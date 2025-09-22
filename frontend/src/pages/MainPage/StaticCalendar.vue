@@ -32,17 +32,20 @@
                 class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-20" style="height: 19px; width: 100px;" rowspan="2">
                 日付</th>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 z-20" style="height: 19px; width: 40px; left: 100px;" rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 100px;" rowspan="2">
                 空室</th>
+              <th
+                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 140px;" rowspan="2">
+                駐車場</th>
               <th v-for="(roomType, typeIndex) in headerRoomsData.roomTypes" :key="typeIndex"
                 :colspan="roomType.colspan"
-                class="px-2 py-2 text-center font-bold dark:text-gray-100 sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.color }">
+                class="px-2 py-2 text-center font-bold dark:text-gray-100 sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.color, left: '180px' }">
                 {{ roomType.name }}
               </th>
             </tr>
             <tr>
               <th v-for="(roomNumber, numIndex) in headerRoomsData.roomNumbers" :key="numIndex"
-                class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 50px; top: 19px;">
+                class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 50px; top: 19px; left: 180px;">
                 <span class="text-xs">{{ roomNumber.room_number }}</span>
               </th>
             </tr>
@@ -56,7 +59,7 @@
                 <span class="text-xs dark:text-gray-100">{{ formatDateWithDay(date) }}</span>
               </td>
               <td
-                class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 40px; left: 100px;">
+                class="px-2 py-2 text-center bg-white dark:text-gray-100 sticky z-10" style="height: 19px; width: 40px; left: 100px;">
                 <div class="text-xs text-gray-500 flex justify-center" :class="{
                   'text-red-400': availableRoomsByDate[date] === 0,
                   'dark:text-gray-400': availableRoomsByDate[date] !== 0
@@ -64,9 +67,19 @@
                   {{ availableRoomsByDate[date] }}
                 </div>
               </td>
+              <td
+                class="px-2 py-2 text-center bg-white dark:text-gray-100 sticky z-10" style="height: 19px; width: 40px; left: 140px;">
+                <div class="text-xs text-gray-500 flex justify-center" :class="{
+                  'text-red-400': availableParkingSpotsByDate[date] === 0,
+                  'dark:text-gray-400': availableParkingSpotsByDate[date] !== 0
+                }">
+                  {{ availableParkingSpotsByDate[date] }}
+                </div>
+              </td>
               <td v-for="(room, roomIndex) in selectedHotelRooms" :key="roomIndex"
                 :style="getCellStyle(room.room_id, date)"
-                :class="['text-xs border text-left']" style="height: 19px; width: 50px;">
+                :class="['text-xs border text-left']" style="height: 19px; width: 50px; left: 180px;"
+                @mouseover="showTooltip($event, room.room_id, date)" @mouseleave="hideTooltip()">
                 
                 <div v-if="isLoading && !isRoomReserved(room.room_id, date)">
                   <Skeleton class="mb-2 dark:bg-gray-700"></Skeleton>
@@ -88,6 +101,11 @@
         </div>
       </template>
     </Card>
+
+    <div v-if="tooltipVisible" :style="{ left: tooltipX + 'px', top: tooltipY + 'px' }"
+      class="absolute bg-gray-800 text-white text-xs p-2 rounded shadow-lg z-50"
+      v-html="tooltipContent">
+    </div>
   </div>
 </template>
 
@@ -101,8 +119,11 @@ import { Panel, Skeleton, Button, DatePicker } from 'primevue';
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+const allParkingSpots = ref([]);
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservedRooms, fetchReservedRooms } = useReservationStore();
+import { useParkingStore } from '@/composables/useParkingStore';
+const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
 
 // Helper function
 const formatDate = (date) => {
@@ -142,6 +163,13 @@ const getRoomTypeColor = (roomTypeName) => {
   }
   return roomTypeColorMap.get(roomTypeName);
 };
+
+const paymentTimingLabels = {
+  not_set: '未設定',
+  prepaid: '前払い',
+  'on-site': '現地払い',
+  postpaid: '後払い',
+};
 //Websocket
 import io from 'socket.io-client';
 const socket = ref(null);
@@ -151,6 +179,10 @@ const isLoading = ref(true);
 const isUpdating = ref(false);
 const currentMonth = ref(new Date());
 const selectedRowIndex = ref(null);
+const tooltipContent = ref('');
+const tooltipVisible = ref(false);
+const tooltipX = ref(0);
+const tooltipY = ref(0);
 
 const highlightRow = (index) => {
   if (selectedRowIndex.value === index) {
@@ -158,6 +190,32 @@ const highlightRow = (index) => {
   } else {
     selectedRowIndex.value = index; // Highlight the new row
   }
+};
+
+const showTooltip = (event, room_id, date) => {
+  const roomInfo = fillRoomInfo(room_id, date);
+  if (roomInfo && roomInfo.reservation_id) {
+    const originalReservation = reservedRooms.value.find(r => r.reservation_id === roomInfo.reservation_id && formatDate(new Date(r.date)) === date);
+    if (originalReservation) {
+      tooltipContent.value = `
+        部屋番号: ${originalReservation.room_number || 'N/A'}<br>  
+        顧客: ${originalReservation.client_name_original || originalReservation.client_name}<br>
+        プラン: ${originalReservation.plan_name || 'N/A'}<br>        
+        支払いタイミング: ${paymentTimingLabels[originalReservation.payment_timing] || originalReservation.payment_timing || 'N/A'}<br>
+        チェックイン日: ${formatDate(new Date(originalReservation.check_in))}<br>
+        チェックアウト日: ${formatDate(new Date(originalReservation.check_out))}
+      `;
+      tooltipVisible.value = true;
+      tooltipX.value = event.pageX + 10;
+      tooltipY.value = event.pageY + 10;
+    }
+  } else {
+    tooltipVisible.value = false;
+  }
+};
+
+const hideTooltip = () => {
+  tooltipVisible.value = false;
 };
 
 // Date range
@@ -220,9 +278,21 @@ const reservedRoomsMap = computed(() => {
     const key = `${reservation.room_id}_${formatDate(new Date(reservation.date))}`;
     map[key] = {
       ...reservation,
+      client_name_original: reservation.client_name, // Store original client name
       client_name: formatClientName(reservation.client_name)
     };
   });
+  return map;
+});
+
+const reservedParkingSpotsMap = computed(() => {
+  const map = {};
+  if (Array.isArray(reservedParkingSpots.value)) {
+    reservedParkingSpots.value.forEach(reservation => {
+      const key = `${reservation.parking_spot_id}_${formatDate(new Date(reservation.date))}`;
+      map[key] = reservation;
+    });
+  }
   return map;
 });
 
@@ -289,12 +359,27 @@ const availableRoomsByDate = computed(() => {
   return availability;
 });
 
+const availableParkingSpotsByDate = computed(() => {
+  const availability = {};
+  dateRange.value.forEach(date => {
+    const spotsForSale = allParkingSpots.value.filter(spot => spot.is_active === true);
+    const reservedCount = spotsForSale.filter(spot =>
+      reservedParkingSpotsMap.value[`${spot.id}_${date}`]
+    ).length;
+
+    availability[date] = spotsForSale.length * 1 - reservedCount * 1;
+  });
+
+  return availability;
+});
+
 const totalTableWidth = computed(() => {
   const dateColumnWidth = 100; // px
   const vacancyColumnWidth = 40; // px
+  const parkingColumnWidth = 40; // px
   const roomColumnWidth = 50; // px
   const numberOfRoomColumns = headerRoomsData.value.roomNumbers.length;
-  return `${dateColumnWidth + vacancyColumnWidth + (numberOfRoomColumns * roomColumnWidth)}px`;
+  return `${dateColumnWidth + vacancyColumnWidth + parkingColumnWidth + (numberOfRoomColumns * roomColumnWidth)}px`;
 });
 
 // Fill & Format the table
@@ -360,6 +445,7 @@ onMounted(async () => {
     const startDate = new Date(currentYear, month, 1);
     const endDate = new Date(currentYear, month + 2, 0);
     await fetchReservations(formatDate(startDate), formatDate(endDate));
+    await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
   });
 
   // Initial data fetch is handled by the watch(currentMonth) which is triggered on mount
@@ -381,7 +467,10 @@ watch(currentMonth, async (newMonth) => {
 
     await fetchHotels(); // Fetch hotels and hotel data here
     await fetchHotel();
+    allParkingSpots.value = await fetchAllParkingSpotsByHotel(selectedHotelId.value);
     await fetchReservations(formatDate(startDate), formatDate(endDate));
+    await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
+    console.log('Reservations available on load:', reservedRooms.value);
   } catch (error) {
     console.error("Error in currentMonth watcher:", error);
   } finally {
