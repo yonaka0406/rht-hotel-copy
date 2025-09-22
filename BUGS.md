@@ -5,6 +5,62 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 22, 2025
+
+#### Feature Request #67: Average Stay Length per Hotel in Reports
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add a new metric showing the average length of stay for each hotel property
+  - Display in both the main dashboard and detailed reports
+  - Provide historical comparison (e.g., month-over-month, year-over-year)
+- **Requirements**:
+  - [ ] Calculate average stay length in nights per hotel property
+  - [ ] Display as both a numerical value and trend indicator
+  - [ ] Include filtering by date range
+  - [ ] Allow comparison across different time periods
+  - [ ] Support export to CSV/Excel
+  - [ ] Include visualization (e.g., bar/line chart)
+- **Metrics to Display**:
+  - Overall average stay length (all properties)
+  - Individual property averages
+  - Comparison to previous period (percentage change)
+  - Breakdown by room type
+  - Seasonal trends
+- **Affected Components**:
+  - Reports page
+  - Dashboard widgets
+  - Analytics backend
+  - Data export functionality
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #66: 宿泊者名簿 (Guest Roster) Direct Printing
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Enhance the guest roster functionality to be more user-friendly for non-technical staff
+  - Instead of just downloading a PDF, provide a direct "Print" option that automatically formats and sends the roster to the printer
+  - This will help staff who are not comfortable with computers to easily print the guest roster
+- **Requirements**:
+  - Add a prominent "Print Roster" button next to the existing download option
+  - Create a print-optimized view of the guest roster
+  - Automatically open the system's print dialog when clicking the print button
+  - Include proper page breaks and formatting for A4 paper
+  - Add hotel logo and contact information in the header
+  - Ensure the print layout is clean and easy to read
+  - Include date and time of printing in the footer
+- **Data to Include**:
+  - Guest name (as it appears on ID)
+  - Room number and type
+  - Check-in/check-out dates and times
+  - Number of adults/children
+  - Contact information
+  - Special requests/notes
+  - Total number of guests per room
+- **Affected Components**:
+  - Roster generation UI
+  - Print layout templates
+  - Report generation backend
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+
 ### September 18, 2025
 
 #### Feature Request #65: 耐用人数 (Capacity-based) Occupancy Indicator
@@ -549,5 +605,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: September 19, 2025*
-*Total Bugs: 2* (last one #66)
-*Total Feature Requests: 26* (last one #65)
+*Total Bugs: 2* (last one #57)
+*Total Feature Requests: 28* (last one #67)
