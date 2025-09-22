@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Meal Report: Fixed date handling in meal count export to correctly include all meals for the selected date range and properly format dates in Japanese locale
+
 ---
 ## Future Releases
 
