@@ -36,7 +36,7 @@
                 空室</th>
               <th v-for="(roomType, typeIndex) in headerRoomsData.roomTypes" :key="typeIndex"
                 :colspan="roomType.colspan"
-                class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 z-20" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px' }">
+                class="px-2 py-2 text-center font-bold dark:text-gray-100 sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.color }">
                 {{ roomType.name }}
               </th>
             </tr>
@@ -118,6 +118,29 @@ const formatDateWithDay = (date) => {
   const options = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' };
   const parsedDate = new Date(date);
   return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
+};
+
+// Room type color assignment
+const roomTypeGrayTones = [
+  '#F3F4F6', // gray-100
+  '#E5E7EB', // gray-200
+  '#D1D5DB', // gray-300
+  '#9CA3AF', // gray-400
+  '#6B7280', // gray-500
+  '#4B5563', // gray-600
+  '#374151', // gray-700
+  '#1F2937', // gray-800
+  '#111827'  // gray-900
+];
+const roomTypeColorMap = new Map();
+let colorIndex = 0;
+
+const getRoomTypeColor = (roomTypeName) => {
+  if (!roomTypeColorMap.has(roomTypeName)) {
+    roomTypeColorMap.set(roomTypeName, roomTypeGrayTones[colorIndex % roomTypeGrayTones.length]);
+    colorIndex++;
+  }
+  return roomTypeColorMap.get(roomTypeName);
 };
 //Websocket
 import io from 'socket.io-client';
@@ -235,7 +258,7 @@ const headerRoomsData = computed(() => {
   selectedHotelRooms.value.forEach(room => {
     if (room.room_type_name !== currentRoomType) {
       if (currentRoomType !== null) {
-        roomTypes.push({ name: currentRoomType, colspan: currentColspan });
+        roomTypes.push({ name: currentRoomType, colspan: currentColspan, color: getRoomTypeColor(currentRoomType) });
       }
       currentRoomType = room.room_type_name;
       currentColspan = 1;
@@ -246,7 +269,7 @@ const headerRoomsData = computed(() => {
   });
 
   if (currentRoomType !== null) {
-    roomTypes.push({ name: currentRoomType, colspan: currentColspan });
+    roomTypes.push({ name: currentRoomType, colspan: currentColspan, color: getRoomTypeColor(currentRoomType) });
   }
 
   return { roomTypes, roomNumbers };
@@ -432,6 +455,14 @@ onUnmounted(() => {
 /* Overlay for dark mode */
 .dark .row-is-pinned td::before {
   background-color: rgba(251, 191, 36, 0.15); /* A subtle amber for dark mode */
+}
+
+.highlighted-row td.sticky {
+  background-color: white !important;
+}
+
+.dark .highlighted-row td.sticky {
+  background-color: #1f2937 !important; /* Dark mode background for sticky cells */
 }
 
 .highlighted-row td {
