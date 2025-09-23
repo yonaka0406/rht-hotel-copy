@@ -18,7 +18,7 @@
         />
       </div>
     </div>
-    <Card>
+    <Panel>
       <template #header>
         <div class="flex justify-between w-full items-center">
           <!-- The h2 and the div with Calendar and Button are moved outside -->
@@ -45,7 +45,8 @@
             </tr>
             <tr>
               <th v-for="(roomNumber, numIndex) in headerRoomsData.roomNumbers" :key="numIndex"
-                class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 50px; top: 19px; left: 180px;">
+                class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 50px; top: 19px; left: 180px;"
+                :class="{ 'pale-yellow-bg': highlightedRooms.has(roomNumber.room_id) }">
                 <span class="text-xs">{{ roomNumber.room_number }}</span>
               </th>
             </tr>
@@ -55,7 +56,8 @@
 
               <td
                 @click="highlightRow(dateIndex)"
-                class="cursor-pointer px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky left-0 z-10" style="height: 19px; width: 100px;">
+                class="cursor-pointer px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky left-0 z-10" style="height: 19px; width: 100px;"
+                :class="{ 'pale-yellow-bg': highlightedDates.has(date) }">
                 <span class="text-xs dark:text-gray-100">{{ formatDateWithDay(date) }}</span>
               </td>
               <td
@@ -79,7 +81,9 @@
               <td v-for="(room, roomIndex) in selectedHotelRooms" :key="roomIndex"
                 :style="getCellStyle(room.room_id, date)"
                 :class="['text-xs border text-left']" style="height: 19px; width: 50px; left: 180px;"
-                @mouseover="showTooltip($event, room.room_id, date)" @mouseleave="hideTooltip()">
+                @mouseover="showTooltip($event, room.room_id, date)" @mouseleave="hideTooltip()"
+                @click="handleCellClick(room.room_id, date)"
+                @dblclick="handleCellDoubleClick(room.room_id, date)">
                 
                 <div v-if="isLoading && !isRoomReserved(room.room_id, date)">
                   <Skeleton class="mb-2 dark:bg-gray-700"></Skeleton>
@@ -100,20 +104,72 @@
         <div class="flex flex-wrap gap-3 p-3">
         </div>
       </template>
-    </Card>
+    </Panel>
 
     <div v-if="tooltipVisible" :style="{ left: tooltipX + 'px', top: tooltipY + 'px' }"
       class="absolute bg-gray-800 text-white text-xs p-2 rounded shadow-lg z-50"
       v-html="tooltipContent">
     </div>
+
+    <Drawer v-if="isDrawerVisible" v-model:visible="isDrawerVisible" position="left" :modal="false" class="w-full md:w-1/2 lg:w-1/3">
+      <div v-if="selectedClientReservations.length > 0">
+        <h3 class="text-lg font-bold mb-2">
+          {{ selectedClientReservations[0].client_name }}
+        </h3>
+        <p class="text-sm text-gray-500 mb-4">
+          表示期間: {{ dateRange.length > 0 ? formatDateWithDay(dateRange[0]) : '' }} - {{ dateRange.length > 0 ? formatDateWithDay(dateRange[dateRange.length - 1]) : '' }}
+        </p>
+
+        <Card v-for="res in selectedClientReservations" :key="res.reservation_id" class="mb-4 cursor-pointer" @click="selectReservationCard(res.reservation_id)" :class="{ 'selected-card-border': cardSelectedReservationId === res.reservation_id }">
+          <template #title>
+            <div class="flex justify-between items-center">
+              <span class="text-base font-semibold">{{ res.check_in }} - {{ res.check_out }}</span>
+              <Button @click="goToReservation(res.reservation_id)" severity="info" size="small" text rounded v-tooltip.top="'編集ページへ'">
+                <i class="pi pi-arrow-up-right"></i>
+              </Button>
+            </div>
+          </template>
+          <template #content>
+            <div class="grid grid-cols-2 gap-2 text-sm pt-2">
+              <div class="col-span-2 flex items-center gap-4 text-sm">
+                <div class="flex items-center gap-1">
+                  <i class="pi pi-user"></i>
+                  <span>{{ res.number_of_people }} 名</span>
+                </div>
+                <div class="flex items-center gap-2" v-tooltip.top="generateRoomTooltip(res)">
+                  <Tag v-if="res.smoking_count > 0" severity="danger" :value="`喫煙: ${res.smoking_count}`"></Tag>
+                  <Tag v-if="res.non_smoking_count > 0" severity="secondary" :value="`禁煙: ${res.non_smoking_count}`"></Tag>
+                </div>
+                <div class="flex items-center gap-1">
+                  <i class="pi pi-wallet"></i>
+                  <Tag :value="paymentTimingInfo[res.payment_timing]?.label" :severity="paymentTimingInfo[res.payment_timing]?.severity"></Tag>
+                </div>
+              </div>
+            </div>
+          </template>
+        </Card>
+      </div>
+      <div v-else>
+        <p>選択されたクライアントの予約情報が見つかりません。</p>
+      </div>
+    </Drawer>
   </div>
 </template>
 
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
-import { Panel, Skeleton, Button, DatePicker } from 'primevue';
+import Panel from 'primevue/panel';
+import Card from 'primevue/card';
+import Skeleton from 'primevue/skeleton';
+import Tag from 'primevue/tag';
+import Drawer from 'primevue/drawer';
+import DatePicker from 'primevue/datepicker';
+import Button from 'primevue/button';
+
 // Components
 
 // Stores
@@ -164,11 +220,11 @@ const getRoomTypeColor = (roomTypeName) => {
   return roomTypeColorMap.get(roomTypeName);
 };
 
-const paymentTimingLabels = {
-  not_set: '未設定',
-  prepaid: '前払い',
-  'on-site': '現地払い',
-  postpaid: '後払い',
+const paymentTimingInfo = {
+  not_set: { label: '未設定', severity: 'contrast' },
+  prepaid: { label: '前払い', severity: 'info' },
+  'on-site': { label: '現地払い', severity: 'success' },
+  postpaid: { label: '後払い', severity: 'warn' },
 };
 //Websocket
 import io from 'socket.io-client';
@@ -183,6 +239,17 @@ const tooltipContent = ref('');
 const tooltipVisible = ref(false);
 const tooltipX = ref(0);
 const tooltipY = ref(0);
+const selectedClientId = ref(null);
+const isDrawerVisible = ref(false);
+const cardSelectedReservationId = ref(null);
+
+const selectReservationCard = (reservationId) => {
+  if (cardSelectedReservationId.value === reservationId) {
+    cardSelectedReservationId.value = null;
+  } else {
+    cardSelectedReservationId.value = reservationId;
+  }
+};
 
 const highlightRow = (index) => {
   if (selectedRowIndex.value === index) {
@@ -201,7 +268,7 @@ const showTooltip = (event, room_id, date) => {
         部屋番号: ${originalReservation.room_number || 'N/A'}<br>  
         顧客: ${originalReservation.client_name_original || originalReservation.client_name}<br>
         プラン: ${originalReservation.plan_name || 'N/A'}<br>        
-        支払いタイミング: ${paymentTimingLabels[originalReservation.payment_timing] || originalReservation.payment_timing || 'N/A'}<br>
+        支払いタイミング: ${paymentTimingInfo[originalReservation.payment_timing]?.label || originalReservation.payment_timing || 'N/A'}<br>
         チェックイン日: ${formatDate(new Date(originalReservation.check_in))}<br>
         チェックアウト日: ${formatDate(new Date(originalReservation.check_out))}
       `;
@@ -216,6 +283,44 @@ const showTooltip = (event, room_id, date) => {
 
 const hideTooltip = () => {
   tooltipVisible.value = false;
+};
+
+const handleCellClick = (room_id, date) => {
+  const roomInfo = fillRoomInfo(room_id, date);
+  if (roomInfo && roomInfo.client_id) {
+    if (selectedClientId.value === roomInfo.client_id) {
+      selectedClientId.value = null;
+    } else {
+      selectedClientId.value = roomInfo.client_id;
+    }
+  } else {
+    selectedClientId.value = null;
+  }
+};
+
+const handleCellDoubleClick = (room_id, date) => {
+  const roomInfo = fillRoomInfo(room_id, date);
+  if (roomInfo && roomInfo.client_id) {
+    selectedClientId.value = roomInfo.client_id;
+    isDrawerVisible.value = true;
+  }
+};
+
+const goToReservation = (reservationId) => {
+  if (!reservationId) return;
+  const routeData = router.resolve({ name: 'ReservationEdit', params: { reservation_id: reservationId } });
+  window.open(routeData.href, '_blank');
+};
+
+const generateRoomTooltip = (reservation) => {
+  const parts = [];
+  if (reservation.smoking_rooms && reservation.smoking_rooms.length > 0) {
+    parts.push(`喫煙: ${reservation.smoking_rooms.join(', ')}`);
+  }
+  if (reservation.non_smoking_rooms && reservation.non_smoking_rooms.length > 0) {
+    parts.push(`禁煙: ${reservation.non_smoking_rooms.join(', ')}`);
+  }
+  return parts.join(' | ');
 };
 
 // Date range
@@ -318,6 +423,95 @@ const uniqueLegendItems = computed(() => {
   return legendItems;
 });
 
+const highlightedDates = computed(() => {
+  const dates = new Set();
+  if (!selectedClientId.value) return dates;
+
+  reservedRooms.value.forEach(reservation => {
+    if (reservation.client_id === selectedClientId.value) {
+      dates.add(formatDate(new Date(reservation.date)));
+    }
+  });
+  return dates;
+});
+
+const highlightedRooms = computed(() => {
+  const rooms = new Set();
+  if (!selectedClientId.value) return rooms;
+
+  reservedRooms.value.forEach(reservation => {
+    if (reservation.client_id === selectedClientId.value) {
+      rooms.add(reservation.room_id);
+    }
+  });
+  return rooms;
+});
+
+const selectedClientReservations = computed(() => {
+  if (!selectedClientId.value) return [];
+
+  // Filter for the selected client
+  const clientReservations = reservedRooms.value.filter(
+    r => r.client_id === selectedClientId.value
+  );
+
+  // Group by reservation_id
+  const grouped = clientReservations.reduce((acc, res) => {
+    acc[res.reservation_id] = acc[res.reservation_id] || [];
+    acc[res.reservation_id].push(res);
+    return acc;
+  }, {});
+
+  // Process each group into a displayable object
+  const processed = Object.values(grouped).map(group => {
+    // All items in the group belong to the same reservation, so we can take details from the first item.
+    const first = group[0];
+    
+    // Find min/max dates for check-in/check-out
+    const dates = group.map(g => new Date(g.date));
+    const checkIn = new Date(Math.min.apply(null, dates));
+    const checkOut = new Date(Math.max.apply(null, dates));
+    checkOut.setDate(checkOut.getDate() + 1); // Checkout is the day after the last night
+
+    // Count unique rooms
+    const uniqueRooms = [];
+    const roomIds = new Set();
+    group.forEach(detail => {
+      if (!roomIds.has(detail.room_id)) {
+        roomIds.add(detail.room_id);
+        uniqueRooms.push({
+          room_number: detail.room_number,
+          smoking: detail.smoking
+        });
+      }
+    });
+
+    const smokingRooms = uniqueRooms.filter(r => r.smoking === true).map(r => r.room_number).sort((a, b) => a - b);
+    const nonSmokingRooms = uniqueRooms.filter(r => r.smoking === false).map(r => r.room_number).sort((a, b) => a - b);
+
+    const smokingCount = smokingRooms.length;
+    const nonSmokingCount = nonSmokingRooms.length;
+    const numRooms = smokingCount + nonSmokingCount;
+
+    return {
+      reservation_id: first.reservation_id,
+      client_name: first.client_name_original || first.client_name,
+      check_in: formatDate(checkIn),
+      check_out: formatDate(checkOut),
+      number_of_people: first.number_of_people,
+      payment_timing: first.payment_timing,
+      num_rooms: numRooms,
+      smoking_count: smokingCount,
+      non_smoking_count: nonSmokingCount,
+      smoking_rooms: smokingRooms,
+      non_smoking_rooms: nonSmokingRooms,
+    };
+  });
+
+  // Sort by check-in date
+  return processed.sort((a, b) => a.check_in.localeCompare(b.check_in));
+});
+  
 // Count of available rooms
 const headerRoomsData = computed(() => {
   const roomTypes = [];
@@ -421,6 +615,16 @@ const getCellStyle = (room_id, date) => {
     style = { color: `${roomColor}`, fontWeight: 'bold' };
   }
 
+  // Add highlighted border for selected client
+  if (selectedClientId.value && roomInfo.client_id === selectedClientId.value) {
+    if (cardSelectedReservationId.value && roomInfo.reservation_id === cardSelectedReservationId.value) {
+      style.border = '3px solid #00FFFF'; // Neon Blue
+    } else {
+      style.border = '3px solid #FFFF33'; // Neon Yellow
+    }
+    style.boxSizing = 'border-box';
+  }
+
   return style;
 };
 
@@ -477,6 +681,34 @@ watch(currentMonth, async (newMonth) => {
     isLoading.value = false;
   }
 }, { immediate: true }); // Added immediate: true
+
+watch(selectedHotelId, async (newHotelId, oldHotelId) => {
+  if (!newHotelId || newHotelId === oldHotelId) return;
+
+  isLoading.value = true;
+  try {
+    // Clear previous data
+    reservedRooms.value = [];
+    
+    const currentYear = currentMonth.value.getFullYear();
+    const month = currentMonth.value.getMonth();
+    const startDate = new Date(currentYear, month, 1);
+    const endDate = new Date(currentYear, month + 2, 0);
+
+    // It's important to ensure the hotel data (like rooms) is updated first.
+    await fetchHotel(); 
+    
+    // Then fetch data that depends on the hotel
+    allParkingSpots.value = await fetchAllParkingSpotsByHotel(newHotelId);
+    await fetchReservations(formatDate(startDate), formatDate(endDate));
+    await fetchReservedParkingSpots(newHotelId, formatDate(startDate), formatDate(endDate));
+
+  } catch (error) {
+    console.error('Error fetching data for new hotel:', error);
+  } finally {
+    isLoading.value = false;
+  }
+});
 
 onUnmounted(() => {
   // Close the Socket.IO connection when the component is unmounted
@@ -564,5 +796,14 @@ onUnmounted(() => {
   border-top-color: #fbbf24 !important; 
   border-bottom-color: #fbbf24 !important;
   background-color: rgba(251, 191, 36, 0.15); /* Apply background directly for dark mode */
+}
+
+.pale-yellow-bg {
+  background-color: #ffffe0 !important;
+}
+
+.selected-card-border {
+  border: 2px solid #00FFFF;
+  border-radius: 6px;
 }
 </style>
