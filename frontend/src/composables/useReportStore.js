@@ -596,6 +596,19 @@ export function useReportStore() {
         }
     };
 
+    const fetchBookerTypeBreakdown = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/metrics/booker-type?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch booker type breakdown:', error);
+            return [];
+        }
+    };
+
     const fetchChannelSummary = async (hotelIds, startDate, endDate) => {
         try {
             if (limitedFunctionality.value) {
@@ -647,5 +660,6 @@ export function useReportStore() {
         fetchPaymentTimingBreakdown,
         fetchChannelSummary,
         fetchCheckInOutReport,
+        fetchBookerTypeBreakdown, // Export the new function
     }
 }

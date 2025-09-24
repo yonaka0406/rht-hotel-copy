@@ -146,6 +146,59 @@
                 </Fieldset>
             </Panel>
 
+            <!-- Line Chart Panel (moved to second position) -->
+            <Panel header="売上" toggleable :collapsed="false" class="col-span-12">             
+                <Card class="col-span-12">
+                <template #title>
+                    
+                </template>
+                <template #subtitle>
+                    <p>{{ lineChartTitle }}</p>
+                </template>
+                <template #content>    
+                    <div ref="lineChart" class="w-full h-60"></div>                
+                </template>
+            </Card>             
+                
+            </Panel>
+
+            <!-- Heat Map -->
+            <Panel header="稼働率" toggleable :collapsed="false" class="col-span-12">
+                <Card class="flex col-span-12">
+                    <template #title>
+
+                    </template>                
+                    <template #subtitle>
+                        <p>曜日毎の予約数ヒートマップ ({{ selectedMonth.getFullYear() }}年 {{ selectedMonth.getMonth() + 1 }}月基点)</p>
+                    </template>
+                    <template #content>
+                        <div ref="heatMap" class="w-full h-96"></div>             
+                    </template>
+                </Card> 
+            </Panel>
+
+            <!-- Panel for Booker Type and Length of Stay -->
+            <Panel header="予約者属性と滞在日数" toggleable :collapsed="false" class="col-span-12">
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-6">
+                        <Card>
+                            <template #title>予約者区分 (泊数ベース)</template>
+                            <template #content>
+                                <div ref="bookerTypeChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                    </div>
+                    <div class="col-span-12 md:col-span-6">
+                        <Card>
+                            <template #title>滞在日数</template>
+                            <template #content>
+                                <div ref="averageLengthOfStayChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                    </div>
+                </div>
+            </Panel>
+
             <!-- Other KPIs Panel -->
             <Panel header="予約チャンネルと支払タイミング" toggleable :collapsed="false" class="col-span-12">
                 <div class="grid grid-cols-12 gap-4">
@@ -166,32 +219,7 @@
                         </Card>
                     </div>
                 </div>
-            </Panel>
-
-            <!-- Line Chart -->
-            <Card class="col-span-12">
-                <template #title>
-                    <p>売上推移</p>
-                </template>
-                <template #subtitle>
-                    <p>{{ lineChartTitle }}</p>
-                </template>
-                <template #content>    
-                    <div ref="lineChart" class="w-full h-60"></div>                
-                </template>
-            </Card>
-            <!-- Heat Map -->
-            <Card class="flex col-span-12">
-                <template #title>
-                    <p>稼働マップ</p>
-                </template>                
-                <template #subtitle>
-                    <p>曜日毎の予約数ヒートマップ ({{ selectedMonth.getFullYear() }}年 {{ selectedMonth.getMonth() + 1 }}月基点)</p>
-                </template>
-                <template #content>
-                    <div ref="heatMap" class="w-full h-96"></div>             
-                </template>
-            </Card> 
+            </Panel> 
 
             <!-- Sales by Plan Breakdown -->
             <Card class="col-span-12">
@@ -308,7 +336,7 @@
                         <p>稼働率内訳データがありません。</p>
                     </div>
                 </template>
-            </Card>
+            </Card>            
         </div>
     </div>
 </template>
@@ -322,7 +350,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown } = useReportStore();
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown, fetchBookerTypeBreakdown } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -394,6 +422,8 @@
   
     // --- Data Sources ---    
     const allReservationsData = ref([]);
+    const reservationListData = ref([]); // New ref for reservation-level data
+    const bookerTypeBreakdownData = ref([]); // New ref for booker type breakdown data
     const forecastData = ref([]);
     const accountingData = ref([]);
     const salesByPlan = ref([]);
@@ -631,10 +661,12 @@
     import {        
         TooltipComponent,
         GridComponent,
-        VisualMapComponent,
         LegendComponent,
+        TitleComponent, // Added TitleComponent
+        MarkLineComponent, // Added MarkLineComponent
+        MarkPointComponent, // Added MarkPointComponent
     } from 'echarts/components';
-    import { HeatmapChart, ScatterChart, BarChart, LineChart, PieChart, SunburstChart, TreemapChart } from 'echarts/charts';
+    import { HeatmapChart, ScatterChart, LineChart, PieChart, SunburstChart, TreemapChart } from 'echarts/charts';
     import { UniversalTransition } from 'echarts/features';
     import { CanvasRenderer } from 'echarts/renderers';
 
@@ -642,10 +674,11 @@
         TooltipComponent,
         GridComponent,
         LegendComponent,
-        VisualMapComponent,
+        TitleComponent, // Added TitleComponent
+        MarkLineComponent, // Added MarkLineComponent
+        MarkPointComponent, // Added MarkLineComponent
         HeatmapChart,
         ScatterChart,
-        BarChart,
         LineChart,
         PieChart,
         SunburstChart,
@@ -777,6 +810,10 @@
     let myBookingSourceChart = null;
     const paymentTimingChart = ref(null);
     let myPaymentTimingChart = null;
+    const bookerTypeChart = ref(null);
+    let myBookerTypeChart = null;
+    const averageLengthOfStayChart = ref(null);
+    let myAverageLengthOfStayChart = null;
     const lineChartAxisX = ref([]);
     const lineChartSeriesData = ref([]);
     const lineChartSeriesSumData = ref([]);
@@ -1491,7 +1528,234 @@
         }
         myPaymentTimingChart.setOption(option, true);
     };
-        
+
+    // Booker Type Distribution
+    const bookerTypeData = ref([]);
+    const processBookerTypeData = () => {
+        if (!bookerTypeBreakdownData.value || bookerTypeBreakdownData.value.length === 0) {
+            bookerTypeData.value = [];
+            initBookerTypeChart();
+            return;
+        }
+
+        // Use data directly from the backend
+        const mappedData = bookerTypeBreakdownData.value.map(item => {
+            let name;
+            if (item.legal_or_natural_person === 'individual' || item.legal_or_natural_person === 'natural') {
+                name = '個人';
+            } else if (item.legal_or_natural_person === 'corporate' || item.legal_or_natural_person === 'legal') {
+                name = '法人';
+            } else {
+                name = '未設定'; // Handle unexpected values with '未設定'
+            }
+            return { name, value: item.room_nights };
+        });
+
+        // Aggregate values for the same name (e.g., if both 'individual' and 'natural' map to '個人')
+        const aggregatedData = mappedData.reduce((acc, current) => {
+            const existing = acc.find(item => item.name === current.name);
+            if (existing) {
+                existing.value += current.value;
+            } else {
+                acc.push({ ...current });
+            }
+            return acc;
+        }, []);
+
+        bookerTypeData.value = aggregatedData.filter(item => item.value > 0);
+        console.log('Booker Type Data:', bookerTypeData.value); // Added console log
+        initBookerTypeChart();
+    };
+
+    const initBookerTypeChart = () => {
+        if (!bookerTypeChart.value) return;
+
+        const option = {
+            color: ["#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de", "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc"],
+            tooltip: {
+                trigger: 'item',
+                formatter: '{b}: {c} 泊 ({d}%)'
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left',
+                bottom: 'bottom'
+            },
+            series: [
+                {
+                    name: '予約者区分',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    center: ['50%', '50%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 10,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    },
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: (params) => {
+                            const total = bookerTypeData.value.reduce((sum, item) => sum + item.value, 0);
+                            const percentage = (params.value / total * 100);
+                            return percentage > 5 ? `${params.name}: ${percentage.toFixed(1)}%` : '';
+                        }
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 20,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    labelLine: {
+                        show: true // Changed to true
+                    },
+                    data: bookerTypeData.value
+                }
+            ]
+        };
+
+        if (!myBookerTypeChart) {
+            myBookerTypeChart = echarts.init(bookerTypeChart.value);
+        }
+        myBookerTypeChart.setOption(option, true);
+    };
+
+    // Average Length of Stay (Boxplot)
+    const averageLengthOfStayData = ref([]);
+    const averageNights = ref(0);
+    const averagePeople = ref(0);
+
+    const processAverageLengthOfStayData = () => {
+        if (!reservationListData.value) {
+            averageLengthOfStayData.value = [];
+            averageNights.value = 0;
+            averagePeople.value = 0;
+            initAverageLengthOfStayChart();
+            return;
+        }
+
+        const rawDataForScatter = [];
+        let totalNightsSum = 0;
+        let totalPeopleSum = 0;
+        let reservationCount = 0;
+
+        reservationListData.value
+            .filter(res => res.number_of_nights > 0 && res.number_of_people > 0)
+            .forEach(res => {
+                const nights = Number(res.number_of_nights);
+                const people = Number(res.number_of_people);
+                rawDataForScatter.push([nights, people]);
+                totalNightsSum += nights;
+                totalPeopleSum += people;
+                reservationCount++;
+            });
+
+        averageLengthOfStayData.value = rawDataForScatter; // Assign raw data directly
+        averageNights.value = reservationCount > 0 ? (totalNightsSum / reservationCount) : 0;
+        averagePeople.value = reservationCount > 0 ? (totalPeopleSum / reservationCount) : 0;
+
+        console.log('Raw Data for Scatter (Nights x People):', rawDataForScatter);
+        console.log('Average Nights:', averageNights.value);
+        console.log('Average People:', averagePeople.value);
+
+        initAverageLengthOfStayChart();
+    };
+
+    const initAverageLengthOfStayChart = () => {
+        if (!averageLengthOfStayChart.value) return;
+
+        const option = {
+            title: {
+                text: '平均滞在日数と人数分布',
+                left: 'center',
+                show: false
+            },
+            grid: {
+                left: '3%',
+                right: '7%',
+                bottom: '7%',
+                containLabel: true
+            },
+            tooltip: {
+                showDelay: 0,
+                formatter: function (params) {
+                    if (params.value.length > 1) {
+                        return (
+                            `泊数: ${params.value[0]}泊<br/>人数: ${params.value[1]}人`
+                        );
+                    } else {
+                        return (
+                            `${params.seriesName} :<br/>` +
+                            `${params.name} : ${params.value} `
+                        );
+                    }
+                },
+                axisPointer: {
+                    show: true,
+                    type: 'cross',
+                    lineStyle: {
+                        type: 'dashed',
+                        width: 1
+                    }
+                }
+            },
+            xAxis: [
+                {
+                    type: 'value',
+                    scale: true,
+                    axisLabel: {
+                        formatter: '{value} 泊'
+                    },
+                    splitLine: {
+                        show: false
+                    }
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    scale: true,
+                    axisLabel: {
+                        formatter: '{value} 人'
+                    },
+                    splitLine: {
+                        show: false
+                    }
+                }
+            ],
+            series: [
+                {
+                    name: '予約データ',
+                    type: 'scatter',
+                    data: averageLengthOfStayData.value,
+                    markPoint: {
+                        data: [
+                            { type: 'max', name: '最大値' },
+                            { type: 'min', name: '最小値' }
+                        ]
+                    },
+                    markLine: {
+                        lineStyle: {
+                            type: 'solid'
+                        },
+                        data: [
+                            { xAxis: averageNights.value, name: '平均泊数' },
+                            { yAxis: averagePeople.value, name: '平均人数' }
+                        ]
+                    }
+                }
+            ]
+        };
+
+        if (!myAverageLengthOfStayChart) {
+            myAverageLengthOfStayChart = echarts.init(averageLengthOfStayChart.value);
+        }
+        myAverageLengthOfStayChart.setOption(option, true);
+    };
+
     const handleResize = () => {
         if (myHeatMap) myHeatMap.resize();
         if (myLineChart) myLineChart.resize();
@@ -1499,6 +1763,8 @@
         if (myOccupationBreakdownChart) myOccupationBreakdownChart.resize();
         if (myBookingSourceChart) myBookingSourceChart.resize();
         if (myPaymentTimingChart) myPaymentTimingChart.resize();
+        if (myBookerTypeChart) myBookerTypeChart.resize();
+        if (myAverageLengthOfStayChart) myAverageLengthOfStayChart.resize();
     };
 
     // --- Data Fetching and Processing ---
@@ -1510,6 +1776,8 @@
             processHeatMapData(); 
             processLineChartData();
             calculateMetrics();
+            processBookerTypeData(); // New call
+            processAverageLengthOfStayData(); // New call
             return;
         }
         try {
@@ -1521,6 +1789,10 @@
             const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
             const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
             const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+            const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value); // New fetch
+            // Fetch reservation list for booker type and length of stay
+            const reservationListViewResult = await fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+
 
             if (rawData && Array.isArray(rawData)) {                
                 allReservationsData.value = rawData.map(item => ({
@@ -1553,6 +1825,19 @@
             occupationBreakdownData.value = occupationBreakdownResult;
             bookingSourceData.value = bookingSourceResult;
             paymentTimingData.value = paymentResult;
+            bookerTypeBreakdownData.value = bookerTypeBreakdownResult; // Assign new data
+            // Assign reservation list data
+            if (reservationListViewResult && Array.isArray(reservationListViewResult)) {
+                // Ensure clients_json and payers_json are parsed if they are strings
+                reservationListData.value = reservationListViewResult.map(res => ({
+                    ...res,
+                    clients_json: typeof res.clients_json === 'string' ? JSON.parse(res.clients_json) : res.clients_json,
+                    payers_json: typeof res.payers_json === 'string' ? JSON.parse(res.payers_json) : res.payers_json
+                }));
+            } else {
+                reservationListData.value = [];
+            }
+
             // console.log('Occupation Breakdown Data (frontend):', occupationBreakdownData.value); // DEBUG - Removed
             // console.log('Occupation Breakdown Data Length (frontend):', occupationBreakdownData.value ? occupationBreakdownData.value.length : 0); // DEBUG - Removed
             // console.log('accountingData', accountingData.value);
@@ -1570,6 +1855,8 @@
         processOccupationBreakdownChartData(); // New call
         initBookingSourceChart();
         initPaymentTimingChart();
+        processBookerTypeData(); // New call
+        processAverageLengthOfStayData(); // New call
         calculateMetrics();
     };
 
@@ -1592,6 +1879,8 @@
         if (myOccupationBreakdownChart) myOccupationBreakdownChart.dispose(); // New dispose
         if (myBookingSourceChart) myBookingSourceChart.dispose();
         if (myPaymentTimingChart) myPaymentTimingChart.dispose();
+        if (myBookerTypeChart) myBookerTypeChart.dispose(); // New dispose
+        if (myAverageLengthOfStayChart) myAverageLengthOfStayChart.dispose(); // New dispose
     });
 
     watch([selectedMonth, selectedHotelId, viewMode], fetchDataAndProcess, { deep: true });

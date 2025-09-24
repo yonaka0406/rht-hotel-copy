@@ -9,5 +9,6 @@ router.get('/metrics/waitlist-entries-today/:hotelId/:date', metricsController.g
 
 router.get('/metrics/booking-source', metricsController.fetchBookingSourceBreakdown);
 router.get('/metrics/payment-timing', metricsController.fetchPaymentTimingBreakdown);
+router.get('/metrics/booker-type', metricsController.fetchBookerTypeBreakdown);
 
 module.exports = router;

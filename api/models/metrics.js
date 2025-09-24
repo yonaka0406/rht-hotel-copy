@@ -279,6 +279,36 @@ const getPaymentTimingBreakdown = async (requestId, hotelId, startDate, endDate)
     }
 };
 
+const getBookerTypeBreakdown = async (requestId, hotelId, startDate, endDate) => {
+    const pool = getPool(requestId);
+    try {
+        const query = `
+            SELECT
+                c.legal_or_natural_person,
+                COUNT(rd.id) as room_nights
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN clients c ON r.reservation_client_id = c.id
+            WHERE r.hotel_id = $1
+              AND r.status NOT IN('hold','block')
+              AND r.type <> 'employee'
+              AND rd.date BETWEEN $2 AND $3
+              AND rd.cancelled IS NULL
+            GROUP BY c.legal_or_natural_person;
+        `;
+        const values = [hotelId, startDate, endDate];
+        const result = await pool.query(query, values);
+
+        return result.rows.map(row => ({
+            legal_or_natural_person: row.legal_or_natural_person,
+            room_nights: parseInt(row.room_nights, 10),
+        }));
+    } catch (error) {
+        console.error(`Error fetching booker type breakdown for hotel ${hotelId}:`, error);
+        throw error;
+    }
+};
+
 module.exports = {
     selectReservationsToday,
     selectBookingAverageLeadTime,
@@ -286,4 +316,5 @@ module.exports = {
     selectWaitlistEntriesToday,
     getBookingSourceBreakdown,
     getPaymentTimingBreakdown,
+    getBookerTypeBreakdown, // Export the new function
 };

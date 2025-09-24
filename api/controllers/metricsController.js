@@ -66,6 +66,16 @@ const fetchPaymentTimingBreakdown = async (req, res) => {
     }
 };
 
+const fetchBookerTypeBreakdown = async (req, res) => {
+    const { hotelId, startDate, endDate } = req.query;
+    try {
+        const data = await metricsModels.getBookerTypeBreakdown(req.requestId, hotelId, startDate, endDate);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getReservationsToday,
     getBookingAverageLeadTime,
@@ -73,4 +83,5 @@ module.exports = {
     getWaitlistEntriesToday,
     fetchBookingSourceBreakdown,
     fetchPaymentTimingBreakdown,
+    fetchBookerTypeBreakdown, // Export the new controller function
 };
