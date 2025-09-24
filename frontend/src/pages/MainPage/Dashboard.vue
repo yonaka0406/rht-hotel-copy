@@ -347,12 +347,18 @@
 
     // Charts
         const fetchBarChartData = async () => {
-            const countData = await fetchCountReservation(selectedHotelId.value, startDate.value, endDate.value);
+            // Define 7-day range starting from selectedDate for this chart
+            const chartStartDate = formatDate(new Date(selectedDate.value));
+            const endDateObjForApi = new Date(selectedDate.value);
+            endDateObjForApi.setDate(endDateObjForApi.getDate() + 6);
+            const chartEndDate = formatDate(endDateObjForApi);
 
-            // Generate an array of dates from startDate to endDate
+            const countData = await fetchCountReservation(selectedHotelId.value, chartStartDate, chartEndDate);
+
+            // Generate an array of dates from chartStartDate to chartEndDate
             const dateArray = [];
-            let currentDate = new Date(startDate.value);
-            const endDateObj = new Date(endDate.value);
+            let currentDate = new Date(chartStartDate);
+            const endDateObj = new Date(chartEndDate);
 
             while (currentDate <= endDateObj) {
                 dateArray.push(formatDateWithDay(currentDate));
@@ -389,7 +395,6 @@
             
             nextTick(() => {                
                 barChartOption.value = generateBarChartOptions();
-                // console.log('barChartOption:',barChartOption.value);
             });                
         };
         const generateBarChartOptions = () => ({
@@ -613,15 +618,15 @@
                         chartKey.value++;
                         // Initialize with empty chart
                         nextTick(() => {
-                            const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value);
+                            const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value, null, { passive: true, renderer: 'canvas' });
                             barStackChartOption.value.series = [];
-                            barStackChartOption.value.xAxis[0].data = displayDateArray;
+                            barStackChartOption.value.xAxis[0].data = chartDisplayDateArray;
                             myBarStackChart.setOption(barStackChartOption.value, true);
                             myBarStackChart.resize();
         
-                            const myBarAddonChart = echarts.getInstanceByDom(barAddonChart.value) || echarts.init(barAddonChart.value);
+                            const myBarAddonChart = echarts.getInstanceByDom(barAddonChart.value) || echarts.init(barAddonChart.value, null, { passive: true, renderer: 'canvas' });
                             barAddonChartOption.value.series = [];
-                            barAddonChartOption.value.xAxis[0].data = displayDateArray;
+                            barAddonChartOption.value.xAxis[0].data = chartDisplayDateArray;
                             myBarAddonChart.setOption(barAddonChartOption.value, true);
                             myBarAddonChart.resize();
                         });
@@ -699,7 +704,7 @@
                         barStackChartOption.value.series = barStackChartData.value.series;
                         barStackChartOption.value.xAxis[0].data = barStackChartData.value.xAxis;
                         
-                        const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value);
+                        const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value, null, { passive: true, renderer: 'canvas' });
                         myBarStackChart.setOption(barStackChartOption.value, true);
                         myBarStackChart.resize();
         
@@ -707,7 +712,7 @@
                         barAddonChartOption.value.series = barAddonChartData.value.series;
                         barAddonChartOption.value.xAxis[0].data = barAddonChartData.value.xAxis;
         
-                        const myBarAddonChart = echarts.getInstanceByDom(barAddonChart.value) || echarts.init(barAddonChart.value);
+                        const myBarAddonChart = echarts.getInstanceByDom(barAddonChart.value) || echarts.init(barAddonChart.value, null, { passive: true, renderer: 'canvas' });
                         myBarAddonChart.setOption(barAddonChartOption.value, true);
                         myBarAddonChart.resize();
                     });                
@@ -890,7 +895,7 @@
                 if (myBarChart) {
                     myBarChart.setOption(barChartOption.value); // Update with new data
                 } else {
-                    const myBarChart = echarts.init(barChart.value); // Create if it doesn't exist
+                    const myBarChart = echarts.init(barChart.value, null, { passive: true, renderer: 'canvas' }); // Create if it doesn't exist
                     myBarChart.setOption(barChartOption.value);
                 }
 
@@ -898,7 +903,7 @@
                 if (myGaugeChart) {
                     myGaugeChart.setOption(gaugeChartOption);
                 } else {
-                    const myGaugeChart = echarts.init(gaugeChart.value);
+                    const myGaugeChart = echarts.init(gaugeChart.value, null, { passive: true, renderer: 'canvas' });
                     myGaugeChart.setOption(gaugeChartOption);
                 }
 
@@ -908,7 +913,7 @@
                     myBarStackChart.setOption(barStackChartOption.value);
                     myBarStackChart.resize();
                 } else {
-                    const myBarStackChart = echarts.init(barStackChart.value);
+                    const myBarStackChart = echarts.init(barStackChart.value, null, { passive: true, renderer: 'canvas' });
                     barStackChartOption.value.series = barStackChartData.value.series;
                     myBarStackChart.setOption(barStackChartOption.value); 
                     myBarStackChart.resize();                           
@@ -920,7 +925,7 @@
                     myBarAddonChart.setOption(barAddonChartOption.value);
                     myBarAddonChart.resize();
                 } else {
-                    const myBarAddonChart = echarts.init(barAddonChart.value);
+                    const myBarAddonChart = echarts.init(barAddonChart.value, null, { passive: true, renderer: 'canvas' });
                     barAddonChartOption.value.series = barAddonChartData.value.series;
                     myBarAddonChart.setOption(barAddonChartOption.value); 
                     myBarAddonChart.resize();                           
