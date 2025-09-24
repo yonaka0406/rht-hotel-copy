@@ -228,9 +228,10 @@ const fields = ref({});
 const guests = ref([]);
 
 const initializeFields = (reservation) => {
-    console.log('--- Guest List Dialog Opened ---');
-    console.log('Received reservation prop:', JSON.parse(JSON.stringify(reservation)));
-    console.log('Is group:', props.isGroup);    
+    //console.log('Component received props:', { 
+    //  reservation,
+    //  isGroup: props.isGroup 
+    //});    
     
     if (!reservation) {
         fields.value = {};
@@ -307,8 +308,6 @@ const initializeFields = (reservation) => {
     } else {
         initializeSingleGuests(firstReservation);
     }
-    console.log('Processed guest data for rendering:', JSON.parse(JSON.stringify(guests.value)));
-    console.log('--- End of Guest List Dialog Data ---');
 };
 
 const initializeGroupGuests = (reservationArray) => {
