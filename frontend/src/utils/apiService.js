@@ -58,7 +58,14 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+
+      // Conditionally parse response based on responseType option
+      let data;
+      if (options.responseType === 'blob') {
+        data = await response.blob();
+      } else {
+        data = await response.json();
+      }
 
       // Handle authentication errors
       if (response.status === 401 && data.errorType) {

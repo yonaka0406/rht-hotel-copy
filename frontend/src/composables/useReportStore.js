@@ -609,6 +609,8 @@ export function useReportStore() {
         }
     };
 
+
+
     const fetchChannelSummary = async (hotelIds, startDate, endDate) => {
         try {
             if (limitedFunctionality.value) {
@@ -660,6 +662,6 @@ export function useReportStore() {
         fetchPaymentTimingBreakdown,
         fetchChannelSummary,
         fetchCheckInOutReport,
-        fetchBookerTypeBreakdown, // Export the new function
+        fetchBookerTypeBreakdown,
     }
 }

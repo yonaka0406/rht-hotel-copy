@@ -1,7 +1,9 @@
 import { ref } from 'vue';
+import { useApi } from './useApi';
 
 export function useGuestStore() {
     const isGenerating = ref(false);
+    const limitedFunctionality = ref(false);
 
     const generateGuestListPDF = async (hotelId, reservationId, guestData) => {
         isGenerating.value = true;
@@ -53,8 +55,60 @@ export function useGuestStore() {
         }
     };
 
+    const generateGuestListExcel = async (date, hotelId) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, export functionality limited');
+                throw new Error('API not available, export functionality limited');
+            }
+
+            console.log('Attempting to generate guest list Excel for date:', date, 'hotelId:', hotelId);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/guests/guest-list/excel/${date}/${hotelId}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const excelBlob = await response.blob();
+
+            let filename = `宿泊者名簿_${date}.xlsx`;
+            const disposition = response.headers.get('content-disposition');
+            if (disposition && disposition.includes('attachment')) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            // Create a download link
+            const excelUrl = window.URL.createObjectURL(excelBlob);
+            const link = document.createElement('a');
+            link.href = excelUrl;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(excelUrl);
+
+            return { success: true };
+
+        } catch (error) {
+            console.error("宿泊者名簿エクスポートエラー:", error);
+            throw error;
+        }
+    };
+
     return {
         isGenerating,
-        generateGuestListPDF,        
+        generateGuestListPDF,
+        generateGuestListExcel,
     };
 }

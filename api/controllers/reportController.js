@@ -991,5 +991,5 @@ module.exports = {
   getSalesByPlan,
   getOccupationBreakdown,
   getChannelSummary,
-  getCheckInOutReport,
-};
+  getCheckInOutReport,  
+}

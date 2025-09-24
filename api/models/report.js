@@ -1602,5 +1602,5 @@ module.exports = {
   selectSalesByPlan,
   selectOccupationBreakdown,
   selectChannelSummary,
-  selectCheckInOutReport,
+  selectCheckInOutReport,  
 };
