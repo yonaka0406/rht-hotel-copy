@@ -228,10 +228,9 @@ const fields = ref({});
 const guests = ref([]);
 
 const initializeFields = (reservation) => {
-    //console.log('Component received props:', { 
-    //  reservation,
-    //  isGroup: props.isGroup 
-    //});    
+    console.log('--- Guest List Dialog Opened ---');
+    console.log('Received reservation prop:', JSON.parse(JSON.stringify(reservation)));
+    console.log('Is group:', props.isGroup);    
     
     if (!reservation) {
         fields.value = {};
@@ -308,6 +307,8 @@ const initializeFields = (reservation) => {
     } else {
         initializeSingleGuests(firstReservation);
     }
+    console.log('Processed guest data for rendering:', JSON.parse(JSON.stringify(guests.value)));
+    console.log('--- End of Guest List Dialog Data ---');
 };
 
 const initializeGroupGuests = (reservationArray) => {
@@ -400,7 +401,11 @@ const generatePDF = async () => {
     }
     guestData.smoking_preference = smokingOption.value;
     guestData.payment_option = paymentOption.value;
-    guestData.plan_names_list = selectedPlans.value.join(', ');
+    const planNames = selectedPlans.value.map(planKey => {
+        const plan = props.allPlans.find(p => p.plan_key === planKey);
+        return plan ? plan.name : planKey;
+    });
+    guestData.plan_names_list = planNames.join(', ');
     guestData.all_plan_names_list = props.allPlans.map(p => p.name).join(',');
     guestData.parking_lot_names_list = selectedParkingLots.value.join(', ');
     

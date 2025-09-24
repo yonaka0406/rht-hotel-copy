@@ -287,10 +287,17 @@ const selectReservation = async (requestId, id, hotel_id) => {
               'name_kanji', c.name_kanji,
               'email', c.email,
               'phone', c.phone,
-              'gender', c.gender
+              'gender', c.gender,
+              'address1', ad.street,
+              'address2', ad.city,
+              'postal_code', ad.postal_code
             )
           ) AS clients_json
         FROM reservation_clients rc JOIN clients c ON rc.client_id = c.id
+        LEFT JOIN (
+          SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
+          FROM addresses
+        ) ad ON ad.client_id = c.id AND ad.rn = 1
 			    JOIN reservation_details rd ON rd.id = rc.reservation_details_id AND rd.hotel_id = rc.hotel_id
 		    WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
         GROUP BY rc.reservation_details_id
@@ -441,11 +448,19 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
                 'name_kana', c.name_kana,
                 'name_kanji', c.name_kanji,
                 'email', c.email,
-                'phone', c.phone
+                'phone', c.phone,
+                'gender', c.gender,
+                'address1', ad.street,
+                'address2', ad.city,
+                'postal_code', ad.postal_code
               )
             ) AS clients_json
           FROM reservation_clients rc
           JOIN clients c ON rc.client_id = c.id
+          LEFT JOIN (
+            SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
+            FROM addresses
+          ) ad ON ad.client_id = c.id AND ad.rn = 1
           JOIN reservation_details rd 
             ON rd.id = rc.reservation_details_id AND rd.hotel_id = rc.hotel_id
           WHERE rd.id = $1 AND rd.hotel_id = $2
@@ -664,11 +679,18 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
                       'name_kanji', c.name_kanji,
                       'email', c.email,
                       'phone', c.phone,
-                      'gender', c.gender
+                      'gender', c.gender,
+                      'address1', ad.street,
+                      'address2', ad.city,
+                      'postal_code', ad.postal_code
                     )
                   ) AS clients_json
                 FROM reservation_clients rc
                 JOIN clients c ON rc.client_id = c.id
+                LEFT JOIN (
+                  SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
+                  FROM addresses
+                ) ad ON ad.client_id = c.id AND ad.rn = 1
                 GROUP BY rc.reservation_details_id
               ) rc ON rc.reservation_details_id = reservation_details.id
             LEFT JOIN plans_hotel 
