@@ -60,7 +60,31 @@ FROM node:22 AS production
 # Install runtime dependencies required by sharp
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libvips \
+    # Puppeteer dependencies
+    chromium \
+    fonts-liberation \
+    libasound2 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcairo2 \
+    libcups2 \
+    libgbm-dev \
+    libnss3 \
+    libpangocairo-1.0-0 \
+    libxss1 \
+    libgtk-3-0 \
+    libjpeg-dev \
+    libxcomposite1 \
+    libxrandr2 \
+    libxi6 \
+    libxtst6 \
+    gconf-service \
+    libgconf-2-4 \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
+
+# Tell Puppeteer to use the system-installed Chrome
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
