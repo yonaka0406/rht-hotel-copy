@@ -665,8 +665,9 @@
         TitleComponent, // Added TitleComponent
         MarkLineComponent, // Added MarkLineComponent
         MarkPointComponent, // Added MarkPointComponent
+        VisualMapComponent, // Added VisualMapComponent back
     } from 'echarts/components';
-    import { HeatmapChart, ScatterChart, LineChart, PieChart, SunburstChart, TreemapChart } from 'echarts/charts';
+    import { HeatmapChart, ScatterChart, BarChart, LineChart, PieChart, SunburstChart, TreemapChart } from 'echarts/charts';
     import { UniversalTransition } from 'echarts/features';
     import { CanvasRenderer } from 'echarts/renderers';
 
@@ -677,8 +678,10 @@
         TitleComponent, // Added TitleComponent
         MarkLineComponent, // Added MarkLineComponent
         MarkPointComponent, // Added MarkLineComponent
+        VisualMapComponent, // Added VisualMapComponent to echarts.use
         HeatmapChart,
         ScatterChart,
+        BarChart, // Added BarChart back
         LineChart,
         PieChart,
         SunburstChart,
@@ -1563,7 +1566,6 @@
         }, []);
 
         bookerTypeData.value = aggregatedData.filter(item => item.value > 0);
-        console.log('Booker Type Data:', bookerTypeData.value); // Added console log
         initBookerTypeChart();
     };
 
@@ -1656,10 +1658,6 @@
         averageLengthOfStayData.value = rawDataForScatter; // Assign raw data directly
         averageNights.value = reservationCount > 0 ? (totalNightsSum / reservationCount) : 0;
         averagePeople.value = reservationCount > 0 ? (totalPeopleSum / reservationCount) : 0;
-
-        console.log('Raw Data for Scatter (Nights x People):', rawDataForScatter);
-        console.log('Average Nights:', averageNights.value);
-        console.log('Average People:', averagePeople.value);
 
         initAverageLengthOfStayChart();
     };
