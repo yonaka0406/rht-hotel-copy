@@ -10,7 +10,7 @@
                     <span>レポートをコピー</span>
                 </Button>
             </div>
-            <p class="mt-4 text-lg font-bold">{{ formattedDate }}</p>
+            <p class="mt-4 text-lg font-bold">{{ hotelName }} {{ formattedDate }}</p>
             <div class="mt-4 text-left w-full p-2">
                 <div class="hidden" ref="reportContentForCopy"><pre class="whitespace-pre-wrap">{{ plainTextReportContent }}</pre></div>
                 <div v-if="selectedView === '当日'">
