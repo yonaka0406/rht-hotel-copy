@@ -1479,6 +1479,78 @@ const selectChannelSummary = async (requestId, hotelIds, startDate, endDate) => 
     throw new Error('Database error');
   }
 };
+
+const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
+  const query = `
+    WITH checkin_data AS (
+        SELECT
+            r.check_in AS date,
+            COUNT(DISTINCT r.id) AS total_checkins,
+            SUM(CASE WHEN c.gender = 'male' THEN 1 ELSE 0 END) AS male_checkins,
+            SUM(CASE WHEN c.gender = 'female' THEN 1 ELSE 0 END) AS female_checkins,
+            SUM(CASE WHEN c.gender IS NULL OR c.gender = '' THEN 1 ELSE 0 END) AS unspecified_checkins
+        FROM
+            reservations r
+        JOIN
+            reservation_clients rc ON r.id = rc.reservation_id AND r.hotel_id = rc.hotel_id
+        JOIN
+            clients c ON rc.client_id = c.id
+        WHERE
+            r.hotel_id = $1
+            AND r.check_in BETWEEN $2 AND $3
+            AND r.status NOT IN ('cancelled', 'block', 'hold', 'provisory')
+        GROUP BY
+            r.check_in
+    ),
+    checkout_data AS (
+        SELECT
+            r.check_out AS date,
+            COUNT(DISTINCT r.id) AS total_checkouts,
+            SUM(CASE WHEN c.gender = 'male' THEN 1 ELSE 0 END) AS male_checkouts,
+            SUM(CASE WHEN c.gender = 'female' THEN 1 ELSE 0 END) AS female_checkouts,
+            SUM(CASE WHEN c.gender IS NULL OR c.gender = '' THEN 1 ELSE 0 END) AS unspecified_checkouts
+        FROM
+            reservations r
+        JOIN
+            reservation_clients rc ON r.id = rc.reservation_id AND r.hotel_id = rc.hotel_id
+        JOIN
+            clients c ON rc.client_id = c.id
+        WHERE
+            r.hotel_id = $1
+            AND r.check_out BETWEEN $2 AND $3
+            AND r.status NOT IN ('cancelled', 'block', 'hold', 'provisory')
+        GROUP BY
+            r.check_out
+    )
+    SELECT
+        COALESCE(ci.date, co.date) AS date,
+        COALESCE(ci.total_checkins, 0) AS total_checkins,
+        COALESCE(ci.male_checkins, 0) AS male_checkins,
+        COALESCE(ci.female_checkins, 0) AS female_checkins,
+        COALESCE(ci.unspecified_checkins, 0) AS unspecified_checkins,
+        COALESCE(co.total_checkouts, 0) AS total_checkouts,
+        COALESCE(co.male_checkouts, 0) AS male_checkouts,
+        COALESCE(co.female_checkouts, 0) AS female_checkouts,
+        COALESCE(co.unspecified_checkouts, 0) AS unspecified_checkouts
+    FROM
+        checkin_data ci
+    FULL OUTER JOIN
+        checkout_data co ON ci.date = co.date
+    ORDER BY
+        date;
+  `;
+  const values = [hotelId, startDate, endDate];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving check-in/out report data:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -1499,4 +1571,5 @@ module.exports = {
   selectSalesByPlan,
   selectOccupationBreakdown,
   selectChannelSummary,
+  selectCheckInOutReport,
 };

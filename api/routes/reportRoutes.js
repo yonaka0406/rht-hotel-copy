@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, 
     getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, 
-    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary } = require('../controllers/reportController');
+    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary, getCheckInOutReport } = require('../controllers/reportController');
 const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
 // Existing routes
@@ -29,5 +29,6 @@ router.get('/report/monthly-reservation-evolution/:hotel_id/:target_month', auth
 router.get('/report/sales-by-plan/:hid/:sdate/:edate', authMiddleware, getSalesByPlan);
 router.get('/report/occupation-breakdown/:hid/:sdate/:edate', authMiddleware, getOccupationBreakdown);
 router.post('/report/channel-summary', authMiddleware, getChannelSummary);
+router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, getCheckInOutReport);
 
 module.exports = router;

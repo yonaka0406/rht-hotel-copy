@@ -1,17 +1,20 @@
 <template>
     <Panel class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">        
         <template #header>
-            <div class="grid grid-cols-2">
-            <p class="text-lg font-bold dark:text-gray-100">ダッシュボード：</p>
-            <DatePicker v-model="selectedDate" 
-                :showIcon="true" 
-                iconDisplay="input" 
-                dateFormat="yy-mm-dd"
-                :selectOtherMonths="true"                 
-                fluid
-                required 
-                class="dark:bg-gray-800 dark:text-gray-100 rounded"
-            />
+            <div class="grid grid-cols-3 items-center w-full">
+                <p class="text-lg font-bold dark:text-gray-100">ダッシュボード</p>
+                <DatePicker v-model="selectedDate" 
+                    :showIcon="true" 
+                    iconDisplay="input" 
+                    dateFormat="yy-mm-dd"
+                    :selectOtherMonths="true"                 
+                    fluid
+                    required 
+                    class="dark:bg-gray-800 dark:text-gray-100 rounded"
+                />
+                <div class="flex justify-end w-full">
+                    <Button severity="help" @click="openHelpDialog">データを開く</Button>
+                </div>
             </div>        
         </template>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2">
@@ -115,6 +118,8 @@
                 :reservation_id="selectedReservationID"
             />
         </Drawer>
+
+        <DashboardDialog :visible="helpDialogVisible" @update:visible="helpDialogVisible = $event" :dashboardSelectedDate="selectedDate" :checkInOutReportData="checkInOutReportData" />
         
     </Panel>    
 </template>
@@ -125,16 +130,19 @@
     const router = useRouter();
 
     import ReservationEdit from './ReservationEdit.vue';
+    import DashboardDialog from './components/Dialogs/DashboardDialog.vue'; // Updated import path and component name
        
     import { Panel, Drawer, Skeleton } from 'primevue';
     import { DataTable, Column } from 'primevue';
     import { Select, AutoComplete, DatePicker, Button } from 'primevue';
 
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView } = useReportStore();
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchCheckInOutReport } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
+
+    const checkInOutReportData = ref(null);
 
     import * as echarts from 'echarts/core';
     import {
@@ -235,7 +243,7 @@
             },
             color: [
                 "#3498db",
-                "#5ecca5",
+                "#6be6c1",
                 "#626c91",
                 "#a0a7e6",
                 "#c4ebad",
@@ -297,9 +305,13 @@
         const tableLoading = ref(true);
         const drawerVisible = ref(false);
         const selectedReservationID = ref(null);
-        const hasReservation = ref(false);                
+        const hasReservation = ref(false);
+        const helpDialogVisible = ref(false); // Re-add helpDialogVisible
 
     // Helper function
+    const openHelpDialog = () => { // Re-add openHelpDialog
+        helpDialogVisible.value = true;
+    };
     const formatDate = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
             console.error("Invalid Date object:", date);
@@ -374,13 +386,7 @@
                 }
             });
             
-            nextTick(() => {
-                console.log('[Debug] barChartxAxis:', barChartxAxis.value);
-                console.log('[Debug] barChartyAxisBar (予約部屋数):', barChartyAxisBar.value);
-                console.log('[Debug] barChartyAxisLine (稼働率):', barChartyAxisLine.value);
-                console.log('[Debug] barChartyAxisMale (男性):', barChartyAxisMale.value);
-                console.log('[Debug] barChartyAxisFemale (女性):', barChartyAxisFemale.value);
-                console.log('[Debug] barChartyAxisUnspecified (未定):', barChartyAxisUnspecified.value);
+            nextTick(() => {                
                 barChartOption.value = generateBarChartOptions();
                 // console.log('barChartOption:',barChartOption.value);
             });                
@@ -837,6 +843,17 @@
             await fetchBarChartData();
             await fetchBarStackChartData();
             await fetchGaugeChartData();
+
+            // Fetch check-in/out report data
+            const reportStartDate = new Date(selectedDate.value);
+            const reportEndDate = new Date(selectedDate.value);
+            reportEndDate.setDate(reportEndDate.getDate() + 6); // For weekly view
+
+            checkInOutReportData.value = await fetchCheckInOutReport(
+                selectedHotelId.value,
+                formatDate(reportStartDate),
+                formatDate(reportEndDate)
+            );
 
             nextTick(() => { // Update chart after data changes
                 const myBarChart = echarts.getInstanceByDom(barChart.value); // Get existing instance

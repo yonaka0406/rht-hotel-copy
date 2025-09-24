@@ -609,6 +609,20 @@ export function useReportStore() {
         }
     };
 
+    const fetchCheckInOutReport = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/report/checkin-out/${hotelId}/${startDate}/${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch check-in/out report data:', error);
+            return [];
+        }
+    };
+
     return {
         reservationList,
         apiErrorCount,
@@ -632,5 +646,6 @@ export function useReportStore() {
         fetchBookingSourceBreakdown,
         fetchPaymentTimingBreakdown,
         fetchChannelSummary,
+        fetchCheckInOutReport,
     }
 }
