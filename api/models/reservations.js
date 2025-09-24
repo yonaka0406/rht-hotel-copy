@@ -663,7 +663,8 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
                       'name_kana', c.name_kana,
                       'name_kanji', c.name_kanji,
                       'email', c.email,
-                      'phone', c.phone
+                      'phone', c.phone,
+                      'gender', c.gender
                     )
                   ) AS clients_json
                 FROM reservation_clients rc

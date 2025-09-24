@@ -106,9 +106,20 @@
                         <div v-else>
                         <Avatar icon="pi pi-user" size="small" class="mr-2"/>
                         </div>
-                        <p class="mb-2">
-                          {{ getClientName(room) }}                    
-                        </p>                        
+                        <div class="flex flex-wrap gap-1 mb-2">
+                          <div v-for="client in getClientName(room)" :key="client.name" class="flex items-center">
+                            <span v-if="client.gender === 'male'" class="mr-1 text-blue-500">♂</span>
+                            <span v-else-if="client.gender === 'female'" class="mr-1 text-pink-500">♀</span>
+                            <Button 
+                                    :label="client.name" 
+                                    :severity="client.isBooker ? 'info' : 'secondary'" 
+                                    size="small" 
+                                    :rounded="true"
+                                    :text="true"
+                                    :outlined="true"
+                                    v-tooltip.top="client.isBooker ? '予約者' : '宿泊者'" />
+                          </div>
+                        </div>                        
                       </div>
                       <p v-if="room.payment_timing === 'on-site'" class="mb-2 text-emerald-500"><i class="pi pi-wallet mr-1"></i>{{ paymentTimingText(room.payment_timing) }}</p>                      
                       <div v-else class="mb-2"></div>                      
@@ -326,8 +337,6 @@
 
   // Computed
   const roomGroups = computed(() => {
-    // console.log('[RoomIndicator] Recalculating room groups...');
-    // console.log('[RoomIndicator] Reserved rooms data:', reservedRoomsDayView.value);
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
       console.error("Invalid selectedDate.value:", selectedDate.value);
@@ -366,20 +375,6 @@
         }
         return acc;
       }, []);
-
-    if (blockedRooms.length > 0) {
-      // console.group('Blocked Rooms - With Adjusted Dates');
-      // console.table(blockedRooms.map(room => ({
-      //   room_id: room.room_id,
-      //   room_number: room.room_number,
-      //   reservation_id: room.id,
-      //   original_check_in: room.check_in,
-      //   original_check_out: room.check_out,
-      //   adjusted_check_out: new Date(room.check_out).toISOString().split('T')[0],
-      //   block_reason: room.client_name
-      // })));
-      // console.groupEnd();
-    }
 
     // Create categorization with priority (no duplicates)
     // Priority: Check-out > Check-in > Occupied
@@ -461,50 +456,6 @@
       !unavailableRoomIds.has(room.room_id)
     ) || [];
 
-  
-    // console.group('Room Groups Debug');
-    // console.log('Check-in Today:', categorizedRooms.checkIn.map(r => ({
-    //   room_id: r.room_id,
-    //   room_number: r.room_number,
-    //   reservation_id: r.id,
-    //   status: r.status,
-    //   payment_timing: r.payment_timing
-    // })));
-    
-    // console.log('Check-out Today:', categorizedRooms.checkOut.map(r => ({
-    //   room_id: r.room_id,
-    //   room_number: r.room_number,
-    //   reservation_id: r.id,
-    //   status: r.status,
-    //   payment_timing: r.payment_timing
-    // })));
-    
-    // console.log('Occupied:', categorizedRooms.occupied.length);
-    // console.log('Free Rooms:', freeRooms.length);
-    // console.log('Blocked Rooms:', blockedRooms.length);
-    // console.groupEnd();
-  
-    // --- Start Debug Block for Duplicate Keys ---
-    const groupsForDebug = [
-      { title: '本日チェックイン', rooms: categorizedRooms.checkIn },
-      { title: '本日チェックアウト', rooms: categorizedRooms.checkOut },
-      { title: '滞在', rooms: categorizedRooms.occupied },
-      { title: '空室', rooms: freeRooms },
-      { title: '部屋ブロック', rooms: blockedRooms },
-    ];
-
-    groupsForDebug.forEach(group => {
-      const seenKeys = new Set();
-      group.rooms.forEach(room => {
-        const key = `${room.room_id}-${room.id || 'no-reservation'}`;
-        if (seenKeys.has(key)) {
-          // console.warn(`[RoomIndicator] Duplicate key detected in group "${group.title}": ${key}`, room);
-        }
-        seenKeys.add(key);
-      });
-    });
-    // --- End Debug Block for Duplicate Keys ---
-
     return [
       { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
       { title: '本日チェックアウト', rooms: categorizedRooms.checkOut, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
@@ -557,53 +508,13 @@
     ];
   });
 
-  const getRoomCardClasses = (room, groupTitle) => {
-    const baseClasses = [
-      'p-2', 'rounded', 'outline-zinc-500/50', 'dark:outline-gray-400/50', 
-      'outline-dashed', 'relative' // Added relative for absolute positioned indicators
-    ];
-
-    // Determine background color based on group and status
-    if (groupTitle === '本日チェックアウト' && room.status === 'checked_out') {
-      // Already checked out - completed status
-      baseClasses.push('bg-green-200', 'dark:bg-green-800');
-    } else if (groupTitle === '本日チェックイン' && (room.status === 'checked_in' || room.status === 'checked_out')) {
-      // Already checked in or completed - completed status
-      baseClasses.push('bg-blue-200', 'dark:bg-blue-800');
-    } else {
-      // Default background for pending/incomplete statuses
-      baseClasses.push('bg-white', 'dark:bg-gray-600');
-    }
-
-    return baseClasses.join(' ');
-  };
-
-  const getStatusIndicator = (room, groupTitle) => {
-    if (groupTitle === '本日チェックアウト' && room.status === 'checked_out') {
-      return {
-        show: true,
-        text: '完了',
-        classes: 'absolute top-1 right-1 text-xs bg-green-500 text-white px-2 py-1 rounded'
-      };
-    } else if (groupTitle === '本日チェックイン' && (room.status === 'checked_in' || room.status === 'checked_out')) {
-      return {
-        show: true,
-        text: '完了',
-        classes: 'absolute top-1 right-1 text-xs bg-blue-500 text-white px-2 py-1 rounded'
-      };
-    }
-    return { show: false };
-  };
-  
   const openNewReservation = (room) => {
-    // console.log('[openNewReservation] Using selected date:', selectedDate.value);
     selectedRoomID.value = room.room_id;
     hasReservation.value = false;
     drawerVisible.value = true;
   };
   
   const openEditReservation = (room) => {        
-    // console.log('[openEditReservation] Current selectedDate:', selectedDate.value);
     selectedReservationID.value = room.id;
     selectedRoomID.value = room.room_id;        
     hasReservation.value = true;
@@ -625,9 +536,6 @@
   };
 
   const getClientName = (room) => {
-    // console.log('getClientName - Full room data:', JSON.parse(JSON.stringify(room)));
-  
-    // Parse clients from clients_json if it exists
     let clients = [];
     try {
       if (room?.clients_json) {
@@ -636,24 +544,21 @@
           : room.clients_json;
       }
     } catch (e) {
-      // console.error('Error parsing clients_json:', e);
+      console.error('Error parsing clients_json:', e);
     }
-  
-    // console.log('Parsed clients:', clients);
           
     const hasClients = Array.isArray(clients) && clients.length > 0;
   
     if (hasClients) {
-      const client = clients[0];
-      const name = client.name_kanji || client.name_kana || client.name || room.client_name;
-      // console.log('Using client name from clients_json:', name);
-      return name;
+      return clients.map((client, index) => ({
+        name: client.name_kanji || client.name_kana || client.name,
+        isBooker: index === 0, // First client is the booker
+        gender: client.gender // Assuming client object has a gender property
+      })).filter(client => client.name);
     }
   
-    // Fallback to client_name or default
     const fallbackName = room?.client_name || 'ゲスト';
-    // console.log('Using fallback name:', fallbackName);
-    return fallbackName;
+    return [{ name: fallbackName, isBooker: true, gender: null }];
   };
 
   const handleDrawerClose = async () => {
@@ -671,18 +576,9 @@
   };
   
   const planSummary = computed(() => {
-    const roomNumberToDebug = '103';
-    // console.log(`[RoomIndicator] Calculating plan summary for selected date: ${formatDate(selectedDate.value)}`);
-    
     const roomPlans = {};
     const reservations = reservedRoomsDayView.value?.filter(room => room.cancelled === null && room.status !== 'cancelled') || [];
     const selectedDateStr = formatDate(selectedDate.value);
-    
-    // Log only room 103 data
-    const roomToDebug = reservations.filter(r => r.room_number === roomNumberToDebug);
-    if (roomToDebug.length > 0) {
-      // console.log(`[RoomIndicator] ${roomNumberToDebug} raw data:`, JSON.parse(JSON.stringify(roomToDebug)));
-    }
     
     // Process each reservation
     reservations.forEach(reservation => {
@@ -690,19 +586,7 @@
       
       const roomNumber = reservation.room_number;
       if (!roomNumber) {
-        // console.error('[RoomIndicator] Missing room number for reservation:', reservation);
         return;
-      }
-      
-      // Only log for room 103
-      const isDebugRoom = roomNumber === roomNumberToDebug;
-      if (isDebugRoom) {
-        // console.log(`[RoomIndicator] Processing ${roomNumber} reservation:`, {
-        //   id: reservation.id,
-        //   check_in: reservation.check_in,
-        //   check_out: reservation.check_out,
-        //   details: reservation.details
-        // });
       }
       
       // Only process reservations that are relevant for the selected date
@@ -718,9 +602,6 @@
       const isActiveDuringSelectedDate = checkInDate <= selectedDateObj && selectedDateObj < checkOutDate;
       
       if (!isCheckingInToday && !isActiveDuringSelectedDate) {
-        if (isDebugRoom) {
-          // console.log(`[RoomIndicator] Skipping reservation ${reservation.id} - not relevant for selected date`);
-        }
         return; // Skip this reservation
       }
       
@@ -731,15 +612,6 @@
       // Process each day's plan in the reservation, but only count plans for the selected date
       if (reservation.details?.length) {
         reservation.details.forEach(detail => {
-          if (isDebugRoom) {
-            // console.log(`[RoomIndicator] ${roomNumber} detail:`, {
-            //   date: detail.date,
-            //   plan_name: detail.plan_name,
-            //   plan_color: detail.plan_color,
-            //   isSelectedDate: detail.date === selectedDateStr
-            // });
-          }
-          
           // Count all plan details for non-checkout reservations
           const planName = detail.plan_name || '未設定';
           const planColor = detail.plan_color || '#CCCCCC';
@@ -758,31 +630,15 @@
       }
     });
     
-    // Log final plan summary for the debug room
-    if (roomPlans[roomNumberToDebug]) {
-      // console.log(`[RoomIndicator] Final plan summary for ${roomNumberToDebug}:`, 
-      //   Object.keys(roomPlans[roomNumberToDebug]).map(planName => ({
-      //     planName,
-      //     count: roomPlans[roomNumberToDebug][planName].count,
-      //     dates: roomPlans[roomNumberToDebug][planName].details.map(d => d.date)
-      //   }))
-      // );
-    }
-    
     return roomPlans;
   });
 
   const getPlanDaysTooltip = (details, planName) => {
-    // console.log(`[RoomIndicator] Getting plan days tooltip for plan: ${planName}`);
-    // console.log(`[RoomIndicator] Details for ${planName}:`, details);
-    
     if (!details || !details.length) {
-      // console.log('[RoomIndicator] No details available for this plan');
       return null;
     }
 
     const planDetails = details.filter(detail => detail.plan_name === planName);
-    // console.log(`[RoomIndicator] Found ${planDetails.length} matching details for plan ${planName}`);
     
     // Define day order (0 = Sunday, 1 = Monday, etc.)
     const dayOrder = { '日': 7, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
@@ -808,67 +664,34 @@
   onMounted(async () => {
     
     isLoading.value = true;
-    // console.log('[RoomIndicator] onMounted: Initializing component.');
 
     // Initialize selectedDate from URL parameter or default to today
     const routeDate = router.currentRoute.value.params.date;
     if (routeDate) {
       selectedDate.value = new Date(routeDate);
-      // console.log('[RoomIndicator] onMounted: Initial selectedDate from URL:', formatDate(selectedDate.value));
     } else {
       selectedDate.value = new Date();
       // If no date in URL, update URL to today's date
       router.replace({ params: { date: formatDate(selectedDate.value) } });
-      // console.log('[RoomIndicator] onMounted: Initial selectedDate defaulted to today:', formatDate(selectedDate.value));
     }
-
-    // console.log('[RoomIndicator] onMounted: Initial selectedHotelId:', selectedHotelId.value);
 
     // Establish Socket.IO connection
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
-    // Add debounce utility function
-    const debounce = (func, wait) => {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
-    };
-
-    // Add debounced fetch function
-    const debouncedFetchReservations = debounce(async () => {
-      if (!isUpdating.value) {
-        // console.log('[RoomIndicator] debouncedFetchReservations: Fetching reservations due to socket update.');
-        await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-        // console.log('[RoomIndicator] debouncedFetchReservations: reservedRoomsDayView after socket update:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
-      }
-    }, 1000); // 1s debounce time
-
     socket.value.on('connect', () => {
-      // console.log('Connected to server');
     });
     socket.value.on('connect_error', (err) => {
-      // console.error('Socket connection error:', err);
     });
     socket.value.on('connect_timeout', () => {
-      // console.error('Socket connection timeout');
     });
     
     socket.value.on('tableUpdate', async (data) => {
-      // console.log('[RoomIndicator] Socket tableUpdate received:', data);
-      // Use the debounced function instead of direct fetch
-      debouncedFetchReservations();
+      await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
     });
 
     await fetchHotels();
     await fetchHotel();
     await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-    // console.log('[RoomIndicator] onMounted: reservedRoomsDayView after initial fetch:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
     
     isLoading.value = false;        
     
@@ -877,7 +700,6 @@
   onUnmounted(() => {
     // Close the Socket.IO connection when the component is unmounted
     if (socket.value) {
-      // console.log('Disconnected from the server.');
       socket.value.disconnect();
     }
   });
@@ -885,34 +707,22 @@
   // Watch      
   watch(selectedHotelId, async (newValue, oldValue) => {            
     try {
-      // console.log('[RoomIndicator] Watcher: selectedHotelId changed:', { oldValue, newValue });
       if (newValue !== oldValue) {
         selectedDate.value = today;
-        // console.log('[RoomIndicator] Watcher: Resetting selectedDate to today:', formatDate(selectedDate.value));
         await fetchHotel();
-        // console.log('[RoomIndicator] Watcher: Fetching reservations for new hotelId and today\'s date.');
         await fetchReservationsToday(selectedHotelId.value, formatDate(today));
-        // console.log('[RoomIndicator] Watcher: reservedRoomsDayView after hotelId change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
       }
     } catch (error) {
-      console.error('[RoomIndicator] Error in selectedHotelId watcher:', error);
+      console.error('Error in selectedHotelId watcher:', error);
     }
   });
   
   watch(selectedDate, async (newValue, oldValue) => {
-    // console.log('[RoomIndicator] Watcher: selectedDate changed:', {
-    //   oldValue: oldValue ? formatDate(oldValue) : 'undefined',
-    //   newValue: newValue ? formatDate(newValue) : 'undefined'
-    // });
     if (newValue && oldValue && formatDate(newValue) !== formatDate(oldValue)) { // Compare formatted dates to avoid unnecessary fetches for same date object but different instances
-      // console.log('[RoomIndicator] Watcher: selectedDate is different. Fetching reservations for date:', formatDate(selectedDate.value));
       await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-      // console.log('[RoomIndicator] Watcher: reservedRoomsDayView after selectedDate change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
       
       // Update URL parameter
       router.push({ params: { date: formatDate(selectedDate.value) } });
-    } else {
-      // console.log('[RoomIndicator] Watcher: selectedDate changed but formatted date is the same or invalid. No fetch triggered.');
     }
   }, { deep: true });
 
