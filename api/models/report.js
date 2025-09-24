@@ -188,30 +188,29 @@ const selectCountReservationDetailsAddons = async (requestId, hotelId, dateStart
   const pool = getPool(requestId);
   const query = `
     SELECT 
-      reservation_details.date
-      ,COALESCE(reservation_addons.addons_global_id::TEXT, '') || 'h' || COALESCE(reservation_addons.addons_hotel_id::TEXT, '') AS key
-      ,reservation_addons.addon_name
-      ,SUM(reservation_addons.quantity) AS quantity
+      rd.date
+      ,COALESCE(ra.addons_global_id::TEXT, '') || 'h' || COALESCE(ra.addons_hotel_id::TEXT, '') AS key
+      ,ra.addon_name
+      ,COALESCE(ah.addon_type, ag.addon_type) AS addon_type
+      ,SUM(ra.quantity) AS quantity
     FROM  
-      reservations
-      ,reservation_details
-      ,reservation_addons
+      reservations res
+      JOIN reservation_details rd ON res.hotel_id = rd.hotel_id AND res.id = rd.reservation_id
+      JOIN reservation_addons ra ON rd.hotel_id = ra.hotel_id AND rd.id = ra.reservation_detail_id
+      LEFT JOIN addons_global ag ON ra.addons_global_id = ag.id
+      LEFT JOIN addons_hotel ah ON ra.hotel_id = ah.hotel_id AND ra.addons_hotel_id = ah.id
     WHERE
-      reservation_details.hotel_id = $1
-      AND reservation_details.date BETWEEN $2 AND $3
-      AND reservation_details.cancelled IS NULL
-      AND reservations.type <> 'employee'
-      AND reservations.status NOT IN ('hold', 'block')
-      AND reservation_details.reservation_id = reservations.id
-      AND reservation_details.hotel_id = reservations.hotel_id
-      AND reservation_details.hotel_id = reservation_addons.hotel_id
-      AND reservation_details.id = reservation_addons.reservation_detail_id
+      rd.hotel_id = $1
+      AND rd.date BETWEEN $2 AND $3
+      AND rd.cancelled IS NULL
+      AND res.type <> 'employee'
+      AND res.status NOT IN ('hold', 'block')
     GROUP BY
-      reservation_details.date
-      ,reservation_addons.addons_global_id
-      ,reservation_addons.addons_hotel_id
-      ,reservation_addons.addon_name
-      
+      rd.date
+      ,ra.addons_global_id
+      ,ra.addons_hotel_id
+      ,ra.addon_name
+      ,ah.addon_type, ag.addon_type
     ORDER BY 1, 2
   `;
   const values = [hotelId, dateStart, dateEnd]
@@ -358,7 +357,8 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
                     'name_kana', c.name_kana,
                     'name_kanji', c.name_kanji,
                     'email', c.email,
-                    'phone', c.phone
+                    'phone', c.phone,
+                    'gender', c.gender
                   )
                 ) AS clients_json
               FROM 
@@ -566,17 +566,17 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
           (
             SELECT 
               rc.reservation_id,
-              JSON_AGG(
-                JSON_BUILD_OBJECT(
-                  'client_id', rc.client_id,
-                  'name', c.name,
-                  'name_kana', c.name_kana,
-                  'name_kanji', c.name_kanji,
-                  'email', c.email,
-                  'phone', c.phone
-                )
-              ) AS clients_json
-            FROM 
+                              JSON_AGG(
+                                JSON_BUILD_OBJECT(
+                                  'client_id', rc.client_id,
+                                  'name', c.name,
+                                  'name_kana', c.name_kana,
+                                  'name_kanji', c.name_kanji,
+                                  'email', c.email,
+                                  'phone', c.phone,
+                                  'gender', c.gender
+                                )
+                              ) AS clients_json            FROM 
               (SELECT DISTINCT reservation_id, client_id 
                  FROM reservation_clients rc 
                  JOIN reservation_details rd ON rc.reservation_details_id = rd.id) rc
