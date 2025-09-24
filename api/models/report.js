@@ -76,7 +76,9 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
                 END, 0
             ) AS net_plan_price,
             -- Calculate net addon price
-            COALESCE(ra.net_price_sum, 0) AS net_addon_price
+            COALESCE(ra.net_price_sum, 0) AS net_addon_price,
+            COALESCE(gender_counts.male_count, 0) AS male_count,
+            COALESCE(gender_counts.female_count, 0) AS female_count
         FROM
             reservations res
 		    JOIN
@@ -105,6 +107,21 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
             GROUP BY
                 hotel_id, reservation_detail_id
         ) ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+        LEFT JOIN (
+            -- Count male, female, and unspecified clients for each reservation_detail
+            SELECT
+                rc.hotel_id,
+                rc.reservation_details_id,
+                COUNT(CASE WHEN c.gender = 'male' THEN 1 ELSE NULL END) AS male_count,
+                COUNT(CASE WHEN c.gender = 'female' THEN 1 ELSE NULL END) AS female_count
+            FROM
+                reservation_clients rc
+            JOIN
+                clients c ON rc.client_id = c.id
+            WHERE rc.hotel_id = $1
+            GROUP BY
+                rc.hotel_id, rc.reservation_details_id
+        ) gender_counts ON rd.id = gender_counts.reservation_details_id AND rd.hotel_id = gender_counts.hotel_id
         WHERE
             rd.billable = TRUE 
             AND rd.hotel_id = $1 AND rd.date BETWEEN $2 AND $3
@@ -119,6 +136,9 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       rt.total_rooms_real,
       COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.reservation_detail_id END) AS room_count, -- Adjusted room_count
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.number_of_people END) AS people_sum, -- Adjusted people_sum      
+      SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.male_count END) AS male_count,
+      SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.female_count END) AS female_count,
+      (SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.number_of_people END) - SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.male_count END) - SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.female_count END)) AS unspecified_count,
       SUM(rdn.net_plan_price + rdn.net_addon_price) AS price -- This will be the pre-tax total revenue
     FROM room_total rt
     LEFT JOIN reservation_details_net_price rdn

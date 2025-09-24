@@ -171,7 +171,10 @@
         const barChartxAxis = ref([]);
         const barChartyAxisMax = ref([]);
         const barChartyAxisBar = ref([0, 0, 0, 0, 0, 0, 0]);
-        const barChartyAxisLine = ref([0, 0, 0, 0, 0, 0, 0]);         
+        const barChartyAxisLine = ref([0, 0, 0, 0, 0, 0, 0]);
+        const barChartyAxisMale = ref([0, 0, 0, 0, 0, 0, 0]);
+        const barChartyAxisFemale = ref([0, 0, 0, 0, 0, 0, 0]);
+        const barChartyAxisUnspecified = ref([0, 0, 0, 0, 0, 0, 0]);         
 
         const barChart = ref(null);
         const barChartOption = ref(null);
@@ -230,6 +233,14 @@
             title: {
                 text: '稼働率',                
             },
+            color: [
+                "#3498db",
+                "#5ecca5",
+                "#626c91",
+                "#a0a7e6",
+                "#c4ebad",
+                "#7fb3d5"
+            ],
             series: [
                 {
                 type: 'gauge',
@@ -338,6 +349,9 @@
             barChartxAxis.value = dateArray;
             barChartyAxisBar.value = new Array(dateArray.length).fill(0);
             barChartyAxisLine.value = new Array(dateArray.length).fill(0);
+            barChartyAxisMale.value = new Array(dateArray.length).fill(0);
+            barChartyAxisFemale.value = new Array(dateArray.length).fill(0);
+            barChartyAxisUnspecified.value = new Array(dateArray.length).fill(0);
             
             if(!countData){                    
                 barChartyAxisMax.value = [];
@@ -354,26 +368,40 @@
                 if (index !== -1) {
                     barChartyAxisBar.value[index] = item.room_count;
                     barChartyAxisLine.value[index] = item.total_rooms ? Math.round(item.room_count / item.total_rooms * 10000) / 100 : 0;
+                    barChartyAxisMale.value[index] = item.male_count;
+                    barChartyAxisFemale.value[index] = item.female_count;
+                    barChartyAxisUnspecified.value[index] = item.unspecified_count;
                 }
             });
             
-            nextTick(() => {                    
+            nextTick(() => {
+                console.log('[Debug] barChartxAxis:', barChartxAxis.value);
+                console.log('[Debug] barChartyAxisBar (予約部屋数):', barChartyAxisBar.value);
+                console.log('[Debug] barChartyAxisLine (稼働率):', barChartyAxisLine.value);
+                console.log('[Debug] barChartyAxisMale (男性):', barChartyAxisMale.value);
+                console.log('[Debug] barChartyAxisFemale (女性):', barChartyAxisFemale.value);
+                console.log('[Debug] barChartyAxisUnspecified (未定):', barChartyAxisUnspecified.value);
                 barChartOption.value = generateBarChartOptions();
                 // console.log('barChartOption:',barChartOption.value);
             });                
         };
         const generateBarChartOptions = () => ({
-            title: {
-                text: '予約数ｘ稼働率',                
-            },
             tooltip: {
                 trigger: 'axis',
                 axisPointer: {
                     type: 'shadow'
                 }
             },
+            color: [
+                "#516b91",
+                "#59c4e6",
+                "#edafda",
+                "#93b7e3",
+                "#a5e7f0",
+                "#cbb0e3"
+            ],
             legend: {
-                data: ['予約', '稼働率'],
+                data: ['予約部屋数', '稼働率', '男性', '女性', '未定'],
                 bottom: '0%'
             },
             grid: {
@@ -397,12 +425,12 @@
             yAxis: [
                 {
                     type: 'value',
-                    name: '予約',
+                    name: '数',
                     min: 0,
                     max: barChartyAxisMax,
                     interval: 10,
                     axisLabel: {
-                        formatter: '{value} 室'
+                        formatter: '{value}'
                     }
                 },
                 {
@@ -416,9 +444,9 @@
                     }
                 }
             ],
-            series: [            
+            series: [
                 {
-                    name: '予約',
+                    name: '予約部屋数',
                     type: 'bar',
                     tooltip: {
                         valueFormatter: function (value) {
@@ -437,10 +465,54 @@
                         }
                     },
                     data: barChartyAxisLine.value,
+                },
+                {
+                    name: '男性',
+                    type: 'bar',
+                    yAxisIndex: 0,
+                    stack: '宿泊者数',
+                    itemStyle: {
+                        color: '#93b7e3'
+                    },
+                    tooltip: {
+                        valueFormatter: function (value) {
+                            return value + ' 人';
+                        }
+                    },
+                    data: barChartyAxisMale.value,
+                },
+                {
+                    name: '女性',
+                    type: 'bar',
+                    yAxisIndex: 0,
+                    stack: '宿泊者数',
+                    itemStyle: {
+                        color: '#edafda'
+                    },
+                    tooltip: {
+                        valueFormatter: function (value) {
+                            return value + ' 人';
+                        }
+                    },
+                    data: barChartyAxisFemale.value,
+                },
+                {
+                    name: '未定',
+                    type: 'bar',
+                    yAxisIndex: 0,
+                    stack: '宿泊者数',
+                    itemStyle: {
+                        color: '#cccccc'
+                    },
+                    tooltip: {
+                        valueFormatter: function (value) {
+                            return value + ' 人';
+                        }
+                    },
+                    data: barChartyAxisUnspecified.value,
                 }
             ]
-        });
-                const fetchBarStackChartData = async () => {  
+        });                const fetchBarStackChartData = async () => {  
                     barStackChartData.value = {
                         series: [],
                         xAxis: []
@@ -451,7 +523,7 @@
                     };
                     const countData = await fetchCountReservationDetails(selectedHotelId.value, startDate.value, endDate.value);
         
-                    console.log('[Dashboard] fetchCountReservationDetails', countData);
+                    //console.log('[Dashboard] fetchCountReservationDetails', countData);
         
                     // Generate an array of dates from startDate to endDate (full fetched range)
                     const dateArray = [];
@@ -648,6 +720,23 @@
                             type: 'shadow'
                         }
                     },
+                    color: [
+                        "#27727b",                        
+                        "#fcce10",
+                        "#e87c25",
+                        "#b5c334",
+                        "#fe8463",
+                        "#9bca63",
+                        "#fad860",
+                        "#f3a43b",
+                        "#60c0dd",
+                        "#d7504b",
+                        "#c6e579",
+                        "#f4e001",
+                        "#f0805a",                        
+                        "#26c0c0",
+                        "#c1232b"
+                    ],
                     legend: {
                         bottom: '0%'
                     },
