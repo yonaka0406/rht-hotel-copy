@@ -282,21 +282,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Any related styling for rate displays
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
-#### Feature Request #55: Display Booker and Client in Room Indicator
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Enhance the room indicator to show both the booker's name and the client's name who is staying in the room
-  - This will help staff quickly identify both who made the booking and who is actually staying in the room
-- **Requirements**:
-  - Update the room indicator UI to accommodate both names
-  - Consider using a format like "Booker: [Name] | Guest: [Name]" or similar
-  - Ensure the text remains readable in the available space
-  - Add tooltips for full names if truncated
-- **Affected Components**:
-  - Room indicator component(s) in the reservation/room management interface
-  - Any related styling for the room indicators
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-
 #### Feature Request #54: 団体用名簿 (Group Guest List) Export
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:

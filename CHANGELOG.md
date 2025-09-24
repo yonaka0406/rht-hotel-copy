@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Meal Report: Fixed date handling in meal count export to correctly include all meals for the selected date range and properly format dates in Japanese locale
-
 ---
 ## Future Releases
 
@@ -482,6 +480,15 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added Payment Timing reports to the Reporting module.
 - Bugfix: Fixed the meal count report summary date and the lunch serve date.
 - Bugfix: Fixed cases where it was not possible to add guests to the reservation.
+
+---
+
+## [1.1.17] - 2025-09-24
+
+- Bugfix: Fixed date handling in meal count export to correctly include all meals for the selected date range and properly format dates in Japanese locale.
+- Bugfix: Fixed count of available spots on new data load for the Parking Calendar.
+- Feature: Added Static Calendar page.
+- Feature: Added Booker and Guests to the Room Indicator with gender indicative.
 
 ---
 

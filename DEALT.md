@@ -2,10 +2,27 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### September 24, 2025
+
+#### Feature Request #55: Display Booker and Client in Room Indicator
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Enhance the room indicator to show both the booker's name and the client's name who is staying in the room
+  - This will help staff quickly identify both who made the booking and who is actually staying in the room
+- **Requirements**:
+  - Update the room indicator UI to accommodate both names
+  - Consider using a format like "Booker: [Name] | Guest: [Name]" or similar
+  - Ensure the text remains readable in the available space
+  - Add tooltips for full names if truncated
+- **Affected Components**:
+  - Room indicator component(s) in the reservation/room management interface
+  - Any related styling for the room indicators
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### September 19, 2025
 
 #### Bug #66: Unable to Add 宿泊者 (Guests) to Reservation
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
   - Users are unable to add 宿泊者 (guests) to an existing reservation
   - The "Add Guest" button/functionality is either not working or not visible
@@ -30,7 +47,7 @@ This document contains all fixed and closed issues that were previously tracked 
 ### September 17, 2025
 
 #### Bug #53: 宿泊者名簿 Should Use payment_timing Field for 現地決済
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
   - The 宿泊者名簿 (Guest List) dialog's 現地決済 (On-site Payment) field should be determined by the `payment_timing` field from the reservations table
   - Currently, the payment timing information is not being properly reflected in the guest list dialog
@@ -39,7 +56,7 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 
 #### Feature Request #59: 宿泊プラン別の稼働率・売上内訳 (Occupancy and Sales Breakdown by Plan)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
   - Add a detailed breakdown of occupancy rates and sales by different room plans
   - This will help in analyzing which plans are most profitable and popular
