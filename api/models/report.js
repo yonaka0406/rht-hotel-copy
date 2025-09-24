@@ -152,7 +152,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -197,7 +197,7 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -236,7 +236,7 @@ const selectCountReservationDetailsAddons = async (requestId, hotelId, dateStart
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -299,10 +299,10 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
   }
 };
 const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd, searchType = 'stay_period') => {
-    
+
   try {
-    const pool = getPool(requestId);    
-  
+    const pool = getPool(requestId);
+
     // Base query parts
     const selectClause = `
       SELECT
@@ -437,7 +437,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
 
     // Add date filtering based on search type
     let dateFilterClause = '';
-    switch(searchType) {
+    switch (searchType) {
       case 'check_in':
         dateFilterClause = `
           AND reservations.check_in >= $2::date 
@@ -464,9 +464,9 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
 
     const query = selectClause + dateFilterClause + orderClause;
     const values = [hotelId, dateStart, dateEnd];
-        
+
     const result = await pool.query(query, values);
-            
+
     return result.rows;
   } catch (err) {
     console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in selectReservationListView:`, {
@@ -488,7 +488,7 @@ const selectForecastData = async (requestId, hotelId, dateStart, dateEnd) => {
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -506,7 +506,7 @@ const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd) => {
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -656,7 +656,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -776,7 +776,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -785,7 +785,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
 };
 const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
-  
+
   const summaryQuery = `
     WITH all_meals AS (
       SELECT
@@ -873,7 +873,7 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
       pool.query(summaryQuery, values),
       pool.query(detailQuery, values)
     ]);
-    
+
     return {
       summary: summaryResult.rows,
       details: detailResult.rows
@@ -945,11 +945,11 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
   `;
   const values = [hotelId, startDate, endDate];
   try {
-      const result = await pool.query(query, values);           
-      return result.rows;
+    const result = await pool.query(query, values);
+    return result.rows;
   } catch (err) {
-      console.error('Error retrieving logs:', err);
-      throw new Error('Database error');
+    console.error('Error retrieving logs:', err);
+    throw new Error('Database error');
   }
 };
 const selectAllRoomTypesInventory = async (requestId, hotelId, startDate, endDate) => {
@@ -991,11 +991,11 @@ const selectAllRoomTypesInventory = async (requestId, hotelId, startDate, endDat
   `;
   const values = [hotelId, startDate, endDate];
   try {
-      const result = await pool.query(query, values);           
-      return result.rows;
+    const result = await pool.query(query, values);
+    return result.rows;
   } catch (err) {
-      console.error('Error retrieving inventory:', err);
-      throw new Error('Database error');
+    console.error('Error retrieving inventory:', err);
+    throw new Error('Database error');
   }
 };
 const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
@@ -1006,7 +1006,7 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
 
   const formatClientName = (name) => {
     if (!name) return null;
-    
+
     const replacements = {
       '株式会社': '㈱',
       '合同会社': '(同)',
@@ -1064,15 +1064,15 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
   `;
   const values = [hotelId, startDate, endDate];
   try {
-      const result = await pool.query(query, values);
-      // Apply client name formatting to each row
-      return result.rows.map(row => ({
-        ...row,
-        client_name: formatClientName(row.client_name)
-      }));
+    const result = await pool.query(query, values);
+    // Apply client name formatting to each row
+    return result.rows.map(row => ({
+      ...row,
+      client_name: formatClientName(row.client_name)
+    }));
   } catch (err) {
-      console.error('Error retrieving data:', err);
-      throw new Error('Database error');
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
   }
 };
 
@@ -1194,20 +1194,20 @@ const selectActiveReservationsChange = async (requestId, hotel_id, dateString) =
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     return { error: 'Invalid dateString format. Expected YYYY-MM-DD.' };
   }
-  
+
   const query = `
     SELECT * FROM get_room_inventory_comparison_for_date_range($1, $2);
   `;
   const values = [p_hotel_id, dateString];
   try {
-      const result = await pool.query(query, values);           
-      if (result.rows.length === 0) {
-        return { message: 'No inventory data found for the given parameters.', data: [] };
-      }
-      return result.rows;
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return { message: 'No inventory data found for the given parameters.', data: [] };
+    }
+    return result.rows;
   } catch (err) {
-      console.error('Error retrieving data from get_room_inventory_comparison_for_date_range:', err);
-      return { error: 'Database error occurred while fetching room inventory.' };
+    console.error('Error retrieving data from get_room_inventory_comparison_for_date_range:', err);
+    return { error: 'Database error occurred while fetching room inventory.' };
   }
 };
 
@@ -1281,14 +1281,14 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
   `;
   const values = [p_hotel_id, p_target_month_start_date];
   try {
-      const result = await pool.query(query, values);           
-      if (result.rows.length === 0) {
-        return []; 
-      }
-      return result.rows;
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return [];
+    }
+    return result.rows;
   } catch (err) {
-      console.error('Error retrieving data:', err);
-      throw new Error('Database error');
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
   }
 }
 
@@ -1483,62 +1483,93 @@ const selectChannelSummary = async (requestId, hotelIds, startDate, endDate) => 
 const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) => {
   const pool = getPool(requestId);
   const query = `
-    WITH checkin_data AS (
-        SELECT
-            r.check_in AS date,
-            COUNT(DISTINCT r.id) AS total_checkins,
-            SUM(CASE WHEN c.gender = 'male' THEN 1 ELSE 0 END) AS male_checkins,
-            SUM(CASE WHEN c.gender = 'female' THEN 1 ELSE 0 END) AS female_checkins,
-            SUM(CASE WHEN c.gender IS NULL OR c.gender = '' THEN 1 ELSE 0 END) AS unspecified_checkins
-        FROM
-            reservations r
-        JOIN
-            reservation_clients rc ON r.id = rc.reservation_id AND r.hotel_id = rc.hotel_id
-        JOIN
-            clients c ON rc.client_id = c.id
-        WHERE
-            r.hotel_id = $1
-            AND r.check_in BETWEEN $2 AND $3
-            AND r.status NOT IN ('cancelled', 'block', 'hold', 'provisory')
-        GROUP BY
-            r.check_in
+    WITH rd_join AS (
+      -- reservation_details rows within the date range, joined to their reservation
+      SELECT rd.*,
+            r.check_in,
+            r.check_out,
+            r.status AS reservation_status
+      FROM reservation_details rd
+      JOIN reservations r
+        ON rd.reservation_id = r.id
+      AND rd.hotel_id = r.hotel_id
+      WHERE rd.hotel_id = $1
+        AND rd.date BETWEEN $2 AND $3
+        AND rd.cancelled IS NULL
+        AND r.status NOT IN ('cancelled','block','hold','provisory')
     ),
-    checkout_data AS (
-        SELECT
-            r.check_out AS date,
-            COUNT(DISTINCT r.id) AS total_checkouts,
-            SUM(CASE WHEN c.gender = 'male' THEN 1 ELSE 0 END) AS male_checkouts,
-            SUM(CASE WHEN c.gender = 'female' THEN 1 ELSE 0 END) AS female_checkouts,
-            SUM(CASE WHEN c.gender IS NULL OR c.gender = '' THEN 1 ELSE 0 END) AS unspecified_checkouts
-        FROM
-            reservations r
-        JOIN
-            reservation_clients rc ON r.id = rc.reservation_id AND r.hotel_id = rc.hotel_id
-        JOIN
-            clients c ON rc.client_id = c.id
-        WHERE
-            r.hotel_id = $1
-            AND r.check_out BETWEEN $2 AND $3
-            AND r.status NOT IN ('cancelled', 'block', 'hold', 'provisory')
-        GROUP BY
-            r.check_out
+
+    -- per-reservation_detail counts of clients by gender (distinct client ids)
+    clients_per_detail AS (
+      SELECT
+        rdj.id AS reservation_detail_id,
+        rdj.date,
+        rdj.check_in,
+        rdj.check_out,
+        rdj.hotel_id,
+        COUNT(DISTINCT CASE WHEN c.gender = 'male'   THEN rc.client_id END)    AS male_per_detail,
+        COUNT(DISTINCT CASE WHEN c.gender = 'female' THEN rc.client_id END)    AS female_per_detail,
+        COUNT(DISTINCT CASE WHEN COALESCE(c.gender,'') = '' THEN rc.client_id END) AS unspecified_per_detail
+      FROM rd_join rdj
+      LEFT JOIN reservation_clients rc
+        ON rc.reservation_details_id = rdj.id
+      AND rc.hotel_id = rdj.hotel_id
+      LEFT JOIN clients c ON c.id = rc.client_id
+      GROUP BY rdj.id, rdj.date, rdj.check_in, rdj.check_out, rdj.hotel_id
+    ),
+
+    -- aggregate room / people counts per date (rooms are reservation_detail rows)
+    date_agg AS (
+      SELECT
+        rdj.date,
+        rdj.hotel_id,
+        SUM(CASE WHEN rdj.date = rdj.check_in THEN 1 ELSE 0 END)                           AS checkin_room_count,
+        SUM(CASE WHEN rdj.date = rdj.check_in THEN rdj.number_of_people ELSE 0 END)         AS total_checkins,
+        SUM(CASE WHEN rdj.date = (rdj.check_out - INTERVAL '1 day') THEN 1 ELSE 0 END)      AS checkout_room_count,
+        SUM(CASE WHEN rdj.date = (rdj.check_out - INTERVAL '1 day') THEN rdj.number_of_people ELSE 0 END) AS total_checkouts
+      FROM rd_join rdj
+      GROUP BY rdj.date, rdj.hotel_id
+    ),
+
+    -- aggregate gender counts for arrivals and departures (using clients_per_detail)
+    gender_agg AS (
+      SELECT
+        cpd.date,
+        cpd.hotel_id,
+        SUM(CASE WHEN cpd.date = cpd.check_in THEN cpd.male_per_detail ELSE 0 END)        AS male_checkins,
+        SUM(CASE WHEN cpd.date = cpd.check_in THEN cpd.female_per_detail ELSE 0 END)      AS female_checkins,
+        SUM(CASE WHEN cpd.date = cpd.check_in THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkins,
+        SUM(CASE WHEN cpd.date = (cpd.check_out - INTERVAL '1 day') THEN cpd.male_per_detail ELSE 0 END)        AS male_checkouts,
+        SUM(CASE WHEN cpd.date = (cpd.check_out - INTERVAL '1 day') THEN cpd.female_per_detail ELSE 0 END)      AS female_checkouts,
+        SUM(CASE WHEN cpd.date = (cpd.check_out - INTERVAL '1 day') THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkouts
+      FROM clients_per_detail cpd
+      GROUP BY cpd.date, cpd.hotel_id
     )
+
+    -- final join: one row per (date, hotel)
     SELECT
-        COALESCE(ci.date, co.date) AS date,
-        COALESCE(ci.total_checkins, 0) AS total_checkins,
-        COALESCE(ci.male_checkins, 0) AS male_checkins,
-        COALESCE(ci.female_checkins, 0) AS female_checkins,
-        COALESCE(ci.unspecified_checkins, 0) AS unspecified_checkins,
-        COALESCE(co.total_checkouts, 0) AS total_checkouts,
-        COALESCE(co.male_checkouts, 0) AS male_checkouts,
-        COALESCE(co.female_checkouts, 0) AS female_checkouts,
-        COALESCE(co.unspecified_checkouts, 0) AS unspecified_checkouts
-    FROM
-        checkin_data ci
-    FULL OUTER JOIN
-        checkout_data co ON ci.date = co.date
-    ORDER BY
-        date;
+      d.date,
+      h.name AS hotel_name,
+      COALESCE(da.total_checkins, 0)        AS total_checkins,
+      COALESCE(da.checkin_room_count, 0)    AS checkin_room_count,
+      COALESCE(ga.male_checkins, 0)         AS male_checkins,
+      COALESCE(ga.female_checkins, 0)       AS female_checkins,
+      COALESCE(ga.unspecified_checkins, 0)  AS unspecified_checkins,
+      COALESCE(da.total_checkouts, 0)       AS total_checkouts,
+      COALESCE(da.checkout_room_count, 0)   AS checkout_room_count,
+      COALESCE(ga.male_checkouts, 0)        AS male_checkouts,
+      COALESCE(ga.female_checkouts, 0)      AS female_checkouts,
+      COALESCE(ga.unspecified_checkouts, 0) AS unspecified_checkouts
+    FROM (
+      -- distinct list of dates (and hotel) that appear in reservation_details in the date range
+      SELECT DISTINCT date, hotel_id
+      FROM rd_join
+    ) d
+    LEFT JOIN date_agg da   ON d.date = da.date   AND d.hotel_id = da.hotel_id
+    LEFT JOIN gender_agg ga ON d.date = ga.date   AND d.hotel_id = ga.hotel_id
+    LEFT JOIN hotels h      ON d.hotel_id = h.id
+    ORDER BY d.date;
+
   `;
   const values = [hotelId, startDate, endDate];
 

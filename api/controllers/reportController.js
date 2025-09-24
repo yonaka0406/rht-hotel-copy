@@ -2,7 +2,7 @@ const { selectCountReservation, selectCountReservationDetailsPlans, selectCountR
   selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, 
   selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle, 
   selectActiveReservationsChange,
-  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary } = require('../models/report');
+  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport } = require('../models/report');
 const { authorize, appendDataToSheet, createSheet } = require('../utils/googleUtils');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");

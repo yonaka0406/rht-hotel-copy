@@ -489,6 +489,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Fixed count of available spots on new data load for the Parking Calendar.
 - Feature: Added Static Calendar page.
 - Feature: Added Booker and Guests to the Room Indicator with gender indicative.
+- Feature: Check-in/Out Statistics with Gender Breakdown to the Dashboard.
 
 ---
 

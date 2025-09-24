@@ -4,6 +4,47 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### September 24, 2025
 
+#### Feature Request #62: Check-in/Out Statistics with Gender Breakdown
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Add a report showing the number of clients checking in and out within a specified date range
+  - Include gender breakdown for both check-ins and check-outs
+  - Provide both numerical counts and percentage breakdowns
+  - **New**: Add a "Copy to Slack" button that formats the data in a clean, easy-to-read format for part-time staff
+- **Requirements**:
+  - Date range selector for filtering data
+  - Summary cards showing total check-ins and check-outs
+  - Gender breakdown (Male/Female/Other/Not Specified)
+  - Option to view data in table format
+  - Export functionality (CSV/Excel)
+  - **New**: "Copy to Slack" button that copies formatted text to clipboard
+  - **New**: Format should be clean and readable in Slack (use emojis, proper spacing)
+- **Data Points to Include**:
+  - Total check-ins/check-outs
+  - Gender distribution
+  - Daily breakdown within selected period
+  - Comparison metrics (e.g., vs previous period)
+- **Example Slack Output**:
+  ```
+  📊 *Check-in/Out Report for Sep 18, 2025*
+  
+  ✅ *Check-ins*: 12
+  👥 Gender: 5♂️ 6♀️ 
+  
+  🚪 *Check-outs*: 8
+  👥 Gender: 3♂️ 5♀️ 
+  
+  📅 *Daily Breakdown*
+  - Sep 18: 12 in, 8 out
+  - Sep 19: 15 in (forecast)
+  ```
+- **Affected Components**:
+  - Reports module
+  - Analytics dashboard
+  - Database queries for guest statistics
+  - New clipboard utility for Slack formatting
+- **Priority**: [ ] Low [ ] Medium [ ] High [x] Critical
+
 #### Feature Request #55: Display Booker and Client in Room Indicator
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:

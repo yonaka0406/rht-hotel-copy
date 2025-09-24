@@ -119,7 +119,7 @@
             />
         </Drawer>
 
-        <DashboardDialog :visible="helpDialogVisible" @update:visible="helpDialogVisible = $event" :dashboardSelectedDate="selectedDate" :checkInOutReportData="checkInOutReportData" />
+        <DashboardDialog :visible="helpDialogVisible" @update:visible="helpDialogVisible = $event" :dashboardSelectedDate="selectedDate" :checkInOutReportData="checkInOutReportData" :hotelName="selectedHotel?.name" :mealReportData="mealReportData" />
         
     </Panel>    
 </template>
@@ -139,7 +139,7 @@
     import { useReportStore } from '@/composables/useReportStore';
     const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchCheckInOutReport } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
+    const { selectedHotelId, fetchHotels, fetchHotel, selectedHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
 
     const checkInOutReportData = ref(null);
@@ -307,6 +307,7 @@
         const selectedReservationID = ref(null);
         const hasReservation = ref(false);
         const helpDialogVisible = ref(false); // Re-add helpDialogVisible
+        const mealReportData = ref(null);
 
     // Helper function
     const openHelpDialog = () => { // Re-add openHelpDialog
@@ -663,6 +664,35 @@
         
                     barStackChartData.value.series = planSeries;
                     barAddonChartData.value.series = [...otherAddonSeries, ...mealAddonSeries];
+
+                    // Process meal data for the report dialog
+                    const processedMealData = {};
+                    for (const dateStr in countData) {
+                        if (countData.hasOwnProperty(dateStr)) {
+                            const item = countData[dateStr];
+                            if (item.addons) {
+                                item.addons.forEach(addon => {
+                                    if (mealAddonTypes.includes(addon.addon_type)) {
+                                        let effectiveDate = new Date(dateStr);
+                                        if (addon.addon_type === 'lunch' || addon.addon_type === 'breakfast') {
+                                            effectiveDate.setDate(effectiveDate.getDate() + 1); // Bump to next day
+                                        }
+                                        const formattedEffectiveDate = formatDate(effectiveDate);
+
+                                        if (!processedMealData[formattedEffectiveDate]) {
+                                            processedMealData[formattedEffectiveDate] = {
+                                                breakfast: 0,
+                                                lunch: 0,
+                                                dinner: 0,
+                                            };
+                                        }
+                                        processedMealData[formattedEffectiveDate][addon.addon_type] += parseInt(addon.quantity) || 0;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    mealReportData.value = processedMealData;
                     
                     nextTick(() => {                    
                         barStackChartOption.value = generateBarStackChartOptions();
