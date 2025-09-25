@@ -4,14 +4,15 @@
       <div class="flex items-center w-full">
         <div class="flex-grow"></div> <!-- Left spacer -->
         <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">予定表</h2>
-        <div class="flex-grow flex justify-end"> <!-- Right spacer and button container -->
+        <div class="flex-grow flex justify-end"> <!-- Right spacer and button container -->          
           <Button
             v-if="checkInClientsCount > 0"
             label="宿泊者名簿を作成"
             icon="pi pi-file-excel"
             severity="info"
             @click="createGuestList"
-          />
+            hidden
+          />          
         </div>
       </div>
     </template>
