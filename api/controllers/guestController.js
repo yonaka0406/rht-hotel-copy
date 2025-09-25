@@ -294,114 +294,362 @@ const generateGuestList = async (req, res) => {
 };
 
 const getGuestListExcel = async (req, res) => {
-    const { date, hotelId } = req.params;
-    logger.debug(`[getGuestListExcel] Request received for date: ${date}, hotelId: ${hotelId}`);
+    const requestId = req.requestId;
+    const { date, hotelId } = req.params; // Now receiving date and hotelId from params
+    logger.debug(`[${requestId}] Starting getGuestListExcel. Params: date=${date}, hotelId=${hotelId}`);
 
     try {
-        const reservations = await selectCheckInReservationsForGuestList(req.requestId, hotelId, date);
-        logger.debug(`[getGuestListExcel] Data from model: ${JSON.stringify(reservations, null, 2)}`);
+        const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
+        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
-        if (!reservations || reservations.length === 0) {
-            return res.status(404).send("No check-in reservations found for the given date and hotel.");
+        if (!reservationsData || reservationsData.length === 0) {
+            logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
+            return res.status(404).json({ message: 'No reservations found for the given date and hotel.' });
         }
+        logger.debug(`[${requestId}] Found ${reservationsData.length} reservations.`);
 
         const workbook = new ExcelJS.Workbook();
-        const hotelName = reservations[0].hotel_name; // Assuming all reservations are for the same hotel
 
-        // Group reservations by room_number
-        const reservationsByRoom = reservations.reduce((acc, reservation) => {
-            const roomNumber = reservation.room_number || '未割り当て';
-            if (!acc[roomNumber]) {
-                acc[roomNumber] = [];
+        // Helper function for date formatting
+        const formatDateForGuestList = (dateString) => {
+            const date = new Date(dateString);
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+            const weekday = weekdays[date.getDay()];
+            return `${month} 月 ${day} 日 （ ${weekday} ）`;
+        };
+
+        // Define a base style for grid items
+        const gridItemStyle = {
+            border: {
+                top: { style: 'thin', color: { argb: 'FFA9A9A9' } },
+                left: { style: 'thin', color: { argb: 'FFA9A9A9' } },
+                bottom: { style: 'thin', color: { argb: 'FFA9A9A9' } },
+                right: { style: 'thin', color: { argb: 'FFA9A9A9' } },
+            },
+            alignment: { vertical: 'middle', horizontal: 'center', wrapText: true },
+        };
+
+        const leftAlignedGridItemStyle = {
+            ...gridItemStyle,
+            alignment: { vertical: 'middle', horizontal: 'left', wrapText: true },
+        };
+
+        const labelStyle = {
+            ...gridItemStyle,
+            fill: {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF2F2F2' }, // Light gray
+            },
+            font: { bold: true },
+        };
+
+        const highlightStyle = {
+            font: { color: { argb: 'FFFF0000' }, bold: true }, // Red color for asterisks
+        };
+
+        // Group reservations by room number
+        const reservationsByRoom = {};
+        for (const reservation of reservationsData) {
+            const roomNumber = reservation.room_number;
+            if (roomNumber) {
+                if (!reservationsByRoom[roomNumber]) {
+                    reservationsByRoom[roomNumber] = [];
+                }
+                reservationsByRoom[roomNumber].push(reservation);
             }
-            acc[roomNumber].push(reservation);
-            return acc;
-        }, {});
+        }
+        logger.debug(`[${requestId}] Reservations grouped by room: ${JSON.stringify(Object.keys(reservationsByRoom))}`);
+
+        if (Object.keys(reservationsByRoom).length === 0) {
+            logger.warn(`[${requestId}] No rooms found for the provided reservations. No sheets will be created.`);
+            const worksheet = workbook.addWorksheet('情報なし');
+            worksheet.mergeCells('A1:G1');
+            worksheet.getCell('A1').value = '選択された予約には部屋情報がありませんでした。';
+            worksheet.getCell('A1').alignment = { vertical: 'middle', horizontal: 'center' };
+            worksheet.getCell('A1').font = { bold: true, size: 14 };
+        }
 
         for (const roomNumber in reservationsByRoom) {
+            logger.debug(`[${requestId}] Creating worksheet for room: ${roomNumber}`);
             const roomReservations = reservationsByRoom[roomNumber];
             const worksheet = workbook.addWorksheet(`部屋番号-${roomNumber}`);
 
-            // Add title
-            worksheet.mergeCells('A1:J1');
-            worksheet.getCell('A1').value = `${hotelName} - 宿泊者名簿 (${date})`;
-            worksheet.getCell('A1').font = { bold: true, size: 16 };
-            worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+            // Set page setup for A4, portrait, and fit all columns to page
+            worksheet.pageSetup.paperSize = 9; // A4
+            worksheet.pageSetup.orientation = 'portrait';
+            worksheet.pageSetup.fitToPage = true;
+            worksheet.pageSetup.fitToWidth = 1;
 
-            // Add room number
-            worksheet.mergeCells('A2:J2');
-            worksheet.getCell('A2').value = `部屋番号: ${roomNumber}`;
-            worksheet.getCell('A2').font = { bold: true, size: 14 };
-            worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
-
-            // Add smoking preference
-            worksheet.mergeCells('A3:J3');
-            worksheet.getCell('A3').value = `喫煙区分: ${roomReservations[0].smoking ? '喫煙' : '禁煙'}`;
-            worksheet.getCell('A3').font = { bold: true, size: 12 };
-            worksheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
-
-            // Add headers
-            const headers = [
-                "予約ID",
-                "チェックイン",
-                "チェックアウト",
-                "プラン名",
-                "人数",
-                "宿泊者名",
-                "ご住所",
-                "ご連絡先",
-                "郵便番号",
-                "備考"
+            // Set default column widths
+            worksheet.columns = [
+                { width: 20 }, // Column 1 (150px)
+                { width: 15 }, // Column 2 (1fr)
+                { width: 15 }, // Column 3 (1fr)
+                { width: 15 }, // Column 4 (1fr)
+                { width: 14 }, // Column 5 (100px)
+                { width: 15 }, // Column 6 (1fr)
+                { width: 15 }, // Column 7 (1fr)
+                { width: 15 }, // Extra column for guest details
+                { width: 15 }, // Extra column for guest details
+                { width: 15 }, // Extra column for guest details
+                { width: 15 }, // Extra column for guest details
+                { width: 15 }, // Extra column for guest details
             ];
-            const headerRow = worksheet.addRow(headers);
-            headerRow.font = { bold: true };
-            headerRow.eachCell((cell) => {
-                cell.border = {
-                    bottom: { style: 'thin', color: { argb: '000000' } },
+
+            let currentRow = 1;
+
+            for (const reservation of roomReservations) {
+                logger.debug(`[${requestId}] Processing reservation ID: ${reservation.id} for room ${roomNumber}`);
+
+                const hotelName = reservation.hotel_name || 'RHT Hotel';
+                const bookerName = reservation.booker_name_kanji || reservation.booker_name_kana || reservation.booker_name || 'N/A';
+                const alternativeName = reservation.alternative_company_name || ''; // Assuming this might be in reservation object
+                const currentRoomNumbers = reservation.room_number; // Already filtered by roomNumber
+                const planNames = reservation.plan_name;
+                const parkingLotNames = ''; // Parking lot info not directly in this reservation object, will need to fetch if needed
+
+                const checkInDateFormatted = formatDateForGuestList(reservation.check_in);
+                const checkOutDateFormatted = formatDateForGuestList(reservation.check_out);
+
+                const paymentTotal = reservation.total_price ? reservation.total_price.toLocaleString() : '0'; // Assuming total_price might be in reservation object
+                let paymentOption;
+                if (reservation.payment_timing === 'on-site') {
+                    paymentOption = '現地決済';
+                } else if (reservation.payment_timing === 'postpaid') {
+                    paymentOption = '後払い';
+                } else if (reservation.payment_timing === 'prepaid') {
+                    paymentOption = '事前決済';
+                } else if (reservation.payment_timing === 'not_set') {
+                    paymentOption = 'N/A';
+                } else {
+                    paymentOption = ''; // Default or handle unknown values
+                }
+
+                // Hotel Name Header
+                logger.debug(`[${requestId}] Adding Hotel Name Header for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = `${hotelName} 宿泊者名簿`;
+                worksheet.getCell(currentRow, 1).font = { bold: true, size: 16 };
+                worksheet.getCell(currentRow, 1).alignment = { vertical: 'middle', horizontal: 'center' };
+                currentRow++;
+                currentRow++; // Add a blank row for spacing
+
+                // Booker Name
+                logger.debug(`[${requestId}] Adding Booker Name for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = 'ご予約会社様/個人様名';
+                Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+                currentRow++;
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = bookerName;
+                Object.assign(worksheet.getCell(currentRow, 1), gridItemStyle);
+                worksheet.getRow(currentRow).height = 30;
+                currentRow++;
+
+                // Alternative Company Name
+                logger.debug(`[${requestId}] Adding Alternative Company Name for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = '※ご宿泊会社様名（ご予約の会社様と異なる場合のみ）';
+                Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+                worksheet.getCell(currentRow, 1).value = {
+                    richText: [
+                        { text: '※', font: highlightStyle.font },
+                        { text: 'ご宿泊会社様名（ご予約の会社様と異なる場合のみ）' }
+                    ]
                 };
-            });
+                currentRow++;
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = alternativeName;
+                Object.assign(worksheet.getCell(currentRow, 1), gridItemStyle);
+                worksheet.getRow(currentRow).height = 30;
+                currentRow++;
 
-            // Add data rows
-            roomReservations.forEach(reservation => {
-                const clients = reservation.clients_json || [];
+                // Check-in/Check-out Dates
+                logger.debug(`[${requestId}] Adding Check-in/Check-out Dates for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 1);
+                worksheet.getCell(currentRow, 1).value = 'チェックイン日';
+                Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
-                clients.forEach(client => {
-                    worksheet.addRow([
-                        reservation.id,
-                        formatDate(new Date(reservation.check_in)),
-                        formatDate(new Date(reservation.check_out)),
-                        reservation.plan_name,
-                        reservation.number_of_people,
-                        client.name_kanji || client.name_kana || client.name,
-                        client.car_number_plate || '',
-                        `${client.address1 || ''}${client.address2 || ''}`,
-                        client.phone || '',
-                        client.postal_code || '',
-                        reservation.comment || '',
-                    ]);
+                worksheet.mergeCells(currentRow, 2, currentRow, 4);
+                worksheet.getCell(currentRow, 2).value = checkInDateFormatted;
+                Object.assign(worksheet.getCell(currentRow, 2), gridItemStyle);
+
+                worksheet.mergeCells(currentRow, 5, currentRow, 5);
+                worksheet.getCell(currentRow, 5).value = 'アウト日';
+                Object.assign(worksheet.getCell(currentRow, 5), labelStyle);
+
+                worksheet.mergeCells(currentRow, 6, currentRow, 7);
+                worksheet.getCell(currentRow, 6).value = checkOutDateFormatted;
+                Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
+                currentRow++;
+
+                // Parking and Payment
+                logger.debug(`[${requestId}] Adding Parking and Payment for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 1);
+                worksheet.getCell(currentRow, 1).value = '駐車場';
+                Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+
+                worksheet.mergeCells(currentRow, 2, currentRow, 4);
+                worksheet.getCell(currentRow, 2).value = parkingLotNames;
+                Object.assign(worksheet.getCell(currentRow, 2), gridItemStyle);
+
+                worksheet.mergeCells(currentRow, 5, currentRow, 5);
+                worksheet.getCell(currentRow, 5).value = '現地決済';
+                Object.assign(worksheet.getCell(currentRow, 5), labelStyle);
+
+                worksheet.mergeCells(currentRow, 6, currentRow, 7);
+                worksheet.getCell(currentRow, 6).value = `${paymentOption} （ ${paymentTotal} 円）`;
+                Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
+                currentRow++;
+
+                // Room Details
+                logger.debug(`[${requestId}] Adding Room Details for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 1);
+                worksheet.getCell(currentRow, 1).value = '部屋番号';
+                Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+
+                worksheet.mergeCells(currentRow, 2, currentRow, 2);
+                worksheet.getCell(currentRow, 2).value = currentRoomNumbers;
+                Object.assign(worksheet.getCell(currentRow, 2), gridItemStyle);
+
+                worksheet.mergeCells(currentRow, 3, currentRow, 4);
+                const smokingPreference = reservation.smoking === true ? '喫煙' : '禁煙'; // Use reservation.smoking
+                worksheet.getCell(currentRow, 3).value = smokingPreference; 
+                Object.assign(worksheet.getCell(currentRow, 3), gridItemStyle);
+
+                worksheet.mergeCells(currentRow, 5, currentRow, 5);
+                worksheet.getCell(currentRow, 5).value = 'プラン';
+                Object.assign(worksheet.getCell(currentRow, 5), labelStyle);
+
+                worksheet.mergeCells(currentRow, 6, currentRow, 7);
+                worksheet.getCell(currentRow, 6).value = planNames;
+                Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
+                worksheet.getRow(currentRow).height = 30;
+                currentRow++;
+
+                // Guests Section Header
+                logger.debug(`[${requestId}] Adding Guests Section Header for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = '宿泊者情報';
+                Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+                currentRow++;
+
+                // Guests Table Rows
+                let guests = reservation.clients_json || []; // Use clients_json from reservation
+                if (guests.length === 0) {
+                    const numPeople = reservation.number_of_people || 1; // Default to 1 if not specified
+                    for (let i = 0; i < numPeople; i++) {
+                        guests.push({
+                            name_kanji: '', name_kana: '', name: '',
+                            postal_code: '', address1: '', address2: '',
+                            phone: '', gender: '', age: '', comment: ''
+                        });
+                    }
+                }
+
+                guests.forEach((guest, index) => {
+                    if (index > 0) {
+                        // Add a separator between guests
+                        worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                        worksheet.getCell(currentRow, 1).value = '';
+                        worksheet.getCell(currentRow, 1).border = { bottom: { style: 'thin', color: { argb: 'FFA9A9A9' } } };
+                        currentRow++;
+                    }
+
+                    logger.debug(`[${requestId}] Adding guest ${guest.name} for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+
+                    // Guest Name
+                    worksheet.mergeCells(currentRow, 1, currentRow, 1);
+                    worksheet.getCell(currentRow, 1).value = {
+                        richText: [
+                            { text: '※', font: highlightStyle.font },
+                            { text: 'お名前' }
+                        ]
+                    };
+                    Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+
+                    worksheet.mergeCells(currentRow, 2, currentRow, 7);
+                    worksheet.getCell(currentRow, 2).value = guest.name_kanji || guest.name || '';
+                    Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
+                    worksheet.getRow(currentRow).height = 30;
+                    currentRow++;
+
+                    // Guest Address (2 merged rows)
+                    const addressStartRow = currentRow;
+                    worksheet.mergeCells(addressStartRow, 1, addressStartRow + 1, 1);
+                    worksheet.getCell(addressStartRow, 1).value = {
+                        richText: [
+                            { text: '※', font: highlightStyle.font },
+                            { text: 'ご住所' }
+                        ]
+                    };
+                    Object.assign(worksheet.getCell(addressStartRow, 1), labelStyle);
+
+                    worksheet.mergeCells(addressStartRow, 2, addressStartRow + 1, 7);
+                    worksheet.getCell(addressStartRow, 2).value = `${guest.postal_code ? '〒 ' + guest.postal_code : ''}\n${guest.address1 || ''} ${guest.address2 || ''}`.trim();
+                    Object.assign(worksheet.getCell(addressStartRow, 2), leftAlignedGridItemStyle);
+                    worksheet.getRow(addressStartRow).height = 30;
+                    worksheet.getRow(addressStartRow + 1).height = 30;
+                    currentRow += 2;
+
+                    // Guest Phone
+                    worksheet.mergeCells(currentRow, 1, currentRow, 1);
+                    worksheet.getCell(currentRow, 1).value = {
+                        richText: [
+                            { text: '※', font: highlightStyle.font },
+                            { text: 'ご連絡先' }
+                        ]
+                    };
+                    Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+
+                    worksheet.mergeCells(currentRow, 2, currentRow, 7);
+                    worksheet.getCell(currentRow, 2).value = guest.phone || '';
+                    Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
+                    worksheet.getRow(currentRow).height = 30;
+                    currentRow++;
                 });
-            });
 
-            // Set column widths
-            worksheet.columns.forEach(column => {
-                let maxLength = 0;
-                column.eachCell({ includeEmpty: true }, (cell) => {
-                    const cellValue = cell.value ? cell.value.toString() : '';
-                    maxLength = Math.max(maxLength, cellValue.length);
-                });
-                column.width = maxLength < 10 ? 10 : maxLength + 2;
-            });
+                // Comments
+                logger.debug(`[${requestId}] Adding Comments for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                worksheet.mergeCells(currentRow, 1, currentRow, 1);
+                worksheet.getCell(currentRow, 1).value = '備考';
+                Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
+
+                worksheet.mergeCells(currentRow, 2, currentRow, 7);
+                            worksheet.getCell(currentRow, 2).value = reservation.comment || '';
+                            Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);                worksheet.getRow(currentRow).height = 60;
+                currentRow++;
+
+                // Footer Section
+                logger.debug(`[${requestId}] Adding Footer Section for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                currentRow++; // Blank row for spacing
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = '↑↑↑上記項目内の※の欄のご記入をお願いいたします。';
+                worksheet.getCell(currentRow, 1).font = highlightStyle.font;
+                worksheet.getCell(currentRow, 1).alignment = { vertical: 'middle', horizontal: 'left' };
+                currentRow++;
+                worksheet.mergeCells(currentRow, 1, currentRow, 7);
+                worksheet.getCell(currentRow, 1).value = '※当社が収集した個人情報につきましては、予約の確認、キャンセルや変更、荷物の受け取り、お忘れ物、 緊急連絡時に利用する場合がございます。お客様からお預かりした個人情報は、適切かつ慎重に管理し 保存期間が終了しましたら、適切に処分いたしますうえ、ご了承くださいませ。';
+                worksheet.getCell(currentRow, 1).font = { size: 9 };
+                worksheet.getCell(currentRow, 1).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+                currentRow++;
+                currentRow++; // Add a blank row for separation between reservations
+            }
         }
 
-        res.setHeader("Content-Disposition", `attachment; filename=guest_list_${date}.xlsx`);
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=' + 'GuestList.xlsx');
 
         await workbook.xlsx.write(res);
         res.end();
+        logger.debug(`[${requestId}] Successfully generated guest list Excel.`);
 
-    } catch (err) {
-        logger.error("[getGuestListExcel] Error generating guest list Excel:", err);
-        res.status(500).send("Error generating guest list Excel");
+    } catch (error) {
+        logger.error(`[${requestId}] Error generating guest list Excel:`, error);
+        res.status(500).json({ message: 'Failed to generate guest list Excel', error: error.message });
     }
 };
 

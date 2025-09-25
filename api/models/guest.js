@@ -78,9 +78,15 @@ const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) =
         h.formal_name AS hotel_name,
         rooms.room_number,
         rooms.smoking, -- Add smoking status
-        rc_json.clients_json -- Use the clients_json from the subquery
+        rc_json.clients_json, -- Use the clients_json from the subquery
+        b.name AS booker_name,
+        b.name_kana AS booker_name_kana,
+        b.name_kanji AS booker_name_kanji,
+        r.payment_timing
       FROM
         reservations r
+      JOIN
+        clients b ON r.reservation_client_id = b.id
       JOIN
         hotels h ON r.hotel_id = h.id
       JOIN
