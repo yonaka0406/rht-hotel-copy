@@ -119,7 +119,7 @@
             />
         </Drawer>
 
-        <DashboardDialog :visible="helpDialogVisible" @update:visible="helpDialogVisible = $event" :dashboardSelectedDate="selectedDate" :checkInOutReportData="checkInOutReportData" :hotelName="selectedHotel?.name" :mealReportData="mealReportData" />
+        <DashboardDialog :visible="helpDialogVisible" @update:visible="helpDialogVisible = $event" :dashboardSelectedDate="selectedDate" :reportDisplayStartDate="reportStartDate.value" :checkInOutReportData="checkInOutReportData" :hotelName="selectedHotel?.name" :mealReportData="mealReportData" />
         
     </Panel>    
 </template>
@@ -344,6 +344,9 @@
         date.setDate(date.getDate() + 6); // selectedDate + 6 days
         return formatDate(date);
     });
+
+    const reportStartDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() - 1))));
+    const reportEndDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() + 6))));
 
     // Charts
         const fetchBarChartData = async () => {
@@ -880,14 +883,18 @@
             await fetchGaugeChartData();
 
             // Fetch check-in/out report data
-            const reportStartDate = new Date(selectedDate.value);
-            const reportEndDate = new Date(selectedDate.value);
-            reportEndDate.setDate(reportEndDate.getDate() + 6); // For weekly view
+            const tempReportStartDate = new Date(selectedDate.value);
+            tempReportStartDate.setDate(tempReportStartDate.getDate() - 1); // Start one day before selectedDate
+            reportStartDate.value = formatDate(tempReportStartDate);
+
+            const tempReportEndDate = new Date(tempReportStartDate);
+            tempReportEndDate.setDate(tempReportEndDate.getDate() + 7); // Cover a full week from the adjusted start date
+            reportEndDate.value = formatDate(tempReportEndDate);
 
             checkInOutReportData.value = await fetchCheckInOutReport(
                 selectedHotelId.value,
-                formatDate(reportStartDate),
-                formatDate(reportEndDate)
+                reportStartDate.value,
+                reportEndDate.value
             );
 
             nextTick(() => { // Update chart after data changes
