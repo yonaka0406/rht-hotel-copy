@@ -7,6 +7,24 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### September 25, 2025
 
+#### Feature Request #69: チェックアウト取り消し (Check-out Cancellation)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add functionality to cancel a check-out that was performed by mistake
+  - This will help in situations where a guest needs to extend their stay after the check-out was processed
+- **Requirements**:
+  - [ ] Add a "Cancel Check-out" button in the reservation details
+  - [ ] Implement validation to ensure the room is still available
+  - [ ] Update the reservation status back to "Checked-in"
+  - [ ] Revert any automated post-checkout processes
+  - [ ] Add an audit log entry for the check-out cancellation
+- **Affected Components**:
+  - Reservation management system
+  - Room status management
+  - Billing system
+  - Audit logging
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 #### Feature Request #68: OTA予約のデフォルト駐車場設定 (OTA Reservation Default Parking Setting)
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
