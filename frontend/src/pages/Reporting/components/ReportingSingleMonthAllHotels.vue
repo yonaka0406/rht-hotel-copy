@@ -69,12 +69,12 @@
                         <div class="w-full md:w-1/2 mb-4 md:mb-0">
                             <h6 class="text-center">施設別 売上合計（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
-                            <div v-else ref="allHotelsRevenueChartContainer" style="height: 450px; width: 100%;"></div>
+                            <div v-else ref="allHotelsRevenueChartContainer" :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
                         </div>
                         <div class="w-full md:w-1/2">
                             <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
-                            <div v-else ref="allHotelsOccupancyChartContainer" style="height: 450px; width: 100%;"></div>
+                            <div v-else ref="allHotelsOccupancyChartContainer" :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
                         </div>
                     </div>
                 </template>
@@ -504,6 +504,17 @@
     });
     const hasAllHotelsOccupancyData = computed(() => allHotelsOccupancyChartData.value.length > 0);
 
+    const allHotelsChartHeight = computed(() => {
+        const numHotels = allHotelsRevenueChartData.value.length;
+        const baseHeight = 150; // Base height for axes, legend, etc.
+        const heightPerHotel = 50; // Pixels per hotel bar
+        const minHeight = 450; // Minimum height to prevent it from being too small
+        
+        const calculatedHeight = baseHeight + (numHotels * heightPerHotel);
+        
+        return Math.max(minHeight, calculatedHeight);
+    });
+
     const revenueDistributionChartData = computed(() => {
         if (!props.revenueData || props.revenueData.length === 0) {
             return { actualSeriesData: [], forecastSeriesData: [], legendData: [] };
@@ -693,15 +704,15 @@
             xAxis: { type: 'value', name: '売上 (万円)', axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') } },
             yAxis: { type: 'category', data: hotelNames, inverse: true }, 
             series: [
-                { name: '計画売上合計', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => formatYenInTenThousandsNoDecimal(params.value) } },
-                { name: '実績売上合計', type: 'bar', data: periodValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => formatYenInTenThousandsNoDecimal(params.value) } },
+                { name: '計画売上合計', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
+                { name: '実績売上合計', type: 'bar', data: periodValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
                 { 
                     name: '計画達成まで',
                     type: 'bar', 
                     data: revenueToForecastValues, 
                     itemStyle: { color: colorScheme.toForecast },
                     barGap: '5%',
-                    label: { show: true, position: 'right', formatter: params => formatYenInTenThousandsNoDecimal(params.value) }
+                    label: { show: true, position: 'right', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' }
                 }
             ]
         };
@@ -731,9 +742,9 @@
             xAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
             yAxis: { type: 'category', data: hotelNames, inverse: true },
             series: [
-                { name: '計画稼働率', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'right', formatter: (params) => formatPercentage(params.value / 100)} },
-                { name: '実績稼働率', type: 'bar', data: actualValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'right', formatter: (params) => formatPercentage(params.value / 100)} },
-                { name: '稼働率差異 (p.p.)', type: 'bar', data: varianceValues, itemStyle: { color: colorScheme.variance }, barGap: '5%', barMaxWidth: '15%', label: { show: true, position: (params) => params.value < 0 ? 'left' : 'right', formatter: (params) => formatPercentage(params.value / 100)} }
+                { name: '計画稼働率', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'right', formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''} },
+                { name: '実績稼働率', type: 'bar', data: actualValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'right', formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''} },
+                { name: '稼働率差異 (p.p.)', type: 'bar', data: varianceValues, itemStyle: { color: colorScheme.variance }, barGap: '5%', barMaxWidth: '15%', label: { show: true, position: (params) => params.value < 0 ? 'left' : 'right', formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''} }
             ]
         };
     });
