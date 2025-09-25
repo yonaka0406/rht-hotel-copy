@@ -1484,95 +1484,161 @@ const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) =>
   const pool = getPool(requestId);
 
   const checkinQuery = `
-    WITH rd_join AS (
-      SELECT rd.*,
-             r.check_in,
-             r.check_out
+    WITH rd_raw AS (
+      SELECT
+        rd.reservation_id,
+        rd.hotel_id,
+        rd.room_id,
+        rd.number_of_people,
+        r.check_in
       FROM reservation_details rd
       JOIN reservations r
         ON rd.reservation_id = r.id
-       AND rd.hotel_id = r.hotel_id
+      AND rd.hotel_id = r.hotel_id
       WHERE rd.hotel_id = $1
         AND r.status NOT IN ('cancelled','block','hold','provisory')
         AND rd.cancelled IS NULL
         AND r.check_in BETWEEN $2 AND $3
+        AND rd.date = r.check_in          -- only the first-night row (check-in date)
     ),
-    clients_per_detail AS (
+
+    -- one row per reservation + room; use MIN(number_of_people) to avoid double-counting
+    people_per_room AS (
       SELECT
-        rdj.id AS reservation_detail_id,
-        rdj.check_in::date AS checkin_date,
-        COUNT(DISTINCT CASE WHEN c.gender = 'male'   THEN rc.client_id END)    AS male_per_detail,
-        COUNT(DISTINCT CASE WHEN c.gender = 'female' THEN rc.client_id END)    AS female_per_detail,
-        COUNT(DISTINCT CASE WHEN COALESCE(c.gender,'') = '' THEN rc.client_id END) AS unspecified_per_detail
-      FROM rd_join rdj
-      LEFT JOIN reservation_clients rc
-        ON rc.reservation_details_id = rdj.id
-       AND rc.hotel_id = rdj.hotel_id
+        reservation_id,
+        room_id,
+        hotel_id,
+        MIN(number_of_people) AS number_of_people
+      FROM rd_raw
+      GROUP BY reservation_id, room_id, hotel_id
+    ),
+
+    -- count distinct clients per reservation + room (gender buckets),
+    -- only counting client links that belong to the check-in detail row
+    clients_per_room AS (
+      SELECT
+        rd.reservation_id,
+        rd.room_id,
+        rd.hotel_id,
+        COUNT(DISTINCT CASE WHEN c.gender = 'male'   THEN rc.client_id END)       AS male_per_room,
+        COUNT(DISTINCT CASE WHEN c.gender = 'female' THEN rc.client_id END)       AS female_per_room,
+        COUNT(DISTINCT CASE WHEN COALESCE(c.gender,'') = '' THEN rc.client_id END) AS unspecified_per_room
+      FROM reservation_clients rc
+      JOIN reservation_details rd
+        ON rc.reservation_details_id = rd.id
+      AND rc.hotel_id = rd.hotel_id
       LEFT JOIN clients c ON c.id = rc.client_id
-      GROUP BY rdj.id, rdj.check_in::date
+      JOIN reservations r
+        ON rd.reservation_id = r.id
+      AND rd.hotel_id = r.hotel_id
+      WHERE rd.hotel_id = $1
+        AND r.status NOT IN ('cancelled','block','hold','provisory')
+        AND rd.cancelled IS NULL
+        AND r.check_in BETWEEN $2 AND $3
+        AND rd.date = r.check_in          -- only the check-in (first-night) detail rows
+      GROUP BY rd.reservation_id, rd.room_id, rd.hotel_id
     )
+
     SELECT
-      r.check_in::date AS date,
-      h.name AS hotel_name,
-      COUNT(DISTINCT rdj.room_id)                           AS checkin_room_count,
-      SUM(rdj.number_of_people)                        AS total_checkins,
-      SUM(cpd.male_per_detail)                         AS male_checkins,
-      SUM(cpd.female_per_detail)                       AS female_checkins,
-      SUM(cpd.unspecified_per_detail)                  AS unspecified_checkins
-    FROM rd_join rdj
-    JOIN reservations r ON r.id = rdj.reservation_id AND r.hotel_id = rdj.hotel_id
-    LEFT JOIN clients_per_detail cpd ON cpd.reservation_detail_id = rdj.id
-    LEFT JOIN hotels h ON rdj.hotel_id = h.id
+      r.check_in::date                                  AS date,
+      h.name                                            AS hotel_name,
+      COUNT(*)                                          AS checkin_room_count,     -- number of unique rooms checking in
+      COALESCE(SUM(ppr.number_of_people),0)             AS total_checkins,         -- sum of MIN(number_of_people) per room
+      COALESCE(SUM(cpr.male_per_room),0)                AS male_checkins,
+      COALESCE(SUM(cpr.female_per_room),0)              AS female_checkins,
+      COALESCE(SUM(cpr.unspecified_per_room),0)         AS unspecified_checkins
+    FROM people_per_room ppr
+    JOIN reservations r
+      ON r.id = ppr.reservation_id
+    AND r.hotel_id = ppr.hotel_id
+    LEFT JOIN clients_per_room cpr
+      ON cpr.reservation_id = ppr.reservation_id
+    AND cpr.room_id = ppr.room_id
+    AND cpr.hotel_id = ppr.hotel_id
+    LEFT JOIN hotels h
+      ON ppr.hotel_id = h.id
     GROUP BY r.check_in::date, h.name
     ORDER BY r.check_in::date;
+
   `;
 
   const checkoutQuery = `
-    WITH rd_join AS (
-      SELECT rd.*,
-             r.check_in,
-             r.check_out
+    WITH rd_raw AS (
+      -- only last-night rows for reservations in the checkout window
+      SELECT
+        rd.reservation_id,
+        rd.hotel_id,
+        rd.room_id,
+        rd.number_of_people,
+        r.check_out
       FROM reservation_details rd
       JOIN reservations r
         ON rd.reservation_id = r.id
-       AND rd.hotel_id = r.hotel_id
+      AND rd.hotel_id = r.hotel_id
       WHERE rd.hotel_id = $1
         AND r.status NOT IN ('cancelled','block','hold','provisory')
         AND rd.cancelled IS NULL
         AND r.check_out BETWEEN $2 AND $3
+        AND rd.date = (r.check_out::date - 1)   -- only last-night rows contribute to checkouts
     ),
-    clients_per_detail AS (
+
+    -- one row per reservation + room; take MIN(number_of_people) to avoid double-counting
+    people_per_room AS (
       SELECT
-        rdj.id AS reservation_detail_id,
-        rdj.check_out::date AS checkout_date,
-        COUNT(DISTINCT CASE WHEN c.gender = 'male'   THEN rc.client_id END)    AS male_per_detail,
-        COUNT(DISTINCT CASE WHEN c.gender = 'female' THEN rc.client_id END)    AS female_per_detail,
-        COUNT(DISTINCT CASE WHEN COALESCE(c.gender,'') = '' THEN rc.client_id END) AS unspecified_per_detail
-      FROM rd_join rdj
-      LEFT JOIN reservation_clients rc
-        ON rc.reservation_details_id = rdj.id
-       AND rc.hotel_id = rdj.hotel_id
+        reservation_id,
+        room_id,
+        hotel_id,
+        MIN(number_of_people) AS number_of_people
+      FROM rd_raw
+      GROUP BY reservation_id, room_id, hotel_id
+    ),
+
+    -- gender counts per reservation + room (distinct clients)
+    clients_per_room AS (
+      SELECT
+        rd.reservation_id,
+        rd.room_id,
+        rd.hotel_id,
+        COUNT(DISTINCT CASE WHEN c.gender = 'male'   THEN rc.client_id END)       AS male_per_room,
+        COUNT(DISTINCT CASE WHEN c.gender = 'female' THEN rc.client_id END)       AS female_per_room,
+        COUNT(DISTINCT CASE WHEN COALESCE(c.gender,'') = '' THEN rc.client_id END) AS unspecified_per_room
+      FROM reservation_clients rc
+      JOIN reservation_details rd
+        ON rc.reservation_details_id = rd.id
+      AND rc.hotel_id = rd.hotel_id
       LEFT JOIN clients c ON c.id = rc.client_id
-      -- only last-night rows contribute to checkout counts
-      WHERE rdj.date = (rdj.check_out::date - 1)
-      GROUP BY rdj.id, rdj.check_out::date
+      JOIN reservations r
+        ON rd.reservation_id = r.id
+      AND rd.hotel_id = r.hotel_id
+      WHERE rd.hotel_id = $1
+        AND r.status NOT IN ('cancelled','block','hold','provisory')
+        AND rd.cancelled IS NULL
+        AND r.check_out BETWEEN $2 AND $3
+        AND rd.date = (r.check_out::date - 1)   -- only last-night rows
+      GROUP BY rd.reservation_id, rd.room_id, rd.hotel_id
     )
+
     SELECT
-      r.check_out::date AS date,
-      h.name AS hotel_name,
-      COUNT(DISTINCT rdj.room_id)                           AS checkout_room_count,
-      SUM(rdj.number_of_people)                        AS total_checkouts,
-      SUM(cpd.male_per_detail)                         AS male_checkouts,
-      SUM(cpd.female_per_detail)                       AS female_checkouts,
-      SUM(cpd.unspecified_per_detail)                  AS unspecified_checkouts
-    FROM rd_join rdj
-    JOIN reservations r ON r.id = rdj.reservation_id AND r.hotel_id = rdj.hotel_id
-    LEFT JOIN clients_per_detail cpd ON cpd.reservation_detail_id = rdj.id
-    LEFT JOIN hotels h ON rdj.hotel_id = h.id
-    -- only last-night rows count
-    WHERE rdj.date = (rdj.check_out::date - 1)
+      r.check_out::date                                  AS date,
+      h.name                                            AS hotel_name,
+      COUNT(*)                                          AS checkout_room_count,     -- unique rooms checking out
+      COALESCE(SUM(ppr.number_of_people),0)             AS total_checkouts,         -- sum of MIN(number_of_people) per room
+      COALESCE(SUM(cpr.male_per_room),0)                AS male_checkouts,
+      COALESCE(SUM(cpr.female_per_room),0)              AS female_checkouts,
+      COALESCE(SUM(cpr.unspecified_per_room),0)         AS unspecified_checkouts
+    FROM people_per_room ppr
+    JOIN reservations r
+      ON r.id = ppr.reservation_id
+    AND r.hotel_id = ppr.hotel_id
+    LEFT JOIN clients_per_room cpr
+      ON cpr.reservation_id = ppr.reservation_id
+    AND cpr.room_id = ppr.room_id
+    AND cpr.hotel_id = ppr.hotel_id
+    LEFT JOIN hotels h
+      ON ppr.hotel_id = h.id
     GROUP BY r.check_out::date, h.name
     ORDER BY r.check_out::date;
+
   `;
 
   const values = [hotelId, startDate, endDate];
