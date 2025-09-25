@@ -1518,32 +1518,50 @@ const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) =>
       GROUP BY rdj.id, rdj.date, rdj.check_in, rdj.check_out, rdj.hotel_id
     ),
 
+    -- include both stay dates and actual checkout dates in the date list
+    dates AS (
+      SELECT DISTINCT date::date AS date, hotel_id
+      FROM rd_join
+    
+      UNION
+    
+      SELECT DISTINCT check_out::date AS date, hotel_id
+      FROM rd_join
+    ),
+
     -- aggregate room / people counts per date (rooms are reservation_detail rows)
     date_agg AS (
       SELECT
-        rdj.date,
-        rdj.hotel_id,
-        SUM(CASE WHEN rdj.date = rdj.check_in THEN 1 ELSE 0 END)                           AS checkin_room_count,
-        SUM(CASE WHEN rdj.date = rdj.check_in THEN rdj.number_of_people ELSE 0 END)         AS total_checkins,
-        SUM(CASE WHEN rdj.date = (rdj.check_out - INTERVAL '1 day') THEN 1 ELSE 0 END)      AS checkout_room_count,
-        SUM(CASE WHEN rdj.date = (rdj.check_out - INTERVAL '1 day') THEN rdj.number_of_people ELSE 0 END) AS total_checkouts
-      FROM rd_join rdj
-      GROUP BY rdj.date, rdj.hotel_id
+        d.date,
+        d.hotel_id,
+        -- checkins: when reservation's check_in date equals the target date
+        SUM(CASE WHEN rdj.check_in::date = d.date THEN 1 ELSE 0 END)                           AS checkin_room_count,
+        SUM(CASE WHEN rdj.check_in::date = d.date THEN rdj.number_of_people ELSE 0 END)         AS total_checkins,
+        -- checkouts: count rows that are the last-night (rdj.date = check_out::date - 1)
+        -- but *attribute* them to the actual checkout date (rdj.check_out::date = d.date)
+        SUM(CASE WHEN rdj.date = (rdj.check_out::date - 1) AND rdj.check_out::date = d.date THEN 1 ELSE 0 END) AS checkout_room_count,
+        SUM(CASE WHEN rdj.date = (rdj.check_out::date - 1) AND rdj.check_out::date = d.date THEN rdj.number_of_people ELSE 0 END) AS total_checkouts
+      FROM dates d
+      LEFT JOIN rd_join rdj
+        ON rdj.hotel_id = d.hotel_id
+      GROUP BY d.date, d.hotel_id
     ),
 
     -- aggregate gender counts for arrivals and departures (using clients_per_detail)
     gender_agg AS (
       SELECT
-        cpd.date,
-        cpd.hotel_id,
-        SUM(CASE WHEN cpd.date = cpd.check_in THEN cpd.male_per_detail ELSE 0 END)        AS male_checkins,
-        SUM(CASE WHEN cpd.date = cpd.check_in THEN cpd.female_per_detail ELSE 0 END)      AS female_checkins,
-        SUM(CASE WHEN cpd.date = cpd.check_in THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkins,
-        SUM(CASE WHEN cpd.date = (cpd.check_out - INTERVAL '1 day') THEN cpd.male_per_detail ELSE 0 END)        AS male_checkouts,
-        SUM(CASE WHEN cpd.date = (cpd.check_out - INTERVAL '1 day') THEN cpd.female_per_detail ELSE 0 END)      AS female_checkouts,
-        SUM(CASE WHEN cpd.date = (cpd.check_out - INTERVAL '1 day') THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkouts
-      FROM clients_per_detail cpd
-      GROUP BY cpd.date, cpd.hotel_id
+        d.date,
+        d.hotel_id,
+        SUM(CASE WHEN cpd.check_in::date = d.date THEN cpd.male_per_detail ELSE 0 END)        AS male_checkins,
+        SUM(CASE WHEN cpd.check_in::date = d.date THEN cpd.female_per_detail ELSE 0 END)      AS female_checkins,
+        SUM(CASE WHEN cpd.check_in::date = d.date THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkins,
+        SUM(CASE WHEN cpd.date = (cpd.check_out::date - 1) AND cpd.check_out::date = d.date THEN cpd.male_per_detail ELSE 0 END)        AS male_checkouts,
+        SUM(CASE WHEN cpd.date = (cpd.check_out::date - 1) AND cpd.check_out::date = d.date THEN cpd.female_per_detail ELSE 0 END)      AS female_checkouts,
+        SUM(CASE WHEN cpd.date = (cpd.check_out::date - 1) AND cpd.check_out::date = d.date THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkouts
+      FROM dates d
+      LEFT JOIN clients_per_detail cpd
+        ON cpd.hotel_id = d.hotel_id
+      GROUP BY d.date, d.hotel_id
     )
 
     -- final join: one row per (date, hotel)
@@ -1560,11 +1578,7 @@ const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) =>
       COALESCE(ga.male_checkouts, 0)        AS male_checkouts,
       COALESCE(ga.female_checkouts, 0)      AS female_checkouts,
       COALESCE(ga.unspecified_checkouts, 0) AS unspecified_checkouts
-    FROM (
-      -- distinct list of dates (and hotel) that appear in reservation_details in the date range
-      SELECT DISTINCT date, hotel_id
-      FROM rd_join
-    ) d
+    FROM dates d
     LEFT JOIN date_agg da   ON d.date = da.date   AND d.hotel_id = da.hotel_id
     LEFT JOIN gender_agg ga ON d.date = ga.date   AND d.hotel_id = ga.hotel_id
     LEFT JOIN hotels h      ON d.hotel_id = h.id
