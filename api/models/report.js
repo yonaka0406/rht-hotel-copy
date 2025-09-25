@@ -1482,114 +1482,153 @@ const selectChannelSummary = async (requestId, hotelIds, startDate, endDate) => 
 
 const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) => {
   const pool = getPool(requestId);
-  const query = `
+
+  const checkinQuery = `
     WITH rd_join AS (
-      -- reservation_details rows within the date range, joined to their reservation
       SELECT rd.*,
-            r.check_in,
-            r.check_out,
-            r.status AS reservation_status
+             r.check_in,
+             r.check_out
       FROM reservation_details rd
       JOIN reservations r
         ON rd.reservation_id = r.id
-      AND rd.hotel_id = r.hotel_id
+       AND rd.hotel_id = r.hotel_id
       WHERE rd.hotel_id = $1
-        AND rd.date BETWEEN $2 AND $3
-        AND rd.cancelled IS NULL
         AND r.status NOT IN ('cancelled','block','hold','provisory')
+        AND rd.cancelled IS NULL
+        AND r.check_in BETWEEN $2 AND $3
     ),
-
-    -- per-reservation_detail counts of clients by gender (distinct client ids)
     clients_per_detail AS (
       SELECT
         rdj.id AS reservation_detail_id,
-        rdj.date,
-        rdj.check_in,
-        rdj.check_out,
-        rdj.hotel_id,
+        rdj.check_in::date AS checkin_date,
         COUNT(DISTINCT CASE WHEN c.gender = 'male'   THEN rc.client_id END)    AS male_per_detail,
         COUNT(DISTINCT CASE WHEN c.gender = 'female' THEN rc.client_id END)    AS female_per_detail,
         COUNT(DISTINCT CASE WHEN COALESCE(c.gender,'') = '' THEN rc.client_id END) AS unspecified_per_detail
       FROM rd_join rdj
       LEFT JOIN reservation_clients rc
         ON rc.reservation_details_id = rdj.id
-      AND rc.hotel_id = rdj.hotel_id
+       AND rc.hotel_id = rdj.hotel_id
       LEFT JOIN clients c ON c.id = rc.client_id
-      GROUP BY rdj.id, rdj.date, rdj.check_in, rdj.check_out, rdj.hotel_id
-    ),
-
-    -- include both stay dates and actual checkout dates in the date list
-    dates AS (
-      SELECT DISTINCT date::date AS date, hotel_id
-      FROM rd_join
-    
-      UNION
-    
-      SELECT DISTINCT check_out::date AS date, hotel_id
-      FROM rd_join
-    ),
-
-    -- aggregate room / people counts per date (rooms are reservation_detail rows)
-    date_agg AS (
-      SELECT
-        d.date,
-        d.hotel_id,
-        -- checkins: when reservation's check_in date equals the target date
-        SUM(CASE WHEN rdj.check_in::date = d.date THEN 1 ELSE 0 END)                           AS checkin_room_count,
-        SUM(CASE WHEN rdj.check_in::date = d.date THEN rdj.number_of_people ELSE 0 END)         AS total_checkins,
-        -- checkouts: count rows that are the last-night (rdj.date = check_out::date - 1)
-        -- but *attribute* them to the actual checkout date (rdj.check_out::date = d.date)
-        SUM(CASE WHEN rdj.date = (rdj.check_out::date - 1) AND rdj.check_out::date = d.date THEN 1 ELSE 0 END) AS checkout_room_count,
-        SUM(CASE WHEN rdj.date = (rdj.check_out::date - 1) AND rdj.check_out::date = d.date THEN rdj.number_of_people ELSE 0 END) AS total_checkouts
-      FROM dates d
-      LEFT JOIN rd_join rdj
-        ON rdj.hotel_id = d.hotel_id
-      GROUP BY d.date, d.hotel_id
-    ),
-
-    -- aggregate gender counts for arrivals and departures (using clients_per_detail)
-    gender_agg AS (
-      SELECT
-        d.date,
-        d.hotel_id,
-        SUM(CASE WHEN cpd.check_in::date = d.date THEN cpd.male_per_detail ELSE 0 END)        AS male_checkins,
-        SUM(CASE WHEN cpd.check_in::date = d.date THEN cpd.female_per_detail ELSE 0 END)      AS female_checkins,
-        SUM(CASE WHEN cpd.check_in::date = d.date THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkins,
-        SUM(CASE WHEN cpd.date = (cpd.check_out::date - 1) AND cpd.check_out::date = d.date THEN cpd.male_per_detail ELSE 0 END)        AS male_checkouts,
-        SUM(CASE WHEN cpd.date = (cpd.check_out::date - 1) AND cpd.check_out::date = d.date THEN cpd.female_per_detail ELSE 0 END)      AS female_checkouts,
-        SUM(CASE WHEN cpd.date = (cpd.check_out::date - 1) AND cpd.check_out::date = d.date THEN cpd.unspecified_per_detail ELSE 0 END) AS unspecified_checkouts
-      FROM dates d
-      LEFT JOIN clients_per_detail cpd
-        ON cpd.hotel_id = d.hotel_id
-      GROUP BY d.date, d.hotel_id
+      GROUP BY rdj.id, rdj.check_in::date
     )
-
-    -- final join: one row per (date, hotel)
     SELECT
-      d.date,
+      r.check_in::date AS date,
       h.name AS hotel_name,
-      COALESCE(da.total_checkins, 0)        AS total_checkins,
-      COALESCE(da.checkin_room_count, 0)    AS checkin_room_count,
-      COALESCE(ga.male_checkins, 0)         AS male_checkins,
-      COALESCE(ga.female_checkins, 0)       AS female_checkins,
-      COALESCE(ga.unspecified_checkins, 0)  AS unspecified_checkins,
-      COALESCE(da.total_checkouts, 0)       AS total_checkouts,
-      COALESCE(da.checkout_room_count, 0)   AS checkout_room_count,
-      COALESCE(ga.male_checkouts, 0)        AS male_checkouts,
-      COALESCE(ga.female_checkouts, 0)      AS female_checkouts,
-      COALESCE(ga.unspecified_checkouts, 0) AS unspecified_checkouts
-    FROM dates d
-    LEFT JOIN date_agg da   ON d.date = da.date   AND d.hotel_id = da.hotel_id
-    LEFT JOIN gender_agg ga ON d.date = ga.date   AND d.hotel_id = ga.hotel_id
-    LEFT JOIN hotels h      ON d.hotel_id = h.id
-    ORDER BY d.date;
-
+      COUNT(DISTINCT rdj.room_id)                           AS checkin_room_count,
+      SUM(rdj.number_of_people)                        AS total_checkins,
+      SUM(cpd.male_per_detail)                         AS male_checkins,
+      SUM(cpd.female_per_detail)                       AS female_checkins,
+      SUM(cpd.unspecified_per_detail)                  AS unspecified_checkins
+    FROM rd_join rdj
+    JOIN reservations r ON r.id = rdj.reservation_id AND r.hotel_id = rdj.hotel_id
+    LEFT JOIN clients_per_detail cpd ON cpd.reservation_detail_id = rdj.id
+    LEFT JOIN hotels h ON rdj.hotel_id = h.id
+    GROUP BY r.check_in::date, h.name
+    ORDER BY r.check_in::date;
   `;
+
+  const checkoutQuery = `
+    WITH rd_join AS (
+      SELECT rd.*,
+             r.check_in,
+             r.check_out
+      FROM reservation_details rd
+      JOIN reservations r
+        ON rd.reservation_id = r.id
+       AND rd.hotel_id = r.hotel_id
+      WHERE rd.hotel_id = $1
+        AND r.status NOT IN ('cancelled','block','hold','provisory')
+        AND rd.cancelled IS NULL
+        AND r.check_out BETWEEN $2 AND $3
+    ),
+    clients_per_detail AS (
+      SELECT
+        rdj.id AS reservation_detail_id,
+        rdj.check_out::date AS checkout_date,
+        COUNT(DISTINCT CASE WHEN c.gender = 'male'   THEN rc.client_id END)    AS male_per_detail,
+        COUNT(DISTINCT CASE WHEN c.gender = 'female' THEN rc.client_id END)    AS female_per_detail,
+        COUNT(DISTINCT CASE WHEN COALESCE(c.gender,'') = '' THEN rc.client_id END) AS unspecified_per_detail
+      FROM rd_join rdj
+      LEFT JOIN reservation_clients rc
+        ON rc.reservation_details_id = rdj.id
+       AND rc.hotel_id = rdj.hotel_id
+      LEFT JOIN clients c ON c.id = rc.client_id
+      -- only last-night rows contribute to checkout counts
+      WHERE rdj.date = (rdj.check_out::date - 1)
+      GROUP BY rdj.id, rdj.check_out::date
+    )
+    SELECT
+      r.check_out::date AS date,
+      h.name AS hotel_name,
+      COUNT(DISTINCT rdj.room_id)                           AS checkout_room_count,
+      SUM(rdj.number_of_people)                        AS total_checkouts,
+      SUM(cpd.male_per_detail)                         AS male_checkouts,
+      SUM(cpd.female_per_detail)                       AS female_checkouts,
+      SUM(cpd.unspecified_per_detail)                  AS unspecified_checkouts
+    FROM rd_join rdj
+    JOIN reservations r ON r.id = rdj.reservation_id AND r.hotel_id = rdj.hotel_id
+    LEFT JOIN clients_per_detail cpd ON cpd.reservation_detail_id = rdj.id
+    LEFT JOIN hotels h ON rdj.hotel_id = h.id
+    -- only last-night rows count
+    WHERE rdj.date = (rdj.check_out::date - 1)
+    GROUP BY r.check_out::date, h.name
+    ORDER BY r.check_out::date;
+  `;
+
   const values = [hotelId, startDate, endDate];
 
   try {
-    const result = await pool.query(query, values);
-    return result.rows;
+    const [checkinResult, checkoutResult] = await Promise.all([
+      pool.query(checkinQuery, values),
+      pool.query(checkoutQuery, values)
+    ]);
+
+    const combinedResults = {};
+
+    // Process check-in results
+    checkinResult.rows.forEach(row => {
+      const dateKey = row.date.toISOString().split('T')[0];
+      combinedResults[dateKey] = {
+        date: row.date,
+        hotel_name: row.hotel_name,
+        total_checkins: row.total_checkins || 0,
+        checkin_room_count: row.checkin_room_count || 0,
+        male_checkins: row.male_checkins || 0,
+        female_checkins: row.female_checkins || 0,
+        unspecified_checkins: row.unspecified_checkins || 0,
+        total_checkouts: 0,
+        checkout_room_count: 0,
+        male_checkouts: 0,
+        female_checkouts: 0,
+        unspecified_checkouts: 0,
+      };
+    });
+
+    // Process check-out results
+    checkoutResult.rows.forEach(row => {
+      const dateKey = row.date.toISOString().split('T')[0];
+      if (!combinedResults[dateKey]) {
+        combinedResults[dateKey] = {
+          date: row.date,
+          hotel_name: row.hotel_name,
+          total_checkins: 0,
+          checkin_room_count: 0,
+          male_checkins: 0,
+          female_checkins: 0,
+          unspecified_checkins: 0,
+        };
+      }
+      combinedResults[dateKey].total_checkouts = row.total_checkouts || 0;
+      combinedResults[dateKey].checkout_room_count = row.checkout_room_count || 0;
+      combinedResults[dateKey].male_checkouts = row.male_checkouts || 0;
+      combinedResults[dateKey].female_checkouts = row.female_checkouts || 0;
+      combinedResults[dateKey].unspecified_checkouts = row.unspecified_checkouts || 0;
+    });
+
+    // Convert to array and sort by date
+    const finalResult = Object.values(combinedResults).sort((a, b) => a.date - b.date);
+
+    return finalResult;
   } catch (err) {
     console.error('Error retrieving check-in/out report data:', err);
     throw new Error('Database error');

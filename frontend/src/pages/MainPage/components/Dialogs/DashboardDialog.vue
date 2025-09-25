@@ -97,6 +97,12 @@ const formattedDate = computed(() => {
     return '';
 });
 
+const getMidnight = (date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+};
+
 const plainTextReportContent = computed(() => {
     if (!props.checkInOutReportData || props.checkInOutReportData.length === 0) {
         return 'データがありません。';
@@ -147,8 +153,16 @@ const plainTextReportContent = computed(() => {
             report += `当日データがありません。\n\n`;
         }
     } else if (selectedView.value === '週間') {
-        report += `📅 日別内訳\n`;
-        props.checkInOutReportData.forEach(day => {
+        const weekStartDate = getMidnight(props.dashboardSelectedDate);
+        const weekEndDate = getMidnight(props.dashboardSelectedDate);
+        weekEndDate.setDate(weekEndDate.getDate() + 6);
+
+        const filteredWeeklyData = props.checkInOutReportData.filter(day => {
+            const dayDate = getMidnight(day.date);
+            return dayDate >= weekStartDate && dayDate <= weekEndDate;
+        });
+
+        filteredWeeklyData.forEach(day => {
             report += `  - ${formatReportDate(day.date)}:    イン ${String(day.checkin_room_count || 0).padStart(2, '0')}室 (${String(day.total_checkins || 0).padStart(2, '0')}人);    アウト ${String(day.checkout_room_count || 0).padStart(2, '0')}室 (${String(day.total_checkouts || 0).padStart(2, '0')}人)\n`;
             const checkinFemale = formatGender(day.female_checkins);
             if (checkinFemale) {
@@ -262,7 +276,16 @@ const displayReportData = computed(() => {
             });
         }
     } else if (selectedView.value === '週間') {
-        props.checkInOutReportData.forEach(day => {
+        const weekStartDate = getMidnight(props.dashboardSelectedDate);
+        const weekEndDate = getMidnight(props.dashboardSelectedDate);
+        weekEndDate.setDate(weekEndDate.getDate() + 6);
+
+        const filteredWeeklyData = props.checkInOutReportData.filter(day => {
+            const dayDate = getMidnight(day.date);
+            return dayDate >= weekStartDate && dayDate <= weekEndDate;
+        });
+
+        filteredWeeklyData.forEach(day => {
             data.weeklyCheckInOut.push({
                 date: formatReportDate(day.date),
                 checkin: `${day.checkin_room_count || 0}室 (${day.total_checkins || 0}人)`,
