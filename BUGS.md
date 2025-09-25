@@ -5,6 +5,27 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 25, 2025
+
+#### Feature Request #68: OTA予約のデフォルト駐車場設定 (OTA Reservation Default Parking Setting)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - For OTA reservations, set the default number of parking spaces to 1 car per room
+  - This will streamline the reservation process by automatically including parking for one car with each room booking
+- **Requirements**:
+  - [ ] Add system setting to configure default parking allocation for OTA reservations
+  - [ ] Set default to 1 car per room for all OTA bookings
+  - [ ] Allow modification of parking count during the reservation process if needed
+  - [ ] Ensure the parking fee is correctly calculated and displayed
+  - [ ] Update reservation confirmation emails/templates to show included parking
+- **Affected Components**:
+  - OTA reservation processing
+  - Booking engine
+  - Reservation management UI
+  - Billing system
+  - Confirmation emails/templates
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### September 22, 2025
 
 #### Feature Request #67: Average Stay Length per Hotel in Reports
