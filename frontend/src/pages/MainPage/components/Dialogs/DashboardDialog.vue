@@ -110,16 +110,15 @@ const plainTextReportContent = computed(() => {
         return female > 0 ? `${female}♀️ ` : '';
     };
 
-    const formatReportDate = (dateString) => {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return '無効な日付'; // Localized invalid date
-        }
-        const options = { month: 'numeric', day: 'numeric', weekday: 'short' };
-        const formatted = date.toLocaleDateString('ja-JP', options);
-        return formatted;
-    };
-
+            const formatReportDate = (dateString) => {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return '無効な日付'; // Localized invalid date
+                }
+                const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
+                const formatted = date.toLocaleDateString('ja-JP', options);
+                return formatted;
+            };
     const formatDate = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
             console.error("Invalid Date object:", date);
@@ -134,7 +133,8 @@ const plainTextReportContent = computed(() => {
     let report = `📊 ${props.hotelName || 'ホテル'} ${formattedDate.value} のチェックイン・チェックアウトレポート\n\n`;
 
     if (selectedView.value === '当日') {
-        const dailyData = props.checkInOutReportData[0]; // Assuming single day data for '当日'
+        const formattedDashboardDate = formatDate(new Date(props.dashboardSelectedDate));
+        const dailyData = props.checkInOutReportData.find(day => formatDate(new Date(day.date)) === formattedDashboardDate);
         if (dailyData) {
             report += `✅ チェックイン: ${dailyData.checkin_room_count || 0}室 (${dailyData.total_checkins || 0}人)\n`;
             const checkinFemale = formatGender(dailyData.female_checkins);
@@ -224,7 +224,7 @@ const displayReportData = computed(() => {
         if (isNaN(date.getTime())) {
             return '無効な日付';
         }
-        const options = { month: 'numeric', day: 'numeric', weekday: 'short' };
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
         const formatted = date.toLocaleDateString('ja-JP', options);
         return formatted;
     };
@@ -241,10 +241,11 @@ const displayReportData = computed(() => {
     };
 
     if (selectedView.value === '当日') {
-        const dailyData = props.checkInOutReportData[0];
+        const formattedDashboardDate = formatDate(new Date(props.dashboardSelectedDate));
+        const dailyData = props.checkInOutReportData.find(day => formatDate(new Date(day.date)) === formattedDashboardDate);
         if (dailyData) {
             data.dailyCheckInOut.push({
-                date: formatReportDate(dailyData.date),
+                date: formatReportDate(props.dashboardSelectedDate.toISOString()),
                 checkin: `${dailyData.checkin_room_count || 0}室 (${dailyData.total_checkins || 0}人)`,
                 checkout: `${dailyData.checkout_room_count || 0}室 (${dailyData.total_checkouts || 0}人)`,                
                 remarks: dailyData.female_checkins > 0 ? `インのうち：${formatGender(dailyData.female_checkins)}` : ''
