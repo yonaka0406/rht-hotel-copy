@@ -231,14 +231,13 @@ const generateGuestList = async (req, res) => {
 
         // Correct the parking lot variable assignment and add bolding
         const allParkingLots = guestData.all_parking_lots_list ? guestData.all_parking_lots_list.split(',') : [];
-        const selectedParkingLot = guestData.parking_lot_names_list;
+        const selectedParkingLotsArray = guestData.parking_lot_names_list ? guestData.parking_lot_names_list.split(',').map(lot => lot.trim()) : [];
 
         let parkingLotNames;
-        if (selectedParkingLot && selectedParkingLot.trim() !== '') {
+        if (selectedParkingLotsArray.length > 0) {
             parkingLotNames = allParkingLots.map(lot => {
                 const trimmedLot = lot.trim();
-                const trimmedSelected = selectedParkingLot.trim();
-                if (trimmedLot === trimmedSelected) {
+                if (selectedParkingLotsArray.includes(trimmedLot)) {
                     return `<span style="font-weight: bold;">${trimmedLot}</span>`;
                 }
                 return trimmedLot;
