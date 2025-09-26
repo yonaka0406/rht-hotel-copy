@@ -5,6 +5,7 @@ const ExcelJS = require("exceljs");
 const logger = require('../config/logger');
 const { selectReservation, selectReservationBalance } = require('../models/reservations');
 const { selectCheckInReservationsForGuestList } = require('../models/guest');
+const { getParkingLots } = require('../models/parking');
 
 // Helper
 const formatDate = (date) => {
@@ -303,6 +304,8 @@ const getGuestListExcel = async (req, res) => {
     // logger.debug(`[${requestId}] Starting getGuestListExcel. Params: date=${date}, hotelId=${hotelId}`);
 
     try {
+        const allParkingLotsData = await getParkingLots(requestId, hotelId);
+        const allParkingLotNames = allParkingLotsData.map(lot => lot.name); // Get just the names
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
         //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
@@ -424,7 +427,20 @@ const getGuestListExcel = async (req, res) => {
                 const alternativeName = reservation.alternative_company_name || ''; // Assuming this might be in reservation object
                 const currentRoomNumbers = reservation.room_number; // Already filtered by roomNumber
                 const planNames = reservation.plan_name;
-                const parkingLotNames = ''; // Parking lot info not directly in this reservation object, will need to fetch if needed
+                const selectedParkingLotNames = reservation.assigned_parking_lot_names ? reservation.assigned_parking_lot_names.split(',').map(lot => lot.trim()) : [];
+
+                let parkingLotNames;
+                if (selectedParkingLotNames.length > 0) {
+                    parkingLotNames = allParkingLotNames.map(lotName => {
+                        const trimmedLotName = lotName.trim();
+                        if (selectedParkingLotNames.includes(trimmedLotName)) {
+                            return `**${trimmedLotName}**`; // Use markdown for bold in Excel
+                        }
+                        return trimmedLotName;
+                    }).join(' ・ ');
+                } else {
+                    parkingLotNames = allParkingLotNames.join(' ・ ');
+                }
 
                 const checkInDateFormatted = formatDateForGuestList(reservation.check_in);
                 const checkOutDateFormatted = formatDateForGuestList(reservation.check_out);
