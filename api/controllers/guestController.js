@@ -533,7 +533,8 @@ const getGuestListExcel = async (req, res) => {
 
                 worksheet.mergeCells(currentRow, 6, currentRow, 7);
                 let paymentDisplayValue = paymentOption;
-                if (remainingPayableAmount !== 0) {
+                // Only display the amount if the payment option is '現地決済' (on-site)
+                if (paymentOption === '現地決済' && remainingPayableAmount !== 0) {
                     paymentDisplayValue += ` （ ${remainingPayableAmount.toLocaleString()} 円）`;
                 }
                 worksheet.getCell(currentRow, 6).value = paymentDisplayValue;
