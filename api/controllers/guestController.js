@@ -635,7 +635,7 @@ const getGuestListExcel = async (req, res) => {
 
                 worksheet.mergeCells(currentRow, 2, currentRow, 7);
                             worksheet.getCell(currentRow, 2).value = reservation.comment || '';
-                            Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);                worksheet.getRow(currentRow).height = 120;
+                            Object.assign(worksheet.getCell(currentRow, 2), { ...leftAlignedGridItemStyle, alignment: { ...leftAlignedGridItemStyle.alignment, vertical: 'top' } });                worksheet.getRow(currentRow).height = 120;
                 currentRow++;
 
                 // Footer Section
