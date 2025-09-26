@@ -563,7 +563,7 @@ const getGuestListExcel = async (req, res) => {
                 worksheet.mergeCells(currentRow, 6, currentRow, 7);
                 worksheet.getCell(currentRow, 6).value = planNames;
                 Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
-                worksheet.getRow(currentRow).height = 30;
+                worksheet.getRow(currentRow).height = 60;
                 currentRow++;
 
                 // Guests Section Header
