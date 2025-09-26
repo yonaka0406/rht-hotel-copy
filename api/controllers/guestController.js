@@ -300,7 +300,7 @@ const getGuestListExcel = async (req, res) => {
 
     try {
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
-        // logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
+        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
             // logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
@@ -405,7 +405,7 @@ const getGuestListExcel = async (req, res) => {
                 // logger.debug(`[${requestId}] Processing reservation ID: ${reservation.id} for room ${roomNumber}`);
 
                 const reservationBalance = await selectReservationBalance(requestId, hotelId, reservation.id);
-                logger.debug(`[${requestId}] selectReservationBalance result for reservation ${reservation.id}: ${JSON.stringify(reservationBalance, null, 2)}`);
+                // logger.debug(`[${requestId}] selectReservationBalance result for reservation ${reservation.id}: ${JSON.stringify(reservationBalance, null, 2)}`);
 
                 // Find the balance for the current room
                 const currentRoomBalance = reservationBalance.find(item => item.room_id === reservation.room_id);
@@ -413,7 +413,7 @@ const getGuestListExcel = async (req, res) => {
                 const totalPayableAmount = currentRoomBalance ? parseFloat(currentRoomBalance.total_price) : 0;
                 const totalPaidAmount = currentRoomBalance ? parseFloat(currentRoomBalance.total_payment) : 0;
                 const remainingPayableAmount = currentRoomBalance ? parseFloat(currentRoomBalance.balance) : 0;
-                logger.debug(`[${requestId}] currentRoomBalance for room ${reservation.room_id}: ${JSON.stringify(currentRoomBalance, null, 2)}, remainingPayableAmount: ${remainingPayableAmount}`);
+                // logger.debug(`[${requestId}] currentRoomBalance for room ${reservation.room_id}: ${JSON.stringify(currentRoomBalance, null, 2)}, remainingPayableAmount: ${remainingPayableAmount}`);
 
                 const hotelName = reservation.hotel_name || 'RHT Hotel';
                 const bookerName = reservation.booker_name_kanji || reservation.booker_name_kana || reservation.booker_name || 'N/A';
@@ -623,7 +623,7 @@ const getGuestListExcel = async (req, res) => {
                     worksheet.mergeCells(currentRow, 2, currentRow, 7);
                     worksheet.getCell(currentRow, 2).value = guest.phone || '';
                     Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
-                    worksheet.getRow(currentRow).height = 30;
+                    worksheet.getRow(currentRow).height = 60;
                     currentRow++;
                 });
 
@@ -648,6 +648,7 @@ const getGuestListExcel = async (req, res) => {
                 currentRow++;
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = '※当社が収集した個人情報につきましては、予約の確認、キャンセルや変更、荷物の受け取り、お忘れ物、 緊急連絡時に利用する場合がございます。お客様からお預かりした個人情報は、適切かつ慎重に管理し 保存期間が終了しましたら、適切に処分いたしますうえ、ご了承くださいませ。';
+    worksheet.getRow(currentRow).height = 45;
                 worksheet.getCell(currentRow, 1).font = { size: 9 };
                 worksheet.getCell(currentRow, 1).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
                 currentRow++;
