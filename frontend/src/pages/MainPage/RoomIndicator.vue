@@ -368,6 +368,7 @@
   };
 
   const getClientName = (room) => {
+    console.log('getClientName - room object:', room);
     let clients = [];
     try {
       if (room?.clients_json) {
@@ -378,18 +379,40 @@
     } catch (e) {
       console.error('Error parsing clients_json:', e);
     }
+    console.log('getClientName - parsed clients:', clients);
           
-    const hasClients = Array.isArray(clients) && clients.length > 0;
-  
-    if (hasClients) {
-      return clients.map((client, index) => ({
-        name: client.name_kanji || client.name_kana || client.name,
-        isBooker: index === 0, // First client is the booker
-        gender: client.gender // Assuming client object has a gender property
-      })).filter(client => client.name);
+    const processedClients = [];
+
+    // Always add the booker from room.client_name first
+    if (room?.client_name) {
+      processedClients.push({
+        name: room.client_name,
+        isBooker: true,
+        gender: null // Gender not available from client_name
+      });
+    }
+
+    // Add other clients from clients_json as guests
+    const hasClientsInJson = Array.isArray(clients) && clients.length > 0;
+    if (hasClientsInJson) {
+      clients.forEach((client) => {
+        const clientName = client.name_kanji || client.name_kana || client.name;
+        if (clientName && clientName !== room.client_name) { // Avoid duplicating the booker if already added
+          processedClients.push({
+            name: clientName,
+            isBooker: false,
+            gender: client.gender
+          });
+        }
+      });
+    }
+
+    if (processedClients.length > 0) {
+      return processedClients;
     }
   
     const fallbackName = room?.client_name || 'ゲスト';
+    console.log('getClientName - fallback name:', fallbackName);
     return [{ name: fallbackName, isBooker: true, gender: null }];
   };
 
