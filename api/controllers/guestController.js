@@ -273,6 +273,11 @@ const generateGuestList = async (req, res) => {
         htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), parkingLotNames || '指定なし');
         htmlContent = htmlContent.replace('{{{guests_html}}}', guestsHtml);
         htmlContent = htmlContent.replace(new RegExp(`{{payment_total}}`, 'g'), guestData.payment_total);
+        // If payment option is 'なし', and payment_total is '0', remove the entire '( 0 円)' part.
+        // This handles the case where the frontend sends '0' for 'なし' payment.
+        if (guestData.payment_option === 'なし' && guestData.payment_total === '0') {
+            htmlContent = htmlContent.replace(new RegExp(`（ 0 円）`, 'g'), '');
+        }
         htmlContent = htmlContent.replace('{{{payment_option_html}}}', paymentOptionHtml);
         htmlContent = htmlContent.replace('{{plan_names_list}}', planNames);
 
