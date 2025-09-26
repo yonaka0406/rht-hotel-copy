@@ -300,7 +300,7 @@ const getGuestListExcel = async (req, res) => {
 
     try {
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
-        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
+        //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
             // logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
@@ -364,7 +364,7 @@ const getGuestListExcel = async (req, res) => {
         // logger.debug(`[${requestId}] Reservations grouped by room: ${JSON.stringify(Object.keys(reservationsByRoom))}`);
 
         if (Object.keys(reservationsByRoom).length === 0) {
-            logger.warn(`[${requestId}] No rooms found for the provided reservations. No sheets will be created.`);
+            // logger.warn(`[${requestId}] No rooms found for the provided reservations. No sheets will be created.`);
             const worksheet = workbook.addWorksheet('情報なし');
             worksheet.mergeCells('A1:G1');
             worksheet.getCell('A1').value = '選択された予約には部屋情報がありませんでした。';
@@ -656,8 +656,11 @@ const getGuestListExcel = async (req, res) => {
             }
         }
 
+        const checkInDateForFilename = formatDate(new Date(date)); // Use the date from params, formatted as YYYY-MM-DD
+        const filename = `${hotelId}_Guest_List_${checkInDateForFilename}.xlsx`;
+
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=' + 'GuestList.xlsx');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
         await workbook.xlsx.write(res);
         res.end();
