@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Feature: Added Excel roster download for check-ins with guest details and room information
 
 ---
 ## Future Releases
