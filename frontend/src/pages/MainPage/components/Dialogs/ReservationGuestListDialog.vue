@@ -147,7 +147,7 @@
                     <span class="highlight">※</span>お名前
                 </div>
                 <div class="grid-item col-span-6">
-                    <InputText v-model="guestFields.client_name.value" fluid />
+                    <InputText :value="guestFields.name_kanji.value || guestFields.name_kana.value || guestFields.client_name.value" fluid />
                 </div>
                 
                 
@@ -228,10 +228,7 @@ const fields = ref({});
 const guests = ref([]);
 
 const initializeFields = (reservation) => {
-    //console.log('Component received props:', { 
-    //  reservation,
-    //  isGroup: props.isGroup 
-    //});    
+    console.log('Initializing fields with reservation:', reservation);
     
     if (!reservation) {
         fields.value = {};
@@ -319,6 +316,7 @@ const initializeGroupGuests = (reservationArray) => {
         
         for (let i = 0; i < numberOfPeople; i++) {
             const existingGuest = existingGuests[i];
+            console.log(`Initializing group guest ${i}:`, existingGuest);
             const guestData = {
                 room_info: {
                     room_number: roomReservation.room_number,
@@ -329,6 +327,8 @@ const initializeGroupGuests = (reservationArray) => {
                 selected_plans: { label: 'プラン', value: roomReservation.assigned_plan_names || [], include: true },
                 selected_parking: { label: '駐車場', value: roomReservation.assigned_parking_lot_names || [], include: true },
                 client_name: { label: 'お名前', value: existingGuest?.name || '', include: true },
+                name_kanji: { label: 'お名前(漢字)', value: existingGuest?.name_kanji || '', include: true },
+                name_kana: { label: 'お名前(カナ)', value: existingGuest?.name_kana || '', include: true },
                 number_plate: { label: '車両ナンバー', value: existingGuest?.car_number_plate || '', include: true },
                 postal_code: { label: '郵便番号', value: existingGuest?.postal_code || '', include: true },
                 address: { label: 'ご住所', value: existingGuest?.address || '', include: true },
@@ -348,9 +348,12 @@ const initializeSingleGuests = (reservation) => {
 
     for (let i = 0; i < numberOfPeople; i++) {
         const existingGuest = existingGuests[i];
+        console.log(`Initializing single guest ${i}:`, existingGuest);
         if (existingGuest) {
             newGuests.push({
                 client_name: { label: 'お名前', value: existingGuest.name, include: true },
+                name_kanji: { label: 'お名前(漢字)', value: existingGuest.name_kanji || '', include: true },
+                name_kana: { label: 'お名前(カナ)', value: existingGuest.name_kana || '', include: true },
                 number_plate: { label: '車両ナンバー', value: existingGuest.car_number_plate, include: true },
                 postal_code: { label: '郵便番号', value: existingGuest.postal_code || '', include: true },
                 address: { label: 'ご住所', value: existingGuest.address, include: true },
@@ -372,6 +375,7 @@ const initializeSingleGuests = (reservation) => {
 watch(() => props.visible, (newValue) => {
     dialogVisible.value = newValue;
     if (newValue) {
+        console.log('Dialog visibility changed, initializing fields with reservation:', props.reservation);
         initializeFields(props.reservation);
     }
 });
@@ -420,7 +424,10 @@ const generatePDF = async () => {
         const guest = {};
         for (const key in guestFields) {
             if (guestFields[key].include) {
-                if (key === 'postal_code') {
+                // For name fields, ensure we pass all three if available
+                if (key === 'client_name' || key === 'name_kanji' || key === 'name_kana') {
+                    guest[key] = guestFields[key].value;
+                } else if (key === 'postal_code') {
                     guest[key] = guestFields[key].value;
                 } else {
                     guest[key] = guestFields[key].value;
@@ -432,7 +439,7 @@ const generatePDF = async () => {
         return guest;
     });
 
-    //console.log('Data to be sent to PDF function:', guestData);
+    console.log('Data to be sent to PDF function:', guestData);
 
     let result;
     const reservationId = Array.isArray(props.reservation) ? props.reservation[0].id : props.reservation.id;

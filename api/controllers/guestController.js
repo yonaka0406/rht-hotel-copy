@@ -214,7 +214,7 @@ const generateGuestList = async (req, res) => {
                 // Adjusting column spans for name and vehicle number
                 guestsHtml += `
                     <div class="grid-item label" style="grid-column: 1 / span 1;"><span class="highlight">※</span>お名前</div>
-                    <div class="grid-item col-span-3">${guest.client_name || ''}</div>
+                    <div class="grid-item col-span-3">${guest.name_kanji || guest.name_kana || guest.name || ''}</div>
                     <div class="grid-item label" style="grid-column: 5 / span 1;"><span class="highlight">※</span>車両ナンバー</div>
                     <div class="grid-item col-span-2">${guest.number_plate || ''}</div>
 

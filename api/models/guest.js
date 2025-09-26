@@ -39,6 +39,8 @@ const getGuestListDetails = async (requestId, hotelId, reservationId) => {
                 SELECT json_agg(
                     json_build_object(
                         'name', c.name,
+                        'name_kana', c.name_kana,
+                        'name_kanji', c.name_kanji,
                         'phone', c.phone
                     )
                 )

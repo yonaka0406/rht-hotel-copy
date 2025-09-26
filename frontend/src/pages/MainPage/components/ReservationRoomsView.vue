@@ -1556,7 +1556,9 @@ const openGuestListDialog = async (group, isGroup = false) => {
         for (const roomGroup of groupedRooms.value) {
             const roomDetail = roomGroup.details[0];
             const roomGuests = roomDetail.reservation_clients.map(client => ({
-                name: client.name_kanji || client.name,
+                name: client.name,
+                name_kanji: client.name_kanji,
+                name_kana: client.name_kana,
                 address: client.address1,
                 phone: client.phone,
                 car_number_plate: client.car_number_plate,
@@ -1618,7 +1620,9 @@ const openGuestListDialog = async (group, isGroup = false) => {
     } else {
         // --- Individual room data processing (unchanged) ---
         const guests = reservationDetails.reservation_clients.map(c => ({
-            name: c.name_kanji || c.name,
+            name: c.name,
+            name_kanji: c.name_kanji,
+            name_kana: c.name_kana,
             address: c.address1,
             phone: c.phone,
             car_number_plate: c.car_number_plate,
