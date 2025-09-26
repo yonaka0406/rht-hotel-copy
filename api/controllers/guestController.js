@@ -489,7 +489,7 @@ const getGuestListExcel = async (req, res) => {
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = bookerName;
                 Object.assign(worksheet.getCell(currentRow, 1), gridItemStyle);
-                worksheet.getRow(currentRow).height = 30;
+                worksheet.getRow(currentRow).height = 50;
                 currentRow++;
 
                 // Alternative Company Name
@@ -507,7 +507,7 @@ const getGuestListExcel = async (req, res) => {
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = alternativeName;
                 Object.assign(worksheet.getCell(currentRow, 1), gridItemStyle);
-                worksheet.getRow(currentRow).height = 60;
+                worksheet.getRow(currentRow).height = 50;
                 currentRow++;
 
                 // Check-in/Check-out Dates
