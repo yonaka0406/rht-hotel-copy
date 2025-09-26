@@ -327,6 +327,18 @@ const getGuestListExcel = async (req, res) => {
             return `${month} 月 ${day} 日 （ ${weekday} ）`;
         };
 
+        // Helper function for phone number formatting
+        const formatPhoneNumber = (phoneNumber) => {
+            if (!phoneNumber) return '';
+            // Remove all non-digit characters
+            const cleaned = (('' + phoneNumber)).replace(/\D/g, '');
+            const match = cleaned.match(/^(\d{3})(\d{4})(\d{4})$/);
+            if (match) {
+                return `${match[1]}-${match[2]}-${match[3]}`;
+            }
+            return phoneNumber; // Return original if not matching the pattern
+        };
+
         // Define a base style for grid items
         const gridItemStyle = {
             border: {
@@ -642,7 +654,7 @@ const getGuestListExcel = async (req, res) => {
                     Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
                     worksheet.mergeCells(currentRow, 2, currentRow, 7);
-                    worksheet.getCell(currentRow, 2).value = guest.phone || '';
+                    worksheet.getCell(currentRow, 2).value = formatPhoneNumber(guest.phone) || '';
                     Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
                     worksheet.getRow(currentRow).height = 60;
                     currentRow++;
