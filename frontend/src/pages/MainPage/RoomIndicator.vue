@@ -368,7 +368,7 @@
   };
 
   const getClientName = (room) => {
-    console.log('getClientName - room object:', room);
+    //console.log('getClientName - room object:', room);
     let clients = [];
     try {
       if (room?.clients_json) {
@@ -379,7 +379,7 @@
     } catch (e) {
       console.error('Error parsing clients_json:', e);
     }
-    console.log('getClientName - parsed clients:', clients);
+    //console.log('getClientName - parsed clients:', clients);
           
     const processedClients = [];
 
@@ -412,7 +412,7 @@
     }
   
     const fallbackName = room?.client_name || 'ゲスト';
-    console.log('getClientName - fallback name:', fallbackName);
+    //console.log('getClientName - fallback name:', fallbackName);
     return [{ name: fallbackName, isBooker: true, gender: null }];
   };
 
