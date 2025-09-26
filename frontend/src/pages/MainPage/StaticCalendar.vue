@@ -674,7 +674,7 @@ watch(currentMonth, async (newMonth) => {
     allParkingSpots.value = await fetchAllParkingSpotsByHotel(selectedHotelId.value);
     await fetchReservations(formatDate(startDate), formatDate(endDate));
     await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
-    console.log('Reservations available on load:', reservedRooms.value);
+    //console.log('Reservations available on load:', reservedRooms.value);
   } catch (error) {
     console.error("Error in currentMonth watcher:", error);
   } finally {
