@@ -5,6 +5,33 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 26, 2025
+
+#### Bug #70: Check-in/Check-out Date Update Issue for Multi-room Reservations
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - When cancelling the first or last day of a reservation with multiple rooms, the check-in and check-out dates are not being updated correctly.
+  - This affects the accuracy of stay duration and may cause issues with room availability and billing.
+- **Steps to Reproduce**:
+  1. Create a reservation with multiple rooms spanning several days
+  2. Cancel the first day of the reservation
+  3. Observe that the check-in date is not updated to reflect the new start date
+  4. Similarly, cancelling the last day does not update the check-out date
+- **Expected Behavior**:
+  - When the first day is cancelled, the check-in date should update to the next available day
+  - When the last day is cancelled, the check-out date should update to the previous day
+  - These updates should be applied consistently across all rooms in the reservation
+- **Affected Components**:
+  - Reservation management system
+  - Date calculation logic
+  - Multi-room reservation handling
+  - Billing system
+- **Additional Notes**:
+  - The issue appears to only affect reservations with multiple rooms
+  - Single-room reservations handle the date updates correctly
+  - This may be related to how the system tracks dates for each room in a multi-room reservation
+
 ### September 25, 2025
 
 #### Feature Request #69: チェックアウト取り消し (Check-out Cancellation)
