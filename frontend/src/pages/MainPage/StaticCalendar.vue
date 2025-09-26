@@ -1,7 +1,7 @@
 <template>
   <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
     <div class="flex justify-between w-full items-center mb-4">
-      <h2 class="text-xl font-bold">静的カレンダー</h2>
+      <h2 class="text-xl font-bold">予約照会</h2>
       <div class="flex flex-wrap gap-2 p-2">
         <div v-for="item in uniqueLegendItems" :key="item.plan_name" class="flex items-center gap-2">
           <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: item.plan_color }"></span>
