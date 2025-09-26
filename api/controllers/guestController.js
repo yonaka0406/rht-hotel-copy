@@ -587,7 +587,7 @@ const getGuestListExcel = async (req, res) => {
                     Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
                     worksheet.mergeCells(currentRow, 2, currentRow, 7);
-                    worksheet.getCell(currentRow, 2).value = guest.name_kanji || guest.name || '';
+                    worksheet.getCell(currentRow, 2).value = guest.name_kanji || guest.name_kana || guest.name || '';
                     Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
                     worksheet.getRow(currentRow).height = 30;
                     currentRow++;
