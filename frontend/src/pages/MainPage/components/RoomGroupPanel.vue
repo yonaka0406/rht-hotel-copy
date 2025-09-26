@@ -257,7 +257,7 @@ const createGuestList = async () => {
   try {
     const formattedDate = props.formatDate(props.selectedDate);
     await generateGuestListExcel(formattedDate, props.selectedHotelId); // Call the store function
-    console.log('Guest list Excel file download initiated via store.');
+    //console.log('Guest list Excel file download initiated via store.');
   } catch (error) {
     console.error('Error creating guest list via store:', error);
     // TODO: Show a toast notification for the error

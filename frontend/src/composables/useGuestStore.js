@@ -63,7 +63,7 @@ export function useGuestStore() {
                 throw new Error('API not available, export functionality limited');
             }
 
-            console.log('Attempting to generate guest list Excel for date:', date, 'hotelId:', hotelId);
+            //console.log('Attempting to generate guest list Excel for date:', date, 'hotelId:', hotelId);
             const authToken = localStorage.getItem('authToken');
             const url = `/api/guests/guest-list/excel/${date}/${hotelId}`;
             const response = await fetch(url, {

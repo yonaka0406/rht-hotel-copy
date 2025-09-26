@@ -527,6 +527,7 @@ const getGuestListExcel = async (req, res) => {
                 worksheet.mergeCells(currentRow, 6, currentRow, 7);
                 worksheet.getCell(currentRow, 6).value = checkOutDateFormatted;
                 Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
+                worksheet.getRow(currentRow).height = 40;
                 currentRow++;
 
                 // Parking and Payment
@@ -551,6 +552,7 @@ const getGuestListExcel = async (req, res) => {
                 }
                 worksheet.getCell(currentRow, 6).value = paymentDisplayValue;
                 Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
+                worksheet.getRow(currentRow).height = 40;
                 currentRow++;
 
                 // Room Details
@@ -680,8 +682,9 @@ const getGuestListExcel = async (req, res) => {
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
                 worksheet.mergeCells(currentRow, 2, currentRow, 7);
-                            worksheet.getCell(currentRow, 2).value = reservation.comment || '';
-                            Object.assign(worksheet.getCell(currentRow, 2), { ...leftAlignedGridItemStyle, alignment: { ...leftAlignedGridItemStyle.alignment, vertical: 'top' } });                worksheet.getRow(currentRow).height = 120;
+                worksheet.getCell(currentRow, 2).value = reservation.comment || '';
+                Object.assign(worksheet.getCell(currentRow, 2), { ...leftAlignedGridItemStyle, alignment: { ...leftAlignedGridItemStyle.alignment, vertical: 'top' } });
+                worksheet.getRow(currentRow).height = 250;
                 currentRow++;
 
                 // Footer Section
