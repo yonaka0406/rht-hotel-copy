@@ -56,6 +56,7 @@ export function useGuestStore() {
     };
 
     const generateGuestListExcel = async (date, hotelId) => {
+        isGenerating.value = true; // Set loading state to true
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, export functionality limited');
@@ -103,6 +104,8 @@ export function useGuestStore() {
         } catch (error) {
             console.error("宿泊者名簿エクスポートエラー:", error);
             throw error;
+        } finally {
+            isGenerating.value = false; // Reset loading state
         }
     };
 

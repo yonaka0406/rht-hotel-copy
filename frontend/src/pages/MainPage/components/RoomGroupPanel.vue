@@ -7,7 +7,7 @@
         <div class="flex-grow flex justify-end"> <!-- Right spacer and button container -->
           
           <Button v-if="checkInClientsCount > 0" label="宿泊者名簿を作成" icon="pi pi-file-excel" severity="info"
-            @click="createGuestList" />
+            @click="createGuestList" :loading="isGenerating" />
             
         </div>
       </div>
@@ -246,7 +246,7 @@ import Button from 'primevue/button';
 
 // Store
 import { useGuestStore } from '@/composables/useGuestStore';
-const { generateGuestListExcel } = useGuestStore();
+const { isGenerating, generateGuestListExcel } = useGuestStore();
 
 const checkInClientsCount = computed(() => {
   const checkInGroup = props.roomGroups.find(group => group.title === '本日チェックイン');
