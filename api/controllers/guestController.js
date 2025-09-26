@@ -307,7 +307,7 @@ const getGuestListExcel = async (req, res) => {
         const allParkingLotsData = await getParkingLots(requestId, hotelId);
         const allParkingLotNames = allParkingLotsData.map(lot => lot.name); // Get just the names
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
-        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
+        //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
             // logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
@@ -507,7 +507,7 @@ const getGuestListExcel = async (req, res) => {
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = alternativeName;
                 Object.assign(worksheet.getCell(currentRow, 1), gridItemStyle);
-                worksheet.getRow(currentRow).height = 30;
+                worksheet.getRow(currentRow).height = 60;
                 currentRow++;
 
                 // Check-in/Check-out Dates
@@ -622,7 +622,7 @@ const getGuestListExcel = async (req, res) => {
                     worksheet.mergeCells(currentRow, 2, currentRow, 7);
                     worksheet.getCell(currentRow, 2).value = guest.name_kanji || guest.name_kana || guest.name || '';
                     Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
-                    worksheet.getRow(currentRow).height = 30;
+                    worksheet.getRow(currentRow).height = 60;
                     currentRow++;
 
                     // Guest Address (2 merged rows)
@@ -640,10 +640,10 @@ const getGuestListExcel = async (req, res) => {
                     worksheet.getCell(addressStartRow, 2).value = `${guest.postal_code ? '〒 ' + guest.postal_code : ''}\n${guest.address1 || ''} ${guest.address2 || ''}`.trim();
                     Object.assign(worksheet.getCell(addressStartRow, 2), leftAlignedGridItemStyle);
                     worksheet.getRow(addressStartRow).height = 30;
-                    worksheet.getRow(addressStartRow + 1).height = 30;
+                    worksheet.getRow(addressStartRow + 1).height = 50;
                     currentRow += 2;
 
-                    // Guest Phone
+                    // Guest Phone and Car Number
                     worksheet.mergeCells(currentRow, 1, currentRow, 1);
                     worksheet.getCell(currentRow, 1).value = {
                         richText: [
@@ -653,9 +653,22 @@ const getGuestListExcel = async (req, res) => {
                     };
                     Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
-                    worksheet.mergeCells(currentRow, 2, currentRow, 7);
+                    worksheet.mergeCells(currentRow, 2, currentRow, 4); // Smaller content for phone
                     worksheet.getCell(currentRow, 2).value = formatPhoneNumber(guest.phone) || '';
                     Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
+
+                    worksheet.mergeCells(currentRow, 5, currentRow, 5); // Label for car number in column E
+                    worksheet.getCell(currentRow, 5).value = {
+                        richText: [
+                            { text: '※', font: highlightStyle.font },
+                            { text: '車両ナンバー' }
+                        ]
+                    };
+                    Object.assign(worksheet.getCell(currentRow, 5), labelStyle);
+
+                    worksheet.mergeCells(currentRow, 6, currentRow, 7); // Content for car number in F:G
+                    worksheet.getCell(currentRow, 6).value = guest.car_number_plate || '';
+                    Object.assign(worksheet.getCell(currentRow, 6), leftAlignedGridItemStyle);
                     worksheet.getRow(currentRow).height = 60;
                     currentRow++;
                 });
