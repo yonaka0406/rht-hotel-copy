@@ -556,13 +556,35 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
         rd.hotel_id,
         rd.reservation_id,
         rd.room_id,
-        SUM(COALESCE(rr.price, 0)) + SUM(COALESCE(ra.quantity, 0) * COALESCE(ra.price, 0)) AS total_price
+        SUM(
+            CASE
+                WHEN rd.billable IS TRUE AND rd.cancelled IS NULL THEN rd.price
+                WHEN rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
+                ELSE 0
+            END
+        ) + COALESCE(SUM(ra_agg.total_addon_price), 0) AS total_price
       FROM
         reservation_details rd
-      LEFT JOIN
-        reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id AND rd.billable = TRUE AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
-      LEFT JOIN
-        reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+      LEFT JOIN (
+          SELECT
+              rr_sub.reservation_details_id,
+              SUM(rr_sub.price) AS base_rate_price
+          FROM
+              reservation_rates rr_sub
+          WHERE
+              rr_sub.adjustment_type = 'base_rate'
+          GROUP BY
+              rr_sub.reservation_details_id
+      ) AS rr_agg ON rd.id = rr_agg.reservation_details_id
+      LEFT JOIN (
+          SELECT
+              ra_sub.reservation_detail_id,
+              SUM(ra_sub.quantity * ra_sub.price) AS total_addon_price
+          FROM
+              reservation_addons ra_sub
+          GROUP BY
+              ra_sub.reservation_detail_id
+      ) AS ra_agg ON rd.id = ra_agg.reservation_detail_id
       WHERE
         rd.hotel_id = $1 AND rd.reservation_id = $2
       GROUP BY

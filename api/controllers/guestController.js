@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
 const logger = require('../config/logger');
-const { selectReservation } = require('../models/reservations');
+const { selectReservation, selectReservationBalance } = require('../models/reservations');
 const { selectCheckInReservationsForGuestList } = require('../models/guest');
 
 // Helper
@@ -296,17 +296,17 @@ const generateGuestList = async (req, res) => {
 const getGuestListExcel = async (req, res) => {
     const requestId = req.requestId;
     const { date, hotelId } = req.params; // Now receiving date and hotelId from params
-    logger.debug(`[${requestId}] Starting getGuestListExcel. Params: date=${date}, hotelId=${hotelId}`);
+    // logger.debug(`[${requestId}] Starting getGuestListExcel. Params: date=${date}, hotelId=${hotelId}`);
 
     try {
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
-        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
+        // logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
-            logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
+            // logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
             return res.status(404).json({ message: 'No reservations found for the given date and hotel.' });
         }
-        logger.debug(`[${requestId}] Found ${reservationsData.length} reservations.`);
+        // logger.debug(`[${requestId}] Found ${reservationsData.length} reservations.`);
 
         const workbook = new ExcelJS.Workbook();
 
@@ -361,7 +361,7 @@ const getGuestListExcel = async (req, res) => {
                 reservationsByRoom[roomNumber].push(reservation);
             }
         }
-        logger.debug(`[${requestId}] Reservations grouped by room: ${JSON.stringify(Object.keys(reservationsByRoom))}`);
+        // logger.debug(`[${requestId}] Reservations grouped by room: ${JSON.stringify(Object.keys(reservationsByRoom))}`);
 
         if (Object.keys(reservationsByRoom).length === 0) {
             logger.warn(`[${requestId}] No rooms found for the provided reservations. No sheets will be created.`);
@@ -373,7 +373,7 @@ const getGuestListExcel = async (req, res) => {
         }
 
         for (const roomNumber in reservationsByRoom) {
-            logger.debug(`[${requestId}] Creating worksheet for room: ${roomNumber}`);
+            // logger.debug(`[${requestId}] Creating worksheet for room: ${roomNumber}`);
             const roomReservations = reservationsByRoom[roomNumber];
             const worksheet = workbook.addWorksheet(`部屋番号-${roomNumber}`);
 
@@ -402,7 +402,17 @@ const getGuestListExcel = async (req, res) => {
             let currentRow = 1;
 
             for (const reservation of roomReservations) {
-                logger.debug(`[${requestId}] Processing reservation ID: ${reservation.id} for room ${roomNumber}`);
+                // logger.debug(`[${requestId}] Processing reservation ID: ${reservation.id} for room ${roomNumber}`);
+
+                const reservationBalance = await selectReservationBalance(requestId, hotelId, reservation.id);
+                logger.debug(`[${requestId}] selectReservationBalance result for reservation ${reservation.id}: ${JSON.stringify(reservationBalance, null, 2)}`);
+
+                // Find the balance for the current room
+                const currentRoomBalance = reservationBalance.find(item => item.room_id === reservation.room_id);
+
+                const totalPayableAmount = currentRoomBalance ? parseFloat(currentRoomBalance.total_price) : 0;
+                const totalPaidAmount = currentRoomBalance ? parseFloat(currentRoomBalance.total_payment) : 0;
+                const remainingPayableAmount = currentRoomBalance ? parseFloat(currentRoomBalance.balance) : 0;
 
                 const hotelName = reservation.hotel_name || 'RHT Hotel';
                 const bookerName = reservation.booker_name_kanji || reservation.booker_name_kana || reservation.booker_name || 'N/A';
@@ -414,7 +424,7 @@ const getGuestListExcel = async (req, res) => {
                 const checkInDateFormatted = formatDateForGuestList(reservation.check_in);
                 const checkOutDateFormatted = formatDateForGuestList(reservation.check_out);
 
-                const paymentTotal = reservation.total_price ? reservation.total_price.toLocaleString() : '0'; // Assuming total_price might be in reservation object
+                const paymentTotal = totalPayableAmount.toLocaleString(); // Use the calculated totalPayableAmount
                 let paymentOption;
                 if (reservation.payment_timing === 'on-site') {
                     paymentOption = '現地決済';
@@ -429,7 +439,7 @@ const getGuestListExcel = async (req, res) => {
                 }
 
                 // Hotel Name Header
-                logger.debug(`[${requestId}] Adding Hotel Name Header for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Hotel Name Header for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = `${hotelName} 宿泊者名簿`;
                 worksheet.getCell(currentRow, 1).font = { bold: true, size: 16 };
@@ -438,7 +448,7 @@ const getGuestListExcel = async (req, res) => {
                 currentRow++; // Add a blank row for spacing
 
                 // Booker Name
-                logger.debug(`[${requestId}] Adding Booker Name for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Booker Name for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = 'ご予約会社様/個人様名';
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
@@ -450,7 +460,7 @@ const getGuestListExcel = async (req, res) => {
                 currentRow++;
 
                 // Alternative Company Name
-                logger.debug(`[${requestId}] Adding Alternative Company Name for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Alternative Company Name for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = '※ご宿泊会社様名（ご予約の会社様と異なる場合のみ）';
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
@@ -468,7 +478,7 @@ const getGuestListExcel = async (req, res) => {
                 currentRow++;
 
                 // Check-in/Check-out Dates
-                logger.debug(`[${requestId}] Adding Check-in/Check-out Dates for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Check-in/Check-out Dates for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 1);
                 worksheet.getCell(currentRow, 1).value = 'チェックイン日';
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
@@ -487,7 +497,7 @@ const getGuestListExcel = async (req, res) => {
                 currentRow++;
 
                 // Parking and Payment
-                logger.debug(`[${requestId}] Adding Parking and Payment for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Parking and Payment for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 1);
                 worksheet.getCell(currentRow, 1).value = '駐車場';
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
@@ -497,16 +507,16 @@ const getGuestListExcel = async (req, res) => {
                 Object.assign(worksheet.getCell(currentRow, 2), gridItemStyle);
 
                 worksheet.mergeCells(currentRow, 5, currentRow, 5);
-                worksheet.getCell(currentRow, 5).value = '現地決済';
+                worksheet.getCell(currentRow, 5).value = '支払い方法';
                 Object.assign(worksheet.getCell(currentRow, 5), labelStyle);
 
                 worksheet.mergeCells(currentRow, 6, currentRow, 7);
-                worksheet.getCell(currentRow, 6).value = `${paymentOption} （ ${paymentTotal} 円）`;
+                worksheet.getCell(currentRow, 6).value = `${paymentOption} （ ${remainingPayableAmount.toLocaleString()} 円）`;
                 Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
                 currentRow++;
 
                 // Room Details
-                logger.debug(`[${requestId}] Adding Room Details for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Room Details for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 1);
                 worksheet.getCell(currentRow, 1).value = '部屋番号';
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
@@ -531,7 +541,7 @@ const getGuestListExcel = async (req, res) => {
                 currentRow++;
 
                 // Guests Section Header
-                logger.debug(`[${requestId}] Adding Guests Section Header for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Guests Section Header for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = '宿泊者情報';
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
@@ -559,7 +569,7 @@ const getGuestListExcel = async (req, res) => {
                         currentRow++;
                     }
 
-                    logger.debug(`[${requestId}] Adding guest ${guest.name} for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                    // logger.debug(`[${requestId}] Adding guest ${guest.name} for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
 
                     // Guest Name
                     worksheet.mergeCells(currentRow, 1, currentRow, 1);
@@ -613,18 +623,18 @@ const getGuestListExcel = async (req, res) => {
                 });
 
                 // Comments
-                logger.debug(`[${requestId}] Adding Comments for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Comments for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 worksheet.mergeCells(currentRow, 1, currentRow, 1);
                 worksheet.getCell(currentRow, 1).value = '備考';
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
                 worksheet.mergeCells(currentRow, 2, currentRow, 7);
                             worksheet.getCell(currentRow, 2).value = reservation.comment || '';
-                            Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);                worksheet.getRow(currentRow).height = 60;
+                            Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);                worksheet.getRow(currentRow).height = 120;
                 currentRow++;
 
                 // Footer Section
-                logger.debug(`[${requestId}] Adding Footer Section for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
+                // logger.debug(`[${requestId}] Adding Footer Section for reservation ${reservation.id} in room ${roomNumber} at row ${currentRow}`);
                 currentRow++; // Blank row for spacing
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
                 worksheet.getCell(currentRow, 1).value = '↑↑↑上記項目内の※の欄のご記入をお願いいたします。';
@@ -645,7 +655,7 @@ const getGuestListExcel = async (req, res) => {
 
         await workbook.xlsx.write(res);
         res.end();
-        logger.debug(`[${requestId}] Successfully generated guest list Excel.`);
+        // logger.debug(`[${requestId}] Successfully generated guest list Excel.`);
 
     } catch (error) {
         logger.error(`[${requestId}] Error generating guest list Excel:`, error);
