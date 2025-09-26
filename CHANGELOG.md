@@ -17,10 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Advanced analytics and business intelligence features
 
 ### Backlog
-- Notifications: Alert notification settings (e.g., alert for large bookings 1 month after receiving order for bookings several months out). (#004)
-- CRM: Data recording via upload method. (#037)
-- CRM: Sales cool performance report. (#041)
-- Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry, the quantity of rooms in OTA should reflect the not imported entries as well).
 
 ---
 

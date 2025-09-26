@@ -2,6 +2,33 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### September 26, 2025
+
+#### Feature Request #64: Excel 名簿 (Roster) Download for Check-ins
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Add functionality to download an Excel file containing guest rosters for all rooms checking in on a selected date
+  - The Excel file should be immediately downloadable without requiring a preview dialog
+  - Users should be able to edit the Excel file or print it directly
+- **Requirements**:
+  - Add a new button/option in the reservations view to download the roster
+  - Generate Excel file with one row per guest/room
+  - Include relevant guest and reservation information in the Excel file
+  - Format the Excel file for easy printing
+  - Support filtering by date range
+- **Data to Include**:
+  - Guest name (as it appears on ID)
+  - Room number
+  - Check-in/check-out dates
+  - Number of guests
+  - Contact information
+  - Special requests/notes
+- **Affected Components**:
+  - Reservation management UI
+  - Report generation backend
+  - Excel export functionality
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### September 24, 2025
 
 #### Feature Request #62: Check-in/Out Statistics with Gender Breakdown
