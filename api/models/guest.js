@@ -73,7 +73,13 @@ const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) =
         r.check_in,
         r.check_out,
         rd.number_of_people, -- Use number_of_people from reservation_details
-        COALESCE(ph.name, pg.name) AS plan_name, -- Get plan_name from plans_hotel or plans_global
+        (
+            SELECT array_agg(DISTINCT COALESCE(ph_sub.name, pg_sub.name))
+            FROM reservation_details rd_sub
+            LEFT JOIN plans_hotel ph_sub ON rd_sub.plans_hotel_id = ph_sub.id AND rd_sub.hotel_id = ph_sub.hotel_id
+            LEFT JOIN plans_global pg_sub ON rd_sub.plans_global_id = pg_sub.id
+            WHERE rd_sub.reservation_id = r.id AND rd_sub.hotel_id = r.hotel_id AND rd_sub.room_id = rd.room_id
+        ) AS assigned_plan_names,
         r.comment,
         h.formal_name AS hotel_name,
         rooms.id AS room_id,

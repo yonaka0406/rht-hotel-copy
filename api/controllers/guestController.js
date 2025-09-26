@@ -307,7 +307,7 @@ const getGuestListExcel = async (req, res) => {
         const allParkingLotsData = await getParkingLots(requestId, hotelId);
         const allParkingLotNames = allParkingLotsData.map(lot => lot.name); // Get just the names
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
-        //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
+        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
             // logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
@@ -426,7 +426,7 @@ const getGuestListExcel = async (req, res) => {
                 const bookerName = reservation.booker_name_kanji || reservation.booker_name_kana || reservation.booker_name || 'N/A';
                 const alternativeName = reservation.alternative_company_name || ''; // Assuming this might be in reservation object
                 const currentRoomNumbers = reservation.room_number; // Already filtered by roomNumber
-                const planNames = reservation.plan_name;
+                const planNames = reservation.assigned_plan_names ? reservation.assigned_plan_names.join(' ・ ') : reservation.plan_name;
                 const selectedParkingLotNames = reservation.assigned_parking_lot_names ? reservation.assigned_parking_lot_names.split(',').map(lot => lot.trim()) : [];
 
                 let parkingLotNames;
