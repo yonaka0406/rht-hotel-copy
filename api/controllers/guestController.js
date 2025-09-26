@@ -413,6 +413,7 @@ const getGuestListExcel = async (req, res) => {
                 const totalPayableAmount = currentRoomBalance ? parseFloat(currentRoomBalance.total_price) : 0;
                 const totalPaidAmount = currentRoomBalance ? parseFloat(currentRoomBalance.total_payment) : 0;
                 const remainingPayableAmount = currentRoomBalance ? parseFloat(currentRoomBalance.balance) : 0;
+                logger.debug(`[${requestId}] currentRoomBalance for room ${reservation.room_id}: ${JSON.stringify(currentRoomBalance, null, 2)}, remainingPayableAmount: ${remainingPayableAmount}`);
 
                 const hotelName = reservation.hotel_name || 'RHT Hotel';
                 const bookerName = reservation.booker_name_kanji || reservation.booker_name_kana || reservation.booker_name || 'N/A';
@@ -511,7 +512,11 @@ const getGuestListExcel = async (req, res) => {
                 Object.assign(worksheet.getCell(currentRow, 5), labelStyle);
 
                 worksheet.mergeCells(currentRow, 6, currentRow, 7);
-                worksheet.getCell(currentRow, 6).value = `${paymentOption} （ ${remainingPayableAmount.toLocaleString()} 円）`;
+                let paymentDisplayValue = paymentOption;
+                if (remainingPayableAmount !== 0) {
+                    paymentDisplayValue += ` （ ${remainingPayableAmount.toLocaleString()} 円）`;
+                }
+                worksheet.getCell(currentRow, 6).value = paymentDisplayValue;
                 Object.assign(worksheet.getCell(currentRow, 6), gridItemStyle);
                 currentRow++;
 

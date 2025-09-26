@@ -76,6 +76,7 @@ const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) =
         COALESCE(ph.name, pg.name) AS plan_name, -- Get plan_name from plans_hotel or plans_global
         r.comment,
         h.formal_name AS hotel_name,
+        rooms.id AS room_id,
         rooms.room_number,
         rooms.smoking, -- Add smoking status
         rc_json.clients_json, -- Use the clients_json from the subquery
