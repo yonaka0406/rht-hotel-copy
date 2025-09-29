@@ -4,6 +4,25 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### September 29, 2025
 
+#### Feature Request #68: OTA予約のデフォルト駐車場設定 (OTA Reservation Default Parking Setting)
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - For OTA reservations, set the default number of parking spaces to 1 car per reservation
+  - This will streamline the reservation process by automatically including parking for one car with each booking
+- **Requirements**:
+  - [ ] Add system setting to configure default parking allocation for OTA reservations
+  - [ ] Set default to 1 car per OTA booking
+  - [ ] Allow modification of parking count during the reservation process if needed
+  - [ ] Ensure the parking fee is correctly calculated and displayed
+  - [ ] Update reservation confirmation emails/templates to show included parking
+- **Affected Components**:
+  - OTA reservation processing
+  - Booking engine
+  - Reservation management UI
+  - Billing system
+  - Confirmation emails/templates
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 #### Feature Request #69: チェックアウト取り消し (Check-out Cancellation)
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:

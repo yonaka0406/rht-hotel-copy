@@ -7,7 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- Feature: Added Excel roster download for check-ins with guest details and room information
 
 ---
 ## Future Releases
@@ -491,8 +490,17 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.18] - 2025-09-29
+
+- Feature: Added Excel roster download for check-ins with guest details and room information
+- Feature: Added OTA reservation default parking setting (1 car per reservation)
+- Feature: Added check-out cancellation functionality
+
+---
+
 ## Version History
 
+- **1.1.17** (2025-09-24) - Enhanced dashboard with check-in/out statistics and gender breakdown. Added static calendar view and improved room indicators with guest information. Fixed meal count export and parking calendar spot availability.
 - **1.1.16** (2025-09-19) - Enhanced reservation management with improved guest handling and data persistence. Added comprehensive reporting features including Channel and Payment Timing reports, and resolved meal count report date issues.
 - **1.1.15** (2025-09-18) - Improved OTA reservation handling and payment timing management. Enhanced calendar functionality and added visual theming to monthly reports.
 - **1.1.14** (2025-09-17) - Introduced multi-room temporary block functionality and enhanced reporting with detailed plan breakdowns. Fixed reporting issues including room count calculations and updated financial reports to display pre-tax values for consistency with accounting standards.
