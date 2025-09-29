@@ -496,6 +496,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added OTA reservation default parking setting (1 car per reservation)
 - Feature: Added check-out cancellation functionality
 - Feature: Added a new metric showing the average length of stay and distribution of types of person in the Reporting module
+- Feature: Added override for rounding logic in plan price calculation
 
 ---
 

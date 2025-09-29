@@ -2625,7 +2625,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
   //console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
   const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, overrideRounding } = data;
 
-  console.log('DEBUGGING updateReservationRoomPlan overrideRounding:', overrideRounding);
+  // console.log('DEBUGGING updateReservationRoomPlan overrideRounding:', overrideRounding);
 
   const pool = getPool(requestId);
   const client = await pool.connect();

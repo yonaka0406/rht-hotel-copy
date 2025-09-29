@@ -986,8 +986,6 @@ const editReservationRoomPlan = async (req, res) => {
   const { plan, addons, daysOfTheWeek, overrideRounding } = req.body;
   const user_id = req.user.id;
 
-  console.log('DEBUGGING editReservationRoomPlan overrideRounding:', overrideRounding);
-
   try {
     const updateData = {
       reservationId: id,

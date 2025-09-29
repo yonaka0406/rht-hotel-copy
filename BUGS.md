@@ -5,31 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### September 29, 2025
-
-#### Bug #71: Room Rate Rounding and Negative Values in Day View
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  - Manual rate entries in room day view are being rounded to the nearest hundred
-  - Negative values are not accepted in the rate field
-- **Steps to Reproduce**:
-  1. Go to room day view
-  2. Edit a reservation rate
-  3. Enter a non-hundred value (e.g., 12,340) - it rounds down (e.g., to 12,300)
-  4. Try to enter a negative value (e.g., -5000) - it's not accepted
-- **Expected**:
-  - Exact value should be saved without rounding
-  - Negative values should be accepted for adjustments/refunds
-- **Components**:
-  - Room day view UI
-  - Rate input handling
-  - Form validation
-- **Notes**: 
-  - Likely a frontend formatting/validation issue
-  - Need to update both the input validation and any backend validation
-  - Consider adding a visual indicator for negative values (e.g., red text or minus sign)
-
 ### September 26, 2025
 
 #### Bug #70: Check-in/Check-out Date Update Issue for Multi-room Reservations
