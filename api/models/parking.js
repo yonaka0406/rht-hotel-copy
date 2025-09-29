@@ -643,7 +643,7 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
 }
 
 const saveParkingAssignments = async (requestId, assignments, userId, client = null) => {
-    console.log(`[saveParkingAssignments] Starting with ${assignments.length} assignments for user ${userId}`, assignments);
+    //console.log(`[saveParkingAssignments] Starting with ${assignments.length} assignments for user ${userId}`, assignments);
     const pool = getPool(requestId);
     let localClient = client;
     let releaseClient = false;
@@ -679,12 +679,12 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             } = assignment;
 
             // 1. Fetch reservation_details for this reservation
-            console.log('Fetching reservation details with params:', {
-                reservation_id,
-                hotel_id,
-                check_in: formatDate(new Date(check_in)),
-                check_out: formatDate(new Date(check_out))
-            });
+            //console.log('Fetching reservation details with params:', {
+            //    reservation_id,
+            //    hotel_id,
+            //    check_in: formatDate(new Date(check_in)),
+            //    check_out: formatDate(new Date(check_out))
+            //});
 
             const query = {
                 text: `SELECT id, room_id, date 
@@ -695,10 +695,10 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 values: [reservation_id, hotel_id, formatDate(new Date(check_in)), formatDate(new Date(check_out))]
             };
 
-            console.log('Executing query:', {
-                text: query.text,
-                values: query.values
-            });
+            //console.log('Executing query:', {
+            //    text: query.text,
+            //    values: query.values
+            //});
 
             const detailsRes = await localClient.query(query);
             const reservationDetails = detailsRes.rows;
