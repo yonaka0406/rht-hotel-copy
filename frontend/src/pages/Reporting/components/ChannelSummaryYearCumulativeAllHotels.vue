@@ -192,8 +192,18 @@ const paymentTimingChartData = computed(() => {
         };
     }
 
-    const hotels = [...new Set(chartData.value.map(item => item.hotel_name))];
+    const allHotels = [...new Set(chartData.value.map(item => item.hotel_name))];
     const paymentTimings = [...new Set(chartData.value.flatMap(item => Object.keys(item.payment_timing || {})))];
+
+    if (paymentTimings.length === 0) { // Handle case where no payment timings exist
+        return {
+            hotels: [],
+            paymentTimings: [],
+            series: []
+        };
+    }
+
+    const firstSeriesTiming = paymentTimings[0]; // This is the "first series"
 
     // Calculate total reserved nights per hotel for percentage calculation
     const hotelTotals = {};
@@ -203,10 +213,22 @@ const paymentTimingChartData = computed(() => {
             total += hotel.payment_timing[timing];
         }
         hotelTotals[hotel.hotel_name] = total;
-        //console.log(`DEBUG: Hotel ${hotel.hotel_name} total reserved dates (from payment_timing sum):`, total); // Debug log
-        //console.log(`DEBUG: Hotel ${hotel.hotel_name} reserved_dates field:`, hotel.reserved_dates); // Debug log
     });
-    //console.log('DEBUG: Calculated hotelTotals:', hotelTotals); // Debug log
+
+    // Sort hotels based on the percentage of the first series timing
+    const sortedHotels = [...allHotels].sort((hotelNameA, hotelNameB) => {
+        const hotelDataA = chartData.value.find(item => item.hotel_name === hotelNameA);
+        const rawValueA = hotelDataA?.payment_timing?.[firstSeriesTiming] || 0;
+        const totalA = hotelTotals[hotelNameA];
+        const percentageA = totalA > 0 ? (rawValueA / totalA) : 0;
+
+        const hotelDataB = chartData.value.find(item => item.hotel_name === hotelNameB);
+        const rawValueB = hotelDataB?.payment_timing?.[firstSeriesTiming] || 0;
+        const totalB = hotelTotals[hotelNameB];
+        const percentageB = totalB > 0 ? (rawValueB / totalB) : 0;
+
+        return percentageB - percentageA; // Descending order
+    });
 
     const series = paymentTimings.map(timing => {
         return {
@@ -225,7 +247,7 @@ const paymentTimingChartData = computed(() => {
             emphasis: {
                 focus: 'series'
             },
-            data: hotels.map(hotelName => {
+            data: sortedHotels.map(hotelName => {
                 const hotelData = chartData.value.find(item => item.hotel_name === hotelName);
                 const rawValue = hotelData?.payment_timing?.[timing] || 0;
                 const total = hotelTotals[hotelName];
@@ -235,7 +257,7 @@ const paymentTimingChartData = computed(() => {
     });
 
     return {
-        hotels,
+        hotels: sortedHotels,
         paymentTimings,
         series,
         hotelTotals // Expose hotelTotals for tooltip formatter
@@ -306,7 +328,39 @@ const bookerTypeChartData = computed(() => {
         hotelData.data && hotelData.data.some(d => d.room_nights > 0)
     );
 
-    const hotels = filteredBookerTypeData.map(item => item.hotelName);
+    const sortedBookerTypeData = [...filteredBookerTypeData].sort((a, b) => {
+        const getPercentage = (hotelData, type) => {
+            const individualNights = hotelData.data.find(d => d.legal_or_natural_person === 'individual' || d.legal_or_natural_person === 'natural')?.room_nights || 0;
+            const corporateNights = hotelData.data.find(d => d.legal_or_natural_person === 'corporate' || d.legal_or_natural_person === 'legal')?.room_nights || 0;
+            const notSetNights = hotelData.data.find(d => d.legal_or_natural_person !== 'individual' && d.legal_or_natural_person !== 'natural' && d.legal_or_natural_person !== 'corporate' && d.legal_or_natural_person !== 'legal')?.room_nights || 0;
+            const totalNights = individualNights + corporateNights + notSetNights;
+
+            let value = 0;
+            if (type === '個人') value = individualNights;
+            else if (type === '法人') value = corporateNights;
+            else if (type === '未設定') value = notSetNights;
+
+            return totalNights > 0 ? (value / totalNights) : 0;
+        };
+
+        const percentageA_individual = getPercentage(a, '個人');
+        const percentageB_individual = getPercentage(b, '個人');
+        if (percentageA_individual !== percentageB_individual) {
+            return percentageB_individual - percentageA_individual; // Descending for '個人'
+        }
+
+        const percentageA_corporate = getPercentage(a, '法人');
+        const percentageB_corporate = getPercentage(b, '法人');
+        if (percentageA_corporate !== percentageB_corporate) {
+            return percentageB_corporate - percentageA_corporate; // Descending for '法人'
+        }
+
+        const percentageA_notSet = getPercentage(a, '未設定');
+        const percentageB_notSet = getPercentage(b, '未設定');
+        return percentageB_notSet - percentageA_notSet; // Descending for '未設定'
+    });
+
+    const hotels = sortedBookerTypeData.map(item => item.hotelName);
     const bookerTypes = ['個人', '法人', '未設定'];
 
     const series = bookerTypes.map(type => {
@@ -325,7 +379,7 @@ const bookerTypeChartData = computed(() => {
             emphasis: {
                 focus: 'series'
             },
-            data: filteredBookerTypeData.map(hotelData => {
+            data: sortedBookerTypeData.map(hotelData => {
                 const individualNights = hotelData.data.find(d => d.legal_or_natural_person === 'individual' || d.legal_or_natural_person === 'natural')?.room_nights || 0;
                 const corporateNights = hotelData.data.find(d => d.legal_or_natural_person === 'corporate' || d.legal_or_natural_person === 'legal')?.room_nights || 0;
                 const notSetNights = hotelData.data.find(d => d.legal_or_natural_person !== 'individual' && d.legal_or_natural_person !== 'natural' && d.legal_or_natural_person !== 'corporate' && d.legal_or_natural_person !== 'legal')?.room_nights || 0;

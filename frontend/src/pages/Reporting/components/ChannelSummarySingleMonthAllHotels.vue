@@ -1,7 +1,6 @@
-
 <template>
     <div class="p-4">
-        <h3 class="text-xl font-semibold mb-4">予約分析</h3>
+        <h3 class="text-xl font-semibold mb-4">予約分析（単月）</h3>
 
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
@@ -17,15 +16,31 @@
         </div>
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
-                <Card>
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別予約分析</div></template>
+                <Card v-if="scatterPlotSeriesData.length > 0">
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別チャネル分布</div></template>
                     <template #content>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
-                            <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
-                            <div ref="bookerTypeChartContainer" style="width: 100%; height: 500px;"></div>
-                            <div ref="lengthOfStayChartContainer" style="width: 100%; height: 500px;"></div>
-                        </div>
+                        <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
+                    </template>
+                </Card>
+
+                <Card class="mt-4" v-if="paymentTimingChartData.hotels.length > 0">
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別支払タイミング分布</div></template>
+                    <template #content>
+                        <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
+                    </template>
+                </Card>
+
+                <Card class="mt-4" v-if="bookerTypeChartData.hotels.length > 0">
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別予約者区分</div></template>
+                    <template #content>
+                        <div ref="bookerTypeChartContainer" style="width: 100%; height: 500px;"></div>
+                    </template>
+                </Card>
+
+                <Card class="mt-4" v-if="lengthOfStayChartData.length > 0">
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別滞在日数</div></template>
+                    <template #content>
+                        <div ref="lengthOfStayChartContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
             </div>
@@ -132,13 +147,6 @@ const viewOptions = ref([
     { label: 'テーブル', value: 'table' }
 ]);
 
-const formattedMonth = computed(() => {
-    const date = props.selectedDate;
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `${year}-${month}`;
-});
-
 const { fetchChannelSummary, fetchBookerTypeBreakdown, fetchReservationListView } = useReportStore();
 const chartData = ref([]);
 const bookerTypeData = ref([]);
@@ -183,8 +191,18 @@ const paymentTimingChartData = computed(() => {
         };
     }
 
-    const hotels = [...new Set(chartData.value.map(item => item.hotel_name))];
+    const allHotels = [...new Set(chartData.value.map(item => item.hotel_name))];
     const paymentTimings = [...new Set(chartData.value.flatMap(item => Object.keys(item.payment_timing || {})))];
+
+    if (paymentTimings.length === 0) { // Handle case where no payment timings exist
+        return {
+            hotels: [],
+            paymentTimings: [],
+            series: []
+        };
+    }
+
+    const firstSeriesTiming = paymentTimings[0]; // This is the "first series"
 
     // Calculate total reserved nights per hotel for percentage calculation
     const hotelTotals = {};
@@ -194,10 +212,22 @@ const paymentTimingChartData = computed(() => {
             total += hotel.payment_timing[timing];
         }
         hotelTotals[hotel.hotel_name] = total;
-        //console.log(`DEBUG: Hotel ${hotel.hotel_name} total reserved dates (from payment_timing sum):`, total); // Debug log
-        //console.log(`DEBUG: Hotel ${hotel.hotel_name} reserved_dates field:`, hotel.reserved_dates); // Debug log
     });
-    //console.log('DEBUG: Calculated hotelTotals:', hotelTotals); // Debug log
+
+    // Sort hotels based on the percentage of the first series timing
+    const sortedHotels = [...allHotels].sort((hotelNameA, hotelNameB) => {
+        const hotelDataA = chartData.value.find(item => item.hotel_name === hotelNameA);
+        const rawValueA = hotelDataA?.payment_timing?.[firstSeriesTiming] || 0;
+        const totalA = hotelTotals[hotelNameA];
+        const percentageA = totalA > 0 ? (rawValueA / totalA) : 0;
+
+        const hotelDataB = chartData.value.find(item => item.hotel_name === hotelNameB);
+        const rawValueB = hotelDataB?.payment_timing?.[firstSeriesTiming] || 0;
+        const totalB = hotelTotals[hotelNameB];
+        const percentageB = totalB > 0 ? (rawValueB / totalB) : 0;
+
+        return percentageB - percentageA; // Descending order
+    });
 
     const series = paymentTimings.map(timing => {
         return {
@@ -216,7 +246,7 @@ const paymentTimingChartData = computed(() => {
             emphasis: {
                 focus: 'series'
             },
-            data: hotels.map(hotelName => {
+            data: sortedHotels.map(hotelName => {
                 const hotelData = chartData.value.find(item => item.hotel_name === hotelName);
                 const rawValue = hotelData?.payment_timing?.[timing] || 0;
                 const total = hotelTotals[hotelName];
@@ -226,7 +256,7 @@ const paymentTimingChartData = computed(() => {
     });
 
     return {
-        hotels,
+        hotels: sortedHotels,
         paymentTimings,
         series,
         hotelTotals // Expose hotelTotals for tooltip formatter
@@ -281,7 +311,8 @@ const paymentTimingChartOptions = computed(() => ({
             interval: 0,
             rotate: 0
         }
-    }
+    },
+    series: paymentTimingChartData.value.series
 }));
 
 const bookerTypeChartData = computed(() => {
@@ -292,7 +323,43 @@ const bookerTypeChartData = computed(() => {
         };
     }
 
-    const hotels = bookerTypeData.value.map(item => item.hotelName);
+    const filteredBookerTypeData = bookerTypeData.value.filter(hotelData => 
+        hotelData.data && hotelData.data.some(d => d.room_nights > 0)
+    );
+
+    const sortedBookerTypeData = [...filteredBookerTypeData].sort((a, b) => {
+        const getPercentage = (hotelData, type) => {
+            const individualNights = hotelData.data.find(d => d.legal_or_natural_person === 'individual' || d.legal_or_natural_person === 'natural')?.room_nights || 0;
+            const corporateNights = hotelData.data.find(d => d.legal_or_natural_person === 'corporate' || d.legal_or_natural_person === 'legal')?.room_nights || 0;
+            const notSetNights = hotelData.data.find(d => d.legal_or_natural_person !== 'individual' && d.legal_or_natural_person !== 'natural' && d.legal_or_natural_person !== 'corporate' && d.legal_or_natural_person !== 'legal')?.room_nights || 0;
+            const totalNights = individualNights + corporateNights + notSetNights;
+
+            let value = 0;
+            if (type === '個人') value = individualNights;
+            else if (type === '法人') value = corporateNights;
+            else if (type === '未設定') value = notSetNights;
+
+            return totalNights > 0 ? (value / totalNights) : 0;
+        };
+
+        const percentageA_individual = getPercentage(a, '個人');
+        const percentageB_individual = getPercentage(b, '個人');
+        if (percentageA_individual !== percentageB_individual) {
+            return percentageB_individual - percentageA_individual; // Descending for '個人'
+        }
+
+        const percentageA_corporate = getPercentage(a, '法人');
+        const percentageB_corporate = getPercentage(b, '法人');
+        if (percentageA_corporate !== percentageB_corporate) {
+            return percentageB_corporate - percentageA_corporate; // Descending for '法人'
+        }
+
+        const percentageA_notSet = getPercentage(a, '未設定');
+        const percentageB_notSet = getPercentage(b, '未設定');
+        return percentageB_notSet - percentageA_notSet; // Descending for '未設定'
+    });
+
+    const hotels = sortedBookerTypeData.map(item => item.hotelName);
     const bookerTypes = ['個人', '法人', '未設定'];
 
     const series = bookerTypes.map(type => {
@@ -311,7 +378,7 @@ const bookerTypeChartData = computed(() => {
             emphasis: {
                 focus: 'series'
             },
-            data: bookerTypeData.value.map(hotelData => {
+            data: sortedBookerTypeData.map(hotelData => {
                 const individualNights = hotelData.data.find(d => d.legal_or_natural_person === 'individual' || d.legal_or_natural_person === 'natural')?.room_nights || 0;
                 const corporateNights = hotelData.data.find(d => d.legal_or_natural_person === 'corporate' || d.legal_or_natural_person === 'legal')?.room_nights || 0;
                 const notSetNights = hotelData.data.find(d => d.legal_or_natural_person !== 'individual' && d.legal_or_natural_person !== 'natural' && d.legal_or_natural_person !== 'corporate' && d.legal_or_natural_person !== 'legal')?.room_nights || 0;
@@ -373,14 +440,19 @@ const bookerTypeChartOptions = computed(() => ({
             interval: 0,
             rotate: 0
         }
-    }
+    },
+    series: bookerTypeChartData.value.series
 }));
 
 const lengthOfStayChartData = computed(() => {
     if (!lengthOfStayData.value || lengthOfStayData.value.length === 0) {
         return [];
     }
-    return lengthOfStayData.value.map(hotelData => {
+    const filteredLengthOfStayData = lengthOfStayData.value.filter(hotelData => 
+        hotelData.data && hotelData.data.some(d => (Number(d.number_of_nights) || 0) > 0 || (Number(d.number_of_people) || 0) > 0)
+    );
+
+    return filteredLengthOfStayData.map(hotelData => {
         const { totalNights, totalPeople, count } = hotelData.data.reduce((acc, res) => {
             acc.totalNights += Number(res.number_of_nights) || 0;
             acc.totalPeople += Number(res.number_of_people) || 0;
@@ -397,7 +469,6 @@ const lengthOfStayChartData = computed(() => {
         };
     });
 });
-
 
 const lengthOfStayChartOptions = computed(() => ({
     xAxis: {
@@ -440,13 +511,11 @@ const lengthOfStayChartOptions = computed(() => ({
     }]
 }));
 
-
-
 const fetchReportData = async () => {
-
+    
     if (!props.selectedHotels || props.selectedHotels.length === 0) {
         chartData.value = [];
-        error.value = 'ホテルが選択されていません。';
+        error.value = 'ホテルが選択されていません。';    
         return;
     }
     loading.value = true;
@@ -454,10 +523,9 @@ const fetchReportData = async () => {
     try {
         const year = props.selectedDate.getFullYear();
         const month = props.selectedDate.getMonth();
-        const startDate = formatDate(new Date(year, month, 1));
-        const endDate = formatDate(new Date(year, month + 1, 0));
-
-        const summaryData = await fetchChannelSummary(props.selectedHotels, startDate, endDate);
+        const startDate = formatDate(new Date(year, month, 1)); // First day of the selected month
+        const endDate = formatDate(new Date(year, month + 1, 0)); // Last day of the selected month        
+        const summaryData = await fetchChannelSummary(props.selectedHotels, startDate, endDate);        
         chartData.value = summaryData;
 
         const bookerTypePromises = props.selectedHotels.map(hotelId => fetchBookerTypeBreakdown(hotelId, startDate, endDate));
@@ -499,13 +567,10 @@ const fetchReportData = async () => {
         }
         lengthOfStayData.value = processedLengthOfStayData;
 
-
     } catch (err) {
-        console.error('Error fetching data:', err);
         error.value = err.message || 'データの取得中にエラーが発生しました。';
     } finally {
-        loading.value = false;
-
+        loading.value = false;        
     }
 };
 
@@ -561,7 +626,7 @@ const chartOptions = ref({
     }]
 });
 
-watch(scatterPlotSeriesData, (newData) => {
+watch(scatterPlotSeriesData, (newData) => {    
     chartOptions.value = {
         ...chartOptions.value,
         series: [{
@@ -579,14 +644,14 @@ watch(() => chartData.value, async (newData) => {
 }, { deep: true });
 
 
+
 const initOrUpdateChart = (instanceRef, containerRef, options) => {
     if (containerRef.value) {
         if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
             instanceRef.value = echarts.init(containerRef.value);
         }
-            // Always set options and resize
-            instanceRef.value.setOption(options, true);
-            instanceRef.value.resize();
+        instanceRef.value.setOption(options, true);
+        instanceRef.value.resize();
     } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
         instanceRef.value.dispose();
         instanceRef.value = null;
@@ -646,7 +711,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart);
 });
 
-watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], ([newHotels, newTrigger, newDate], [oldHotels, oldTrigger, oldDate]) => {
+watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], ([newHotels, newTrigger, newDate], [oldHotels, oldTrigger, oldDate]) => {    
     fetchReportData();
 }, { deep: true });
 
@@ -658,5 +723,6 @@ watch(selectedView, async (newView) => {
         disposeAllCharts();
     }
 });
+
 
 </script>
