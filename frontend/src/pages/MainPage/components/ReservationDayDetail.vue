@@ -638,7 +638,9 @@
         selectedRates.value = reservationDetail.value.reservation_rates.map(rate => ({
             ...rate,
         }));
-        selectedAddon.value = reservationDetail.value.reservation_addons.map(addon => ({
+        selectedAddon.value = reservationDetail.value.reservation_addons
+        .filter(addon => addon.addon_type !== 'parking')
+        .map(addon => ({
             ...addon,
         }));
 
@@ -680,7 +682,9 @@
     watch(addons, (newValue, oldValue) => {
         if (newValue !== oldValue) {
             // console.log('addons changed:', newValue);            
-            selectedAddon.value = newValue.map(addon => ({
+            selectedAddon.value = newValue
+            .filter(addon => addon.addon_type !== 'parking')
+            .map(addon => ({
                 ...addon,
                 quantity: reservationDetail.value.number_of_people
             }));

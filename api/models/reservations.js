@@ -311,6 +311,7 @@ const selectReservation = async (requestId, id, hotel_id) => {
                   'addons_global_id', ra.addons_global_id,
                   'addons_hotel_id', ra.addons_hotel_id,
                   'addon_name', ra.addon_name,
+                  'addon_type', ra.addon_type,
                   'quantity', ra.quantity,
                   'price', ra.price
               )
@@ -473,6 +474,7 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
                     'addons_global_id', ra.addons_global_id,
                     'addons_hotel_id', ra.addons_hotel_id,
                     'addon_name', ra.addon_name,
+                    'addon_type', ra.addon_type,
                     'quantity', ra.quantity,
                     'price', ra.price
                 )
