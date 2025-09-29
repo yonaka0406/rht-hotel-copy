@@ -162,6 +162,7 @@
             <ConfirmDialog group="revert"></ConfirmDialog>
             <ConfirmDialog group="cancel"></ConfirmDialog>
             <ConfirmDialog group="recovery"></ConfirmDialog>
+            <ConfirmDialog group="revertCheckout"></ConfirmDialog>
 
             <!-- Delete button for employee reservations (always shown when status is 保留中) -->
             <div v-if="reservationType === '社員' && reservationStatus === '確定'" class="grid grid-cols-4 gap-x-6">
@@ -191,6 +192,9 @@
                 <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
                     <Button label="チェックアウト" severity="warn" icon="pi pi-eject" fluid
                         @click="updateReservationStatus('checked_out')" :loading="isSubmitting" :disabled="isSubmitting" />
+                </div>
+                <div v-if="reservationStatus === 'チェックアウト'" class="field flex flex-col">
+                    <Button label="チェックインに戻す" severity="danger" icon="pi pi-undo" fluid @click="revertCheckout" :loading="isSubmitting" :disabled="isSubmitting" />
                 </div>
                 <div v-if="reservationStatus === '仮予約' || reservationStatus === '確定'" class="field flex flex-col">
                     <Button label="キャンセル" severity="contrast" :disabled="!allRoomsHavePlan || isSubmitting" @click="handleCancel" :loading="isSubmitting" />
@@ -1041,6 +1045,26 @@ const confirmPartialCancel = async () => {
 
         showDateDialog.value = false;
     }
+};
+
+const revertCheckout = () => {
+    confirm.require({
+        group: 'revertCheckout',
+        message: 'チェックアウトを取り消し、ステータスを「チェックイン」に戻しますか？',
+        header: 'チェックアウト取り消し確認',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: '取り消す',
+        rejectLabel: 'キャンセル',
+        acceptClass: 'p-button-danger',
+        rejectClass: 'p-button-secondary p-button-outlined',
+        accept: () => {
+            updateReservationStatus('checked_in');
+            toast.add({ severity: 'success', summary: '成功', detail: 'チェックアウトが取り消されました。', life: 3000 });
+        },
+        reject: () => {
+            toast.add({ severity: 'info', summary: 'キャンセル', detail: '操作はキャンセルされました。', life: 3000 });
+        }
+    });
 };
 
 // Check-in and Check-out
