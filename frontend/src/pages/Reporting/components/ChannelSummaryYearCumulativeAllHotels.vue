@@ -291,6 +291,9 @@ const paymentTimingChartOptions = computed(() => ({
             rotate: 0
         }
     },
+    series: paymentTimingChartData.value.series
+}));
+
 const bookerTypeChartData = computed(() => {
     if (!bookerTypeData.value || bookerTypeData.value.length === 0) {
         return {
@@ -381,6 +384,9 @@ const bookerTypeChartOptions = computed(() => ({
             rotate: 0
         }
     },
+    series: bookerTypeChartData.value.series
+}));
+
 const lengthOfStayChartData = computed(() => {
     if (!lengthOfStayData.value || lengthOfStayData.value.length === 0) {
         return [];
@@ -443,8 +449,6 @@ const lengthOfStayChartOptions = computed(() => ({
         },
     }]
 }));
-
-
 
 const fetchReportData = async () => {
     
