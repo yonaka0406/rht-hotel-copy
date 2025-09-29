@@ -3939,22 +3939,34 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               if (availableSpot) {
                   const parkingSpotId = availableSpot.parking_spot_id;
 
-                  const parkingInsertPromises = detailsForRoom.map(detail => {
+                  const parkingInsertPromises = detailsForRoom.map(async detail => {
+                      const addonQuery = `
+                          INSERT INTO reservation_addons 
+                              (hotel_id, reservation_detail_id, addons_global_id, addon_type, addon_name, price, quantity, tax_type_id, tax_rate, created_by, updated_by)
+                          VALUES ($1, $2, 3, 'parking', '駐車場', 0, 1, 3, 0.1, 1, 1)
+                          RETURNING id;
+                      `;
+                      const addonValues = [hotel_id, detail.id];
+                      const addonResult = await internalClient.query(addonQuery, addonValues);
+                      const reservationAddonId = addonResult.rows[0].id;
+
                       const parkingQuery = `
                           INSERT INTO reservation_parking (
                               hotel_id,
                               reservation_details_id,
+                              reservation_addon_id,
                               vehicle_category_id,
                               parking_spot_id,
                               date,
                               status,
                               created_by,
                               updated_by
-                          ) VALUES ($1, $2, $3, $4, $5, 'confirmed', 1, 1)
+                          ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', 1, 1)
                       `;
                       const parkingValues = [
                           hotel_id,
                           detail.id,
+                          reservationAddonId,
                           1, // vehicle_category_id
                           parkingSpotId,
                           detail.date
