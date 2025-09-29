@@ -103,8 +103,53 @@ const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut
   } catch (err) {
     console.error('Error fetching available parking spots:', err);
     throw new Error('Database error');
+  }  
+};
+
+const selectAndLockAvailableParkingSpot = async (requestId, hotelId, checkIn, checkOut, capacity_units_required, client) => {
+  if (!client) {
+    throw new Error('A database client is required for locking.');
+  }
+  const query = `
+        WITH occupied_spots AS (
+            SELECT
+                parking_spot_id
+            FROM
+                reservation_parking
+            WHERE
+                date >= $1 AND date < $2
+                AND parking_spot_id IS NOT NULL
+        )
+        SELECT
+            ps.id AS parking_spot_id,
+            ps.spot_number,
+            ps.spot_type,
+            ps.capacity_units
+        FROM
+            parking_spots ps
+        JOIN
+            parking_lots pl ON ps.parking_lot_id = pl.id
+        WHERE
+            pl.hotel_id = $3
+            AND ps.is_active = TRUE
+            AND ps.capacity_units >= $4
+            AND ps.id NOT IN (SELECT parking_spot_id FROM occupied_spots)
+        ORDER BY ps.capacity_units, ps.id
+        LIMIT 1
+        FOR UPDATE of ps SKIP LOCKED;
+    `;
+
+  const values = [checkIn, checkOut, hotelId, capacity_units_required];
+
+  try {
+    const result = await client.query(query, values);
+    return result.rows[0] || null; // Return the single spot or null
+  } catch (err) {
+    console.error('Error fetching and locking available parking spot:', err);
+    throw new Error('Database error');
   }
 };
+
 const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
   const pool = getPool(requestId);
   const query = `
@@ -3882,7 +3927,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const checkIn = BasicInformation.CheckInDate;
               const checkOut = BasicInformation.CheckOutDate;
 
-              const availableSpots = await selectAvailableParkingSpots(
+              const availableSpot = await selectAndLockAvailableParkingSpot(
                   requestId,
                   hotel_id,
                   checkIn,
@@ -3891,8 +3936,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                   internalClient
               );
 
-              if (availableSpots.length > 0) {
-                  const parkingSpotId = availableSpots[0].parking_spot_id;
+              if (availableSpot) {
+                  const parkingSpotId = availableSpot.parking_spot_id;
 
                   const parkingInsertPromises = detailsForRoom.map(detail => {
                       const parkingQuery = `
@@ -5452,6 +5497,7 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
 module.exports = {
   selectAvailableRooms,
   selectAvailableParkingSpots,
+  selectAndLockAvailableParkingSpot,
   selectReservedRooms,
   selectReservation,
   selectReservationDetail,
