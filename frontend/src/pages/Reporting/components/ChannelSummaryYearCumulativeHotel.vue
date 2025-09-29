@@ -18,7 +18,7 @@
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
             <Panel header="予約チャンネルと支払タイミング" toggleable :collapsed="false">
-                <div class="grid grid-cols-1 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card>
                         <template #title>予約チャンネル内訳 (泊数ベース)</template>
                         <template #content>
@@ -35,7 +35,7 @@
             </Panel>
 
             <Panel header="予約者属性と滞在日数" toggleable :collapsed="false" class="mt-4">
-                <div class="grid grid-cols-1 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card>
                         <template #title>予約者区分 (泊数ベース)</template>
                         <template #content>

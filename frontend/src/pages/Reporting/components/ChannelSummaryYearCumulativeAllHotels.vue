@@ -636,8 +636,12 @@ const resizeChart = () => {
     lengthOfStayChartInstance.value?.resize();
 };
 
-onMounted(() => {
-    fetchReportData();
+onMounted(async () => {
+    await fetchReportData();
+    if (selectedView.value === 'graph') {
+        await nextTick(); // Ensure DOM is updated after data fetch
+        refreshAllCharts();
+    }
     window.addEventListener('resize', resizeChart);
 });
 
@@ -650,11 +654,10 @@ watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], ([ne
     fetchReportData();
 }, { deep: true });
 
-watch(selectedView, async (newView) => {    
+watch(selectedView, async (newView) => {
     if (newView === 'graph') {
         await nextTick();
-        disposeAllCharts();
-        refreshAllCharts();
+        refreshAllCharts(); // Only refresh, don't dispose if not initialized
     } else {
         disposeAllCharts();
     }

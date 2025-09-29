@@ -18,30 +18,14 @@
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
                 <Card>
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別チャネル分布</div></template>
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別予約分析</div></template>
                     <template #content>
-                        <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
-                    </template>
-                </Card>
-
-                <Card class="mt-4">
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別支払タイミング分布</div></template>
-                    <template #content>
-                        <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
-                    </template>
-                </Card>
-
-                <Card class="mt-4">
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別予約者区分</div></template>
-                    <template #content>
-                        <div ref="bookerTypeChartContainer" style="width: 100%; height: 500px;"></div>
-                    </template>
-                </Card>
-
-                <Card class="mt-4">
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別滞在日数</div></template>
-                    <template #content>
-                        <div ref="lengthOfStayChartContainer" style="width: 100%; height: 500px;"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
+                            <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
+                            <div ref="bookerTypeChartContainer" style="width: 100%; height: 500px;"></div>
+                            <div ref="lengthOfStayChartContainer" style="width: 100%; height: 500px;"></div>
+                        </div>
                     </template>
                 </Card>
             </div>
@@ -297,7 +281,9 @@ const paymentTimingChartOptions = computed(() => ({
             interval: 0,
             rotate: 0
         }
-    },
+    }
+}));
+
 const bookerTypeChartData = computed(() => {
     if (!bookerTypeData.value || bookerTypeData.value.length === 0) {
         return {
@@ -387,7 +373,9 @@ const bookerTypeChartOptions = computed(() => ({
             interval: 0,
             rotate: 0
         }
-    },
+    }
+}));
+
 const lengthOfStayChartData = computed(() => {
     if (!lengthOfStayData.value || lengthOfStayData.value.length === 0) {
         return [];
@@ -409,6 +397,7 @@ const lengthOfStayChartData = computed(() => {
         };
     });
 });
+
 
 const lengthOfStayChartOptions = computed(() => ({
     xAxis: {
@@ -643,8 +632,12 @@ const resizeChart = () => {
     lengthOfStayChartInstance.value?.resize();
 };
 
-onMounted(() => {
-    fetchReportData();
+onMounted(async () => {
+    await fetchReportData();
+    if (selectedView.value === 'graph') {
+        await nextTick(); // Ensure DOM is updated after data fetch
+        refreshAllCharts();
+    }
     window.addEventListener('resize', resizeChart);
 });
 
@@ -660,8 +653,7 @@ watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], ([ne
 watch(selectedView, async (newView) => {
     if (newView === 'graph') {
         await nextTick();
-        disposeAllCharts();
-        refreshAllCharts();
+        refreshAllCharts(); // Only refresh, don't dispose if not initialized
     } else {
         disposeAllCharts();
     }
