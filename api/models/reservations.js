@@ -3865,6 +3865,71 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       }
     }
 
+    try {
+      const firstRoomKey = Object.keys(roomsArrayWithID)[0];
+      if (firstRoomKey) {
+          const firstRoomDetails = roomsArrayWithID[firstRoomKey];
+          const firstRoomId = firstRoomDetails[0].room_id;
+
+          const detailsQuery = `
+              SELECT id, date FROM reservation_details
+              WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
+          `;
+          const detailsResult = await internalClient.query(detailsQuery, [reservationId, hotel_id, firstRoomId]);
+          const detailsForRoom = detailsResult.rows;
+
+          if (detailsForRoom.length > 0) {
+              const checkIn = BasicInformation.CheckInDate;
+              const checkOut = BasicInformation.CheckOutDate;
+
+              const availableSpots = await selectAvailableParkingSpots(
+                  requestId,
+                  hotel_id,
+                  checkIn,
+                  checkOut,
+                  100, // capacity_units_required
+                  internalClient
+              );
+
+              if (availableSpots.length > 0) {
+                  const parkingSpotId = availableSpots[0].parking_spot_id;
+
+                  const parkingInsertPromises = detailsForRoom.map(detail => {
+                      const parkingQuery = `
+                          INSERT INTO reservation_parking (
+                              hotel_id,
+                              reservation_details_id,
+                              vehicle_category_id,
+                              parking_spot_id,
+                              date,
+                              status,
+                              created_by,
+                              updated_by
+                          ) VALUES ($1, $2, $3, $4, $5, 'confirmed', 1, 1)
+                      `;
+                      const parkingValues = [
+                          hotel_id,
+                          detail.id,
+                          1, // vehicle_category_id
+                          parkingSpotId,
+                          detail.date
+                      ];
+                      return internalClient.query(parkingQuery, parkingValues);
+                  });
+                  await Promise.all(parkingInsertPromises);
+              }
+          }
+      }
+    } catch (parkingError) {
+        logger.error('Failed to assign parking spot during OTA reservation creation. This error is non-critical and the reservation will be created without parking.', {
+            requestId,
+            hotel_id,
+            otaReservationId: BasicInformation.TravelAgencyBookingNumber,
+            error: parkingError.message,
+            stack: parkingError.stack
+        });
+    }
+
     // Payment    
     query = `
       INSERT INTO reservation_payments (
