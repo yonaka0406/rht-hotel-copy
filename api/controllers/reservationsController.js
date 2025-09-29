@@ -953,10 +953,10 @@ const editReservationAddon = async (req, res) => {
   const addons = req.body;
   const user_id = req.user.id;
 
-  console.log('[reservationsController] editReservationAddon', {
-    'id': id,
-    'hotel_id': hid
-  })
+  //console.log('[reservationsController] editReservationAddon', {
+  //  'id': id,
+  //  'hotel_id': hid
+  //})
 
   try {
     const updatedReservation = await updateReservationDetailAddon(req.requestId, id, hid, addons, user_id);
