@@ -59,32 +59,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### September 22, 2025
 
-#### Feature Request #67: Average Stay Length per Hotel in Reports
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Add a new metric showing the average length of stay for each hotel property
-  - Display in both the main dashboard and detailed reports
-  - Provide historical comparison (e.g., month-over-month, year-over-year)
-- **Requirements**:
-  - [ ] Calculate average stay length in nights per hotel property
-  - [ ] Display as both a numerical value and trend indicator
-  - [ ] Include filtering by date range
-  - [ ] Allow comparison across different time periods
-  - [ ] Support export to CSV/Excel
-  - [ ] Include visualization (e.g., bar/line chart)
-- **Metrics to Display**:
-  - Overall average stay length (all properties)
-  - Individual property averages
-  - Comparison to previous period (percentage change)
-  - Breakdown by room type
-  - Seasonal trends
-- **Affected Components**:
-  - Reports page
-  - Dashboard widgets
-  - Analytics backend
-  - Data export functionality
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-
 #### Feature Request #66: 宿泊者名簿 (Guest Roster) Direct Printing
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
