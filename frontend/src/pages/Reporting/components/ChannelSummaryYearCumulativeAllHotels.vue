@@ -17,28 +17,28 @@
         </div>
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
-                <Card>
+                <Card v-if="scatterPlotSeriesData.length > 0">
                     <template #header><div class="flex-1 text-center font-bold">ホテル別チャネル分布</div></template>
                     <template #content>
                         <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
 
-                <Card class="mt-4">
+                <Card class="mt-4" v-if="paymentTimingChartData.hotels.length > 0">
                     <template #header><div class="flex-1 text-center font-bold">ホテル別支払タイミング分布</div></template>
                     <template #content>
                         <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
 
-                <Card class="mt-4">
+                <Card class="mt-4" v-if="bookerTypeChartData.hotels.length > 0">
                     <template #header><div class="flex-1 text-center font-bold">ホテル別予約者区分</div></template>
                     <template #content>
                         <div ref="bookerTypeChartContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
 
-                <Card class="mt-4">
+                <Card class="mt-4" v-if="lengthOfStayChartData.length > 0">
                     <template #header><div class="flex-1 text-center font-bold">ホテル別滞在日数</div></template>
                     <template #content>
                         <div ref="lengthOfStayChartContainer" style="width: 100%; height: 500px;"></div>
@@ -302,7 +302,11 @@ const bookerTypeChartData = computed(() => {
         };
     }
 
-    const hotels = bookerTypeData.value.map(item => item.hotelName);
+    const filteredBookerTypeData = bookerTypeData.value.filter(hotelData => 
+        hotelData.data && hotelData.data.some(d => d.room_nights > 0)
+    );
+
+    const hotels = filteredBookerTypeData.map(item => item.hotelName);
     const bookerTypes = ['個人', '法人', '未設定'];
 
     const series = bookerTypes.map(type => {
@@ -321,7 +325,7 @@ const bookerTypeChartData = computed(() => {
             emphasis: {
                 focus: 'series'
             },
-            data: bookerTypeData.value.map(hotelData => {
+            data: filteredBookerTypeData.map(hotelData => {
                 const individualNights = hotelData.data.find(d => d.legal_or_natural_person === 'individual' || d.legal_or_natural_person === 'natural')?.room_nights || 0;
                 const corporateNights = hotelData.data.find(d => d.legal_or_natural_person === 'corporate' || d.legal_or_natural_person === 'legal')?.room_nights || 0;
                 const notSetNights = hotelData.data.find(d => d.legal_or_natural_person !== 'individual' && d.legal_or_natural_person !== 'natural' && d.legal_or_natural_person !== 'corporate' && d.legal_or_natural_person !== 'legal')?.room_nights || 0;
@@ -391,7 +395,11 @@ const lengthOfStayChartData = computed(() => {
     if (!lengthOfStayData.value || lengthOfStayData.value.length === 0) {
         return [];
     }
-    return lengthOfStayData.value.map(hotelData => {
+    const filteredLengthOfStayData = lengthOfStayData.value.filter(hotelData => 
+        hotelData.data && hotelData.data.some(d => (Number(d.number_of_nights) || 0) > 0 || (Number(d.number_of_people) || 0) > 0)
+    );
+
+    return filteredLengthOfStayData.map(hotelData => {
         const { totalNights, totalPeople, count } = hotelData.data.reduce((acc, res) => {
             acc.totalNights += Number(res.number_of_nights) || 0;
             acc.totalPeople += Number(res.number_of_people) || 0;
