@@ -151,9 +151,9 @@
 
     const reportTypeOptions = ref([
         { label: '月次収益・稼働サマリ', value: 'monthlySummary' },
+        { label: '予約分析', value: 'reservationAnalysis' },
         { label: '予約数変動 (昨日/今日)', value: 'activeReservationsChange' },
-        { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' },
-        { label: 'チャネルサマリー', value: 'channelSummary' }
+        { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' }
         // Add other existing views if they are to be selected via this dropdown
     ]);
 

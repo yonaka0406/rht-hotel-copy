@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-        <h3 class="text-xl font-semibold mb-4">チャネルサマリー</h3>
+        <h3 class="text-xl font-semibold mb-4">予約分析</h3>
 
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
@@ -16,26 +16,39 @@
         </div>
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
-                <Panel header="予約チャンネルと支払タイミング" toggleable :collapsed="false" class="col-span-12">
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-12 md:col-span-12">
-                            <Card>
-                                <template #title>予約チャンネル内訳 (泊数ベース)</template>
-                                <template #content>
-                                    <div ref="bookingSourceChart" class="w-full h-60"></div>
-                                </template>
-                            </Card>
-                        </div>
-                        <div class="col-span-12 md:col-span-12">
-                            <Card>
-                                <template #title>支払タイミング内訳 (泊数ベース)</template>
-                                <template #content>
-                                    <div ref="paymentTimingChart" class="w-full h-60"></div>
-                                </template>
-                            </Card>
-                        </div>
-                    </div>
-                </Panel>
+            <Panel header="予約チャンネルと支払タイミング" toggleable :collapsed="false">
+                <div class="grid grid-cols-1 gap-4">
+                    <Card>
+                        <template #title>予約チャンネル内訳 (泊数ベース)</template>
+                        <template #content>
+                            <div ref="bookingSourceChart" class="w-full h-60"></div>
+                        </template>
+                    </Card>
+                    <Card>
+                        <template #title>支払タイミング内訳 (泊数ベース)</template>
+                        <template #content>
+                            <div ref="paymentTimingChart" class="w-full h-60"></div>
+                        </template>
+                    </Card>
+                </div>
+            </Panel>
+
+            <Panel header="予約者属性と滞在日数" toggleable :collapsed="false" class="mt-4">
+                <div class="grid grid-cols-1 gap-4">
+                    <Card>
+                        <template #title>予約者区分 (泊数ベース)</template>
+                        <template #content>
+                            <div ref="bookerTypeChart" class="w-full h-60"></div>
+                        </template>
+                    </Card>
+                    <Card>
+                        <template #title>滞在日数</template>
+                        <template #content>
+                            <div ref="averageLengthOfStayChart" class="w-full h-60"></div>
+                        </template>
+                    </Card>
+                </div>
+            </Panel>
             </div>
             <div v-else-if="selectedView === 'table'">
                 <Panel header="テーブル表示" toggleable :collapsed="false" class="col-span-12">
@@ -128,8 +141,8 @@ import Column from 'primevue/column';
 import Panel from 'primevue/panel';
 import Tag from 'primevue/tag';
 import * as echarts from 'echarts/core';
-import { TreemapChart, PieChart } from 'echarts/charts';
-import { TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent } from 'echarts/components';
+import { TreemapChart, PieChart, ScatterChart } from 'echarts/charts';
+import { TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent, MarkLineComponent, MarkPointComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { formatDate } from '@/utils/dateUtils';
 
@@ -139,8 +152,11 @@ echarts.use([
     GridComponent,
     LegendComponent,
     VisualMapComponent,
+    MarkLineComponent,
+    MarkPointComponent,
     TreemapChart,
     PieChart,
+    ScatterChart,
     CanvasRenderer
 ]);
 
@@ -172,7 +188,7 @@ const formattedMonth = computed(() => {
     return `${year}-${month}`;
 });
 
-const { fetchChannelSummary, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown } = useReportStore();
+const { fetchChannelSummary, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown, fetchBookerTypeBreakdown, fetchReservationListView } = useReportStore();
 const chartData = ref([]);
 const loading = ref(false);
 const error = ref(null);
@@ -180,9 +196,17 @@ const bookingSourceChart = ref(null);
 let myBookingSourceChart = null;
 const paymentTimingChart = ref(null);
 let myPaymentTimingChart = null;
+const bookerTypeChart = ref(null);
+let myBookerTypeChart = null;
+const averageLengthOfStayChart = ref(null);
+let myAverageLengthOfStayChart = null;
 
 const bookingSourceData = ref([]);
 const paymentTimingData = ref([]);
+const bookerTypeData = ref([]);
+const averageLengthOfStayData = ref([]);
+const averageNights = ref(0);
+const averagePeople = ref(0);
 
 const translatePaymentTiming = (timing) => {
     const map = {
@@ -224,9 +248,14 @@ const fetchReportData = async () => {
         const month = props.selectedDate.getMonth();
         const startDate = formatDate(new Date(year, month, 1));
         const endDate = formatDate(new Date(year, month + 1, 0));
-        const data = await fetchChannelSummary([props.hotelId], startDate, endDate);
-        const bookingSourceResult = await fetchBookingSourceBreakdown(props.hotelId, startDate, endDate);
-        const paymentResult = await fetchPaymentTimingBreakdown(props.hotelId, startDate, endDate);
+        
+        const [data, bookingSourceResult, paymentResult, bookerTypeResult, reservationListResult] = await Promise.all([
+            fetchChannelSummary([props.hotelId], startDate, endDate),
+            fetchBookingSourceBreakdown(props.hotelId, startDate, endDate),
+            fetchPaymentTimingBreakdown(props.hotelId, startDate, endDate),
+            fetchBookerTypeBreakdown(props.hotelId, startDate, endDate),
+            fetchReservationListView(props.hotelId, startDate, endDate)
+        ]);
 
         const currentTotalBookingSourceRoomNights = bookingSourceResult.reduce((sum, item) => sum + item.room_nights, 0);
         const currentTotalPaymentTimingCount = paymentResult.reduce((sum, item) => sum + item.count, 0);
@@ -242,11 +271,216 @@ const fetchReportData = async () => {
 
         chartData.value = data;
 
+        processBookerTypeData(bookerTypeResult);
+        processAverageLengthOfStayData(reservationListResult);
+
     } catch (err) {
         error.value = err.message || 'データの取得中にエラーが発生しました。';
     } finally {
         loading.value = false;
     }
+};
+
+const processBookerTypeData = (bookerTypeBreakdownData) => {
+    if (!bookerTypeBreakdownData || bookerTypeBreakdownData.length === 0) {
+        bookerTypeData.value = [];
+        initBookerTypeChart();
+        return;
+    }
+
+    const mappedData = bookerTypeBreakdownData.map(item => {
+        let name;
+        if (item.legal_or_natural_person === 'individual' || item.legal_or_natural_person === 'natural') {
+            name = '個人';
+        } else if (item.legal_or_natural_person === 'corporate' || item.legal_or_natural_person === 'legal') {
+            name = '法人';
+        } else {
+            name = '未設定';
+        }
+        return { name, value: item.room_nights };
+    });
+
+    const aggregatedData = mappedData.reduce((acc, current) => {
+        const existing = acc.find(item => item.name === current.name);
+        if (existing) {
+            existing.value += current.value;
+        } else {
+            acc.push({ ...current });
+        }
+        return acc;
+    }, []);
+
+    bookerTypeData.value = aggregatedData.filter(item => item.value > 0);
+    initBookerTypeChart();
+};
+
+const initBookerTypeChart = () => {
+    if (!bookerTypeChart.value) return;
+    if (myBookerTypeChart) {
+        myBookerTypeChart.dispose();
+    }
+    myBookerTypeChart = echarts.init(bookerTypeChart.value);
+
+    const option = {
+        color: ["#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de", "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc"],
+        tooltip: {
+            trigger: 'item',
+            formatter: '{b}: {c} 泊 ({d}%)'
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left',
+            bottom: 'bottom'
+        },
+        series: [
+            {
+                name: '予約者区分',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['50%', '50%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 10,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                },
+                label: {
+                    show: true,
+                    position: 'outside',
+                    formatter: (params) => {
+                        const total = bookerTypeData.value.reduce((sum, item) => sum + item.value, 0);
+                        const percentage = (params.value / total * 100);
+                        return percentage > 5 ? `${params.name}: ${percentage.toFixed(1)}%` : '';
+                    }
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        fontSize: 20,
+                        fontWeight: 'bold'
+                    }
+                },
+                labelLine: {
+                    show: true
+                },
+                data: bookerTypeData.value
+            }
+        ]
+    };
+    myBookerTypeChart.setOption(option, true);
+};
+
+const processAverageLengthOfStayData = (reservationListData) => {
+    if (!reservationListData) {
+        averageLengthOfStayData.value = [];
+        averageNights.value = 0;
+        averagePeople.value = 0;
+        initAverageLengthOfStayChart();
+        return;
+    }
+
+    const rawDataForScatter = [];
+    let totalNightsSum = 0;
+    let totalPeopleSum = 0;
+    let reservationCount = 0;
+
+    reservationListData
+        .filter(res => res.number_of_nights > 0 && res.number_of_people > 0)
+        .forEach(res => {
+            const nights = Number(res.number_of_nights);
+            const people = Number(res.number_of_people);
+            rawDataForScatter.push([nights, people]);
+            totalNightsSum += nights;
+            totalPeopleSum += people;
+            reservationCount++;
+        });
+
+    averageLengthOfStayData.value = rawDataForScatter;
+    averageNights.value = reservationCount > 0 ? (totalNightsSum / reservationCount) : 0;
+    averagePeople.value = reservationCount > 0 ? (totalPeopleSum / reservationCount) : 0;
+
+    initAverageLengthOfStayChart();
+};
+
+const initAverageLengthOfStayChart = () => {
+    if (!averageLengthOfStayChart.value) return;
+    if(myAverageLengthOfStayChart) {
+        myAverageLengthOfStayChart.dispose();
+    }
+    myAverageLengthOfStayChart = echarts.init(averageLengthOfStayChart.value);
+
+    const option = {
+        grid: {
+            left: '3%',
+            right: '7%',
+            bottom: '7%',
+            containLabel: true
+        },
+        tooltip: {
+            showDelay: 0,
+            formatter: function (params) {
+                if (params.value.length > 1) {
+                    return `泊数: ${params.value[0]}泊<br/>人数: ${params.value[1]}人`;
+                }
+                return `${params.seriesName} :<br/>${params.name} : ${params.value} `;
+            },
+            axisPointer: {
+                show: true,
+                type: 'cross',
+                lineStyle: {
+                    type: 'dashed',
+                    width: 1
+                }
+            }
+        },
+        xAxis: [
+            {
+                type: 'value',
+                scale: true,
+                axisLabel: {
+                    formatter: '{value} 泊'
+                },
+                splitLine: {
+                    show: false
+                }
+            }
+        ],
+        yAxis: [
+            {
+                type: 'value',
+                scale: true,
+                axisLabel: {
+                    formatter: '{value} 人'
+                },
+                splitLine: {
+                    show: false
+                }
+            }
+        ],
+        series: [
+            {
+                name: '予約データ',
+                type: 'scatter',
+                data: averageLengthOfStayData.value,
+                markPoint: {
+                    data: [
+                        { type: 'max', name: '最大値' },
+                        { type: 'min', name: '最小値' }
+                    ]
+                },
+                markLine: {
+                    lineStyle: {
+                        type: 'solid'
+                    },
+                    data: [
+                        { xAxis: averageNights.value, name: '平均泊数' },
+                        { yAxis: averagePeople.value, name: '平均人数' }
+                    ]
+                }
+            }
+        ]
+    };
+    myAverageLengthOfStayChart.setOption(option, true);
 };
 
 
@@ -473,13 +707,17 @@ const refreshAllCharts = () => {
         myBookingSourceChart = null;
         myPaymentTimingChart?.dispose();
         myPaymentTimingChart = null;
+        myBookerTypeChart?.dispose();
+        myBookerTypeChart = null;
+        myAverageLengthOfStayChart?.dispose();
+        myAverageLengthOfStayChart = null;
+
         initBookingSourceChart();
         initPaymentTimingChart();
+        initBookerTypeChart();
+        initAverageLengthOfStayChart();
     } else {
-        myBookingSourceChart?.dispose();
-        myBookingSourceChart = null;
-        myPaymentTimingChart?.dispose();
-        myPaymentTimingChart = null;
+        disposeAllCharts();
     }
 };
 
@@ -488,11 +726,17 @@ const disposeAllCharts = () => {
     myBookingSourceChart = null;
     myPaymentTimingChart?.dispose();
     myPaymentTimingChart = null;
+    myBookerTypeChart?.dispose();
+    myBookerTypeChart = null;
+    myAverageLengthOfStayChart?.dispose();
+    myAverageLengthOfStayChart = null;
 };
 
 const resizeChart = () => {
     myBookingSourceChart?.resize();
     myPaymentTimingChart?.resize();
+    myBookerTypeChart?.resize();
+    myAverageLengthOfStayChart?.resize();
 };
 
 onMounted(async () => {

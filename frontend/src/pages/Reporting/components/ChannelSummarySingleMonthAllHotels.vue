@@ -1,7 +1,7 @@
 
 <template>
     <div class="p-4">
-        <h3 class="text-xl font-semibold mb-4">チャネルサマリー</h3>
+        <h3 class="text-xl font-semibold mb-4">予約分析</h3>
 
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
@@ -28,6 +28,20 @@
                     <template #header><div class="flex-1 text-center font-bold">ホテル別支払タイミング分布</div></template>
                     <template #content>
                         <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
+                    </template>
+                </Card>
+
+                <Card class="mt-4">
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別予約者区分</div></template>
+                    <template #content>
+                        <div ref="bookerTypeChartContainer" style="width: 100%; height: 500px;"></div>
+                    </template>
+                </Card>
+
+                <Card class="mt-4">
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別滞在日数</div></template>
+                    <template #content>
+                        <div ref="lengthOfStayChartContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
             </div>
@@ -141,14 +155,20 @@ const formattedMonth = computed(() => {
     return `${year}-${month}`;
 });
 
-const { fetchChannelSummary } = useReportStore();
+const { fetchChannelSummary, fetchBookerTypeBreakdown, fetchReservationListView } = useReportStore();
 const chartData = ref([]);
+const bookerTypeData = ref([]);
+const lengthOfStayData = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const scatterPlotContainer = ref(null);
 const scatterPlotInstance = shallowRef(null);
 const paymentTimingChartContainer = ref(null);
 const paymentTimingChartInstance = shallowRef(null);
+const bookerTypeChartContainer = ref(null);
+const bookerTypeChartInstance = shallowRef(null);
+const lengthOfStayChartContainer = ref(null);
+const lengthOfStayChartInstance = shallowRef(null);
 
 const translatePaymentTiming = (timing) => {
     const map = {
@@ -278,8 +298,160 @@ const paymentTimingChartOptions = computed(() => ({
             rotate: 0
         }
     },
-    series: paymentTimingChartData.value.series
+const bookerTypeChartData = computed(() => {
+    if (!bookerTypeData.value || bookerTypeData.value.length === 0) {
+        return {
+            hotels: [],
+            series: []
+        };
+    }
+
+    const hotels = bookerTypeData.value.map(item => item.hotelName);
+    const bookerTypes = ['個人', '法人', '未設定'];
+
+    const series = bookerTypes.map(type => {
+        return {
+            name: type,
+            type: 'bar',
+            stack: 'total',
+            label: {
+                show: true,
+                formatter: (params) => {
+                    const percentage = parseFloat(params.value.toFixed(1));
+                    return percentage >= 5 ? `${percentage}%` : '';
+                },
+                position: 'inside'
+            },
+            emphasis: {
+                focus: 'series'
+            },
+            data: bookerTypeData.value.map(hotelData => {
+                const individualNights = hotelData.data.find(d => d.legal_or_natural_person === 'individual' || d.legal_or_natural_person === 'natural')?.room_nights || 0;
+                const corporateNights = hotelData.data.find(d => d.legal_or_natural_person === 'corporate' || d.legal_or_natural_person === 'legal')?.room_nights || 0;
+                const notSetNights = hotelData.data.find(d => d.legal_or_natural_person !== 'individual' && d.legal_or_natural_person !== 'natural' && d.legal_or_natural_person !== 'corporate' && d.legal_or_natural_person !== 'legal')?.room_nights || 0;
+                const totalNights = individualNights + corporateNights + notSetNights;
+
+                let value = 0;
+                if (type === '個人') value = individualNights;
+                else if (type === '法人') value = corporateNights;
+                else if (type === '未設定') value = notSetNights;
+
+                return totalNights > 0 ? parseFloat((value / totalNights * 100).toFixed(1)) : 0;
+            })
+        };
+    });
+
+    return {
+        hotels,
+        series
+    };
+});
+
+const bookerTypeChartOptions = computed(() => ({
+    color: ["#5470c6", "#91cc75", "#fac858"],
+    tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+            type: 'shadow'
+        },
+        formatter: function (params) {
+            let tooltipContent = params[0].name + '<br/>'; // Hotel Name
+            params.forEach(function (item) {
+                tooltipContent += item.marker + item.seriesName + ': ' + item.value.toFixed(1) + '%<br/>';
+            });
+            return tooltipContent;
+        }
+    },
+    legend: {
+        data: ['個人', '法人', '未設定'],
+        bottom: 0
+    },
+    grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '10%',
+        containLabel: true
+    },
+    xAxis: {
+        type: 'value',
+        name: '割合 (%)',
+        axisLabel: {
+            formatter: '{value}%'
+        },
+        max: 100
+    },
+    yAxis: {
+        type: 'category',
+        data: bookerTypeChartData.value.hotels,
+        axisLabel: {
+            interval: 0,
+            rotate: 0
+        }
+    },
+const lengthOfStayChartData = computed(() => {
+    if (!lengthOfStayData.value || lengthOfStayData.value.length === 0) {
+        return [];
+    }
+    return lengthOfStayData.value.map(hotelData => {
+        const { totalNights, totalPeople, count } = hotelData.data.reduce((acc, res) => {
+            acc.totalNights += Number(res.number_of_nights) || 0;
+            acc.totalPeople += Number(res.number_of_people) || 0;
+            acc.count++;
+            return acc;
+        }, { totalNights: 0, totalPeople: 0, count: 0 });
+
+        const avgNights = count > 0 ? totalNights / count : 0;
+        const avgPeople = count > 0 ? totalPeople / count : 0;
+
+        return {
+            name: hotelData.hotelName,
+            value: [avgNights, avgPeople],
+        };
+    });
+});
+
+const lengthOfStayChartOptions = computed(() => ({
+    xAxis: {
+        name: '平均泊数',
+        type: 'value',
+        axisLabel: {
+            formatter: '{value} 泊'
+        }
+    },
+    yAxis: {
+        name: '平均人数',
+        type: 'value',
+        axisLabel: {
+            formatter: '{value} 人'
+        }
+    },
+    tooltip: {
+        trigger: 'item',
+        formatter: function (params) {
+            const avgNights = parseFloat(params.data.value[0]).toFixed(2);
+            const avgPeople = parseFloat(params.data.value[1]).toFixed(2);
+            return `${params.data.name}<br/>平均泊数: ${avgNights}泊<br/>平均人数: ${avgPeople}人`;
+        }
+    },
+    series: [{
+        name: 'ホテル',
+        type: 'scatter',
+        data: lengthOfStayChartData.value,
+        symbolSize: 15,
+        label: {
+            show: true,
+            formatter: function (param) {
+                return param.data.name;
+            },
+            position: 'top'
+        },
+        emphasis: {
+            focus: 'series',
+        },
+    }]
 }));
+
+
 
 const fetchReportData = async () => {
 
@@ -296,10 +468,49 @@ const fetchReportData = async () => {
         const startDate = formatDate(new Date(year, month, 1));
         const endDate = formatDate(new Date(year, month + 1, 0));
 
-        const data = await fetchChannelSummary(props.selectedHotels, startDate, endDate);
+        const summaryData = await fetchChannelSummary(props.selectedHotels, startDate, endDate);
+        chartData.value = summaryData;
 
-        chartData.value = data;
-        //console.log('DEBUG: chartData after fetch:', chartData.value); // Debug log
+        const bookerTypePromises = props.selectedHotels.map(hotelId => fetchBookerTypeBreakdown(hotelId, startDate, endDate));
+        const lengthOfStayPromises = props.selectedHotels.map(hotelId => fetchReservationListView(hotelId, startDate, endDate));
+
+        const bookerTypeResults = await Promise.all(bookerTypePromises);
+        const lengthOfStayResults = await Promise.all(lengthOfStayPromises);
+
+        // Process and store booker type data
+        const processedBookerTypeData = [];
+        for (let i = 0; i < props.selectedHotels.length; i++) {
+            const hotelId = props.selectedHotels[i];
+            const hotelData = bookerTypeResults[i];
+            const hotelName = summaryData.find(d => d.hotel_id === hotelId)?.hotel_name || `Hotel ${hotelId}`;
+            if (hotelData) {
+                processedBookerTypeData.push({
+                    hotelId,
+                    hotelName,
+                    data: hotelData
+                });
+            }
+        }
+        bookerTypeData.value = processedBookerTypeData;
+
+
+        // Process and store length of stay data
+        const processedLengthOfStayData = [];
+        for (let i = 0; i < props.selectedHotels.length; i++) {
+            const hotelId = props.selectedHotels[i];
+            const hotelData = lengthOfStayResults[i];
+            const hotelName = summaryData.find(d => d.hotel_id === hotelId)?.hotel_name || `Hotel ${hotelId}`;
+            if (hotelData) {
+                processedLengthOfStayData.push({
+                    hotelId,
+                    hotelName,
+                    data: hotelData
+                });
+            }
+        }
+        lengthOfStayData.value = processedLengthOfStayData;
+
+
     } catch (err) {
         console.error('Error fetching data:', err);
         error.value = err.message || 'データの取得中にエラーが発生しました。';
@@ -400,14 +611,17 @@ const refreshAllCharts = () => {
         scatterPlotInstance.value = null;
         paymentTimingChartInstance.value?.dispose();
         paymentTimingChartInstance.value = null;
+        bookerTypeChartInstance.value?.dispose();
+        bookerTypeChartInstance.value = null;
+        lengthOfStayChartInstance.value?.dispose();
+        lengthOfStayChartInstance.value = null;
 
         initOrUpdateChart(scatterPlotInstance, scatterPlotContainer, chartOptions.value);
         initOrUpdateChart(paymentTimingChartInstance, paymentTimingChartContainer, paymentTimingChartOptions.value);
+        initOrUpdateChart(bookerTypeChartInstance, bookerTypeChartContainer, bookerTypeChartOptions.value);
+        initOrUpdateChart(lengthOfStayChartInstance, lengthOfStayChartContainer, lengthOfStayChartOptions.value);
     } else {
-        scatterPlotInstance.value?.dispose();
-        scatterPlotInstance.value = null;
-        paymentTimingChartInstance.value?.dispose();
-        paymentTimingChartInstance.value = null;
+        disposeAllCharts();
     }
 };
 
@@ -416,11 +630,17 @@ const disposeAllCharts = () => {
     scatterPlotInstance.value = null;
     paymentTimingChartInstance.value?.dispose();
     paymentTimingChartInstance.value = null;
+    bookerTypeChartInstance.value?.dispose();
+    bookerTypeChartInstance.value = null;
+    lengthOfStayChartInstance.value?.dispose();
+    lengthOfStayChartInstance.value = null;
 };
 
 const resizeChart = () => {
     scatterPlotInstance.value?.resize();
     paymentTimingChartInstance.value?.resize();
+    bookerTypeChartInstance.value?.resize();
+    lengthOfStayChartInstance.value?.resize();
 };
 
 onMounted(() => {

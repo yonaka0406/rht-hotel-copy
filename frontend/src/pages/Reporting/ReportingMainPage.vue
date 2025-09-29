@@ -27,25 +27,25 @@
                 :trigger-fetch="reportTriggerKey"
             />
             <ChannelSummarySingleMonthAllHotels
-                v-else-if="selectedReportType === 'channelSummary' && period === 'month' && selectedHotels.length > 1"
+                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'month' && selectedHotels.length > 1"
                 :selected-hotels="selectedHotels"
                 :trigger-fetch="reportTriggerKey"
                 :selected-date="selectedDate"
             />
             <ChannelSummarySingleMonthHotel
-                v-else-if="selectedReportType === 'channelSummary' && period === 'month' && selectedHotels.length === 1"
+                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'month' && selectedHotels.length === 1"
                 :hotel-id="selectedHotelIdForReport"
                 :trigger-fetch="reportTriggerKey"
                 :selected-date="selectedDate"
             />
             <ChannelSummaryYearCumulativeAllHotels
-                v-else-if="selectedReportType === 'channelSummary' && period === 'year' && selectedHotels.length > 1"
+                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'year' && selectedHotels.length > 1"
                 :selected-hotels="selectedHotels"
                 :trigger-fetch="reportTriggerKey"
                 :selected-date="selectedDate"
             />
             <ChannelSummaryYearCumulativeHotel
-                v-else-if="selectedReportType === 'channelSummary' && period === 'year' && selectedHotels.length === 1"
+                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'year' && selectedHotels.length === 1"
                 :hotel-id="selectedHotelIdForReport"
                 :trigger-fetch="reportTriggerKey"
                 :selected-date="selectedDate"
@@ -501,7 +501,7 @@
         // Prevent fetching summary data if a new specialized report type is selected
         if (selectedReportType.value === 'activeReservationsChange' || 
             selectedReportType.value === 'monthlyReservationEvolution' ||
-            selectedReportType.value === 'channelSummary') {
+            selectedReportType.value === 'reservationAnalysis') {
             loading.value = false; 
             pmsTotalData.value = {}; forecastTotalData.value = {}; accountingTotalData.value = {};
             return; 
