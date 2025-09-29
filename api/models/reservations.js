@@ -4971,7 +4971,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
       hotel_id,
     ];
     const reservation = await internalClient.query(query, values);
-    console.log('cancelOTAReservation reservations:', reservation.rows[0]);
+    //console.log('cancelOTAReservation reservations:', reservation.rows[0]);
 
     query = `
         UPDATE reservation_details
@@ -4987,7 +4987,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
       hotel_id,
     ];
     const reservationDetails = await internalClient.query(query, values);
-    console.log('cancelOTAReservation reservation_details:', reservationDetails.rows[0]);
+    //console.log('cancelOTAReservation reservation_details:', reservationDetails.rows[0]);
 
     if (cancellationCharge > 0) {
       query = `
