@@ -478,15 +478,22 @@
 
         </div>
         <template #footer>
-            <Button v-if="tabsReservationBulkEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
-            <Button v-if="tabsReservationBulkEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyPatternChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
-            <Button v-if="tabsReservationBulkEditDialog === 4" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyDateChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
+            <div class="flex justify-center items-center">
+                <div v-if="tabsReservationBulkEditDialog === 0 && !isPatternInput" class="field-checkbox mr-4">
+                    <Checkbox id="overrideRounding" v-model="overrideRounding" :binary="true" />
+                    <label for="overrideRounding" class="ml-2">端数処理を上書きする</label>
+                </div>                                
+                <Button v-if="tabsReservationBulkEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check"
+                    class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
+                
+                <Button v-if="tabsReservationBulkEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check"
+                    class="p-button-success p-button-text p-button-sm" @click="applyPatternChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
+                <Button v-if="tabsReservationBulkEditDialog === 4" label="適用" icon="pi pi-check"
+                    class="p-button-success p-button-text p-button-sm" @click="applyDateChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
 
-            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
-                @click="closeReservationBulkEditDialog" :loading="isSubmitting" :disabled="isSubmitting" />
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
+                    @click="closeReservationBulkEditDialog" :loading="isSubmitting" :disabled="isSubmitting" />
+            </div>
         </template>
     </Dialog>
 
@@ -527,7 +534,7 @@ import { useConfirm } from "primevue/useconfirm";
 // Assign unique group names to each confirm instance
 const confirm = useConfirm();
 import {
-    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton
+    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox
 } from 'primevue';
 
 const props = defineProps({
@@ -1306,6 +1313,7 @@ const selectedPatternDetails = ref(null);
 const selectedAddon = ref([]);
 const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
+const overrideRounding = ref(false);
 
 const updatePattern = async () => {
     if (selectedPattern.value !== null) {
@@ -1382,7 +1390,8 @@ const applyPlanChangesToAll = async () => {
                 reservation_id: reservationInfo.value.reservation_id,
                 plan: selectedPlan.value,
                 addons: selectedAddon.value,
-                daysOfTheWeek: selectedDays.value
+                daysOfTheWeek: selectedDays.value,
+                overrideRounding: overrideRounding.value
             };
             // Assuming setRoomPlan is refactored to take one object
             return setRoomPlan(params);
@@ -1435,7 +1444,8 @@ const applyPatternChangesToAll = async () => {
                     reservationInfo.value.hotel_id,
                     roomId,
                     reservationInfo.value.reservation_id,
-                    dayPlanSelections.value
+                    dayPlanSelections.value,
+                    overrideRounding.value
                 );
                 console.log('Pattern applied to room:', roomId, result);
                 return result;

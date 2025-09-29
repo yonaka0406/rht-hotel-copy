@@ -765,6 +765,7 @@ const editReservationDetail = async (req, res) => {
     , number_of_people
     , price
     , addons
+    , overrideRounding
   } = req.body;
   const updated_by = req.user.id;
 
@@ -791,7 +792,8 @@ const editReservationDetail = async (req, res) => {
         plans_global_id,
         plans_hotel_id,
         hotel_id,
-        formatDate(existingReservation[0].date)
+        formatDate(existingReservation[0].date),
+        overrideRounding
       );
 
       if (newPrice !== undefined) {
@@ -934,11 +936,11 @@ const editReservationGuests = async (req, res) => {
 
 const editReservationPlan = async (req, res) => {
   const { id } = req.params;
-  const { hotel_id, plan, rates, price } = req.body;
+  const { hotel_id, plan, rates, price, overrideRounding } = req.body;
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, plan, rates, price, user_id);
+    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);
@@ -981,8 +983,10 @@ const editReservationRoom = async (req, res) => {
 
 const editReservationRoomPlan = async (req, res) => {
   const { hid, rid, id } = req.params;
-  const { plan, addons, daysOfTheWeek } = req.body;
+  const { plan, addons, daysOfTheWeek, overrideRounding } = req.body;
   const user_id = req.user.id;
+
+  console.log('DEBUGGING editReservationRoomPlan overrideRounding:', overrideRounding);
 
   try {
     const updateData = {
@@ -992,7 +996,8 @@ const editReservationRoomPlan = async (req, res) => {
       plan,
       addons,
       daysOfTheWeek,
-      userId: user_id
+      userId: user_id,
+      overrideRounding
     };
     //console.log('DEBUGGING editReservationRoomPlan ARGS:', updateData);
 
@@ -1012,11 +1017,11 @@ const editReservationRoomPlan = async (req, res) => {
 
 const editReservationRoomPattern = async (req, res) => {
   const { hid, rid, id } = req.params;
-  const { pattern } = req.body;
+  const { pattern, overrideRounding } = req.body;
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationRoomPattern(req.requestId, id, hid, rid, pattern, user_id);
+    const updatedReservation = await updateReservationRoomPattern(req.requestId, id, hid, rid, pattern, user_id, overrideRounding);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);

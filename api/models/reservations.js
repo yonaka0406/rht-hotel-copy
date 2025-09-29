@@ -2432,7 +2432,7 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
   }
 
 };
-const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding) => {
   //console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
   if (!plan) {
     console.warn('[updateReservationDetailPlan] plan is null or undefined');
@@ -2448,7 +2448,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   // Use unified price calculation
   let calculatedPrice = 0;
   if (rates && rates.length > 0) {
-    calculatedPrice = calculatePriceFromRates(rates);
+    calculatedPrice = calculatePriceFromRates(rates, overrideRounding);
 
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
@@ -2623,7 +2623,9 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
 };
 const updateReservationRoomPlan = async (requestId, data) => {
   //console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
-  const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId } = data;
+  const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, overrideRounding } = data;
+
+  console.log('DEBUGGING updateReservationRoomPlan overrideRounding:', overrideRounding);
 
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2664,7 +2666,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons    
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId, overrideRounding);
 
 
     await client.query('COMMIT');
@@ -2686,7 +2688,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
     */
   }
 };
-const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id) => {
+const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id, overrideRounding) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
 
@@ -2716,7 +2718,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
 
       // 1. Update Plan
       if (plan) {
-        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
+        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, overrideRounding);
       } else {
         //console.log('[updateReservationDetailPlan] Skipped because plan is null');
       }
@@ -2729,7 +2731,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id, overrideRounding);
 
     await client.query('COMMIT');
 
@@ -2742,7 +2744,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
-const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, client = null) => {
+const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, overrideRounding, client = null) => {
   const pool = getPool(requestId);
 
   // Use provided client or create a new connection
@@ -2772,7 +2774,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       const formattedDate = formatDate(new Date(date));
       // Fetch new price
-      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
+      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, overrideRounding);
 
       // Update reservation_details
       const dtlUpdateQuery = `
@@ -2796,7 +2798,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       await insertAggregatedRates(dbClient, newrates, hotel_id, id, user_id);
 
       // Update the price in reservation_details using the calculated price from rates
-      const calculatedPrice = calculatePriceFromRates(newrates);
+      const calculatedPrice = calculatePriceFromRates(newrates, overrideRounding);
       const updatePriceQuery = `
         UPDATE reservation_details
         SET price = $1
@@ -5282,7 +5284,7 @@ const selectFailedOtaReservations = async (requestId) => {
 };
 
 // Shared utility function for consistent price calculation
-const calculatePriceFromRates = (rates) => {
+const calculatePriceFromRates = (rates, overrideRounding = false) => {
   if (!rates || rates.length === 0) {
     return 0;
   }
@@ -5328,11 +5330,15 @@ const calculatePriceFromRates = (rates) => {
   });
 
   // Round down to nearest 100 yen (Japanese pricing convention)
-  return Math.floor(totalPrice / 100) * 100;
+  if (!overrideRounding) {
+    return Math.floor(totalPrice / 100) * 100;
+  } else {
+    return totalPrice;
+  }
 };
 
 // Shared utility function for inserting rates with consistent price calculation
-const insertAggregatedRates = async (client, rates, hotel_id, reservation_details_id, user_id) => {
+const insertAggregatedRates = async (client, rates, hotel_id, reservation_details_id, user_id, overrideRounding = false) => {
   if (!rates || rates.length === 0) {
     return;
   }
@@ -5367,14 +5373,18 @@ const insertAggregatedRates = async (client, rates, hotel_id, reservation_detail
     if (rate.adjustment_type === 'base_rate') {
       price = rate.adjustment_value;
     } else if (rate.adjustment_type === 'percentage') {
-      price = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
+      if (!overrideRounding) {
+        price = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
+      } else {
+        price = totalBaseRate * (rate.adjustment_value / 100);
+      }
     } else if (rate.adjustment_type === 'flat_fee') {
       price = rate.adjustment_value;
     }
 
     const insertRateQuery = `
       INSERT INTO reservation_rates (
-        hotel_id, reservation_details_id, adjustment_type, adjustment_value, 
+        hotel_id, reservation_details_id, adjustment_type, adjustment_value,
         tax_type_id, tax_rate, price, created_by
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *;
@@ -5394,7 +5404,6 @@ const insertAggregatedRates = async (client, rates, hotel_id, reservation_detail
 
   await Promise.all(insertPromises);
 };
-
 const cancelReservationRooms = async (requestId, hotelId, reservationId, detailIds, updated_by, billable = false) => {
   const pool = getPool(requestId);
   const client = await pool.connect();

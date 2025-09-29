@@ -111,7 +111,7 @@ const getPlansRateById = async (requestId, id) => {
     }
 };
 
-const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
+const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false) => {
     const pool = actualGetPool(requestId);
     const query = `        
         SELECT 
@@ -190,10 +190,12 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         //console.log(`[${timestamp}] DEBUG - After Group A (${groupAPercentageEffect * 100}%):`, afterGroupA);
         currentTotal = afterGroupA;
         
-        // 2. Round down to the nearest 100
-        const afterRounding = Math.floor(currentTotal / 100) * 100;
-        //console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
-        currentTotal = afterRounding;
+        // 2. Conditionally Round down to the nearest 100 (Japanese pricing convention)
+        if (!overrideRounding) {
+            const afterRounding = Math.floor(currentTotal / 100) * 100;
+            //console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
+            currentTotal = afterRounding;
+        }
         
         // 3. Calculate Group B Adjustment (non-taxable, applied after rounding like flat fees)
         const groupBAdjustment = currentTotal * groupBPercentageEffect;

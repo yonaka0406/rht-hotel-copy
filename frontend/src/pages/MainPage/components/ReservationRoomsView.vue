@@ -439,8 +439,16 @@
 
         </div>
         <template #footer>
+            <div class="flex items-center">
+
+            
+            <div v-if="tabsRoomEditDialog === 0 && !isPatternInput" class="field-checkbox mr-6">
+                <Checkbox id="overrideRounding" v-model="overrideRounding" :binary="true" />
+                <label for="overrideRounding" class="ml-2">端数処理を上書きする</label>
+            </div>
             <Button v-if="tabsRoomEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check"
                 class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
+
             <Button v-if="tabsRoomEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check"
                 class="p-button-success p-button-text p-button-sm" @click="applyPatternChanges" />
 
@@ -452,8 +460,9 @@
             <Button v-if="tabsRoomEditDialog === 4" label="適用" icon="pi pi-check"
                 class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
 
-            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
-                @click="closeRoomEditDialog" />
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
+                    @click="closeRoomEditDialog" />
+            </div>
         </template>
     </Dialog>
 
@@ -779,6 +788,7 @@ const selectedPatternDetails = ref(null);
 const selectedAddon = ref([]);
 const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
+const overrideRounding = ref(false);
 const updatePattern = async () => {
 
     if (selectedPattern.value !== null) {
@@ -855,7 +865,8 @@ const applyPlanChanges = async () => {
             reservation_id: reservationInfo.value.reservation_id,
             plan: selectedPlan.value,
             addons: selectedAddon.value,
-            daysOfTheWeek: selectedDays.value
+            daysOfTheWeek: selectedDays.value,
+            overrideRounding: overrideRounding.value
         };
 
         const result = await setRoomPlan(params);
@@ -897,7 +908,7 @@ const applyPatternChanges = async () => {
             return;
         }
 
-        await setRoomPattern(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, dayPlanSelections.value);
+        await setRoomPattern(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, dayPlanSelections.value, overrideRounding.value);
 
         closeRoomEditDialog();
 

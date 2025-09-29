@@ -320,8 +320,8 @@ const listenForTableChanges = async () => {
     devClient = await listenClient.connect();
     devClient.on('notification', async (msg) => {
       if (msg.channel === 'logs_reservation_changed') {
-        logger.debug('Notification received: logs_reservation_changed (dev)');
-        logger.debug(`[Socket.IO] Number of connected clients: ${ioHttp.sockets.sockets.size}`);    
+        //logger.debug('Notification received: logs_reservation_changed (dev)');
+        //logger.debug(`[Socket.IO] Number of connected clients: ${ioHttp.sockets.sockets.size}`);    
         ioHttp.emit('tableUpdate', 'Reservation update detected');
       }
       if (msg.channel === 'reservation_log_inserted') {

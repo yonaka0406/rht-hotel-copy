@@ -120,7 +120,6 @@
                                                         <template #body="slotProps">
                                                             <InputNumber 
                                                                 v-model="slotProps.data.adjustment_value" 
-                                                                :min="0" 
                                                                 placeholder="数値を記入"
                                                                 @update:modelValue="recalculatePrice(slotProps.data)"
                                                                 fluid
@@ -204,6 +203,10 @@
                                         </template>                                        
                                     </Card>                                    
                                     <Divider />
+                                    <div class="field-checkbox flex justify-center mt-4 mb-4">
+                                        <Checkbox id="overrideRounding" v-model="overrideRounding" :binary="true" />
+                                        <label for="overrideRounding" class="ml-2">端数処理を上書きする</label>
+                                    </div>
                                     <div class="flex justify-center items-center">                                    
                                         <Button label="保存" severity="info" type="submit" :loading="isSubmitting" :disabled="isSubmitting" />
                                     </div>
@@ -309,7 +312,7 @@
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
     const confirm = useConfirm();
-    import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, FloatLabel, Select, InputText, InputNumber, Button, Badge, Divider, ConfirmDialog } from 'primevue';
+    import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, FloatLabel, Select, InputText, InputNumber, Button, Badge, Divider, ConfirmDialog, Checkbox } from 'primevue';
 
     // Stores    
     import { useReservationStore } from '@/composables/useReservationStore';
@@ -509,7 +512,8 @@
             const price = planTotalRate.value || 0;
 
             if (selectedPlanObject) {
-                await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, selectedRates.value, price);
+                const filteredRates = selectedRates.value.filter(rate => rate.adjustment_value !== 0);
+                await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, filteredRates, price, overrideRounding.value);
             }
 
             const addonDataArray = selectedAddon.value.map(addon => ({
@@ -570,6 +574,7 @@
     // Cancel
     const reservationCancelled = ref(false);
     const isSubmitting = ref(false);
+    const overrideRounding = ref(false);
     const dayCancel = async () => {
         isSubmitting.value = true;
         try {

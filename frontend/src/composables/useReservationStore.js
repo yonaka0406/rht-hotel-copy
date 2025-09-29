@@ -242,7 +242,7 @@ export function useReservationStore() {
             console.error('Error updating reservation client:', error);
         }
     };
-    const setReservationPlan = async (detail_id, hotel_id, plan, rates, price) => {            
+    const setReservationPlan = async (detail_id, hotel_id, plan, rates, price, overrideRounding) => {            
         // console.log('From Reservation Store => setReservationPlan');
         try {
             const authToken = localStorage.getItem('authToken');
@@ -253,7 +253,7 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ hotel_id, plan, rates, price })
+                body: JSON.stringify({ hotel_id, plan, rates, price, overrideRounding })
             });
 
             if (!response.ok) {
@@ -484,7 +484,8 @@ export function useReservationStore() {
             reservation_id: reservationId, 
             plan, 
             addons, 
-            daysOfTheWeek 
+            daysOfTheWeek, 
+            overrideRounding 
         } = params;
         //console.log('DEBUGGING setRoomPlan ARGS:', params);
         try {
@@ -497,7 +498,7 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ plan, addons, daysOfTheWeek })
+                body: JSON.stringify({ plan, addons, daysOfTheWeek, overrideRounding })
             });
 
             if (!response.ok) {
@@ -516,7 +517,7 @@ export function useReservationStore() {
             console.error('Error updating reservation:', error);
         }
     };
-    const setRoomPattern = async (hotelId, roomId, reservationId, pattern) => {
+    const setRoomPattern = async (hotelId, roomId, reservationId, pattern, overrideRounding) => {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -527,7 +528,7 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ pattern })
+                body: JSON.stringify({ pattern, overrideRounding })
             });
 
             if (!response.ok) {
