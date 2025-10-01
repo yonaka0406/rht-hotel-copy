@@ -3405,13 +3405,22 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       await internalClient.query('BEGIN');
     }
 
+    let clientGender = selectGender(Member?.UserGendar);
+    if (clientGender === 'other' && parseInt(BasicInformation.GrandTotalPaxCount, 10) === 1) {
+      if (parseInt(Extendmytrip?.TotalMaleCount, 10) === 1) {
+        clientGender = 'male';
+      } else if (parseInt(Extendmytrip?.TotalFemaleCount, 10) === 1) {
+        clientGender = 'female';
+      }
+    }
+
     // Client info
     const clientData = {
       name: Member?.UserName?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
       name_kana: Member?.UserKana?.trim() || BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
       date_of_birth: Member?.UserDateOfBirth || null,
       legal_or_natural_person: selectNature(Member?.UserGendar || 1),
-      gender: selectGender(Member?.UserGendar || '2'),
+      gender: clientGender,
       email: Basic.Email || '',
       phone: Basic.PhoneNumber || '',
       created_by: 1,
@@ -3754,8 +3763,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
         //console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
-
-
+        
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
           if (Member?.UserName?.trim()) {
@@ -4279,13 +4287,22 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       return availableRoom?.room_id || null;
     };
 
+    let clientGender = selectGender(Member?.UserGendar);
+    if (clientGender === 'other' && parseInt(BasicInformation.GrandTotalPaxCount, 10) === 1) {
+      if (parseInt(Extendmytrip?.TotalMaleCount, 10) === 1) {
+        clientGender = 'male';
+      } else if (parseInt(Extendmytrip?.TotalFemaleCount, 10) === 1) {
+        clientGender = 'female';
+      }
+    }
+
     // Client info
     const clientData = {
       name: Member?.UserName?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
       name_kana: Member?.UserKana?.trim() || BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
       date_of_birth: Member?.UserDateOfBirth || null,
       legal_or_natural_person: selectNature(Member?.UserGendar || 1),
-      gender: selectGender(Member?.UserGendar || '2'),
+      gender: clientGender,
       email: Basic.Email || '',
       phone: Basic.PhoneNumber || '',
       created_by: 1,
