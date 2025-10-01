@@ -5,6 +5,18 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### October 01, 2025
+
+#### Feature Request #72: Forecast Data Breakdown by Plan
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add plan-based breakdown to forecast reports for better comparison and analysis.
+- **Requirements**:
+  - Show forecast data grouped by plan type
+  - Include comparison views between plans
+  - Add plan filters to forecast reports
+  - Support export functionality for plan breakdowns
+
 ### September 26, 2025
 
 #### Bug #70: Check-in/Check-out Date Update Issue for Multi-room Reservations
