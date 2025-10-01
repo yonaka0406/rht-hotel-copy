@@ -86,7 +86,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         }
 
         htmlContent = htmlContent.replace(new RegExp(`{{hotel_name}}`, 'g'), hotelName);
-        htmlContent = htmlContent.replace(new RegExp(`{{booker_name}}`, 'g'), guestData.booker_name || '');
+        htmlContent = htmlContent.replace(new RegExp(`{{booker_name}}`, 'g'), guestData.booker_name ? `${guestData.booker_name} 様` : '');
         htmlContent = htmlContent.replace(new RegExp(`{{alternative_name}}`, 'g'), guestData.alternative_name || '');
         htmlContent = htmlContent.replace(new RegExp(`{{check_in_month}}`, 'g'), guestData.check_in_month);
         htmlContent = htmlContent.replace(new RegExp(`{{check_in_day}}`, 'g'), guestData.check_in_day);
@@ -266,7 +266,8 @@ const generateGuestList = async (req, res) => {
 
         for (const key in guestData) {
             if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html' && key !== 'parking_lot_names_list' && key !== 'all_parking_lots_list' && key !== 'payment_option' && key !== 'plan_names_list') {
-                htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), guestData[key] || '');
+                const value = guestData[key] || '';
+                htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), key === 'booker_name' && value ? `${value} 様` : value);
             }
         }
         htmlContent = htmlContent.replace('{{{non_smoking_preference_html}}}', guestData.non_smoking_preference_html);
