@@ -308,7 +308,7 @@ const getGuestListExcel = async (req, res) => {
         const allParkingLotsData = await getParkingLots(requestId, hotelId);
         const allParkingLotNames = allParkingLotsData.map(lot => lot.name); // Get just the names
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
-        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
+        //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
             // logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
