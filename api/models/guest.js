@@ -70,7 +70,7 @@ const getGuestListDetails = async (requestId, hotelId, reservationId) => {
 const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) => {
     const pool = getPool(requestId);
     const query = `
-      SELECT DISTINCT ON (r.id)
+      SELECT DISTINCT ON (r.id, rooms.room_number, rd.room_id)
         r.id,
         r.check_in,
         r.check_out,
@@ -140,7 +140,7 @@ const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) =
         AND r.status = 'confirmed' -- Only confirmed reservations
         AND r.check_in = $2 -- Only check-ins on the specified date
       ORDER BY
-        r.id, rooms.room_number, r.check_in;
+        r.id, rooms.room_number, rd.room_id, r.check_in;
     `;
     const values = [hotelId, date];
   

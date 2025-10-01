@@ -308,7 +308,7 @@ const getGuestListExcel = async (req, res) => {
         const allParkingLotsData = await getParkingLots(requestId, hotelId);
         const allParkingLotNames = allParkingLotsData.map(lot => lot.name); // Get just the names
         const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
-        //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
+        logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
             // logger.warn(`[${requestId}] No reservations found for date ${date} and hotelId ${hotelId}.`);
@@ -442,19 +442,6 @@ const getGuestListExcel = async (req, res) => {
                 const planNames = reservation.assigned_plan_names ? reservation.assigned_plan_names.join(' ・ ') : reservation.plan_name;
                 const selectedParkingLotNames = reservation.assigned_parking_lot_names ? reservation.assigned_parking_lot_names.split(',').map(lot => lot.trim()) : [];
 
-                let parkingLotNames;
-                if (selectedParkingLotNames.length > 0) {
-                    parkingLotNames = allParkingLotNames.map(lotName => {
-                        const trimmedLotName = lotName.trim();
-                        if (selectedParkingLotNames.includes(trimmedLotName)) {
-                            return `**${trimmedLotName}**`; // Use markdown for bold in Excel
-                        }
-                        return trimmedLotName;
-                    }).join(' ・ ');
-                } else {
-                    parkingLotNames = allParkingLotNames.join(' ・ ');
-                }
-
                 const checkInDateFormatted = formatDateForGuestList(reservation.check_in);
                 const checkOutDateFormatted = formatDateForGuestList(reservation.check_out);
 
@@ -538,8 +525,23 @@ const getGuestListExcel = async (req, res) => {
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
                 worksheet.mergeCells(currentRow, 2, currentRow, 4);
-                worksheet.getCell(currentRow, 2).value = parkingLotNames;
-                Object.assign(worksheet.getCell(currentRow, 2), gridItemStyle);
+                const parkingCell = worksheet.getCell(currentRow, 2);
+                if (allParkingLotNames.length > 0) {
+                    const richText = allParkingLotNames.flatMap((lotName, index) => {
+                        const trimmedLotName = lotName.trim();
+                        const isSelected = selectedParkingLotNames.includes(trimmedLotName);
+                        const fragments = [{ text: trimmedLotName, font: { bold: isSelected } }];
+                        if (index < allParkingLotNames.length - 1) {
+                            fragments.push({ text: ' ・ ', font: { bold: false } });
+                        }
+                        return fragments;
+                    });
+                    parkingCell.value = { richText };
+                } else {
+                    parkingCell.value = '指定なし';
+                }
+                Object.assign(parkingCell, gridItemStyle);
+
 
                 worksheet.mergeCells(currentRow, 5, currentRow, 5);
                 worksheet.getCell(currentRow, 5).value = '支払い方法';
@@ -568,7 +570,7 @@ const getGuestListExcel = async (req, res) => {
 
                 worksheet.mergeCells(currentRow, 3, currentRow, 4);
                 const smokingPreference = reservation.smoking === true ? '喫煙' : '禁煙'; // Use reservation.smoking
-                worksheet.getCell(currentRow, 3).value = smokingPreference; 
+                worksheet.getCell(currentRow, 3).value = smokingPreference;
                 Object.assign(worksheet.getCell(currentRow, 3), gridItemStyle);
 
                 worksheet.mergeCells(currentRow, 5, currentRow, 5);
@@ -595,8 +597,8 @@ const getGuestListExcel = async (req, res) => {
                     for (let i = 0; i < numPeople; i++) {
                         guests.push({
                             name_kanji: '', name_kana: '', name: '',
-                            postal_code: '', address1: '', address2: '',
-                            phone: '', gender: '', age: '', comment: ''
+                            postal_code: '', address: '',
+                            phone: '', gender: '', age: '', comment: '', number_plate: ''
                         });
                     }
                 }
@@ -641,7 +643,7 @@ const getGuestListExcel = async (req, res) => {
                     Object.assign(worksheet.getCell(addressStartRow, 1), labelStyle);
 
                     worksheet.mergeCells(addressStartRow, 2, addressStartRow + 1, 7);
-                    worksheet.getCell(addressStartRow, 2).value = `${guest.postal_code ? '〒 ' + guest.postal_code : ''}\n${guest.address1 || ''} ${guest.address2 || ''}`.trim();
+                    worksheet.getCell(addressStartRow, 2).value = `${guest.postal_code ? '〒 ' + guest.postal_code : ''}\n${guest.address || ''}`.trim();
                     Object.assign(worksheet.getCell(addressStartRow, 2), leftAlignedGridItemStyle);
                     worksheet.getRow(addressStartRow).height = 30;
                     worksheet.getRow(addressStartRow + 1).height = 50;
@@ -670,8 +672,8 @@ const getGuestListExcel = async (req, res) => {
                     };
                     Object.assign(worksheet.getCell(currentRow, 5), labelStyle);
 
-                    worksheet.mergeCells(currentRow, 6, currentRow, 7); // Content for car number in F:G
-                    worksheet.getCell(currentRow, 6).value = guest.car_number_plate || '';
+                    worksheet.mergeCells(currentRow, 6, currentRow, 7);
+                    worksheet.getCell(currentRow, 6).value = guest.number_plate || '';
                     Object.assign(worksheet.getCell(currentRow, 6), leftAlignedGridItemStyle);
                     worksheet.getRow(currentRow).height = 60;
                     currentRow++;
