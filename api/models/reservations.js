@@ -2205,7 +2205,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
 
     // Recalculate plan price
     //console.log('Recalculating plan price.');
-    await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by, client);
+    await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by, false, client);
 
     await client.query('COMMIT');
     //console.log('Transaction committed successfully.');
@@ -2746,7 +2746,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
-const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, overrideRounding, client = null) => {
+const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, overrideRounding = false, client = null) => {
   const pool = getPool(requestId);
 
   // Use provided client or create a new connection
@@ -2767,7 +2767,8 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     const detailsQuery = `
       SELECT id, plans_global_id, plans_hotel_id, hotel_id, date
       FROM reservation_details
-      WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3;
+      WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
+      ORDER BY date;
     `;
     const detailsResult = await dbClient.query(detailsQuery, [reservation_id, hotel_id, room_id]);
     const detailsArray = detailsResult.rows;
