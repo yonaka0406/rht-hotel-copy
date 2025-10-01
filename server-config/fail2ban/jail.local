@@ -33,7 +33,8 @@ maxretry = 3
 [postgresql]
 enabled = true
 port = 5432
-filter = postgresql
+# Use a combination of the default filter and your new custom filter
+filter = postgresql, custom_pg_hba
 logpath = /var/log/postgresql/postgresql-*.log
 maxretry = 3
 bantime = 7200
