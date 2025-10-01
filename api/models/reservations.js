@@ -3406,10 +3406,15 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     }
 
     let clientGender = selectGender(Member?.UserGendar);
-    if (clientGender === 'other' && parseInt(BasicInformation.GrandTotalPaxCount, 10) === 1) {
-      if (parseInt(Extendmytrip?.TotalMaleCount, 10) === 1) {
+
+    if (clientGender === 'other') {
+      const grandTotal = parseInt(BasicInformation.GrandTotalPaxCount, 10) || 0;
+      const maleTotal = parseInt(Extendmytrip?.TotalMaleCount, 10) || 0;
+      const femaleTotal = parseInt(Extendmytrip?.TotalFemaleCount, 10) || 0;
+
+      if (grandTotal > 0 && grandTotal === maleTotal) {
         clientGender = 'male';
-      } else if (parseInt(Extendmytrip?.TotalFemaleCount, 10) === 1) {
+      } else if (grandTotal > 0 && grandTotal === femaleTotal) {
         clientGender = 'female';
       }
     }
@@ -4288,10 +4293,15 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     };
 
     let clientGender = selectGender(Member?.UserGendar);
-    if (clientGender === 'other' && parseInt(BasicInformation.GrandTotalPaxCount, 10) === 1) {
-      if (parseInt(Extendmytrip?.TotalMaleCount, 10) === 1) {
+
+    if (clientGender === 'other') {
+      const grandTotal = parseInt(BasicInformation.GrandTotalPaxCount, 10) || 0;
+      const maleTotal = parseInt(Extendmytrip?.TotalMaleCount, 10) || 0;
+      const femaleTotal = parseInt(Extendmytrip?.TotalFemaleCount, 10) || 0;
+
+      if (grandTotal > 0 && grandTotal === maleTotal) {
         clientGender = 'male';
-      } else if (parseInt(Extendmytrip?.TotalFemaleCount, 10) === 1) {
+      } else if (grandTotal > 0 && grandTotal === femaleTotal) {
         clientGender = 'female';
       }
     }
