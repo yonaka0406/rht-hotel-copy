@@ -500,8 +500,15 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.19] - 2025-10-01
+
+- Bugfix: Refactored `recalculatePlanPrice` to default `overrideRounding` to `false` and corrected a buggy internal call.
+
+---
+
 ## Version History
 
+- **1.1.18** (2025-09-29) - Introduced Excel roster downloads, default parking for OTA reservations, check-out cancellation, and new reporting metrics for length of stay. Also added an override for plan price rounding.
 - **1.1.17** (2025-09-24) - Enhanced dashboard with check-in/out statistics and gender breakdown. Added static calendar view and improved room indicators with guest information. Fixed meal count export and parking calendar spot availability.
 - **1.1.16** (2025-09-19) - Enhanced reservation management with improved guest handling and data persistence. Added comprehensive reporting features including Channel and Payment Timing reports, and resolved meal count report date issues.
 - **1.1.15** (2025-09-18) - Improved OTA reservation handling and payment timing management. Enhanced calendar functionality and added visual theming to monthly reports.
