@@ -213,8 +213,8 @@ const generateGuestList = async (req, res) => {
 
                 // Adjusting column spans for name and vehicle number
                 guestsHtml += `
-                    <div class="grid-item label" style="grid-column: 1 / span 1;"><span class="highlight">※</span>お名前</div>
-                    <div class="grid-item col-span-3">${guest.name_kanji || guest.name_kana || guest.name || ''}</div>
+                    <div class="grid-item label" style="grid-column: 1 / span 1;"><span class="highlight">※</span>お名前</div>                    
+                    <div class="grid-item col-span-3">${(guest.name_kanji || guest.name_kana || guest.name) ? `${guest.name_kanji || guest.name_kana || guest.name} 様` : ''}</div>
                     <div class="grid-item label" style="grid-column: 5 / span 1;"><span class="highlight">※</span>車両ナンバー</div>
                     <div class="grid-item col-span-2">${guest.number_plate || ''}</div>
 
@@ -434,8 +434,8 @@ const getGuestListExcel = async (req, res) => {
                 const remainingPayableAmount = currentRoomBalance ? parseFloat(currentRoomBalance.balance) : 0;
                 // logger.debug(`[${requestId}] currentRoomBalance for room ${reservation.room_id}: ${JSON.stringify(currentRoomBalance, null, 2)}, remainingPayableAmount: ${remainingPayableAmount}`);
 
-                const hotelName = reservation.hotel_name || 'RHT Hotel';
-                const bookerName = reservation.booker_name_kanji || reservation.booker_name_kana || reservation.booker_name || 'N/A';
+                const hotelName = reservation.hotel_name || 'Hotel';                
+                const bookerName = reservation.booker_name_kanji || reservation.booker_name_kana || reservation.booker_name;
                 const alternativeName = reservation.alternative_company_name || ''; // Assuming this might be in reservation object
                 const currentRoomNumbers = reservation.room_number; // Already filtered by roomNumber
                 const planNames = reservation.assigned_plan_names ? reservation.assigned_plan_names.join(' ・ ') : reservation.plan_name;
@@ -487,7 +487,7 @@ const getGuestListExcel = async (req, res) => {
                 Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
                 currentRow++;
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
-                worksheet.getCell(currentRow, 1).value = bookerName;
+                worksheet.getCell(currentRow, 1).value = bookerName ? `${bookerName} 様` : bookerName;
                 Object.assign(worksheet.getCell(currentRow, 1), gridItemStyle);
                 worksheet.getRow(currentRow).height = 50;
                 currentRow++;
@@ -505,7 +505,7 @@ const getGuestListExcel = async (req, res) => {
                 };
                 currentRow++;
                 worksheet.mergeCells(currentRow, 1, currentRow, 7);
-                worksheet.getCell(currentRow, 1).value = alternativeName;
+                worksheet.getCell(currentRow, 1).value = alternativeName ? `${alternativeName} 様` : '';
                 Object.assign(worksheet.getCell(currentRow, 1), gridItemStyle);
                 worksheet.getRow(currentRow).height = 50;
                 currentRow++;
@@ -622,7 +622,8 @@ const getGuestListExcel = async (req, res) => {
                     Object.assign(worksheet.getCell(currentRow, 1), labelStyle);
 
                     worksheet.mergeCells(currentRow, 2, currentRow, 7);
-                    worksheet.getCell(currentRow, 2).value = guest.name_kanji || guest.name_kana || guest.name || '';
+                    const guestName = guest.name_kanji || guest.name_kana || guest.name;
+                    worksheet.getCell(currentRow, 2).value = guestName ? `${guestName} 様` : '';
                     Object.assign(worksheet.getCell(currentRow, 2), leftAlignedGridItemStyle);
                     worksheet.getRow(currentRow).height = 60;
                     currentRow++;

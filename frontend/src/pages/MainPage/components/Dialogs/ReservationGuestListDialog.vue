@@ -349,25 +349,15 @@ const initializeSingleGuests = (reservation) => {
     for (let i = 0; i < numberOfPeople; i++) {
         const existingGuest = existingGuests[i];
         console.log(`Initializing single guest ${i}:`, existingGuest);
-        if (existingGuest) {
-            newGuests.push({
-                client_name: { label: 'お名前', value: existingGuest.name, include: true },
-                name_kanji: { label: 'お名前(漢字)', value: existingGuest.name_kanji || '', include: true },
-                name_kana: { label: 'お名前(カナ)', value: existingGuest.name_kana || '', include: true },
-                number_plate: { label: '車両ナンバー', value: existingGuest.car_number_plate, include: true },
-                postal_code: { label: '郵便番号', value: existingGuest.postal_code || '', include: true },
-                address: { label: 'ご住所', value: existingGuest.address, include: true },
-                phone_number: { label: 'ご連絡先', value: existingGuest.phone, include: true },
-            });
-        } else {
-            newGuests.push({
-                client_name: { label: 'お名前', value: '', include: true },
-                number_plate: { label: '車両ナンバー', value: '', include: true },
-                postal_code: { label: '郵便番号', value: '', include: true },
-                address: { label: 'ご住所', value: '', include: true },
-                phone_number: { label: 'ご連絡先', value: '', include: true },
-            });
-        }
+        newGuests.push({
+            client_name: { label: 'お名前', value: existingGuest?.name || '', include: true },
+            name_kanji: { label: 'お名前(漢字)', value: existingGuest?.name_kanji || '', include: true },
+            name_kana: { label: 'お名前(カナ)', value: existingGuest?.name_kana || '', include: true },
+            number_plate: { label: '車両ナンバー', value: existingGuest?.car_number_plate || '', include: true },
+            postal_code: { label: '郵便番号', value: existingGuest?.postal_code || '', include: true },
+            address: { label: 'ご住所', value: existingGuest?.address || '', include: true },
+            phone_number: { label: 'ご連絡先', value: existingGuest?.phone || '', include: true },
+        });
     }
     guests.value = newGuests;
 };

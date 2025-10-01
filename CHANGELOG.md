@@ -486,7 +486,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added Static Calendar page.
 - Feature: Added Booker and Guests to the Room Indicator with gender indicative.
 - Feature: Check-in/Out Statistics with Gender Breakdown to the Dashboard.
-- Feature: Added a new metric showing the average length of stay and distribution of types of person for each hotel monthly report
+- Feature: Added a new metric showing the average length of stay and distribution of types of person for each hotel monthly report.
 
 ---
 
