@@ -508,13 +508,18 @@
             return; 
         }
 
-        pmsTotalData.value = {}; forecastTotalData.value = {}; accountingTotalData.value = {};
-        if (selectedHotels.value.length === 0) {
-            // console.log('RMP: No hotels selected for summary. Skipping data fetch.');
-            loading.value = false; 
-            return;
-        }
-        if (!firstDayofFetch.value || !lastDayofFetch.value) {
+                const newPmsTotalData = {};
+                const newForecastTotalData = {};
+                const newAccountingTotalData = {};
+        
+                if (selectedHotels.value.length === 0) {
+                    // console.log('RMP: No hotels selected for summary. Skipping data fetch.');
+                    loading.value = false;
+                    pmsTotalData.value = newPmsTotalData; // Ensure refs are updated even if empty
+                    forecastTotalData.value = newForecastTotalData;
+                    accountingTotalData.value = newAccountingTotalData;
+                    return;
+                }        if (!firstDayofFetch.value || !lastDayofFetch.value) {
             // console.log('RMP: Date range is not properly set for summary. Skipping data fetch.');
             loading.value = false; 
             return;
@@ -555,7 +560,7 @@
                         pmsFallbackCapacities.value[String(hotelId)] = 0; // Default if no data or no total_rooms
                     }
 
-                    pmsTotalData.value[String(hotelId)] = rawPmsData.map(item => ({
+                    newPmsTotalData[String(hotelId)] = rawPmsData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.date))),
                         revenue: item.price !== undefined ? Number(item.price) : 0,
                         room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
@@ -563,27 +568,29 @@
                         total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
                     })).filter(item => item.date !== null);
                 } else {
-                     pmsTotalData.value[String(hotelId)] = [];
+                     newPmsTotalData[String(hotelId)] = [];
                      pmsFallbackCapacities.value[String(hotelId)] = 0;
                 }
 
                 if (rawForecastData && Array.isArray(rawForecastData)) {
-                    forecastTotalData.value[String(hotelId)] = rawForecastData.map(item => ({
+                    newForecastTotalData[String(hotelId)] = rawForecastData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.forecast_month))),
                         revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                         total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0,  
                         room_count: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0,                      
                     })).filter(item => item.date !== null);
-                } else if (rawForecastData) { forecastTotalData.value[String(hotelId)] = []; }
+                } else if (rawForecastData) { newForecastTotalData[String(hotelId)] = []; }
                 if (rawAccountingData && Array.isArray(rawAccountingData)) {
-                    accountingTotalData.value[String(hotelId)] = rawAccountingData.map(item => ({
+                    newAccountingTotalData[String(hotelId)] = rawAccountingData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.accounting_month))),
                         revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,                        
                     })).filter(item => item.date !== null);
-                } else if (rawAccountingData) { accountingTotalData.value[String(hotelId)] = []; }
-            }  
-            currentProcessingHotelId = null;           
-        } catch (error) {
+                } else if (rawAccountingData) { newAccountingTotalData[String(hotelId)] = []; }
+                        }
+                        currentProcessingHotelId = null;
+                        pmsTotalData.value = newPmsTotalData;
+                        forecastTotalData.value = newForecastTotalData;
+                        accountingTotalData.value = newAccountingTotalData;        } catch (error) {
             console.error(`RMP: Error during summary data fetching (hotel ID ${currentProcessingHotelId || 'N/A'} may have failed):`, error);
             if (currentProcessingHotelId) {
                 const hotelKey = String(currentProcessingHotelId);

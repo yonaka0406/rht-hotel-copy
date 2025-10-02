@@ -998,4 +998,17 @@
             disposeAllCharts();
         }
     });
+
+    // Watch for changes in revenueData and occupancyData props to re-render charts
+    watch(() => props.revenueData, () => {
+        if (selectedView.value === 'graph') {
+            nextTick(refreshAllCharts);
+        }
+    }, { deep: true }); // Use deep watch for array/object changes
+
+    watch(() => props.occupancyData, () => {
+        if (selectedView.value === 'graph') {
+            nextTick(refreshAllCharts);
+        }
+    }, { deep: true }); // Use deep watch for array/object changes
 </script>
