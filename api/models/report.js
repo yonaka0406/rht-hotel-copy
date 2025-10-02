@@ -480,10 +480,17 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
 const selectForecastData = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT * 
+    SELECT
+      hotel_id,
+      forecast_month,
+      SUM(accommodation_revenue) AS accommodation_revenue,
+      SUM(operating_days) AS operating_days,
+      SUM(available_room_nights) AS available_room_nights,
+      SUM(rooms_sold_nights) AS rooms_sold_nights
     FROM du_forecast
-    WHERE hotel_id = $1 
+    WHERE hotel_id = $1
       AND forecast_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+    GROUP BY hotel_id, forecast_month
   `;
   const values = [hotelId, dateStart, dateEnd]
 
@@ -498,10 +505,17 @@ const selectForecastData = async (requestId, hotelId, dateStart, dateEnd) => {
 const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT * 
+    SELECT
+      hotel_id,
+      accounting_month,
+      SUM(accommodation_revenue) AS accommodation_revenue,
+      SUM(operating_days) AS operating_days,
+      SUM(available_room_nights) AS available_room_nights,
+      SUM(rooms_sold_nights) AS rooms_sold_nights
     FROM du_accounting
-    WHERE hotel_id = $1 
+    WHERE hotel_id = $1
       AND accounting_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+    GROUP BY hotel_id, accounting_month
   `;
   const values = [hotelId, dateStart, dateEnd]
 
@@ -1701,6 +1715,64 @@ const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) =>
   }
 };
 
+const selectForecastDataByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      df.hotel_id,
+      df.forecast_month,
+      df.plan_global_id,
+      COALESCE(pg.name, '未設定') AS plan_name,
+      SUM(df.accommodation_revenue) AS accommodation_revenue,
+      SUM(df.operating_days) AS operating_days,
+      SUM(df.available_room_nights) AS available_room_nights,
+      SUM(df.rooms_sold_nights) AS rooms_sold_nights
+    FROM du_forecast df
+    LEFT JOIN plans_global pg ON df.plan_global_id = pg.id
+    WHERE df.hotel_id = $1
+      AND df.forecast_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+    GROUP BY df.hotel_id, df.forecast_month, df.plan_global_id, pg.name
+  `;
+  const values = [hotelId, dateStart, dateEnd];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data by plan:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectAccountingDataByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      da.hotel_id,
+      da.accounting_month,
+      da.plan_global_id,
+      COALESCE(pg.name, '未設定') AS plan_name,
+      SUM(da.accommodation_revenue) AS accommodation_revenue,
+      SUM(da.operating_days) AS operating_days,
+      SUM(da.available_room_nights) AS available_room_nights,
+      SUM(da.rooms_sold_nights) AS rooms_sold_nights
+    FROM du_accounting da
+    LEFT JOIN plans_global pg ON da.plan_global_id = pg.id
+    WHERE da.hotel_id = $1
+      AND da.accounting_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+    GROUP BY da.hotel_id, da.accounting_month, da.plan_global_id, pg.name
+  `;
+  const values = [hotelId, dateStart, dateEnd];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data by plan:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -1709,6 +1781,8 @@ module.exports = {
   selectReservationListView,
   selectForecastData,
   selectAccountingData,
+  selectForecastDataByPlan,
+  selectAccountingDataByPlan,
   selectExportReservationList,
   selectExportReservationDetails,
   selectExportMealCount,
