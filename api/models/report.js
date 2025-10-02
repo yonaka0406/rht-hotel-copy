@@ -484,8 +484,8 @@ const selectForecastData = async (requestId, hotelId, dateStart, dateEnd) => {
       hotel_id,
       forecast_month,
       SUM(accommodation_revenue) AS accommodation_revenue,
-      SUM(operating_days) AS operating_days,
-      SUM(available_room_nights) AS available_room_nights,
+      MAX(operating_days) AS operating_days,
+      MAX(available_room_nights) AS available_room_nights,
       SUM(rooms_sold_nights) AS rooms_sold_nights
     FROM du_forecast
     WHERE hotel_id = $1
@@ -509,8 +509,8 @@ const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd) => {
       hotel_id,
       accounting_month,
       SUM(accommodation_revenue) AS accommodation_revenue,
-      SUM(operating_days) AS operating_days,
-      SUM(available_room_nights) AS available_room_nights,
+      MAX(operating_days) AS operating_days,
+      MAX(available_room_nights) AS available_room_nights,
       SUM(rooms_sold_nights) AS rooms_sold_nights
     FROM du_accounting
     WHERE hotel_id = $1
@@ -1744,15 +1744,14 @@ const selectForecastDataByPlan = async (requestId, hotelId, dateStart, dateEnd) 
       df.forecast_month,
       df.plan_global_id,
       COALESCE(pg.name, '未設定') AS plan_name,
-      SUM(df.accommodation_revenue) AS accommodation_revenue,
-      SUM(df.operating_days) AS operating_days,
-      SUM(df.available_room_nights) AS available_room_nights,
-      SUM(df.rooms_sold_nights) AS rooms_sold_nights
+      df.accommodation_revenue,
+      df.operating_days,
+      df.available_room_nights,
+      df.rooms_sold_nights
     FROM du_forecast df
     LEFT JOIN plans_global pg ON df.plan_global_id = pg.id
     WHERE df.hotel_id = $1
       AND df.forecast_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
-    GROUP BY df.hotel_id, df.forecast_month, df.plan_global_id, pg.name
   `;
   const values = [hotelId, dateStart, dateEnd];
 
@@ -1773,15 +1772,14 @@ const selectAccountingDataByPlan = async (requestId, hotelId, dateStart, dateEnd
       da.accounting_month,
       da.plan_global_id,
       COALESCE(pg.name, '未設定') AS plan_name,
-      SUM(da.accommodation_revenue) AS accommodation_revenue,
-      SUM(da.operating_days) AS operating_days,
-      SUM(da.available_room_nights) AS available_room_nights,
-      SUM(da.rooms_sold_nights) AS rooms_sold_nights
+      da.accommodation_revenue,
+      da.operating_days,
+      da.available_room_nights,
+      da.rooms_sold_nights
     FROM du_accounting da
     LEFT JOIN plans_global pg ON da.plan_global_id = pg.id
     WHERE da.hotel_id = $1
       AND da.accounting_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
-    GROUP BY da.hotel_id, da.accounting_month, da.plan_global_id, pg.name
   `;
   const values = [hotelId, dateStart, dateEnd];
 
