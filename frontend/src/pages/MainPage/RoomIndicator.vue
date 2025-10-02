@@ -25,6 +25,7 @@
     </div>
 
     <RoomGroupPanel
+      v-if="selectedHotelId"
       :isLoading="isLoading"
       :roomGroups="roomGroups"
       :openNewReservation="openNewReservation"
