@@ -1310,7 +1310,7 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
     SELECT
-      COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
+      COALESCE(pg.name, ph.name, 'プラン未設定') AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(
         CASE
@@ -1349,9 +1349,9 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       AND r.status NOT IN ('hold', 'block')
       AND r.type <> 'employee'
     GROUP BY
-      1, 2
+      pg.name, ph.name, is_cancelled_billable
     ORDER BY
-      1, 2;
+      plan_name, is_cancelled_billable;
   `;
   const values = [hotelId, dateStart, dateEnd];
 
