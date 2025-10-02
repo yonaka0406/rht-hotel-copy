@@ -239,71 +239,62 @@ const selectReservation = async (requestId, id, hotel_id) => {
   }
   const query = `
     SELECT
-      reservation_details.id
-      ,reservation_details.hotel_id
-      ,hotels.formal_name AS hotel_name
-      ,reservation_details.reservation_id
-      ,reservation_details.cancelled
-      ,reservation_details.billable
-      ,clients.id as client_id
-      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
-      ,reservations.check_in
-      ,reservations.check_in_time
-      ,reservations.check_out      
-      ,reservations.check_out_time
-      ,reservations.number_of_people as reservation_number_of_people
-      ,reservations.status   
-      ,reservations.type
-      ,reservations.payment_timing
-      ,reservations.agent
-      ,reservations.ota_reservation_id
-      ,reservations.comment 
-      ,reservations.has_important_comment
-      ,reservation_details.date
-      ,rooms.room_type_id
-      ,room_types.name AS room_type_name
-      ,reservation_details.room_id
-      ,rooms.room_number
-      ,rooms.smoking
-      ,rooms.capacity
-      ,rooms.floor
-      ,reservation_details.plans_global_id
-      ,reservation_details.plans_hotel_id
-      ,reservation_details.plan_type
-      ,reservation_details.plan_name
-      ,reservation_details.number_of_people
-      ,reservation_details.price AS plan_total_price
-	    ,COALESCE(ra.total_price, 0) AS addon_total_price      
-      ,CASE 
-        WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price 
-        ELSE reservation_details.price * reservation_details.number_of_people
-        END + COALESCE(ra.total_price, 0)
-      AS price
-      ,COALESCE(rc.clients_json, '[]'::json) AS reservation_clients
-      ,COALESCE(ra.addons_json, '[]'::json) AS reservation_addons
-      ,COALESCE(rr.rates_json, '[]'::json) AS reservation_rates
-
-    FROM
-      rooms
-        JOIN 
-      room_types 
-        ON room_types.id = rooms.room_type_id AND room_types.hotel_id = rooms.hotel_id
-        JOIN 
-      reservation_details 
-        ON reservation_details.room_id = rooms.id AND reservation_details.hotel_id = rooms.hotel_id
-        JOIN 
-      hotels
-        ON hotels.id = reservation_details.hotel_id
-		JOIN 
-      reservations 
-        ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id
-        JOIN 
-      clients 
-        ON clients.id = reservations.reservation_client_id        
-        LEFT JOIN 
-      (
-        SELECT
-          ra.reservation_detail_id,
+      rd.id,
+      rd.hotel_id,
+      h.formal_name AS hotel_name,
+      rd.reservation_id,
+      rd.cancelled,
+      rd.billable,
+      c.id AS client_id,
+      COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      r.check_in,
+      r.check_in_time,
+      r.check_out,
+      r.check_out_time,
+      r.number_of_people AS reservation_number_of_people,
+      r.status,
+      r.type,
+      r.payment_timing,
+      r.agent,
+      r.ota_reservation_id,
+      r.comment,
+      r.has_important_comment,
+      rd.date,
+      rm.room_type_id,
+      rt.name AS room_type_name,
+      rd.room_id,
+      rm.room_number,
+      rm.smoking,
+      rm.capacity,
+      rm.floor,
+      rd.plans_global_id,
+      rd.plans_hotel_id,
+      rd.plan_type,
+      rd.plan_name,
+      rd.number_of_people,
+      rd.price AS plan_total_price,
+      COALESCE(ra.total_price, 0) AS addon_total_price,
+      CASE
+          WHEN rd.plan_type = 'per_room' THEN rd.price
+          ELSE rd.price * rd.number_of_people
+      END + COALESCE(ra.total_price, 0) AS price,
+      COALESCE(rc.clients_json, '[]'::json) AS reservation_clients,
+      COALESCE(ra.addons_json, '[]'::json) AS reservation_addons,
+      COALESCE(rr.rates_json, '[]'::json) AS reservation_rates
+  FROM
+      reservations r
+  JOIN
+      reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
+  JOIN
+      hotels h ON h.id = rd.hotel_id
+  JOIN
+      clients c ON c.id = r.reservation_client_id
+  JOIN
+      rooms rm ON rm.id = rd.room_id AND rm.hotel_id = rd.hotel_id
+  JOIN
+      room_types rt ON rt.id = rm.room_type_id AND rt.hotel_id = rm.hotel_id
+  LEFT JOIN LATERAL (
+      SELECT
           SUM(ra.price * ra.quantity) AS total_price,
           JSON_AGG(
               JSON_BUILD_OBJECT(
@@ -316,63 +307,54 @@ const selectReservation = async (requestId, id, hotel_id) => {
                   'price', ra.price
               )
           ) AS addons_json
-        FROM reservation_addons ra JOIN reservation_details rd ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
-		    WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
-        GROUP BY
-          reservation_detail_id
-      ) ra ON reservation_details.id = ra.reservation_detail_id
-        LEFT JOIN 
-      (
-        SELECT 
-          rc.reservation_details_id,
+      FROM reservation_addons ra
+      WHERE ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+      GROUP BY ra.reservation_detail_id
+  ) ra ON true
+  LEFT JOIN LATERAL (
+      SELECT
           JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'client_id', rc.client_id,
-              'name', c.name,
-              'name_kana', c.name_kana,
-              'name_kanji', c.name_kanji,
-              'email', c.email,
-              'phone', c.phone,
-              'gender', c.gender,
-              'address1', ad.street,
-              'address2', ad.city,
-              'postal_code', ad.postal_code
-            )
+              JSON_BUILD_OBJECT(
+                  'client_id', rc_inner.client_id,
+                  'name', c_inner.name,
+                  'name_kana', c_inner.name_kana,
+                  'name_kanji', c_inner.name_kanji,
+                  'email', c_inner.email,
+                  'phone', c_inner.phone,
+                  'gender', c_inner.gender,
+                  'address1', ad.street,
+                  'address2', ad.city,
+                  'postal_code', ad.postal_code
+              )
           ) AS clients_json
-        FROM reservation_clients rc JOIN clients c ON rc.client_id = c.id
-        LEFT JOIN (
+      FROM reservation_clients rc_inner
+      JOIN clients c_inner ON rc_inner.client_id = c_inner.id
+      LEFT JOIN (
           SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
           FROM addresses
-        ) ad ON ad.client_id = c.id AND ad.rn = 1
-			    JOIN reservation_details rd ON rd.id = rc.reservation_details_id AND rd.hotel_id = rc.hotel_id
-		    WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
-        GROUP BY rc.reservation_details_id
-      ) rc ON rc.reservation_details_id = reservation_details.id
-        LEFT JOIN 
-      (
-        SELECT 
-          rr.reservation_details_id,
+      ) ad ON ad.client_id = c_inner.id AND ad.rn = 1
+      WHERE rc_inner.reservation_details_id = rd.id AND rc_inner.hotel_id = rd.hotel_id
+  ) rc ON true
+  LEFT JOIN LATERAL (
+      SELECT
           JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'adjustment_type', rr.adjustment_type,
-              'adjustment_value', rr.adjustment_value,
-              'tax_type_id', rr.tax_type_id,
-              'tax_rate', rr.tax_rate,
-              'price', rr.price              
-            )
+              JSON_BUILD_OBJECT(
+                  'adjustment_type', rr.adjustment_type,
+                  'adjustment_value', rr.adjustment_value,
+                  'tax_type_id', rr.tax_type_id,
+                  'tax_rate', rr.tax_rate,
+                  'price', rr.price
+              )
           ) AS rates_json
-        FROM reservation_rates rr JOIN reservation_details rd ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id 
-		    WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
-        GROUP BY rr.reservation_details_id
-      ) rr ON rr.reservation_details_id = reservation_details.id
-
-    WHERE
-      reservations.id = $1
-      AND reservation_details.hotel_id = $2
-
-    ORDER BY
-      rooms.room_number
-      ,reservation_details.date  
+      FROM reservation_rates rr
+      WHERE rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
+      GROUP BY rr.reservation_details_id
+  ) rr ON true
+  WHERE
+      r.id = $1 AND rd.hotel_id = $2
+  ORDER BY
+      rm.room_number,
+      rd.date;
   `;
 
   const values = [id, hotel_id];
