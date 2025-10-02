@@ -262,15 +262,18 @@
                             <template #body="slotProps">
                                 <span v-if="salesByPlanChartMode === 'tax_included'">
                                     {{ (slotProps.data.regular_sales + slotProps.data.cancelled_sales).toLocaleString('ja-JP') }} 円
+                                    <Badge v-if="salesByPlanTotals.grand_total_sales > 0" :value="((slotProps.data.regular_sales + slotProps.data.cancelled_sales) / salesByPlanTotals.grand_total_sales * 100).toFixed(1) + '%'" severity="secondary" class="ml-2"/>
                                 </span>
                                 <span v-else>
                                     {{ (slotProps.data.regular_net_sales + slotProps.data.cancelled_net_sales).toLocaleString('ja-JP') }} 円
+                                    <Badge v-if="salesByPlanTotals.grand_total_net_sales > 0" :value="((slotProps.data.regular_net_sales + slotProps.data.cancelled_net_sales) / salesByPlanTotals.grand_total_net_sales * 100).toFixed(1) + '%'" severity="info" class="ml-2"/>
                                 </span>
                             </template>
                         </Column>
                         <Column v-if="salesByPlanChartMode !== 'tax_included'" header="計画売上" bodyStyle="text-align:right">
                             <template #body="slotProps">
                                 {{ slotProps.data.forecast_sales.toLocaleString('ja-JP') }} 円
+                                <Badge v-if="salesByPlanTotals.grand_total_forecast_sales > 0" :value="(slotProps.data.forecast_sales / salesByPlanTotals.grand_total_forecast_sales * 100).toFixed(1) + '%'" severity="contrast" class="ml-2"/>
                             </template>
                         </Column>
                         <ColumnGroup type="footer">
@@ -280,9 +283,24 @@
                                 <Column v-else :footer="salesByPlanTotals.regular_net_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
                                 <Column v-if="salesByPlanChartMode === 'tax_included'" :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
                                 <Column v-else :footer="salesByPlanTotals.cancelled_net_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
-                                <Column v-if="salesByPlanChartMode === 'tax_included'" :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
-                                <Column v-else :footer="(salesByPlanTotals.regular_net_sales + salesByPlanTotals.cancelled_net_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
-                                <Column v-if="salesByPlanChartMode !== 'tax_included'" :footer="salesByPlanTotals.forecast_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column v-if="salesByPlanChartMode === 'tax_included'" footerStyle="text-align:right">
+                                    <template #footer>
+                                        <span class="font-bold">{{ (salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') }} 円</span>
+                                        <Badge value="100%" severity="secondary" class="ml-2"/>
+                                    </template>
+                                </Column>
+                                <Column v-else footerStyle="text-align:right">
+                                    <template #footer>
+                                        <span class="font-bold">{{ (salesByPlanTotals.regular_net_sales + salesByPlanTotals.cancelled_net_sales).toLocaleString('ja-JP') }} 円</span>
+                                        <Badge value="100%" severity="info" class="ml-2"/>
+                                    </template>
+                                </Column>
+                                <Column v-if="salesByPlanChartMode !== 'tax_included'" footerStyle="text-align:right">
+                                    <template #footer>
+                                        <span class="font-bold">{{ salesByPlanTotals.forecast_sales.toLocaleString('ja-JP') }} 円</span>
+                                        <Badge value="100%" severity="contrast" class="ml-2"/>
+                                    </template>
+                                </Column>
                             </Row>
                         </ColumnGroup>
                     </DataTable>
@@ -367,7 +385,7 @@
     import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from "vue";    
 
     // Primevue
-    import { Card, DatePicker, SelectButton, Fieldset, DataTable, Column, ColumnGroup, Row, Panel } from 'primevue';
+    import { Card, DatePicker, SelectButton, Fieldset, DataTable, Column, ColumnGroup, Row, Panel, Badge } from 'primevue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
@@ -532,7 +550,7 @@
     });
 
     const salesByPlanTotals = computed(() => {
-        return processedSalesByPlan.value.reduce((acc, item) => {
+        const totals = processedSalesByPlan.value.reduce((acc, item) => {
             acc.regular_sales += item.regular_sales;
             acc.cancelled_sales += item.cancelled_sales;
             acc.regular_net_sales += item.regular_net_sales;
@@ -540,6 +558,12 @@
             acc.forecast_sales += item.forecast_sales;
             return acc;
         }, { regular_sales: 0, cancelled_sales: 0, regular_net_sales: 0, cancelled_net_sales: 0, forecast_sales: 0 });
+
+        totals.grand_total_sales = totals.regular_sales + totals.cancelled_sales;
+        totals.grand_total_net_sales = totals.regular_net_sales + totals.cancelled_net_sales;
+        totals.grand_total_forecast_sales = totals.forecast_sales;
+
+        return totals;
     });
 
     const occupationBreakdownTotals = computed(() => {
