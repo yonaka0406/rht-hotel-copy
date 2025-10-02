@@ -4,11 +4,12 @@ CREATE TABLE du_forecast (
    id SERIAL PRIMARY KEY,
    hotel_id INT NOT NULL REFERENCES hotels(id),
    forecast_month DATE NOT NULL,
+   plan_global_id INT REFERENCES plans_global(id),
    accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'
    operating_days INTEGER, -- '営業日数'
    available_room_nights INTEGER, -- '客室数'
    rooms_sold_nights INTEGER, -- '販売客室数'
-   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,   
    created_by INT REFERENCES users(id),
    CONSTRAINT uq_hotel_month_forecast UNIQUE (hotel_id, forecast_month)
 );
@@ -19,8 +20,12 @@ CREATE TABLE du_accounting (
    id SERIAL PRIMARY KEY,
    hotel_id INT NOT NULL REFERENCES hotels(id),
    accounting_month DATE NOT NULL,
+   plan_global_id INT REFERENCES plans_global(id), -- 'プランのグローバルID'
    accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'
-   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+   operating_days INTEGER, -- '営業日数'                                             │
+   available_room_nights INTEGER, -- '客室数'                                        │
+   rooms_sold_nights INTEGER, -- '販売客室数' 
+   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,   
    created_by INT REFERENCES users(id),
    CONSTRAINT uq_hotel_month_accounting UNIQUE (hotel_id, accounting_month)
 );
