@@ -204,15 +204,16 @@
             }
         }        
 
-        if (selectedHotels.value.length === 1) {
-            viewName += 'Hotel';
-        } else if (selectedHotels.value.length > 1) {
+        // Check if '全施設' (id: 0) is the only selected hotel
+        const isAllFacilitiesSelected = selectedHotels.value.length === 1 && selectedHotels.value[0] === 0;
+
+        if (isAllFacilitiesSelected || selectedHotels.value.length > 1) {
             viewName += 'AllHotels';
+        } else if (selectedHotels.value.length === 1) {
+            viewName += 'Hotel';
         } else {
             // No hotels selected, or invalid state for summary views
-            // Potentially return a specific state like 'noSelection' if needed
-            // For now, if viewName is still empty, it means no specific view matched.
-            if (viewName === '') return null; // Or a default like 'pleaseSelect'
+            if (viewName === '') return null; 
         }
         return viewName;
     });

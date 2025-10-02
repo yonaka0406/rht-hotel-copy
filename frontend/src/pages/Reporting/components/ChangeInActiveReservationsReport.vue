@@ -19,7 +19,7 @@
                 </template>
                 <template #content>                    
                     <p class="text-sm text-gray-600 mb-1">在庫数合計:</p>
-                    <p class="text-3xl font-bold text-blue-600">{{ totalPreviousDayEnd }}</p>
+                    <p class="text-3xl font-bold text-blue-600">{{ formatNumberWithThousandsSeparator(totalPreviousDayEnd) }}</p>
                 </template>
             </Card>
             <Card>
@@ -31,7 +31,7 @@
                 </template>
                 <template #content>                    
                     <p class="text-sm text-gray-600 mb-1">在庫数合計:</p>
-                    <p class="text-3xl font-bold text-green-600">{{ totalSnapshotDayEnd }}</p>
+                    <p class="text-3xl font-bold text-green-600">{{ formatNumberWithThousandsSeparator(totalSnapshotDayEnd) }}</p>
                 </template>
             </Card>
         </div>
@@ -70,17 +70,17 @@
 
                                 <!-- Column 2: Previous Day Total (aligned right) -->
                                 <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
-                                    <span class="text-xs text-gray-500">前日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span></span>
+                                    <span class="text-xs text-gray-500">前日合計: <span class="font-semibold text-gray-700">{{ formatNumberWithThousandsSeparator(calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal) }}</span></span>
                                 </div>
 
                                 <!-- Column 3: Snapshot Day Total (aligned right) -->
                                 <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
-                                    <span class="text-xs text-gray-500">指定日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span></span>
+                                    <span class="text-xs text-gray-500">指定日合計: <span class="font-semibold text-gray-700">{{ formatNumberWithThousandsSeparator(calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal) }}</span></span>
                                 </div>
 
                                 <!-- Column 4: Daily Difference Total (aligned right, with color for positive/negative) -->
                                 <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
-                                    <span class="text-xs text-gray-500">日次差異合計: <span class="font-semibold" :class="{'text-red-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal < 0, 'text-green-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal >= 0}">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span></span>
+                                    <span class="text-xs text-gray-500">日次差異合計: <span class="font-semibold" :class="{'text-red-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal < 0, 'text-green-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal >= 0}">{{ formatNumberWithThousandsSeparator(calculateGroupTotals(slotProps.data.yearMonth).diffTotal) }}</span></span>
                                 </div>
                             </div>
                         </template>
@@ -291,6 +291,14 @@
             ]
         };
     });
+
+    // Helper function to format numbers with a thousand separator
+    const formatNumberWithThousandsSeparator = (value) => {
+        if (typeof value !== 'number') {
+            return value;
+        }
+        return value.toLocaleString('ja-JP');
+    };
 
     // Helper function to get today's date in YYYY-MM-DD format
     const getTodayDateString = () => {

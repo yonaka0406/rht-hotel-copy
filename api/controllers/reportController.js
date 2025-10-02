@@ -88,7 +88,7 @@ const getCountReservation = async (req, res) => {
     const data = await selectCountReservation(req.requestId, hotelId, startDate, endDate);    
     
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }  
 
     res.json(data);
@@ -107,7 +107,7 @@ const getCountReservationDetails = async (req, res) => {
     const addonData = await selectCountReservationDetailsAddons(req.requestId, hotelId, startDate, endDate);     
     
     if ((!planData && !addonData) || (planData.length === 0 && addonData.length === 0)) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.json({});
     }
 
     const mergedData = {};
@@ -659,10 +659,8 @@ const getReservationsInventory = async (req, res) => {
   const endDate = req.params.edate;
   
   try {    
-    const data = await selectReservationsInventory(req.requestId, hotelId, startDate, endDate);    
-    
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }  
 
     res.json(data);
@@ -680,7 +678,7 @@ const getAllInventory = async (req, res) => {
     const data = await selectAllRoomTypesInventory(req.requestId, hotelId, startDate, endDate);    
     
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }  
 
     res.json(data);
@@ -700,7 +698,7 @@ const getReservationsForGoogle = async (req, res) => {
     const dataToAppend = await selectReservationsForGoogle(req.requestId, hotelId, startDate, endDate);    
     
     if (!dataToAppend || dataToAppend.length === 0) {
-      return res.status(404).json({ error: 'No data found for Google' });
+      return res.status(200).json([]);
     }
 
     const formattedData = formatDataForSheet(dataToAppend);
@@ -767,7 +765,7 @@ const getParkingReservationsForGoogle = async (req, res) => {
     const dataToAppend = await selectParkingReservationsForGoogle(req.requestId, hotelId, startDate, endDate);
 
     if (!dataToAppend || dataToAppend.length === 0) {
-      return res.status(404).json({ error: 'No parking data found for Google' });
+      return res.status(200).json([]);
     }
 
     const formattedData = formatParkingDataForSheet(dataToAppend);
@@ -866,7 +864,7 @@ const getActiveReservationsChange = async (req, res) => {
     const data = await selectActiveReservationsChange(req.requestId, hotel_id, date);
 
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data returned from query.' });
+      return res.status(200).json([]);
     }  
 
     res.json(data);
@@ -928,7 +926,7 @@ const getOccupationBreakdown = async (req, res) => {
   try {
     const data = await selectOccupationBreakdown(req.requestId, hotelId, startDate, endDate);
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }
     res.json(data); // The query now returns multiple rows (an array of objects)
   } catch (err) {
@@ -961,7 +959,7 @@ const getCheckInOutReport = async (req, res) => {
     const data = await selectCheckInOutReport(req.requestId, hotelId, startDate, endDate);
 
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }
 
     res.json(data);

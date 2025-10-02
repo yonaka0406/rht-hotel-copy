@@ -177,6 +177,11 @@
       emit('hotel-change', selectedHotels.value, hotels.value);
     }
 
+    // Computed property to determine if a given report type is a single-hotel-select type
+    const isSingleHotelSelectReportType = (reportType) => {
+        return reportType === 'activeReservationsChange' || reportType === 'monthlyReservationEvolution';
+    };
+
     // When report type changes in ReportingTopMenu:
     function onInternalReportTypeChange(event) { 
         const newReportType = event.value;
@@ -198,10 +203,13 @@
             } else {
                 selectedHotels.value = []; // No hotels available
             }
-        } else if (oldReportType === 'activeReservationsChange' && newReportType !== 'activeReservationsChange' && newReportType !== 'monthlyReservationEvolution') {
-            // If switching from "activeReservationsChange" (and "All Facilities" was selected) to other multi-hotel reports
+        } else if (isSingleHotelSelectReportType(oldReportType) && !isSingleHotelSelectReportType(newReportType)) {
+            // If switching from a single-hotel-select report (where '全施設' might have been selected) to a multi-hotel-select report
             if (selectedHotels.value && selectedHotels.value.length === 1 && selectedHotels.value[0] === 0) {
                 selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : []; // Select all hotels
+            } else if (!selectedHotels.value || selectedHotels.value.length === 0) {
+                // If no hotels were selected, default to all hotels for multi-select reports
+                selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : [];
             }
         }
         // Note: If switching from a multi-hotel selection to another multi-hotel report (e.g. monthlySummary to another),
@@ -226,6 +234,12 @@
 
     watch(() => props.initialReportType, (newValue) => {
         if (newValue) selectedReportType.value = newValue;
+    });
+
+    // Watch for changes in showSingleHotelSelect for debugging
+    watch(showSingleHotelSelect, (newValue, oldValue) => {
+        console.log(`[ReportingTopMenu] showSingleHotelSelect changed from ${oldValue} to ${newValue}`);
+        console.log('[ReportingTopMenu] selectedHotels.value when showSingleHotelSelect changed:', selectedHotels.value);
     });
 
     onMounted(async () => {
