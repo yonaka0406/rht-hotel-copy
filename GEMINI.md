@@ -143,4 +143,34 @@ A common workflow for optimizing database queries involves the following steps:
 
 *   **Providing IDs:** If the model requires example IDs (e.g., UUIDs for database queries), the user can provide them upon request.
 
+## 11. Frontend Development Guidelines
+
+To ensure the frontend codebase remains scalable and maintainable, follow these conventions.
+
+### Component & Page Structure
+
+Adopt a feature-based approach for organizing pages and their components. For any page that requires its own set of child components, create a dedicated directory.
+
+-   **Global Components (`/src/components`):** This directory is for generic components that are reused across multiple, unrelated pages (e.g., `AppButton.vue`, `ConfirmationDialog.vue`).
+-   **Page-Specific Components (`/src/pages/[PageName]/components`):** Create a directory for each page. Inside, create a `components` subdirectory for components that are *only* used by that page.
+
+**Example Structure:**
+```
+frontend/src/
+├── components/      # Shared/Global components
+│   └── AppHeader.vue
+└── pages/
+    └── Reservations/
+        ├── components/  # Components ONLY for Reservations
+        │   └── ReservationList.vue
+        └── ReservationsPage.vue
+```
+
+### File Size
+
+-   **Aim for conciseness:** Strive to keep most files, especially Vue components, **under 300 lines**.
+-   **Refactor when necessary:** A file exceeding 400-500 lines is a strong indicator that it has too many responsibilities and should be refactored.
+    -   **Component Splitting:** Break large templates into smaller, logical child components.
+    -   **Composable Extraction:** Move complex business logic from `<script setup>` into reusable composable functions (e.g., `src/composables/useReservations.js`).
+
 **Note:** If you encounter issues with password prompts, ensure your `api/.env` file (or environment variables) correctly sets `POSTGRES_PASSWORD`. By default, it's `password`.
