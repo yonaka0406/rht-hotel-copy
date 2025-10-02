@@ -90,12 +90,12 @@
   // Vue
   import { ref, onMounted } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
-  const router = useRouter();
-  const route = useRoute();
+  
+  // Store
+  import { useAuthStore } from '@/composables/useAuthStore';
 
   // Primevue
   import { useToast } from 'primevue/usetoast';
-  const toast = useToast();
   import Card from 'primevue/card';
   import FloatLabel from 'primevue/floatlabel';
   import InputText from 'primevue/inputtext';
@@ -103,9 +103,13 @@
   import Button from 'primevue/button';
   import Message from 'primevue/message';
 
+  const router = useRouter();
+  const route = useRoute();
+  const authStore = useAuthStore();
+  const toast = useToast();
+
   const email = ref('');
   const password = ref('');
-  const error = ref(null);
   const isLoading = ref(false);
   const emailError = ref(null);
   const passwordError = ref(null);
@@ -119,30 +123,6 @@
     if (!userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
       showBrowserWarning.value = true;
     }
-
-    // Add localStorage monitoring
-    window.addEventListener('storage', (e) => {
-      //console.log('Storage event:', e.key, e.oldValue, e.newValue);
-    });
-
-    // Check private browsing mode and log initial state
-    const checkPrivateBrowsing = async () => {
-      const isPrivate = await new Promise((resolve) => {
-        try {
-          const db = indexedDB.open('test');
-          db.onerror = () => resolve(true);
-          db.onsuccess = () => resolve(false);
-        } catch (e) {
-          resolve(true);
-        }
-      });
-      
-      //console.log('Page loaded, token exists:', !!localStorage.getItem('authToken'));
-      //console.log('Private browsing:', isPrivate);
-      //console.log('User agent:', navigator.userAgent);
-    };
-
-    checkPrivateBrowsing();
 
     const errorParam = route.query.error;
     if (errorParam) {
@@ -181,8 +161,7 @@
     }
   });
 
-  const handleGoogleLogin = () => { // Added
-    // Redirect to the backend Google OAuth endpoint
+  const handleGoogleLogin = () => {
     window.location.href = '/api/auth/google';
   };
 
@@ -204,69 +183,21 @@
     validateEmail();
     validatePassword();
 
-    if (emailError.value) {
-      toast.add({ severity: 'error', summary: '入力エラー', detail: emailError.value, life: 3000 });
+    if (emailError.value || passwordError.value) {
+      const detail = emailError.value || passwordError.value;
+      toast.add({ severity: 'error', summary: '入力エラー', detail, life: 3000 });
       return;
     }
 
-    if (passwordError.value) {
-      toast.add({ severity: 'error', summary: '入力エラー', detail: passwordError.value, life: 3000 });
-      return;
-    }
-
+    isLoading.value = true;
     try {
-      error.value = null;
-      isLoading.value = true;
-
-      const data = {
-        email: email.value,
-        password: password.value,
-      };
-
-      const url = `/api/auth/login`;
-      const response = await fetch(url, {
-          method: 'POST',
-          headers: {              
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-      }); 
-
-      const responseData = await response.json();
-
-      if (responseData.token) {
-        // Successful login
-        localStorage.setItem('authToken', responseData.token);
-        //console.log('Token stored after login:', localStorage.getItem('authToken'));
-        //console.log('Current URL after login:', window.location.href);
-        toast.add({ severity: 'success', summary: 'ログイン成功', detail: responseData.message || 'ログインしました。', life: 3000 });
+        await authStore.login(email.value, password.value);
+        toast.add({ severity: 'success', summary: 'ログイン成功', detail: 'ようこそ！', life: 3000 });
         router.push('/');
-      } else if (responseData.error && responseData.error === "このアカウントはGoogleで登録されています。Googleログインをご利用ください。") {
-        toast.add({ severity: 'info', summary: 'ログイン方法', detail: "このアカウントはGoogleで登録されています。Googleログインをご利用ください。", life: 5000 });
-      } else if(responseData.error){
-        toast.add({ severity: 'warn', summary: 'ログイン失敗', detail: responseData.error || 'ログインできなかった。', life: 3000 });
-      } else {
-        // Edge case: No token in response
-        throw new Error('サーバーエラーが発生しました。');
-      }
-
-    } catch (err) {
-      error.value = err.message || '予期しないエラーが発生しました。';
-
-      // Show toast based on API response messages
-      if (error.value === 'Email and password are required') {
-        toast.add({ severity: 'error', summary: '入力エラー', detail: 'メールとパスワードを入力してください。', life: 3000 });
-      } else if (error.value === 'User not found') {
-        toast.add({ severity: 'error', summary: 'ログイン失敗', detail: 'ユーザーが見つかりません。', life: 3000 });
-        emailError.value = 'ユーザーが見つかりません。';
-      } else if (error.value === 'パスワードの誤差がありました。') {
-        toast.add({ severity: 'error', summary: 'ログイン失敗', detail: 'パスワードが間違っています。', life: 3000 });
-        passwordError.value = 'パスワードが間違っています。';
-      } else if (error.value === 'ユーザーが無効になっています。') {
-        toast.add({ severity: 'error', summary: 'アカウント無効', detail: 'このユーザーは無効になっています。', life: 3000 });
-      } 
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'ログイン失敗', detail: error.message, life: 5000 });
     } finally {
-      isLoading.value = false;
+        isLoading.value = false;
     }
   };
 
