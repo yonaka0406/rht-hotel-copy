@@ -170,9 +170,9 @@ const fetchAllReservationData = async () => {
 
 // Computed property for blocked room information
 const blockedRoomInfo = computed(() => {
-    console.log('[blockedRoomInfo] Evaluating...');
-    console.log('[blockedRoomInfo] reservationStatus.value:', reservationStatus.value);
-    console.log('[blockedRoomInfo] reservation_details.value:', reservation_details.value);
+    //console.log('[blockedRoomInfo] Evaluating...');
+    //console.log('[blockedRoomInfo] reservationStatus.value:', reservationStatus.value);
+    //console.log('[blockedRoomInfo] reservation_details.value:', reservation_details.value);
 
     if (reservationStatus.value === 'block' && reservation_details.value && reservation_details.value.length > 0) {
         // Collect all unique room_ids and room_numbers from the reservation_details array
@@ -186,20 +186,20 @@ const blockedRoomInfo = computed(() => {
         const roomIds = Object.keys(uniqueRoomDetails);
         const roomNumbers = Object.values(uniqueRoomDetails);
 
-        console.log('[blockedRoomInfo] Collected roomIds:', roomIds);
-        console.log('[blockedRoomInfo] Collected roomNumbers:', roomNumbers);
+        //console.log('[blockedRoomInfo] Collected roomIds:', roomIds);
+        //console.log('[blockedRoomInfo] Collected roomNumbers:', roomNumbers);
 
         if (roomIds.length > 0) {
-            console.log('[blockedRoomInfo] Returning blocked room info.');
+            //console.log('[blockedRoomInfo] Returning blocked room info.');
             return {
                 count: roomIds.length,
                 roomNumbers: roomNumbers.join(', ')
             };
         } else {
-            console.log('[blockedRoomInfo] No room IDs found in reservation_details.');
+            //console.log('[blockedRoomInfo] No room IDs found in reservation_details.');
         }
     } else {
-        console.log('[blockedRoomInfo] Conditions not met for displaying blocked room info.');
+        //console.log('[blockedRoomInfo] Conditions not met for displaying blocked room info.');
     }
     return null;
 });
