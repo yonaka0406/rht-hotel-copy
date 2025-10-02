@@ -416,25 +416,30 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 hotel_id, forecast_month,
                 accommodation_revenue, operating_days,
                 available_room_nights, rooms_sold_nights,
+                plan_global_id,
                 created_by                    
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (hotel_id, forecast_month) DO UPDATE SET
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (hotel_id, forecast_month, plan_global_id) DO UPDATE SET
                 accommodation_revenue = CASE
-                                            WHEN $3 IS NOT NULL THEN EXCLUDED.accommodation_revenue
+                                            WHEN EXCLUDED.accommodation_revenue IS NOT NULL THEN EXCLUDED.accommodation_revenue
                                             ELSE du_forecast.accommodation_revenue
                                         END,
                 operating_days = CASE
-                                    WHEN $4 IS NOT NULL THEN EXCLUDED.operating_days
+                                    WHEN EXCLUDED.operating_days IS NOT NULL THEN EXCLUDED.operating_days
                                     ELSE du_forecast.operating_days
                                     END,
                 available_room_nights = CASE
-                                            WHEN $5 IS NOT NULL THEN EXCLUDED.available_room_nights
+                                            WHEN EXCLUDED.available_room_nights IS NOT NULL THEN EXCLUDED.available_room_nights
                                             ELSE du_forecast.available_room_nights
                                         END,
                 rooms_sold_nights = CASE
-                                        WHEN $6 IS NOT NULL THEN EXCLUDED.rooms_sold_nights
+                                        WHEN EXCLUDED.rooms_sold_nights IS NOT NULL THEN EXCLUDED.rooms_sold_nights
                                         ELSE du_forecast.rooms_sold_nights
                                     END,
+                plan_global_id = CASE
+                                    WHEN EXCLUDED.plan_global_id IS NOT NULL THEN EXCLUDED.plan_global_id
+                                    ELSE du_forecast.plan_global_id
+                                END,
                 created_by = EXCLUDED.created_by                    
             RETURNING id;
         `;
@@ -450,6 +455,7 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 forecast.operating_days !== undefined && forecast.operating_days !== null ? parseInt(forecast.operating_days, 10) : null,
                 forecast.available_room_nights !== undefined && forecast.available_room_nights !== null ? parseInt(forecast.available_room_nights, 10) : null,
                 forecast.rooms_sold_nights !== undefined && forecast.rooms_sold_nights !== null ? parseInt(forecast.rooms_sold_nights, 10) : null,
+                forecast.plan_global_id !== undefined && forecast.plan_global_id !== null ? parseInt(forecast.plan_global_id, 10) : null,
                 user_id
             ];
 
@@ -503,14 +509,32 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
         const query = `
             INSERT INTO du_accounting (
                 hotel_id, accounting_month,
-                accommodation_revenue,
+                accommodation_revenue, operating_days,
+                available_room_nights, rooms_sold_nights,
+                plan_global_id,
                 created_by
-            ) VALUES ($1, $2, $3, $4)
-            ON CONFLICT (hotel_id, accounting_month) DO UPDATE SET
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (hotel_id, accounting_month, plan_global_id) DO UPDATE SET
                 accommodation_revenue = CASE
                                           WHEN EXCLUDED.accommodation_revenue IS NOT NULL THEN EXCLUDED.accommodation_revenue
                                           ELSE du_accounting.accommodation_revenue -- Keep existing if new value is null
                                         END,
+                operating_days = CASE
+                                    WHEN EXCLUDED.operating_days IS NOT NULL THEN EXCLUDED.operating_days
+                                    ELSE du_accounting.operating_days
+                                    END,
+                available_room_nights = CASE
+                                            WHEN EXCLUDED.available_room_nights IS NOT NULL THEN EXCLUDED.available_room_nights
+                                            ELSE du_accounting.available_room_nights
+                                        END,
+                rooms_sold_nights = CASE
+                                        WHEN EXCLUDED.rooms_sold_nights IS NOT NULL THEN EXCLUDED.rooms_sold_nights
+                                        ELSE du_accounting.rooms_sold_nights
+                                    END,
+                plan_global_id = CASE
+                                    WHEN EXCLUDED.plan_global_id IS NOT NULL THEN EXCLUDED.plan_global_id
+                                    ELSE du_accounting.plan_global_id
+                                END,
                 created_by = EXCLUDED.created_by              
             RETURNING id;
         `;
@@ -523,6 +547,10 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
                 parseInt(entry.hotel_id, 10),
                 entry.month, // Assuming this is a date string like 'YYYY-MM-DD' and the DB column is DATE
                 entry.accommodation_revenue !== undefined && entry.accommodation_revenue !== null ? parseFloat(entry.accommodation_revenue) : null,
+                entry.operating_days !== undefined && entry.operating_days !== null ? parseInt(entry.operating_days, 10) : null,
+                entry.available_room_nights !== undefined && entry.available_room_nights !== null ? parseInt(entry.available_room_nights, 10) : null,
+                entry.rooms_sold_nights !== undefined && entry.rooms_sold_nights !== null ? parseInt(entry.rooms_sold_nights, 10) : null,
+                entry.plan_global_id !== undefined && entry.plan_global_id !== null ? parseInt(entry.plan_global_id, 10) : null,
                 user_id
             ];
 
