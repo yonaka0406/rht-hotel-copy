@@ -231,7 +231,7 @@
                             <small v-else>（税抜き）</small>
                         </div>                        
                         <SelectButton v-model="salesByPlanChartMode" :options="salesByPlanChartOptions" optionLabel="name" optionValue="value" />
-                        <SelectButton v-model="salesByPlanViewMode" :options="salesByPlanViewOptions" optionLabel="name" optionValue="value" />
+                        <SelectButton v-model="salesByPlanViewMode" :options="salesByPlanViewOptions" optionLabel="name" optionValue="value" class="ml-2" />
                     </div>
                 </template>
                 <template #content>
@@ -370,7 +370,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown, fetchBookerTypeBreakdown } = useReportStore();
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown, fetchBookerTypeBreakdown, fetchForecastDataByPlan } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -387,7 +387,7 @@
         { name: 'テーブル', value: 'table' }
     ]);
 
-    const salesByPlanChartMode = ref('tax_included'); // 'tax_included' or 'tax_excluded'
+    const salesByPlanChartMode = ref('tax_excluded'); // 'tax_included' or 'tax_excluded'
     const salesByPlanChartOptions = ref([
         { name: '税込み', value: 'tax_included' },
         { name: '税抜き', value: 'tax_excluded' }
@@ -456,6 +456,7 @@
     const occupationBreakdownData = ref(null);
     const bookingSourceData = ref([]);
     const paymentTimingData = ref([]);
+    const forecastDataByPlan = ref([]);
 
     const filteredOccupationBreakdownData = computed(() => {
         if (!occupationBreakdownData.value) return [];
@@ -578,6 +579,7 @@
     const revPAR = ref(0);
     const OCC = ref(0);
     const displayedCumulativeSales = ref(0);
+    const displayedCumulativeSalesNet = ref(0);
     // Forecast Data
     const forecastSales = ref(0);
     const forecastADR = ref(0);
@@ -1836,6 +1838,7 @@
             const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
             const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
             const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value); // New fetch
+            const forecastDataByPlanResult = await fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
             // Fetch reservation list for booker type and length of stay
             const reservationListViewResult = await fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
 
@@ -1873,6 +1876,16 @@
             bookingSourceData.value = bookingSourceResult;
             paymentTimingData.value = paymentResult;
             bookerTypeBreakdownData.value = bookerTypeBreakdownResult; // Assign new data
+
+            if (forecastDataByPlanResult && Array.isArray(forecastDataByPlanResult)) {
+                forecastDataByPlan.value = forecastDataByPlanResult.map(item => ({
+                    ...item,
+                    forecast_month: formatDate(new Date(item.forecast_month))
+                }));
+            } else {
+                forecastDataByPlan.value = [];
+            }
+
             // Assign reservation list data
             if (reservationListViewResult && Array.isArray(reservationListViewResult)) {
                 // Ensure clients_json and payers_json are parsed if they are strings
