@@ -3,17 +3,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 items-center">
 
       <div class="lg:col-span-4">
-        <h2 class="text-xl font-semibold mb-3 text-gray-700 dark:text-gray-200">当日の概要</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> <Card v-for="metric in summaryMetrics" :key="metric.title" class="shadow-md rounded-lg dark:bg-gray-800 dark:border-gray-700">
-              <template #title>                
-                <i :class="[metric.icon, metric.iconColor, 'text-xl mr-2']"></i>
-                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ metric.title }}</span>                
-              </template>
-              <template #content>
-                <p class="text-3xl font-bold text-gray-800 dark:text-white pt-1">{{ metric.count }}</p>
-              </template>
-            </Card>
-        </div>
+        <SummaryMetricsPanel :roomGroups="roomGroups" />
       </div>
 
       <div class="lg:col-span-3 flex lg:justify-center items-start">
@@ -40,32 +30,14 @@
       :selectedHotelId="selectedHotelId"
     />  </div>
 
-  <Drawer 
-    v-model:visible="drawerVisible"
-    :modal="true"
-    :position="'bottom'"
-    :style="{height: '75vh'}"    
-    @hide="handleDrawerClose"
-    :closable="true"
-    class="dark:bg-gray-800"
-  >
-    <div class="flex justify-end" v-if="hasReservation">
-      <Button @click="goToReservation" severity="info">
-        <i class="pi pi-arrow-right"></i><span>編集ページへ</span>
-      </Button>
-    </div>
-    
-    <ReservationAddRoom v-if="!hasReservation"     
-      :room_id="selectedRoomID"
-      :date="selectedDate"
-      @temp-block-close="handleTempBlock"
+    <ReservationDrawer
+      v-if="selectedHotelId"
+      ref="reservationDrawerRef"
+      :selectedDate="selectedDate"
+      :selectedHotelId="selectedHotelId"
+      :formatDate="formatDate"
+      @reservation-updated="handleReservationUpdated"
     />
-    <ReservationEdit
-        v-if="hasReservation"
-        :reservation_id="selectedReservationID"
-        :room_id="selectedRoomID"        
-    />
-  </Drawer>
 
 </template>
 
@@ -74,9 +46,9 @@
   import { ref, computed, watch, onMounted, onUnmounted, onErrorCaptured } from 'vue';
   import { useRouter } from 'vue-router';
   const router = useRouter(); 
-  import ReservationAddRoom from '@/pages/MainPage/components/ReservationAddRoom.vue';
-  import ReservationEdit from '../ReservationEdit.vue';
   import RoomGroupPanel from './components/RoomGroupPanel.vue';
+  import SummaryMetricsPanel from './components/SummaryMetricsPanel.vue';
+  import ReservationDrawer from './components/ReservationDrawer.vue';
 
   //Websocket
   import io from 'socket.io-client';
@@ -85,13 +57,7 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();  
-  import Panel from 'primevue/panel';
-  import Card from 'primevue/card';
-  import Drawer from 'primevue/drawer';
-  import Skeleton from 'primevue/skeleton';
-  import Avatar from 'primevue/avatar';
   import DatePicker from 'primevue/datepicker';
-  import Button from 'primevue/button';
   
   //Stores
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -104,11 +70,11 @@
   const isUpdating = ref(false);
   const isLoading = ref(false);
   const today = new Date();
-      
-  const selectedRoomID = ref(null);
-  const selectedReservationID = ref(null);
-  const drawerVisible = ref(false);
-  const hasReservation = ref(false);
+  const reservationDrawerRef = ref(null);
+
+  const handleReservationUpdated = async () => {
+    await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+  };
       
   // Helper function
   const formatDate = (date) => {
@@ -147,6 +113,56 @@
     }
   };
 
+  const getClientName = (room) => {
+    //console.log('getClientName - room object:', room);
+    let clients = [];
+    try {
+      if (room?.clients_json) {
+        clients = typeof room.clients_json === 'string' 
+          ? JSON.parse(room.clients_json)
+          : room.clients_json;
+      }
+    } catch (e) {
+      console.error('Error parsing clients_json:', e);
+    }
+    //console.log('getClientName - parsed clients:', clients);
+          
+    const processedClients = [];
+
+    // Always add the booker from room.client_name first
+    if (room?.client_name) {
+      processedClients.push({
+        name: room.client_name,
+        isBooker: true,
+        gender: null // Gender not available from client_name
+      });
+    }
+
+    // Add other clients from clients_json as guests
+    const hasClientsInJson = Array.isArray(clients) && clients.length > 0;
+    if (hasClientsInJson) {
+      clients.forEach((client) => {
+        const clientName = client.name_kanji || client.name_kana || client.name;
+        if (clientName && clientName !== room.client_name) { // Avoid duplicating the booker if already added
+          processedClients.push({
+            name: clientName,
+            isBooker: false,
+            gender: client.gender
+          });
+        }
+      });
+    }
+
+    if (processedClients.length > 0) {
+      return processedClients;
+    }
+  
+    const fallbackName = room?.client_name || 'ゲスト';
+    //console.log('getClientName - fallback name:', fallbackName);
+    return [{ name: fallbackName, isBooker: true, gender: null }];
+  };
+
+
   const getContrastColor = (hexcolor) => {
     if (!hexcolor || typeof hexcolor !== 'string') return '#000000';
     let processedHex = hexcolor.startsWith('#') ? hexcolor.slice(1) : hexcolor;
@@ -163,6 +179,14 @@
 
     const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
     return (yiq >= 128) ? '#000000' : '#FFFFFF';
+  };
+
+  const openNewReservation = (room) => {
+    reservationDrawerRef.value?.openNewReservation(room);
+  };
+  
+  const openEditReservation = (room) => {        
+    reservationDrawerRef.value?.openEditReservation(room);
   };
 
   const selectedDate = ref(new Date());
@@ -340,95 +364,7 @@
     ];
   });
 
-  const openNewReservation = (room) => {
-    selectedRoomID.value = room.room_id;
-    hasReservation.value = false;
-    drawerVisible.value = true;
-  };
-  
-  const openEditReservation = (room) => {        
-    selectedReservationID.value = room.id;
-    selectedRoomID.value = room.room_id;        
-    hasReservation.value = true;
-    drawerVisible.value = true;
-  };  
-  const goToReservation = () => {
-    router.push({ name: 'ReservationEdit', params: { reservation_id: selectedReservationID.value } });
-  }
 
-  onErrorCaptured((err, instance, info) => {
-    console.error('Error captured:', err, instance, info);
-    // You can also prevent the error from propagating further
-    return false; // Prevents error propagation
-  });
-
-  const handleTempBlock = (data) => {
-    // Close any open dialogs or drawers
-    drawerVisible.value = false;
-  };
-
-  const getClientName = (room) => {
-    //console.log('getClientName - room object:', room);
-    let clients = [];
-    try {
-      if (room?.clients_json) {
-        clients = typeof room.clients_json === 'string' 
-          ? JSON.parse(room.clients_json)
-          : room.clients_json;
-      }
-    } catch (e) {
-      console.error('Error parsing clients_json:', e);
-    }
-    //console.log('getClientName - parsed clients:', clients);
-          
-    const processedClients = [];
-
-    // Always add the booker from room.client_name first
-    if (room?.client_name) {
-      processedClients.push({
-        name: room.client_name,
-        isBooker: true,
-        gender: null // Gender not available from client_name
-      });
-    }
-
-    // Add other clients from clients_json as guests
-    const hasClientsInJson = Array.isArray(clients) && clients.length > 0;
-    if (hasClientsInJson) {
-      clients.forEach((client) => {
-        const clientName = client.name_kanji || client.name_kana || client.name;
-        if (clientName && clientName !== room.client_name) { // Avoid duplicating the booker if already added
-          processedClients.push({
-            name: clientName,
-            isBooker: false,
-            gender: client.gender
-          });
-        }
-      });
-    }
-
-    if (processedClients.length > 0) {
-      return processedClients;
-    }
-  
-    const fallbackName = room?.client_name || 'ゲスト';
-    //console.log('getClientName - fallback name:', fallbackName);
-    return [{ name: fallbackName, isBooker: true, gender: null }];
-  };
-
-  const handleDrawerClose = async () => {
-    try {
-      await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-    } catch (error) {
-      console.error('Error refreshing reservations after drawer close:', error);
-      toast.add({
-        severity: 'error',
-        summary: 'エラー',
-        detail: '予約情報の更新に失敗しました',
-        life: 3000
-      });
-    }
-  };
   
   const planSummary = computed(() => {
     const roomPlans = {};
