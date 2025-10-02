@@ -217,6 +217,34 @@ export function useReportStore() {
         }
     };
 
+    const fetchForecastDataByPlan = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/report/forecast-by-plan/${hotelId}/${startDate}/${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch forecast data by plan:', error);
+            return [];
+        }
+    };
+
+    const fetchAccountingDataByPlan = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/report/accounting-by-plan/${hotelId}/${startDate}/${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch accounting data by plan:', error);
+            return [];
+        }
+    };
+
     // Export methods
     const exportReservationList = async (hotelId, startDate, endDate) => {
         try {
@@ -663,5 +691,7 @@ export function useReportStore() {
         fetchChannelSummary,
         fetchCheckInOutReport,
         fetchBookerTypeBreakdown,
+        fetchForecastDataByPlan,
+        fetchAccountingDataByPlan,
     }
 }
