@@ -227,8 +227,10 @@
                     <div class="flex justify-between items-center">
                         <div>
                             <p>プラン別売上内訳</p>
-                            <small>（税込み）</small>
+                            <small v-if="salesByPlanChartMode === 'tax_included'">（税込み）</small>
+                            <small v-else>（税抜き）</small>
                         </div>                        
+                        <SelectButton v-model="salesByPlanChartMode" :options="salesByPlanChartOptions" optionLabel="name" optionValue="value" />
                         <SelectButton v-model="salesByPlanViewMode" :options="salesByPlanViewOptions" optionLabel="name" optionValue="value" />
                     </div>
                 </template>
@@ -241,27 +243,45 @@
                             </div>
                         </template>
                         <Column field="plan_name" header="プラン名"></Column>
-                        <Column field="regular_sales" header="通常売上" bodyStyle="text-align:right">
+                        <Column header="通常売上" bodyStyle="text-align:right">
                             <template #body="slotProps">
-                                {{ slotProps.data.regular_sales.toLocaleString('ja-JP') }} 円
+                                <span v-if="salesByPlanChartMode === 'tax_included'">
+                                    {{ slotProps.data.regular_sales.toLocaleString('ja-JP') }} 円
+                                </span>
+                                <span v-else>
+                                    {{ slotProps.data.regular_net_sales.toLocaleString('ja-JP') }} 円
+                                </span>
                             </template>
                         </Column>
-                        <Column field="cancelled_sales" header="キャンセル売上" bodyStyle="text-align:right">
+                        <Column header="キャンセル売上" bodyStyle="text-align:right">
                             <template #body="slotProps">
-                                {{ slotProps.data.cancelled_sales.toLocaleString('ja-JP') }} 円
+                                <span v-if="salesByPlanChartMode === 'tax_included'">
+                                    {{ slotProps.data.cancelled_sales.toLocaleString('ja-JP') }} 円
+                                </span>
+                                <span v-else>
+                                    {{ slotProps.data.cancelled_net_sales.toLocaleString('ja-JP') }} 円
+                                </span>
                             </template>
                         </Column>
                         <Column header="合計" bodyStyle="text-align:right">
                             <template #body="slotProps">
-                                {{ (slotProps.data.regular_sales + slotProps.data.cancelled_sales).toLocaleString('ja-JP') }} 円
+                                <span v-if="salesByPlanChartMode === 'tax_included'">
+                                    {{ (slotProps.data.regular_sales + slotProps.data.cancelled_sales).toLocaleString('ja-JP') }} 円
+                                </span>
+                                <span v-else>
+                                    {{ (slotProps.data.regular_net_sales + slotProps.data.cancelled_net_sales).toLocaleString('ja-JP') }} 円
+                                </span>
                             </template>
                         </Column>
                         <ColumnGroup type="footer">
                             <Row>
                                 <Column footer="合計" :colspan="1" footerStyle="text-align:left"/>
-                                <Column :footer="salesByPlanTotals.regular_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
-                                <Column :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
-                                <Column :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column v-if="salesByPlanChartMode === 'tax_included'" :footer="salesByPlanTotals.regular_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column v-else :footer="salesByPlanTotals.regular_net_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column v-if="salesByPlanChartMode === 'tax_included'" :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column v-else :footer="salesByPlanTotals.cancelled_net_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column v-if="salesByPlanChartMode === 'tax_included'" :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column v-else :footer="(salesByPlanTotals.regular_net_sales + salesByPlanTotals.cancelled_net_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
                             </Row>
                         </ColumnGroup>
                     </DataTable>
@@ -367,6 +387,12 @@
         { name: 'テーブル', value: 'table' }
     ]);
 
+    const salesByPlanChartMode = ref('tax_included'); // 'tax_included' or 'tax_excluded'
+    const salesByPlanChartOptions = ref([
+        { name: '税込み', value: 'tax_included' },
+        { name: '税抜き', value: 'tax_excluded' }
+    ]);
+
     const occupationBreakdownViewMode = ref('chart');
     const occupationBreakdownViewOptions = ref([
         { name: 'グラフ', value: 'chart' },
@@ -442,24 +468,29 @@
         salesByPlan.value.forEach(item => {
             const planName = item.plan_name;
             const sales = parseFloat(item.total_sales);
+            const netSales = parseFloat(item.total_sales_net);
 
             if (!planMap.has(planName)) {
                 planMap.set(planName, {
                     plan_name: planName,
                     regular_sales: 0,
                     cancelled_sales: 0,
+                    regular_net_sales: 0,
+                    cancelled_net_sales: 0,
                 });
             }
 
             const planEntry = planMap.get(planName);
             if (item.is_cancelled_billable) {
                 planEntry.cancelled_sales += sales;
+                planEntry.cancelled_net_sales += netSales;
             } else {
                 planEntry.regular_sales += sales;
+                planEntry.regular_net_sales += netSales;
             }
         });
 
-        //console.log('Processed Sales by Plan Map:', planMap);
+        console.log('Processed Sales by Plan Map:', planMap);
         const sortedData = Array.from(planMap.values());
         sortedData.sort((a, b) => {
             const totalA = a.regular_sales + a.cancelled_sales;
@@ -473,8 +504,10 @@
         return processedSalesByPlan.value.reduce((acc, item) => {
             acc.regular_sales += item.regular_sales;
             acc.cancelled_sales += item.cancelled_sales;
+            acc.regular_net_sales += item.regular_net_sales;
+            acc.cancelled_net_sales += item.cancelled_net_sales;
             return acc;
-        }, { regular_sales: 0, cancelled_sales: 0 });
+        }, { regular_sales: 0, cancelled_sales: 0, regular_net_sales: 0, cancelled_net_sales: 0 });
     });
 
     const occupationBreakdownTotals = computed(() => {
@@ -1006,8 +1039,23 @@
 
         const chartData = processedSalesByPlan.value;
         const planNames = chartData.map(item => item.plan_name);
-        const regularSales = chartData.map(item => item.regular_sales);
-        const cancelledSales = chartData.map(item => item.cancelled_sales);
+
+        let regularSalesData;
+        let cancelledSalesData;
+        let valueLabel;
+        let axisLabel;
+
+        if (salesByPlanChartMode.value === 'tax_included') {
+            regularSalesData = chartData.map(item => item.regular_sales);
+            cancelledSalesData = chartData.map(item => item.cancelled_sales);
+            valueLabel = ' 万円 (税込み)';
+            axisLabel = '売上 (税込み)';
+        } else {
+            regularSalesData = chartData.map(item => item.regular_net_sales);
+            cancelledSalesData = chartData.map(item => item.cancelled_net_sales);
+            valueLabel = ' 万円 (税抜き)';
+            axisLabel = '売上 (税抜き)';
+        }
 
         const option = {
             color: ["#3fb1e3", "#6be6c1", "#626c91", "#a0a7e6", "#c4ebad", "#96dee8"],
@@ -1016,7 +1064,7 @@
                 axisPointer: {
                     type: 'shadow'
                 },
-                valueFormatter: (value) => Math.round(value / 10000).toLocaleString('ja-JP') + ' 万円 (税込み)'
+                valueFormatter: (value) => Math.round(value / 10000).toLocaleString('ja-JP') + valueLabel
             },
             legend: {
                 data: ['通常売上', 'キャンセル売上']
@@ -1029,7 +1077,7 @@
             },
             xAxis: {
                 type: 'value',
-                name: '売上 (税込み)',
+                name: axisLabel,
                 nameLocation: 'middle',
                 nameGap: 30,
                 axisLabel: {
@@ -1051,12 +1099,12 @@
                     stack: 'total',
                     label: {
                         show: false,
-                        formatter: (params) => Math.round(params.value / 10000).toLocaleString('ja-JP') + ' 万円 (税込み)'
+                        formatter: (params) => Math.round(params.value / 10000).toLocaleString('ja-JP') + valueLabel
                     },
                     emphasis: {
                         focus: 'series'
                     },
-                    data: regularSales
+                    data: regularSalesData
                 },
                 {
                     name: 'キャンセル売上',
@@ -1064,12 +1112,12 @@
                     stack: 'total',
                     label: {
                         show: false,
-                        formatter: (params) => Math.round(params.value / 10000).toLocaleString('ja-JP') + ' 万円 (税込み)'
+                        formatter: (params) => Math.round(params.value / 10000).toLocaleString('ja-JP') + valueLabel
                     },
                     emphasis: {
                         focus: 'series'
                     },
-                    data: cancelledSales
+                    data: cancelledSalesData
                 }
             ]
         };
@@ -1820,6 +1868,7 @@
                 accountingData.value = [];
             }
             salesByPlan.value = salesByPlanResult;
+            console.log('Raw Sales by Plan Result:', salesByPlanResult);
             occupationBreakdownData.value = occupationBreakdownResult;
             bookingSourceData.value = bookingSourceResult;
             paymentTimingData.value = paymentResult;
@@ -1904,6 +1953,14 @@
             });
         }
     });    
+
+    watch(salesByPlanChartMode, (newValue) => {
+        if (mySalesByPlanChart) {
+            nextTick(() => {
+                processSalesByPlanChartData();
+            });
+        }
+    });
   
 </script>
 <style scoped>

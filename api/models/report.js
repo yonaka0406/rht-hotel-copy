@@ -1317,11 +1317,32 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
           WHEN rd.plan_type = 'per_room' THEN rd.price
           ELSE rd.price * rd.number_of_people
         END
-      ) AS total_sales
+      ) AS total_sales,
+      SUM(COALESCE(rr.net_price, 0) + COALESCE(ra.net_price_sum, 0)) AS total_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
     LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+    LEFT JOIN (
+        SELECT
+            hotel_id,
+            reservation_details_id,
+            SUM(net_price) AS net_price
+        FROM
+            reservation_rates
+        GROUP BY
+            hotel_id, reservation_details_id
+    ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+    LEFT JOIN (
+        SELECT
+            hotel_id,
+            reservation_detail_id,
+            SUM(net_price * quantity) AS net_price_sum
+        FROM
+            reservation_addons
+        GROUP BY
+            hotel_id, reservation_detail_id
+    ) ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
       AND rd.billable = TRUE
