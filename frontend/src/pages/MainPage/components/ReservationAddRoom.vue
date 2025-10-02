@@ -53,9 +53,9 @@
 
 <script setup>
 // Vue
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
-import ClientForReservationDialog from './Dialogs/ClientForReservationDialog.vue';
+const ClientForReservationDialog = defineAsyncComponent(() => import('./Dialogs/ClientForReservationDialog.vue'));
 
 const router = useRouter();
 
@@ -153,6 +153,9 @@ const formatDate = (date) => {
 
 // Dialog
 const openDialog = () => {
+    if (clients.value.length === 0) {
+        fetchAllClientsForFiltering();
+    }
     if (!reservationDetails.value.number_of_people) {
         toast.add({
             severity: 'warn',
@@ -271,9 +274,6 @@ onMounted(async () => {
     drawerHeader.value = selectedRoom.value.name + '：' + selectedRoom.value.room_number + '号室 ' + selectedRoom.value.room_type_name;
     maxNumberOfPeople.value = selectedRoom.value.room_capacity;
 
-    if (clients.value.length === 0) {
-        fetchAllClientsForFiltering();
-    }
     const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
 
     if (datesResult && datesResult.earliestCheckIn) {

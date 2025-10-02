@@ -15,10 +15,7 @@
 
         <!-- New Card for Blocked Room Details -->
                 <!-- Container for Blocked Room and Parking Details -->
-        <div v-if="reservationStatus === 'block'" class="flex">
-            <!-- Debug logs for parking -->
-            {{ console.log('[ReservationEdit Template] reservationStatus:', reservationStatus) }}
-            {{ console.log('[ReservationEdit Template] parking_reservations:', parking_reservations) }}
+        <div v-if="reservationStatus === 'block'" class="flex">            
             <!-- Card for Blocked Room Details -->
             <Card v-if="blockedRoomInfo" class="m-2 w-1/2">
                 <template #title>ブロックされた部屋</template>

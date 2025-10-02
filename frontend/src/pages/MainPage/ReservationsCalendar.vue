@@ -228,14 +228,14 @@
 
 <script setup>
 // Vue
-import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onUnmounted, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
 // Components
-import ReservationEdit from './ReservationEdit.vue';
-import ReservationAddRoom from './components/ReservationAddRoom.vue';
-import ClientForReservationDialog from './components/Dialogs/ClientForReservationDialog.vue';
+const ReservationEdit = defineAsyncComponent(() => import('./ReservationEdit.vue'));
+const ReservationAddRoom = defineAsyncComponent(() => import('./components/ReservationAddRoom.vue'));
+const ClientForReservationDialog = defineAsyncComponent(() => import('./components/Dialogs/ClientForReservationDialog.vue'));
 import ReservationsCalendarHeader from './components/ReservationsCalendarHeader.vue';
 import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
 //import ReservationsCalendarGrid from './components/ReservationsCalendarGrid.vue';
