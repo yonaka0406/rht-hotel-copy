@@ -225,30 +225,30 @@
 
     // --- Lifecycle Hooks ---
     onMounted(async () => {
-        console.group('[TopMenu] Component Mounted');
-        console.log('[TopMenu] onMounted: Initial selectedHotelId.value:', selectedHotelId.value);
-        console.log('[TopMenu] onMounted: hotels.value.length:', hotels.value.length);
+        // console.group('[TopMenu] Component Mounted');
+        // console.log('[TopMenu] onMounted: Initial selectedHotelId.value:', selectedHotelId.value);
+        // console.log('[TopMenu] onMounted: hotels.value.length:', hotels.value.length);
         
         // Ensure hotels are loaded
         if (hotels.value.length === 0) {
-            console.log('[TopMenu] onMounted: Fetching hotels...');
+            // console.log('[TopMenu] onMounted: Fetching hotels...');
             await fetchHotels();
-            console.log('[TopMenu] onMounted: Hotels fetched. hotels.value.length:', hotels.value.length);
+            // console.log('[TopMenu] onMounted: Hotels fetched. hotels.value.length:', hotels.value.length);
         }
         
         // If no hotel is selected but we have hotels, select the first one
         if (!selectedHotelId.value && hotels.value.length > 0) {
-            console.log('[TopMenu] onMounted: No hotel selected, selecting first available hotel');
+            // console.log('[TopMenu] onMounted: No hotel selected, selecting first available hotel');
             setHotelId(hotels.value[0].id);
         }
         
-        console.log('[TopMenu] onMounted: Final selectedHotelId.value:', selectedHotelId.value);
-        console.log('[TopMenu] onMounted: Available hotels:', JSON.parse(JSON.stringify(hotels.value)));
-        console.log('[TopMenu] onMounted: Current route:', router.currentRoute.value);
+        // console.log('[TopMenu] onMounted: Final selectedHotelId.value:', selectedHotelId.value);
+        // console.log('[TopMenu] onMounted: Available hotels:', JSON.parse(JSON.stringify(hotels.value)));
+        // console.log('[TopMenu] onMounted: Current route:', router.currentRoute.value);
         console.groupEnd();
         
         try {
-            console.log('[TopMenu] onMounted: Fetching failed OTA reservations...');
+            // console.log('[TopMenu] onMounted: Fetching failed OTA reservations...');
             await fetchFailedOtaReservations();
         } catch (error) {
             console.error('[TopMenu] onMounted: Error in mounted hook:', error);
@@ -275,30 +275,30 @@
     // --- Watchers ---
     watch(selectedHotelId,
         async (newHotelId, oldHotelId) => {
-            console.group(`[TopMenu] Hotel Selection Change Watcher`);
-            console.log('[TopMenu] Watcher: Previous Hotel ID:', oldHotelId);
-            console.log('[TopMenu] Watcher: New Hotel ID:', newHotelId);
+            // console.group(`[TopMenu] Hotel Selection Change Watcher`);
+            // console.log('[TopMenu] Watcher: Previous Hotel ID:', oldHotelId);
+            // console.log('[TopMenu] Watcher: New Hotel ID:', newHotelId);
             
             // Always update the hotel ID in the store when it changes
             if (newHotelId !== null && newHotelId !== undefined) {
-                console.log('[TopMenu] Watcher: Updating selected hotel in store and localStorage');
+                // console.log('[TopMenu] Watcher: Updating selected hotel in store and localStorage');
                 setHotelId(newHotelId);
             }
             
             if (newHotelId && newHotelId !== oldHotelId) {
                 const hotel = hotels.value.find(h => h.id === newHotelId);
-                console.log('[TopMenu] Watcher: Selected Hotel:', hotel ? `${hotel.name} (ID: ${hotel.id})` : 'Hotel not found in local list');
+                // console.log('[TopMenu] Watcher: Selected Hotel:', hotel ? `${hotel.name} (ID: ${hotel.id})` : 'Hotel not found in local list');
                 
                 try {
-                    console.log('[TopMenu] Watcher: Fetching waitlist entries...');
+                    // console.log('[TopMenu] Watcher: Fetching waitlist entries...');
                     await waitlistStore.fetchWaitlistEntries(newHotelId, { 
                         filters: { status: ['waiting', 'notified'] } 
                     });
-                    console.log('[TopMenu] Watcher: Waitlist entries fetched successfully');
+                    // console.log('[TopMenu] Watcher: Waitlist entries fetched successfully');
                     
-                    console.log('[TopMenu] Watcher: Fetching blocked rooms...');
+                    // console.log('[TopMenu] Watcher: Fetching blocked rooms...');
                     await fetchBlockedRooms(newHotelId);
-                    console.log('[TopMenu] Watcher: Blocked rooms fetched successfully');
+                    // console.log('[TopMenu] Watcher: Blocked rooms fetched successfully');
                 } catch (error) {
                     console.error('Error during hotel data fetch:', {
                         message: error.message,
@@ -308,10 +308,10 @@
                     });
                 }
             } else if (!newHotelId && hotels.value.length > 0) {
-                console.log('[TopMenu] Watcher: No hotel selected - selecting first available hotel');
+                // console.log('[TopMenu] Watcher: No hotel selected - selecting first available hotel');
                 setHotelId(hotels.value[0].id);
             } else if (!newHotelId) {
-                console.log('[TopMenu] Watcher: No hotel selected - clearing waitlist entries');
+                // console.log('[TopMenu] Watcher: No hotel selected - clearing waitlist entries');
                 waitlistStore.entries.value = [];
             }
             
@@ -322,10 +322,10 @@
     
     // Watch for changes to the hotels array
     watch(() => hotels.value, (newHotels) => {
-        console.log('[TopMenu] Watcher: hotels.value changed. newHotels.length:', newHotels.length, 'selectedHotelId.value:', selectedHotelId.value);
+        // console.log('[TopMenu] Watcher: hotels.value changed. newHotels.length:', newHotels.length, 'selectedHotelId.value:', selectedHotelId.value);
         if (newHotels.length > 0 && !selectedHotelId.value) {
             // If we have hotels but no selected hotel, select the first one
-            console.log('[TopMenu] Watcher: Auto-selecting first hotel from list');
+            // console.log('[TopMenu] Watcher: Auto-selecting first hotel from list');
             setHotelId(newHotels[0].id);
         }
     });
