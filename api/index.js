@@ -517,14 +517,61 @@ app.listen(PORT, '0.0.0.0', () => {
 const { closeBrowser } = require('./services/puppeteerService');
 
 // Graceful shutdown
-const cleanup = async () => {
-  logger.info('Closing HTTP server.');
+const cleanup = () => {
+  logger.info('Starting graceful shutdown...');
+
+  // 1. Close Socket.IO server to disconnect clients
+  ioHttp.close(() => {
+    logger.info('Socket.IO server closed.');
+  });
+
+  // 2. Close HTTP server
   httpServer.close(async () => {
     logger.info('HTTP server closed.');
-    await closeBrowser();
-    logger.info('Puppeteer browser closed.');
+
+    // 3. Close all database pools
+    try {
+      await db.pool.end();
+      logger.info('Main DEV database pool closed.');
+    } catch (err) {
+      logger.error('Error closing main DEV database pool:', err);
+    }
+    try {
+      await db.prodPool.end();
+      logger.info('Main PROD database pool closed.');
+    } catch (err) {
+      logger.error('Error closing main PROD database pool:', err);
+    }
+    try {
+      await listenClient.end();
+      logger.info('Listener DEV database pool closed.');
+    } catch (err) {
+      logger.error('Error closing listener DEV database pool:', err);
+    }
+    try {
+      await prodListenClient.end();
+      logger.info('Listener PROD database pool closed.');
+    } catch (err) {
+      logger.error('Error closing listener PROD database pool:', err);
+    }
+
+    // 4. Close Puppeteer
+    try {
+      await closeBrowser();
+      logger.info('Puppeteer browser closed.');
+    } catch (err) {
+      logger.error('Error closing Puppeteer browser:', err);
+    }
+
+    logger.info('Graceful shutdown complete.');
     process.exit(0);
   });
+
+  // Force shutdown after a timeout
+  setTimeout(() => {
+    logger.error('Graceful shutdown timed out. Forcefully exiting.');
+    process.exit(1);
+  }, 10000); // 10 seconds
 };
 
 process.on('SIGINT', cleanup);
