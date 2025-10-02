@@ -10,24 +10,24 @@ const isLoadingHotelList = ref(false);
 // Load selected hotel ID from localStorage on module load
 const STORAGE_KEY = 'selectedHotelId';
 const savedHotelId = localStorage.getItem(STORAGE_KEY);
-console.log('[useHotelStore] Initializing selectedHotelId. savedHotelId from localStorage:', savedHotelId);
-if (savedHotelId && savedHotelId !== 'undefined' && savedHotelId !== 'null') {
-    selectedHotelId.value = parseInt(savedHotelId, 10);
-    console.log('[useHotelStore] selectedHotelId initialized from localStorage:', selectedHotelId.value);
-} else {
-    console.log('[useHotelStore] selectedHotelId remains null/undefined after localStorage check.');
-}
+// console.log('[useHotelStore] Initializing selectedHotelId. savedHotelId from localStorage:', savedHotelId);
+// if (savedHotelId && savedHotelId !== 'undefined' && savedHotelId !== 'null') {
+//     selectedHotelId.value = parseInt(savedHotelId, 10);
+//     console.log('[useHotelStore] selectedHotelId initialized from localStorage:', selectedHotelId.value);
+// } else {
+//     console.log('[useHotelStore] selectedHotelId remains null/undefined after localStorage check.');
+// }
 
 export function useHotelStore() {
 
     const setHotelId = (id) => {
-        console.log('[useHotelStore] setHotelId called with id:', id);
+        // console.log('[useHotelStore] setHotelId called with id:', id);
         if (id !== null && id !== undefined) {
             selectedHotelId.value = id;
             localStorage.setItem(STORAGE_KEY, id.toString());
-            console.log('[useHotelStore] selectedHotelId set to:', selectedHotelId.value);
+            // console.log('[useHotelStore] selectedHotelId set to:', selectedHotelId.value);
         } else {
-            console.log('[useHotelStore] setHotelId called with null/undefined id, not updating.');
+            // console.log('[useHotelStore] setHotelId called with null/undefined id, not updating.');
         }
     };
 
@@ -45,7 +45,7 @@ export function useHotelStore() {
             });
             const data = await response.json();
             hotels.value = Array.isArray(data) ? data : [];
-            console.log('[useHotelStore] fetchHotels completed. hotels.value:', hotels.value);
+            // console.log('[useHotelStore] fetchHotels completed. hotels.value:', hotels.value);
             
             // If we have hotels but no selected hotel, select the first one
             if (hotels.value.length > 0) {
@@ -55,15 +55,15 @@ export function useHotelStore() {
                 if (savedHotel) {
                     // If we have a saved hotel ID and it exists in the hotels list, use it
                     selectedHotelId.value = savedHotel.id;
-                    console.log('[useHotelStore] fetchHotels: Using savedHotelId:', selectedHotelId.value);
+                    // console.log('[useHotelStore] fetchHotels: Using savedHotelId:', selectedHotelId.value);
                 } else if (!selectedHotelId.value || !hotels.value.some(h => h.id === selectedHotelId.value)) {
                     // If no valid selected hotel, use the first one
                     selectedHotelId.value = hotels.value[0].id;
                     localStorage.setItem(STORAGE_KEY, selectedHotelId.value.toString());
-                    console.log('[useHotelStore] fetchHotels: No valid selected hotel, defaulting to first:', selectedHotelId.value);
+                    // console.log('[useHotelStore] fetchHotels: No valid selected hotel, defaulting to first:', selectedHotelId.value);
                 }
             } else {
-                console.log('[useHotelStore] fetchHotels: No hotels available.');
+                // console.log('[useHotelStore] fetchHotels: No hotels available.');
             }
         } catch (error) {
             console.error('Failed to fetch hotels', error);
@@ -252,7 +252,7 @@ export function useHotelStore() {
     // Defensive computed for Select :options
     const safeHotels = computed(() => {
       if (!Array.isArray(hotels.value)) {
-        console.warn('[useHotelStore] hotels is not an array:', hotels.value);
+        // console.warn('[useHotelStore] hotels is not an array:', hotels.value);
         return [];
       }
       return hotels.value;

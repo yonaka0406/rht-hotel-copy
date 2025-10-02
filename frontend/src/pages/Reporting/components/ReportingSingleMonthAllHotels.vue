@@ -956,7 +956,7 @@
             });
             csvString = csvRows.join('\n');
         } else {
-            console.log(`RSMAll: No data to export for ${tableType} or invalid table type.`);
+            // console.log(`RSMAll: No data to export for ${tableType} or invalid table type.`);
             return;
         }
         

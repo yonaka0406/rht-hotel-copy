@@ -238,8 +238,8 @@
 
     // Watch for changes in showSingleHotelSelect for debugging and to handle hotel selection logic
     watch(showSingleHotelSelect, (newValue, oldValue) => {
-        console.log(`[ReportingTopMenu] showSingleHotelSelect changed from ${oldValue} to ${newValue}`);
-        console.log('[ReportingTopMenu] selectedHotels.value when showSingleHotelSelect changed:', selectedHotels.value);
+        // console.log(`[ReportingTopMenu] showSingleHotelSelect changed from ${oldValue} to ${newValue}`);
+        // console.log('[ReportingTopMenu] selectedHotels.value when showSingleHotelSelect changed:', selectedHotels.value);
 
         // If transitioning from single-hotel-select (true) to multi-hotel-select (false)
         if (oldValue === true && newValue === false) {
