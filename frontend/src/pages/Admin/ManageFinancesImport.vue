@@ -133,6 +133,13 @@
     const { hotels, fetchHotels } = useHotelStore();
     import { useImportStore } from '@/composables/useImportStore';
     const { forecastAddData, accountingAddData } = useImportStore();
+    import { usePlansStore } from '@/composables/usePlansStore';
+    const { plans, fetchPlansGlobal } = usePlansStore();
+
+    onMounted(async () => {
+        await fetchHotels();
+        await fetchPlansGlobal();
+    });
       
     // Primevue
     import { Tabs, TabList, Tab, TabPanels, TabPanel, Card, Button, FileUpload, Message, Toast, Panel } from 'primevue';
@@ -188,40 +195,50 @@
 
         let itemsForProcessing;
         let itemColumnTitle;
-        if (type === 'accounting') {
+        if (type === 'accounting') {        
             itemColumnTitle = '会計項目'; // Set column title for accounting
-            itemsForProcessing = ['宿泊売上']; // Only this item for accounting
+            itemsForProcessing = budgetItems; // Use all budget items for accounting
         } else {
             itemColumnTitle = '予算項目'; // Default column title
             itemsForProcessing = budgetItems; // Use all budget items for other types (e.g., 'forecast')
         }
 
         // Add header row to CSV
-        csvRows.push(['ID', '施設', itemColumnTitle, ...monthHeaders].join(','));
+        csvRows.push(['ID', '施設', 'プランID', 'プラン名', itemColumnTitle, ...monthHeaders].join(','));
     
         // Generate data rows
         if (!hotels.value || hotels.value.length === 0) {
             console.warn('CSV生成のためのホテルデータが利用できません。');
             return "";
         }
-        hotels.value.forEach(hotel => {
-            itemsForProcessing.forEach(item => {
-                const row = [hotel.id, hotel.name, item];
-                monthHeaders.forEach(header => {
-                    const [hYear, hMonth] = header.split('-').map(Number);
-                    if (item === '営業日数') {
-                        row.push(getDaysInMonth(hYear, hMonth - 1));
-                    } else if (item === '客室数') {
-                        const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);            
-                        const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
-                            ? hotel.total_rooms * daysInCurrentMonth
-                            : 0; 
-                        row.push(totalRoomsForMonth);
-                    } else {
-                        row.push(''); // Blank for 宿泊売上 and 販売客室数
-                    }
+        if (!plans.value || plans.value.length === 0) {
+            console.warn('CSV生成のためのプランデータが利用できません。');
+            return "";
+        }
+
+        const sortedHotels = [...hotels.value].sort((a, b) => a.id - b.id);
+        const sortedPlans = [...plans.value].sort((a, b) => a.id - b.id);
+
+        sortedHotels.forEach(hotel => {
+            sortedPlans.forEach(plan => { // Iterate through plans
+                itemsForProcessing.forEach(item => {
+                    const row = [hotel.id, hotel.name, plan.id, plan.name, item]; // Pre-fill plan.id and plan.name
+                    monthHeaders.forEach(header => {
+                        const [hYear, hMonth] = header.split('-').map(Number);
+                        if (item === '営業日数') {
+                            row.push(getDaysInMonth(hYear, hMonth - 1));
+                        } else if (item === '客室数') {
+                            const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);            
+                            const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
+                                ? hotel.total_rooms * daysInCurrentMonth
+                                : 0; 
+                            row.push(totalRoomsForMonth);
+                        } else {
+                            row.push(''); // Blank for 宿泊売上, 販売客室数
+                        }
+                    });
+                    csvRows.push(row.join(','));
                 });
-                csvRows.push(row.join(','));
             });
         });
     
@@ -230,16 +247,21 @@
     
     const downloadTemplate = async (type) => {
         console.log('downloadTemplate was triggered');
-        if (!hotels.value || hotels.value.length === 0) {
+        if (!hotels.value || hotels.value.length === 0 || !plans.value || plans.value.length === 0) {
             try {
                 await fetchHotels();
+                await fetchPlansGlobal();
                 if (!hotels.value || hotels.value.length === 0) {
                     toast.add({ severity: 'warn', summary: '注意', detail: 'ホテルデータが利用できません。テンプレートを生成できません。', life: 3000 });
                     return;
                 }
+                if (!plans.value || plans.value.length === 0) {
+                    toast.add({ severity: 'warn', summary: '注意', detail: 'プランデータが利用できません。テンプレートを生成できません。', life: 3000 });
+                    return;
+                }
             } catch (error) {
-                console.error("Error fetching hotels for template:", error);
-                toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルデータの取得に失敗しました。', life: 3000 });
+                console.error("Error fetching hotels or plans for template:", error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルまたはプランデータの取得に失敗しました。', life: 3000 });
                 return;
             }
         }        
@@ -293,7 +315,7 @@
 
 
         const headers = parseCsvRow(headerLine);
-        const monthDateHeaders = headers.slice(3);
+        const monthDateHeaders = headers.slice(5);
         
         // Temporary store: Key "hotelId_monthString", Value: { hotel_id, hotel_name, forecast_month, details: [{...items...}] }
         const hotelMonthDataMap = {};
@@ -310,19 +332,23 @@
 
             const hotelId = parts[0];
             const hotelName = parts[1].replace(/^"|"$/g, '');
-            const budgetItemFromCsv = parts[2]; // This is the Japanese name from CSV "予算項目"
+            const planGlobalId = parts[2]; // New: プランID
+            const planName = parts[3];     // New: プラン名
+            const budgetItemFromCsv = parts[4]; // This is the Japanese name from CSV "予算項目"
 
             monthDateHeaders.forEach((monthString, monthIndex) => {
-                const valueString = parts[monthIndex + 3];
+                const valueString = parts[monthIndex + 5];
                 const value = valueString && valueString.trim() !== '' ? parseFloat(valueString) : 0;
 
-                const mapKey = `${hotelId}_${monthString}`;
+                const mapKey = `${hotelId}_${monthString}_${planGlobalId}`;
 
                 if (!hotelMonthDataMap[mapKey]) {
                     hotelMonthDataMap[mapKey] = {
                         hotel_id: hotelId,
                         hotel_name: hotelName,
                         month: formatToFirstDayOfMonth(monthString),
+                        plan_global_id: planGlobalId && planGlobalId.trim() !== '' ? parseInt(planGlobalId, 10) : null,
+                        plan_name: planName,
                         accommodation_revenue: null,
                         operating_days: null,
                         available_room_nights: null,
