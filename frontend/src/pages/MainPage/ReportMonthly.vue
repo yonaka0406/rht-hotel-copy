@@ -422,7 +422,7 @@
     function formatDate(date) {        
         date.setHours(date.getHours() + 9); // JST adjustment        
         return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
-    };
+    };    
     const normalizeDate = (date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     function addDaysUTC(date, days) {
         const newDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -681,7 +681,7 @@
         });        
 
         // ADR
-        // console.log('ADR', 'totalRevenue', totalRevenue, 'totalRoomsSold', totalRoomsSold);
+        // ADR
         ADR.value = totalRoomsSold > 0 ? Math.round(totalRevenue / totalRoomsSold) : 0;
 
         // RevPAR
@@ -715,8 +715,7 @@
         }        
         revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
         
-        //console.log('OCC Calculation - totalRoomsSold:', totalRoomsSold);
-        //console.log('OCC Calculation - totalAvailableRoomNightsInPeriod:', totalAvailableRoomNightsInPeriod);
+        
         OCC.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round((totalRoomsSold / totalAvailableRoomNightsInPeriod) * 10000) / 100 : 0;
 
         // Calculate Forecast
@@ -956,7 +955,7 @@
             let currentDate = normalizeDate(new Date(startDateForChart));
             const endDate = normalizeDate(new Date(endDateForChart));
             while (currentDate <= endDate) {
-                //console.log(currentDate, 'is < than ', endDate)
+                
                 const dayKey = formatDate(currentDate);
                 newXAxis.push(dayKey);
 
@@ -1305,8 +1304,7 @@
             total: data['確定'] + data['ブロック'] + data['未予約']
         })).sort((a, b) => b.total - a.total);
 
-        //console.log('totalConfirmedNights:', totalConfirmedNights);
-        //console.log('yAxisCategories:', yAxisCategories);
+        
         
         // Create series data for each plan
         const series = processedPlans.map(plan => ({
@@ -1893,7 +1891,7 @@
     // --- Data Fetching and Processing ---
     const fetchDataAndProcess = async () => {        
         if (!selectedHotelId.value) {
-            // console.warn("Hotel ID not selected. Skipping data fetch.");
+            
             allReservationsData.value = []; // Clear data
             // Call processors to clear charts/metrics
             processHeatMapData(); 
@@ -1946,7 +1944,7 @@
                 accountingData.value = [];
             }
             salesByPlan.value = salesByPlanResult;
-            console.log('Raw Sales by Plan Result:', salesByPlanResult);
+            // console.log('Raw Sales by Plan Result:', salesByPlanResult);
             occupationBreakdownData.value = occupationBreakdownResult;
             bookingSourceData.value = bookingSourceResult;
             paymentTimingData.value = paymentResult;
@@ -1960,7 +1958,7 @@
             } else {
                 forecastDataByPlan.value = [];
             }
-            console.log('Forecast Data By Plan:', forecastDataByPlan.value);
+            // console.log('Forecast Data By Plan:', forecastDataByPlan.value);
 
             // Assign reservation list data
             if (reservationListViewResult && Array.isArray(reservationListViewResult)) {
@@ -1974,9 +1972,9 @@
                 reservationListData.value = [];
             }
 
-            // console.log('Occupation Breakdown Data (frontend):', occupationBreakdownData.value); // DEBUG - Removed
-            // console.log('Occupation Breakdown Data Length (frontend):', occupationBreakdownData.value ? occupationBreakdownData.value.length : 0); // DEBUG - Removed
-            // console.log('accountingData', accountingData.value);
+            
+            
+            
             
         } catch (error) {
             console.error("Error fetching reservation data:", error);
