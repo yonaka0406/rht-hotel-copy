@@ -10,8 +10,8 @@ CREATE TABLE du_forecast (
    available_room_nights INTEGER, -- '客室数'
    rooms_sold_nights INTEGER, -- '販売客室数'
    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,   
-   created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_forecast UNIQUE (hotel_id, forecast_month)
+   created_by INT REFERENCE
+   CONSTRAINT uq_hotel_month_plan_forecast UNIQUE (hotel_id, forecast_month, plan_global_id)
 );
 COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';
 COMMENT ON COLUMN du_forecast.hotel_id IS '施設テーブルを参照する外部キー (hotels.id)';
@@ -27,6 +27,6 @@ CREATE TABLE du_accounting (
    rooms_sold_nights INTEGER, -- '販売客室数' 
    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,   
    created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_accounting UNIQUE (hotel_id, accounting_month)
+   CONSTRAINT uq_hotel_month_plan_accounting UNIQUE (hotel_id, accounting_month, plan_global_id)
 );
 COMMENT ON TABLE du_accounting IS '施設ごと月ごとの売上会計データ';
