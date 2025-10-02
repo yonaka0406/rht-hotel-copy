@@ -236,10 +236,19 @@
         if (newValue) selectedReportType.value = newValue;
     });
 
-    // Watch for changes in showSingleHotelSelect for debugging
+    // Watch for changes in showSingleHotelSelect for debugging and to handle hotel selection logic
     watch(showSingleHotelSelect, (newValue, oldValue) => {
         console.log(`[ReportingTopMenu] showSingleHotelSelect changed from ${oldValue} to ${newValue}`);
         console.log('[ReportingTopMenu] selectedHotels.value when showSingleHotelSelect changed:', selectedHotels.value);
+
+        // If transitioning from single-hotel-select (true) to multi-hotel-select (false)
+        if (oldValue === true && newValue === false) {
+            // If "All Facilities" (ID 0) was selected in single-select mode, switch to selecting all hotels
+            if (selectedHotels.value && selectedHotels.value.length === 1 && selectedHotels.value[0] === 0) {
+                selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : []; // Select all hotels
+                emit('hotel-change', selectedHotels.value, hotels.value); // Emit the change to parent
+            }
+        }
     });
 
     onMounted(async () => {
