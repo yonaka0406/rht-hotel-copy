@@ -1,5 +1,5 @@
 const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, 
-  selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, 
+  selectReservationListView, selectForecastData, selectAccountingData, selectForecastDataByPlan, selectAccountingDataByPlan, selectExportReservationList, selectExportReservationDetails, 
   selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle, 
   selectActiveReservationsChange,
   selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport } = require('../models/report');
@@ -204,24 +204,47 @@ const getForecastData = async (req, res) => {
   }
 };
 const getAccountingData = async (req, res) => {
-  const hotelId = req.params.hid;
-  const startDate = req.params.sdate;
-  const endDate = req.params.edate;
-  
-  try {    
-    const data = await selectAccountingData(req.requestId, hotelId, startDate, endDate);    
-    
-    // Return empty array with 200 status if no data found
+  const { hid, sdate, edate } = req.params;
+  try {
+    const data = await selectAccountingData(req.requestId, hid, sdate, edate);
     if (!data || data.length === 0) {
       return res.status(200).json([]);
-    }  
-
+    }
     res.json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] [Request ${req.requestId}] Error in getAccountingData:`, error);
+    res.status(500).json({ message: 'Error fetching accounting data' });
   }
 };
+
+const getForecastDataByPlan = async (req, res) => {
+  const { hid, sdate, edate } = req.params;
+  try {
+    const data = await selectForecastDataByPlan(req.requestId, hid, sdate, edate);
+    if (!data || data.length === 0) {
+      return res.status(200).json([]);
+    }
+    res.json(data);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] [Request ${req.requestId}] Error in getForecastDataByPlan:`, error);
+    res.status(500).json({ message: 'Error fetching forecast data by plan' });
+  }
+};
+
+const getAccountingDataByPlan = async (req, res) => {
+  const { hid, sdate, edate } = req.params;
+  try {
+    const data = await selectAccountingDataByPlan(req.requestId, hid, sdate, edate);
+    if (!data || data.length === 0) {
+      return res.status(200).json([]);
+    }
+    res.json(data);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] [Request ${req.requestId}] Error in getAccountingDataByPlan:`, error);
+    res.status(500).json({ message: 'Error fetching accounting data by plan' });
+  }
+};
+
 
 const getExportReservationList = async (req, res) => {
   const hotelId = req.params.hid;
@@ -989,5 +1012,7 @@ module.exports = {
   getSalesByPlan,
   getOccupationBreakdown,
   getChannelSummary,
-  getCheckInOutReport,  
+  getCheckInOutReport,
+  getForecastDataByPlan,
+  getAccountingDataByPlan,
 }

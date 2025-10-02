@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, 
+const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getForecastDataByPlan, getAccountingDataByPlan, 
     getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, 
     getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary, getCheckInOutReport } = require('../controllers/reportController');
 const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
@@ -12,6 +12,8 @@ router.get('/report/occ/:period/:hid/:rdate', authMiddleware, getOccupationByPer
 router.get('/report/res/list/:search_type/:hid/:sdate/:edate', authMiddleware, getReservationListView);
 router.get('/report/forecast/:hid/:sdate/:edate', authMiddleware, getForecastData);
 router.get('/report/accounting/:hid/:sdate/:edate', authMiddleware, getAccountingData);
+router.get('/report/forecast-by-plan/:hid/:sdate/:edate', authMiddleware, getForecastDataByPlan);
+router.get('/report/accounting-by-plan/:hid/:sdate/:edate', authMiddleware, getAccountingDataByPlan);
 router.get('/report/download/res/list/:hid/:sdate/:edate', authMiddleware, getExportReservationList);
 router.get('/report/download/res/dtl/:hid/:sdate/:edate', authMiddleware, getExportReservationDetails);
 router.get('/report/download/res/meals/:hid/:sdate/:edate', authMiddleware, getExportMealCount);
