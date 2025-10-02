@@ -5,7 +5,35 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### October 02, 2025
+
+#### Feature Request #74: Daily Report Data Download
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add functionality to download Daily Report data showing confirmed stays by plan from current month to last reservation date.
+- **Requirements**:
+  - Show confirmed stays count by plan type
+  - Date range: current month to last reservation
+  - Include all hotels
+  - Download options: CSV/Excel
+  - Available in Reporting module
+  - Support custom date ranges
+
 ### October 01, 2025
+
+#### Feature Request #73: Client List Download
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add functionality to download the complete client list from the CRM module.
+- **Requirements**:
+  - Handle large datasets efficiently (currently ~9,000 entries)
+  - Include all client fields in the export
+  - Provide download options: CSV and Excel formats
+  - Add filters to customize the exported data
+  - Include progress indicator for large exports
+  - Add to the CRM module interface
+  - Consider server-side processing for better performance
+  - Implement rate limiting to prevent server overload
 
 #### Feature Request #72: Forecast Data Breakdown by Plan
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -538,4 +566,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: September 19, 2025*
 *Total Bugs: 2* (last one #57)
-*Total Feature Requests: 28* (last one #67)
+*Total Feature Requests: 28* (last one #74)
