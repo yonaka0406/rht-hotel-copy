@@ -28,7 +28,7 @@ const ManageGoogleDrive = () => import('@/pages/Admin/ManageGoogleDrive.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
 const Dashboard = () => import('@/pages/MainPage/Dashboard.vue');
-const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator.vue');
+const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator/RoomIndicator.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');

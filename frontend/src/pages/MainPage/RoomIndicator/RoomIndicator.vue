@@ -74,9 +74,8 @@
   import { ref, computed, watch, onMounted, onUnmounted, onErrorCaptured } from 'vue';
   import { useRouter } from 'vue-router';
   const router = useRouter(); 
-
-  import ReservationAddRoom from './components/ReservationAddRoom.vue';
-  import ReservationEdit from './ReservationEdit.vue';
+  import ReservationAddRoom from '@/pages/MainPage/components/ReservationAddRoom.vue';
+  import ReservationEdit from '../ReservationEdit.vue';
   import RoomGroupPanel from './components/RoomGroupPanel.vue';
 
   //Websocket
