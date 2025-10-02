@@ -14,24 +14,13 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import { useRouter } from 'vue-router';
 
-export default {
-  name: "NotFound",
-  components: {
-    Card,
-    Button,
-  },
-  setup() {
-    const router = useRouter();
-    const goHome = () => {
-      router.push('/');
-    };
-
-    return { goHome };
-  },
+const router = useRouter();
+const goHome = () => {
+  router.push('/');
 };
 </script>

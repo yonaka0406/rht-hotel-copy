@@ -83,79 +83,82 @@
     </div>
   </template>
   
-  <script>
+  <script setup>
     import { ref } from "vue"; 
     import { useToast } from 'primevue/usetoast';
-    import { useConfirm } from "primevue/useconfirm";
+    import { useRoute } from 'vue-router';
 
-    import InputText from 'primevue/inputtext';
     import Password from 'primevue/password';
     import FloatLabel from 'primevue/floatlabel';
     import Card from 'primevue/card';
     import Button from 'primevue/button';
     import Divider from 'primevue/divider';
 
-    export default {
-        components: {
-            InputText,
-            Password,
-            FloatLabel,
-            Card,
-            Button,
-            Divider,
-        },
-        data() {
-        return {
-            password: '',
-            confirmPassword: '',
-            passwordError: null,
-            confirmPasswordError: null,
-            isLoading: false,
-            successMessage: null,
-            errorMessage: null,
-        };
-        },
-        setup (){
-            const toast = useToast();
-            const confirm = useConfirm();
+    const toast = useToast();
+    const route = useRoute();
 
-        },
-        methods: {
-            validatePassword() {   
-                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    const password = ref('');
+    const confirmPassword = ref('');
+    const passwordError = ref(null);
+    const confirmPasswordError = ref(null);
+    const isLoading = ref(false);
+    const successMessage = ref(null);
+    const errorMessage = ref(null);
 
-                if (!this.password) {
-                    this.passwordError = "パスワードが必要です。";
-                } else if (!passwordRegex.test(this.password)) {
-                    this.passwordError =
-                        "パスワードには少なくとも 8 文字、大文字 1 文字、小文字 1 文字、数字 1 文字を含める必要があります。";
-                } else {
-                    this.passwordError = "";
-                }
+    const validatePassword = () => {   
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
-                this.confirmPasswordError = this.confirmPassword !== this.password
-                    ? 'パスワードが一致しません。'
-                    : null;
-            },
-            async handleResetPassword() {
-                this.validatePassword();
-                if (this.passwordError || this.confirmPasswordError) return;
-        
-                this.isLoading = true;
-        
-                try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const token = urlParams.get('token');
-                    
-                    const response = await this.$http.post('/api/auth/reset-password', { token, password: this.password });
-                    this.successMessage = response.data.message;
-                } catch (error) {
-                this.errorMessage = 'パスワードのリセット中にエラーが発生しました。もう一度お試しください。';
-                } finally {
-                this.isLoading = false;
-                }
-            },
-        },
+        if (!password.value) {
+            passwordError.value = "パスワードが必要です。";
+        } else if (!passwordRegex.test(password.value)) {
+            passwordError.value = "パスワードには少なくとも 8 文字、大文字 1 文字、小文字 1 文字、数字 1 文字を含める必要があります。";
+        } else {
+            passwordError.value = null;
+        }
+
+        if (password.value && confirmPassword.value !== password.value) {
+            confirmPasswordError.value = 'パスワードが一致しません。';
+        } else {
+            confirmPasswordError.value = null;
+        }
+    };
+
+    const handleResetPassword = async () => {
+        validatePassword();
+        if (passwordError.value || confirmPasswordError.value) {
+            const detail = passwordError.value || confirmPasswordError.value;
+            toast.add({ severity: 'error', summary: '入力エラー', detail, life: 3000 });
+            return;
+        }
+
+        isLoading.value = true;
+        errorMessage.value = null;
+        successMessage.value = null;
+
+        try {
+            const token = route.query.token;
+            
+            const response = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, password: password.value })
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(responseData.message || 'サーバーエラーが発生しました。');
+            }
+
+            successMessage.value = responseData.message;
+            toast.add({ severity: 'success', summary: '成功', detail: responseData.message, life: 5000 });
+
+        } catch (error) {
+            errorMessage.value = error.message || 'パスワードのリセット中にエラーが発生しました。もう一度お試しください。';
+            toast.add({ severity: 'error', summary: 'エラー', detail: errorMessage.value, life: 3000 });
+        } finally {
+            isLoading.value = false;
+        }
     };
   </script>
   
