@@ -1,8 +1,8 @@
 <template>
     <div class="admin-double-booking">
-        <h2 class="text-xl font-semibold mb-4">二重予約管理</h2>
-
-        <div v-if="loading" class="text-center py-4">データを読み込み中...</div>
+        <div v-if="loading" class="flex justify-center items-center py-4">
+            <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+        </div>
         <div v-else-if="error" class="text-center py-4 text-red-500">エラー: {{ error.message }}</div>
         <div v-else-if="doubleBookings.length === 0" class="text-center py-4">二重予約は見つかりませんでした。</div>
         <div v-else>
@@ -33,10 +33,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, defineExpose } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
+import ProgressSpinner from 'primevue/progressspinner';
 import { useValidationStore } from '@/composables/useValidationStore';
 import { formatDate } from '@/utils/dateUtils';
 
@@ -59,6 +60,10 @@ onMounted(async () => {
     } finally {
         loading.value = false;
     }
+});
+
+defineExpose({
+    doubleBookings,
 });
 </script>
 

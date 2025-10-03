@@ -15,9 +15,12 @@
 
     <Panel toggleable class="mt-4">
         <template #header>
-            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">二重予約管理</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">二重予約管理</h2>                
+                <Badge :value="doubleBookingRef?.doubleBookings?.length || 0" severity="danger"></Badge>
+            </div>
         </template>
-        <AdminDoubleBooking />
+        <AdminDoubleBooking ref="doubleBookingRef" />
     </Panel>
 </template>
 
@@ -32,7 +35,10 @@ import ReservationsTodayCard from './Cards/ReservationsTodayCard.vue';
 import AverageLeadTimeCard from './Cards/AverageLeadTimeCard.vue';
 import WaitlistCountCard from './Cards/WaitlistCountCard.vue';
 import Panel from 'primevue/panel';
+import Badge from 'primevue/badge';
 import AdminDoubleBooking from './AdminDoubleBooking.vue';
+
+const doubleBookingRef = ref(null);
 
 const today = new Date();
 const year = today.getFullYear();
