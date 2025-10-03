@@ -10,13 +10,13 @@ const isLoadingHotelList = ref(false);
 // Load selected hotel ID from localStorage on module load
 const STORAGE_KEY = 'selectedHotelId';
 const savedHotelId = localStorage.getItem(STORAGE_KEY);
-// console.log('[useHotelStore] Initializing selectedHotelId. savedHotelId from localStorage:', savedHotelId);
-// if (savedHotelId && savedHotelId !== 'undefined' && savedHotelId !== 'null') {
-//     selectedHotelId.value = parseInt(savedHotelId, 10);
-//     console.log('[useHotelStore] selectedHotelId initialized from localStorage:', selectedHotelId.value);
-// } else {
-//     console.log('[useHotelStore] selectedHotelId remains null/undefined after localStorage check.');
-// }
+
+if (savedHotelId && savedHotelId !== 'undefined' && savedHotelId !== 'null') {
+    selectedHotelId.value = parseInt(savedHotelId, 10);
+    // console.log('[useHotelStore] selectedHotelId initialized from localStorage:', selectedHotelId.value);
+} else {
+    // console.log('[useHotelStore] selectedHotelId remains null/undefined after localStorage check.');
+}
 
 export function useHotelStore() {
 
