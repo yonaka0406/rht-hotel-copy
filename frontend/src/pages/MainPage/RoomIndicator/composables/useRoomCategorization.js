@@ -55,7 +55,10 @@ export function useRoomCategorization(selectedDate) {
       occupied: []
     };
     
+    console.log("[useRoomCategorization] All Reservations:", allReservations);
     allReservations.forEach(room => {
+      console.log("[useRoomCategorization] Processing room:", room.room_id, "Reservation ID:", room.id);
+      console.log("[useRoomCategorization] Room details:", room);
       if (room.status === 'block') return; // Already handled
       
       const checkInDate = new Date(room.check_in);
@@ -69,19 +72,30 @@ export function useRoomCategorization(selectedDate) {
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
       
+      console.log(`[useRoomCategorization] Room ${room.room_id}: isCheckInToday=${isCheckInToday}, isCheckOutToday=${isCheckOutToday}`);
       // Priority 1: Check-out today (highest priority)
       if (isCheckOutToday) {
-        categorizedRooms.checkOut.push(room);
+        if (!categorizedRooms.checkOut.some(existingRoom => existingRoom.room_id === room.room_id)) {
+          categorizedRooms.checkOut.push(room);
+        }
       }
       // Priority 2: Check-in today (only if not checking out)
       else if (isCheckInToday) {
-        categorizedRooms.checkIn.push(room);
+        // Ensure room_id is unique in checkIn category
+        if (!categorizedRooms.checkIn.some(existingRoom => existingRoom.room_id === room.room_id)) {
+          console.log(`[useRoomCategorization] Pushing room ${room.room_id} to checkIn. Reservation ID: ${room.id}`);
+          categorizedRooms.checkIn.push(room);
+        } else {
+          console.log(`[useRoomCategorization] Room ${room.room_id} already in checkIn category. Skipping reservation ID: ${room.id}`);
+        }
       }
       // Priority 3: Currently allocated/reserved for this date (regardless of check-in status)
       else if (checkInDate <= selectedDateObj && 
               checkOutDate > selectedDateObj) {
         // Room is allocated/reserved for this date period
-        categorizedRooms.occupied.push(room);
+        if (!categorizedRooms.occupied.some(existingRoom => existingRoom.room_id === room.room_id)) {
+          categorizedRooms.occupied.push(room);
+        }
       }
     });
 
