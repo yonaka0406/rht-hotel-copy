@@ -92,51 +92,14 @@
                 </Menubar>
             </div>
 
-            <Drawer v-model:visible="mobileSidebarVisible" position="left" class="w-[18rem] md:hidden">
-                <div class="flex flex-col h-full">
-                    <div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
-                        <img src="@/assets/logo-simple.png" alt="管理者パネル" class="h-8 mr-2" />
-                        <span class="text-xl font-semibold text-gray-800 dark:text-gray-200">管理者パネル</span>
-                    </div>
-                    <nav class="flex-1 space-y-1 p-4 overflow-y-auto">
-                        <template v-for="(item, index) in adminSidebarItems" :key="'mobile-' + item.key + '-' + index">
-                            <div v-if="item.type === 'header'"
-                                class="px-2 py-2 text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wider mt-1">
-                                {{ item.label }}
-                            </div>
-                            <router-link v-else-if="item.type === 'link'" :to="item.route"
-                                v-slot="{ href, navigate, isActive, isExactActive }" custom>
-                                <a :href="href" @click="navigate($event); mobileSidebarVisible = false;"
-                                    :class="['flex items-center py-2.5 px-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 group',
-                                        ((isActive && item.route !== '/admin') || (isExactActive && item.route === '/admin') || ($route.path.startsWith(String(item.route)) && String(item.route) !== '/admin' && String(item.route).length > '/admin'.length && !$route.path.substring(String(item.route).length).startsWith('/'))) ? 'bg-gray-200 dark:bg-gray-600 font-semibold' : '']">
-                                    <i :class="[item.icon, 'text-lg mr-3 text-gray-600 dark:text-gray-400']"></i>
-                                    <span class="truncate">{{ item.label }}</span>
-                                </a>
-                            </router-link>
-                            <Divider v-if="item.type === 'separator'" class="my-2" />
-                        </template>
-                    </nav>
-                    <div class="mt-auto p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                        <router-link to="/" @click="mobileSidebarVisible = false"
-                            class="flex items-center py-2.5 px-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 group">
-                            <i class="pi pi-home text-lg mr-3 text-gray-600 dark:text-gray-400"></i>
-                            <span>PMSホーム</span>
-                        </router-link>
-                        <Button @click="handleLogoutAndCloseMobileSidebar" text
-                            class="flex items-center w-full py-2.5 px-3 !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/20 rounded-lg transition-colors duration-200 group">
-                            <i class="pi pi-sign-out text-lg mr-3"></i>
-                            <span>ログアウト</span>
-                        </Button>
-                    </div>
-                </div>
-            </Drawer>
+            <AdminMobileSidebar v-model:mobileSidebarVisible="mobileSidebarVisible"
+                :adminSidebarItems="adminSidebarItems"
+                :handleLogoutAndCloseMobileSidebar="handleLogoutAndCloseMobileSidebar" />
 
             <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
-                <p class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ userNameDisplay
-                    }}管理者パネルへようこそ！</p>
+                <p class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ userNameDisplay }}管理者パネルへようこそ！</p>
                 <AdminDashboard v-if="isRootAdminPath" />                
-                <router-view v-else />
-            </main>
+                <router-view v-else />            </main>
         </div>
     </div>
 
@@ -167,6 +130,7 @@ import { useToast } from 'primevue/usetoast';
 
 // Components
 import AdminDashboard from './components/AdminDashboard.vue';
+import AdminMobileSidebar from './components/AdminMobileSidebar.vue';
 
 const userName = ref('');
 
@@ -176,36 +140,11 @@ const mobileSidebarVisible = ref(false);
 const userNameDisplay = computed(() => userName.value || 'ユーザー、');
 const userNameDisplayShort = computed(() => (logged_user.value?.[0]?.name || 'ユーザー'));
 
-const adminSidebarItems = ref([
-    { key: 'dashboard', type: 'link', label: 'ダッシュボード', icon: 'pi pi-fw pi-tablet', route: '/admin' },
-    { type: 'separator' },
-    { key: 'manage-users-header', type: 'header', label: 'ユーザー管理', icon: 'pi pi-fw pi-users' },
-    { key: 'mu-create-edit', type: 'link', label: '新規 & 編集', icon: 'pi pi-fw pi-user', route: '/admin/users' },
-    { key: 'mu-roles', type: 'link', label: 'ロール', icon: 'pi pi-fw pi-key', route: '/admin/roles' },
-    { type: 'separator' },
-    { key: 'manage-hotels-header', type: 'header', label: 'ホテル管理', icon: 'pi pi-fw pi-building' },
-    { key: 'mh-create', type: 'link', label: '新規', icon: 'pi pi-fw pi-plus', route: '/admin/hotel-create' },
-    { key: 'mh-edit', type: 'link', label: '編集', icon: 'pi pi-fw pi-pen-to-square', route: '/admin/hotel-edit' },
-    { key: 'mh-plan', type: 'link', label: 'プラン', icon: 'pi pi-fw pi-box', route: '/admin/hotel-plans' },
-    { key: 'mh-addon', type: 'link', label: 'アドオン', icon: 'pi pi-fw pi-cart-plus', route: '/admin/hotel-addons' },
-    { key: 'mh-calendar', type: 'link', label: 'カレンダー', icon: 'pi pi-fw pi-calendar', route: '/admin/hotel-calendar' },
-    { type: 'separator' },
-    { key: 'manage-parking-header', type: 'header', label: '駐車場管理', icon: 'pi pi-fw pi-car' },
-    { key: 'mp-manage', type: 'link', label: '管理', icon: 'pi pi-fw pi-car', route: '/admin/manage-parking' },
-    { type: 'separator' },
-    { key: 'customer-management-header', type: 'header', label: '顧客管理', icon: 'pi pi-fw pi-address-book' },
-    { key: 'loyalty-tiers', type: 'link', label: 'ロイヤルティ層設定', icon: 'pi pi-fw pi-star', route: '/admin/loyalty-tiers' },
-    { key: 'waitlist-management', type: 'link', label: '順番待ち管理', icon: 'pi pi-fw pi-clock', route: '/admin/waitlist' },
-    { type: 'separator' },
-    { key: 'data-import-header', type: 'header', label: 'データインポート', icon: 'pi pi-fw pi-database' },
-    { key: 'import-data', type: 'link', label: '他社PMSデータインポート', icon: 'pi pi-fw pi-file-import', route: '/admin/pms-import' },
-    { key: 'import-finances', type: 'link', label: '財務データ', icon: 'pi pi-fw pi-wallet', route: '/admin/finances' },
-    { type: 'separator' },
-    { key: 'other-settings', type: 'link', label: 'その他設定', icon: 'pi pi-fw pi-cog', route: '/admin/settings' },
-    { key: 'manage-ota', type: 'link', label: 'OTA Exchange', icon: 'pi pi-fw pi-arrow-right-arrow-left', route: '/admin/ota' },
-]);
+// Composables
+import { useAdminNavigation } from './composables/useAdminNavigation';
+const { adminSidebarItems } = useAdminNavigation();
 
-const adminMobileMenuItems = ref([]);
+const adminMobileMenuItems = computed(() => adminSidebarItems.value);
 
 const isRootAdminPath = computed(() => route.path === '/admin');
 
