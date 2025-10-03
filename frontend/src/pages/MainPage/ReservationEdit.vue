@@ -6,7 +6,7 @@
     <div v-else>
         <!-- Top Panel -->
         <Card class="m-2">
-            <template #title>予約編集</template>
+            <template #title>予約編集 - {{ reservation_details?.[0]?.hotel_name }}</template>
             <template #content>
                 <ReservationPanel v-if="reservationId && reservation_details" :reservation_id="reservationId"
                     :reservation_details="reservation_details" />
