@@ -941,6 +941,25 @@ const selectReservationParking = async (requestId, hotel_id, reservation_id) => 
   return result.rows;
 };
 
+const getHotelIdByReservationId = async (requestId, reservationId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT hotel_id
+    FROM reservations
+    WHERE id = $1
+    LIMIT 1;
+  `;
+  const values = [reservationId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]?.hotel_id || null;
+  } catch (err) {
+    console.error('Error fetching hotel ID by reservation ID:', err);
+    throw new Error('Database error');
+  }
+};
+
 /**
  * Get parking spot availability statistics for a hotel in a date range
  * @param {string} requestId - The request ID for logging
@@ -5542,6 +5561,7 @@ module.exports = {
   selectReservationClientIds,
   selectReservationPayments,
   selectReservationParking,
+  getHotelIdByReservationId, // Add this line
   selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,
