@@ -1,5 +1,5 @@
 <template>
-    <Panel toggleable>
+    <Panel toggleable :collapsed="false">
         <template #header>
             <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">一般指標</h2>
         </template>
@@ -13,7 +13,7 @@
         </div>
     </Panel>
 
-    <Panel toggleable class="mt-4">
+    <Panel toggleable :collapsed="true" class="mt-4">
         <template #header>
             <div class="flex items-center gap-2">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">二重予約管理</h2>                
@@ -23,7 +23,7 @@
         <AdminDoubleBooking ref="doubleBookingRef" />
     </Panel>
 
-    <Panel toggleable class="mt-4">
+    <Panel toggleable :collapsed="true" class="mt-4">
         <template #header>
             <div class="flex items-center gap-2">
                 <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">空の予約</h2>
