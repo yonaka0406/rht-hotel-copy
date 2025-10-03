@@ -122,7 +122,7 @@
                     <div class="flex items-center gap-2">
                       <span class="dark:text-gray-200">
                         <i class="pi pi-clock mr-1"></i>
-                        {{ formatTime(room.check_in_time) }}
+                        {{ room.check_in_time ? formatTime(room.check_in_time) : '' }}
                       </span>
 
                       <div v-if="room.plan_name">
@@ -146,7 +146,7 @@
                     <div>
                       <span class="dark:text-gray-200">
                         <i class="pi pi-clock mr-1"></i>
-                        {{ formatTime(room.check_out_time) }}
+                        {{ room.check_out_time ? formatTime(room.check_out_time) : '' }}
                       </span>
                     </div>
                   </div>
