@@ -2,7 +2,6 @@ export const formatTime = (time) => {
   if (!time) return "";
   const date = new Date(`1970-01-01T${time}`);
   if (isNaN(date.getTime())) {
-    console.warn('formatTime received an invalid time string:', time);
     return ''; // Return empty string for invalid times
   }
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

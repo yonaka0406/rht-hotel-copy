@@ -8,7 +8,6 @@ export function useRoomCategorization(selectedDate) {
   const { selectedHotelRooms } = useHotelStore();
 
   const roomGroups = computed(() => {
-    console.log('[useRoomCategorization] roomGroups computed: selectedDate.value', selectedDate.value);
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
       console.error("[useRoomCategorization] Invalid selectedDate.value:", selectedDate.value);
@@ -16,7 +15,6 @@ export function useRoomCategorization(selectedDate) {
     }
 
     const allReservations = reservedRoomsDayView.value?.filter(room => room.cancelled === null) || [];
-    console.log('[useRoomCategorization] roomGroups computed: allReservations count', allReservations.length);
 
     // Filter out duplicate reservations based on their unique 'id'
     const uniqueReservations = [];
@@ -27,7 +25,6 @@ export function useRoomCategorization(selectedDate) {
         seenReservationIds.add(reservation.id);
       }
     });
-    console.log('[useRoomCategorization] roomGroups computed: uniqueReservations count', uniqueReservations.length);
 
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
     const blockedRooms = uniqueReservations
@@ -49,7 +46,6 @@ export function useRoomCategorization(selectedDate) {
         }
         return acc;
       }, []);
-    console.log('[useRoomCategorization] roomGroups computed: blockedRooms count', blockedRooms.length);
 
     // Create categorization with priority (no duplicates)
     // Priority: Check-out > Check-in > Occupied
@@ -139,7 +135,6 @@ export function useRoomCategorization(selectedDate) {
       { title: '空室', rooms: freeRooms, color: 'bg-gray-100', darkColor: 'dark:bg-gray-800' },
       { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100', darkColor: 'dark:bg-red-900/30' },
     ];
-    console.log('[useRoomCategorization] roomGroups computed: result', result);
     return result;
   });
 
