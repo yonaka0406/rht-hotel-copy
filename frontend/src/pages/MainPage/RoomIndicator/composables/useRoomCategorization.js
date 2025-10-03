@@ -55,10 +55,10 @@ export function useRoomCategorization(selectedDate) {
       occupied: []
     };
     
-    console.log("[useRoomCategorization] All Reservations:", allReservations);
+    // console.log("[useRoomCategorization] All Reservations:", allReservations);
     allReservations.forEach(room => {
-      console.log("[useRoomCategorization] Processing room:", room.room_id, "Reservation ID:", room.id);
-      console.log("[useRoomCategorization] Room details:", room);
+      // console.log("[useRoomCategorization] Processing room:", room.room_id, "Reservation ID:", room.id);
+      // console.log("[useRoomCategorization] Room details:", room);
       if (room.status === 'block') return; // Already handled
       
       const checkInDate = new Date(room.check_in);
@@ -72,7 +72,7 @@ export function useRoomCategorization(selectedDate) {
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
       
-      console.log(`[useRoomCategorization] Room ${room.room_id}: isCheckInToday=${isCheckInToday}, isCheckOutToday=${isCheckOutToday}`);
+      // console.log(`[useRoomCategorization] Room ${room.room_id}: isCheckInToday=${isCheckInToday}, isCheckOutToday=${isCheckOutToday}`);
       // Priority 1: Check-out today (highest priority)
       if (isCheckOutToday) {
         if (!categorizedRooms.checkOut.some(existingRoom => existingRoom.room_id === room.room_id)) {
@@ -83,10 +83,10 @@ export function useRoomCategorization(selectedDate) {
       else if (isCheckInToday) {
         // Ensure room_id is unique in checkIn category
         if (!categorizedRooms.checkIn.some(existingRoom => existingRoom.room_id === room.room_id)) {
-          console.log(`[useRoomCategorization] Pushing room ${room.room_id} to checkIn. Reservation ID: ${room.id}`);
+          // console.log(`[useRoomCategorization] Pushing room ${room.room_id} to checkIn. Reservation ID: ${room.id}`);
           categorizedRooms.checkIn.push(room);
         } else {
-          console.log(`[useRoomCategorization] Room ${room.room_id} already in checkIn category. Skipping reservation ID: ${room.id}`);
+          // console.log(`[useRoomCategorization] Room ${room.room_id} already in checkIn category. Skipping reservation ID: ${room.id}`);
         }
       }
       // Priority 3: Currently allocated/reserved for this date (regardless of check-in status)
