@@ -22,6 +22,16 @@
         </template>
         <AdminDoubleBooking ref="doubleBookingRef" />
     </Panel>
+
+    <Panel toggleable class="mt-4">
+        <template #header>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">空の予約</h2>
+                <Badge :value="emptyReservationRef?.emptyReservations?.length || 0" severity="warning"></Badge>
+            </div>
+        </template>
+        <AdminEmptyReservations ref="emptyReservationRef" />
+    </Panel>
 </template>
 
 <script setup>
@@ -37,8 +47,10 @@ import WaitlistCountCard from './Cards/WaitlistCountCard.vue';
 import Panel from 'primevue/panel';
 import Badge from 'primevue/badge';
 import AdminDoubleBooking from './AdminDoubleBooking.vue';
+import AdminEmptyReservations from './AdminEmptyReservations.vue';
 
 const doubleBookingRef = ref(null);
+const emptyReservationRef = ref(null);
 
 const today = new Date();
 const year = today.getFullYear();

@@ -1,6 +1,6 @@
 let getPool = require('../config/database').getPool;
 
-const getPotentialDoubleBookings = async (requestId) => {
+const getDoubleBookings = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
     WITH dup_groups AS (
@@ -61,6 +61,44 @@ const getPotentialDoubleBookings = async (requestId) => {
   }
 };
 
+const getEmptyReservations = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+        r.id AS reservation_id,
+        h.formal_name AS hotel_name,
+        COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+        r.check_in,
+        r.check_out,
+        (r.check_out - r.check_in) AS number_of_nights,
+        r.status,
+        r.type
+    FROM
+        reservations r
+    JOIN
+        hotels h ON r.hotel_id = h.id
+    LEFT JOIN
+        clients c ON r.reservation_client_id = c.id
+    WHERE
+        NOT EXISTS (
+            SELECT 1
+            FROM reservation_details rd
+            WHERE rd.reservation_id = r.id
+        )
+    ORDER BY
+        r.check_in, h.formal_name, c.name;
+  `;
+
+  try {
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving empty reservations:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
-  getPotentialDoubleBookings,
+  getDoubleBookings,
+  getEmptyReservations,
 };
