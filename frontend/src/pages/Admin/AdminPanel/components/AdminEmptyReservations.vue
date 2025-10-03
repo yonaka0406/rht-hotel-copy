@@ -26,8 +26,16 @@
                     </template>
                 </Column>
                 <Column field="number_of_nights" header="泊数"></Column>
-                <Column field="status" header="ステータス"></Column>
-                <Column field="type" header="タイプ"></Column>
+                <Column header="ステータス">
+                    <template #body="slotProps">
+                        {{ translateStatus(slotProps.data.status) }}
+                    </template>
+                </Column>
+                <Column header="タイプ">
+                    <template #body="slotProps">
+                        {{ translateType(slotProps.data.type) }}
+                    </template>
+                </Column>
                 <Column header="アクション">
                     <template #body="slotProps">
                         <div class="flex gap-2">
@@ -67,6 +75,7 @@ import ToggleButton from 'primevue/togglebutton';
 import Tooltip from 'primevue/tooltip';
 import { useValidationStore } from '@/composables/useValidationStore';
 import { formatDate } from '@/utils/dateUtils';
+import { translateStatus, translateType } from '@/utils/reservationUtils';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
