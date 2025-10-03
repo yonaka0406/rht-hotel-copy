@@ -2,6 +2,7 @@ const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   selectFailedOtaReservations,
   selectParkingSpotAvailability,
+  getHotelIdByReservationId, // Import the new function
   addReservationHold, addReservationDetail, addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
@@ -248,6 +249,27 @@ const getParkingSpotAvailability = async (req, res) => {
   } catch (error) {
     console.error('Error fetching parking spot availability:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching parking spot availability.' });
+  }
+};
+
+const getHotelIdForReservation = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ error: 'Missing required parameter: reservation ID.' });
+  }
+
+  try {
+    const hotelId = await getHotelIdByReservationId(req.requestId, id);
+
+    if (hotelId === null) {
+      return res.status(404).json({ message: 'Hotel ID not found for the provided reservation ID.' });
+    }
+
+    return res.status(200).json({ hotel_id: hotelId });
+  } catch (error) {
+    console.error('Error fetching hotel ID for reservation:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching hotel ID.' });
   }
 };
 
@@ -1493,6 +1515,7 @@ const editPaymentTiming = async (req, res) => {
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, 
   getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability,
+  getHotelIdForReservation, // Add this line
   createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, 
   addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, 
   editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, 

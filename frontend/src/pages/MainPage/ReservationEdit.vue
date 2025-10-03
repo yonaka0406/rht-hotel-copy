@@ -6,7 +6,7 @@
     <div v-else>
         <!-- Top Panel -->
         <Card class="m-2">
-            <template #title>予約編集</template>
+            <template #title>予約編集 - {{ reservation_details?.[0]?.hotel_name }}</template>
             <template #content>
                 <ReservationPanel v-if="reservationId && reservation_details" :reservation_id="reservationId"
                     :reservation_details="reservation_details" />
@@ -108,11 +108,11 @@ const socket = ref(null);
 
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
+const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments, getReservationHotelId } = useReservationStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { fetchParkingReservations } = useParkingStore();
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId } = useHotelStore();
+const { selectedHotelId, setHotelId } = useHotelStore();
 
 // Primevue
 import { Card } from 'primevue';
@@ -139,6 +139,10 @@ const fetchAllReservationData = async () => {
 
     try {
         //console.log(`[ReservationEdit] ➡️ Fetching all data for reservation ID: ${reservationId.value}`);
+        const hotelIdFromReservation = await getReservationHotelId(reservationId.value);
+        if (hotelIdFromReservation) {
+            setHotelId(hotelIdFromReservation);
+        }
         await fetchReservation(reservationId.value, selectedHotelId.value);
 
         if (reservationDetails.value?.reservation?.[0]) {
@@ -256,126 +260,7 @@ watch(() => props.reservation_id, async (newId) => {
         await fetchAllReservationData();
     }
 });
-/*
-    // Helper function to fetch parking data
-    const fetchParkingData = async (hotelId, reservationId) => {
-        try {
-            const parkingData = await fetchParkingReservations(hotelId, reservationId);
-            parking_reservations.value = parkingData || [];
-            //console.log('[Reservation Edit] parking_reservations', parking_reservations.value);
-        } catch (error) {
-            console.error('Error fetching parking reservations:', error);
-            parking_reservations.value = [];
-        }
-    };
-    
-    // Fetch reservation details on mount    
-    onMounted(async () => {
-        
-        await setReservationId(props.reservation_id);
-        await fetchReservation(reservationId.value);
-        if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
-            reservation_details.value = reservationDetails.value.reservation;
-            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-            reservation_payments.value = pmtData.payments;
-            reservationStatus.value = reservation_details.value[0].status;
-            
-            // Fetch parking data when reservation details are loaded
-            if (reservation_details.value[0].hotel_id && reservation_details.value[0].reservation_id) {
-                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-            }
-        } else {
-            reservation_details.value = [];
-            reservation_payments.value = [];
-            parking_reservations.value = [];
-            reservationStatus.value = null;
-        }
 
-        // Establish Socket.IO connection
-        socket.value = io(import.meta.env.VITE_BACKEND_URL);
-
-        socket.value.on('connect', () => {
-            // console.log('Connected to server');
-        });
-
-        socket.value.on('tableUpdate', async (data) => {
-            // Prevent fetching if bulk update is in progress
-            if (reservationIsUpdating.value) {
-                // console.log('Skipping fetchReservation because update is still running');
-                return;
-            }
-            // console.log('Reservation updated detected in ReservationEdit');
-            // Web Socket fetchReservation                
-            await fetchReservation(reservationId.value);
-            if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
-                reservation_details.value = reservationDetails.value.reservation;
-                const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-                reservation_payments.value = pmtData.payments;
-                
-                // Update parking data when reservation is updated
-                if (reservation_details.value[0].hotel_id && reservation_details.value[0].reservation_id) {
-                    await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-                }
-            } else {
-                reservation_details.value = [];
-                reservation_payments.value = [];
-                parking_reservations.value = [];
-            }
-        });
-
-        
-        //console.log('onMounted ReservationEdit reservation_id:', reservationId.value);
-        //console.log('onMounted ReservationEdit reservation_details:', reservation_details.value);
-    });   
-    
-    
-    onUnmounted(() => {
-        // Close the Socket.IO connection when the component is unmounted
-        if (socket.value) {
-            socket.value.disconnect();
-        }
-    });
-
-    // Watcher
-    watch(reservationIsUpdating, async (newVal, oldVal) => {
-        if (newVal === true) {
-            // console.log("Updating...");            
-        }
-        if (newVal === false) {
-            // console.log("Not Updating...");
-            await fetchReservation(reservationId.value);
-            if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
-                reservation_details.value = reservationDetails.value.reservation;
-                const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-                reservation_payments.value = pmtData.payments;
-                // Add fetchParkingData here
-                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-            } else {
-                reservation_details.value = [];
-                reservation_payments.value = [];
-                parking_reservations.value = [];
-            }
-        }
-    });
-    watch(reservationId, async (newVal, oldVal) => {
-        if (oldVal && newVal !== oldVal) {
-            // console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
-            await fetchReservation(newVal);
-            if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
-                reservation_details.value = reservationDetails.value.reservation;
-                const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-                reservation_payments.value = pmtData.payments;
-                // Add fetchParkingData here too
-                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-            } else {
-                reservation_details.value = [];
-                reservation_payments.value = [];
-                parking_reservations.value = [];
-            }
-        }
-        
-    });    
-*/
 </script>
 
 <style scoped></style>

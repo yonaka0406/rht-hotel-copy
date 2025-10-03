@@ -41,12 +41,28 @@ export function useReservationStore() {
     };
     const getReservationHotelId = async (reservation_id) => {            
         // console.log('From Reservation Store => getReservationHotelId');
-        if (!reservationDetails.value.reservation) {
-            // console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
-            await fetchReservation(reservation_id, );
-        }
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/hotel-id/${reservation_id}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
 
-        return reservationDetails.value.reservation?.[0]?.hotel_id || null;
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to fetch hotel ID for reservation');
+            }
+
+            return data.hotel_id || null;
+        } catch (error) {
+            console.error('Error fetching hotel ID by reservation ID:', error);
+            return null;
+        }
     };
     const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
         // console.log('From Reservation Store => getAvailableDatesForChange');

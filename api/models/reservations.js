@@ -941,6 +941,25 @@ const selectReservationParking = async (requestId, hotel_id, reservation_id) => 
   return result.rows;
 };
 
+const getHotelIdByReservationId = async (requestId, reservationId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT hotel_id
+    FROM reservations
+    WHERE id = $1
+    LIMIT 1;
+  `;
+  const values = [reservationId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]?.hotel_id || null;
+  } catch (err) {
+    console.error('Error fetching hotel ID by reservation ID:', err);
+    throw new Error('Database error');
+  }
+};
+
 /**
  * Get parking spot availability statistics for a hotel in a date range
  * @param {string} requestId - The request ID for logging
@@ -3638,6 +3657,19 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
               const sanitizedName = sanitizeName(rawName);
               const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
+              let guestGender = selectGender(guest?.GuestGender || '2');
+
+              if (guestGender === 'other') {
+                const roomPaxMaleCount = roomDetail.RoomPaxMaleCount * 1 || 0;
+                const roomPaxFemaleCount = roomDetail.RoomPaxFemaleCount * 1 || 0;
+                const totalRoomPax = roomPaxMaleCount + roomPaxFemaleCount;
+
+                if (totalRoomPax > 0 && roomPaxMaleCount > 0 && totalRoomPax === roomPaxMaleCount) {
+                  guestGender = 'male';
+                } else if (totalRoomPax > 0 && roomPaxFemaleCount > 0 && totalRoomPax === roomPaxFemaleCount) {
+                  guestGender = 'female';
+                }
+              }
 
               guestData = {
                 name: name,
@@ -3645,7 +3677,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 name_kanji: nameKanji,
                 date_of_birth: guest?.GuestDateOfBirth || null,
                 legal_or_natural_person: selectNature(guest?.GuestGender || 1),
-                gender: selectGender(guest?.GuestGender || '2'),
+                gender: guestGender,
                 email: Basic.Email || '',
                 phone: Basic.PhoneNumber || '',
                 created_by: 1,
@@ -3754,18 +3786,31 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
           if (Member?.UserName?.trim()) {
+            let guestGender = selectGender('2');
+
+            if (guestGender === 'other') {
+              const grandTotal = parseInt(BasicInformation.GrandTotalPaxCount, 10) || 0;
+              const maleTotal = parseInt(Extendmytrip?.TotalMaleCount, 10) || 0;
+              const femaleTotal = parseInt(Extendmytrip?.TotalFemaleCount, 10) || 0;
+
+              if (grandTotal > 0 && maleTotal > 0 && grandTotal === maleTotal) {
+                guestGender = 'male';
+              } else if (grandTotal > 0 && femaleTotal > 0 && grandTotal === femaleTotal) {
+                guestGender = 'female';
+              }
+            }
+
             const guestData = {
               name: BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
               name_kana: BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
               date_of_birth: null,
               legal_or_natural_person: selectNature(1),
-              gender: selectGender('2'),
+              gender: guestGender,
               email: Basic.Email || '',
               phone: Basic.PhoneNumber || '',
               created_by: 1,
               updated_by: 1,
             };
-
             const sanitizedName = sanitizeName(guestData.name);
             const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
@@ -4516,13 +4561,27 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const sanitizedName = sanitizeName(rawName);
               const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
 
+              let guestGender = selectGender(guest?.GuestGender || '2');
+
+              if (guestGender === 'other') {
+                const roomPaxMaleCount = roomDetail.RoomPaxMaleCount * 1 || 0;
+                const roomPaxFemaleCount = roomDetail.RoomPaxFemaleCount * 1 || 0;
+                const totalRoomPax = roomPaxMaleCount + roomPaxFemaleCount;
+
+                if (totalRoomPax > 0 && roomPaxMaleCount > 0 && totalRoomPax === roomPaxMaleCount) {
+                  guestGender = 'male';
+                } else if (totalRoomPax > 0 && roomPaxFemaleCount > 0 && totalRoomPax === roomPaxFemaleCount) {
+                  guestGender = 'female';
+                }
+              }
+
               guestData = {
                 name: name,
                 name_kana: nameKana,
                 name_kanji: nameKanji,
                 date_of_birth: guest?.GuestDateOfBirth || null,
                 legal_or_natural_person: selectNature(guest?.GuestGender || 1),
-                gender: selectGender(guest?.GuestGender || '2'),
+                gender: guestGender,
                 email: Basic.Email || '',
                 phone: Basic.PhoneNumber || '',
                 created_by: 1,
@@ -4630,12 +4689,26 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
           if (Member?.UserName?.trim()) {
+            let guestGender = selectGender('2');
+
+            if (guestGender === 'other') {
+              const grandTotal = parseInt(BasicInformation.GrandTotalPaxCount, 10) || 0;
+              const maleTotal = parseInt(Extendmytrip?.TotalMaleCount, 10) || 0;
+              const femaleTotal = parseInt(Extendmytrip?.TotalFemaleCount, 10) || 0;
+
+              if (grandTotal > 0 && maleTotal > 0 && grandTotal === maleTotal) {
+                guestGender = 'male';
+              } else if (grandTotal > 0 && femaleTotal > 0 && grandTotal === femaleTotal) {
+                guestGender = 'female';
+              }
+            }
+
             const guestData = {
               name: BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
               name_kana: BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
               date_of_birth: null,
               legal_or_natural_person: selectNature(1),
-              gender: selectGender('2'),
+              gender: guestGender,
               email: Basic.Email || '',
               phone: Basic.PhoneNumber || '',
               created_by: 1,
@@ -5542,6 +5615,7 @@ module.exports = {
   selectReservationClientIds,
   selectReservationPayments,
   selectReservationParking,
+  getHotelIdByReservationId, // Add this line
   selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,

@@ -13,6 +13,7 @@ router.get('/reservation/today/:hid/:date', authMiddleware, reservationsControll
 router.get('/reservation/query/:hid/:rid/:ci/:co', authMiddleware, reservationsController.getAvailableDatesForChange);
 router.get('/reservation/list/clients/:hid/:id', authMiddleware, reservationsController.getReservationClientIds);
 router.get('/reservation/payment/list/:hid/:id', authMiddleware, reservationsController.getReservationPayments);
+router.get('/reservation/hotel-id/:id', authMiddleware, reservationsController.getHotelIdForReservation); // New route
 
 // Parking reservation routes
 router.get('/reservation/parking/:hid/:id', authMiddlewareCRUDAccess, reservationsController.getReservationParking);
