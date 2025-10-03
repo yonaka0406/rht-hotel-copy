@@ -8,10 +8,25 @@
         <div v-else>
             <DataTable :value="doubleBookings" paginator :rows="10" :rowsPerPageOptions="[5, 10, 20, 50]"
                 tableStyle="min-width: 50rem">
-                <Column field="id" header="ID"></Column>
-                <Column field="hotel_id" header="ホテルID"></Column>
-                <Column field="room_id" header="部屋ID"></Column>
-                <Column field="date" header="日付"></Column>
+                <Column field="hotel_name" header="ホテル名"></Column>
+                <Column field="room_number" header="部屋番号"></Column>
+                <Column header="日付">
+                    <template #body="slotProps">
+                        {{ formatDate(new Date(slotProps.data.date)) }}
+                    </template>
+                </Column>
+                <Column header="重複予約">
+                    <template #body="slotProps">
+                        <div v-for="res in slotProps.data.conflicting_reservations" :key="res.reservation_detail_id" class="mb-1">
+                            <Button
+                                :label="`予約ID: ${res.reservation_id.substring(0, 8)}... (${formatDate(new Date(res.check_in))}, ${res.number_of_nights}泊, ${res.client_name})`"
+                                icon="pi pi-external-link"
+                                class="p-button-sm p-button-text"
+                                @click="openReservationEdit(res.reservation_id)"
+                            />
+                        </div>
+                    </template>
+                </Column>
             </DataTable>
         </div>
     </div>
@@ -21,12 +36,19 @@
 import { ref, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Button from 'primevue/button';
 import { useValidationStore } from '@/composables/useValidationStore';
+import { formatDate } from '@/utils/dateUtils';
 
 const { doubleBookings, fetchDoubleBookings } = useValidationStore();
 
 const loading = ref(true);
 const error = ref(null);
+
+const openReservationEdit = (id) => {
+    const url = `/reservations/edit/${id}`;
+    window.open(url, '_blank');
+};
 
 onMounted(async () => {
     try {
