@@ -4,6 +4,7 @@ const billableList = ref(null);
 const billedList = ref(null);
 const paymentsList = ref([]);
 const isLoadingPayments = ref(false);
+const isGenerating = ref(false);
 
 export function useBillingStore() {
         
@@ -123,6 +124,7 @@ export function useBillingStore() {
     };
 
     const fetchBilledListView = async(hotelId, month) => {
+        isGenerating.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/billing/res/billed-list/${hotelId}/${month}`;
@@ -146,6 +148,8 @@ export function useBillingStore() {
         } catch (error) {
             billedList.value = [];
             console.error('Failed to fetch data', error);
+        } finally {
+            isGenerating.value = false;
         }
     };
 
@@ -332,6 +336,7 @@ export function useBillingStore() {
         billedList,
         paymentsList,
         isLoadingPayments,
+        isGenerating,
         fetchBillableListView,
         fetchBilledListView,
         generateInvoicePdf,

@@ -5,6 +5,22 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### October 03, 2025
+
+#### Bug #75: Invoice File Naming Issue
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Invoice download filename shows '001' instead of actual invoice number (e.g., '002')
+  - Missing company name in downloaded filename
+- **Expected Behavior**:
+  - Filename should match invoice number (e.g., `[CompanyName]_Invoice_002.pdf`)
+  - Include company name for better identification
+- **Affected Components**:
+  - Invoice generation service
+  - File download handler
+  - Invoice number generation/retrieval
+
 ### October 02, 2025
 
 #### Feature Request #74: Daily Report Data Download

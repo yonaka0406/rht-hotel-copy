@@ -588,16 +588,15 @@
         await fetchHotels();
         await fetchHotel();
 
-        if(clients.value.length === 0) {
-            setClientsIsLoading(true);
-            const clientsTotalPages = fetchClients(1);
-            // Fetch clients for all pages
-            for (let page = 2; page <= clientsTotalPages; page++) {
-                fetchClients(page);
-            }
-            setClientsIsLoading(false);            
-        }
-    });
+                    if(clients.value.length === 0) {
+                        setClientsIsLoading(true);
+                        const clientsTotalPages = await fetchClients(1);
+                        // Fetch clients for all pages
+                        for (let page = 2; page <= clientsTotalPages; page++) {
+                            await fetchClients(page);
+                        }
+                        setClientsIsLoading(false);            
+                    }    });
 
     watch(() => [selectedHotelId.value], // Watch multiple values
         async () => {                                          
