@@ -26,7 +26,23 @@ const getEmptyReservations = async (req, res) => {
   }
 };
 
+const deleteEmptyReservation = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletedReservation = await validationModel.deleteEmptyReservationById(req.requestId, id);
+    if (deletedReservation) {
+      res.status(200).json({ message: 'Reservation deleted successfully', id: deletedReservation.id });
+    } else {
+      res.status(404).json({ message: 'Reservation not found' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getDoubleBookings,
   getEmptyReservations,
+  deleteEmptyReservation,
 };
