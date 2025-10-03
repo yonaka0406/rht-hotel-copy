@@ -50,9 +50,7 @@
   import SummaryMetricsPanel from './components/SummaryMetricsPanel.vue';
   import ReservationDrawer from './components/ReservationDrawer.vue';
 
-  //Websocket
-  import io from 'socket.io-client';
-  const socket = ref(null);
+
 
   // Primevue
   import { useToast } from 'primevue/usetoast';
@@ -66,6 +64,8 @@
   const { clients, fetchClients } = useClientStore();
   import { useReservationStore } from '@/composables/useReservationStore';
   const { reservedRoomsDayView, fetchReservationsToday } = useReservationStore();
+  import { useSocket } from '@/composables/useSocket';
+  import { getContrastColor } from '@/utils/colorUtils';
       
   const isUpdating = ref(false);
   const isLoading = ref(false);
@@ -76,110 +76,25 @@
     await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
   };
       
+  const selectedDate = ref(new Date());
+
   // Helper function
-  const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error("Invalid Date object:", date);
-      throw new Error("The provided input is not a valid Date object:");
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };      
-  const formatDateWithDay = (date) => {
-      const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
-      const parsedDate = new Date(date);
-      return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-  };
-  const formatTime = (time) => {
-      if (!time) return "";
-      const date = new Date(`1970-01-01T${time}`);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  // Mount
+  onMounted(async () => {
+    isLoading.value = true;
 
-  const paymentTimingText = (timing) => {
-    switch (timing) {
-        case 'not_set':
-            return '未設定';
-        case 'prepaid':
-            return '事前決済';
-        case 'on-site':
-            return '現地決済';
-        case 'postpaid':
-            return '後払い';
-        default:
-            return '';
-    }
-  };
-
-  const getClientName = (room) => {
-    //console.log('getClientName - room object:', room);
-    let clients = [];
-    try {
-      if (room?.clients_json) {
-        clients = typeof room.clients_json === 'string' 
-          ? JSON.parse(room.clients_json)
-          : room.clients_json;
-      }
-    } catch (e) {
-      console.error('Error parsing clients_json:', e);
-    }
-    //console.log('getClientName - parsed clients:', clients);
-          
-    const processedClients = [];
-
-    // Always add the booker from room.client_name first
-    if (room?.client_name) {
-      processedClients.push({
-        name: room.client_name,
-        isBooker: true,
-        gender: null // Gender not available from client_name
-      });
+    // Initialize selectedDate from URL parameter or default to today
+    const routeDate = router.currentRoute.value.params.date;
+    if (routeDate) {
+      selectedDate.value = new Date(routeDate);
+    } else {
+      selectedDate.value = new Date();
+      // If no date in URL, update URL to today's date
+      router.replace({ params: { date: formatDate(selectedDate.value) } });
     }
 
-    // Add other clients from clients_json as guests
-    const hasClientsInJson = Array.isArray(clients) && clients.length > 0;
-    if (hasClientsInJson) {
-      clients.forEach((client) => {
-        const clientName = client.name_kanji || client.name_kana || client.name;
-        if (clientName && clientName !== room.client_name) { // Avoid duplicating the booker if already added
-          processedClients.push({
-            name: clientName,
-            isBooker: false,
-            gender: client.gender
-          });
-        }
-      });
-    }
-
-    if (processedClients.length > 0) {
-      return processedClients;
-    }
+  });
   
-    const fallbackName = room?.client_name || 'ゲスト';
-    //console.log('getClientName - fallback name:', fallbackName);
-    return [{ name: fallbackName, isBooker: true, gender: null }];
-  };
-
-
-  const getContrastColor = (hexcolor) => {
-    if (!hexcolor || typeof hexcolor !== 'string') return '#000000';
-    let processedHex = hexcolor.startsWith('#') ? hexcolor.slice(1) : hexcolor;
-    
-    if (processedHex.length === 3) {
-      processedHex = processedHex.split('').map(char => char + char).join('');
-    }
-    if (processedHex.length !== 6) return '#000000'; // Invalid hex
-
-    const r = parseInt(processedHex.substring(0, 2), 16);
-    const g = parseInt(processedHex.substring(2, 4), 16);
-    const b = parseInt(processedHex.substring(4, 6), 16);
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return '#000000'; // Parsing failed
-
-    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    return (yiq >= 128) ? '#000000' : '#FFFFFF';
-  };
 
   const openNewReservation = (room) => {
     reservationDrawerRef.value?.openNewReservation(room);
@@ -189,7 +104,7 @@
     reservationDrawerRef.value?.openEditReservation(room);
   };
 
-  const selectedDate = ref(new Date());
+
 
   // Computed
   const roomGroups = computed(() => {
@@ -452,48 +367,7 @@
  
 
   // Mount
-  onMounted(async () => {
-    
-    isLoading.value = true;
 
-    // Initialize selectedDate from URL parameter or default to today
-    const routeDate = router.currentRoute.value.params.date;
-    if (routeDate) {
-      selectedDate.value = new Date(routeDate);
-    } else {
-      selectedDate.value = new Date();
-      // If no date in URL, update URL to today's date
-      router.replace({ params: { date: formatDate(selectedDate.value) } });
-    }
-
-    // Establish Socket.IO connection
-    socket.value = io(import.meta.env.VITE_BACKEND_URL);
-
-    socket.value.on('connect', () => {
-    });
-    socket.value.on('connect_error', (err) => {
-    });
-    socket.value.on('connect_timeout', () => {
-    });
-    
-    socket.value.on('tableUpdate', async (data) => {
-      await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-    });
-
-    await fetchHotels();
-    await fetchHotel();
-    await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-    
-    isLoading.value = false;        
-    
-  });
-
-  onUnmounted(() => {
-    // Close the Socket.IO connection when the component is unmounted
-    if (socket.value) {
-      socket.value.disconnect();
-    }
-  });
 
   // Watch      
   watch(selectedHotelId, async (newValue, oldValue) => {            
