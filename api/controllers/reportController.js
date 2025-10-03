@@ -681,7 +681,9 @@ const getReservationsInventory = async (req, res) => {
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
   
-  try {    
+  try {
+    const data = await selectReservationsInventory(req.requestId, hotelId, startDate, endDate); 
+
     if (!data || data.length === 0) {
       return res.status(200).json([]);
     }  
