@@ -28,6 +28,30 @@
                 <Column field="number_of_nights" header="泊数"></Column>
                 <Column field="status" header="ステータス"></Column>
                 <Column field="type" header="タイプ"></Column>
+                <Column header="アクション">
+                    <template #body="slotProps">
+                        <div class="flex gap-2">
+                            <ToggleButton
+                                :modelValue="unlockedReservations.has(slotProps.data.reservation_id)"
+                                :onIcon="'pi pi-lock-open'"
+                                :offIcon="'pi pi-lock'"
+                                onLabel=""
+                                offLabel=""
+                                :class="unlockedReservations.has(slotProps.data.reservation_id) ? 'p-button-success' : 'p-button-secondary'"
+                                @change="toggleDeleteUnlock(slotProps.data.reservation_id)"
+                                v-tooltip.top="'削除ボタンを有効にするには選択してください'"
+                            />
+                            <Button
+                                icon="pi pi-trash"
+                                severity="danger"
+                                text
+                                rounded
+                                :disabled="!unlockedReservations.has(slotProps.data.reservation_id)"
+                                @click="confirmDeleteReservation($event, slotProps.data.reservation_id)"
+                            />
+                        </div>
+                    </template>
+                </Column>
             </DataTable>
         </div>
     </div>
@@ -39,17 +63,70 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import ProgressSpinner from 'primevue/progressspinner';
+import ToggleButton from 'primevue/togglebutton';
+import Tooltip from 'primevue/tooltip';
 import { useValidationStore } from '@/composables/useValidationStore';
 import { formatDate } from '@/utils/dateUtils';
+import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
+import axios from 'axios';
 
 const { emptyReservations, fetchEmptyReservations } = useValidationStore();
 
+const confirm = useConfirm();
+const toast = useToast();
+
 const loading = ref(true);
 const error = ref(null);
+const unlockedReservations = ref(new Set()); // Use a Set to store IDs of unlocked reservations
 
 const openReservationEdit = (id) => {
     const url = `/reservations/edit/${id}`;
     window.open(url, '_blank');
+};
+
+const toggleDeleteUnlock = (reservationId) => {
+    if (unlockedReservations.value.has(reservationId)) {
+        unlockedReservations.value.delete(reservationId); // Remove if already unlocked
+    } else {
+        unlockedReservations.value.add(reservationId); // Add to unlock
+    }
+};
+
+const confirmDeleteReservation = (event, reservationId) => {
+    confirm.require({
+        target: event.currentTarget,
+        message: 'この空の予約を削除してもよろしいですか？',
+        icon: 'pi pi-info-circle',
+        rejectClass: 'p-button-secondary p-button-outlined',
+        acceptClass: 'p-button-danger',
+        rejectLabel: 'キャンセル',
+        acceptLabel: '削除',
+        accept: async () => {
+            await deleteReservation(reservationId);
+        },
+        reject: () => {
+            toast.add({ severity: 'info', summary: 'キャンセル', detail: '削除はキャンセルされました', life: 3000 });
+        }
+    });
+};
+
+const deleteReservation = async (reservationId) => {
+    try {
+        const token = localStorage.getItem('authToken');
+        await axios.delete(`/api/validation/empty-reservations/${reservationId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        toast.add({ severity: 'success', summary: '成功', detail: '予約が削除されました', life: 3000 });
+        // Refresh the list after deletion
+        await fetchEmptyReservations();
+    } catch (err) {
+        error.value = err;
+        toast.add({ severity: 'error', summary: 'エラー', detail: '予約の削除に失敗しました', life: 3000 });
+        console.error('Error deleting empty reservation:', err);
+    }
 };
 
 onMounted(async () => {
