@@ -4561,13 +4561,27 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const sanitizedName = sanitizeName(rawName);
               const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
 
+              let guestGender = selectGender(guest?.GuestGender || '2');
+
+              if (guestGender === 'other') {
+                const roomPaxMaleCount = roomDetail.RoomPaxMaleCount * 1 || 0;
+                const roomPaxFemaleCount = roomDetail.RoomPaxFemaleCount * 1 || 0;
+                const totalRoomPax = roomPaxMaleCount + roomPaxFemaleCount;
+
+                if (totalRoomPax > 0 && roomPaxMaleCount > 0 && totalRoomPax === roomPaxMaleCount) {
+                  guestGender = 'male';
+                } else if (totalRoomPax > 0 && roomPaxFemaleCount > 0 && totalRoomPax === roomPaxFemaleCount) {
+                  guestGender = 'female';
+                }
+              }
+
               guestData = {
                 name: name,
                 name_kana: nameKana,
                 name_kanji: nameKanji,
                 date_of_birth: guest?.GuestDateOfBirth || null,
                 legal_or_natural_person: selectNature(guest?.GuestGender || 1),
-                gender: selectGender(guest?.GuestGender || '2'),
+                gender: guestGender,
                 email: Basic.Email || '',
                 phone: Basic.PhoneNumber || '',
                 created_by: 1,
@@ -4675,12 +4689,26 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
           if (Member?.UserName?.trim()) {
+            let guestGender = selectGender('2');
+
+            if (guestGender === 'other') {
+              const grandTotal = parseInt(BasicInformation.GrandTotalPaxCount, 10) || 0;
+              const maleTotal = parseInt(Extendmytrip?.TotalMaleCount, 10) || 0;
+              const femaleTotal = parseInt(Extendmytrip?.TotalFemaleCount, 10) || 0;
+
+              if (grandTotal > 0 && maleTotal > 0 && grandTotal === maleTotal) {
+                guestGender = 'male';
+              } else if (grandTotal > 0 && femaleTotal > 0 && grandTotal === femaleTotal) {
+                guestGender = 'female';
+              }
+            }
+
             const guestData = {
               name: BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
               name_kana: BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
               date_of_birth: null,
               legal_or_natural_person: selectNature(1),
-              gender: selectGender('2'),
+              gender: guestGender,
               email: Basic.Email || '',
               phone: Basic.PhoneNumber || '',
               created_by: 1,
