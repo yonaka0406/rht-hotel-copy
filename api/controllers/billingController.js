@@ -108,7 +108,6 @@ const generateInvoice = async (req, res) => {
 
     //  1. Create HTML content for the PDF
     const htmlContent = generateInvoiceHTML(invoiceHTML, invoiceData, userInfo[0].name);
-    //console.log("generateInvoice:", htmlContent);
     await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
 
     const imageSelector = 'img[alt="Company Stamp"]';
@@ -145,6 +144,8 @@ const generateInvoice = async (req, res) => {
     });
 
     //  3. Send PDF as a download
+    res.setHeader('Access-Control-Expose-Headers', 'X-Invoice-Number');
+    res.setHeader('X-Invoice-Number', invoiceData.invoice_number);
     res.contentType("application/pdf");
     res.send(Buffer.from(pdfBuffer));
   } catch (error) {

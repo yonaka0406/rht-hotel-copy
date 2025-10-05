@@ -317,22 +317,22 @@ const selectBilledListView = async (requestId, hotelId, month) => {
   }
 };
 
-const selectMaxInvoiceNumber = async (requestId, hotelId, month) => {
+const selectMaxInvoiceNumber = async (requestId, hotelId, date) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT 
-      MAX(invoices.invoice_number) as last_invoice_number
-    FROM      
+    SELECT
+      MAX(invoice_number) AS last_invoice_number
+    FROM
       invoices
-
-    WHERE 
-      invoices.hotel_id = $1  
-      AND DATE_TRUNC('month', invoices.date) = DATE_TRUNC('month', $2::date)
-  ;`;
-  const values = [hotelId, month];
+    WHERE
+      hotel_id = $1
+      AND EXTRACT(YEAR FROM date) = EXTRACT(YEAR FROM $2::date)
+      AND EXTRACT(MONTH FROM date) = EXTRACT(MONTH FROM $2::date)
+  `;
+  const values = [hotelId, date];
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);

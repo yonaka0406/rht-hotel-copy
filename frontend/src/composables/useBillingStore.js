@@ -156,7 +156,7 @@ export function useBillingStore() {
     const generateInvoicePdf = async (hotelId, invoiceNumber, invoiceData) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/billing/res/generate/${hotelId}/${invoiceNumber}/`;
+            const url = `/api/billing/res/generate/${hotelId}/${invoiceData.id}/`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -170,14 +170,7 @@ export function useBillingStore() {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             
-            let invoice_number = invoiceNumber;
-            if (!invoiceNumber) {
-                const date = new Date(invoiceData.date);
-                const year = date.getFullYear() % 100;
-                const month = date.getMonth() + 1;
-                
-                invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
-            }
+            const finalInvoiceNumber = response.headers.get('X-Invoice-Number') || invoiceNumber;
             
             const pdfBlob = await response.blob();
     
@@ -185,7 +178,7 @@ export function useBillingStore() {
             const pdfUrl = window.URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
             link.href = pdfUrl;
-            link.setAttribute('download', `請求書-${invoice_number}.pdf`);             
+            link.setAttribute('download', `請求書-${finalInvoiceNumber}.pdf`);             
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
