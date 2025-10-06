@@ -1,4 +1,4 @@
-const logModel = require('../models/log');
+const logModel = require('../../models/log');
 
 const fetchReservationHistory = async (req, res) => {
     const { id } = req.params;

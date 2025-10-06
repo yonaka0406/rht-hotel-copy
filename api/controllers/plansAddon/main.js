@@ -1,4 +1,4 @@
-const { getAllPlanAddons, createPlanAddon, updatePlanAddon, deletePlanAddon, getPlanAddonById } = require('../models/planAddon');
+const { getAllPlanAddons, createPlanAddon, updatePlanAddon, deletePlanAddon, getPlanAddonById } = require('../../models/planAddon');
 const { validateNumericParam, validateUuidParam } = require('../../utils/validationUtils');
 
 // Helper function to handle common error responses
