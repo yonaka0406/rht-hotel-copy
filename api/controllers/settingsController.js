@@ -1,7 +1,4 @@
-const { selectPaymentTypes, insertPaymentType, updatePaymentTypeVisibility, updatePaymentTypeDescription,
-  selectTaxTypes, insertTaxType, updateTaxTypeVisibility, updateTaxTypeDescription,
-  getLoyaltyTiers, upsertLoyaltyTier
- } = require('../models/settings');
+const settingsModel = require('../models/settings');
 const multer = require('multer');
 const sharp = require('sharp');
 const fs = require('fs');
@@ -124,7 +121,7 @@ const getCompanyStampImage = (req, res) => {
 
 const getPaymentTypes = async (req, res) => {
   try {
-    const data = await selectPaymentTypes(req.requestId);    
+    const data = await settingsModel.selectPaymentTypes(req.requestId);    
     if (!data) {
       return res.status(401).json({ error: 'Data not found' });
     }    
@@ -139,7 +136,7 @@ const addPaymentType = async (req, res) => {
   const user_id = req.user.id;  
   
   try {
-    const user = await insertPaymentType(req.requestId, newData, user_id);
+    const user = await settingsModel.insertPaymentType(req.requestId, newData, user_id);
     res.status(201).json({ 
       message: 'Payment type registered successfully',      
      });
@@ -154,7 +151,7 @@ const changePaymentTypeVisibility = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const data = await updatePaymentTypeVisibility(req.requestId, id, visible, user_id);
+    const data = await settingsModel.updatePaymentTypeVisibility(req.requestId, id, visible, user_id);
     if (!data) {
       return res.status(404).json({ error: 'Data not found' });
     }        
@@ -170,7 +167,7 @@ const changePaymentTypeDescription = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const data = await updatePaymentTypeDescription(req.requestId, id, description, user_id);
+    const data = await settingsModel.updatePaymentTypeDescription(req.requestId, id, description, user_id);
     if (!data) {
       return res.status(404).json({ error: 'Data not found' });
     }        
@@ -183,7 +180,7 @@ const changePaymentTypeDescription = async (req, res) => {
 
 const getTaxTypes = async (req, res) => {
   try {
-    const data = await selectTaxTypes(req.requestId);    
+    const data = await settingsModel.selectTaxTypes(req.requestId);    
     if (!data) {
       return res.status(401).json({ error: 'Data not found' });
     }    
@@ -198,7 +195,7 @@ const addTaxType = async (req, res) => {
   const user_id = req.user.id;  
   
   try {
-    const user = await insertTaxType(req.requestId, newData, user_id);
+    const user = await settingsModel.insertTaxType(req.requestId, newData, user_id);
     res.status(201).json({ 
       message: 'Tax type registered successfully',      
      });
@@ -213,7 +210,7 @@ const changeTaxTypeVisibility = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const data = await updateTaxTypeVisibility(req.requestId, id, visible, user_id);
+    const data = await settingsModel.updateTaxTypeVisibility(req.requestId, id, visible, user_id);
     if (!data) {
       return res.status(404).json({ error: 'Data not found' });
     }        
@@ -229,7 +226,7 @@ const changeTaxTypeDescription = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const data = await updateTaxTypeDescription(req.requestId, id, description, user_id);
+    const data = await settingsModel.updateTaxTypeDescription(req.requestId, id, description, user_id);
     if (!data) {
       return res.status(404).json({ error: 'Data not found' });
     }        
@@ -243,7 +240,7 @@ const changeTaxTypeDescription = async (req, res) => {
 // Loyalty Tier Controller Functions
 const handleGetLoyaltyTiers = async (req, res) => {
   try {
-    const data = await getLoyaltyTiers(req.requestId);
+    const data = await settingsModel.getLoyaltyTiers(req.requestId);
     res.status(200).json(data);
   } catch (err) {
     console.error('Error in handleGetLoyaltyTiers:', err);
@@ -303,7 +300,7 @@ const handleUpsertLoyaltyTiers = async (req, res) => {
   };
 
   try {
-    const result = await upsertLoyaltyTier(req.requestId, cleanTierData, userId);
+    const result = await settingsModel.upsertLoyaltyTier(req.requestId, cleanTierData, userId);
     res.status(201).json(result);
   } catch (err) {
     console.error('Error in handleUpsertLoyaltyTiers:', err);
