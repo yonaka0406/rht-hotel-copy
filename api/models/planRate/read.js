@@ -1,4 +1,4 @@
-let actualGetPool = require('../config/database').getPool;
+let actualGetPool = require('../../config/database').getPool;
 
 // Helper function to validate conditions
 const isValidCondition = (row, date) => {
@@ -71,8 +71,8 @@ const isValidCondition = (row, date) => {
 let actualIsValidCondition = isValidCondition;
 
 // Return all plans_rates
-const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
-    const pool = actualGetPool(requestId);
+const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id, dbClient = null) => {    
+    const client = dbClient || await actualGetPool(requestId).connect();
     const query = `
         SELECT * FROM plans_rates
         WHERE 
@@ -82,7 +82,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
     `;
 
     try {
-        const result = await pool.query(query, [
+        const result = await client.query(query, [
             plans_global_id || null,
             plans_hotel_id || null,
             hotel_id || null,
@@ -91,16 +91,18 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
     } catch (err) {
         console.error('Error retrieving plans rates:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
 // Get plans_rates by ID
-const getPlansRateById = async (requestId, id) => {
-    const pool = actualGetPool(requestId);
+const getPlansRateById = async (requestId, id, dbClient = null) => {
+    const client = dbClient || await actualGetPool(requestId).connect();
     const query = 'SELECT * FROM plans_rates WHERE id = $1';
 
     try {
-        const result = await pool.query(query, [id]);
+        const result = await client.query(query, [id]);
         if (result.rows.length === 0) {
             throw new Error('Plan rate not found');
         }
@@ -108,11 +110,13 @@ const getPlansRateById = async (requestId, id) => {
     } catch (err) {
         console.error(`Error retrieving plan rate with ID ${id}:`, err);
         throw err;
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false) => {
-    const pool = actualGetPool(requestId);
+const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false, dbClient = null) => {
+    const client = dbClient || await actualGetPool(requestId).connect();
     const query = `        
         SELECT 
             adjustment_type,
@@ -138,7 +142,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     ];
 
     try {
-        const result = await pool.query(query, values);        
+        const result = await client.query(query, values);        
 
         // console.log('Query:', query);
         // console.log('Values:', values);
@@ -216,10 +220,12 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
-const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
-    const pool = actualGetPool(requestId);
+const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, dbClient = null) => {
+    const client = dbClient || await actualGetPool(requestId).connect();
     const query = `        
         SELECT 
             adjustment_type,
@@ -247,7 +253,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
     ];
 
     try {
-        const result = await pool.query(query, values);  
+        const result = await client.query(query, values);  
         
         // Filter results using isValidCondition
         const filteredRates = result.rows.filter(row => actualIsValidCondition(row, date));
@@ -256,120 +262,8 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
-    }
-};
-
-// Create a new plans_rate
-const createPlansRate = async (requestId, plansRate) => {
-    const pool = actualGetPool(requestId);
-    const query = `
-        INSERT INTO plans_rates (
-            hotel_id, 
-            plans_global_id, 
-            plans_hotel_id, 
-            adjustment_type, 
-            adjustment_value, 
-            tax_type_id,
-            tax_rate,
-            condition_type, 
-            condition_value, 
-            date_start, 
-            date_end, 
-            created_by,
-            updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING *
-    `;
-
-    const values = [
-        plansRate.hotel_id,
-        plansRate.plans_global_id,
-        plansRate.plans_hotel_id,
-        plansRate.adjustment_type,
-        plansRate.adjustment_value,
-        plansRate.tax_type_id,
-        plansRate.tax_rate,
-        plansRate.condition_type,
-        plansRate.condition_value,
-        plansRate.date_start,
-        plansRate.date_end,
-        plansRate.created_by,
-        plansRate.updated_by
-    ];
-
-    try {
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    } catch (err) {
-        console.error('Error creating plan rate:', err);
-        throw new Error('Database error');
-    }
-};
-
-// Update an existing plans_rate
-const updatePlansRate = async (requestId, id, plansRate) => {
-    const pool = actualGetPool(requestId);
-    const query = `
-        UPDATE plans_rates
-        SET 
-            hotel_id = $1,
-            plans_global_id = $2,
-            plans_hotel_id = $3,
-            adjustment_type = $4,
-            adjustment_value = $5,
-            tax_type_id = $6,
-            tax_rate = $7,
-            condition_type = $8,
-            condition_value = $9,
-            date_start = $10,
-            date_end = $11,
-            updated_by = $12
-        WHERE id = $13
-        RETURNING *
-    `;
-
-    const values = [
-        plansRate.hotel_id,
-        plansRate.plans_global_id,
-        plansRate.plans_hotel_id,
-        plansRate.adjustment_type,
-        plansRate.adjustment_value,
-        plansRate.tax_type_id,
-        plansRate.tax_rate,
-        plansRate.condition_type,
-        plansRate.condition_value,
-        plansRate.date_start,
-        plansRate.date_end,
-        plansRate.updated_by,
-        id
-    ];
-
-    try {
-        const result = await pool.query(query, values);
-        if (result.rows.length === 0) {
-            throw new Error('Plan rate not found');
-        }
-        return result.rows[0];
-    } catch (err) {
-        console.error(`Error updating plan rate with ID ${id}:`, err);
-        throw err;
-    }
-};
-
-// Delete a plans_rate by ID
-const deletePlansRate = async (requestId, id) => {
-    const pool = actualGetPool(requestId);
-    const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
-
-    try {
-        const result = await pool.query(query, [id]);
-        if (result.rows.length === 0) {
-            throw new Error('Plan rate not found');
-        }
-        return result.rows[0];
-    } catch (err) {
-        console.error(`Error deleting plan rate with ID ${id}:`, err);
-        throw err;
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
@@ -384,9 +278,6 @@ module.exports = {
     getPlansRateById,
     getPriceForReservation,
     getRatesForTheDay,
-    createPlansRate,
-    updatePlansRate,
-    deletePlansRate,
     // For testing purposes
     __setGetPool,
     __getOriginalGetPool,
