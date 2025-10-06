@@ -842,7 +842,8 @@ const generateInvoiceExcel = async (req, res) => {
         row.getCell('L').value = cancelledCount > 0 ? cancelledCount : '';
       }
 
-      res.setHeader("Content-Disposition", `attachment; filename="invoice-${invoiceData.invoice_number}.xlsx"`);
+      res.setHeader('Access-Control-Expose-Headers', 'X-Invoice-Number');
+      res.setHeader('X-Invoice-Number', invoiceData.invoice_number);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       await workbook.xlsx.write(res);
       res.end();

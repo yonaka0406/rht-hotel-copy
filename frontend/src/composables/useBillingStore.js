@@ -178,7 +178,8 @@ export function useBillingStore() {
             const pdfUrl = window.URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
             link.href = pdfUrl;
-            link.setAttribute('download', `請求書-${finalInvoiceNumber}.pdf`);             
+            const sanitizedClientName = invoiceData.client_name.replace(/[\\/:\*\?"<>\|]/g, '_');
+            link.setAttribute('download', `請求書_${finalInvoiceNumber}_${sanitizedClientName}.pdf`);             
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -285,7 +286,7 @@ export function useBillingStore() {
     const generateInvoiceExcel = async (hotelId, invoiceNumber, invoiceData) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/billing/res/generate/excel-invoice/${hotelId}/${invoiceNumber || 0}`;
+            const url = `/api/billing/res/generate/excel-invoice/${hotelId}/${invoiceData.id || 0}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -299,14 +300,7 @@ export function useBillingStore() {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
-            let invoice_number = invoiceNumber;
-            if (!invoiceNumber) {
-                const date = new Date(invoiceData.date);
-                const year = date.getFullYear() % 100;
-                const month = date.getMonth() + 1;
-
-                invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
-            }
+            const finalInvoiceNumber = response.headers.get('X-Invoice-Number') || invoiceNumber;
 
             const excelBlob = await response.blob();
 
@@ -314,7 +308,8 @@ export function useBillingStore() {
             const excelUrl = window.URL.createObjectURL(excelBlob);
             const link = document.createElement('a');
             link.href = excelUrl;
-            link.setAttribute('download', `請求書-${invoice_number}.xlsx`);
+            const sanitizedClientName = invoiceData.client_name.replace(/[\\/:\*\?"<>\|]/g, '_');
+            link.setAttribute('download', `請求書_${finalInvoiceNumber}_${sanitizedClientName}.xlsx`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
