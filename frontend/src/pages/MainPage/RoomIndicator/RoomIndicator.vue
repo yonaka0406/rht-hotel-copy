@@ -21,7 +21,7 @@
       :openNewReservation="openNewReservation"
       :openEditReservation="openEditReservation"
       :getClientName="getClientName"
-      :paymentTimingText="paymentTimingText"
+      :translatePaymentTiming="translatePaymentTiming"
       :formatTime="formatTime"
       :formatDate="formatDate"
       :planSummary="planSummary"
@@ -69,7 +69,7 @@
   import { useSocket } from '@/composables/useSocket';
   import { getContrastColor } from '@/utils/colorUtils';
   import { formatDate, formatTime } from '@/utils/dateUtils';
-  import { paymentTimingText } from '@/utils/reservationUtils';
+  import { translatePaymentTiming } from '@/utils/reservationUtils';
   import { useRoomCategorization } from './composables/useRoomCategorization';
   import { usePlanSummary } from './composables/usePlanSummary';
   import { useReservationActions } from './composables/useReservationActions';

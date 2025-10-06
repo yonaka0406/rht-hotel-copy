@@ -109,7 +109,7 @@
                       </div>
                     </div>
                     <p v-if="room.payment_timing === 'on-site'" class="mb-2 text-emerald-500"><i
-                        class="pi pi-wallet mr-1"></i>{{ paymentTimingText(room.payment_timing) }}</p>
+                        class="pi pi-wallet mr-1"></i>{{ translatePaymentTiming(room.payment_timing) }}</p>
                     <div v-else class="mb-2"></div>
                   </div>
                   <div v-else @click="openNewReservation(room)" class="dark:text-gray-200">
@@ -207,7 +207,7 @@ const props = defineProps({
     type: Function,
     required: true,
   },
-  paymentTimingText: {
+  translatePaymentTiming: {
     type: Function,
     required: true,
   },
