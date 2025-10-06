@@ -1,4 +1,4 @@
-const addonModel = require('../models/addon');
+const addonModel = require('../../models/addon');
 
 // GET
 const getAllAddons = async (req, res) => {
