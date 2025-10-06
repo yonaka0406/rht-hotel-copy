@@ -3350,7 +3350,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar    
     if (code == 2) {
       return 'legal';
-    } else {
+    }
+    else {
       return 'natural';
     }
   };
@@ -3368,7 +3369,10 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
   const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
   // console.log('selectTLRoomMaster:', roomMaster);
   const selectRoomTypeId = (code) => {
+    console.log('selectRoomTypeId - code:', code);
+    console.log('selectRoomTypeId - roomMaster:', roomMaster);
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
+    console.log('selectRoomTypeId - match:', match);
     return match ? match.room_type_id : null;
   };
   const planMaster = await selectTLPlanMaster(requestId, hotel_id);
