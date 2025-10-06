@@ -1,20 +1,19 @@
 const { getPool } = require('../config/database');
-const { validateNumericParam, validateNonEmptyStringParam, validateDateStringParam, validateIntegerParam } = require('../utils/validationUtils');
+const validationUtils = require('../utils/validationUtils');
 const hotelModel = require('../models/hotel');
-const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllHotelRoomTypesById, getAllRoomsByHotelId, deleteBlockedRooms, getPlanExclusionSettings, updatePlanExclusions, getRoomAssignmentOrder, updateRoomAssignmentOrder } = hotelModel;
 
 // POST
   const hotels = async (req, res) => {
     let validatedFormalName, validatedName, validatedOpenDate, validatedTotalRooms, 
         validatedAddress, validatedEmail, validatedPhoneNumber;
     try {
-      validatedFormalName = validateNonEmptyStringParam(req.body.formal_name, 'Formal Name');
-      validatedName = validateNonEmptyStringParam(req.body.name, 'Name');
-      validatedOpenDate = validateDateStringParam(req.body.open_date, 'Open Date');
-      validatedTotalRooms = validateIntegerParam(String(req.body.total_rooms), 'Total Rooms');
-      validatedAddress = validateNonEmptyStringParam(req.body.address, 'Address');
-      validatedEmail = validateNonEmptyStringParam(req.body.email, 'Email');
-      validatedPhoneNumber = validateNonEmptyStringParam(req.body.phone_number, 'Phone Number');
+      validatedFormalName = validationUtils.validateNonEmptyStringParam(req.body.formal_name, 'Formal Name');
+      validatedName = validationUtils.validateNonEmptyStringParam(req.body.name, 'Name');
+      validatedOpenDate = validationUtils.validateDateStringParam(req.body.open_date, 'Open Date');
+      validatedTotalRooms = validationUtils.validateIntegerParam(String(req.body.total_rooms), 'Total Rooms');
+      validatedAddress = validationUtils.validateNonEmptyStringParam(req.body.address, 'Address');
+      validatedEmail = validationUtils.validateNonEmptyStringParam(req.body.email, 'Email');
+      validatedPhoneNumber = validationUtils.validateNonEmptyStringParam(req.body.phone_number, 'Phone Number');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
@@ -101,8 +100,8 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 
     let numericHotelId, validatedRoomTypeName;
     try {
-      numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
-      validatedRoomTypeName = validateNonEmptyStringParam(name, 'Room Type Name');
+      numericHotelId = validationUtils.validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
+      validatedRoomTypeName = validationUtils.validateNonEmptyStringParam(name, 'Room Type Name');
     } catch (error) {
       // The finally block will release the client
       return res.status(400).json({ error: error.message });
@@ -141,12 +140,12 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 
     let numericHotelId, numericFloor, validatedRoomNumber, numericCapacity, validatedRoomTypeString;
     try {
-      numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
-      numericFloor = validateNumericParam(String(floor), 'Floor');
-      validatedRoomNumber = validateNonEmptyStringParam(room_number, 'Room Number');
-      numericCapacity = validateNumericParam(String(capacity), 'Capacity');
+      numericHotelId = validationUtils.validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
+      numericFloor = validationUtils.validateNumericParam(String(floor), 'Floor');
+      validatedRoomNumber = validationUtils.validateNonEmptyStringParam(room_number, 'Room Number');
+      numericCapacity = validationUtils.validateNumericParam(String(capacity), 'Capacity');
       if (room_type_id === 0 && room_type) {
-        validatedRoomTypeString = validateNonEmptyStringParam(room_type, 'Room Type Name (string)');
+        validatedRoomTypeString = validationUtils.validateNonEmptyStringParam(room_type, 'Room Type Name (string)');
       }
     } catch (error) {
       // The finally block will release the client
@@ -201,7 +200,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 // GET
   const getHotels = async (req, res) => {
     try {
-      const hotels = await getAllHotels(req.requestId);
+      const hotels = await hotelModel.getAllHotels(req.requestId);
       res.json(hotels);
     } catch (error) {
       console.error('Error getting hotels:', error);
@@ -211,13 +210,13 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   const getHotelRoomTypes = async (req, res) => {
     let numericId;
     try {
-      numericId = validateNumericParam(req.params.id, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const hotels = await getAllHotelRoomTypesById(req.requestId, numericId);
+      const hotels = await hotelModel.getAllHotelRoomTypesById(req.requestId, numericId);
       res.json(hotels);
     } catch (error) {
       console.error('Error getting hotel room types:', error);
@@ -227,13 +226,13 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   const getHotelRooms = async (req, res) => {
     let numericId;
     try {
-      numericId = validateNumericParam(req.params.id, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const hotels = await getAllRoomsByHotelId(req.requestId, numericId);
+      const hotels = await hotelModel.getAllRoomsByHotelId(req.requestId, numericId);
       res.json(hotels);
     } catch (error) {
       console.error('Error getting hotel rooms:', error);
@@ -243,13 +242,13 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   const getBlockedRooms = async (req, res) => {
     let numericId;
     try {
-      numericId = validateNumericParam(req.params.id, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const blocked = await selectBlockedRooms(req.requestId, numericId);
+      const blocked = await hotelModel.selectBlockedRooms(req.requestId, numericId);
       res.json(blocked);
     } catch (error) {
       console.error('Error getting hotel blocked rooms:', error);
@@ -259,13 +258,13 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   const fetchHotelSiteController = async (req, res) => {
     let numericId;
     try {
-      numericId = validateNumericParam(req.params.id, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const hotel = await getHotelSiteController(req.requestId, numericId);
+      const hotel = await hotelModel.getHotelSiteController(req.requestId, numericId);
       res.json(hotel);
     } catch (error) {
       console.error('Error getting hotels:', error);
@@ -278,7 +277,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   const editHotel = async (req, res) => {
     let numericId;
     try {
-      numericId = validateNumericParam(req.params.id, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
@@ -289,18 +288,18 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     let validatedFormalName, validatedName, validatedAddress, validatedEmail, validatedPhoneNumber, validatedSortOrder;
     try {
       // numericId for req.params.id is already validated at the start of the function
-      validatedFormalName = validateNonEmptyStringParam(formal_name, 'Formal Name');
-      validatedName = validateNonEmptyStringParam(name, 'Name');
-      validatedAddress = validateNonEmptyStringParam(address, 'Address');
-      validatedEmail = validateNonEmptyStringParam(email, 'Email');
-      validatedPhoneNumber = validateNonEmptyStringParam(phone_number, 'Phone Number');
-      validatedSortOrder = validateIntegerParam(String(sort_order), 'Sort Order');
+      validatedFormalName = validationUtils.validateNonEmptyStringParam(formal_name, 'Formal Name');
+      validatedName = validationUtils.validateNonEmptyStringParam(name, 'Name');
+      validatedAddress = validationUtils.validateNonEmptyStringParam(address, 'Address');
+      validatedEmail = validationUtils.validateNonEmptyStringParam(email, 'Email');
+      validatedPhoneNumber = validationUtils.validateNonEmptyStringParam(phone_number, 'Phone Number');
+      validatedSortOrder = validationUtils.validateIntegerParam(String(sort_order), 'Sort Order');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const updatedHotel = await updateHotel(req.requestId, numericId, validatedFormalName, validatedName, postal_code, validatedAddress, validatedEmail, validatedPhoneNumber, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, validatedSortOrder, updated_by);
+      const updatedHotel = await hotelModel.updateHotel(req.requestId, numericId, validatedFormalName, validatedName, postal_code, validatedAddress, validatedEmail, validatedPhoneNumber, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, validatedSortOrder, updated_by);
       if (!updatedHotel) {
         return res.status(404).json({ message: 'Hotel not found' });
       }
@@ -313,7 +312,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   const editHotelSiteController = async (req, res) => {
     let numericId;
     try {
-      numericId = validateNumericParam(req.params.id, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
@@ -321,7 +320,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     const data = req.body;    
 
     try {
-      const updatedHotel = await updateHotelSiteController(req.requestId, numericId, data);
+      const updatedHotel = await hotelModel.updateHotelSiteController(req.requestId, numericId, data);
       if (!updatedHotel) {
         return res.status(404).json({ message: 'Hotel not found' });
       }
@@ -338,15 +337,15 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 
     let numericId, validatedName, numericHotelId;
     try {
-      numericId = validateNumericParam(idParam, 'Room Type ID');
-      validatedName = validateNonEmptyStringParam(name, 'Room Type Name');
-      numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(idParam, 'Room Type ID');
+      validatedName = validationUtils.validateNonEmptyStringParam(name, 'Room Type Name');
+      numericHotelId = validationUtils.validateNumericParam(hotelIdFromBody, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const updatedRoomType = await updateRoomType(req.requestId, numericId, validatedName, description, updated_by, numericHotelId);
+      const updatedRoomType = await hotelModel.updateRoomType(req.requestId, numericId, validatedName, description, updated_by, numericHotelId);
       if (!updatedRoomType) {
         return res.status(404).json({ message: 'Room type not found' });
       }
@@ -363,18 +362,18 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 
     let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, numericHotelId;
     try {
-      numericId = validateNumericParam(idParam, 'Room ID');
-      numericRoomTypeId = validateNumericParam(String(room_type_id), 'Room Type ID');
-      numericFloor = validateNumericParam(String(floor), 'Floor');
-      validatedRoomNumber = validateNonEmptyStringParam(room_number, 'Room Number');
-      numericCapacity = validateNumericParam(String(capacity), 'Capacity');
-      numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID');
+      numericId = validationUtils.validateNumericParam(idParam, 'Room ID');
+      numericRoomTypeId = validationUtils.validateNumericParam(String(room_type_id), 'Room Type ID');
+      numericFloor = validationUtils.validateNumericParam(String(floor), 'Floor');
+      validatedRoomNumber = validationUtils.validateNonEmptyStringParam(room_number, 'Room Number');
+      numericCapacity = validationUtils.validateNumericParam(String(capacity), 'Capacity');
+      numericHotelId = validationUtils.validateNumericParam(hotelIdFromBody, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const updatedRoom = await updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, updated_by, numericHotelId);
+      const updatedRoom = await hotelModel.updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, updated_by, numericHotelId);
       if (!updatedRoom) {
         return res.status(404).json({ message: 'Room not found' });
       }
@@ -394,9 +393,9 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     const client = await pool.connect();
 
     try {      
-      numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
-      validatedStartDate = validateDateStringParam(startDateParam, 'Start Date parameter');
-      validatedEndDate = validateDateStringParam(endDateParam, 'End Date parameter');
+      numericHotelId = validationUtils.validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
+      validatedStartDate = validationUtils.validateDateStringParam(startDateParam, 'Start Date parameter');
+      validatedEndDate = validationUtils.validateDateStringParam(endDateParam, 'End Date parameter');
 
       // If start and end dates are the same, increment end date by one day
       if (validatedStartDate === validatedEndDate) {
@@ -416,7 +415,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
           throw new Error('roomIds must be an array.');
         }
         for (const roomId of roomIds) {
-          validatedRoomIds.push(validateNumericParam(String(roomId), 'Room ID in roomIds array'));
+          validatedRoomIds.push(validationUtils.validateNumericParam(String(roomId), 'Room ID in roomIds array'));
         }
       }
 
@@ -424,7 +423,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         throw new Error('No valid rooms found for the specified hotel or no comment provided.');
       }      
             
-      const updatedRoom = await updateHotelCalendar(
+      const updatedRoom = await hotelModel.updateHotelCalendar(
         req.requestId, 
         numericHotelId, 
         validatedRoomIds, 
@@ -470,7 +469,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     }
 
     try {    
-        const unblock = await deleteBlockedRooms(req.requestId, blockId, user_id);
+        const unblock = await hotelModel.deleteBlockedRooms(req.requestId, blockId, user_id);
         
         if (!unblock) {
             console.warn('Blocked room not found for ID:', blockId);
@@ -508,7 +507,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 const getPlanExclusionSettingsController = async (req, res) => {
   let parsedId;
   try {
-    parsedId = validateNumericParam(req.params.hotel_id, 'Hotel ID');
+    parsedId = validationUtils.validateNumericParam(req.params.hotel_id, 'Hotel ID');
   } catch (error) {
     // If validateNumericParam throws because hotel_id is empty/null/undefined,
     // it will say "Hotel ID is required...". If it's not a positive int, it'll say that.
@@ -516,7 +515,7 @@ const getPlanExclusionSettingsController = async (req, res) => {
   }
 
   try {
-    const settings = await getPlanExclusionSettings(req.requestId, parsedId);
+    const settings = await hotelModel.getPlanExclusionSettings(req.requestId, parsedId);
     res.status(200).json(settings);
   } catch (error) {
     console.error('Error getting plan exclusion settings:', error);
@@ -528,7 +527,7 @@ const getPlanExclusionSettingsController = async (req, res) => {
 const updatePlanExclusionSettingsController = async (req, res) => {
   let parsedId;
   try {
-    parsedId = validateNumericParam(req.params.hotel_id, 'Hotel ID');
+    parsedId = validationUtils.validateNumericParam(req.params.hotel_id, 'Hotel ID');
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -540,7 +539,7 @@ const updatePlanExclusionSettingsController = async (req, res) => {
       return res.status(400).json({ message: 'global_plan_ids must be an array.' });
     }
 
-    await updatePlanExclusions(req.requestId, parsedId, global_plan_ids);
+    await hotelModel.updatePlanExclusions(req.requestId, parsedId, global_plan_ids);
     res.status(200).json({ message: 'Plan exclusions updated successfully' });
   } catch (error) {
     console.error('Error updating plan exclusion settings:', error);
@@ -551,13 +550,13 @@ const updatePlanExclusionSettingsController = async (req, res) => {
 const getRoomAssignmentOrderController = async (req, res) => {
   let numericId;
   try {
-    numericId = validateNumericParam(req.params.id, 'Hotel ID');
+    numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
 
   try {
-    const order = await getRoomAssignmentOrder(req.requestId, numericId);
+    const order = await hotelModel.getRoomAssignmentOrder(req.requestId, numericId);
     res.json(order);
   } catch (error) {
     console.error('Error getting room assignment order:', error);
@@ -568,7 +567,7 @@ const getRoomAssignmentOrderController = async (req, res) => {
 const updateRoomAssignmentOrderController = async (req, res) => {
   let numericId;
   try {
-    numericId = validateNumericParam(req.params.id, 'Hotel ID');
+    numericId = validationUtils.validateNumericParam(req.params.id, 'Hotel ID');
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -581,7 +580,7 @@ const updateRoomAssignmentOrderController = async (req, res) => {
   }
 
   try {
-    await updateRoomAssignmentOrder(req.requestId, numericId, rooms, userId);
+    await hotelModel.updateRoomAssignmentOrder(req.requestId, numericId, rooms, userId);
     res.status(200).json({ message: 'Room assignment order updated successfully.' });
   } catch (error) {
     console.error('Error updating room assignment order:', error);
