@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
 async function findClientSuggestionsByHotelAndTerm(requestId, hotelId, searchTerm) {
   const pool = getPool(requestId);
@@ -75,4 +75,4 @@ async function findClientSuggestionsByHotelAndTerm(requestId, hotelId, searchTer
 
 module.exports = {
   findClientSuggestionsByHotelAndTerm,
-}; 
+};

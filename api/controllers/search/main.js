@@ -1,3 +1,5 @@
+const searchModels = require('../../models/search');
+
 /**
  * Convert text to different Japanese writing systems
  */
@@ -10,9 +12,7 @@ const convertTextEndpoint = async (req, res) => {
     }
 
     // Dynamic import of ES module
-    const { convertText, convertToRomaji } = await import('../utils/japaneseUtils.mjs');
-    
-    let result;
+    const { convertText, convertToRomaji } = await import('../../utils/japaneseUtils.mjs');
     
     switch (to) {
       case 'hiragana':
@@ -44,7 +44,7 @@ const getPhoneticVariants = async (req, res) => {
     }
 
     // Dynamic import of ES module
-    const { convertText, convertToRomaji } = await import('../utils/japaneseUtils.mjs');
+    const { convertText, convertToRomaji } = await import('../../utils/japaneseUtils.mjs');
     
     const variants = new Set([text]);
     
@@ -84,7 +84,7 @@ const getPhoneticVariants = async (req, res) => {
   }
 };
 
-const SearchModel = require('../models/search');
+
 
 /**
  * Provide search suggestions (placeholder)
@@ -95,7 +95,7 @@ const getSuggestions = async (req, res) => {
   const searchTerm = query ? query.trim() : '';
 
   try {
-    const rows = await SearchModel.findClientSuggestionsByHotelAndTerm(req.requestId, hotelId, searchTerm);
+    const rows = await searchModels.findClientSuggestionsByHotelAndTerm(req.requestId, hotelId, searchTerm);
 
     const suggestions = rows.map(row => ({
       client_id: row.client_id,

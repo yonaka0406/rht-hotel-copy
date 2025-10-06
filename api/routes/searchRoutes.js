@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/authMiddleware');
-const searchController = require('../controllers/searchController');
+const searchControllers = require('../controllers/search');
 
 // Text conversion endpoints for search functionality
-router.post('/convert-text', authMiddleware, searchController.convertText);
-router.post('/phonetic-variants', authMiddleware, searchController.getPhoneticVariants);
-router.post('/suggestions/:hotelId', authMiddleware, searchController.getSuggestions);
-router.post('/reservations', authMiddleware, searchController.searchReservations);
+router.post('/convert-text', authMiddleware, searchControllers.convertText);
+router.post('/phonetic-variants', authMiddleware, searchControllers.getPhoneticVariants);
+router.post('/suggestions/:hotelId', authMiddleware, searchControllers.getSuggestions);
+router.post('/reservations', authMiddleware, searchControllers.searchReservations);
 
 module.exports = router;

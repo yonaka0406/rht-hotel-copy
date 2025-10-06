@@ -1,0 +1,1 @@
+// This file will contain write operations for the search model.
