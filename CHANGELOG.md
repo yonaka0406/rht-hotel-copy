@@ -507,8 +507,19 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.20] - 2025-10-06
+
+- Bugfix: Fixed invoice number not appearing in downloaded PDF files.
+- Bugfix: Fixed gender selection for OTA clients to use the correct XML fields.
+- Feature: Added client name to invoice PDF files for better identification.
+- Feature: Added breakdown of forecast by plan for comparison in the reports.
+- Feature: Added Admin panel validation screen to detect and manage empty reservations and double bookings.
+
+---
+
 ## Version History
 
+- **1.1.19** (2025-10-01) - Fixed plan price rounding issues and improved Excel roster to show multiple rooms per reservation.
 - **1.1.18** (2025-09-29) - Introduced Excel roster downloads, default parking for OTA reservations, check-out cancellation, and new reporting metrics for length of stay. Also added an override for plan price rounding.
 - **1.1.17** (2025-09-24) - Enhanced dashboard with check-in/out statistics and gender breakdown. Added static calendar view and improved room indicators with guest information. Fixed meal count export and parking calendar spot availability.
 - **1.1.16** (2025-09-19) - Enhanced reservation management with improved guest handling and data persistence. Added comprehensive reporting features including Channel and Payment Timing reports, and resolved meal count report date issues.

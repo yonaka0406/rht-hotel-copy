@@ -446,6 +446,14 @@
         { "type": "feature", "description": "レポートモジュールに平均滞在日数と予約者区分の分布を表示する新しいメトリクスを追加しました。" },
         { "type": "feature", "description": "プラン料金計算の丸め処理を上書きする機能を追加" }
       ]      
+    },
+    {
+      "version": "1.1.19",
+      "date": "2025-10-01",
+      "changes": [
+        { "type": "feature", "description": "`recalculatePlanPrice`関数をリファクタリングし、`overrideRounding`のデフォルトを`false`に設定すると共に、内部呼び出しの不具合を修正しました。" },
+        { "type": "bugfix", "description": "チェックインに基づくエクセル名簿で、1予約あたり複数部屋が表示されるように修正しました。" }
+      ]      
     }
   ],
   "backlog": [
