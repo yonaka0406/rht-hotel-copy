@@ -243,6 +243,20 @@ const selectCustomerID = async (requestId, clientId, customerId) => {
     throw new Error('Database error');
   }
 };
+const getMaxCustomerID = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT MAX(customer_id) as max_customer_id FROM clients;
+  `;
+  try {
+    const result = await pool.query(query);
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error getting max customer ID:', err);
+    throw new Error('Database error');
+  }
+};
+
 const selectClientGroups = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
@@ -1165,6 +1179,7 @@ module.exports = {
   selectClient,
   selectGroup,
   selectCustomerID,
+  getMaxCustomerID,
   selectClientGroups,
   addClientByName,
   addNewClient,

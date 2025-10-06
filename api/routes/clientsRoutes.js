@@ -10,6 +10,7 @@ router.get('/client/group/:id', authMiddleware, clientsController.getGroup);
 router.get('/client/name/:name', authMiddleware, clientsController.getConvertedName);
 router.get('/client/reservation/history/:id', authMiddleware, clientsController.getClientReservations);
 router.get('/client/customer-id/:clientId/:customerId', authMiddleware, clientsController.getCustomerID);
+router.get('/clients/max-customer-id', authMiddleware, clientsController.getMaxCustomerID);
 router.get('/client/groups/all', authMiddleware, clientsController.getClientGroups);
 router.post('/client/basic', authMiddlewareCRUDAccess, clientsController.createClientBasic);
 router.post('/client/new', authMiddlewareCRUDAccess, clientsController.createClient);

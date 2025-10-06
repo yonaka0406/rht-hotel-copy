@@ -127,9 +127,9 @@
                             />                                
                         </div>
                         <div class="field col-span-1">
-                            <FloatLabel>
-                                <InputNumber v-model="client.customer_id" :min="0" fluid />
-                                <label>顧客ID</label>
+                            <FloatLabel>                                
+                                <InputNumber v-model="client.customer_id" :min="0" fluid :placeholder="`次のID: ${maxCustomerId + 1}`" />
+                                <label>顧客ID</label>                                
                             </FloatLabel>
                         </div>
                         <div class="field col-span-1 flex items-center">
@@ -279,7 +279,7 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { groups, selectedClient, selectedClientGroup, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup } = useClientStore();
+    const { groups, selectedClient, selectedClientGroup, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup, fetchMaxCustomerId, maxCustomerId } = useClientStore();
     import { useCRMStore } from '@/composables/useCRMStore';
     const { clientImpediments } = useCRMStore();
 
@@ -454,6 +454,7 @@
             
             await fetchClient(clientId.value);
             await fetchClientGroups();
+            await fetchMaxCustomerId();
             
             client.value = selectedClient.value.client;
             selectedGroupId.value = client.value.client_group_id;

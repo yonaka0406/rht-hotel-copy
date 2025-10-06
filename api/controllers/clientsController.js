@@ -80,6 +80,16 @@ const getCustomerID = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getMaxCustomerID = async (req, res) => {
+  try {
+    const maxId = await clientsModel.getMaxCustomerID(req.requestId);
+    res.status(200).json(maxId);
+  } catch (error) {
+    console.error('Error getting max customer ID:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const getClientGroups = async (req, res) => {
       
   try{
@@ -446,7 +456,6 @@ const handleDeleteImpediment = async (req, res) => {
   }
 };
 
-
 module.exports = { 
   getClients, 
   getClient,
@@ -454,6 +463,7 @@ module.exports = {
   getConvertedName,
   getClientReservations,
   getCustomerID,
+  getMaxCustomerID,
   getClientGroups,
   createClientBasic, 
   createClient, 
@@ -470,5 +480,5 @@ module.exports = {
   handleCreateImpediment,
   handleGetImpedimentsByClientId,
   handleUpdateImpediment,
-  handleDeleteImpediment,
+  handleDeleteImpediment,  
 };

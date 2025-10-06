@@ -12,6 +12,7 @@ const relatedCompanies = ref([]);
 const isLoadingRelatedCompanies = ref(false);
 const commonRelationshipPairs = ref([]);
 const isLoadingCommonRelationshipPairs = ref(false);
+const maxCustomerId = ref(null);
 
 export function useClientStore() {
     
@@ -577,6 +578,23 @@ export function useClientStore() {
             isLoadingCommonRelationshipPairs.value = false;
         }
     }
+
+    async function fetchMaxCustomerId() {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/clients/max-customer-id`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch max customer ID');
+            }
+            const data = await response.json();
+            maxCustomerId.value = data.max_customer_id;
+        } catch (error) {
+            console.error('Error fetching max customer ID:', error);
+        }
+    }
     
     return {
         groups,
@@ -590,6 +608,7 @@ export function useClientStore() {
         isLoadingRelatedCompanies,
         commonRelationshipPairs,
         isLoadingCommonRelationshipPairs,
+        maxCustomerId,
         fetchAllClientsForFiltering, // add new function
         setClientsIsLoading,
         fetchClients,
@@ -614,6 +633,7 @@ export function useClientStore() {
         addClientRelationship,
         deleteClientRelationship,
         updateClientRelationship,
-        fetchCommonRelationshipPairs,        
+        fetchCommonRelationshipPairs,   
+        fetchMaxCustomerId,     
     };
 }
