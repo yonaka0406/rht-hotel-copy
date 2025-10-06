@@ -1,15 +1,10 @@
 const { getPool } = require('../config/database');
 const waitlistModel = require('../models/waitlist');
-const {
-    validateNumericParam,
-    validateDateStringParam,
-    validateIntegerParam,
-    validateNonEmptyStringParam
-} = require('../utils/validationUtils');
-const { selectClient } = require('../models/clients'); // To check if client exists
-const { getHotelByID } = require('../models/hotel'); // To check if hotel exists
-const { getRoomTypeById } = require('../models/hotel'); // To check if room type exists
+const validationUtils = require('../utils/validationUtils');
+const clientModel = require('../models/clients'); // To check if client exists
+const hotelModel = require('../models/hotel'); // To check if hotel exists
 const logger = require('../config/logger');
+const crypto = require('crypto');
 
 const waitlistController = {
     /**
@@ -29,19 +24,19 @@ const waitlistController = {
             } = req.body;
 
             // --- Basic Input Validation ---
-            const validatedClientId = validateNonEmptyStringParam(client_id, 'Client ID');
-            const validatedHotelId = validateNumericParam(hotel_id, 'Hotel ID');
+            const validatedClientId = validationUtils.validateNonEmptyStringParam(client_id, 'Client ID');
+            const validatedHotelId = validationUtils.validateNumericParam(hotel_id, 'Hotel ID');
             let validatedRoomTypeId = null;
             if (room_type_id !== undefined && room_type_id !== null && room_type_id !== '') {
-                validatedRoomTypeId = validateNumericParam(room_type_id, 'Room Type ID');
-                const roomType = await getRoomTypeById(requestId, validatedRoomTypeId, validatedHotelId);
+                validatedRoomTypeId = validationUtils.validateNumericParam(room_type_id, 'Room Type ID');
+                const roomType = await hotelModel.getRoomTypeById(requestId, validatedRoomTypeId, validatedHotelId);
                 if (!roomType) {
                     return res.status(404).json({ error: `Room type with ID ${validatedRoomTypeId} not found for hotel ${validatedHotelId}.` });
                 }
             }
-            const validatedCheckIn = validateDateStringParam(requested_check_in_date, 'Requested Check-in Date');
-            const validatedCheckOut = validateDateStringParam(requested_check_out_date, 'Requested Check-out Date');
-            const validatedNumGuests = validateIntegerParam(number_of_guests, 'Number of Guests');
+            const validatedCheckIn = validationUtils.validateDateStringParam(requested_check_in_date, 'Requested Check-in Date');
+            const validatedCheckOut = validationUtils.validateDateStringParam(requested_check_out_date, 'Requested Check-out Date');
+            const validatedNumGuests = validationUtils.validateIntegerParam(number_of_guests, 'Number of Guests');
 
             if (!['email', 'phone'].includes(communication_preference)) {
                 return res.status(400).json({ error: 'Invalid communication preference. Must be "email" or "phone".' });
@@ -49,7 +44,7 @@ const waitlistController = {
             let validatedContactEmail = null;
             let validatedContactPhone = null;
             if (communication_preference === 'email') {
-                validatedContactEmail = validateNonEmptyStringParam(contact_email, 'Contact Email');
+                validatedContactEmail = validationUtils.validateNonEmptyStringParam(contact_email, 'Contact Email');
             }
             if (communication_preference === 'phone') {
                 if (!contact_phone || String(contact_phone).trim() === '') {
@@ -68,13 +63,13 @@ const waitlistController = {
                 return res.status(400).json({ error: 'Invalid preferred smoking status. Must be "any", "smoking", or "non_smoking".' });
             }
 
-            const clientObj = await selectClient(requestId, validatedClientId);
+            const clientObj = await clientModel.selectClient(requestId, validatedClientId);
             const client = clientObj && clientObj.client;
             if (!client) {
                 return res.status(404).json({ error: `Client with ID ${validatedClientId} not found.` });
             }
 
-            const hotel = await getHotelByID(requestId, validatedHotelId);
+            const hotel = await hotelModel.getHotelByID(requestId, validatedHotelId);
             if (!hotel) {
                 return res.status(404).json({ error: `Hotel with ID ${validatedHotelId} not found.` });
             }
@@ -129,7 +124,7 @@ const waitlistController = {
         const { page = 1, size = 20, status, startDate, endDate, roomTypeId } = req.query;
 
         // Validate hotelId (basic)
-        const validatedHotelId = validateNumericParam(hotelId, 'Hotel ID');
+        const validatedHotelId = validationUtils.validateNumericParam(hotelId, 'Hotel ID');
         if (validatedHotelId === null || isNaN(validatedHotelId)) { // validateNumericParam returns null on error
              return res.status(400).json({ error: 'Invalid Hotel ID parameter.' });
         }
@@ -236,8 +231,7 @@ const waitlistController = {
             }
 
             // Get client details
-            const { selectClient } = require('../models/clients');
-            const clientObj = await selectClient(requestId, entry.client_id, client); // Pass client
+            const clientObj = await clientModel.selectClient(requestId, entry.client_id, client); // Pass client
             const clientDetails = clientObj ? clientObj.client : null;
             if (!clientDetails) {
                 await client.query('ROLLBACK');
@@ -245,8 +239,7 @@ const waitlistController = {
             }
 
             // Get hotel details
-            const { getHotelByID } = require('../models/hotel');
-            const hotel = await getHotelByID(requestId, entry.hotel_id, client); // Pass client
+            const hotel = await hotelModel.getHotelByID(requestId, entry.hotel_id, client); // Pass client
             if (!hotel) {
                 await client.query('ROLLBACK');
                 return res.status(404).json({ error: 'Hotel not found.' });
@@ -392,7 +385,7 @@ const waitlistController = {
     /**
      * POST /api/waitlist/:id/manual-notify - Send manual offer email
      */
-    async sendManualNotificationEmail(req, res) {
+    async sendEmailNotification(req, res) {
         const { requestId } = req;
         const { id: entryId } = req.params;
         const userId = req.user.id; // From authMiddleware
@@ -423,8 +416,7 @@ const waitlistController = {
             const confirmationToken = crypto.randomBytes(32).toString('hex');
             const tokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // E.g., 48 hours expiry
 
-            const { selectClient } = require('../models/clients');
-            const clientResult = await selectClient(requestId, entry.client_id, client); // Pass client
+            const clientResult = await clientModel.selectClient(requestId, entry.client_id, client); // Pass client
             const clientDetails = clientResult ? clientResult.client : null;
             if (!clientDetails) {
                 await client.query('ROLLBACK');
@@ -432,8 +424,7 @@ const waitlistController = {
             }
             const clientName = clientDetails.name_kanji || clientDetails.name_kana || clientDetails.name || 'お客様';
 
-            const { getHotelByID, getRoomTypeById } = require('../models/hotel');
-            const hotel = await getHotelByID(requestId, entry.hotel_id, client); // Pass client
+            const hotel = await hotelModel.getHotelByID(requestId, entry.hotel_id, client); // Pass client
             if (!hotel) {
                 await client.query('ROLLBACK');
                 return res.status(404).json({ error: `Hotel with ID ${entry.hotel_id} not found.` });
@@ -442,7 +433,7 @@ const waitlistController = {
 
             let roomTypeName = "指定なし";
             if (entry.room_type_id) {
-                const roomType = await getRoomTypeById(requestId, entry.room_type_id, entry.hotel_id, client); // Pass client
+                const roomType = await hotelModel.getRoomTypeById(requestId, entry.room_type_id, entry.hotel_id, client); // Pass client
                 if (roomType) {
                     roomTypeName = roomType.name;
                 } else {
@@ -514,6 +505,69 @@ const waitlistController = {
     },
 
     /**
+     * POST /api/waitlist/:id/phone-notify - Mark entry as notified via phone
+     */
+    async sendPhoneNotification(req, res) {
+        const { requestId } = req;
+        const { id: entryId } = req.params;
+        const userId = req.user.id; // From authMiddleware
+
+        if (!entryId) {
+            return res.status(400).json({ error: 'Waitlist entry ID is required.' });
+        }
+
+        const client = await getPool(requestId).connect(); // Acquire a client for the transaction
+
+        try {
+            await client.query('BEGIN'); // Start transaction
+
+            const entry = await waitlistModel.findWaitlistEntryById(requestId, entryId, client); // Pass client
+            if (!entry) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: 'Waitlist entry not found.' });
+            }
+
+            if (entry.status !== 'waiting') {
+                // If already notified, confirmed, etc., we might want to prevent re-notifying via phone
+                // For now, allow it to update to 'notified' if it's not already 'notified'
+            }
+            if (entry.status === 'notified') {
+                await client.query('ROLLBACK');
+                return res.status(200).json(entry); // Already notified, return current entry
+            }
+
+            // Generate a mock token and an immediately expired token_expires_at
+            // to satisfy the chk_token_expiry constraint for phone notifications.
+            const confirmationToken = crypto.randomBytes(32).toString('hex');
+            const tokenExpiresAt = new Date(Date.now() - 1000); // Immediately expired
+
+            const updatedEntry = await waitlistModel.updateEntryStatus(requestId, entryId, 'notified', {
+                confirmation_token: confirmationToken,
+                token_expires_at: tokenExpiresAt.toISOString(),
+            }, userId, client); // Pass client with mock token/expiry
+
+            if (!updatedEntry) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: 'Failed to update waitlist entry after phone notification, entry not found or update failed.' });
+            }
+
+            await client.query('COMMIT'); // Commit transaction
+
+            return res.status(200).json(updatedEntry);
+
+        } catch (error) {
+            await client.query('ROLLBACK'); // Rollback on error
+            console.error(`[${requestId}] Error in sendPhoneNotification for entry ${entryId}:`, error);
+            if (error.message.includes('not found') || error.message.includes('Invalid status')) {
+                return res.status(400).json({ error: error.message });
+            }
+            return res.status(500).json({ error: 'Failed to process phone notification.' });
+        } finally {
+            client.release(); // Release the client
+        }
+    },
+
+    /**
      * PUT /api/waitlist/:id/cancel - Cancel a waitlist entry
      */
     async cancelEntry(req, res) {
@@ -559,7 +613,7 @@ const waitlistController = {
         const { page = 1, size = 20, filters = {} } = req.body;
 
         // Validate hotelId (basic)
-        const validatedHotelId = validateNumericParam(hotelId, 'Hotel ID');
+        const validatedHotelId = validationUtils.validateNumericParam(hotelId, 'Hotel ID');
         if (validatedHotelId === null || isNaN(validatedHotelId)) {
             return res.status(400).json({ error: 'Invalid Hotel ID parameter.' });
         }

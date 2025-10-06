@@ -160,18 +160,24 @@ const updateEntryStatus = async (requestId, id, status, additionalData = {}, use
         let queryValues = [status, userId];
         let valueCounter = 3;
 
-        if (status === 'notified') {
+        let finalConfirmationToken = null;
+        let finalTokenExpiresAt = null;
+
+        if (status === 'notified' && confirmation_token !== undefined) { // If status is notified AND a token is explicitly provided
             if (!confirmation_token || !token_expires_at) {
-                throw new Error('Confirmation token and expiry are required when status is "notified".');
+                throw new Error('Confirmation token and expiry are required when status is "notified" and a token is intended.');
             }
-            querySetters.push(`confirmation_token = $${valueCounter++}`);
-            queryValues.push(confirmation_token);
-            querySetters.push(`token_expires_at = $${valueCounter++}`);
-            queryValues.push(token_expires_at);
-        } else {
-            querySetters.push(`confirmation_token = NULL`);
-            querySetters.push(`token_expires_at = NULL`);
+            finalConfirmationToken = confirmation_token;
+            finalTokenExpiresAt = token_expires_at;
         }
+        // If status is not 'notified', or if it is 'notified' but no token is provided,
+        // then finalConfirmationToken and finalTokenExpiresAt remain null.
+
+        // Always push these two setters, ensuring they are explicitly set.
+        querySetters.push(`confirmation_token = $${valueCounter++}`);
+        queryValues.push(finalConfirmationToken);
+        querySetters.push(`token_expires_at = $${valueCounter++}`);
+        queryValues.push(finalTokenExpiresAt);
 
         // Handle notes update
         if (notes) {
@@ -204,7 +210,7 @@ const updateEntryStatus = async (requestId, id, status, additionalData = {}, use
         if (err.constraint) {
              throw new Error(`Database constraint violation: ${err.constraint} while updating status.`);
         }
-        throw new Error('Database error occurred while updating waitlist entry status.');
+        throw err; // Re-throw the original error for better debugging
     } finally {
         if (isTransactionOwner) {
             client.release();

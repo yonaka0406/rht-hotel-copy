@@ -65,7 +65,7 @@ import axios from 'axios';
 // Tooltip directive is globally registered in main.js, so no need to import here.
 
 const confirm = useConfirm();
-const { entries, loading, pagination, fetchWaitlistEntries, sendManualNotification, cancelEntry } = useWaitlistStore();
+const { entries, loading, pagination, fetchWaitlistEntries, sendEmailNotification, sendPhoneNotification, cancelEntry } = useWaitlistStore();
 const { selectedHotelId } = useHotelStore(); // This is a ref
 
 const props = defineProps({
@@ -172,23 +172,7 @@ const getMainActionSeverity = (entry) => {
 
 const getActionItems = (entry) => {
   const items = [];
-  const disabled = vacancyStatus.value[entry.id] === false;
-  
-  if (entry.communication_preference === 'email') {
-    items.push({
-      label: 'メール送信',
-      icon: 'pi pi-envelope',
-      command: () => sendManualEmail(entry),
-      disabled: true // Disable email sending
-    });
-  } else if (entry.communication_preference === 'phone') {
-    items.push({
-      label: `電話番号: ${entry.contact_phone || '未設定'}`,
-      icon: 'pi pi-phone',
-      command: () => showPhoneNumber(entry),
-      disabled: false
-    });
-  }
+  // The main email/phone action is now handled by handleMainAction, so it's not part of the dropdown.
   items.push({
     label: 'キャンセル',
     icon: 'pi pi-times',
@@ -216,7 +200,7 @@ const sendManualEmail = (entry) => {
       if (!entry.id) {
         return;
       }
-      const result = await sendManualNotification(entry.id);
+      const result = await sendEmailNotification(entry.id);
       if (result && selectedHotelId.value) {
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
       }
@@ -248,7 +232,7 @@ const showPhoneNumber = (entry) => {
         return;
       }
       // Use the same API as manual notification to set status to notified
-      const result = await sendManualNotification(entry.id);
+      const result = await sendPhoneNotification(entry.id);
       if (result && selectedHotelId.value) {
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
       }
@@ -313,10 +297,12 @@ const getStatusTagSeverity = (status) => {
 
 // Add this method in <script setup>
 const handleMainAction = (entry) => {
-  const actions = getActionItems(entry);
-  if (actions.length > 0 && typeof actions[0].command === 'function' && !actions[0].disabled) {
-    actions[0].command();
+  if (entry.communication_preference === 'email') {
+    sendManualEmail(entry);
+  } else if (entry.communication_preference === 'phone') {
+    showPhoneNumber(entry);
   }
+  // No action if neither, or if other main action is desired.
 };
 
 // TODO: Fetch actual waitlist entries when the modal becomes visible,

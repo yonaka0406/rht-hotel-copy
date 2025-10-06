@@ -92,7 +92,7 @@ export function useWaitlistStore() {
          * @param {string} entryId - The ID of the waitlist entry.
          * @returns {Promise<object|null>} The updated entry object or null if an error occurred.
          */
-        async sendManualNotification(entryId) {
+        async sendEmailNotification(entryId) {
             state.loading = true;
             state.error = null;
             try {
@@ -134,6 +134,58 @@ export function useWaitlistStore() {
                     severity: 'error',
                     summary: 'エラー',
                     detail: err.message || '手動通知メールの送信中にエラーが発生しました。',
+                    life: 5000
+                });
+                return null;
+            } finally {
+                state.loading = false;
+            }
+        },
+
+        /**
+         * Marks a waitlist entry as notified via phone contact.
+         * @param {string} entryId - The ID of the waitlist entry.
+         * @returns {Promise<object|null>} The updated entry object or null if an error occurred.
+         */
+        async sendPhoneNotification(entryId) {
+            state.loading = true;
+            state.error = null;
+            try {
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    throw new Error('認証トークンが見つかりません。');
+                }
+
+                const response = await fetch(`/api/waitlist/${entryId}/phone-notify`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    const errorMessage = responseData.error || `電話通知の送信に失敗しました。ステータス: ${response.status}`;
+                    throw new Error(errorMessage);
+                }
+
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: '電話通知の送信処理を開始しました。', // Phone notification process initiated.
+                    life: 3000
+                });
+                return responseData;
+
+            } catch (err) {
+                console.error('Error sending phone notification:', err);
+                state.error = err.message;
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: err.message || '電話通知の送信中にエラーが発生しました。',
                     life: 5000
                 });
                 return null;

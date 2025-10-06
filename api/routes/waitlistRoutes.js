@@ -26,7 +26,10 @@ router.get('/waitlist/confirm/:token', waitlistController.getConfirmationDetails
 router.post('/waitlist/confirm/:token', waitlistController.confirmReservation);
 
 // POST /waitlist/:id/manual-notify - Trigger manual email notification for an entry
-router.post('/waitlist/:id/manual-notify', authMiddleware, waitlistController.sendManualNotificationEmail);
+router.post('/waitlist/:id/manual-notify', authMiddleware, waitlistController.sendEmailNotification);
+
+// POST /waitlist/:id/phone-notify - Mark entry as notified via phone
+router.post('/waitlist/:id/phone-notify', authMiddleware, waitlistController.sendPhoneNotification);
 
 // PUT /waitlist/:id/cancel - Cancel a waitlist entry (requires auth)
 router.put('/waitlist/:id/cancel', authMiddleware, waitlistController.cancelEntry);
