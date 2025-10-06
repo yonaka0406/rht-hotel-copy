@@ -53,6 +53,40 @@ RHT Hotel is a comprehensive hotel property management system designed to stream
 - **Component Selection:** Use `<Select>` for dropdowns and `<DatePicker>` for dates (not `<Dropdown>` or `<Calendar>`).
 - **Confirmation Dialogs:** Use `useConfirm()` with `acceptProps` and `rejectProps` for styling all confirmation dialogs.
 - **Client Name Display:** Display client names in the order of `name_kanji`, `name_kana`, `name` (using `COALESCE` in SQL).
+- **Backend Model Organization:** To keep model files focused and scalable, they should be split into read (query) and write (command) operations.
+  - **Structure:** For a model like `reservations`, create a directory `api/models/reservations/`.
+    - `read.js`: Contains only `SELECT` queries that do not alter data.
+    - `write.js`: Contains `INSERT`, `UPDATE`, and `DELETE` operations.
+    - `index.js`: Imports from `read.js` and `write.js` and exports a single, aggregated module. This prevents breaking changes in controllers.
+  - **Transactions:** For operations requiring both a write and a subsequent read within the same transaction (e.g., creating a record and then fetching it), the read function must be designed to accept an optional database client. The write function will manage the transaction and pass its client to the read function.
+    ```javascript
+    // In read.js - note the optional dbClient parameter
+    const findById = async (requestId, id, dbClient = null) => {
+      const client = dbClient || await pool.get(requestId).connect();
+      try {
+        // ... query logic ...
+      } finally {
+        if (!dbClient) client.release();
+      }
+    };
+
+    // In write.js - pass the transaction client to the read function
+    const createRecord = async (requestId, data) => {
+      const client = await pool.get(requestId).connect();
+      try {
+        await client.query('BEGIN');
+        const result = await client.query('INSERT...', []);
+        const newRecord = await findById(requestId, result.rows[0].id, client); // Pass client here
+        await client.query('COMMIT');
+        return newRecord;
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+    };
+    ```
 - **Read-Only UI:** Users without `crud_ok` permissions will see a red '閲覧者' tag in the UI and will be blocked from creating reservations.
 
 ## 5. Setup & Environment
