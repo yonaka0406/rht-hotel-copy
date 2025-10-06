@@ -1,4 +1,5 @@
-const { WaitlistEntry } = require('../models/waitlist');
+const { getPool } = require('../config/database');
+const waitlistModel = require('../models/waitlist');
 const {
     validateNumericParam,
     validateDateStringParam,
@@ -93,7 +94,7 @@ const waitlistController = {
                 preferred_smoking_status: preferred_smoking_status || 'any'
             };
 
-            const newWaitlistEntry = await WaitlistEntry.create(requestId, entryData, userId);
+            const newWaitlistEntry = await waitlistModel.createEntry(requestId, entryData, userId);
             return res.status(201).json(newWaitlistEntry);
 
         } catch (error) {
@@ -146,7 +147,7 @@ const waitlistController = {
 
             // TODO: Add permission check: Validate user has access to this hotel's waitlist
 
-            const result = await WaitlistEntry.getByHotel(requestId, validatedHotelId, filters);
+            const result = await waitlistModel.getWaitlistEntriesByHotel(requestId, validatedHotelId, filters);
             return res.status(200).json(result);
 
         } catch (error) {
@@ -170,7 +171,7 @@ const waitlistController = {
 
         try {
             // Find waitlist entry by token
-            const entry = await WaitlistEntry.findByToken(requestId, token, true);
+            const entry = await waitlistModel.findWaitlistEntryByToken(requestId, token, true);
             
             if (!entry) {
                 return res.status(404).json({ error: 'Invalid or expired confirmation token.' });
@@ -213,40 +214,50 @@ const waitlistController = {
     async confirmReservation(req, res) {
         const { requestId } = req;
         const { token } = req.params;
+        const userId = req.user.id; // Assuming req.user is populated by authMiddleware
 
-        if (!token) {
-            return res.status(400).json({ error: 'Confirmation token is required.' });
-        }
-
+                    if (!token) {
+                        return res.status(400).json({ error: 'Confirmation token is required.' });
+                    }
+                    const client = await getPool(requestId).connect(); // Acquire a client for the transaction
         try {
+            await client.query('BEGIN'); // Start transaction
+
             // Find waitlist entry by token
-            const entry = await WaitlistEntry.findByToken(requestId, token, true);
+            const entry = await waitlistModel.findWaitlistEntryByToken(requestId, token, true, client); // Pass client
             if (!entry) {
+                await client.query('ROLLBACK');
                 return res.status(400).json({ error: 'Invalid or expired token.' });
             }
 
             if (entry.status !== 'notified') {
+                await client.query('ROLLBACK');
                 return res.status(400).json({ error: 'Waitlist entry is not in notified status.' });
             }
 
             // Get client details
-            const clientResult = await selectClient(requestId, entry.client_id);
-            const client = clientResult ? clientResult.client : null;
-            if (!client) {
+            const { selectClient } = require('../models/clients');
+            const clientObj = await selectClient(requestId, entry.client_id, client); // Pass client
+            const clientDetails = clientObj ? clientObj.client : null;
+            if (!clientDetails) {
+                await client.query('ROLLBACK');
                 return res.status(404).json({ error: 'Client not found.' });
             }
 
             // Get hotel details
-            const hotel = await getHotelByID(requestId, entry.hotel_id);
+            const { getHotelByID } = require('../models/hotel');
+            const hotel = await getHotelByID(requestId, entry.hotel_id, client); // Pass client
             if (!hotel) {
+                await client.query('ROLLBACK');
                 return res.status(404).json({ error: 'Hotel not found.' });
             }
 
             // Import reservation creation functions
-            const { 
-                addReservationHold, 
-                addReservationDetail, 
-                selectAvailableRooms 
+            const {
+                addReservationHold,
+                addReservationDetail,
+                selectAvailableRooms,
+                updateReservationComment
             } = require('../models/reservations');
 
             // Create reservation data
@@ -256,15 +267,15 @@ const waitlistController = {
                 check_in: entry.requested_check_in_date,
                 check_out: entry.requested_check_out_date,
                 number_of_people: entry.number_of_guests,
-                created_by: entry.created_by, // Use waitlist entry creator
-                updated_by: entry.created_by
+                created_by: userId, // Use current user ID for creation
+                updated_by: userId
             };
 
             // Create the reservation
-            const newReservation = await addReservationHold(requestId, reservationData);
+            const newReservation = await addReservationHold(requestId, reservationData, client); // Pass client
 
             // Get available rooms for the reservation period
-            const availableRooms = await selectAvailableRooms(requestId, entry.hotel_id, entry.requested_check_in_date, entry.requested_check_out_date);
+            const availableRooms = await selectAvailableRooms(requestId, entry.hotel_id, entry.requested_check_in_date, entry.requested_check_out_date, client); // Pass client
 
             // Filter rooms by room type if specified
             let availableRoomsFiltered = availableRooms;
@@ -273,6 +284,7 @@ const waitlistController = {
             }
 
             if (availableRoomsFiltered.length === 0) {
+                await client.query('ROLLBACK');
                 return res.status(400).json({ error: 'No available rooms for the specified period.' });
             }
 
@@ -331,8 +343,8 @@ const waitlistController = {
                         plan_type: 'per_room',
                         number_of_people: peopleAssigned,
                         price: 0,
-                        created_by: entry.created_by,
-                        updated_by: entry.created_by
+                        created_by: userId,
+                        updated_by: userId
                     });
                 });
 
@@ -342,23 +354,24 @@ const waitlistController = {
 
             // Add reservation details to the database
             for (const detail of reservationDetails) {
-                await addReservationDetail(requestId, detail);
+                await addReservationDetail(requestId, detail, client); // Pass client
             }
 
             // Add waitlist notes to reservation comments if they exist
             if (entry.notes && entry.notes.trim()) {
-                const { updateReservationComment } = require('../models/reservations');
                 const commentText = `【順番待ち時備考】${entry.notes.trim()}`;
                 await updateReservationComment(requestId, {
                     id: newReservation.id,
                     hotelId: entry.hotel_id,
                     comment: commentText,
-                    updated_by: entry.created_by
-                });
+                    updated_by: userId
+                }, client); // Pass client
             }
 
             // Update waitlist entry status to 'confirmed'
-            await WaitlistEntry.updateStatus(requestId, entry.id, 'confirmed', {}, entry.created_by);
+            await waitlistModel.updateEntryStatus(requestId, entry.id, 'confirmed', {}, userId, client); // Pass client
+
+            await client.query('COMMIT'); // Commit transaction
 
             // Return success response with reservation details
             return res.status(201).json({
@@ -369,11 +382,13 @@ const waitlistController = {
             });
 
         } catch (error) {
+            await client.query('ROLLBACK'); // Rollback on error
             console.error(`[${requestId}] Error in confirmReservation for token ${token}:`, error);
             return res.status(500).json({ error: 'Failed to confirm reservation.' });
+        } finally {
+            client.release(); // Release the client
         }
     },
-
     /**
      * POST /api/waitlist/:id/manual-notify - Send manual offer email
      */
@@ -386,14 +401,21 @@ const waitlistController = {
             return res.status(400).json({ error: 'Waitlist entry ID is required.' });
         }
 
+
+        const client = await getPool(requestId).connect(); // Acquire a client for the transaction
+
         try {
-            const entry = await WaitlistEntry.findById(requestId, entryId);
+            await client.query('BEGIN'); // Start transaction
+
+            const entry = await waitlistModel.findWaitlistEntryById(requestId, entryId, client); // Pass client
             if (!entry) {
+                await client.query('ROLLBACK');
                 return res.status(404).json({ error: 'Waitlist entry not found.' });
             }
 
             if (entry.status !== 'waiting') {
                 // Or, allow resending even if 'notified', TBD by exact requirements
+                // await client.query('ROLLBACK');
                 // return res.status(400).json({ error: `Waitlist entry is not in 'waiting' status (current: ${entry.status}).` });
             }
 
@@ -401,23 +423,26 @@ const waitlistController = {
             const confirmationToken = crypto.randomBytes(32).toString('hex');
             const tokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // E.g., 48 hours expiry
 
-            const clientResult = await selectClient(requestId, entry.client_id);
-            const client = clientResult ? clientResult.client : null;
-            if (!client) {
-                 return res.status(404).json({ error: `Client with ID ${entry.client_id} not found for waitlist entry.` });
+            const { selectClient } = require('../models/clients');
+            const clientResult = await selectClient(requestId, entry.client_id, client); // Pass client
+            const clientDetails = clientResult ? clientResult.client : null;
+            if (!clientDetails) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: `Client with ID ${entry.client_id} not found for waitlist entry.` });
             }
-            // Use the same name prioritization logic as in findByToken
-            const clientName = client.name_kanji || client.name_kana || client.name || 'お客様';
+            const clientName = clientDetails.name_kanji || clientDetails.name_kana || clientDetails.name || 'お客様';
 
-            const hotel = await getHotelByID(requestId, entry.hotel_id);
+            const { getHotelByID, getRoomTypeById } = require('../models/hotel');
+            const hotel = await getHotelByID(requestId, entry.hotel_id, client); // Pass client
             if (!hotel) {
+                await client.query('ROLLBACK');
                 return res.status(404).json({ error: `Hotel with ID ${entry.hotel_id} not found.` });
             }
             const hotelName = hotel.name;
 
             let roomTypeName = "指定なし";
             if (entry.room_type_id) {
-                const roomType = await getRoomTypeById(requestId, entry.room_type_id, entry.hotel_id);
+                const roomType = await getRoomTypeById(requestId, entry.room_type_id, entry.hotel_id, client); // Pass client
                 if (roomType) {
                     roomTypeName = roomType.name;
                 } else {
@@ -456,29 +481,35 @@ const waitlistController = {
                     confirmationLink,
                     tokenExpiresAt.toLocaleDateString('ja-JP')
                 );
-                // console.log(`[${requestId}] Waitlist notification email sent successfully to ${entry.contact_email}`);
             } catch (emailError) {
                 console.error(`[${requestId}] Error sending waitlist notification email:`, emailError);
+                await client.query('ROLLBACK'); // Rollback if email sending fails
                 return res.status(500).json({ error: 'Failed to send notification email.' });
             }
 
-            const updatedEntry = await WaitlistEntry.updateStatus(requestId, entryId, 'notified', {
+            const updatedEntry = await waitlistModel.updateEntryStatus(requestId, entryId, 'notified', {
                 confirmation_token: confirmationToken,
                 token_expires_at: tokenExpiresAt.toISOString(),
-            }, userId);
+            }, userId, client); // Pass client
 
             if (!updatedEntry) {
+                await client.query('ROLLBACK');
                 return res.status(404).json({ error: 'Failed to update waitlist entry after sending email, entry not found or update failed.' });
             }
+
+            await client.query('COMMIT'); // Commit transaction
 
             return res.status(200).json(updatedEntry);
 
         } catch (error) {
+            await client.query('ROLLBACK'); // Rollback on error
             console.error(`[${requestId}] Error in sendManualNotificationEmail for entry ${entryId}:`, error);
             if (error.message.includes('not found') || error.message.includes('Invalid status')) {
                 return res.status(400).json({ error: error.message });
             }
             return res.status(500).json({ error: 'Failed to process manual notification.' });
+        } finally {
+            client.release(); // Release the client
         }
     },
 
@@ -496,7 +527,7 @@ const waitlistController = {
         }
 
         try {
-            const entry = await WaitlistEntry.findById(requestId, entryId);
+            const entry = await waitlistModel.findWaitlistEntryById(requestId, entryId);
             if (!entry) {
                 return res.status(404).json({ error: 'Waitlist entry not found.' });
             }
@@ -505,7 +536,7 @@ const waitlistController = {
                 return res.status(400).json({ error: 'Waitlist entry is already cancelled.' });
             }
 
-            const cancelledEntry = await WaitlistEntry.cancelEntry(requestId, entryId, userId, cancelReason);
+            const cancelledEntry = await waitlistModel.cancelEntry(requestId, entryId, userId, cancelReason);
             if (!cancelledEntry) {
                 return res.status(404).json({ error: 'Failed to cancel waitlist entry, entry not found or update failed.' });
             }
@@ -537,7 +568,7 @@ const waitlistController = {
             // Compose filters object for model
             const modelFilters = { ...filters, page: parseInt(page, 10), size: parseInt(size, 10) };
             // TODO: Add permission check: Validate user has access to this hotel's waitlist
-            const result = await WaitlistEntry.getByHotel(requestId, validatedHotelId, modelFilters);
+            const result = await waitlistModel.getWaitlistEntriesByHotel(requestId, validatedHotelId, modelFilters);
             return res.status(200).json(result);
         } catch (error) {
             console.error(`[${requestId}] Error in waitlistController.getByHotelPost for hotel ${hotelId}:`, error);
@@ -564,57 +595,21 @@ const waitlistController = {
                 smoking_preference
             } = req.body;
 
-            // console.log(`[${requestId}] checkVacancy called with:`, {
-            //     hotel_id,
-            //     room_type_id,
-            //     check_in,
-            //     check_out,
-            //     number_of_rooms,
-            //     number_of_guests,
-            //     smoking_preference
-            // });
-
             // Validate required fields (basic)
             if (!hotel_id || !check_in || !check_out || !number_of_rooms || !number_of_guests) {
                 return res.status(400).json({ error: 'Missing required parameters.' });
             }
 
-            // Convert ISO date strings to DATE format for SQL function
-            const formatDateForSQL = (dateString) => {
-                // The frontend sends dates in JST but with Z suffix (misleading)
-                // We need to adjust for the 9-hour timezone difference
-                const date = new Date(dateString);
-                // Add 9 hours to convert from UTC to JST, then extract the date
-                date.setHours(date.getHours() + 9);
-                return date.toISOString().split('T')[0];
-            };
-
-            const checkInDate = formatDateForSQL(check_in);
-            const checkOutDate = formatDateForSQL(check_out);
-
-            // console.log(`[${requestId}] Converted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
-
-            // Prepare params for SQL function
-            const pool = require('../config/database').getPool(requestId);
-            const params = [
+            const available = await waitlistModel.checkWaitlistVacancy(
+                requestId,
                 hotel_id,
-                room_type_id || null,
-                checkInDate,
-                checkOutDate,
+                room_type_id,
+                check_in,
+                check_out,
                 number_of_rooms,
                 number_of_guests,
                 smoking_preference
-            ];
-            
-            // console.log(`[${requestId}] Calling SQL function with params:`, params);
-            
-            const result = await pool.query(
-                'SELECT is_waitlist_vacancy_available($1::INT, $2::INT, $3::DATE, $4::DATE, $5::INT, $6::INT, $7::BOOLEAN) AS available',
-                params
             );
-            
-            const available = result.rows[0].available;
-            // console.log(`[${requestId}] SQL function returned:`, available);
             
             return res.status(200).json({ available });
         } catch (error) {

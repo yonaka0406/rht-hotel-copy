@@ -18,17 +18,21 @@ const getAllHotels = async (requestId) => {
     throw new Error('Database error');
   }
 };
-const getHotelByID = async (requestId, id) => {
-  const pool = getPool(requestId);
+const getHotelByID = async (requestId, id, dbClient = null) => {
+  const client = dbClient || await getPool(requestId).connect();
   const query = 'SELECT hotels.* FROM hotels WHERE hotels.id = $1';
   const values = [id];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows[0]; // Return the first user found (or null if none)
   } catch (err) {
     console.error('Error finding hotel by id:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
   }
 };
 const getAllHotelSiteController = async (requestId) => {
@@ -469,8 +473,8 @@ const updatePlanExclusions = async (requestId, hotel_id, global_plan_ids) => {
   }
 };
 
-const getRoomTypeById = async (requestId, roomTypeId, hotelId = null) => {
-  const pool = getPool(requestId);
+const getRoomTypeById = async (requestId, roomTypeId, hotelId = null, dbClient = null) => {
+  const client = dbClient || await getPool(requestId).connect();
   let query = 'SELECT * FROM room_types WHERE id = $1';
   let values = [roomTypeId];
   if (hotelId !== null) {
@@ -478,11 +482,15 @@ const getRoomTypeById = async (requestId, roomTypeId, hotelId = null) => {
     values.push(hotelId);
   }
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows[0] || null;
   } catch (err) {
     console.error('Error finding room type by id:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
   }
 };
 

@@ -164,8 +164,8 @@ const getTotalClientsCount = async (requestId) => {
     throw new Error('Database error');
   }
 };
-const selectClient = async (requestId, clientId) => {
-  const pool = getPool(requestId);
+const selectClient = async (requestId, clientId, dbClient = null) => {
+  const client = dbClient || await getPool(requestId).connect();
   const clientQuery = `
     SELECT * FROM clients
     WHERE id = $1
@@ -187,9 +187,9 @@ const selectClient = async (requestId, clientId) => {
   `;
   const values = [clientId];
   try {
-    const clientResult = await pool.query(clientQuery, values);
-    const addressResult = await pool.query(addressQuery, values);
-    const groupResult = await pool.query(groupQuery, values);
+    const clientResult = await client.query(clientQuery, values);
+    const addressResult = await client.query(addressQuery, values);
+    const groupResult = await client.query(groupQuery, values);
     return {
       client: clientResult.rows[0],
       addresses: addressResult.rows,
@@ -199,6 +199,10 @@ const selectClient = async (requestId, clientId) => {
   catch (err) {
     console.error('Error selecting client and addresses:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
   }
 };
 const selectGroup = async (requestId, groupId) => {
