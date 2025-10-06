@@ -1,7 +1,7 @@
-let getPool = require('../config/database').getPool;
+let getPool = require('../../config/database').getPool;
 
-const getDoubleBookings = async (requestId) => {
-  const pool = getPool(requestId);
+const getDoubleBookings = async (requestId, dbClient = null) => {
+  const client = dbClient || await getPool(requestId).connect();
   const query = `
     WITH dup_groups AS (
         SELECT 
@@ -53,16 +53,20 @@ const getDoubleBookings = async (requestId) => {
   `;
 
   try {
-    const result = await pool.query(query);
+    const result = await client.query(query);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving potential double bookings:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
   }
 };
 
-const getEmptyReservations = async (requestId) => {
-  const pool = getPool(requestId);
+const getEmptyReservations = async (requestId, dbClient = null) => {
+  const client = dbClient || await getPool(requestId).connect();
   const query = `
     SELECT
         r.id AS reservation_id,
@@ -90,57 +94,19 @@ const getEmptyReservations = async (requestId) => {
   `;
 
   try {
-    const result = await pool.query(query);
+    const result = await client.query(query);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving empty reservations:', err);
     throw new Error('Database error');
-  }
-};
-
-const deleteEmptyReservationById = async (requestId, reservationId) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect(); // Get a client from the pool
-
-  try {
-    await client.query('BEGIN'); // Start the transaction
-
-    // First, check if there are any associated reservation_details
-    const checkDetailsQuery = `
-      SELECT COUNT(*)
-      FROM reservation_details
-      WHERE reservation_id = $1;
-    `;
-    const checkDetailsResult = await client.query(checkDetailsQuery, [reservationId]);
-    const detailsCount = parseInt(checkDetailsResult.rows[0].count, 10);
-
-    if (detailsCount > 0) {
-      throw new Error('Reservation cannot be deleted: it has associated reservation details.');
-    }
-
-    // If no details, proceed with deletion
-    const deleteQuery = `
-      DELETE FROM reservations
-      WHERE id = $1
-      RETURNING id;
-    `;
-    const values = [reservationId];
-
-    const result = await client.query(deleteQuery, values);
-
-    await client.query('COMMIT'); // Commit the transaction
-    return result.rows[0]; // Return the ID of the deleted reservation
-  } catch (err) {
-    await client.query('ROLLBACK'); // Rollback on error
-    console.error('Error deleting reservation:', err);
-    throw new Error('Database error');
   } finally {
-    client.release(); // Release the client back to the pool
+    if (!dbClient) {
+      client.release();
+    }
   }
 };
 
 module.exports = {
   getDoubleBookings,
   getEmptyReservations,
-  deleteEmptyReservationById,
 };
