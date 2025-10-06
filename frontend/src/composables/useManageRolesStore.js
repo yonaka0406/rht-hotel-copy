@@ -180,10 +180,11 @@ export function useManageRoles() {
                 },
             });
 
-                        if (response.ok) {
-                            const result = await response.json();
-                            fetchRoles(); // Reload the list
-                        } else if (response.status === 403) {                console.error("Failed to delete role:", response.statusText);
+            if (response.ok) {
+                const result = await response.json();
+                fetchRoles(); // Reload the list
+            } else if (response.status === 403) {
+                console.error("Failed to delete role:", response.statusText);
                 toast.add({
                     severity: 'error',
                     summary: 'Delete Denied',
