@@ -87,6 +87,11 @@ RHT Hotel is a comprehensive hotel property management system designed to stream
       }
     };
     ```
+- **Backend Controller Organization:** To keep controller files focused and maintainable, especially when handling multiple related resources or complex logic:
+  - **File Size Limit:** Controller files exceeding **500 lines** should be refactored.
+  - **Structure:** Group related controller methods into separate files within a dedicated directory for that controller (e.g., `api/controllers/hotel/main.js`, `api/controllers/hotel/roomTypes.js`).
+  - **Aggregation:** Create an `index.js` file within the controller's directory to aggregate and export all sub-controller methods.
+  - **Usage:** Routes should import from this aggregated `index.js` (e.g., `const hotelControllers = require('../controllers/hotel');`) and call methods using the aggregated object (e.g., `hotelControllers.getHotels`).
 - **Read-Only UI:** Users without `crud_ok` permissions will see a red '閲覧者' tag in the UI and will be blocked from creating reservations.
 
 ## 5. Setup & Environment
