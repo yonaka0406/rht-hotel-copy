@@ -1,4 +1,4 @@
-const validationModel = require('../models/validation');
+const validationModel = require('../../models/validation');
 
 const getDoubleBookings = async (req, res) => {
   try {

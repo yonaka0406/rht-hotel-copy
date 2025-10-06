@@ -1,10 +1,12 @@
-const { getPool } = require('../config/database');
-const waitlistModel = require('../models/waitlist');
-const validationUtils = require('../utils/validationUtils');
-const clientModel = require('../models/clients'); // To check if client exists
-const hotelModel = require('../models/hotel'); // To check if hotel exists
-const logger = require('../config/logger');
+// This is a test comment to force module re-evaluation.
+const { getPool } = require('../../config/database');
+const waitlistModel = require('../../models/waitlist');
+const validationUtils = require('../../utils/validationUtils');
+const clientModel = require('../../models/clients'); // To check if client exists
+const hotelModel = require('../../models/hotel'); // To check if hotel exists
+const logger = require('../../config/logger');
 const crypto = require('crypto');
+const reservationsModel = require('../../models/reservations');
 
 const waitlistController = {
     /**
@@ -93,7 +95,7 @@ const waitlistController = {
             return res.status(201).json(newWaitlistEntry);
 
         } catch (error) {
-            console.error(`[${requestId}] Error in waitlistController.create:`, error);
+            console.error(`[${requestId}] Error in create:`, error);
             if (error.message.startsWith('Missing required field:') ||
                 error.message.startsWith('Invalid') ||
                 error.message.includes('must be after check-in date') ||
@@ -146,7 +148,7 @@ const waitlistController = {
             return res.status(200).json(result);
 
         } catch (error) {
-            console.error(`[${requestId}] Error in waitlistController.getByHotel for hotel ${hotelId}:`, error);
+            console.error(`[${requestId}] Error in getByHotel for hotel ${hotelId}:`, error);
             if (error.message.includes('Invalid Hotel ID')) { // Or other specific validation errors
                 return res.status(400).json({ error: error.message });
             }
@@ -245,14 +247,6 @@ const waitlistController = {
                 return res.status(404).json({ error: 'Hotel not found.' });
             }
 
-            // Import reservation creation functions
-            const {
-                addReservationHold,
-                addReservationDetail,
-                selectAvailableRooms,
-                updateReservationComment
-            } = require('../models/reservations');
-
             // Create reservation data
             const reservationData = {
                 hotel_id: entry.hotel_id,
@@ -265,10 +259,10 @@ const waitlistController = {
             };
 
             // Create the reservation
-            const newReservation = await addReservationHold(requestId, reservationData, client); // Pass client
+            const newReservation = await reservationsModel.addReservationHold(requestId, reservationData, client); // Pass client
 
             // Get available rooms for the reservation period
-            const availableRooms = await selectAvailableRooms(requestId, entry.hotel_id, entry.requested_check_in_date, entry.requested_check_out_date, client); // Pass client
+            const availableRooms = await reservationsModel.selectAvailableRooms(requestId, entry.hotel_id, entry.requested_check_in_date, entry.requested_check_out_date, client); // Pass client
 
             // Filter rooms by room type if specified
             let availableRoomsFiltered = availableRooms;
@@ -347,13 +341,13 @@ const waitlistController = {
 
             // Add reservation details to the database
             for (const detail of reservationDetails) {
-                await addReservationDetail(requestId, detail, client); // Pass client
+                await reservationsModel.addReservationDetail(requestId, detail, client); // Pass client
             }
 
             // Add waitlist notes to reservation comments if they exist
             if (entry.notes && entry.notes.trim()) {
                 const commentText = `【順番待ち時備考】${entry.notes.trim()}`;
-                await updateReservationComment(requestId, {
+                await reservationsModel.updateReservationComment(requestId, {
                     id: newReservation.id,
                     hotelId: entry.hotel_id,
                     comment: commentText,
@@ -458,7 +452,7 @@ const waitlistController = {
             const formattedCheckOutDate = formatDateForEmail(entry.requested_check_out_date);
 
             // --- Email Sending ---
-            const { sendWaitlistNotificationEmail } = require('../utils/emailUtils');
+            const { sendWaitlistNotificationEmail } = require('../../utils/emailUtils');
             
             try {
                 await sendWaitlistNotificationEmail(
@@ -625,7 +619,7 @@ const waitlistController = {
             const result = await waitlistModel.getWaitlistEntriesByHotel(requestId, validatedHotelId, modelFilters);
             return res.status(200).json(result);
         } catch (error) {
-            console.error(`[${requestId}] Error in waitlistController.getByHotelPost for hotel ${hotelId}:`, error);
+            console.error(`[${requestId}] Error in getByHotelPost for hotel ${hotelId}:`, error);
             if (error.message.includes('Invalid Hotel ID')) {
                 return res.status(400).json({ error: error.message });
             }
@@ -667,7 +661,7 @@ const waitlistController = {
             
             return res.status(200).json({ available });
         } catch (error) {
-            console.error(`[${requestId}] Error in waitlistController.checkVacancy:`, error);
+            console.error(`[${requestId}] Error in checkVacancy:`, error);
             return res.status(500).json({ error: 'Failed to check vacancy.' });
         }
     }
