@@ -1,10 +1,10 @@
-const { selectReservationHistory, selectReservationInventoryChange, selectReservationGoogleInventoryChange, selectClientHistory } = require('../models/log');
+const logModel = require('../models/log');
 
 const fetchReservationHistory = async (req, res) => {
     const { id } = req.params;
 
     try {
-      const logs = await selectReservationHistory(req.requestId, id);
+      const logs = await logModel.selectReservationHistory(req.requestId, id);
       res.json(logs);
     } catch (error) {
       console.error('Error getting hotel rooms:', error);
@@ -17,12 +17,12 @@ const fetchReservationInventoryChange = async (req, res) => {
   
   try {
     if (type === 'google') {      
-      const logs = await selectReservationGoogleInventoryChange(req.requestId, id);
+      const logs = await logModel.selectReservationGoogleInventoryChange(req.requestId, id);
       // console.log('fetchReservationInventoryChange google', id, logs);
       res.json(logs);      
     }
     if (type === 'site-controller') {      
-      const logs = await selectReservationInventoryChange(req.requestId, id);
+      const logs = await logModel.selectReservationInventoryChange(req.requestId, id);
       // console.log('fetchReservationInventoryChange site-controller', id, logs);
       res.json(logs);
     }    
@@ -36,7 +36,7 @@ const fetchClientHistory = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const logs = await selectClientHistory(req.requestId, id);
+    const logs = await logModel.selectClientHistory(req.requestId, id);
     res.json(logs);
   } catch (error) {
     console.error('Error getting hotel rooms:', error);

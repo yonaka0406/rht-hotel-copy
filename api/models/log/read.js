@@ -1,7 +1,7 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
-const selectReservationHistory = async (requestId, id) => {
-    const pool = getPool(requestId);
+const selectReservationHistory = async (requestId, id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         SELECT
             lr.log_time,
@@ -54,16 +54,20 @@ const selectReservationHistory = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(query, values);   
+        const result = await client.query(query, values);   
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) {
+            client.release();
+        }
     }
 };
-const selectReservationInventoryChange = async (requestId, id) => {
+const selectReservationInventoryChange = async (requestId, id, dbClient = null) => {
     // console.log('selectReservationInventoryChange for id:', id)
-    const pool = getPool(requestId);
+    const client = dbClient || await getPool(requestId).connect();
     const reservationQuery = `
         SELECT
             id,
@@ -146,20 +150,24 @@ const selectReservationInventoryChange = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(reservationQuery, values);
+        const result = await client.query(reservationQuery, values);
         if (result.rows.length === 0) {
-            const detailsResult = await pool.query(detailsQuery, values);
+            const detailsResult = await client.query(detailsQuery, values);
             return detailsResult.rows;
         }        
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) {
+            client.release();
+        }
     }
 };
-const selectReservationGoogleInventoryChange = async (requestId, id) => {
+const selectReservationGoogleInventoryChange = async (requestId, id, dbClient = null) => {
     // console.log('selectReservationGoogleInventoryChange for id:', id)
-    const pool = getPool(requestId);
+    const client = dbClient || await getPool(requestId).connect();
     const reservationQuery = `
         SELECT
             id,
@@ -238,19 +246,23 @@ const selectReservationGoogleInventoryChange = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(reservationQuery, values);
+        const result = await client.query(reservationQuery, values);
         if (result.rows.length === 0) {
-            const detailsResult = await pool.query(detailsQuery, values);
+            const detailsResult = await client.query(detailsQuery, values);
             return detailsResult.rows;
         }        
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) {
+            client.release();
+        }
     }
 };
-const selectClientHistory = async (requestId, id) => {
-    const pool = getPool(requestId);
+const selectClientHistory = async (requestId, id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         SELECT
             lr.log_time,
@@ -303,11 +315,15 @@ const selectClientHistory = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(query, values);   
+        const result = await client.query(query, values);   
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) {
+            client.release();
+        }
     }
 };
 

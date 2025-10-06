@@ -1,0 +1,1 @@
+// No write operations for the log model.
