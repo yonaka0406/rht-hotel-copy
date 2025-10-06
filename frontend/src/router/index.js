@@ -44,7 +44,7 @@ const ClientHomePage = () => import('@/pages/CRM/ClientHomePage.vue');
 const ClientDashboard = () => import('@/pages/CRM/ClientDashboard.vue');
 const ClientList = () => import('@/pages/CRM/ClientList.vue');
 const ClientDuplicates = () => import('@/pages/CRM/ClientDuplicates.vue');
-const ClientEdit = () => import('@/pages/CRM/ClientEdit.vue');
+const ClientEdit = () => import('@/pages/CRM/ClientEdit/ClientEdit.vue');
 const ClientGroupList = () => import('@/pages/CRM/ClientGroupList.vue');
 const ClientGroupEdit = () => import('@/pages/CRM/ClientGroupEdit.vue');
 const SalesInteractions = () => import('@/pages/CRM/Sales/SalesInteractions.vue');
