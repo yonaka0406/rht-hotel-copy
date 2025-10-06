@@ -169,10 +169,8 @@
                                     <p>
                                         <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
                                         <i v-else class="pi pi-user"></i>
-                                        {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
-                                            slotProps.option.name || '' }}
-                                        <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana
-                                            }})</span>
+                                        {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
+                                        <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
                                         <i v-if="slotProps.option.is_blocked" class="pi pi-ban text-red-500 ml-2"></i>
                                     </p>
                                     <div class="flex items-center gap-2">
