@@ -3,7 +3,7 @@ const format = require('pg-format');
 const { toFullWidthKana, processNameString } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
 const { getAllPlanAddons } = require('../models/planAddon');
-const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
+const planRateModel = require('../models/planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../ota/xmlModel');
 const logger = require('../config/logger');
 
@@ -2314,7 +2314,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     // Update the reservation details with promise    
     const dtlUpdatePromises = detailsArray.map(async ({ id, operation_mode, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       let newPrice = 0;
-      newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
+      newPrice = await planRateModel.getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
       // console.log('newPrice calculated:',newPrice);
 
       const dtlUpdateQuery = `
@@ -2778,7 +2778,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       const formattedDate = formatDate(new Date(date));
       // Fetch new price
-      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, overrideRounding);
+      const newPrice = await planRateModel.getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, overrideRounding);
 
       // Update reservation_details
       const dtlUpdateQuery = `
@@ -2796,7 +2796,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       await dbClient.query(deleteRatesQuery, [id]);
 
       // Fetch new rates
-      const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
+      const newrates = await planRateModel.getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
 
       // Insert rates using the shared utility function
       await insertAggregatedRates(dbClient, newrates, hotel_id, id, user_id);
