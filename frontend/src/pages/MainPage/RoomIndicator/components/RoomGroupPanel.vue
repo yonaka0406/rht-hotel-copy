@@ -17,8 +17,8 @@
         <Skeleton shape="rectangle" width="100%" height="50px" />
       </div>
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div v-for="group in roomGroups" :key="group.title" class="col-span-1 md:col-span-1">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div v-for="group in roomGroups" :key="group.title" class="col-span-1 lg:col-span-1">
         <div v-if="group.title !== '部屋ブロック' || (group.rooms.length > 0 && group.title === '部屋ブロック')"
           :class="`p-2 rounded-lg ${group.color} ${group.darkColor}`">
           <Card class="p-2 dark:bg-gray-700 dark:border-gray-600">
@@ -122,7 +122,7 @@
                     <div class="flex items-center gap-2">
                       <span class="dark:text-gray-200">
                         <i class="pi pi-clock mr-1"></i>
-                        {{ formatTime(room.check_in_time) }}
+                        {{ room.check_in_time ? formatTime(room.check_in_time) : '' }}
                       </span>
 
                       <div v-if="room.plan_name">
@@ -146,7 +146,7 @@
                     <div>
                       <span class="dark:text-gray-200">
                         <i class="pi pi-clock mr-1"></i>
-                        {{ formatTime(room.check_out_time) }}
+                        {{ room.check_out_time ? formatTime(room.check_out_time) : '' }}
                       </span>
                     </div>
                   </div>
