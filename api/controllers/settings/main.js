@@ -1,4 +1,4 @@
-const settingsModel = require('../models/settings');
+const settingsModel = require('../../models/settings');
 const multer = require('multer');
 const sharp = require('sharp');
 const fs = require('fs');
