@@ -1,11 +1,6 @@
 const { validationResult } = require('express-validator');
-const { 
-  getAllUsers, 
-  getUsersByID, 
-  createUser, 
-  updateUserInfo, 
-  updateUserCalendarSettings
-} = require('../models/user');
+const userModel = require('../models/user');
+const { getPool } = require('../config/database');
 const googleCalendarUtils = require('../utils/googleCalendarUtils');
 const { syncCalendarFromGoogle } = require('../services/synchronizationService');
 
@@ -13,9 +8,9 @@ const users = async (req, res) => {
   const logger = req.app.locals.logger;
   const isProduction = process.env.NODE_ENV === 'production';
   try {
-    const users = await getAllUsers(req.requestId);
+    const users = await userModel.getAllUsers(req.requestId);
     if (!users || users.length === 0) { // Check for empty array too
-      logger.info('No users found.', { requestId: req.requestId });
+      // logger.info('No users found.', { requestId: req.requestId });
       return res.status(404).json({ error: isProduction ? 'Data not found.' : 'Users not found' });
     }
     res.json(users);
@@ -31,9 +26,9 @@ const getUser = async (req, res) => {
   const isProduction = process.env.NODE_ENV === 'production';
   const user_id = req.user.id;
   try {
-      const user = await getUsersByID(req.requestId, user_id);
+      const user = await userModel.getUsersByID(req.requestId, user_id);
       if (!user) {
-        logger.info('User not found by ID for current user.', { userId: user_id, requestId: req.requestId });
+        // logger.info('User not found by ID for current user.', { userId: user_id, requestId: req.requestId });
         return res.status(404).json({ error: isProduction ? 'User information not found.' : 'User not found' });
       }
       res.json(user);
@@ -65,8 +60,8 @@ const registerUser = async (req, res) => {
   // Role might need a specific validator if it has enum values, but for now, notEmpty is good.
 
   try {
-    const user = await createUser(req.requestId, email, name, password, role, created_by, updated_by);
-    logger.info('User registered successfully by admin/manager', { userId: user.id, email: user.email, adminId: created_by, requestId: req.requestId });
+    const user = await userModel.createUser(req.requestId, email, name, password, role, created_by, updated_by);
+    // logger.info('User registered successfully by admin/manager', { userId: user.id, email: user.email, adminId: created_by, requestId: req.requestId });
     res.status(201).json({
       message: 'User registered successfully',
       user: {
@@ -103,14 +98,14 @@ const updateUser = async (req, res) => {
   }
 
   try {
-    const user = await updateUserInfo(req.requestId, id, name, status_id, role_id, updated_by);
+    const user = await userModel.updateUserInfo(req.requestId, id, name, status_id, role_id, updated_by);
     if (!user) {
       const specificError = 'User not found for update.';
       logger.warn(specificError, { userIdToUpdate: id, adminId: updated_by, requestId: req.requestId });
       return res.status(404).json({ error: isProduction ? 'User not found.' : specificError });
     }
     
-    logger.info('User updated successfully by admin/manager', { userIdUpdated: id, adminId: updated_by, requestId: req.requestId });
+    // logger.info('User updated successfully by admin/manager', { userIdUpdated: id, adminId: updated_by, requestId: req.requestId });
     res.status(200).json({ message: 'User updated successfully' });
   } catch (err) {
     const specificError = 'Internal server error during user update.';
@@ -122,15 +117,21 @@ const updateUser = async (req, res) => {
 const createUserCalendar = async (req, res) => {
   const logger = req.app.locals.logger;
   const userId = req.user.id;
+  const isProduction = process.env.NODE_ENV === 'production';
   
   const settingsToUpdate = {};
   let newCalendarId = null; // To store new calendar id
   let messageDetail = '';
 
+  const client = await getPool(req.requestId).connect(); // Acquire a client for the transaction
+
   try {
-    const currentUserArr = await getUsersByID(req.requestId, userId);
+    await client.query('BEGIN'); // Start transaction
+
+    const currentUserArr = await userModel.getUsersByID(req.requestId, userId, client); // Pass client
     if (!currentUserArr || currentUserArr.length === 0) {
       logger.warn(`[UserCalPrefs] User not found for ID: ${userId}. Request ID: ${req.requestId}`);
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'User not found' });
     }
     const currentUser = currentUserArr[0];
@@ -138,41 +139,46 @@ const createUserCalendar = async (req, res) => {
     newCalendarId = currentUser.google_calendar_id;
     
     if (!currentUser.google_calendar_id) { 
-        logger.info(`[UserCalPrefs] User ${userId} requested dedicated calendar creation. Current calendar ID is null. Request ID: ${req.requestId}`);
+        // logger.info(`[UserCalPrefs] User ${userId} requested dedicated calendar creation. Current calendar ID is null. Request ID: ${req.requestId}`);
         
         const createdCalendarId = await googleCalendarUtils.createDedicatedCalendar(req.requestId, userId);
         if (createdCalendarId && typeof createdCalendarId === 'string') {
             newCalendarId = createdCalendarId;
             settingsToUpdate.google_calendar_id = newCalendarId;
             messageDetail += 'Dedicated Google Calendar created/verified. ';
-            logger.info(`[UserCalPrefs] Dedicated calendar created for user ${userId} with ID: ${newCalendarId}. Request ID: ${req.requestId}`);
+            // logger.info(`[UserCalPrefs] Dedicated calendar created for user ${userId} with ID: ${newCalendarId}. Request ID: ${req.requestId}`);
         } else {
             logger.error(`[UserCalPrefs] Failed to create dedicated calendar for user ${userId}. Request ID: ${req.requestId}`);
             messageDetail += 'Failed to create dedicated Google Calendar. ';
         }
     } else {
-        logger.info(`[UserCalPrefs] User ${userId} already has dedicated calendar ID: ${currentUser.google_calendar_id}. Re-confirming. Request ID: ${req.requestId}`);
+        // logger.info(`[UserCalPrefs] User ${userId} already has dedicated calendar ID: ${currentUser.google_calendar_id}. Re-confirming. Request ID: ${req.requestId}`);
         settingsToUpdate.google_calendar_id = currentUser.google_calendar_id; 
         messageDetail += 'Existing dedicated calendar ID confirmed. ';
     }
     
     if (Object.keys(settingsToUpdate).length > 0) {
-      await updateUserCalendarSettings(req.requestId, userId, settingsToUpdate); 
-      logger.info(`[UserCalPrefs] User ${userId} calendar preferences updated in DB. Settings: ${JSON.stringify(settingsToUpdate)}. Request ID: ${req.requestId}`);
+      await userModel.updateUserCalendarSettings(req.requestId, userId, settingsToUpdate, client); // Pass client
+      // logger.info(`[UserCalPrefs] User ${userId} calendar preferences updated in DB. Settings: ${JSON.stringify(settingsToUpdate)}. Request ID: ${req.requestId}`);
     } else {
-      logger.info(`[UserCalPrefs] No direct preference changes to save for user ${userId}. Request ID: ${req.requestId}`);
+      // logger.info(`[UserCalPrefs] No direct preference changes to save for user ${userId}. Request ID: ${req.requestId}`);
     }
     
     // Fetch the latest user data to return, ensuring the response reflects the true state
-    const updatedUserArray = await getUsersByID(req.requestId, userId); 
+    const updatedUserArray = await userModel.getUsersByID(req.requestId, userId, client); // Pass client
     res.status(200).json({ 
         message: 'User calendar preferences processed. ' + messageDetail.trim(), 
         user: updatedUserArray && updatedUserArray.length > 0 ? updatedUserArray[0] : null 
     });
 
+    await client.query('COMMIT'); // Commit transaction
+
   } catch (error) {
+    await client.query('ROLLBACK'); // Rollback on error
     logger.error(`[UserCalPrefs] Error updating calendar preferences for user ${userId}: ${error.message}`, { stack: error.stack, requestId: req.requestId });
     res.status(500).json({ error: isProduction ? 'Failed to update calendar preferences.' : error.message });
+  } finally {
+    client.release(); // Release the client
   }
 };
 
@@ -182,11 +188,11 @@ const triggerGoogleCalendarSync = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    logger.info(`[TriggerSyncCtrl] User ${userId} initiated Google Calendar sync. Request ID: ${req.requestId}`);
+    // logger.info(`[TriggerSyncCtrl] User ${userId} initiated Google Calendar sync. Request ID: ${req.requestId}`);
     const syncResult = await syncCalendarFromGoogle(req.requestId, userId);
 
     if (syncResult.success) {
-      logger.info(`[TriggerSyncCtrl] Sync completed for user ${userId}. Result: ${JSON.stringify(syncResult)}. Request ID: ${req.requestId}`);
+      // logger.info(`[TriggerSyncCtrl] Sync completed for user ${userId}. Result: ${JSON.stringify(syncResult)}. Request ID: ${req.requestId}`);
       res.status(200).json({ message: 'Googleカレンダー同期処理完了.', details: syncResult });
     } else {
       logger.warn(`[TriggerSyncCtrl] Sync process for user ${userId} reported issues: ${syncResult.message}. Request ID: ${req.requestId}`);
@@ -205,9 +211,9 @@ const getUserById = async (req, res) => {
   const { id } = req.params; // Get ID from URL parameters
 
   try {
-    const user = await getUsersByID(req.requestId, id);
+    const user = await userModel.getUsersByID(req.requestId, id);
     if (!user || user.length === 0) {
-      logger.info(`User not found by ID: ${id}.`, { requestId: req.requestId });
+      // logger.info(`User not found by ID: ${id}.`, { requestId: req.requestId });
       return res.status(404).json({ error: isProduction ? 'User not found.' : 'User not found' });
     }
     res.json({ user: user[0] }); // Return the first user found
