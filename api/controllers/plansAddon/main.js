@@ -1,4 +1,11 @@
 const { getAllPlanAddons, createPlanAddon, updatePlanAddon, deletePlanAddon, getPlanAddonById } = require('../models/planAddon');
+const { validateNumericParam, validateUuidParam } = require('../../utils/validationUtils');
+
+// Helper function to handle common error responses
+const handleError = (res, message, error, statusCode = 500) => {
+  console.error(message, error);
+  res.status(statusCode).json({ message });
+};
 
 // GET all plan addons
 const getPlanAddons = async (req, res) => {    
@@ -82,10 +89,46 @@ const deleteExistingPlanAddon = async (req, res) => {
     }
 };
 
+// Add an addon to a plan
+const addAddonToPlan = async (req, res) => {
+  const { planId, addonId } = req.params;
+  if (!validateNumericParam(planId, 'Plan ID') || !validateNumericParam(addonId, 'Addon ID')) {
+    return res.status(400).json({ message: 'Invalid Plan ID or Addon ID' });
+  }
+
+  try {
+    const newPlanAddon = await createPlanAddon(req.requestId, planId, addonId);
+    res.status(201).json(newPlanAddon);
+  } catch (error) {
+    handleError(res, 'Failed to add addon to plan', error);
+  }
+};
+
+// Remove an addon from a plan
+const removeAddonFromPlan = async (req, res) => {
+  const { planId, addonId } = req.params;
+  if (!validateNumericParam(planId, 'Plan ID') || !validateNumericParam(addonId, 'Addon ID')) {
+    return res.status(400).json({ message: 'Invalid Plan ID or Addon ID' });
+  }
+
+  try {
+    const deleted = await deletePlanAddon(req.requestId, planId, addonId);
+    if (deleted) {
+      res.status(204).send();
+    } else {
+      res.status(404).json({ message: 'Plan addon not found' });
+    }
+  } catch (error) {
+    handleError(res, 'Failed to remove addon from plan', error);
+  }
+};
+
 module.exports = {
     getPlanAddons,
     getPlanAddon,
     createNewPlanAddon,
     updateExistingPlanAddon,
-    deleteExistingPlanAddon
+    deleteExistingPlanAddon,
+    addAddonToPlan,
+    removeAddonFromPlan
 };

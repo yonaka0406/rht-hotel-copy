@@ -35,7 +35,7 @@ const updatePlansRate = async (requestId, id, plansRate, dbClient = null) => {
             await client.query('BEGIN');
         }
 
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         if (result.rows.length === 0) {
             throw new Error('Plan rate not found');
         }
@@ -64,7 +64,7 @@ const deletePlansRate = async (requestId, id, dbClient = null) => {
         if (isTransactionOwner) {
             await client.query('BEGIN');
         }
-        const result = await pool.query(query, [id]);
+        const result = await client.query(query, [id]);
         if (result.rows.length === 0) {
             throw new Error('Plan rate not found');
         }
