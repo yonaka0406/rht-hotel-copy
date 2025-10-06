@@ -1,8 +1,8 @@
 const { validationResult } = require('express-validator');
-const userModel = require('../models/user');
-const { getPool } = require('../config/database');
-const googleCalendarUtils = require('../utils/googleCalendarUtils');
-const { syncCalendarFromGoogle } = require('../services/synchronizationService');
+const userModel = require('../../models/user');
+const { getPool } = require('../../config/database');
+const googleCalendarUtils = require('../../utils/googleCalendarUtils');
+const synchronizationService = require('../../services/synchronizationService');
 
 const users = async (req, res) => {
   const logger = req.app.locals.logger;
@@ -189,7 +189,7 @@ const triggerGoogleCalendarSync = async (req, res) => {
 
   try {
     // logger.info(`[TriggerSyncCtrl] User ${userId} initiated Google Calendar sync. Request ID: ${req.requestId}`);
-    const syncResult = await syncCalendarFromGoogle(req.requestId, userId);
+    const syncResult = await synchronizationService.syncCalendarFromGoogle(req.requestId, userId);
 
     if (syncResult.success) {
       // logger.info(`[TriggerSyncCtrl] Sync completed for user ${userId}. Result: ${JSON.stringify(syncResult)}. Request ID: ${req.requestId}`);
