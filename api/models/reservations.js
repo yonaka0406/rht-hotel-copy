@@ -3398,10 +3398,13 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
   const assignedRoomIds = new Set();
 
   const findFirstAvailableRoomId = (room_type_id) => {
+    console.log('findFirstAvailableRoomId - room_type_id:', room_type_id);
+    console.log('findFirstAvailableRoomId - availableRooms:', availableRooms);
+    console.log('findFirstAvailableRoomId - assignedRoomIds:', assignedRoomIds);
     const availableRoom = availableRooms.find(room =>
       room.room_type_id === room_type_id && !assignedRoomIds.has(room.room_id)
     );
-
+    console.log('findFirstAvailableRoomId - found availableRoom:', availableRoom);
     return availableRoom?.room_id || null;
   };
 
