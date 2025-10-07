@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
 // Diagnostic note: If you encounter partition errors related to hotel_id being null in reservation_details inserts, add a log in addReservationDetail (models/reservations.js) to print the SQL values array before the insert. Example:
 // console.error('[addReservationDetail] Inserting with values:', values);
