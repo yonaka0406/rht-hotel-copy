@@ -1,5 +1,11 @@
-const mainQueries = require('./main');
+const main = require('./main');
+const exportQueries = require('./export');
+const forecastQueries = require('./forecast');
+const googleQueries = require('./google');
 
 module.exports = {
-  ...mainQueries,  
+  ...main,
+  ...exportQueries,
+  ...forecastQueries,
+  ...googleQueries,
 };
