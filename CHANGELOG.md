@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Bugfix: Fixed an issue where sales report was not including addon sales in the final total amount. Now properly includes all addon sales (e.g., parking, breakfast) in the total calculation.
 
 ---
 ## Future Releases

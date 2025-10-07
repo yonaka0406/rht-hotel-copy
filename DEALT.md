@@ -2,6 +2,28 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### October 7, 2025
+
+#### Bug #75: P釧路 Sales Report Addon Sales Calculation
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The P釧路 sales report might not be including addon sales in the final total amount.
+- **Steps to Reproduce**:
+  1. Generate a sales report for P釧路 location
+  2. Check if addon sales (e.g., parking, breakfast, etc.) are included in the final total
+  3. Compare with individual reservation details to verify amounts
+- **Expected Behavior**:
+  - All addon sales should be included in the total sales amount
+  - The report should clearly break down sales by category (room, addons, etc.)
+- **Affected Components**:
+  - Sales report generation
+  - Addon revenue calculation
+  - P釧路 location-specific reporting
+- **Additional Notes**:
+  - Check if this affects other locations as well
+  - Verify if the issue is with specific types of addons or all addons
+  - Check if the issue is present in both daily and monthly reports
+
 ### October 6, 2025
 
 #### Bug #75: Invoice File Naming Issue
