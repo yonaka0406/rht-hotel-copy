@@ -2,13 +2,13 @@ const { selectCountReservation, selectCountReservationDetailsPlans, selectCountR
   selectReservationListView, selectForecastData, selectAccountingData, selectForecastDataByPlan, selectAccountingDataByPlan, selectExportReservationList, selectExportReservationDetails, 
   selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle, 
   selectActiveReservationsChange,
-  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport } = require('../models/report');
-const { authorize, appendDataToSheet, createSheet } = require('../utils/googleUtils');
+  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport } = require('../../models/report');
+const { authorize, appendDataToSheet, createSheet } = require('../../utils/googleUtils');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
-const logger = require('../config/logger');
+const logger = require('../../config/logger');
 
-const { formatDate, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../utils/reportUtils');
+const { formatDate, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
 
 const getCountReservation = async (req, res) => {
   const hotelId = req.params.hid;
