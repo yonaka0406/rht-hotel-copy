@@ -1313,10 +1313,10 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       COALESCE(pg.name, ph.name, 'プラン未設定') AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(
-        CASE
+        (CASE
           WHEN rd.plan_type = 'per_room' THEN rd.price
           ELSE rd.price * rd.number_of_people
-        END
+        END) + COALESCE(ra.price_sum, 0)
       ) AS total_sales,
       SUM(COALESCE(rr.net_price, 0) + COALESCE(ra.net_price_sum, 0)) AS total_sales_net
     FROM reservation_details rd
@@ -1337,6 +1337,7 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         SELECT
             hotel_id,
             reservation_detail_id,
+			      SUM(price * quantity) AS price_sum,
             SUM(net_price * quantity) AS net_price_sum
         FROM
             reservation_addons
