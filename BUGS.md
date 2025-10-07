@@ -7,6 +7,34 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### October 07, 2025
 
+#### Feature Request #76: Occupancy Rate by Groups
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add functionality to view and analyze occupancy rates by different groups such as weekdays, weekends, and custom date ranges.
+- **Requirements**:
+  - Display occupancy rates in the following default groups:
+    - Weekdays (Monday-Thursday)
+    - Weekends (Friday-Sunday)
+    - Holidays (based on Japanese holiday calendar)
+  - Allow creation of custom date groups (e.g., specific event periods, seasons)
+  - Show comparison between different groups
+  - Include both room-based and capacity-based occupancy rates
+  - Export functionality for the grouped occupancy data
+- **Expected Behavior**:
+  - Users can select date ranges and view occupancy rates by the defined groups
+  - Visual representation (charts/graphs) of occupancy trends by group
+  - Drill-down capability to see detailed data for each group
+  - Ability to compare occupancy rates across different time periods
+- **Affected Components**:
+  - Reporting module
+  - Analytics dashboard
+  - Data export functionality
+- **Additional Notes**:
+  - Consider adding seasonal trend analysis
+  - Include year-over-year comparison for the same date groups
+  - Allow saving frequently used custom groups for quick access
+  - Ensure the system can handle large date ranges efficiently
+
 #### Bug #75: P釧路 Sales Report Addon Sales Calculation
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
