@@ -534,14 +534,12 @@
     const processedSalesByPlan = computed(() => {
         const sortedData = [...combinedSalesByPlan.value];
         sortedData.sort((a, b) => {
-            // Primary sort by total sales (descending)
-            const totalA = a.regular_sales + a.cancelled_sales + a.forecast_sales;
-            const totalB = b.regular_sales + b.cancelled_sales + b.forecast_sales;
-            if (totalB !== totalA) {
-                return totalA - totalB; // Ascending
+            // Primary sort by regular_sales (descending)
+            if (b.regular_sales !== a.regular_sales) {
+                return b.regular_sales - a.regular_sales;
             }
             
-            // Secondary sort by plan_name (ascending) if total sales are the same
+            // Secondary sort by plan_name (ascending) if regular_sales are the same
             if (a.plan_name < b.plan_name) return -1;
             if (a.plan_name > b.plan_name) return 1;
             return 0;
