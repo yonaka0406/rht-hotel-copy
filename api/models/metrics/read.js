@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
 const selectReservationsToday = async (requestId, hotelId, date) => {
     // --- Input Validation ---
@@ -316,5 +316,5 @@ module.exports = {
     selectWaitlistEntriesToday,
     getBookingSourceBreakdown,
     getPaymentTimingBreakdown,
-    getBookerTypeBreakdown, // Export the new function
+    getBookerTypeBreakdown,
 };

@@ -5,7 +5,7 @@ const ExcelJS = require("exceljs");
 const logger = require('../config/logger');
 const { selectReservation, selectReservationBalance } = require('../models/reservations');
 const guestModel = require('../models/guest');
-const { getParkingLots } = require('../models/parking');
+const parkingModel = require('../models/parking');
 
 // Helper
 const formatDate = (date) => {
@@ -305,7 +305,7 @@ const getGuestListExcel = async (req, res) => {
     // logger.debug(`[${requestId}] Starting getGuestListExcel. Params: date=${date}, hotelId=${hotelId}`);
 
     try {
-        const allParkingLotsData = await getParkingLots(requestId, hotelId);
+        const allParkingLotsData = await parkingModel.getParkingLots(requestId, hotelId);
         const allParkingLotNames = allParkingLotsData.map(lot => lot.name); // Get just the names
         const reservationsData = await guestModel.selectCheckInReservationsForGuestList(requestId, hotelId, date);
         //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
