@@ -509,7 +509,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
     if (parking_combos_processed && parking_combos_processed.length > 0) {
       // Move require inside the function, but outside the loop
       const { selectAvailableParkingSpots } = require('../models/reservations'); 
-      const { saveParkingAssignments } = require('../models/parking'); // Import saveParkingAssignments 
+      const parkingModel = require('../models/parking'); // Import saveParkingAssignments 
 
       console.log(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
       for (const parkingCombo of parking_combos_processed) {
@@ -557,7 +557,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
           spotId: s.parking_spot_id // Preferred spot
         }));
         
-        await saveParkingAssignments(requestId, parkingAssignments, userId, client);
+        await parkingModel.saveParkingAssignments(requestId, parkingAssignments, userId, client);
         console.log(`[${requestId}] Successfully assigned ${parkingAssignments.length} parking spots.`);
         
       }
