@@ -12,28 +12,57 @@
                     <TabPanel value="0">
                         <h4 class="mt-4 mb-3 font-bold">部屋追加</h4>
 
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="field mt-6 col-span-1">
-                                <FloatLabel>
-                                    <InputNumber id="move-people" v-model="numberOfPeopleToMove" :min="0" fluid />
-                                    <label for="move-people">人数</label>
-                                </FloatLabel>
-                            </div>
-                            <div class="field mt-6 col-span-1">
-                                <FloatLabel>
-                                    <Select id="move-room" v-model="targetRoom" :options="filteredRooms"
-                                        optionLabel="label" showClear fluid />
-                                    <label for="move-room">部屋を追加</label>
-                                </FloatLabel>
-                            </div>
-                        </div>
-                    </TabPanel>
+                                                                        <div v-if="!hasAnyAvailableRooms" class="text-center text-red-500 font-bold mt-4">
+
+                                                                            利用可能な部屋はありません。
+
+                                                                        </div>
+
+                                                                        <div v-else>
+
+                                                                            <div class="grid grid-cols-2 gap-2">
+
+                                                                                <div class="field mt-6 col-span-1">
+
+                                                                                    <FloatLabel>
+
+                                                                                        <InputNumber id="move-people" v-model="numberOfPeopleToMove" :min="0" fluid />
+
+                                                                                        <label for="move-people">人数</label>
+
+                                                                                    </FloatLabel>
+
+                                                                                </div>
+
+                                                                                <div v-if="filteredRooms.length === 0" class="col-span-1 text-center text-orange-500 font-bold mt-4">
+
+                                                                                    選択された人数に合う部屋はありません。
+
+                                                                                </div>
+
+                                                                                <div v-else class="field mt-6 col-span-1">
+
+                                                                                    <FloatLabel>
+
+                                                                                        <Select id="move-room" v-model="targetRoom" :options="filteredRooms"
+
+                                                                                            optionLabel="label" showClear fluid />
+
+                                                                                        <label for="move-room">部屋を追加</label>
+
+                                                                                    </FloatLabel>
+
+                                                                                </div>
+
+                                                                            </div>
+
+                                                                        </div>                    </TabPanel>
                 </TabPanels>
             </Tabs>
 
         </div>
         <template #footer>
-            <Button label="追加" icon="pi pi-check" class="p-button-success p-button-text p-button-sm"
+            <Button v-if="filteredRooms.length > 0" label="追加" icon="pi pi-check" class="p-button-success p-button-text p-button-sm"
                 @click="applyReservationRoomChanges" :loading="isSubmitting" :disabled="isSubmitting" />
             <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
                 @click="closeAddRoomDialog" :loading="isSubmitting" :disabled="isSubmitting" />
@@ -89,6 +118,9 @@ const filteredRooms = computed(() => {
         }));
 });
 
+const noRoomsAvailable = computed(() => filteredRooms.value.length === 0);
+const hasAnyAvailableRooms = computed(() => availableRooms.value.length > 0);
+
 const openAddRoomDialog = async () => {
     const hotelId = reservationInfo.value.hotel_id;
     const startDate = reservationInfo.value.check_in;
@@ -96,10 +128,12 @@ const openAddRoomDialog = async () => {
 
     await fetchAvailableRooms(hotelId, startDate, endDate);
 
+    numberOfPeopleToMove.value = 1;
     visibleAddRoomDialog.value = true;
 };
 const closeAddRoomDialog = () => {
     visibleAddRoomDialog.value = false;
+    numberOfPeopleToMove.value = 0;
 };
 const applyReservationRoomChanges = async () => {
     isSubmitting.value = true;
