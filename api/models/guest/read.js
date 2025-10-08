@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
 const getGuestListDetails = async (requestId, hotelId, reservationId) => {
     const pool = getPool(requestId);

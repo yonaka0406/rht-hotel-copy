@@ -4,7 +4,7 @@ const path = require('path');
 const ExcelJS = require("exceljs");
 const logger = require('../config/logger');
 const { selectReservation, selectReservationBalance } = require('../models/reservations');
-const { selectCheckInReservationsForGuestList } = require('../models/guest');
+const guestModel = require('../models/guest');
 const { getParkingLots } = require('../models/parking');
 
 // Helper
@@ -289,7 +289,7 @@ const generateGuestList = async (req, res) => {
         res.set({
             'Content-Type': 'application/pdf',
             'Content-Length': pdfBuffer.length,
-            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Content-Disposition': `attachment; filename="${filename}"`, 
         });
         res.send(pdfBuffer);
 
@@ -307,7 +307,7 @@ const getGuestListExcel = async (req, res) => {
     try {
         const allParkingLotsData = await getParkingLots(requestId, hotelId);
         const allParkingLotNames = allParkingLotsData.map(lot => lot.name); // Get just the names
-        const reservationsData = await selectCheckInReservationsForGuestList(requestId, hotelId, date);
+        const reservationsData = await guestModel.selectCheckInReservationsForGuestList(requestId, hotelId, date);
         //logger.debug(`[${requestId}] Data from model: ${JSON.stringify(reservationsData, null, 2)}`);
 
         if (!reservationsData || reservationsData.length === 0) {
