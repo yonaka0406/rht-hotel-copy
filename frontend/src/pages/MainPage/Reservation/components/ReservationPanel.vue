@@ -522,10 +522,10 @@ import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
-import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
-import ReservationHistory from '@/pages/MainPage/components/ReservationHistory.vue';
-import ReservationCopyDialog from '@/pages/MainPage/components/Dialogs/ReservationCopyDialog.vue';
-import CancellationCalculatorDialog from '@/pages/MainPage/components/Dialogs/CancellationCalculatorDialog.vue';
+import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
+import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
+import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
+import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
 
 // Primevue
 import { useToast } from 'primevue/usetoast';

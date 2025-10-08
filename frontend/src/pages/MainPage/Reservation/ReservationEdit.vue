@@ -85,10 +85,10 @@
 // Vue
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 
-import ReservationPanel from '@/pages/MainPage/components/ReservationPanel.vue';
-import ReservationRoomsView from '@/pages/MainPage/components/ReservationRoomsView.vue';
-import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
-import ReservationParking from '@/pages/MainPage/components/ReservationParking.vue';
+import ReservationPanel from '@/pages/MainPage/Reservation/components/ReservationPanel.vue';
+import ReservationRoomsView from '@/pages/MainPage/Reservation/components/ReservationRoomsView.vue';
+import ReservationPayments from '@/pages/MainPage/Reservation/components/ReservationPayments.vue';
+import ReservationParking from '@/pages/MainPage/Reservation/components/ReservationParking.vue';
 
 const props = defineProps({
     reservation_id: {

@@ -168,7 +168,7 @@
   
   // Components
   import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
-  import ReservationEdit from './ReservationEdit.vue';
+  import ReservationEdit from './Reservation/ReservationEdit.vue';
   
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';

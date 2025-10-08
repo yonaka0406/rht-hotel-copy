@@ -310,7 +310,7 @@
     // Vue
     import { ref, shallowRef, watch, computed, onMounted } from 'vue';
 
-    import ReservationEdit from './ReservationEdit.vue';
+    import ReservationEdit from './Reservation/ReservationEdit.vue';
 
     // Primevue
     import { useToast } from "primevue/usetoast";

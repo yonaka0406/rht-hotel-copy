@@ -270,7 +270,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
-import ReservationEdit from './ReservationEdit.vue';
+import ReservationEdit from './Reservation/ReservationEdit.vue';
 
 const goToReservation = () => {
     router.push({ name: 'ReservationEdit', params: { reservation_id: selectedReservation.value.id } });

@@ -486,8 +486,8 @@
 // Vue
 import { ref, computed, onMounted, watch } from 'vue';
 
-import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
-import ReservationGuestListDialog from '@/pages/MainPage/components/Dialogs/ReservationGuestListDialog.vue';
+import ReservationDayDetail from '@/pages/MainPage/Reservation/components/ReservationDayDetail.vue';
+import ReservationGuestListDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationGuestListDialog.vue';
 
 const props = defineProps({
     reservation_details: {
