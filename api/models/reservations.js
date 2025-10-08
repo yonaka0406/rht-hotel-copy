@@ -5155,7 +5155,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
   }
 };
 
-const insertCopyReservation = async (requestId, originalReservationId, newClientId, roomMapping, userId, deps = {}) => {
+const insertCopyReservation = async (requestId, originalReservationId, newClientId, roomMapping, userId, hotelId, deps = {}) => {
   logger.warn('[copyReservation] Logger is working');
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -5187,7 +5187,7 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
   try {
     await client.query('BEGIN');
 
-    const originalReservation = await _selectReservation(requestId, originalReservationId, hotelID);
+    const originalReservation = await _selectReservation(requestId, originalReservationId, hotelId);
     logger.debug('[copyReservation] originalReservation', { originalReservation });
     if (originalReservation.length === 0) {
       throw new Error('Original reservation not found');

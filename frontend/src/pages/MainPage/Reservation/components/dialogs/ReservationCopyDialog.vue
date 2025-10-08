@@ -33,12 +33,12 @@
       <div v-if="targetRooms.length > 0 && originalRooms.length > 0" class="mt-6">
         <h3 class="text-lg font-semibold mb-3">部屋設定の複製元を選択</h3>
         <DataTable :value="roomMappings" class="p-datatable-sm" aria-label="部屋マッピングテーブル">
-          <Column field="newRoom" header="新しい部屋">
+          <Column field="newRoom" header="新しい部屋" style="width: 25%">
             <template #body="slotProps">
               <span class="font-medium">{{ slotProps.data.newRoomLabel }}</span>
             </template>
           </Column>
-          <Column field="originalRoom" header="複製元の部屋">
+          <Column field="originalRoom" header="複製元の部屋" style="width: 75%">
             <template #body="slotProps">
               <Select
                 v-model="slotProps.data.originalRoomId"
@@ -52,14 +52,7 @@
               />
             </template>
           </Column>
-          <Column field="planInfo" header="プラン情報">
-            <template #body="slotProps">
-              <span v-if="slotProps.data.planInfo" class="text-sm text-gray-600">
-                {{ slotProps.data.planInfo }}
-              </span>
-              <span v-else class="text-sm text-gray-400">プランなし</span>
-            </template>
-          </Column>
+
         </DataTable>
       </div>
 
@@ -169,11 +162,21 @@
   watch(targetRooms, (newTargetRooms) => {
     roomMappings.value = newTargetRooms.map(room => {
       const existingMapping = roomMappings.value.find(m => m.newRoomId === room.value);
+      let defaultOriginalRoomId = existingMapping?.originalRoomId || (originalRooms.value.length > 0 ? originalRooms.value[0].value : null);
+      let defaultPlanInfo = existingMapping?.planInfo || null;
+
+      if (defaultOriginalRoomId && !defaultPlanInfo) {
+        const selectedOriginalRoom = originalRooms.value.find(r => r.value === defaultOriginalRoomId);
+        if (selectedOriginalRoom) {
+          defaultPlanInfo = selectedOriginalRoom.planInfo;
+        }
+      }
+
       return {
         newRoomId: room.value,
         newRoomLabel: room.label,
-        originalRoomId: existingMapping?.originalRoomId || null,
-        planInfo: existingMapping?.planInfo || null
+        originalRoomId: defaultOriginalRoomId,
+        planInfo: defaultPlanInfo
       };
     });
   });
