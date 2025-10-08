@@ -636,8 +636,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
                 await localClient.query(
                     `INSERT INTO reservation_parking 
-                        (hotel_id,reservation_details_id,reservation_addon_id,vehicle_category_id,parking_spot_id,date,status,created_by)`
-                    `VALUES ${placeholders}`
+                        (hotel_id,reservation_details_id,reservation_addon_id,vehicle_category_id,parking_spot_id,date,status,created_by) VALUES ${placeholders}`
                     , flatValues
                 );
             }

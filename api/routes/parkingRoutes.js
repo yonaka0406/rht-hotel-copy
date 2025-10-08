@@ -1,75 +1,49 @@
 const express = require('express');
 const router = express.Router();
-const {
-    getVehicleCategories,
-    createVehicleCategory,
-    updateVehicleCategory,
-    deleteVehicleCategory,
-    getParkingLots,
-    createParkingLot,
-    updateParkingLot,
-    deleteParkingLot,
-    getParkingSpots,
-    createParkingSpot,
-    updateParkingSpot,
-    deleteParkingSpot,
-    blockParkingSpot,
-    updateParkingSpotsForLot,
-    getParkingReservations,
-    getAllParkingSpotsByHotel,
-    checkParkingVacancies,
-    getCompatibleSpots,
-    getAvailableSpotsForDates,
-    checkRealTimeAvailability,
-    createParkingAddonAssignment,
-    updateParkingAddonAssignment,
-    deleteParkingAddonAssignment,
-    bulkDeleteParkingAddonAssignments,
-    saveParkingAssignments
-} = require('../controllers/parkingController');
+const parkingControllers = require('../controllers/parking');
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 
 
 // Vehicle Categories
-router.get('/vehicle-categories', authMiddleware, getVehicleCategories);
-router.post('/vehicle-categories', authMiddleware_manageDB, createVehicleCategory);
-router.put('/vehicle-categories/:id', authMiddleware_manageDB, updateVehicleCategory);
-router.delete('/vehicle-categories/:id', authMiddleware_manageDB, deleteVehicleCategory);
+router.get('/vehicle-categories', authMiddleware, parkingControllers.getVehicleCategories);
+router.post('/vehicle-categories', authMiddleware_manageDB, parkingControllers.createVehicleCategory);
+router.put('/vehicle-categories/:id', authMiddleware_manageDB, parkingControllers.updateVehicleCategory);
+router.delete('/vehicle-categories/:id', authMiddleware_manageDB, parkingControllers.deleteVehicleCategory);
 
 // Parking Lots
-router.get('/parking-lots/:hotel_id', authMiddleware, getParkingLots);
-router.post('/parking-lots', authMiddleware_manageDB, createParkingLot);
-router.put('/parking-lots/:id', authMiddleware_manageDB, updateParkingLot);
-router.delete('/parking-lots/:id', authMiddleware_manageDB, deleteParkingLot);
+router.get('/parking-lots/:hotel_id', authMiddleware, parkingControllers.getParkingLots);
+router.post('/parking-lots', authMiddleware_manageDB, parkingControllers.createParkingLot);
+router.put('/parking-lots/:id', authMiddleware_manageDB, parkingControllers.updateParkingLot);
+router.delete('/parking-lots/:id', authMiddleware_manageDB, parkingControllers.deleteParkingLot);
 
 // Parking Spots
-router.get('/parking-spots/:parking_lot_id', authMiddleware, getParkingSpots);
-router.post('/parking-spots', authMiddleware_manageDB, createParkingSpot);
-router.put('/parking-spots/:id', authMiddleware_manageDB, updateParkingSpot);
-router.delete('/parking-spots/:id', authMiddleware_manageDB, deleteParkingSpot);
-router.put('/parking-lots/:parking_lot_id/spots', authMiddleware_manageDB, updateParkingSpotsForLot);
+router.get('/parking-spots/:parking_lot_id', authMiddleware, parkingControllers.getParkingSpots);
+router.post('/parking-spots', authMiddleware_manageDB, parkingControllers.createParkingSpot);
+router.put('/parking-spots/:id', authMiddleware_manageDB, parkingControllers.updateParkingSpot);
+router.delete('/parking-spots/:id', authMiddleware_manageDB, parkingControllers.deleteParkingSpot);
+router.put('/parking-lots/:parking_lot_id/spots', authMiddleware_manageDB, parkingControllers.updateParkingSpotsForLot);
 
 // Block Parking Spot
-router.post('/parking/block', authMiddleware_manageDB, blockParkingSpot);
+router.post('/parking/block', authMiddleware_manageDB, parkingControllers.blockParkingSpot);
 
 // Parking Reservations
-router.get('/parking/reservations', authMiddleware, getParkingReservations);
-router.post('/parking/reservations', authMiddlewareCRUDAccess, saveParkingAssignments);
+router.get('/parking/reservations', authMiddleware, parkingControllers.getParkingReservations);
+router.post('/parking/reservations', authMiddlewareCRUDAccess, parkingControllers.saveParkingAssignments);
 
 // All Parking Spots by Hotel
-router.get('/parking/spots/hotel/:hotel_id', authMiddleware, getAllParkingSpotsByHotel);
+router.get('/parking/spots/hotel/:hotel_id', authMiddleware, parkingControllers.getAllParkingSpotsByHotel);
 
 // Enhanced Vehicle Category and Capacity Management Endpoints
-router.get('/parking/vacancies/:hotelId/:startDate/:endDate/:vehicleCategoryId', authMiddleware, checkParkingVacancies);
-router.get('/parking/compatible-spots/:hotelId/:vehicleCategoryId', authMiddleware, getCompatibleSpots);
-router.get('/parking/available-spots/:hotelId/:vehicleCategoryId', authMiddleware, getAvailableSpotsForDates);
-router.post('/parking/real-time-availability/:hotelId/:vehicleCategoryId', authMiddlewareCRUDAccess, checkRealTimeAvailability);
+router.get('/parking/vacancies/:hotelId/:startDate/:endDate/:vehicleCategoryId', authMiddleware, parkingControllers.checkParkingVacancies);
+router.get('/parking/compatible-spots/:hotelId/:vehicleCategoryId', authMiddleware, parkingControllers.getCompatibleSpots);
+router.get('/parking/available-spots/:hotelId/:vehicleCategoryId', authMiddleware, parkingControllers.getAvailableSpotsForDates);
+router.post('/parking/real-time-availability/:hotelId/:vehicleCategoryId', authMiddlewareCRUDAccess, parkingControllers.checkRealTimeAvailability);
 
 // Parking Addon Assignment Endpoints
-router.post('/parking/addon-assignment', authMiddlewareCRUDAccess, createParkingAddonAssignment);
-router.put('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, updateParkingAddonAssignment);
-router.delete('/parking/addon-assignment/bulk', authMiddlewareCRUDAccess, bulkDeleteParkingAddonAssignments);
-router.delete('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, deleteParkingAddonAssignment);
+router.post('/parking/addon-assignment', authMiddlewareCRUDAccess, parkingControllers.createParkingAddonAssignment);
+router.put('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, parkingControllers.updateParkingAddonAssignment);
+router.delete('/parking/addon-assignment/bulk', authMiddlewareCRUDAccess, parkingControllers.bulkDeleteParkingAddonAssignments);
+router.delete('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, parkingControllers.deleteParkingAddonAssignment);
 
 module.exports = router;
