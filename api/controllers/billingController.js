@@ -1,17 +1,6 @@
-const {
-  selectBillableListView,
-  selectBilledListView,
-  selectMaxInvoiceNumber,
-  updateInvoices,
-  getPaymentById,
-  selectMaxReceiptNumber,
-  getReceiptByPaymentId,
-  saveReceiptNumber,
-  selectPaymentsForReceiptsView,
-  linkPaymentToReceipt
-} = require('../models/billing');
-const { getUsersByID } = require('../models/user');
-const { getBrowser } = require('../services/puppeteerService');
+const billingModel = require('../models/billing');
+const {getUsersByID} = require('../models/user');
+const {getBrowser} = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -19,7 +8,7 @@ const ExcelJS = require("exceljs");
 // --- Helper Functions ---
 
 const generateNewInvoiceNumber = async (requestId, hotelId, date) => {
-  let result = await selectMaxInvoiceNumber(requestId, hotelId, date);
+  let result = await billingModel.selectMaxInvoiceNumber(requestId, hotelId, date);
   let last_invoice_number = result.length > 0 ? result[0].last_invoice_number : null;
 
   let new_invoice_number;
@@ -43,7 +32,7 @@ const getBillableListView = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const data = await selectBillableListView(req.requestId, hotelId, startDate, endDate);
+    const data = await billingModel.selectBillableListView(req.requestId, hotelId, startDate, endDate);
 
     if (!data || data.length === 0) {
       return res.status(200).json([]);
@@ -64,7 +53,7 @@ const getBilledListView = async (req, res) => {
   const month = req.params.mdate;
 
   try {
-    const data = await selectBilledListView(req.requestId, hotelId, month);
+    const data = await billingModel.selectBilledListView(req.requestId, hotelId, month);
 
     // Return empty array instead of 404 when no data found
     if (!data || data.length === 0) {
@@ -95,7 +84,7 @@ const generateInvoice = async (req, res) => {
       invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
     }
 
-    await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
+    await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
     const userInfo = await getUsersByID(req.requestId, userId);
 
@@ -163,7 +152,7 @@ const generateInvoice = async (req, res) => {
  */
 function generateInvoiceHTML(html, data, userName) {
   const imagePath = path.join(__dirname, '../components/stamp.png');
-  //const imageUrl = `file:///${imagePath.replace(/\\/g, '/')}`;
+  //const imageUrl = `file:///${imagePath.replace(/\/g, '/')}`;
   const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
 
   let modifiedHTML = html;
@@ -263,12 +252,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
     let existingReceipt = null;
     if (!isConsolidated && paymentId) {
       // For single payment requests, check if a receipt already exists
-      existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId, hotelId);
+      existingReceipt = await billingModel.getReceiptByPaymentId(req.requestId, paymentId, hotelId);
     } else if (isConsolidated && Array.isArray(paymentIds) && paymentIds.length > 0) {
       // For consolidated requests, check if any of the payments already has a receipt
       // If any payment already has a receipt, we should use that existing receipt data
       for (const pid of paymentIds) {
-        const existingReceiptForPayment = await getReceiptByPaymentId(req.requestId, pid, hotelId);
+        const existingReceiptForPayment = await billingModel.getReceiptByPaymentId(req.requestId, pid, hotelId);
         if (existingReceiptForPayment) {
           existingReceipt = existingReceiptForPayment;
           break; // Use the first existing receipt found
@@ -290,7 +279,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
       // Get payment data for PDF generation (use first payment for consolidated)
       const paymentForPdfId = isConsolidated ? paymentIds[0] : paymentId;
-      paymentDataForPdf = await getPaymentById(req.requestId, paymentForPdfId, hotelId);
+      paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentForPdfId, hotelId);
       if (!paymentDataForPdf) {
         return res.status(404).json({ error: 'Payment data not found' });
       }
@@ -303,7 +292,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
       if (isConsolidated) {
         paymentsArrayForPdf = [];
         for (const pid of paymentIds) {
-          const paymentData = await getPaymentById(req.requestId, pid, hotelId);
+          const paymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId);
           if (paymentData) {
             paymentsArrayForPdf.push(paymentData);
           }
@@ -322,7 +311,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         let fetchedPaymentsData = [];
         let clientNameCheck = null;
         for (const pid of paymentIds) {
-          const singlePaymentData = await getPaymentById(req.requestId, pid, hotelId);
+          const singlePaymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId);
           if (!singlePaymentData) {
             return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
           }
@@ -359,7 +348,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         const year = receiptDateObj.getFullYear() % 100;
         const month = receiptDateObj.getMonth() + 1;
         const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-        let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+        let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
         let sequence = 1;
         if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
           sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
@@ -381,7 +370,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save consolidated receipt
         //console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
-        const saveResult = await saveReceiptNumber(
+        const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
         );
@@ -392,7 +381,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Link all payments to the receipt
         for (const pData of fetchedPaymentsData) {
-          await linkPaymentToReceipt(req.requestId, pData.id, saveResult.id, hotelId);
+          await billingModel.linkPaymentToReceipt(req.requestId, pData.id, saveResult.id, hotelId);
         }
 
       } else {
@@ -405,7 +394,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
-          paymentDataForPdf = await getPaymentById(req.requestId, paymentId, hotelId);
+          paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentId, hotelId);
           if (!paymentDataForPdf) {
             return res.status(404).json({ error: 'Payment data not found' });
           }
@@ -418,7 +407,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         const year = receiptDateObj.getFullYear() % 100;
         const month = receiptDateObj.getMonth() + 1;
         const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-        let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+        let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
         let sequence = 1;
         if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
           sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
@@ -442,7 +431,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save the new receipt
         //console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
-        const saveResult = await saveReceiptNumber(
+        const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf
         );
@@ -452,7 +441,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Link payment to receipt
-        await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id, hotelId);
+        await billingModel.linkPaymentToReceipt(req.requestId, paymentId, saveResult.id, hotelId);
       }
     }
 
@@ -658,6 +647,7 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
   }
 
   const taxDetailsPlaceholderRegex = /(<div id="taxDetailsPlaceholder"[^>]*>)[\s\S]*?(<\/div>)/i;
+  
   if (modifiedHTML.match(taxDetailsPlaceholderRegex)) {
     if (dynamicTaxDetailsHtml) {
       modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, `$1${dynamicTaxDetailsHtml}$2`);
@@ -689,7 +679,7 @@ const getPaymentsForReceipts = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const data = await selectPaymentsForReceiptsView(req.requestId, hotelId, startDate, endDate);
+    const data = await billingModel.selectPaymentsForReceiptsView(req.requestId, hotelId, startDate, endDate);
     if (!data) { // Changed from !data || data.length === 0 to handle cases where model might return null on error
       return res.status(404).json({ error: 'No payment data found for the specified criteria or an error occurred.' });
     }
@@ -715,7 +705,7 @@ const generateInvoiceExcel = async (req, res) => {
           invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
       }
 
-      await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
+      await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
       const userInfo = await getUsersByID(req.requestId, userId);
 
       const mainTemplatePath = path.join(__dirname, '../components/請求書テンプレート.xlsx');
