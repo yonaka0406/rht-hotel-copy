@@ -437,11 +437,11 @@
         <ReservationHistory v-if="props.reservation_id" :reservation_id="props.reservation_id" />
     </Dialog>
 
-    <!-- ReservationCopy dialog -->
-    <Dialog v-model:visible="showCopyDialog" header="予約を複製"
-        :style="{ width: '50vw', 'max-height': '80vh', 'overflow-y': 'auto' }" modal>
-        <ReservationCopyDialog :reservation_id="props.reservation_id" @close="showCopyDialog = false" />
-    </Dialog>
+    <ReservationCopyDialog
+        :reservation_id="props.reservation_id"
+        :hotel_id="String(reservationInfo.hotel_id)"
+        v-model:visible="showCopyDialog"
+    />
 
     <CancellationCalculatorDialog 
         v-model:visible="showCancellationCalculator" 
@@ -459,6 +459,7 @@ const router = useRouter();
 import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
 import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
 import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
+
 import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
 import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAddRoomDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
@@ -1119,6 +1120,7 @@ const showHistoryDialog = () => {
 };
 
 const showCancellationCalculator = ref(false);
+const showCopyDialog = ref(false);
 
 // Tab Apply Plan
 const isPatternInput = ref(false);
@@ -1380,7 +1382,6 @@ const applyDateChangesToAll = async () => {
     }
 };
 
-const showCopyDialog = ref(false);
 const actionOptions = [
     {
         label: 'プラン・期間編集',
@@ -1395,14 +1396,7 @@ const actionOptions = [
     {
         label: '予約を複製',
         icon: 'pi pi-copy',
-        command: () => {
-            console.log('[SplitButton] 予約を複製 clicked');
-            console.log('reservationInfo.value:', reservationInfo.value);
-            console.log('reservationInfo.value.reservation_id:', reservationInfo.value?.reservation_id);
-            console.log('showCopyDialog (before):', showCopyDialog.value);
-            showCopyDialog.value = true;
-            console.log('showCopyDialog (after):', showCopyDialog.value);
-        }
+        command: () => { showCopyDialog.value = true; }
     }
 ];
 const onActionClick = () => {

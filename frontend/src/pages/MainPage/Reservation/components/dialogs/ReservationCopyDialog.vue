@@ -1,9 +1,10 @@
 <template>
-  <div>
+  <Dialog v-model:visible="showDialog" header="予約を複製"
+    :style="{ width: '50vw', 'max-height': '80vh', 'overflow-y': 'auto' }" modal>
     <div v-if="!loading && availableRooms.length === 0" class="flex flex-col items-center justify-center p-4">
       <i class="pi pi-inbox text-5xl text-gray-400 mb-4" aria-hidden="true"></i>
       <p class="text-lg text-gray-600">この期間に利用可能な部屋はありません。</p>
-      <Button label="閉じる" @click="$emit('close')" class="mt-4" aria-label="閉じる" />
+      <Button label="閉じる" @click="closeDialog" class="mt-4" aria-label="閉じる" />
     </div>
     <div v-else>
       <div class="mb-4">
@@ -63,7 +64,7 @@
       </div>
 
       <div class="flex justify-end gap-2 mt-6">
-        <Button label="キャンセル" icon="pi pi-times" severity="secondary" outlined @click="$emit('close')" aria-label="キャンセル" />
+        <Button label="キャンセル" icon="pi pi-times" severity="secondary" outlined @click="closeDialog" aria-label="キャンセル" />
         <Button 
           label="複製" 
           icon="pi pi-copy" 
@@ -74,7 +75,7 @@
         />
       </div>
     </div>
-  </div>
+  </Dialog>
 </template>
 
 <script setup>
@@ -85,13 +86,18 @@
   import { useToast } from 'primevue/usetoast';
 
   const props = defineProps({
-    reservation_id: { type: String, required: true }
+    reservation_id: { type: String, required: true },
+    hotel_id: { type: String, required: true },
+    visible: {
+        type: Boolean,
+        default: false,
+    }
   });
 
-  const emit = defineEmits(['close']);
+  const emit = defineEmits(['update:visible']);
 
   // Primevue
-  import { Button, MultiSelect, FloatLabel, DataTable, Column, Select } from 'primevue';
+  import { Button, MultiSelect, FloatLabel, DataTable, Column, Select, Dialog } from 'primevue';
 
   // Stores
   import { useReservationStore } from '@/composables/useReservationStore';
@@ -104,6 +110,20 @@
   const loading = ref(true);
   const roomMappings = ref([]);
   const firstInput = ref(null);
+
+  const showDialog = ref(props.visible);
+
+  watch(() => props.visible, (newValue) => {
+      showDialog.value = newValue;
+  });
+
+  watch(showDialog, (newValue) => {
+      emit('update:visible', newValue);
+  });
+
+  const closeDialog = () => {
+      showDialog.value = false;
+  };
 
   const availableRooms = computed(() => {
     return availableRoomsForCopy.value.map(room => ({
@@ -167,17 +187,38 @@
   };
 
   onMounted(async () => {
-    try {
-      await fetchReservationForCopy(props.reservation_id);
-      await nextTick();
-      // Set focus to the first input (client autocomplete) when dialog opens
-      if (firstInput.value && firstInput.value.$el && firstInput.value.$el.querySelector('input')) {
-        firstInput.value.$el.querySelector('input').focus();
+    // Only fetch reservation data if the dialog is visible
+    if (props.visible) {
+      try {
+        await fetchReservationForCopy(props.reservation_id, props.hotel_id);
+        await nextTick();
+        // Set focus to the first input (client autocomplete) when dialog opens
+        if (firstInput.value && firstInput.value.$el && firstInput.value.$el.querySelector('input')) {
+          firstInput.value.$el.querySelector('input').focus();
+        }
+      } catch (error) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '予約情報の取得に失敗しました。', life: 3000 });
+      } finally {
+        loading.value = false;
       }
-    } catch (error) {
-      toast.add({ severity: 'error', summary: 'エラー', detail: '予約情報の取得に失敗しました。', life: 3000 });
-    } finally {
-      loading.value = false;
+    }
+  });
+
+  // Watch for changes in props.visible to trigger data fetching
+  watch(() => props.visible, async (newVal) => {
+    if (newVal) {
+      loading.value = true;
+      try {
+        await fetchReservationForCopy(props.reservation_id, props.hotel_id);
+        await nextTick();
+        if (firstInput.value && firstInput.value.$el && firstInput.value.$el.querySelector('input')) {
+          firstInput.value.$el.querySelector('input').focus();
+        }
+      } catch (error) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '予約情報の取得に失敗しました。', life: 3000 });
+      } finally {
+        loading.value = false;
+      }
     }
   });
 
@@ -197,7 +238,7 @@
         router.push({ name: 'ReservationEdit', params: { reservation_id: result.reservation.id } });
       }
       toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に複製されました。', life: 3000 });
-      emit('close');
+      emit('update:visible', false);
     } catch (error) {
       toast.add({ severity: 'error', summary: 'エラー', detail: '予約の複製中にエラーが発生しました。', life: 3000 });
     }
