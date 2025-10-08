@@ -146,9 +146,8 @@ const getExportReservationDetails = async (req, res) => {
                 アドオン数量: reservation.addon_quantity,
                 アドオン単価: reservation.addon_price,
                 アドオン料金: Math.floor(parseFloat(reservation.addon_value)),
-                請求対象: reservation.billable ? 'はい' : 'いいえ',
-                /*入金額: reservation.payments,*/
-                /*残高: reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) - reservation.payments,*/
+                "アドオン料金(税抜き)": Math.floor(parseFloat(reservation.addon_net_value)),
+                請求対象: reservation.billable ? 'はい' : 'いいえ',                
                 売上高: reservation.billable ? reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) : 0,
                 支払い: translatePaymentTiming(reservation.payment_timing),
                 予約ID: reservation.reservation_id,

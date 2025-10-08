@@ -155,39 +155,40 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
   const query = `
     SELECT
       head.hotel_id
-        ,head.formal_name
-        ,head.id AS reservation_id
-        ,head.booker_name
-        ,head.booker_kana
-        ,head.booker_kanji
-        ,head.check_in
-        ,head.check_out
-        ,head.check_out - head.check_in AS number_of_nights
-        ,head.number_of_people AS reservation_number_of_people
-        ,head.status AS reservation_status
-        ,head.type AS reservation_type
-        ,head.agent
-        ,head.ota_reservation_id
-        ,head.payment_timing
+      ,head.formal_name
+      ,head.id AS reservation_id
+      ,head.booker_name
+      ,head.booker_kana
+      ,head.booker_kanji
+      ,head.check_in
+      ,head.check_out
+      ,head.check_out - head.check_in AS number_of_nights
+      ,head.number_of_people AS reservation_number_of_people
+      ,head.status AS reservation_status
+      ,head.type AS reservation_type
+      ,head.agent
+      ,head.ota_reservation_id
+      ,head.payment_timing
       ,head.payments
       ,body.id
-        ,body.date
+      ,body.date
       ,body.floor
-        ,body.room_number
-        ,body.capacity
-        ,body.smoking
-        ,body.for_sale
-        ,body.room_type_name
-        ,body.number_of_people
-        ,body.plan_type
-        ,body.plan_name
+      ,body.room_number
+      ,body.capacity
+      ,body.smoking
+      ,body.for_sale
+      ,body.room_type_name
+      ,body.number_of_people
+      ,body.plan_type
+      ,body.plan_name
       ,body.plan_price
-        ,body.addon_name
-        ,body.addon_quantity
-        ,body.addon_price
-        ,body.addon_value    
-        ,body.billable
-        ,body.cancelled
+      ,body.addon_name
+      ,body.addon_quantity
+      ,body.addon_price      
+      ,body.addon_value    
+      ,body.addon_net_value
+      ,body.billable
+      ,body.cancelled
       
     FROM
       (
@@ -274,7 +275,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ON head.hotel_id = body.hotel_id AND head.id = body.reservation_id
 
     ORDER BY 
-      head.check_in, head.id, body.room_number, body.date, body.addon_name
+      head.check_in, head.id, body.room_number, body.date, body.id, body.addon_name
   `;
 
   const values = [hotelId, dateStart, dateEnd]
