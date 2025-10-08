@@ -164,48 +164,16 @@
             <ConfirmDialog group="recovery"></ConfirmDialog>
             <ConfirmDialog group="revertCheckout"></ConfirmDialog>
 
-            <!-- Delete button for employee reservations (always shown when status is 保留中) -->
-            <div v-if="reservationType === '社員' && reservationStatus === '確定'" class="grid grid-cols-4 gap-x-6">
-                <div class="field flex flex-col">
-                    <Button label="社員予約を削除" severity="danger" fluid @click="deleteReservation" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-            </div>
-
-            <!-- Regular status buttons (hidden for employee reservations) -->
-            <div v-if="reservationType !== '社員'" class="grid grid-cols-4 gap-x-6">
-                <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
-                    <Button label="仮予約として保存" severity="info" :disabled="!allRoomsHavePlan || isSubmitting"
-                        @click="updateReservationStatus('provisory')" :loading="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" class="field flex flex-col">
-                    <Button label="確定予約として保存" severity="success" :disabled="!allRoomsHavePlan || isSubmitting"
-                        @click="updateReservationStatus('confirmed')" :loading="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '確定'" class="field flex flex-col">
-                    <Button label="チェックイン" severity="success" icon="pi pi-sign-in" fluid
-                        @click="updateReservationStatus('checked_in')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
-                    <Button label="確定に戻す" severity="info" icon="pi pi-undo" fluid
-                        @click="updateReservationStatus('confirmed')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
-                    <Button label="チェックアウト" severity="warn" icon="pi pi-eject" fluid
-                        @click="updateReservationStatus('checked_out')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'チェックアウト'" class="field flex flex-col">
-                    <Button label="チェックインに戻す" severity="danger" icon="pi pi-undo" fluid @click="revertCheckout" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '仮予約' || reservationStatus === '確定'" class="field flex flex-col">
-                    <Button label="キャンセル" severity="contrast" :disabled="!allRoomsHavePlan || isSubmitting" @click="handleCancel" :loading="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'キャンセル'" class="field flex flex-col">
-                    <Button label="キャンセル復活" severity="secondary" raised @click="updateReservationStatus('confirmed')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
-                    <Button :label="'保留中予約を削除'" severity="danger" fluid @click="deleteReservation" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-            </div>
+            <ReservationStatusButtons
+                :reservationType="reservationType"
+                :reservationStatus="reservationStatus"
+                :allRoomsHavePlan="allRoomsHavePlan"
+                :isSubmitting="isSubmitting"
+                @updateReservationStatus="updateReservationStatus"
+                @revertCheckout="revertCheckout"
+                @handleCancel="handleCancel"
+                @deleteReservation="deleteReservation"
+            />
         </div>
     </div>
 
@@ -491,6 +459,7 @@ import ReservationHistory from '@/pages/MainPage/Reservation/components/Reservat
 import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
 import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
 import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAddRoomDialog.vue';
+import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
