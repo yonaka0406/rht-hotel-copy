@@ -1221,12 +1221,9 @@ const deleteRoom = async (group) => {
         throw error;
     }
 };
-const isChangingGuestNumber = ref(false); // New ref
+const isChangingGuestNumber = ref(false); // Keep this ref as it's used for disabling the button
 
 const changeGuestNumber = async (group, mode) => {
-    console.log('[ReservationRoomsView] changeGuestNumber called. Mode:', mode);
-    console.log('[ReservationRoomsView] Before change - Room ID:', group.room_id, 'Current People:', group.details[0].number_of_people, 'Capacity:', group.details[0].capacity);
-
     isChangingGuestNumber.value = true; // Set to true at the start
     // Add operation_mode to each detail in the group
     group.details.forEach(detail => {
@@ -1238,11 +1235,7 @@ const changeGuestNumber = async (group, mode) => {
 
         // Provide feedback to the user
         toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
-        console.log('[ReservationRoomsView] Emitting update:reservation_details event.'); // Debug log
         emit('update:reservation_details');
-        // After emit, the parent will re-fetch, so the updated values will be available in the next render cycle.
-        // We can't log the *new* number_of_people here directly from `group.details[0].number_of_people`
-        // because it's updated by the parent's re-fetch.
     } catch (error) {
         console.error('Error updating reservation details:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約明細の更新に失敗しました。', life: 3000 });
@@ -1563,7 +1556,6 @@ watch(() => props.reservation_details, (newDetails) => {
         const updatedGroup = groupedRooms.value.find(group => group.room_id === selectedGroup.value.room_id);
         if (updatedGroup) {
             selectedGroup.value = updatedGroup;
-            console.log('[ReservationRoomsView] selectedGroup updated from props.reservation_details. New People:', selectedGroup.value.details[0].number_of_people);
         }
     }
 }, { deep: true });
