@@ -349,14 +349,16 @@
                             class="grid grid-cols-3 gap-4 items-center mb-4">
                             <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
                             <button class="bg-blue-500 text-white hover:bg-blue-600"
-                                @click="changeGuestNumber(selectedGroup, 'add')"><i class="pi pi-plus"></i>
+                                @click="changeGuestNumber(selectedGroup, 'add')"
+                                :disabled="selectedGroup.details[0].number_of_people >= selectedGroup.details[0].capacity || isChangingGuestNumber"><i class="pi pi-plus"></i>
                                 人数増加</button>
                         </div>
                         <div v-if="selectedGroup.details[0].number_of_people > 1"
                             class="grid grid-cols-3 gap-4 items-center mb-4">
                             <p class="col-span-2">予約の宿泊者の人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
                             <button class="bg-yellow-500 text-white hover:bg-yellow-600"
-                                @click="changeGuestNumber(selectedGroup, 'subtract')"><i class="pi pi-minus"></i>
+                                @click="changeGuestNumber(selectedGroup, 'subtract')"
+                                :disabled="selectedGroup.details[0].number_of_people <= 1"><i class="pi pi-minus"></i>
                                 人数削減</button>
                         </div>
 
@@ -489,6 +491,8 @@ const props = defineProps({
         required: true,
     },
 });
+
+const emit = defineEmits(['update:reservation_details']);
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -1217,7 +1221,13 @@ const deleteRoom = async (group) => {
         throw error;
     }
 };
+const isChangingGuestNumber = ref(false); // New ref
+
 const changeGuestNumber = async (group, mode) => {
+    console.log('[ReservationRoomsView] changeGuestNumber called. Mode:', mode);
+    console.log('[ReservationRoomsView] Before change - Room ID:', group.room_id, 'Current People:', group.details[0].number_of_people, 'Capacity:', group.details[0].capacity);
+
+    isChangingGuestNumber.value = true; // Set to true at the start
     // Add operation_mode to each detail in the group
     group.details.forEach(detail => {
         detail.operation_mode = mode === 'add' ? 1 : -1;
@@ -1228,9 +1238,16 @@ const changeGuestNumber = async (group, mode) => {
 
         // Provide feedback to the user
         toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
+        console.log('[ReservationRoomsView] Emitting update:reservation_details event.'); // Debug log
+        emit('update:reservation_details');
+        // After emit, the parent will re-fetch, so the updated values will be available in the next render cycle.
+        // We can't log the *new* number_of_people here directly from `group.details[0].number_of_people`
+        // because it's updated by the parent's re-fetch.
     } catch (error) {
         console.error('Error updating reservation details:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約明細の更新に失敗しました。', life: 3000 });
+    } finally {
+        isChangingGuestNumber.value = false; // Set to false in finally block
     }
 };
 
@@ -1536,6 +1553,18 @@ watch(addons, (newValue, oldValue) => {
             ...addon,
             quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1
         }));
+    }
+}, { deep: true });
+
+// Watch for changes in reservation_details to update selectedGroup
+watch(() => props.reservation_details, (newDetails) => {
+    if (selectedGroup.value && newDetails) {
+        // Find the updated version of the selected group
+        const updatedGroup = groupedRooms.value.find(group => group.room_id === selectedGroup.value.room_id);
+        if (updatedGroup) {
+            selectedGroup.value = updatedGroup;
+            console.log('[ReservationRoomsView] selectedGroup updated from props.reservation_details. New People:', selectedGroup.value.details[0].number_of_people);
+        }
     }
 }, { deep: true });
 

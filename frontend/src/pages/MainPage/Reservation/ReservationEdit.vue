@@ -56,7 +56,7 @@
             <Card class="m-2">
                 <template #title>部屋</template>
                 <template #content>
-                    <ReservationRoomsView v-if="reservation_details" :reservation_details="reservation_details" />
+                    <ReservationRoomsView v-if="reservation_details" :reservation_details="reservation_details" @update:reservation_details="() => { console.log('[ReservationEdit] update:reservation_details event received. Calling fetchAllReservationData.'); fetchAllReservationData(); }" />
                 </template>
             </Card>
 
