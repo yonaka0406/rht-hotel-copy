@@ -431,8 +431,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
         const BATCH_SIZE = 100;
 
         for (const [index, assignment] of assignments.entries()) {
-            //console.log(`
-Processing assignment ${index + 1}/${assignments.length}:`, JSON.stringify(assignment, null, 2));
+            //console.log(`\nProcessing assignment ${index + 1}/${assignments.length}:`, JSON.stringify(assignment, null, 2));
 
             const { 
                 hotel_id, reservation_id, vehicle_category_id, 
