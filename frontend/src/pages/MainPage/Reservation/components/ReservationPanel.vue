@@ -170,7 +170,7 @@
                 :allRoomsHavePlan="allRoomsHavePlan"
                 :isSubmitting="isSubmitting"
                 :reservation_id="props.reservation_id"
-                :hotel_id="reservationInfo.hotel_id"
+                :hotel_id="String(reservationInfo.hotel_id)"
                 @updateReservationStatus="updateReservationStatus"
                 @revertCheckout="revertCheckout"
                 @handleCancel="handleCancel"
