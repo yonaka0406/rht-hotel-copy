@@ -133,6 +133,10 @@
             return paymentTimingLabels[value] || value;
         }
 
+        if (key === 'number_of_people') {
+            return `${value}人`;
+        }
+
         return value;
     };
 
