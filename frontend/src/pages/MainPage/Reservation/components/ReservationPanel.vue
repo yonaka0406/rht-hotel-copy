@@ -169,10 +169,12 @@
                 :reservationStatus="reservationStatus"
                 :allRoomsHavePlan="allRoomsHavePlan"
                 :isSubmitting="isSubmitting"
+                :reservation_id="props.reservation_id"
+                :hotel_id="reservationInfo.hotel_id"
                 @updateReservationStatus="updateReservationStatus"
                 @revertCheckout="revertCheckout"
                 @handleCancel="handleCancel"
-                @deleteReservation="deleteReservation"
+                @onReservationDeleted="goToNewReservation"
             />
         </div>
     </div>
@@ -486,8 +488,8 @@ const props = defineProps({
 
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, 
-    deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, 
+const { setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern,
+    availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
@@ -911,56 +913,7 @@ const updateReservationStatus = async (status, type = null) => {
     showDateDialog.value = false;
 
 };
-const deleteReservation = () => {
-    const hotel_id = reservationInfo.value.hotel_id;
-    const reservation_id = reservationInfo.value.reservation_id;
 
-    confirm.require({
-        group: 'delete',
-        message: `保留中予約を削除してもよろしいですか?`,
-        header: '削除確認',
-        icon: 'pi pi-info-circle',
-        acceptClass: 'p-button-danger',
-        acceptProps: {
-            label: '削除',
-            loading: isSubmitting.value
-        },
-        rejectProps: {
-            label: 'キャンセル',
-            severity: 'secondary',
-            outlined: true,
-            icon: 'pi pi-times',
-            disabled: isSubmitting.value
-        },
-        accept: async () => {
-            isSubmitting.value = true;
-            try {
-                await deleteHoldReservation(hotel_id, reservation_id);
-                toast.add({
-                    severity: 'success',
-                    summary: '成功',
-                    detail: `保留中予約が削除されました。`,
-                    life: 3000
-                });
-            } catch (e) {
-                // Always show Japanese warning for not found/404
-                toast.add({
-                    severity: 'warn',
-                    summary: '警告',
-                    detail: '予約は既に削除されています。',
-                    life: 3000
-                });
-            } finally {
-                isSubmitting.value = false;
-            }
-            await goToNewReservation();
-
-        },
-        reject: () => {
-            // Do nothing on reject
-        }
-    });
-};
 const handleCancel = () => {
     confirm.require({
         group: 'cancel',
