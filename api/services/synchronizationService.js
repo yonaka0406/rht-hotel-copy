@@ -1,5 +1,5 @@
 const { getUsersByID, updateUserCalendarSettings } = require('../models/user');
-const { getActionById, insertAction, updateAction } = require('../models/crm');
+const crmModel = require('../models/crm');
 const googleCalendarUtils = require('../utils/googleCalendarUtils');
 const defaultLogger = require('../config/logger');
 
@@ -72,7 +72,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
             const pmsEventClientId = gEvent.extendedProperties?.private?.crmClientId; // May be undefined
 
             if (gEvent.status === 'cancelled' && crmActionId) {
-                const existingAction = await getActionById(requestId, crmActionId);
+                const existingAction = await crmModel.getActionById(requestId, crmActionId);
                 if (existingAction && existingAction.status !== 'cancelled') {
                     const updateFields = { 
                         status: 'cancelled', 
@@ -81,7 +81,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
                         google_calendar_html_link: gEvent.htmlLink,
                         synced_with_google_calendar: true
                     };
-                    await updateAction(requestId, crmActionId, updateFields, userId);
+                    await crmModel.updateAction(requestId, crmActionId, updateFields, userId);
                     logger.info(`CRM Action ${crmActionId} cancelled due to Google event ${gEvent.id} cancellation.`);
                     actionsUpdated++;
                 }
@@ -96,7 +96,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
 
 
             if (crmActionId) { // Event originated from CRM
-                const existingAction = await getActionById(requestId, crmActionId);
+                const existingAction = await crmModel.getActionById(requestId, crmActionId);
                 if (existingAction) {
                     // Compare gEvent.updated with a sync timestamp on CRM action if available, or crm_action.updated_at
                     // For simplicity, assume GCal is master if event is more recent.
@@ -112,7 +112,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
                             google_calendar_html_link: gEvent.htmlLink,
                             synced_with_google_calendar: true,
                         };
-                        await updateAction(requestId, crmActionId, actionFieldsToUpdate, userId);
+                        await crmModel.updateAction(requestId, crmActionId, actionFieldsToUpdate, userId);
                         logger.info(`Updated CRM action ${crmActionId} from Google event ${gEvent.id}.`);
                         actionsUpdated++;
                     }
@@ -144,7 +144,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
                     google_calendar_html_link: gEvent.htmlLink,
                     synced_with_google_calendar: true,
                 };
-                await insertAction(requestId, newActionFields, userId);
+                await crmModel.insertAction(requestId, newActionFields, userId);
                 logger.info(`Created new CRM action from Google event ${gEvent.id}.`);
                 actionsCreated++;
             }

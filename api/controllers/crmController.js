@@ -1,12 +1,4 @@
-const { 
-    selectUserActions, 
-    selectClientActions, 
-    selectAllActions, 
-    insertAction, 
-    updateAction, 
-    deleteAction,
-    getActionById
-} = require('../models/crm');
+const crmModel = require('../models/crm');
 const { getUsersByID } = require('../models/user'); // To get user's Google Calendar sync preferences
 const googleCalendarUtils = require('../utils/googleCalendarUtils');
 
@@ -31,7 +23,7 @@ const fetchUserActions = async (req, res) => {
   const { uid } = req.params;
     
   try{
-    const result = await selectUserActions(req.requestId, uid);    
+    const result = await crmModel.selectUserActions(req.requestId, uid);    
     res.status(200).json( result );
   } catch (error) {
     console.error('Error getting user actions:', error);
@@ -42,7 +34,7 @@ const fetchClientActions = async (req, res) => {
   const { cid } = req.params;
     
   try{
-    const result = await selectClientActions(req.requestId, cid);    
+    const result = await crmModel.selectClientActions(req.requestId, cid);    
     res.status(200).json( result );
   } catch (error) {
     console.error('Error getting user actions:', error);
@@ -51,7 +43,7 @@ const fetchClientActions = async (req, res) => {
 };
 const fetchAllActions = async (req, res) => {
   try{
-    const result = await selectAllActions(req.requestId);    
+    const result = await crmModel.selectAllActions(req.requestId);    
     res.status(200).json( result );
   } catch (error) {
     console.error('Error getting all actions:', error);
@@ -90,7 +82,7 @@ const addAction = async (req, res) => {
         actionFields.synced_with_google_calendar = false; // Explicitly false if not attempting sync
     }
 
-    const result = await insertAction(req.requestId, actionFields, userId);    
+    const result = await crmModel.insertAction(req.requestId, actionFields, userId);    
     res.status(201).json( result ); // Changed to 201 for resource creation
   } catch (error) {
     if (logger) logger.error('[CRMController][addAction] Error adding action:', { errorMessage: error.message, stack: error.stack, actionFields });
@@ -105,7 +97,7 @@ const editAction = async (req, res) => {
   const logger = req.app.locals.logger;
 
   try {
-    const existingAction = await getActionById(req.requestId, actionId);
+    const existingAction = await crmModel.getActionById(req.requestId, actionId);
     if (!existingAction) {
       return res.status(404).json({ error: 'CRM Action not found' });
     }
@@ -175,7 +167,7 @@ const editAction = async (req, res) => {
         }
     }
     
-    const result = await updateAction(req.requestId, actionId, actionFields, userId);
+    const result = await crmModel.updateAction(req.requestId, actionId, actionFields, userId);
     res.status(200).json(result);
   } catch (error) {
     if (logger) logger.error('[CRMController][editAction] Error editing action:', { actionId, errorMessage: error.message, stack: error.stack, actionFields });
@@ -189,7 +181,7 @@ const removeAction = async (req, res) => {
   const logger = req.app.locals.logger;
 
   try {
-    const actionToDelete = await getActionById(req.requestId, actionId);
+    const actionToDelete = await crmModel.getActionById(req.requestId, actionId);
     if (!actionToDelete) {
       return res.status(404).json({ error: 'CRM Action not found' });
     }
@@ -218,7 +210,7 @@ const removeAction = async (req, res) => {
         if (logger) logger.info(`[CRMController][removeAction] Action ${actionId} not synced to Google Calendar or no event ID. Skipping calendar deletion.`);
     }
 
-    const result = await deleteAction(req.requestId, actionId);
+    const result = await crmModel.deleteAction(req.requestId, actionId);
     // if (!result) { // deleteAction in model might return the deleted row or a count. If it returns the row:
     //   return res.status(404).json({ error: 'Action not found or already deleted during operation' });
     // }
@@ -238,7 +230,7 @@ const syncActionToCalendar = async (req, res) => {
 
     try {
         if (logger) logger.info(`[CRMController][syncActionToCalendar] Attempting to sync action ${actionId} for user ${userId}.`);
-        const action = await getActionById(req.requestId, actionId);
+        const action = await crmModel.getActionById(req.requestId, actionId);
         if (!action) {
             return res.status(404).json({ error: 'CRM Action not found.' });
         }
@@ -285,7 +277,7 @@ const syncActionToCalendar = async (req, res) => {
             synced_with_google_calendar: true,
         };
         
-        const dbResult = await updateAction(req.requestId, actionId, updatedActionFieldsForDB, userId);
+        const dbResult = await crmModel.updateAction(req.requestId, actionId, updatedActionFieldsForDB, userId);
         if (logger) logger.info(`[CRMController][syncActionToCalendar] Successfully updated CRM action ${actionId} with new Google Calendar details.`);
 
         res.status(200).json({ 
