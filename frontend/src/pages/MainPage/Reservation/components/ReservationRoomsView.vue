@@ -91,13 +91,7 @@
                                         <template #body="addonSlotProps">
                                             {{ formatCurrency(addonSlotProps.data.price) || 0 }}
                                         </template>
-                                    </Column>
-                                    <Column header="操作">
-                                        <template #body="addonSlotProps">
-                                            <Button icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
-                                                @click="deleteAddon(addonSlotProps.data)" />
-                                        </template>
-                                    </Column>
+                                    </Column>                                    
                                 </DataTable>
                             </div>
                             <div v-else>
