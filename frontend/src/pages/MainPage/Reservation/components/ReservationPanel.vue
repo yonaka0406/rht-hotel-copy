@@ -1382,6 +1382,15 @@ const deleteAddon = (addon) => {
 const applyPlanChangesToAll = async () => {
     isSubmitting.value = true;
     try {
+        // Get the number of people for the reservation
+        const numberOfPeople = reservationInfo.value.reservation_number_of_people;
+
+        // Adjust addon quantities based on the number of people
+        const adjustedAddons = selectedAddon.value.map(addon => ({
+            ...addon,
+            quantity: addon.quantity * numberOfPeople
+        }));
+
         // 1. Create an array of promises
         const updatePromises = groupedRooms.value.map(room => {
             const params = {
@@ -1389,7 +1398,7 @@ const applyPlanChangesToAll = async () => {
                 room_id: room.room_id,
                 reservation_id: reservationInfo.value.reservation_id,
                 plan: selectedPlan.value,
-                addons: selectedAddon.value,
+                addons: adjustedAddons,
                 daysOfTheWeek: selectedDays.value,
                 overrideRounding: overrideRounding.value
             };
