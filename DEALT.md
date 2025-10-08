@@ -2,6 +2,33 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### October 8, 2025
+
+#### Feature Request #77: Add Values Excluding Tax in Data Export
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add the ability to include values excluding tax in all data export Excel files.
+- **Requirements**:
+  - Add a new column for "Amount (Excl. Tax)" in all relevant data exports
+  - Include both inclusive and exclusive tax amounts in the export
+  - Clearly label tax-inclusive and tax-exclusive columns
+  - Add a summary row showing the total amounts (with and without tax)
+  - Include the applicable tax rate in the export
+- **Expected Behavior**:
+  - Users can easily identify the base amount before tax
+  - All monetary values in the export clearly indicate whether they include tax
+  - The tax rate used is clearly visible in the exported file
+- **Affected Components**:
+  - All data export functionality
+  - Financial reports
+  - Sales reports
+  - Reservation exports
+- **Additional Notes**:
+  - Ensure consistency across all export types
+  - Consider adding a configuration option to include/exclude tax details
+  - Update any related documentation to reflect the new columns
+  - Consider adding a tax summary section in the exported files
+
 ### October 7, 2025
 
 #### Bug #75: P釧路 Sales Report Addon Sales Calculation
