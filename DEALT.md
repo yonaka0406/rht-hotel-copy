@@ -4,6 +4,33 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### October 8, 2025
 
+#### Bug #79: Addons Not Aligned with Room Capacity When Applying Plan to All Rooms
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  When applying a plan to all rooms in a reservation, the number of addons is not being properly aligned with the number of people in each room. This can lead to incorrect addon quantities and potential over/under charging.
+- **Current Behavior**:
+  - When selecting "Apply to all rooms", the same number of addons is applied to each room regardless of room capacity
+  - Addon quantities don't adjust based on the number of guests in each room
+  - This affects both per-person addons and per-room addons
+- **Expected Behavior**:
+  - Addon quantities should automatically adjust based on the number of guests in each room when "Apply to all rooms" is selected
+  - Per-person addons should multiply by the number of guests in each room
+  - Per-room addons should be applied once per room
+- **Steps to Reproduce**:
+  1. Create a reservation with multiple rooms having different guest counts
+  2. Select "Apply to all rooms" when adding a plan with addons
+  3. Observe that addon quantities don't match room capacities
+- **Affected Components**:
+  - Reservation creation/editing interface
+  - Plan application logic
+  - Addon quantity calculation
+- **Additional Notes**:
+  - Need to ensure this works for both new reservations and modifications
+  - Should handle edge cases like zero-guest rooms or maximum capacity limits
+  - Consider adding a visual indicator showing the calculated addon quantities before applying
+  - May need to update any related reports or exports that show addon quantities
+
 #### Feature Request #77: Add Values Excluding Tax in Data Export
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
