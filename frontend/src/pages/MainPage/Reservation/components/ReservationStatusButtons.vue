@@ -1,7 +1,7 @@
 <template>
     <div v-if="reservationType === '社員' && reservationStatus === '確定'" class="grid grid-cols-4 gap-x-6">
         <div class="field flex flex-col">
-            <Button label="社員予約を削除" severity="danger" fluid @click="$emit('deleteReservation')" :loading="isSubmitting" :disabled="isSubmitting" />
+            <Button label="社員予約を削除" severity="danger" fluid @click="deleteReservation()" :loading="isSubmitting" :disabled="isSubmitting" />
         </div>
     </div>
 
@@ -36,13 +36,24 @@
             <Button label="キャンセル復活" severity="secondary" raised @click="$emit('updateReservationStatus', 'confirmed')" :loading="isSubmitting" :disabled="isSubmitting" />
         </div>
         <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
-            <Button :label="'保留中予約を削除'" severity="danger" fluid @click="$emit('deleteReservation')" :loading="isSubmitting" :disabled="isSubmitting" />
+            <Button :label="'保留中予約を削除'" severity="danger" fluid @click="deleteReservation()" :loading="isSubmitting" :disabled="isSubmitting" />
         </div>
     </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
+import { useReservationStore } from '@/composables/useReservationStore';
 import { Button } from 'primevue';
+
+const router = useRouter();
+const toast = useToast();
+const confirm = useConfirm();
+
+const { deleteHoldReservation, setReservationId } = useReservationStore();
 
 const props = defineProps({
     reservationType: {
@@ -61,12 +72,70 @@ const props = defineProps({
         type: Boolean,
         required: true,
     },
+    reservation_id: {
+        type: String,
+        required: true,
+    },
+    hotel_id: {
+        type: String,
+        required: true,
+    },
 });
 
 const emit = defineEmits([
     'updateReservationStatus',
     'revertCheckout',
     'handleCancel',
-    'deleteReservation',
 ]);
+
+const goToNewReservation = async () => {
+    await setReservationId(null);
+    await router.push({ name: 'ReservationsNew' });
+};
+
+const deleteReservation = () => {
+    confirm.require({
+        group: 'delete',
+        message: `保留中予約を削除してもよろしいですか?`,
+        header: '削除確認',
+        icon: 'pi pi-info-circle',
+        acceptClass: 'p-button-danger',
+        acceptProps: {
+            label: '削除',
+            loading: props.isSubmitting
+        },
+        rejectProps: {
+            label: 'キャンセル',
+            severity: 'secondary',
+            outlined: true,
+            icon: 'pi pi-times',
+            disabled: props.isSubmitting
+        },
+        accept: async () => {
+            // isSubmitting is a prop, cannot be directly modified
+            try {
+                await deleteHoldReservation(props.hotel_id, props.reservation_id);
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: `保留中予約が削除されました。`,
+                    life: 3000
+                });
+            } catch (e) {
+                toast.add({
+                    severity: 'warn',
+                    summary: '警告',
+                    detail: '予約は既に削除されています。',
+                    life: 3000
+                });
+            } finally {
+                // isSubmitting is a prop, cannot be directly modified
+            }
+            await goToNewReservation();
+        },
+        reject: () => {
+            // Do nothing on reject
+        }
+    });
+};
 </script>
