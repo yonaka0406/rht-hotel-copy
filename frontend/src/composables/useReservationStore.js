@@ -1196,10 +1196,10 @@ export function useReservationStore() {
         }
     };
 
-    const fetchReservationForCopy = async (reservationId) => {
+    const fetchReservationForCopy = async (reservationId, hotelId) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/reservation/info?id=${reservationId}`;
+            const url = `/api/reservation/info?id=${reservationId}&hotel_id=${hotelId}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {

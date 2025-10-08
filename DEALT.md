@@ -2,7 +2,131 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### October 8, 2025
+
+#### Bug #79: Addons Not Aligned with Room Capacity When Applying Plan to All Rooms
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  When applying a plan to all rooms in a reservation, the number of addons is not being properly aligned with the number of people in each room. This can lead to incorrect addon quantities and potential over/under charging.
+- **Current Behavior**:
+  - When selecting "Apply to all rooms", the same number of addons is applied to each room regardless of room capacity
+  - Addon quantities don't adjust based on the number of guests in each room
+  - This affects both per-person addons and per-room addons
+- **Expected Behavior**:
+  - Addon quantities should automatically adjust based on the number of guests in each room when "Apply to all rooms" is selected
+  - Per-person addons should multiply by the number of guests in each room
+  - Per-room addons should be applied once per room
+- **Steps to Reproduce**:
+  1. Create a reservation with multiple rooms having different guest counts
+  2. Select "Apply to all rooms" when adding a plan with addons
+  3. Observe that addon quantities don't match room capacities
+- **Affected Components**:
+  - Reservation creation/editing interface
+  - Plan application logic
+  - Addon quantity calculation
+- **Additional Notes**:
+  - Need to ensure this works for both new reservations and modifications
+  - Should handle edge cases like zero-guest rooms or maximum capacity limits
+  - Consider adding a visual indicator showing the calculated addon quantities before applying
+  - May need to update any related reports or exports that show addon quantities
+
+#### Feature Request #77: Add Values Excluding Tax in Data Export
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add the ability to include values excluding tax in all data export Excel files.
+- **Requirements**:
+  - Add a new column for "Amount (Excl. Tax)" in all relevant data exports
+  - Include both inclusive and exclusive tax amounts in the export
+  - Clearly label tax-inclusive and tax-exclusive columns
+  - Add a summary row showing the total amounts (with and without tax)
+  - Include the applicable tax rate in the export
+- **Expected Behavior**:
+  - Users can easily identify the base amount before tax
+  - All monetary values in the export clearly indicate whether they include tax
+  - The tax rate used is clearly visible in the exported file
+- **Affected Components**:
+  - All data export functionality
+  - Financial reports
+  - Sales reports
+  - Reservation exports
+- **Additional Notes**:
+  - Ensure consistency across all export types
+  - Consider adding a configuration option to include/exclude tax details
+  - Update any related documentation to reflect the new columns
+  - Consider adding a tax summary section in the exported files
+
+### October 7, 2025
+
+#### Bug #75: P釧路 Sales Report Addon Sales Calculation
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The P釧路 sales report might not be including addon sales in the final total amount.
+- **Steps to Reproduce**:
+  1. Generate a sales report for P釧路 location
+  2. Check if addon sales (e.g., parking, breakfast, etc.) are included in the final total
+  3. Compare with individual reservation details to verify amounts
+- **Expected Behavior**:
+  - All addon sales should be included in the total sales amount
+  - The report should clearly break down sales by category (room, addons, etc.)
+- **Affected Components**:
+  - Sales report generation
+  - Addon revenue calculation
+  - P釧路 location-specific reporting
+- **Additional Notes**:
+  - Check if this affects other locations as well
+  - Verify if the issue is with specific types of addons or all addons
+  - Check if the issue is present in both daily and monthly reports
+
+### October 6, 2025
+
+#### Bug #75: Invoice File Naming Issue
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Invoice download filename shows '001' instead of actual invoice number (e.g., '002')
+  - Missing company name in downloaded filename
+- **Expected Behavior**:
+  - Filename should match invoice number (e.g., `[CompanyName]_Invoice_002.pdf`)
+  - Include company name for better identification
+- **Affected Components**:
+  - Invoice generation service
+  - File download handler
+  - Invoice number generation/retrieval
+
+### October 3, 2025
+
+#### Feature Request #72: Forecast Data Breakdown by Plan
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add plan-based breakdown to forecast reports for better comparison and analysis.
+- **Requirements**:
+  - Show forecast data grouped by plan type
+  - Include comparison views between plans
+  - Add plan filters to forecast reports
+  - Support export functionality for plan breakdowns
+
 ### September 29, 2025
+
+#### Bug #57: 宿泊者名簿 Name Order Consistency and Address Display
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The 宿泊者名簿 (Guest List) dialog is not consistently displaying names in the correct order (name_kanji, name_kana, name)
+  - This inconsistency can cause confusion and affect the professional appearance of exported documents
+  - Address fields for 宿泊者 (guests) are not being properly filled in the guest list
+- **Requirements**:
+  - Ensure the name fields are consistently displayed in the order: name_kanji, name_kana, name
+  - Verify the order is maintained in both the dialog display and any exported files
+  - Add input validation to prevent empty or incorrectly formatted names
+  - Update any related tooltips or help text to clarify the expected name format
+  - Ensure all address fields (postal_code, address1, address2, city, prefecture, country) are properly included in the guest list
+  - Validate that address information is correctly mapped from the guest profile to the guest list
+- **Affected Components**:
+  - Guest List dialog component
+  - Name and address display components in the reservation interface
+  - Any related export functionality for guest lists
+  - Guest profile data mapping logic
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
 #### Bug #71: Room Rate Rounding and Negative Values in Day View
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -118,6 +242,47 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
 ### September 24, 2025
+
+## Feature Request #50: Enhanced Calendar View for Client Visualization
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: 
+  - The current calendar view can be difficult to read when a single client has multiple or consecutive bookings.
+  - The goal is to improve the visual representation of these bookings to be more like an existing Google Sheet view, which is clearer.
+- **Suggested approaches**:
+  - Adapt the current calendar to match the layout of the Google Sheet view.
+  - Create a new, view-only page that mimics the Google Sheet.
+  - Implement a "client highlight" function that visually groups bookings from the same client. For example, by making the cells thinner and only displaying the client's name once.
+- **Key Features / Requirements**:
+  - Client Grouping Logic:
+    - Identify consecutive or overlapping reservations made by the same client.
+  - Visual Representation (Client Highlight option):
+    - Display the client's name only in the first reservation block of a group.
+    - Subsequent blocks for the same client should be visually connected but condensed (e.g., thinner, without the repeated name).
+    - Use a consistent color or border to link all parts of a single client's stay.
+  - View Options:
+    - Could be a new, dedicated view ("Client View", "Condensed View").
+    - Alternatively, a toggle on the existing calendar to switch the highlight function on/off.
+- **UI/UX Considerations**:
+  - Hovering over a condensed block should reveal the full reservation details.
+  - The visual grouping should be clear and intuitive, improving readability at a glance.
+  - The feature should not negatively impact the performance of the calendar view.
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #60: Meal Count Display for Easy Copy-Paste
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Currently, meal counts are only visible when exporting to Excel
+  - Add a dialog that shows meal count information in a text format that can be easily copied and pasted into Slack
+- **Requirements**:
+  - Add a new button/option to display meal count summary in a dialog
+  - Format the text in a clear, copy-paste friendly way for Slack
+  - Include date range, meal types, and counts
+  - Add a "Copy to Clipboard" button for easy sharing
+- **Affected Components**:
+  - Meal management UI
+  - Report generation components
+  - Frontend dialog components
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
 #### Feature Request #62: Check-in/Out Statistics with Gender Breakdown
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed

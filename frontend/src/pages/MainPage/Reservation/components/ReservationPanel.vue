@@ -164,48 +164,18 @@
             <ConfirmDialog group="recovery"></ConfirmDialog>
             <ConfirmDialog group="revertCheckout"></ConfirmDialog>
 
-            <!-- Delete button for employee reservations (always shown when status is 保留中) -->
-            <div v-if="reservationType === '社員' && reservationStatus === '確定'" class="grid grid-cols-4 gap-x-6">
-                <div class="field flex flex-col">
-                    <Button label="社員予約を削除" severity="danger" fluid @click="deleteReservation" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-            </div>
-
-            <!-- Regular status buttons (hidden for employee reservations) -->
-            <div v-if="reservationType !== '社員'" class="grid grid-cols-4 gap-x-6">
-                <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
-                    <Button label="仮予約として保存" severity="info" :disabled="!allRoomsHavePlan || isSubmitting"
-                        @click="updateReservationStatus('provisory')" :loading="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" class="field flex flex-col">
-                    <Button label="確定予約として保存" severity="success" :disabled="!allRoomsHavePlan || isSubmitting"
-                        @click="updateReservationStatus('confirmed')" :loading="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '確定'" class="field flex flex-col">
-                    <Button label="チェックイン" severity="success" icon="pi pi-sign-in" fluid
-                        @click="updateReservationStatus('checked_in')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
-                    <Button label="確定に戻す" severity="info" icon="pi pi-undo" fluid
-                        @click="updateReservationStatus('confirmed')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
-                    <Button label="チェックアウト" severity="warn" icon="pi pi-eject" fluid
-                        @click="updateReservationStatus('checked_out')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'チェックアウト'" class="field flex flex-col">
-                    <Button label="チェックインに戻す" severity="danger" icon="pi pi-undo" fluid @click="revertCheckout" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '仮予約' || reservationStatus === '確定'" class="field flex flex-col">
-                    <Button label="キャンセル" severity="contrast" :disabled="!allRoomsHavePlan || isSubmitting" @click="handleCancel" :loading="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === 'キャンセル'" class="field flex flex-col">
-                    <Button label="キャンセル復活" severity="secondary" raised @click="updateReservationStatus('confirmed')" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-                <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
-                    <Button :label="'保留中予約を削除'" severity="danger" fluid @click="deleteReservation" :loading="isSubmitting" :disabled="isSubmitting" />
-                </div>
-            </div>
+            <ReservationStatusButtons
+                :reservationType="reservationType"
+                :reservationStatus="reservationStatus"
+                :allRoomsHavePlan="allRoomsHavePlan"
+                :isSubmitting="isSubmitting"
+                :reservation_id="props.reservation_id"
+                :hotel_id="String(reservationInfo.hotel_id)"
+                @updateReservationStatus="updateReservationStatus"
+                @revertCheckout="revertCheckout"
+                @handleCancel="handleCancel"
+                @onReservationDeleted="goToNewReservation"
+            />
         </div>
     </div>
 
@@ -231,47 +201,11 @@
         </template>
     </Dialog>
 
-    <!-- Change Rooms Dialog -->
-    <Dialog v-model:visible="visibleAddRoomDialog" header="予約一括編集" :modal="true"
-        :breakpoints="{ '960px': '75vw', '640px': '100vw' }" style="width: 50vw">
-        <div class="p-fluid">
-            <Tabs value="0">
-                <TabList>
-                    <Tab value="0">部屋追加</Tab>
-                </TabList>
-
-                <TabPanels>
-                    <!-- Tab 1: Rooms -->
-                    <TabPanel value="0">
-                        <h4 class="mt-4 mb-3 font-bold">部屋追加</h4>
-
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="field mt-6 col-span-1">
-                                <FloatLabel>
-                                    <InputNumber id="move-people" v-model="numberOfPeopleToMove" :min="0" fluid />
-                                    <label for="move-people">人数</label>
-                                </FloatLabel>
-                            </div>
-                            <div class="field mt-6 col-span-1">
-                                <FloatLabel>
-                                    <Select id="move-room" v-model="targetRoom" :options="filteredRooms"
-                                        optionLabel="label" showClear fluid />
-                                    <label for="move-room">部屋を追加</label>
-                                </FloatLabel>
-                            </div>
-                        </div>
-                    </TabPanel>
-                </TabPanels>
-            </Tabs>
-
-        </div>
-        <template #footer>
-            <Button label="追加" icon="pi pi-check" class="p-button-success p-button-text p-button-sm"
-                @click="applyReservationRoomChanges" :loading="isSubmitting" :disabled="isSubmitting" />
-            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
-                @click="closeAddRoomDialog" :loading="isSubmitting" :disabled="isSubmitting" />
-        </template>
-    </Dialog>
+    <ReservationAddRoomDialog
+        :reservation_details="reservation_details"
+        :isSubmitting="isSubmitting"
+        ref="reservationAddRoomDialogRef"        
+    />
 
     <!-- Reservation Edit Dialog -->
     <Dialog v-model:visible="visibleReservationBulkEditDialog" header="全部屋一括編集" :modal="true"
@@ -503,11 +437,11 @@
         <ReservationHistory v-if="props.reservation_id" :reservation_id="props.reservation_id" />
     </Dialog>
 
-    <!-- ReservationCopy dialog -->
-    <Dialog v-model:visible="showCopyDialog" header="予約を複製"
-        :style="{ width: '50vw', 'max-height': '80vh', 'overflow-y': 'auto' }" modal>
-        <ReservationCopyDialog :reservation_id="props.reservation_id" @close="showCopyDialog = false" />
-    </Dialog>
+    <ReservationCopyDialog
+        :reservation_id="props.reservation_id"
+        :hotel_id="String(reservationInfo.hotel_id)"
+        v-model:visible="showCopyDialog"
+    />
 
     <CancellationCalculatorDialog 
         v-model:visible="showCancellationCalculator" 
@@ -522,10 +456,13 @@ import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
-import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
-import ReservationHistory from '@/pages/MainPage/components/ReservationHistory.vue';
-import ReservationCopyDialog from '@/pages/MainPage/components/Dialogs/ReservationCopyDialog.vue';
-import CancellationCalculatorDialog from '@/pages/MainPage/components/Dialogs/CancellationCalculatorDialog.vue';
+import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
+import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
+import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
+
+import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
+import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAddRoomDialog.vue';
+import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -536,6 +473,8 @@ const confirm = useConfirm();
 import {
     Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox
 } from 'primevue';
+
+const reservationAddRoomDialogRef = ref(null);
 
 const props = defineProps({
     reservation_id: {
@@ -550,8 +489,8 @@ const props = defineProps({
 
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, 
-    deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, 
+const { setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern,
+    availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
@@ -975,56 +914,7 @@ const updateReservationStatus = async (status, type = null) => {
     showDateDialog.value = false;
 
 };
-const deleteReservation = () => {
-    const hotel_id = reservationInfo.value.hotel_id;
-    const reservation_id = reservationInfo.value.reservation_id;
 
-    confirm.require({
-        group: 'delete',
-        message: `保留中予約を削除してもよろしいですか?`,
-        header: '削除確認',
-        icon: 'pi pi-info-circle',
-        acceptClass: 'p-button-danger',
-        acceptProps: {
-            label: '削除',
-            loading: isSubmitting.value
-        },
-        rejectProps: {
-            label: 'キャンセル',
-            severity: 'secondary',
-            outlined: true,
-            icon: 'pi pi-times',
-            disabled: isSubmitting.value
-        },
-        accept: async () => {
-            isSubmitting.value = true;
-            try {
-                await deleteHoldReservation(hotel_id, reservation_id);
-                toast.add({
-                    severity: 'success',
-                    summary: '成功',
-                    detail: `保留中予約が削除されました。`,
-                    life: 3000
-                });
-            } catch (e) {
-                // Always show Japanese warning for not found/404
-                toast.add({
-                    severity: 'warn',
-                    summary: '警告',
-                    detail: '予約は既に削除されています。',
-                    life: 3000
-                });
-            } finally {
-                isSubmitting.value = false;
-            }
-            await goToNewReservation();
-
-        },
-        reject: () => {
-            // Do nothing on reject
-        }
-    });
-};
 const handleCancel = () => {
     confirm.require({
         group: 'cancel',
@@ -1131,70 +1021,7 @@ const goToNewReservation = async () => {
     await router.push({ name: 'ReservationsNew' });
 };
 
-// Dialog: Add Room
-const visibleAddRoomDialog = ref(false);
-const targetRoom = ref(null);
-const numberOfPeopleToMove = ref(0);
-const filteredRooms = computed(() => {
-    const reservedRoomIds = props.reservation_details.map(detail => detail.room_id);
 
-    return availableRooms.value
-        .filter(room => room.capacity >= numberOfPeopleToMove.value) // Ensure room can fit the people count
-        .filter(room => !reservedRoomIds.includes(room.room_id))
-        .map(room => ({
-            label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
-            value: room.room_id, // Value for selection
-        }));
-});
-const openAddRoomDialog = async () => {
-    const hotelId = reservationInfo.value.hotel_id;
-    const startDate = reservationInfo.value.check_in;
-    const endDate = reservationInfo.value.check_out;
-
-    await fetchAvailableRooms(hotelId, startDate, endDate);
-
-    visibleAddRoomDialog.value = true;
-};
-const closeAddRoomDialog = () => {
-    visibleAddRoomDialog.value = false;
-};
-const applyReservationRoomChanges = async () => {
-    isSubmitting.value = true;
-    try {
-        if (numberOfPeopleToMove.value <= 0) {
-            toast.add({ severity: 'warn', summary: '警告', detail: `少なくとも一人入力してください。`, life: 3000 });
-            return
-        }
-        if (targetRoom.value === null) {
-            toast.add({ severity: 'warn', summary: '警告', detail: `部屋を選択してください。`, life: 3000 });
-            return;
-        }
-
-        const reservation_id = reservationInfo.value.reservation_id;
-
-        const data = {
-            reservationId: reservation_id,
-            numberOfPeople: numberOfPeopleToMove.value,
-            roomId: targetRoom.value.value,
-        }
-
-        await addRoomToReservation(data);
-
-        closeAddRoomDialog();
-
-        toast.add({ severity: 'success', summary: '成功', detail: '部屋追加されました。', life: 3000 });
-    } catch (error) {
-        console.error('Error applying room changes:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: '部屋の変更に失敗しました',
-            life: 3000
-        });
-    } finally {
-        isSubmitting.value = false;
-    }
-};
 
 // Dialog: Change Client
 const visibleClientChangeDialog = ref(false);
@@ -1293,6 +1120,7 @@ const showHistoryDialog = () => {
 };
 
 const showCancellationCalculator = ref(false);
+const showCopyDialog = ref(false);
 
 // Tab Apply Plan
 const isPatternInput = ref(false);
@@ -1382,6 +1210,15 @@ const deleteAddon = (addon) => {
 const applyPlanChangesToAll = async () => {
     isSubmitting.value = true;
     try {
+        // Get the number of people for the reservation
+        const numberOfPeople = reservationInfo.value.reservation_number_of_people;
+
+        // Adjust addon quantities based on the number of people
+        const adjustedAddons = selectedAddon.value.map(addon => ({
+            ...addon,
+            quantity: addon.quantity * numberOfPeople
+        }));
+
         // 1. Create an array of promises
         const updatePromises = groupedRooms.value.map(room => {
             const params = {
@@ -1389,7 +1226,7 @@ const applyPlanChangesToAll = async () => {
                 room_id: room.room_id,
                 reservation_id: reservationInfo.value.reservation_id,
                 plan: selectedPlan.value,
-                addons: selectedAddon.value,
+                addons: adjustedAddons,
                 daysOfTheWeek: selectedDays.value,
                 overrideRounding: overrideRounding.value
             };
@@ -1554,7 +1391,6 @@ const applyDateChangesToAll = async () => {
     }
 };
 
-const showCopyDialog = ref(false);
 const actionOptions = [
     {
         label: 'プラン・期間編集',
@@ -1564,19 +1400,12 @@ const actionOptions = [
     {
         label: '部屋追加',
         icon: 'pi pi-plus',
-        command: openAddRoomDialog
+        command: () => reservationAddRoomDialogRef.value.openAddRoomDialog()
     },
     {
         label: '予約を複製',
         icon: 'pi pi-copy',
-        command: () => {
-            console.log('[SplitButton] 予約を複製 clicked');
-            console.log('reservationInfo.value:', reservationInfo.value);
-            console.log('reservationInfo.value.reservation_id:', reservationInfo.value?.reservation_id);
-            console.log('showCopyDialog (before):', showCopyDialog.value);
-            showCopyDialog.value = true;
-            console.log('showCopyDialog (after):', showCopyDialog.value);
-        }
+        command: () => { showCopyDialog.value = true; }
     }
 ];
 const onActionClick = () => {

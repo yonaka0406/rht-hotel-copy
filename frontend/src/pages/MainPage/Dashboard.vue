@@ -129,7 +129,7 @@
     import { useRouter } from 'vue-router';
     const router = useRouter();
 
-    import ReservationEdit from './ReservationEdit.vue';
+    import ReservationEdit from './Reservation/ReservationEdit.vue';
     import DashboardDialog from './components/Dialogs/DashboardDialog.vue'; // Updated import path and component name
        
     import { Panel, Drawer, Skeleton } from 'primevue';

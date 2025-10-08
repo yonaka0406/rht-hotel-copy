@@ -37,8 +37,8 @@
 <script setup>
   // Vue
   import { ref, computed, onMounted } from 'vue';
-  import ReservationsNewMinimal from '@/pages/MainPage/components/ReservationsNewMinimal.vue';
-  import ReservationsNewCombo from '@/pages/MainPage/components/ReservationsNewCombo.vue';
+  import ReservationsNewMinimal from '@/pages/MainPage/ReservationsNew/components/ReservationsNewMinimal.vue';
+  import ReservationsNewCombo from '@/pages/MainPage/ReservationsNew/components/ReservationsNewCombo.vue';
 
   // Stores
   import { useUserStore } from '@/composables/useUserStore';
@@ -75,8 +75,4 @@
     }
   };
 
-  // This function is not strictly necessary anymore as the toggle button handles its state directly
-  // const toggleMinimal = () => {
-  //   showMinimal.value = !showMinimal.value;
-  // };
 </script>

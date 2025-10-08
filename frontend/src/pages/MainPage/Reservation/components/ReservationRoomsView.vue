@@ -91,13 +91,7 @@
                                         <template #body="addonSlotProps">
                                             {{ formatCurrency(addonSlotProps.data.price) || 0 }}
                                         </template>
-                                    </Column>
-                                    <Column header="操作">
-                                        <template #body="addonSlotProps">
-                                            <Button icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
-                                                @click="deleteAddon(addonSlotProps.data)" />
-                                        </template>
-                                    </Column>
+                                    </Column>                                    
                                 </DataTable>
                             </div>
                             <div v-else>
@@ -355,14 +349,16 @@
                             class="grid grid-cols-3 gap-4 items-center mb-4">
                             <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
                             <button class="bg-blue-500 text-white hover:bg-blue-600"
-                                @click="changeGuestNumber(selectedGroup, 'add')"><i class="pi pi-plus"></i>
+                                @click="changeGuestNumber(selectedGroup, 'add')"
+                                :disabled="selectedGroup.details[0].number_of_people >= selectedGroup.details[0].capacity || isChangingGuestNumber"><i class="pi pi-plus"></i>
                                 人数増加</button>
                         </div>
                         <div v-if="selectedGroup.details[0].number_of_people > 1"
                             class="grid grid-cols-3 gap-4 items-center mb-4">
                             <p class="col-span-2">予約の宿泊者の人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
                             <button class="bg-yellow-500 text-white hover:bg-yellow-600"
-                                @click="changeGuestNumber(selectedGroup, 'subtract')"><i class="pi pi-minus"></i>
+                                @click="changeGuestNumber(selectedGroup, 'subtract')"
+                                :disabled="selectedGroup.details[0].number_of_people <= 1"><i class="pi pi-minus"></i>
                                 人数削減</button>
                         </div>
 
@@ -486,8 +482,8 @@
 // Vue
 import { ref, computed, onMounted, watch } from 'vue';
 
-import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
-import ReservationGuestListDialog from '@/pages/MainPage/components/Dialogs/ReservationGuestListDialog.vue';
+import ReservationDayDetail from '@/pages/MainPage/Reservation/components/ReservationDayDetail.vue';
+import ReservationGuestListDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationGuestListDialog.vue';
 
 const props = defineProps({
     reservation_details: {
@@ -495,6 +491,8 @@ const props = defineProps({
         required: true,
     },
 });
+
+const emit = defineEmits(['update:reservation_details']);
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -1223,7 +1221,10 @@ const deleteRoom = async (group) => {
         throw error;
     }
 };
+const isChangingGuestNumber = ref(false); // Keep this ref as it's used for disabling the button
+
 const changeGuestNumber = async (group, mode) => {
+    isChangingGuestNumber.value = true; // Set to true at the start
     // Add operation_mode to each detail in the group
     group.details.forEach(detail => {
         detail.operation_mode = mode === 'add' ? 1 : -1;
@@ -1234,9 +1235,12 @@ const changeGuestNumber = async (group, mode) => {
 
         // Provide feedback to the user
         toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
+        emit('update:reservation_details');
     } catch (error) {
         console.error('Error updating reservation details:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約明細の更新に失敗しました。', life: 3000 });
+    } finally {
+        isChangingGuestNumber.value = false; // Set to false in finally block
     }
 };
 
@@ -1542,6 +1546,17 @@ watch(addons, (newValue, oldValue) => {
             ...addon,
             quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1
         }));
+    }
+}, { deep: true });
+
+// Watch for changes in reservation_details to update selectedGroup
+watch(() => props.reservation_details, (newDetails) => {
+    if (selectedGroup.value && newDetails) {
+        // Find the updated version of the selected group
+        const updatedGroup = groupedRooms.value.find(group => group.room_id === selectedGroup.value.room_id);
+        if (updatedGroup) {
+            selectedGroup.value = updatedGroup;
+        }
     }
 }, { deep: true });
 

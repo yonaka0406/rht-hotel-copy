@@ -56,7 +56,7 @@
             <Card class="m-2">
                 <template #title>部屋</template>
                 <template #content>
-                    <ReservationRoomsView v-if="reservation_details" :reservation_details="reservation_details" />
+                    <ReservationRoomsView v-if="reservation_details" :reservation_details="reservation_details" @update:reservation_details="fetchAllReservationData" />
                 </template>
             </Card>
 
@@ -85,10 +85,10 @@
 // Vue
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 
-import ReservationPanel from '@/pages/MainPage/components/ReservationPanel.vue';
-import ReservationRoomsView from '@/pages/MainPage/components/ReservationRoomsView.vue';
-import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
-import ReservationParking from '@/pages/MainPage/components/ReservationParking.vue';
+import ReservationPanel from '@/pages/MainPage/Reservation/components/ReservationPanel.vue';
+import ReservationRoomsView from '@/pages/MainPage/Reservation/components/ReservationRoomsView.vue';
+import ReservationPayments from '@/pages/MainPage/Reservation/components/ReservationPayments.vue';
+import ReservationParking from '@/pages/MainPage/Reservation/components/ReservationParking.vue';
 
 const props = defineProps({
     reservation_id: {
@@ -233,7 +233,7 @@ onMounted(async () => {
     // Listen for a SPECIFIC event, not a generic one
     socket.value.on('tableUpdate', (data) => {
         // This will now trigger on ANY 'tableUpdate' event from the server.
-        //console.log('📬 [WebSocket] Generic "tableUpdate" event received. Refetching all data as requested.');
+        //console.log('📬 [WebSocket] "tableUpdate" event received. Calling fetchAllReservationData.'); // Debug log
         fetchAllReservationData();
     });
 });

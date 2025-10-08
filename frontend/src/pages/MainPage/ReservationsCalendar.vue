@@ -233,7 +233,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 // Components
-const ReservationEdit = defineAsyncComponent(() => import('./ReservationEdit.vue'));
+const ReservationEdit = defineAsyncComponent(() => import('./Reservation/ReservationEdit.vue'));
 const ReservationAddRoom = defineAsyncComponent(() => import('./components/ReservationAddRoom.vue'));
 const ClientForReservationDialog = defineAsyncComponent(() => import('./components/Dialogs/ClientForReservationDialog.vue'));
 import ReservationsCalendarHeader from './components/ReservationsCalendarHeader.vue';

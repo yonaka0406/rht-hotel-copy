@@ -305,7 +305,7 @@
         },        
     });
 
-    import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
+    import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
 
     // Primevue
     import { useToast } from 'primevue/usetoast';

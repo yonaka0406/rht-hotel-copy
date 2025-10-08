@@ -34,7 +34,7 @@ import { useToast } from 'primevue/usetoast';
 import Drawer from 'primevue/drawer';
 import Button from 'primevue/button';
 import ReservationAddRoom from '@/pages/MainPage/components/ReservationAddRoom.vue';
-import ReservationEdit from '@/pages/MainPage/ReservationEdit.vue';
+import ReservationEdit from '@/pages/MainPage/Reservation/ReservationEdit.vue';
 import { useReservationStore } from '@/composables/useReservationStore';
 
 const router = useRouter();

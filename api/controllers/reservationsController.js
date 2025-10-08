@@ -1370,8 +1370,12 @@ const copyReservation = async (req, res) => {
   });
 
   try {
+    const hotel_id = await getHotelIdByReservationId(req.requestId, original_reservation_id);
+    if (!hotel_id) {
+      throw new Error('Hotel ID not found for the original reservation.');
+    }
     // Use the model's copyReservation which copies plans and addons
-    const newReservation = await insertCopyReservation(req.requestId, original_reservation_id, new_client_id, room_mapping, user_id);
+    const newReservation = await insertCopyReservation(req.requestId, original_reservation_id, new_client_id, room_mapping, user_id, hotel_id);
     logger.warn('[copyReservation][controller] Reservation copy complete', { newReservation });
     res.status(201).json({ message: 'Reservation copied successfully', reservation: newReservation });
   } catch (error) {
