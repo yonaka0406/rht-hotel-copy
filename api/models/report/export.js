@@ -153,111 +153,128 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
 const selectExportReservationDetails = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT 
-      reservation_details.hotel_id
-      ,hotels.formal_name
-      ,reservation_details.reservation_id
-      ,reservations.booker_name
-      ,reservations.booker_kana
-      ,reservations.booker_kanji
-      ,reservations.check_in
-      ,reservations.check_out
-      ,reservations.check_out - reservations.check_in AS number_of_nights
-      ,reservations.number_of_people AS reservation_number_of_people
-      ,reservations.status AS reservation_status
-      ,reservations.type AS reservation_type
-      ,reservations.agent
-      ,reservations.ota_reservation_id
-      ,reservations.payment_timing
-      ,reservation_details.id
-      ,reservation_details.date
-      ,rooms.floor
-      ,rooms.room_number
-      ,rooms.capacity
-      ,rooms.smoking
-      ,rooms.for_sale
-      ,room_types.name AS room_type_name
-      ,reservation_details.number_of_people
-      ,reservation_details.plan_type
-      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
-      ,(CASE 
-          WHEN reservation_details.plan_type = 'per_room' 
-          THEN reservation_details.price
-          ELSE reservation_details.price * reservation_details.number_of_people 
-        END
-       ) AS plan_price
-      ,reservation_addons.addon_name
-      ,COALESCE(reservation_addons.quantity,0) AS addon_quantity
-      ,COALESCE(reservation_addons.price,0) AS addon_price
-      ,(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_value
-      ,COALESCE(reservations.payments,0) AS payments
-      ,reservation_details.billable
-      ,reservation_details.cancelled
+    SELECT
+      head.hotel_id
+        ,head.formal_name
+        ,head.id AS reservation_id
+        ,head.booker_name
+        ,head.booker_kana
+        ,head.booker_kanji
+        ,head.check_in
+        ,head.check_out
+        ,head.check_out - head.check_in AS number_of_nights
+        ,head.number_of_people AS reservation_number_of_people
+        ,head.status AS reservation_status
+        ,head.type AS reservation_type
+        ,head.agent
+        ,head.ota_reservation_id
+        ,head.payment_timing
+      ,head.payments
+      ,body.id
+        ,body.date
+      ,body.floor
+        ,body.room_number
+        ,body.capacity
+        ,body.smoking
+        ,body.for_sale
+        ,body.room_type_name
+        ,body.number_of_people
+        ,body.plan_type
+        ,body.plan_name
+      ,body.plan_price
+        ,body.addon_name
+        ,body.addon_quantity
+        ,body.addon_price
+        ,body.addon_value    
+        ,body.billable
+        ,body.cancelled
+      
     FROM
-      hotels
-      ,rooms
-      ,room_types
-      ,(
+      (
         SELECT 
-          reservations.hotel_id
-          ,reservations.id          
-          ,reservations.check_in
-          ,reservations.check_out
-          ,reservations.number_of_people
-          ,reservations.status
-          ,reservations.type
-          ,reservations.agent
-          ,reservations.ota_reservation_id
-          ,reservations.payment_timing
-          ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS booker_name
-          ,clients.name_kana AS booker_kana
-          ,clients.name_kanji AS booker_kanji
-          ,SUM(reservation_payments.value) as payments
+          r.hotel_id
+          ,h.formal_name
+          ,r.id
+          ,r.check_in
+            ,r.check_out
+            ,r.number_of_people
+            ,r.status
+            ,r.type
+            ,r.agent
+            ,r.ota_reservation_id
+            ,r.payment_timing
+            ,COALESCE(c.name_kanji, c.name_kana, c.name) AS booker_name
+            ,c.name_kana AS booker_kana
+            ,COALESCE(c.name_kanji,'') AS booker_kanji
+            ,SUM(COALESCE(rp.value,0)) as payments
         FROM
-          clients
-          ,reservations
-            LEFT JOIN reservation_payments
-              ON reservations.hotel_id = reservation_payments.hotel_id 
-             AND reservations.id = reservation_payments.reservation_id
+          reservations r 
+          JOIN reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
+          JOIN clients c ON r.reservation_client_id = c.id
+          JOIN hotels h ON r.hotel_id = h.id
+          LEFT JOIN reservation_payments rp ON r.hotel_id = rp.hotel_id AND r.id = rp.reservation_id
         WHERE
-          reservations.reservation_client_id = clients.id
-          AND reservations.status <> 'block'
+          r.hotel_id = $1
+          AND rd.date BETWEEN $2 AND $3
+          AND r.status <> 'block'
         GROUP BY
-          reservations.hotel_id
-          ,reservations.id
-          ,reservations.check_in
-          ,reservations.check_out
-          ,reservations.number_of_people
-          ,reservations.status
-          ,reservations.type
-          ,reservations.agent
-          ,reservations.ota_reservation_id
-          ,reservations.payment_timing
-          ,clients.name_kanji, clients.name, clients.name_kana
-      ) AS reservations
-      ,reservation_details
-        LEFT JOIN reservation_addons
-          ON reservation_details.hotel_id = reservation_addons.hotel_id 
-         AND reservation_details.id = reservation_addons.reservation_detail_id
-      LEFT JOIN plans_hotel 
-        ON plans_hotel.hotel_id = reservation_details.hotel_id 
-       AND plans_hotel.id = reservation_details.plans_hotel_id
-      LEFT JOIN plans_global 
-        ON plans_global.id = reservation_details.plans_global_id
-        
-    WHERE      
-      reservations.hotel_id = $1
-      AND reservation_details.date BETWEEN $2 AND $3      
-      AND reservation_details.hotel_id = reservations.hotel_id
-      AND reservation_details.reservation_id = reservations.id
-      AND reservation_details.hotel_id = hotels.id
-      AND reservation_details.hotel_id = rooms.hotel_id
-      AND reservation_details.room_id = rooms.id
-      AND rooms.hotel_id = room_types.hotel_id
-      AND rooms.room_type_id = room_types.id
+          r.hotel_id
+          ,h.formal_name
+          ,r.id
+          ,r.check_in
+          ,r.check_out
+          ,r.number_of_people
+          ,r.status
+          ,r.type
+          ,r.agent
+          ,r.ota_reservation_id
+          ,r.payment_timing
+          ,c.name_kanji, c.name, c.name_kana
+      ) head 
+      JOIN
+      (
+        SELECT 
+          rd.hotel_id
+          ,rd.reservation_id
+          ,rd.id
+          ,rd.date
+          ,rooms.floor
+            ,rooms.room_number
+            ,rooms.capacity
+            ,rooms.smoking
+            ,rooms.for_sale
+            ,room_types.name AS room_type_name
+          ,rd.number_of_people
+            ,rd.plan_type
+          ,COALESCE(ph.name, pg.name) AS plan_name
+          ,(CASE 
+            WHEN rd.plan_type = 'per_room' 
+            THEN rd.price
+            ELSE rd.price * rd.number_of_people 
+            END
+            ) AS plan_price
+          ,ra.addon_name
+          ,COALESCE(ra.quantity,0) AS addon_quantity
+            ,COALESCE(ra.price,0) AS addon_price
+          ,(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) AS addon_value
+          ,(COALESCE(ra.quantity,0) * COALESCE(ra.net_price,0)) AS addon_net_value
+          ,rd.billable
+            ,rd.cancelled
+        FROM
+          reservation_details rd	
+          JOIN rooms ON rd.hotel_id = rooms.hotel_id AND rd.room_id = rooms.id
+          JOIN room_types  ON rooms.hotel_id = room_types.hotel_id AND rooms.room_type_id = room_types.id
+          LEFT JOIN plans_hotel ph ON ph.hotel_id = rd.hotel_id AND ph.id = rd.plans_hotel_id
+            LEFT JOIN plans_global pg ON pg.id = rd.plans_global_id
+          LEFT JOIN reservation_addons ra ON rd.hotel_id = ra.hotel_id AND rd.id = ra.reservation_detail_id
+        WHERE 
+          rd.hotel_id = $1
+          AND rd.date BETWEEN $2 AND $3
+      ) body 
+      ON head.hotel_id = body.hotel_id AND head.id = body.reservation_id
+
     ORDER BY 
-      reservations.check_in, reservation_details.reservation_id, rooms.room_number, 
-      reservation_details.date, reservation_addons.addon_name, reservation_addons.price DESC
+      head.check_in, head.id, body.room_number, body.date, body.addon_name
   `;
 
   const values = [hotelId, dateStart, dateEnd]
