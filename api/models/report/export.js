@@ -182,6 +182,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,body.plan_type
       ,body.plan_name
       ,body.plan_price
+	    ,rates.plan_net_price
       ,body.addon_name
       ,body.addon_quantity
       ,body.addon_price      
@@ -273,6 +274,22 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           AND rd.date BETWEEN $2 AND $3
       ) body 
       ON head.hotel_id = body.hotel_id AND head.id = body.reservation_id
+      LEFT JOIN
+      (
+          SELECT
+              rr.hotel_id,
+              rr.reservation_details_id AS id,
+        SUM(rr.price) AS plan_price,
+              SUM(rr.net_price) AS plan_net_price
+          FROM
+              reservation_rates rr JOIN reservation_details rd ON rr.hotel_id = rd.hotel_id AND rr.reservation_details_id = rd.id
+      WHERE 
+            rd.hotel_id = $1
+            AND rd.date BETWEEN $2 AND $3
+          GROUP BY
+              rr.hotel_id, rr.reservation_details_id    
+      ) rates
+      ON body.hotel_id = rates.hotel_id AND body.id = rates.id
 
     ORDER BY 
       head.check_in, head.id, body.room_number, body.date, body.id, body.addon_name

@@ -97,6 +97,9 @@ const getExportReservationDetails = async (req, res) => {
                 plan_price: isFirstDetailOccurrence
                     ? Math.floor(parseFloat(reservation.plan_price) || 0)
                     : null,
+                plan_net_price: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_net_price) || 0)
+                    : null,
                 payments: isFirstOccurrence
                     ? Math.floor(parseFloat(reservation.payments) || 0)
                     : null,
@@ -116,7 +119,12 @@ const getExportReservationDetails = async (req, res) => {
             const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
             const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
 
-            // Write data to CSV, add a formatted row
+            // Process each reservation and write to CSV
+            // Note on pricing: 
+            // - plan_price comes from reservation_details (sometimes rounded to nearest 100, what client pays)
+            // - plan_net_price comes from reservation_rates (actual net value based on gross value before rounding)
+            // This discrepancy means the net value of sales and plan calculations may not be accurate
+            // due to rounding differences between what's charged and what's recorded in the system
             csvStream.write({
                 ホテルID: reservation.hotel_id,
                 ホテル名称: reservation.formal_name,
@@ -142,6 +150,7 @@ const getExportReservationDetails = async (req, res) => {
                 プラン名: reservation.plan_name,
                 プランタイプ: translatePlanType(reservation.plan_type),
                 プラン料金: reservation.plan_price,
+                "プラン料金(税抜き)": reservation.plan_net_price,                
                 アドオン名: reservation.addon_name,
                 アドオン数量: reservation.addon_quantity,
                 アドオン単価: reservation.addon_price,
@@ -149,6 +158,7 @@ const getExportReservationDetails = async (req, res) => {
                 "アドオン料金(税抜き)": Math.floor(parseFloat(reservation.addon_net_value)),
                 請求対象: reservation.billable ? 'はい' : 'いいえ',                
                 売上高: reservation.billable ? reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) : 0,
+                "売上高(税抜き)": reservation.billable ? reservation.plan_net_price + Math.floor(parseFloat(reservation.addon_net_value)) : 0,
                 支払い: translatePaymentTiming(reservation.payment_timing),
                 予約ID: reservation.reservation_id,
                 予約詳細ID: reservation.id,
