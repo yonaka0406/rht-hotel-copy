@@ -189,12 +189,25 @@ const reservationDetailId = computed(() => {
 const reservationDates = computed(() => {
   if (!props.reservationDetails || props.reservationDetails.length === 0) return [];
   
-  const checkIn = new Date(props.reservationDetails[0].check_in);
-  const checkOut = new Date(props.reservationDetails[0].check_out);
+  // Find the earliest check-in and latest check-out across all reservation details
+  let minCheckIn = new Date(props.reservationDetails[0].check_in);
+  let maxCheckOut = new Date(props.reservationDetails[0].check_out);
+
+  props.reservationDetails.forEach(detail => {
+    const detailCheckIn = new Date(detail.check_in);
+    const detailCheckOut = new Date(detail.check_out);
+
+    if (detailCheckIn < minCheckIn) {
+      minCheckIn = detailCheckIn;
+    }
+    if (detailCheckOut > maxCheckOut) {
+      maxCheckOut = detailCheckOut;
+    }
+  });
+
   const dates = [];
-  
-  const current = new Date(checkIn);
-  while (current < checkOut) {
+  const current = new Date(minCheckIn);
+  while (current < maxCheckOut) {
     dates.push(current.toISOString().split('T')[0]);
     current.setDate(current.getDate() + 1);
   }
