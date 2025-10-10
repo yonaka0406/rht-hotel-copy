@@ -789,7 +789,7 @@
   
   // Mount
   onMounted(async () => {
-    console.log('[ParkingCalendar] onMounted start');
+    // console.log('[ParkingCalendar] onMounted start');
     try {
       isLoading.value = true;
 
@@ -802,11 +802,11 @@
       socket.value.on('tableUpdate', async (data) => {
         // Prevent fetching if bulk update is in progress
         if (isUpdating.value) {
-          console.log('Skipping fetchParkingReservationsLocal because update is still running');
+          // console.log('Skipping fetchParkingReservationsLocal because update is still running');
           return;
         }
         
-        console.log('[ParkingCalendar] Refreshing parking data...');
+        // console.log('[ParkingCalendar] Refreshing parking data...');
         await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       });
             

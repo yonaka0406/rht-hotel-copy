@@ -1266,16 +1266,16 @@ const applyPlanChangesToAll = async () => {
 const applyPatternChangesToAll = async () => {
     isSubmitting.value = true;
     try {
-        console.log('Starting to apply pattern to all rooms:', {
-            hotelId: reservationInfo.value.hotel_id,
-            reservationId: reservationInfo.value.reservation_id,
-            pattern: dayPlanSelections.value
-        });
+        // console.log('Starting to apply pattern to all rooms:', {
+        //    hotelId: reservationInfo.value.hotel_id,
+        //    reservationId: reservationInfo.value.reservation_id,
+        //    pattern: dayPlanSelections.value
+        // });
 
         // Use Promise.all to wait for all room updates to complete
         const updatePromises = groupedRooms.value.map(async (room) => {
             const roomId = room.room_id;
-            console.log('Applying pattern to room:', roomId);
+            // console.log('Applying pattern to room:', roomId);
             try {
                 const result = await setRoomPattern(
                     reservationInfo.value.hotel_id,
@@ -1284,7 +1284,7 @@ const applyPatternChangesToAll = async () => {
                     dayPlanSelections.value,
                     overrideRounding.value
                 );
-                console.log('Pattern applied to room:', roomId, result);
+                // console.log('Pattern applied to room:', roomId, result);
                 return result;
             } catch (error) {
                 console.error(`Failed to apply pattern to room ${roomId}:`, error);
@@ -1295,7 +1295,7 @@ const applyPatternChangesToAll = async () => {
         await Promise.all(updatePromises);
 
         closeReservationBulkEditDialog();
-        console.log('Successfully applied pattern to all rooms');
+        // console.log('Successfully applied pattern to all rooms');
 
         toast.add({
             severity: 'success',

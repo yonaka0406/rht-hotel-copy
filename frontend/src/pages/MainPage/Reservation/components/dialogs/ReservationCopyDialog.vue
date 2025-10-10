@@ -234,7 +234,7 @@
       }));
 
       const result = await copyReservationAction(props.reservation_id, selectedClient.value.id, roomMapping);
-      console.log('copyReservation result:', result);
+      // console.log('copyReservation result:', result);
       
       // Redirect to the new reservation edit page
       if (result && result.reservation && result.reservation.id) {
