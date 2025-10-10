@@ -7,6 +7,25 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### October 10, 2025
 
+#### Bug #81: OTA Reservation Plan Recalculation on Room Change
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  When changing the room for an OTA reservation, the system is incorrectly recalculating the plan and overriding the original price that was received from the XML. This can lead to incorrect billing and discrepancies with the OTA's records.
+- **Steps to Reproduce**:
+  1. Import a reservation from an OTA (e.g., Booking.com, Expedia)
+  2. Note the original price from the XML
+  3. Change the room type for the reservation
+  4. Observe that the price is recalculated instead of maintaining the original OTA price
+- **Expected Behavior**:
+  - OTA reservations should maintain their original pricing when only the room is changed
+  - The system should only update the room assignment without recalculating the plan
+  - Any price changes should be explicitly made by staff, not automatically recalculated
+- **Technical Notes**:
+  - The issue likely occurs in the room change logic where it's not checking if the reservation is from an OTA
+  - Need to preserve the original price and plan details from the XML
+  - Consider adding a flag to identify OTA reservations that should maintain their original pricing
+
 #### Bug #80: Incorrect Date Plan Updates When Modifying Reservation Period
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
