@@ -5,6 +5,28 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### October 10, 2025
+
+#### Feature Request #79: Evaluate Add Simulation Function with ADR and RevPAR Metrics
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  Add functionality to evaluate the simulation results by displaying key performance indicators (KPIs) such as ADR (Average Daily Rate) and RevPAR (Revenue Per Available Room).
+- **Requirements**:
+  - Add an "Evaluate" button in the simulation interface
+  - Calculate and display the following metrics:
+    - ADR (Total Room Revenue / Number of Rooms Sold)
+    - RevPAR (Total Room Revenue / Total Available Rooms)
+    - Occupancy Rate (% of rooms occupied)
+  - Display metrics in a clear, easy-to-read dashboard format
+  - Allow comparison between different simulation scenarios
+  - Include date range filtering for evaluation
+  - Option to export metrics to CSV/Excel
+- **Technical Notes**:
+  - Ensure calculations handle edge cases (e.g., zero rooms sold)
+  - Consider adding visualizations (charts/graphs) for trend analysis
+  - Cache results for better performance with large datasets
+  
 ### October 08, 2025
 
 #### Feature Request #78: Add Slack Text Generation in ReservationPanel
