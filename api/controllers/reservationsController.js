@@ -1361,14 +1361,6 @@ const copyReservation = async (req, res) => {
   const { original_reservation_id, new_client_id, room_mapping } = req.body;
   const user_id = req.user.id;
 
-  // Use a single object for structured logging (Winston compatible)
-  logger.warn('[copyReservation][controller] Called with body', {
-    original_reservation_id,
-    new_client_id,
-    room_mapping,
-    user_id
-  });
-
   try {
     const hotel_id = await getHotelIdByReservationId(req.requestId, original_reservation_id);
     if (!hotel_id) {
@@ -1376,7 +1368,7 @@ const copyReservation = async (req, res) => {
     }
     // Use the model's copyReservation which copies plans and addons
     const newReservation = await insertCopyReservation(req.requestId, original_reservation_id, new_client_id, room_mapping, user_id, hotel_id);
-    logger.warn('[copyReservation][controller] Reservation copy complete', { newReservation });
+
     res.status(201).json({ message: 'Reservation copied successfully', reservation: newReservation });
   } catch (error) {
     logger.error('[copyReservation][controller] Error copying reservation:', error);
