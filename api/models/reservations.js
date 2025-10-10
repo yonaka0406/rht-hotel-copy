@@ -2006,194 +2006,208 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     const newDuration = (new Date(new_check_out) - new Date(new_check_in)) / (1000 * 60 * 60 * 24);
     //console.log(`Duration calculated - Old: ${oldDuration} days, New: ${newDuration} days.`);
 
-    // If the duration is the same, update the dates. Else, add dates and delete the old ones
-    if (oldDuration === newDuration) {
-      //console.log('Duration is the same. Updating existing reservation_details dates.');
-      const updateDatesQuery = `
-        WITH date_diff AS (
-          SELECT
-            reservations.check_in AS old_check_in,
-            reservations.check_out AS old_check_out,
-            $1::DATE - reservations.check_in AS date_diff
-          FROM reservations
-          WHERE
-            reservations.id = $2
-            AND reservations.hotel_id = $3
-        ),
-        ordered_details AS (
-            SELECT *, (SELECT date_diff FROM date_diff) AS shift_days
+        // If the duration is the same, update the dates. Else, add dates and delete the old ones
+        if (oldDuration === newDuration) {
+          //console.log('Duration is the same. Updating existing reservation_details dates.');
+          const updateDatesQuery = `
+            WITH date_diff AS (
+              SELECT
+                reservations.check_in AS old_check_in,
+                reservations.check_out AS old_check_out,
+                $1::DATE - reservations.check_in AS date_diff
+              FROM reservations
+              WHERE
+                reservations.id = $2
+                AND reservations.hotel_id = $3
+            ),
+            ordered_details AS (
+                SELECT *, (SELECT date_diff FROM date_diff) AS shift_days
+                FROM reservation_details
+                WHERE reservation_id = $2
+                AND hotel_id = $3
+                AND room_id = $7
+                ORDER BY date ${shiftDirection} NULLS LAST
+            ),
+            updated_dates AS (
+              UPDATE reservation_details
+              SET
+                reservation_id = $4,
+                room_id = $5,
+                updated_by = $6,
+                date = reservation_details.date + (SELECT date_diff FROM date_diff)
+              FROM
+                ordered_details
+              WHERE reservation_details.id = ordered_details.id
+              RETURNING reservation_details.*
+            )
+            SELECT * FROM updated_dates;
+          `;
+          const values = [
+            new_check_in,
+            id,
+            hotel_id,
+            newReservationId,
+            new_room_id,
+            updated_by,
+            old_room_id
+          ];
+          const result = await client.query(updateDatesQuery, values);
+          //console.log(`${result.rowCount} reservation_details records updated.`);
+        } else {
+          //console.log('Duration has changed. Recreating reservation_details records.');
+    
+          // Get all original details to preserve plans day by day
+          const originalDetailsQuery = `
+            SELECT id, date, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable
             FROM reservation_details
-            WHERE reservation_id = $2
-            AND hotel_id = $3
-            AND room_id = $7
-            ORDER BY date ${shiftDirection} NULLS LAST
-        ),
-        updated_dates AS (
-          UPDATE reservation_details
-          SET
-            reservation_id = $4,
-            room_id = $5,
-            updated_by = $6,
-            date = reservation_details.date + (SELECT date_diff FROM date_diff)
-          FROM
-            ordered_details
-          WHERE reservation_details.id = ordered_details.id
-          RETURNING reservation_details.*
-        )
-        SELECT * FROM updated_dates;
-      `;
-      const values = [
-        new_check_in,
-        id,
-        hotel_id,
-        newReservationId,
-        new_room_id,
-        updated_by,
-        old_room_id
-      ];
-      const result = await client.query(updateDatesQuery, values);
-      //console.log(`${result.rowCount} reservation_details records updated.`);
-    } else {
-      //console.log('Duration has changed. Recreating reservation_details records.');
-
-      // Get template record to copy from
-      const templateQuery = `
-        SELECT plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable
-        FROM reservation_details
-        WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
-        ORDER BY date ASC
-        LIMIT 1
-      `;
-      const templateResult = await client.query(templateQuery, [id, hotel_id, old_room_id]);
-
-      if (templateResult.rows.length === 0) {
-        throw new Error('No template record found to copy from');
-      }
-      //console.log('Found template record to copy details from.');
-      const template = templateResult.rows[0];
-
-      // --- NEW LOGIC: START ---
-      // 1. Fetch client and addon data BEFORE deleting old records
-      let clientsToCopy = [];
-      let addonsToCopy = [];
-
-      const sourceDetailQuery = `
-        SELECT id FROM reservation_details
-        WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
-        ORDER BY date ASC LIMIT 1
-      `;
-      const sourceResult = await client.query(sourceDetailQuery, [id, hotel_id, old_room_id]);
-
-      if (sourceResult.rows.length > 0) {
-        const sourceDetailId = sourceResult.rows[0].id;
-        //console.log(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
-
-        const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
-        clientsToCopy = clientsResult.rows;
-        //console.log(`Found ${clientsToCopy.length} clients to copy.`);
-
-        const addonsResult = await client.query('SELECT addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate FROM reservation_addons WHERE reservation_detail_id = $1', [sourceDetailId]);
-        addonsToCopy = addonsResult.rows;
-        //console.log(`Found ${addonsToCopy.length} addons to copy.`);
-      }
-      // --- NEW LOGIC: END ---
-
-      // 2. Delete old records
-      const deleteOldQuery = `
-        DELETE FROM reservation_details 
-        WHERE reservation_id = $1 
-          AND hotel_id = $2 
-          AND room_id = $3
-          AND date >= $4 AND date < $5
-        RETURNING id, date;
-      `;
-      const deleteResult = await client.query(deleteOldQuery, [id, hotel_id, old_room_id, old_check_in, old_check_out]);
-      //console.log(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
-
-      // 3. Create all required new dates
-      const insertDetailsQuery = `
-        INSERT INTO reservation_details (
-          hotel_id, reservation_id, date, room_id, 
-          plans_global_id, plans_hotel_id, plan_name, plan_type, 
-          number_of_people, price, billable, created_by, updated_by
-        )
-        SELECT 
-          $1 as hotel_id,
-          $2::uuid as reservation_id,
-          date_series.date,
-          $3 as room_id,
-          $4 as plans_global_id,
-          $5 as plans_hotel_id, 
-          $6 as plan_name,
-          $7 as plan_type,
-          $8 as number_of_people,
-          $9 as price,
-          $10 as billable,
-          $11 as created_by,
-          $11 as updated_by
-        FROM generate_series($12::DATE, ($13::DATE - INTERVAL '1 day')::DATE, '1 day'::INTERVAL) as date_series(date)
-        RETURNING id;
-      `;
-
-      const insertDetailsValues = [
-        hotel_id,                   // $1
-        newReservationId,           // $2
-        new_room_id,                // $3
-        template.plans_global_id,   // $4
-        template.plans_hotel_id,    // $5
-        template.plan_name,         // $6
-        template.plan_type,         // $7
-        template.number_of_people,  // $8
-        template.price,             // $9
-        template.billable,          // $10
-        updated_by,                 // $11
-        new_check_in,               // $12
-        new_check_out               // $13
-      ];
-
-      const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
-      const newReservationDetails = insertedDetails.rows;
-      //console.log(`Inserted ${newReservationDetails.length} new reservation_details records.`);
-
-      // --- MODIFIED LOGIC: START ---
-      // 4. Copy clients/addons to new records using the data fetched earlier
-      if (newReservationDetails.length > 0) {
-        let clientsInserted = 0;
-        let addonsInserted = 0;
-
-        for (const detail of newReservationDetails) {
-          // Insert clients
-          if (clientsToCopy.length > 0) {
-            for (const clientRow of clientsToCopy) {
-              const insertClientQuery = `
-                INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by)
-                VALUES ($1, $2, $3, $4, $4)
-              `;
-              const clientResult = await client.query(insertClientQuery, [hotel_id, detail.id, clientRow.client_id, updated_by]);
-              clientsInserted += clientResult.rowCount || 0;
-            }
+            WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
+            ORDER BY date ASC
+          `;
+          const originalDetailsResult = await client.query(originalDetailsQuery, [id, hotel_id, old_room_id]);
+          const originalDetailsMap = new Map(originalDetailsResult.rows.map(d => [formatDate(new Date(d.date)), d]));
+    
+          // --- NEW LOGIC: START ---
+          // 1. Fetch client and addon data BEFORE deleting old records
+          let clientsToCopy = [];
+          let addonsToCopy = [];
+    
+          const sourceDetailQuery = `
+            SELECT id FROM reservation_details
+            WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
+            ORDER BY date ASC LIMIT 1
+          `;
+          const sourceResult = await client.query(sourceDetailQuery, [id, hotel_id, old_room_id]);
+    
+          if (sourceResult.rows.length > 0) {
+            const sourceDetailId = sourceResult.rows[0].id;
+            //console.log(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
+    
+            const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
+            clientsToCopy = clientsResult.rows;
+            //console.log(`Found ${clientsToCopy.length} clients to copy.`);
+    
+            const addonsResult = await client.query('SELECT addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate FROM reservation_addons WHERE reservation_detail_id = $1', [sourceDetailId]);
+            addonsToCopy = addonsResult.rows;
+            //console.log(`Found ${addonsToCopy.length} addons to copy.`);
           }
-
-          // Insert addons
-          if (addonsToCopy.length > 0) {
-            for (const addonRow of addonsToCopy) {
-              const insertAddonQuery = `
-                INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
-              `;
-              const addonResult = await client.query(insertAddonQuery, [
-                hotel_id, detail.id, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name,
-                addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, updated_by
-              ]);
-              addonsInserted += addonResult.rowCount || 0;
+          // --- NEW LOGIC: END ---
+    
+          // 2. Delete old records
+          const deleteOldQuery = `
+            DELETE FROM reservation_details 
+            WHERE reservation_id = $1 
+              AND hotel_id = $2 
+              AND room_id = $3
+              AND (date < $4 OR date >= $5)
+            RETURNING id, date;
+          `;
+          const deleteResult = await client.query(deleteOldQuery, [id, hotel_id, old_room_id, new_check_in, new_check_out]);
+          //console.log(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
+    
+          // 3. Create all required new dates
+          const newDates = [];
+          let currentDate = new Date(new_check_in);
+          while (currentDate < new Date(new_check_out)) {
+            newDates.push(formatDate(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+    
+          const existingDates = new Set(originalDetailsResult.rows.map(d => formatDate(new Date(d.date))));
+          const datesToCreate = newDates.filter(d => !existingDates.has(d));
+    
+          if (datesToCreate.length > 0) {
+            const template = originalDetailsResult.rows[0] || {
+              plans_global_id: null,
+              plans_hotel_id: null,
+              plan_name: null,
+              plan_type: 'per_room',
+              number_of_people: number_of_people,
+              price: 0,
+              billable: true
+            };
+    
+            const insertDetailsQuery = `
+              INSERT INTO reservation_details ( 
+                hotel_id, reservation_id, date, room_id, 
+                plans_global_id, plans_hotel_id, plan_name, plan_type, 
+                number_of_people, price, billable, created_by, updated_by
+              )
+              SELECT 
+                $1 as hotel_id,
+                $2::uuid as reservation_id,
+                date_series.date,
+                $3 as room_id,
+                $4 as plans_global_id,
+                $5 as plans_hotel_id, 
+                $6 as plan_name,
+                $7 as plan_type,
+                $8 as number_of_people,
+                $9 as price,
+                $10 as billable,
+                $11 as created_by,
+                $11 as updated_by
+              FROM unnest($12::date[]) as date_series(date)
+              RETURNING id;
+            `;
+    
+            const insertDetailsValues = [
+              hotel_id,
+              newReservationId,
+              new_room_id,
+              template.plans_global_id,
+              template.plans_hotel_id,
+              template.plan_name,
+              template.plan_type,
+              template.number_of_people,
+              template.price,
+              template.billable,
+              updated_by,
+              datesToCreate
+            ];
+    
+            const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
+            const newReservationDetails = insertedDetails.rows;
+            //console.log(`Inserted ${newReservationDetails.length} new reservation_details records.`);
+    
+            // --- MODIFIED LOGIC: START ---
+            // 4. Copy clients/addons to new records using the data fetched earlier
+            if (newReservationDetails.length > 0) {
+              let clientsInserted = 0;
+              let addonsInserted = 0;
+    
+              for (const detail of newReservationDetails) {
+                // Insert clients
+                if (clientsToCopy.length > 0) {
+                  for (const clientRow of clientsToCopy) {
+                    const insertClientQuery = `
+                      INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by)
+                      VALUES ($1, $2, $3, $4, $4)
+                    `;
+                    const clientResult = await client.query(insertClientQuery, [hotel_id, detail.id, clientRow.client_id, updated_by]);
+                    clientsInserted += clientResult.rowCount || 0;
+                  }
+                }
+    
+                // Insert addons
+                if (addonsToCopy.length > 0) {
+                  for (const addonRow of addonsToCopy) {
+                    const insertAddonQuery = `
+                      INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by)
+                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+                    `;
+                    const addonResult = await client.query(insertAddonQuery, [
+                      hotel_id, detail.id, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name,
+                      addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, updated_by
+                    ]);
+                    addonsInserted += addonResult.rowCount || 0;
+                  }
+                }
+              }
+              //console.log(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
             }
+            // --- MODIFIED LOGIC: END ---
           }
         }
-        //console.log(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
-      }
-      // --- MODIFIED LOGIC: END ---
-    }
-
     // Update reservations table with new check_in and check_out
     //console.log(`Updating main reservation record ${newReservationId} with new dates.`);
     const updateReservationQuery = `
