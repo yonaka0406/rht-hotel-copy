@@ -656,16 +656,17 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
 const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
+    -- Plan Sales
     SELECT
       COALESCE(pg.name, ph.name, 'プラン未設定') AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(
-        (CASE
+        CASE
           WHEN rd.plan_type = 'per_room' THEN rd.price
           ELSE rd.price * rd.number_of_people
-        END) + COALESCE(ra.price_sum, 0)
+        END
       ) AS total_sales,
-      SUM(COALESCE(rr.net_price, 0) + COALESCE(ra.net_price_sum, 0)) AS total_sales_net
+      SUM(COALESCE(rr.net_price, 0)) AS total_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
@@ -680,17 +681,6 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         GROUP BY
             hotel_id, reservation_details_id
     ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
-    LEFT JOIN (
-        SELECT
-            hotel_id,
-            reservation_detail_id,
-			      SUM(price * quantity) AS price_sum,
-            SUM(net_price * quantity) AS net_price_sum
-        FROM
-            reservation_addons
-        GROUP BY
-            hotel_id, reservation_detail_id
-    ) ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
       AND rd.billable = TRUE
@@ -698,6 +688,29 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       AND r.type <> 'employee'
     GROUP BY
       pg.name, ph.name, is_cancelled_billable
+
+    UNION ALL
+
+    -- Addon Sales by Type and Tax
+    SELECT
+      ra.addon_type || ' ' || (ra.tax_rate * 100) || '%' AS plan_name,
+      rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
+      SUM(ra.price * ra.quantity) AS total_sales,
+      SUM(ra.net_price * ra.quantity) AS total_sales_net
+    FROM reservation_details rd
+    JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+    JOIN reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+    WHERE rd.hotel_id = $1
+      AND rd.date BETWEEN $2 AND $3
+      AND rd.billable = TRUE
+      AND r.status NOT IN ('hold', 'block')
+      AND r.type <> 'employee'
+    GROUP BY
+      ra.addon_type,
+      ra.tax_rate,
+      is_cancelled_billable
+    HAVING SUM(ra.price * ra.quantity) <> 0
+
     ORDER BY
       plan_name, is_cancelled_billable;
   `;
