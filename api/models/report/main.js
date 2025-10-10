@@ -693,7 +693,14 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
 
     -- Addon Sales by Type and Tax
     SELECT
-      ra.addon_type || ' ' || (ra.tax_rate * 100) || '%' AS plan_name,
+      'アドオン：' || CASE ra.addon_type
+        WHEN 'breakfast' THEN '朝食'
+        WHEN 'lunch' THEN '昼食'
+        WHEN 'dinner' THEN '夕食'
+        WHEN 'parking' THEN '駐車場'
+        WHEN 'other' THEN 'その他'
+        ELSE ra.addon_type
+      END || '(' || (ra.tax_rate * 100)::integer || '%)' AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(ra.price * ra.quantity) AS total_sales,
       SUM(ra.net_price * ra.quantity) AS total_sales_net
