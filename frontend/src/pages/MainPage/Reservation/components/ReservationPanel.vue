@@ -34,7 +34,7 @@
                 style="background-color: transparent;" />
         </div>
         <div class="field flex flex-col">
-            <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'">
+            <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'">
                 <div class="flex items-center justify-between mr-2 mb-2">
                     <p class="font-bold">宿泊者：</p>
                     <SplitButton label="予約操作" :model="actionOptions" icon="pi pi-cog" severity="help" class="ml-2"
@@ -214,7 +214,7 @@
             <Tabs value="0" @update:value="handleTabChange">
                 <TabList>
                     <Tab value="0">プラン適用</Tab>
-                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'"
+                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'"
                         value="4">期間</Tab>
                 </TabList>
 
