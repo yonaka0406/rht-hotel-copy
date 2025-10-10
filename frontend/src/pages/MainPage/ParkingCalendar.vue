@@ -212,6 +212,7 @@
   const isCompactView = ref(true);
   const centerDate = ref(formatDate(new Date()));
   const pinnedRowIndex = ref(null);
+  const tableContainer = ref(null);
 
   const pinRow = (dateIndex) => {
     if (pinnedRowIndex.value === dateIndex) {
