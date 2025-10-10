@@ -590,7 +590,7 @@ const updateRoomAssignmentOrderController = async (req, res) => {
 };
 
 const blockMultipleRooms = async (req, res) => {
-  console.log('Starting blockMultipleRooms with request body:', JSON.stringify(req.body, null, 2));
+  // console.log('Starting blockMultipleRooms with request body:', JSON.stringify(req.body, null, 2));
   const {
       hotel_id,
       check_in,
@@ -603,7 +603,7 @@ const blockMultipleRooms = async (req, res) => {
   
   const updated_by = req.user.id;
   const requestId = req.requestId;
-  console.log(`Processing request ${requestId} for hotel ${hotel_id} by user ${updated_by}`);
+  // console.log(`Processing request ${requestId} for hotel ${hotel_id} by user ${updated_by}`);
   
   // Validate required fields
   if (!hotel_id || !check_in || !check_out || !room_type_counts || !comment) {
@@ -619,14 +619,14 @@ const blockMultipleRooms = async (req, res) => {
   const roomTypeCounts = [];
   if (room_type_counts) { // Ensure room_type_counts exists
     try {
-        console.log('Processing room type counts:', JSON.stringify(room_type_counts, null, 2));
+        // console.log('Processing room type counts:', JSON.stringify(room_type_counts, null, 2));
         for (const [roomTypeId, count] of Object.entries(room_type_counts)) {
             roomTypeCounts.push({
                 room_type_id: parseInt(roomTypeId, 10),
                 count: parseInt(count, 10)
             });
         }
-        console.log('Processed room type counts:', JSON.stringify(roomTypeCounts, null, 2));
+        // console.log('Processed room type counts:', JSON.stringify(roomTypeCounts, null, 2));
     } catch (error) {
         const errorMsg = 'Invalid room_type_counts format. Expected an object with room_type_id as keys and counts as values.';
         console.error('Error processing room type counts:', errorMsg, error);
@@ -641,7 +641,7 @@ const blockMultipleRooms = async (req, res) => {
   const parkingCombos = [];
   if (parking_combos) { // Ensure parking_combos exists
     try {
-        console.log('Processing parking combos:', JSON.stringify(parking_combos, null, 2));
+        // console.log('Processing parking combos:', JSON.stringify(parking_combos, null, 2));
         // Assuming parking_combos is an array of objects like { vehicle_category_id, number_of_rooms }
         for (const combo of parking_combos) {
             parkingCombos.push({
@@ -649,7 +649,7 @@ const blockMultipleRooms = async (req, res) => {
                 number_of_rooms: parseInt(combo.number_of_rooms, 10)
             });
         }
-        console.log('Processed parking combos:', JSON.stringify(parkingCombos, null, 2));
+        // console.log('Processed parking combos:', JSON.stringify(parkingCombos, null, 2));
     } catch (error) {
         const errorMsg = 'Invalid parking_combos format. Expected an array of objects with vehicle_category_id and number_of_rooms.';
         console.error('Error processing parking combos:', errorMsg, error);
@@ -663,7 +663,7 @@ const blockMultipleRooms = async (req, res) => {
   // Validate date range
   const startDate = new Date(check_in);
   const endDate = new Date(check_out);
-  console.log(`Validating date range: ${startDate} to ${endDate}`);
+  // console.log(`Validating date range: ${startDate} to ${endDate}`);
   
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       const errorMsg = 'Invalid date format. Please use YYYY-MM-DD.';
@@ -685,7 +685,7 @@ const blockMultipleRooms = async (req, res) => {
   
   const pool = getPool(requestId);
   const client = await pool.connect();
-  console.log('Database connection established');
+  // console.log('Database connection established');
   
   try {
       // Call the model function to block rooms by room type
@@ -702,14 +702,14 @@ const blockMultipleRooms = async (req, res) => {
       );
 
       if (result.success) {
-          console.log(`Transaction committed. Successfully blocked ${result.blocked_room_ids.length} rooms`);
+          // console.log(`Transaction committed. Successfully blocked ${result.blocked_room_ids.length} rooms`);
           const successResponse = {
               success: true,
               message: `Successfully blocked ${result.blocked_room_ids.length} rooms`,
               blocked_rooms: result.blocked_room_ids.length,
               room_ids: result.blocked_room_ids
           };
-          console.log('Sending success response:', JSON.stringify(successResponse, null, 2));
+          // console.log('Sending success response:', JSON.stringify(successResponse, null, 2));
           res.status(200).json(successResponse);
       } else {
           // This case should ideally be handled by blockRoomsByRoomType throwing an error
