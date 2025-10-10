@@ -1520,7 +1520,7 @@ const updateReservationStatus = async (requestId, reservationData) => {
     if (resStatus === 'cancelled') {
       // Determine if the cancellation is billable based on the original status
       const isBillable = type === 'full-fee';
-      console.log(`Processing cancellation with billable = ${isBillable}`);
+      // console.log(`Processing cancellation with billable = ${isBillable}`);
 
       // Update reservation_details to mark as cancelled and set billable status
       const updateDetailsQuery = `
@@ -2374,7 +2374,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     throw new Error('Database error');
   } finally {
     client.release();
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    // console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
 const updateReservationGuest = async (requestId, oldValue, newValue) => {
@@ -3471,7 +3471,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     if (existingClient.rows.length > 0) {
       // Use existing client
       reservationClientId = existingClient.rows[0].id;
-      console.log('Using existing client with ID:', reservationClientId);
+      //console.log('Using existing client with ID:', reservationClientId);
     } else {
       // Insert new client
       query = `
@@ -3652,7 +3652,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           const guestList = guestInformation?.GuestInformationList;
 
           if (guestList && Array.isArray(guestList) && guestList.length > 0) {
-            console.log('Processing guest information from GuestInformationList');
+            //console.log('Processing guest information from GuestInformationList');
             for (const guest of guestList) {
               const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
               const sanitizedName = sanitizeName(rawName);
@@ -3886,7 +3886,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
               //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
-              console.log('No reservationGuestId available to add to reservation_clients');
+              //console.log('No reservationGuestId available to add to reservation_clients');
             }
           } catch (error) {
             console.error('Error adding booker to reservation_clients:', error);
@@ -3902,7 +3902,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 ) VALUES ($1, $2, $3, 1, 1)
                 RETURNING *;
               `, [hotel_id, reservationDetailsId, client.id]);
-              console.log('Added guest to reservation_clients:', result.rows[0]);
+              //console.log('Added guest to reservation_clients:', result.rows[0]);
             } catch (error) {
               console.error('Error adding guest to reservation_clients:', error);
               throw error; // Re-throw to trigger transaction rollback
@@ -4157,10 +4157,10 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     console.error("Transaction failed, error message:", err.message);
     console.error("Full error object:", err);
     try {
-      console.log("Attempting to roll back transaction...");
+      //console.log("Attempting to roll back transaction...");
       if (shouldRelease) {
         await internalClient.query('ROLLBACK');
-        console.log("Transaction successfully rolled back");
+        //console.log("Transaction successfully rolled back");
       }
     } catch (rollbackErr) {
       console.error("Failed to roll back transaction:", rollbackErr);
