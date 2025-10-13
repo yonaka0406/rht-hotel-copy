@@ -7,9 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- Bugfix: Fixed an issue where sales report was not including addon sales in the final total amount. Now properly includes all addon sales (e.g., parking, breakfast) in the total calculation.
-- Feature: Added tax-exclusive values to all data exports, including plan prices and addon charges, with clear labeling of tax-inclusive and tax-exclusive amounts.
-- Bugfix: Fixed addon quantities not matching room capacity when applying plans to all rooms
+
 
 ---
 ## Future Releases
@@ -520,8 +518,19 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.21] - 2025-10-14
+
+- Bugfix: Fixed an issue where sales report was not including addon sales in the final total amount. Now properly includes all addon sales (e.g., parking, breakfast) in the total calculation.
+- Feature: Added tax-exclusive values to all data exports, including plan prices and addon charges, with clear labeling of tax-inclusive and tax-exclusive amounts.
+- Bugfix: Fixed addon quantities not matching room capacity when applying plans to all rooms
+- Bugfix: Disabled guest number increment/decrement buttons appropriately and added loading state to prevent multiple changes.
+- Bugfix: Refactor room update to update only changed reservation duration plans
+- Feature: Separated Addon rate and Plan rate in Monthly Report Sales by Plan view
+
 ## Version History
 
+- **1.1.21** (2025-10-14) - Enhanced financial reporting with accurate addon sales totals and tax-exclusive values in exports. Improved room management with better addon quantity handling and UI state management for guest number controls. Added plan/addon rate separation in Monthly Reports.
+- **1.1.20** (2025-10-06) - Fixed invoice PDF issues and OTA client gender selection. Enhanced PDFs with client names, added plan-based forecast reports, and introduced Admin validation tools.
 - **1.1.19** (2025-10-01) - Fixed plan price rounding issues and improved Excel roster to show multiple rooms per reservation.
 - **1.1.18** (2025-09-29) - Introduced Excel roster downloads, default parking for OTA reservations, check-out cancellation, and new reporting metrics for length of stay. Also added an override for plan price rounding.
 - **1.1.17** (2025-09-24) - Enhanced dashboard with check-in/out statistics and gender breakdown. Added static calendar view and improved room indicators with guest information. Fixed meal count export and parking calendar spot availability.

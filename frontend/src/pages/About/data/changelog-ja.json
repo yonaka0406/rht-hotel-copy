@@ -454,6 +454,29 @@
         { "type": "feature", "description": "`recalculatePlanPrice`関数をリファクタリングし、`overrideRounding`のデフォルトを`false`に設定すると共に、内部呼び出しの不具合を修正しました。" },
         { "type": "bugfix", "description": "チェックインに基づくエクセル名簿で、1予約あたり複数部屋が表示されるように修正しました。" }
       ]      
+    },
+    {
+      "version": "1.1.20",
+      "date": "2025-10-06",
+      "changes": [
+        { "type": "bugfix", "description": "ダウンロードしたPDFファイルに請求書番号が表示されない問題を修正しました。" },
+        { "type": "bugfix", "description": "OTAクライアントの性別選択で正しいXMLフィールドを使用するように修正しました。" },
+        { "type": "feature", "description": "請求書PDFファイルにクライアント名を追加し、識別を容易にしました。" },
+        { "type": "feature", "description": "レポートにプラン別の売上予測の内訳を追加しました。" },
+        { "type": "feature", "description": "空の予約や二重予約を検出・管理するための管理パネル検証画面を追加しました。" }
+      ]      
+    },
+    {
+      "version": "1.1.21",
+      "date": "2025-10-14",
+      "changes": [
+        { "type": "bugfix", "description": "売上レポートにアドオン売上が合計金額に含まれていなかった問題を修正しました（駐車場、朝食などのアドオン売上が適切に合計に含まれるようになりました）。" },
+        { "type": "feature", "description": "プラン料金やアドオン料金の税抜き価格をデータエクスポートに追加し、税込み/税抜きの金額を明確に表示するようにしました。" },
+        { "type": "bugfix", "description": "全室にプランを適用する際のアドオン数量が部屋の収容人数と一致しない問題を修正しました。" },
+        { "type": "bugfix", "description": "ゲスト数の増減ボタンを適切に無効化し、複数回の変更を防ぐためのローディング状態を追加しました。" },
+        { "type": "bugfix", "description": "部屋更新時に変更された予約期間のプランのみを更新するようにリファクタリングしました。" },
+        { "type": "feature", "description": "月次レポートのプラン別売上ビューで、アドオン料金とプラン料金を分離して表示するようにしました。" }
+      ]      
     }
   ],
   "backlog": [
