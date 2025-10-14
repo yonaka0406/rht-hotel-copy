@@ -13,11 +13,12 @@
 import { ref, computed, watch } from 'vue';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { BarChart } from 'echarts/charts';
+import { BarChart, LineChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
   TitleComponent,
+  LegendComponent,
 } from 'echarts/components';
 import VChart from 'vue-echarts';
 import Card from 'primevue/card';
@@ -25,9 +26,11 @@ import Card from 'primevue/card';
 use([
   CanvasRenderer,
   BarChart,
+  LineChart,
   GridComponent,
   TooltipComponent,
   TitleComponent,
+  LegendComponent,
 ]);
 
 const props = defineProps({
@@ -52,6 +55,11 @@ const chartOption = ref({
       type: 'shadow',
     },
   },
+  legend: {
+    data: [],
+    bottom: 0,
+    selectedMode: 'multiple',
+  },
   xAxis: {
     type: 'category',
     data: [],
@@ -64,43 +72,48 @@ const chartOption = ref({
     type: 'value',
     name: '確定予約数',
   },
-  series: [
-    {
-      name: '確定予約数',
-      type: 'bar',
-      data: [],
-      itemStyle: {
-        color: '#5470C6',
-      },
-    },
-  ],
+  series: [],
 });
 
 const processedChartData = computed(() => {
-  const hotelNames = [];
-  const confirmedStays = [];
-
-  // Aggregate confirmed stays per hotel
-  const aggregatedData = props.reportData.reduce((acc, item) => {
-    if (!acc[item.hotel_name]) {
-      acc[item.hotel_name] = 0;
+  const monthlyAggregatedData = props.reportData.reduce((acc, item) => {
+    const month = item.month.substring(0, 7); // Extract YYYY-MM from YYYY-MM-DD
+    if (!acc[month]) {
+      acc[month] = {};
     }
-    acc[item.hotel_name] += Number(item.confirmed_stays);
+    if (!acc[month][item.hotel_name]) {
+      acc[month][item.hotel_name] = 0;
+    }
+    acc[month][item.hotel_name] += Number(item.confirmed_stays);
     return acc;
   }, {});
 
-  for (const hotelName in aggregatedData) {
-    hotelNames.push(hotelName);
-    confirmedStays.push(aggregatedData[hotelName]);
-  }
+  const months = Object.keys(monthlyAggregatedData).sort();
+  const hotelNames = [...new Set(props.reportData.map(item => item.hotel_name))];
 
-  return { hotelNames, confirmedStays };
+  const series = hotelNames.map(hotelName => {
+    const data = months.map(month => {
+      const value = monthlyAggregatedData[month][hotelName] || 0;
+      return value === 0 ? { value: 0, symbol: 'none' } : value;
+    });
+    return {
+      name: hotelName,
+      type: 'line',
+      smooth: true,
+      stack: 'total', // Add stack property for stacking
+      areaStyle: {}, // Add areaStyle for area chart
+      data: data,
+    };
+  });
+
+  return { hotelNames, months, series };
 });
 
 watch(processedChartData, (newData) => {
   console.log('Chart Data:', newData);
-  chartOption.value.xAxis.data = newData.hotelNames;
-  chartOption.value.series[0].data = newData.confirmedStays;
+  chartOption.value.xAxis.data = newData.months;
+  chartOption.value.legend.data = newData.hotelNames;
+  chartOption.value.series = newData.series;
 }, { immediate: true });
 </script>
 

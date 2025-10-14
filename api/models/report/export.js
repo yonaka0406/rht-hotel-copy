@@ -422,7 +422,7 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
             SELECT r.hotel_id, MAX(r.check_out) as last_date
             FROM reservations r
             JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
-            WHERE rd.date >= $1
+            WHERE rd.date >= $1 AND r.status <> 'block'
             GROUP BY r.hotel_id;
         `, [metricDate]);
 

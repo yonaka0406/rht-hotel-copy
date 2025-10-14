@@ -58,7 +58,7 @@
             </Card>
         </div>
 
-        <div class="col-span-12">
+        <div class="col-span-12" v-if="reportData.length">
             <DailyReportConfirmedReservationsChart :reportData="reportData" :metricDate="loadedDateTitle.split(' - ')[1]" />
         </div>
     </div>
