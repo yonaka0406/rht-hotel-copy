@@ -1063,7 +1063,7 @@ const onClientChange = (rowData) => {
     const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
 
     if (guestIndex > -1) {
-        guests.value[guestIndex].client = null; // Clear the client object
+        guests.value[guestIndex].client = {}; // Re-initialize client as an empty object
         guests.value[guestIndex].isClientSelected = false;
     }
 };
