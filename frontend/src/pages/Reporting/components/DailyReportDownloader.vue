@@ -38,7 +38,7 @@
                         currentPageReportTemplate="{first}-{last} of {totalRecords}"
                     >
                         <template #paginatorend> <!-- Use #paginatorend slot -->
-                            <Button type="button" icon="pi pi-download" text @click="dt.exportCSV()" :disabled="!reportData.length" />
+                            <Button type="button" icon="pi pi-download" text @click="dt.exportCSV()" :disabled="!reportData.length" label="ダウンロード" />
                         </template>
                         <Column field="hotel_id" header="ホテルID" class="hidden"></Column>
                         <Column field="hotel_name" header="ホテル名"></Column>                        

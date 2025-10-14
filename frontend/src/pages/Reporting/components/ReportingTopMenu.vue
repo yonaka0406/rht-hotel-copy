@@ -154,9 +154,9 @@
     const reportTypeOptions = ref([
         { label: '月次収益・稼働サマリ', value: 'monthlySummary' },
         { label: '予約分析', value: 'reservationAnalysis' },
+        { label: '日次レポート', value: 'dailyReport' },
         { label: '予約数変動 (昨日/今日)', value: 'activeReservationsChange' },
-        { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' },
-        { label: '日次レポート', value: 'dailyReport' }
+        { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' }        
     ]);
 
     // When a date is picked in ReportingTopMenu:
