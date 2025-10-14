@@ -57,6 +57,10 @@
                 </template>
             </Card>
         </div>
+
+        <div class="col-span-12">
+            <DailyReportConfirmedReservationsChart :reportData="reportData" :metricDate="loadedDateTitle.split(' - ')[1]" />
+        </div>
     </div>
 </template>
 
@@ -68,7 +72,8 @@ import FloatLabel from 'primevue/floatlabel';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import ProgressSpinner from 'primevue/progressspinner';
-import Card from 'primevue/card'; // Import Card component
+import Card from 'primevue/card';
+import DailyReportConfirmedReservationsChart from './charts/DailyReportConfirmedReservationsChart.vue'; // Import Card component
 import { useReportStore } from '@/composables/useReportStore';
 import { formatDate, formatDateTime } from '@/utils/dateUtils';
 
