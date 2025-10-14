@@ -2220,7 +2220,9 @@ const updateRoomByCalendar = async (requestId, roomData) => {
 
     // Recalculate plan price
     //console.log('Recalculating plan price.');
-    await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by, false, client);
+    // Recalculating the plan here was overriding the OTA plan prices.
+    // However, if we change to a new date and the conditional rules are different, the price will not be updated.
+    //await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by, false, client);
 
     await client.query('COMMIT');
     //console.log('Transaction committed successfully.');
