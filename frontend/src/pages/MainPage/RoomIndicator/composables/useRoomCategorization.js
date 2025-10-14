@@ -99,19 +99,51 @@ export function useRoomCategorization(selectedDate) {
       }
     });
 
-    // Remove duplicate rooms from check-out list (keeping the first occurrence)
-    const uniqueCheckOutRooms = [];
-    const processedRoomIds = new Set();
-    
-    categorizedRooms.checkOut.forEach(room => {
-      if (!processedRoomIds.has(room.room_id)) {
-        uniqueCheckOutRooms.push(room);
-        processedRoomIds.add(room.room_id);
+    // In case of room changes, multiple rooms can be listed for checkout for the same reservation.
+    // We need to select only the room the guest is in on the night before checkout.
+    const checkoutGroups = categorizedRooms.checkOut.reduce((acc, room) => {
+      const reservationId = room.id;
+      if (!acc[reservationId]) {
+        acc[reservationId] = [];
       }
-    });
-    
-    // Update the checkOut array with unique rooms
-    categorizedRooms.checkOut = uniqueCheckOutRooms;
+      acc[reservationId].push(room);
+      return acc;
+    }, {});
+
+    const finalCheckOutRooms = Object.values(checkoutGroups).map(group => {
+      if (group.length <= 1) {
+        return group[0]; // No conflict
+      }
+
+      // If there's a conflict, find the correct room.
+      // The correct room is the one the guest occupies on the night before checkout.
+      
+      // The check_out date string is in UTC. We need to parse it into a Date object,
+      // which will represent the date in the browser's local timezone (JST for the user).
+      const localCheckOutDate = new Date(group[0].check_out);
+      
+      // Get the date for the day before checkout.
+      const dayBeforeCheckout = new Date(localCheckOutDate);
+      dayBeforeCheckout.setDate(localCheckOutDate.getDate() - 1);
+
+      // Use the existing formatDate utility to get YYYY-MM-DD in the local timezone.
+      const dayBeforeCheckoutStr = formatDate(dayBeforeCheckout);
+
+      let finalRoom = group.find(room =>
+        room.details && room.details.some(detail => detail.date === dayBeforeCheckoutStr)
+      );
+
+      // Fallback: if for some reason the above logic fails, take the one with more details,
+      // as it implies a longer stay in that room.
+      if (!finalRoom) {
+        console.warn("Could not determine final checkout room. Falling back to longest stay.", group);
+        finalRoom = group.reduce((a, b) => (a.details && b.details && a.details.length > b.details.length ? a : b));
+      }
+      
+      return finalRoom;
+    }).filter(Boolean);
+
+    categorizedRooms.checkOut = finalCheckOutRooms;
 
     // 5. FREE ROOMS - Rooms that are available or will become available (including check-outs)
     const unavailableRoomIds = new Set([
