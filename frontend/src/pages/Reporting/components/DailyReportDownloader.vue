@@ -45,7 +45,8 @@
                         <Column field="month" header="月"></Column>
                         <Column field="plans_global_id" header="グローバルプランID" class="hidden"></Column>
                         <Column field="plans_hotel_id" header="ホテルプランID" class="hidden"></Column>
-                        <Column field="plan_name" header="プラン名"></Column>
+                        <Column field="created_at" header="作成日時" class="hidden"></Column> <!-- Added hidden created_at column -->
+                        <Column field="month" header="月"></Column>
                         <Column field="confirmed_stays" header="確定"></Column>
                         <Column field="pending_stays" header="仮予約"></Column>
                         <Column field="in_talks_stays" header="保留中"></Column>
@@ -70,7 +71,7 @@ import Column from 'primevue/column';
 import ProgressSpinner from 'primevue/progressspinner';
 import Card from 'primevue/card'; // Import Card component
 import { useReportStore } from '@/composables/useReportStore';
-import { formatDate } from '@/utils/dateUtils';
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
 
 const {
     availableDates,
@@ -78,6 +79,7 @@ const {
     isLoading,
     getAvailableMetricDates,
     getDailyReportData,
+    generateDailyMetricsForToday, // Import new function
 } = useReportStore();
 
 const selectedDate = ref(new Date());
@@ -98,14 +100,29 @@ onMounted(async () => {
 const loadReport = async () => { // Made async to await getDailyReportData
     if (!selectedDate.value) return;
     const date = formatDate(selectedDate.value);
-    await getDailyReportData(date); // Await the data fetch
+    const today = formatDate(new Date()); // Get today's date formatted
+
+    await getDailyReportData(date); // Attempt to load data
+
+    // If no data is available for today's date, generate it
+    if (reportData.value.length === 0 && date === today) {
+        console.log('No data available for today. Generating daily metrics...');
+        const result = await generateDailyMetricsForToday();
+        if (result.success) {
+            console.log('Daily metrics generated. Re-loading report data...');
+            await getDailyReportData(date); // Re-load data after generation
+        } else {
+            console.error('Failed to generate daily metrics:', result.error);
+        }
+    }
+
     loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
 };
-
 const processedReportData = computed(() => {
     return reportData.value.map(item => ({
         ...item,
         month: formatDate(item.month),
+        created_at: formatDateTime(item.created_at), // Format the created_at field
     }));
 });
 </script>

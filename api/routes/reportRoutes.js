@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getForecastDataByPlan, getAccountingDataByPlan, 
-    getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, 
-    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary, getCheckInOutReport, getDailyReport, getDailyReportData, getAvailableMetricDates } = require('../controllers/report');
-const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
+const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getForecastDataByPlan, getAccountingDataByPlan,
+    getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory,
+    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary, getCheckInOutReport, getDailyReport, getDailyReportData, getAvailableMetricDates, generateDailyMetrics } = require('../controllers/report');const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
 // Existing routes
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
@@ -22,6 +21,7 @@ router.get('/report/download/res/meals/:hid/:sdate/:edate', authMiddleware, getE
 router.get('/report/daily/available-dates', authMiddleware, getAvailableMetricDates);
 router.get('/report/daily/data/:date', authMiddleware, getDailyReportData);
 router.get('/report/daily/download/:date', authMiddleware, getDailyReport);
+router.post('/report/daily/generate-for-today', authMiddleware, generateDailyMetrics);
 
 // Internal route
 router.get('/report/res/inventory/:hid/:sdate/:edate', getReservationsInventory);

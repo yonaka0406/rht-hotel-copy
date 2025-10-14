@@ -493,6 +493,16 @@ const getDailyReport = async (req, res) => {
     }
 };
 
+const generateDailyMetrics = async (req, res) => {
+    try {
+        await reportModel.calculateAndSaveDailyMetrics(req.requestId);
+        res.status(200).send('Daily metrics generated successfully.');
+    } catch (err) {
+        console.error('Error generating daily metrics:', err);
+        res.status(500).send('Error generating daily metrics');
+    }
+};
+
 module.exports = {
     getExportReservationList,
     getExportReservationDetails,
@@ -500,4 +510,5 @@ module.exports = {
     getDailyReport,
     getDailyReportData,
     getAvailableMetricDates,
+    generateDailyMetrics, // Export the new function
 };

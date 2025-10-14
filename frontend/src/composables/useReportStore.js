@@ -736,6 +736,21 @@ export function useReportStore() {
         }
     };
 
+    const generateDailyMetricsForToday = async () => {
+        isLoading.value = true;
+        try {
+            await api.post('/report/daily/generate-for-today');
+            return { success: true };
+        } catch (error) {
+            console.error('Error generating daily metrics for today:', error);
+            return { success: false, error };
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    // ... (existing functions)
+
     return {
         reservationList,
         apiErrorCount,
@@ -769,5 +784,6 @@ export function useReportStore() {
         fetchBookerTypeBreakdown,
         fetchForecastDataByPlan,
         fetchAccountingDataByPlan,
-    }
+        generateDailyMetricsForToday, // Export the new function
+    };
 }
