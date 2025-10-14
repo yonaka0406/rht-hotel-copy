@@ -14,6 +14,9 @@
         </header>
         
         <main class="flex-1 overflow-auto p-6">
+            <DailyReportDownloader
+                v-if="selectedReportType === 'dailyReport'"
+            />
             <!-- New Report Components Rendering -->
             <ChangeInActiveReservationsReport
                 v-if="selectedReportType === 'activeReservationsChange'"
@@ -102,6 +105,7 @@
     import ChannelSummarySingleMonthAllHotels from './components/ChannelSummarySingleMonthAllHotels.vue';
     import ChannelSummarySingleMonthHotel from './components/ChannelSummarySingleMonthHotel.vue';
     import ChannelSummaryYearCumulativeAllHotels from './components/ChannelSummaryYearCumulativeAllHotels.vue';
+    import DailyReportDownloader from './components/DailyReportDownloader.vue';
     import ChannelSummaryYearCumulativeHotel from './components/ChannelSummaryYearCumulativeHotel.vue';
 
     // Stores

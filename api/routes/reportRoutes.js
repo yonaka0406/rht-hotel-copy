@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getForecastDataByPlan, getAccountingDataByPlan, 
     getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, 
-    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary, getCheckInOutReport } = require('../controllers/report');
+    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary, getCheckInOutReport, getDailyReport, getDailyReportData, getAvailableMetricDates } = require('../controllers/report');
 const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
 // Existing routes
@@ -17,6 +17,11 @@ router.get('/report/accounting-by-plan/:hid/:sdate/:edate', authMiddleware, getA
 router.get('/report/download/res/list/:hid/:sdate/:edate', authMiddleware, getExportReservationList);
 router.get('/report/download/res/dtl/:hid/:sdate/:edate', authMiddleware, getExportReservationDetails);
 router.get('/report/download/res/meals/:hid/:sdate/:edate', authMiddleware, getExportMealCount);
+
+// Daily Report
+router.get('/report/daily/available-dates', authMiddleware, getAvailableMetricDates);
+router.get('/report/daily/data/:date', authMiddleware, getDailyReportData);
+router.get('/report/daily/download/:date', authMiddleware, getDailyReport);
 
 // Internal route
 router.get('/report/res/inventory/:hid/:sdate/:edate', getReservationsInventory);

@@ -435,8 +435,69 @@ const getExportMealCount = async (req, res) => {
     }
 };
 
+const getAvailableMetricDates = async (req, res) => {
+    try {
+        const dates = await reportModel.getAvailableMetricDates(req.requestId);
+        res.json(dates);
+    } catch (err) {
+        console.error('Error getting available metric dates:', err);
+        res.status(500).send('Error getting available metric dates');
+    }
+};
+
+const getDailyReportData = async (req, res) => {
+    const { date } = req.params;
+    try {
+        const data = await reportModel.selectDailyReportData(req.requestId, date);
+        res.json(data);
+    } catch (err) {
+        console.error('Error getting daily report data:', err);
+        res.status(500).send('Error getting daily report data');
+    }
+};
+
+const getDailyReport = async (req, res) => {
+    const { date } = req.params;
+    const { format = 'csv' } = req.query; // Only csv is supported now
+
+    try {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+
+        // If the date is today, recalculate the metrics for today
+        if (date === todayStr) {
+            await reportModel.calculateAndSaveDailyMetrics(req.requestId);
+        }
+
+        const result = await reportModel.selectDailyReportData(req.requestId, date);
+
+        if (!result || result.length === 0) {
+            return res.status(404).send("No data available for the given date.");
+        }
+
+        if (format === 'csv') {
+            res.setHeader("Content-Disposition", `attachment; filename=daily_report_${date}.csv`);
+            res.setHeader("Content-Type", "text/csv; charset=utf-8");
+            res.write("\uFEFF"); // BOM for UTF-8
+
+            const csvStream = format({ headers: true });
+            csvStream.pipe(res);
+            result.forEach(row => csvStream.write(row));
+            csvStream.end();
+        } else {
+            res.status(400).send('Unsupported format. Only CSV is available.');
+        }
+    } catch (err) {
+        console.error(`Error generating daily report:`, err);
+        res.status(500).send("Error generating daily report");
+    }
+};
+
 module.exports = {
     getExportReservationList,
     getExportReservationDetails,
     getExportMealCount,
-}
+    getDailyReport,
+    getDailyReportData,
+    getAvailableMetricDates,
+};

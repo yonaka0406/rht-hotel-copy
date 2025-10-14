@@ -594,11 +594,15 @@ if (httpsServer) {
 */
 
 // Start scheduled jobs only in production environment
+const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
+
+// ... (inside the production block)
 if (process.env.NODE_ENV === 'production') {
     startScheduling();
     scheduleLoyaltyTierJob();
     startWaitlistJob();
-    // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration) started for production environment.');
+    scheduleDailyMetricsJob(); // Add this line
+    // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
     // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
 }
