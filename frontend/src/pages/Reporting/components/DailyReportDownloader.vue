@@ -15,19 +15,16 @@
                     <Button @click="loadReport" label="ロード" class="w-full" />
                 </div>
                 <div class="col-span-2">
-                    <Button @click="download" label="CSV" class="w-full" :disabled="!reportData.length" />
+                    <Button @click="dt.exportCSV()" label="CSV" class="w-full" :disabled="!reportData.length" />
                 </div>
             </div>
             <div v-if="isLoading" class="mt-4">
                 <ProgressSpinner />
             </div>
             <div v-if="reportData.length" class="mt-4">
-                <DataTable :value="reportData">
-                    <Column field="month" header="月">
-                        <template #body="slotProps">
-                            {{ formatDate(slotProps.data.month) }}
-                        </template>
-                    </Column>
+                <DataTable :value="processedReportData" ref="dt">                    
+                    <Column field="month" header="月"></Column>
+                    <Column field="hotel_id" header="ホテルID" class="hidden"></Column>
                     <Column field="hotel_name" header="ホテル名"></Column>
                     <Column field="plan_name" header="プラン名"></Column>
                     <Column field="confirmed_stays" header="確定"></Column>
@@ -43,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 import FloatLabel from 'primevue/floatlabel';
@@ -59,12 +56,14 @@ const {
     isLoading,
     getAvailableMetricDates,
     getDailyReportData,
-    downloadDailyReport,
 } = useReportStore();
 
 const selectedDate = ref(new Date());
 const minDate = ref(null);
-const maxDate = ref(new Date()); // New ref for maxDate
+const maxDate = ref(new Date());
+
+// Ref for the DataTable component
+const dt = ref();
 
 onMounted(async () => {
     await getAvailableMetricDates();
@@ -80,6 +79,14 @@ const loadReport = () => {
     const date = formatDate(selectedDate.value);
     getDailyReportData(date);
 };
+
+// Computed property to format reportData for display and export
+const processedReportData = computed(() => {
+    return reportData.value.map(item => ({
+        ...item,
+        month: formatDate(item.month), // Format the month field
+    }));
+});
 
 const download = () => {
     if (!selectedDate.value) return;
