@@ -4,6 +4,41 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### October 14, 2025
 
+#### Feature Request #74: Daily Report Data Download
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add functionality to download Daily Report data showing confirmed stays by plan from current month to last reservation date.
+- **Requirements**:
+  - Show confirmed stays count by plan type
+  - Date range: current month to last reservation
+  - Include all hotels
+  - Download options: CSV/Excel
+  - Available in Reporting module
+  - Support custom date ranges
+
+#### Bug #82: Room Indicator Shows Both Rooms After Room Change
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  When a room change occurs during a reservation, the Room Indicator incorrectly displays both the original and new rooms in the checkout box. Only the room assigned for the last day of the reservation should be shown.
+- **Current Behavior**:
+  - After changing a room during a reservation, both the original and new rooms appear in the checkout box
+  - This can cause confusion about which room the guest should check out from
+- **Expected Behavior**:
+  - Only show the room assigned for the last day of the reservation in the checkout box
+  - If the room was changed during the stay, only the final room should be displayed in the checkout section
+- **Steps to Reproduce**:
+  1. Create a reservation for multiple nights
+  2. Change the room for the last night of the reservation
+  3. Observe the checkout box in the Room Indicator
+- **Affected Components**:
+  - Room Indicator component
+  - Checkout display logic
+  - Room change handling system
+- **Additional Notes**:
+  - This is particularly important for housekeeping and front desk operations
+  - The system should maintain a history of room changes but only display the final room in the checkout context
+
 #### Bug #81: OTA Reservation Plan Recalculation on Room Change
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical

@@ -527,8 +527,15 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Refactor room update to update only changed reservation duration plans
 - Feature: Separated Addon rate and Plan rate in Monthly Report Sales by Plan view
 
+## [1.1.22] - 2025-10-14
+
+- Feature: Added Daily Report Data Download functionality for viewing confirmed stays by plan type
+- Bugfix: Resolved issue where Room Indicator showed both original and new rooms after a room change
+- Bugfix: Disabled reservation plan recalculation when changing rooms to maintain original pricing
+
 ## Version History
 
+- **1.1.22** (2025-10-14) - Introduced Daily Report Data Download for plan-based stay analysis. Fixed room indicator display to show only current room after changes and disabled plan recalculations during room modifications to preserve original pricing.
 - **1.1.21** (2025-10-14) - Enhanced financial reporting with accurate addon sales totals and tax-exclusive values in exports. Improved room management with better addon quantity handling and UI state management for guest number controls. Added plan/addon rate separation in Monthly Reports.
 - **1.1.20** (2025-10-06) - Fixed invoice PDF issues and OTA client gender selection. Enhanced PDFs with client names, added plan-based forecast reports, and introduced Admin validation tools.
 - **1.1.19** (2025-10-01) - Fixed plan price rounding issues and improved Excel roster to show multiple rooms per reservation.
