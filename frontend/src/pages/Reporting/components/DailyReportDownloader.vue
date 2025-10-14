@@ -34,15 +34,17 @@
                         :rows="10"
                         :rowsPerPageOptions="[5, 10, 20, 50]"
                         tableStyle="min-width: 50rem"
-                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
                         currentPageReportTemplate="{first}-{last} of {totalRecords}"
                     >
                         <template #paginatorend> <!-- Use #paginatorend slot -->
                             <Button type="button" icon="pi pi-download" text @click="dt.exportCSV()" :disabled="!reportData.length" />
                         </template>
                         <Column field="hotel_id" header="ホテルID" class="hidden"></Column>
-                        <Column field="hotel_name" header="ホテル名"></Column>
-                        <Column field="month" header="月"></Column>                        
+                        <Column field="hotel_name" header="ホテル名"></Column>                        
+                        <Column field="month" header="月"></Column>
+                        <Column field="plans_global_id" header="グローバルプランID" class="hidden"></Column>
+                        <Column field="plans_hotel_id" header="ホテルプランID" class="hidden"></Column>
                         <Column field="plan_name" header="プラン名"></Column>
                         <Column field="confirmed_stays" header="確定"></Column>
                         <Column field="pending_stays" header="仮予約"></Column>
