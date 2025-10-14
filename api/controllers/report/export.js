@@ -449,10 +449,30 @@ const getDailyReportData = async (req, res) => {
     const { date } = req.params;
     try {
         const data = await reportModel.selectDailyReportData(req.requestId, date);
-        res.json(data);
+
+        const processedData = data.map(item => {
+            if (item.created_at instanceof Date) {
+                const year = item.created_at.getFullYear();
+                const month = item.created_at.getMonth();
+                const day = item.created_at.getDate();
+                const hour = item.created_at.getHours();
+                const minute = item.created_at.getMinutes();
+                const second = item.created_at.getSeconds();
+                const millisecond = item.created_at.getMilliseconds();
+
+                const utcDateObj = new Date(Date.UTC(year, month, day, hour, minute, second, millisecond));
+                return { ...item, created_at: utcDateObj.toISOString() };
+            } else if (item.created_at && typeof item.created_at === 'string' && !item.created_at.includes('T')) {
+                const utcDateString = item.created_at.replace(' ', 'T') + 'Z';
+                return { ...item, created_at: new Date(utcDateString).toISOString() };
+            }
+            return item;
+        });
+
+        res.json(processedData);
     } catch (err) {
         console.error('Error getting daily report data:', err);
-        res.status(500).send('Error getting daily report data');
+        res.status(500).json({ error: 'Error getting daily report data' });
     }
 };
 
@@ -496,10 +516,10 @@ const getDailyReport = async (req, res) => {
 const generateDailyMetrics = async (req, res) => {
     try {
         await reportModel.calculateAndSaveDailyMetrics(req.requestId);
-        res.status(200).send('Daily metrics generated successfully.');
+        res.status(200).json({ message: 'Daily metrics generated successfully.' });
     } catch (err) {
         console.error('Error generating daily metrics:', err);
-        res.status(500).send('Error generating daily metrics');
+        res.status(500).json({ error: 'Error generating daily metrics' });
     }
 };
 

@@ -516,7 +516,7 @@ const selectDailyReportData = async (requestId, metricDate) => {
             SUM(dpm.cancelled_stays) as cancelled_stays,
             SUM(dpm.non_billable_cancelled_stays) as non_billable_cancelled_stays,
             SUM(dpm.employee_stays) as employee_stays,
-            MAX(dpm.created_at) as created_at,
+            MAX(dpm.created_at) as created_at
 
         FROM
             daily_plan_metrics dpm
@@ -525,9 +525,9 @@ const selectDailyReportData = async (requestId, metricDate) => {
         WHERE
             dpm.metric_date = $1
         GROUP BY
-            dpm.month, dpm.hotel_id, dpm.plans_global_id, dpm.plans_hotel_id, h.name, dpm.plan_name
+            dpm.month, dpm.hotel_id, dpm.plans_global_id, dpm.plans_hotel_id, h.name, dpm.plan_name, dpm.created_at
         ORDER BY
-            dpm.month, h.name, dpm.plan_name;
+            dpm.hotel_id, dpm.month, h.name, dpm.plan_name;
     `;
 
     const values = [metricDate];

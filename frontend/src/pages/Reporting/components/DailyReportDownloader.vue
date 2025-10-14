@@ -44,16 +44,15 @@
                         <Column field="hotel_name" header="ホテル名"></Column>                        
                         <Column field="month" header="月"></Column>
                         <Column field="plans_global_id" header="グローバルプランID" class="hidden"></Column>
-                        <Column field="plans_hotel_id" header="ホテルプランID" class="hidden"></Column>
-                        <Column field="created_at" header="作成日時" class="hidden"></Column> <!-- Added hidden created_at column -->
-                        <Column field="month" header="月"></Column>
+                        <Column field="plans_hotel_id" header="ホテルプランID" class="hidden"></Column>                        
+                        <Column field="plan_name" header="プラン名"></Column>
                         <Column field="confirmed_stays" header="確定"></Column>
                         <Column field="pending_stays" header="仮予約"></Column>
                         <Column field="in_talks_stays" header="保留中"></Column>
                         <Column field="cancelled_stays" header="キャンセル"></Column>
                         <Column field="non_billable_cancelled_stays" header="キャンセル(請求対象外)"></Column>
                         <Column field="employee_stays" header="社員"></Column>
-
+                        <Column field="created_at" header="作成日時" class="hidden"></Column>
                     </DataTable>
                 </template>
             </Card>
