@@ -449,27 +449,7 @@ const getDailyReportData = async (req, res) => {
     const { date } = req.params;
     try {
         const data = await reportModel.selectDailyReportData(req.requestId, date);
-
-        const processedData = data.map(item => {
-            if (item.created_at instanceof Date) {
-                const year = item.created_at.getFullYear();
-                const month = item.created_at.getMonth();
-                const day = item.created_at.getDate();
-                const hour = item.created_at.getHours();
-                const minute = item.created_at.getMinutes();
-                const second = item.created_at.getSeconds();
-                const millisecond = item.created_at.getMilliseconds();
-
-                const utcDateObj = new Date(Date.UTC(year, month, day, hour, minute, second, millisecond));
-                return { ...item, created_at: utcDateObj.toISOString() };
-            } else if (item.created_at && typeof item.created_at === 'string' && !item.created_at.includes('T')) {
-                const utcDateString = item.created_at.replace(' ', 'T') + 'Z';
-                return { ...item, created_at: new Date(utcDateString).toISOString() };
-            }
-            return item;
-        });
-
-        res.json(processedData);
+        res.json(data);
     } catch (err) {
         console.error('Error getting daily report data:', err);
         res.status(500).json({ error: 'Error getting daily report data' });
