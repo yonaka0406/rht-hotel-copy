@@ -4,6 +4,9 @@ import { useApi } from './useApi';
 const reservationList = ref(null);
 const limitedFunctionality = ref(false);
 const apiErrorCount = ref(0); // Counter for API errors
+const availableDates = ref([]);
+const reportData = ref([]);
+const isLoading = ref(false);
 
 export function useReportStore() {
     // Use static import for API
@@ -16,6 +19,74 @@ export function useReportStore() {
             data: [],
             count: 0
         };
+    };
+
+    const getAvailableMetricDates = async () => {
+        isLoading.value = true;
+        try {
+            const data = await api.get('/report/daily/available-dates');
+            availableDates.value = data.map(d => new Date(d));
+        } catch (error) {
+            console.error('Error fetching available metric dates:', error);
+            availableDates.value = [];
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const getDailyReportData = async (metricDate) => {
+        isLoading.value = true;
+        reportData.value = [];
+        try {
+            const data = await api.get(`/report/daily/data/${metricDate}`);
+            reportData.value = data;
+        } catch (error) {
+            console.error('Error fetching daily report data:', error);
+            reportData.value = [];
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const downloadDailyReport = async (metricDate) => {
+        try {
+            const response = await fetch(`/report/daily/download/${metricDate}?format=csv`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch CSV");
+            }
+
+            const blob = await response.blob();
+            const dlURL = window.URL.createObjectURL(blob);
+
+            try {
+                const link = document.createElement("a");
+                link.href = dlURL;
+                link.setAttribute("download", `daily_report_${metricDate}.csv`);
+                document.body.appendChild(link);
+
+                if (typeof link.click === 'function') {
+                    link.click();
+                }
+
+                document.body.removeChild(link);
+            } catch (e) {
+                console.debug('Download functionality not available in current environment');
+            }
+
+            return { success: true };
+
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            console.error('Export failed:', error.message);
+            throw error;
+        }
     };
 
     const fetchActiveReservationsChange = async (hotelId, dateString) => {
@@ -383,7 +454,6 @@ export function useReportStore() {
                 link.setAttribute("download", "meal_count.xlsx");
                 document.body.appendChild(link);
 
-                // In test environment, link.click might not be available
                 if (typeof link.click === 'function') {
                     link.click();
                 }
@@ -666,9 +736,30 @@ export function useReportStore() {
         }
     };
 
+    const generateDailyMetricsForToday = async () => {
+        isLoading.value = true;
+        try {
+            await api.post('/report/daily/generate-for-today');
+            return { success: true };
+        } catch (error) {
+            console.error('Error generating daily metrics for today:', error);
+            return { success: false, error };
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    // ... (existing functions)
+
     return {
         reservationList,
         apiErrorCount,
+        availableDates,
+        reportData,
+        isLoading,
+        getAvailableMetricDates,
+        getDailyReportData,
+        downloadDailyReport,
         fetchCountReservation,
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
@@ -693,5 +784,6 @@ export function useReportStore() {
         fetchBookerTypeBreakdown,
         fetchForecastDataByPlan,
         fetchAccountingDataByPlan,
-    }
+        generateDailyMetricsForToday, // Export the new function
+    };
 }

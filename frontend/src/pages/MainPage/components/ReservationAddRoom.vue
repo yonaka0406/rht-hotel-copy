@@ -185,8 +185,8 @@ const handleReservationSave = async (reservationData) => {
     Object.assign(reservationDetails.value, reservationData);
 
     // Log the values being sent
-    console.log('[submitReservation] reservationDetails:', JSON.stringify(reservationDetails.value));
-    console.log('[submitReservation] name field:', reservationDetails.value.name);
+    //console.log('[submitReservation] reservationDetails:', JSON.stringify(reservationDetails.value));
+    //console.log('[submitReservation] name field:', reservationDetails.value.name);
 
     const authToken = localStorage.getItem('authToken');
     try {

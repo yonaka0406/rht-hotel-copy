@@ -31,7 +31,7 @@
                 </div>
 
                 <!-- Date Filter -->
-                <template v-if="!isReservationChangeReport">
+                <template v-if="!isReservationChangeReport && !isDailyReport">
                     <div class="flex gap-2 grid">
                         <label for="date" class="text-sm text-gray-200 dark:text-gray-300">月度</label>
                         <DatePicker
@@ -45,7 +45,7 @@
                 </template>
 
                 <!-- Period Filter -->
-                <template v-if="!showSingleHotelSelect">
+                <template v-if="!showSingleHotelSelect && !isDailyReport">
                     <div class="flex gap-2 grid">
                         <label for="period" class="text-sm text-gray-200 dark:text-gray-300">期間</label>
                         <Select
@@ -61,7 +61,7 @@
                 </template>
 
                 <!-- Hotels Filter -->
-                <div v-if="!showSingleHotelSelect" class="flex gap-2 grid"> <!-- Changed condition -->
+                <div v-if="!showSingleHotelSelect && !isDailyReport" class="flex gap-2 grid"> <!-- Changed condition -->
                     <label for="hotels" class="text-sm text-gray-200 dark:text-gray-300">施設</label>
                     <MultiSelect
                         v-model="selectedHotels"
@@ -75,7 +75,7 @@
                         class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[180px] w-full sm:w-auto"
                     />                    
                 </div>
-                <div v-if="showSingleHotelSelect" class="flex gap-2 grid"> <!-- Changed condition -->
+                <div v-if="showSingleHotelSelect && !isDailyReport" class="flex gap-2 grid"> <!-- Changed condition -->
                     <label for="facility" class="text-sm text-gray-200 dark:text-gray-300">施設</label>
                     <Select
                         v-model="singleSelectedHotelId"
@@ -123,6 +123,8 @@
     // Report Type State
     const selectedReportType = ref(props.initialReportType || 'monthlySummary'); // Initialize with prop or default
 
+    const isDailyReport = computed(() => selectedReportType.value === 'dailyReport');
+
     // Computed property to determine if the current report type is 'activeReservationsChange'
     const isReservationChangeReport = computed(() => 
         selectedReportType.value === 'activeReservationsChange'
@@ -152,9 +154,9 @@
     const reportTypeOptions = ref([
         { label: '月次収益・稼働サマリ', value: 'monthlySummary' },
         { label: '予約分析', value: 'reservationAnalysis' },
+        { label: '日次レポート', value: 'dailyReport' },
         { label: '予約数変動 (昨日/今日)', value: 'activeReservationsChange' },
-        { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' }
-        // Add other existing views if they are to be selected via this dropdown
+        { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' }        
     ]);
 
     // When a date is picked in ReportingTopMenu:

@@ -18,6 +18,7 @@ const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const crypto = require('crypto'); // Added for session secret
 const { startWaitlistJob } = require('./jobs/waitlistJob');
+const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
 
 const app = express();
 app.locals.logger = logger; // Make logger globally available
@@ -594,11 +595,13 @@ if (httpsServer) {
 */
 
 // Start scheduled jobs only in production environment
+// ... (inside the production block)
 if (process.env.NODE_ENV === 'production') {
     startScheduling();
     scheduleLoyaltyTierJob();
     startWaitlistJob();
-    // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration) started for production environment.');
+    scheduleDailyMetricsJob();
+    // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
     // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
 }

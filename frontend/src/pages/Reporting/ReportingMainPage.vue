@@ -14,6 +14,9 @@
         </header>
         
         <main class="flex-1 overflow-auto p-6">
+            <DailyReportDownloader
+                v-if="selectedReportType === 'dailyReport'"
+            />
             <!-- New Report Components Rendering -->
             <ChangeInActiveReservationsReport
                 v-if="selectedReportType === 'activeReservationsChange'"
@@ -75,7 +78,7 @@
                     :revenueData="revenueData"
                     :occupancyData="occupancyData"                
                 />
-                <div v-else class="text-gray-700 dark:text-gray-200 text-center">
+                <div v-else-if="selectedReportType === 'monthlySummary' && selectedView === null" class="text-gray-700 dark:text-gray-200 text-center mt-4">
                     <!-- This message shows if selectedReportType is a summary type but selectedView doesn't match any known summary view -->
                     レポートタイプに対応するサマリービューが見つかりません。
                 </div>
@@ -102,6 +105,7 @@
     import ChannelSummarySingleMonthAllHotels from './components/ChannelSummarySingleMonthAllHotels.vue';
     import ChannelSummarySingleMonthHotel from './components/ChannelSummarySingleMonthHotel.vue';
     import ChannelSummaryYearCumulativeAllHotels from './components/ChannelSummaryYearCumulativeAllHotels.vue';
+    import DailyReportDownloader from './components/DailyReportDownloader.vue';
     import ChannelSummaryYearCumulativeHotel from './components/ChannelSummaryYearCumulativeHotel.vue';
 
     // Stores

@@ -407,8 +407,146 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
   }
 };
 
+const calculateAndSaveDailyMetrics = async (requestId) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+        
+        const metricDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
+
+        await client.query('DELETE FROM daily_plan_metrics WHERE metric_date = $1', [metricDate]);
+
+        const hotelsWithReservationsResult = await client.query(`
+            SELECT r.hotel_id, MAX(r.check_out) as last_date
+            FROM reservations r
+            JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
+            WHERE rd.date >= $1 AND r.status <> 'block'
+            GROUP BY r.hotel_id;
+        `, [metricDate]);
+
+        const hotelsWithReservations = hotelsWithReservationsResult.rows;
+
+        for (const hotel of hotelsWithReservations) {
+            const hotelId = hotel.hotel_id;
+            const lastDate = hotel.last_date;
+
+            const query = `
+                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays)
+                WITH months AS (
+                    SELECT generate_series(
+                        date_trunc('month', $1::date),
+                        date_trunc('month', $2::date),
+                        '1 month'
+                    )::date AS month
+                )
+                SELECT
+                    $1 AS metric_date,
+                    m.month,
+                    $3 AS hotel_id,
+                    rd.plans_global_id,
+                    rd.plans_hotel_id,
+                    COALESCE(ph.name, pg.name, '未設定') AS plan_name,
+                    COUNT(CASE WHEN r.status = 'confirmed' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS confirmed_stays,
+                    COUNT(CASE WHEN r.status = 'provisory' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS pending_stays,
+                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS in_talks_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS cancelled_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' THEN rd.id END) AS non_billable_cancelled_stays,
+                    COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays
+                FROM
+                    months m
+                CROSS JOIN
+                    reservation_details rd
+                JOIN
+                    reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                LEFT JOIN
+                    plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+                LEFT JOIN
+                    plans_global pg ON rd.plans_global_id = pg.id
+                WHERE
+                    rd.hotel_id = $3
+                    AND r.status <> 'block'
+                    AND date_trunc('month', rd.date) = m.month                    
+                GROUP BY
+                    m.month, rd.plans_global_id, rd.plans_hotel_id, ph.name, pg.name;
+            `;
+
+            await client.query(query, [metricDate, lastDate, hotelId]);
+        }
+
+        await client.query('COMMIT');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error calculating and saving daily metrics:', err);
+        throw new Error('Database error');
+    } finally {
+        client.release();
+    }
+};
+
+const getAvailableMetricDates = async (requestId) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT DISTINCT metric_date
+        FROM daily_plan_metrics
+        ORDER BY metric_date DESC;
+    `;
+    try {
+        const result = await pool.query(query);
+        return result.rows.map(row => row.metric_date);
+    } catch (err) {
+        console.error('Error retrieving available metric dates:', err);
+        throw new Error('Database error');
+    }
+};
+
+const selectDailyReportData = async (requestId, metricDate) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT
+            dpm.month,
+            dpm.hotel_id,
+            dpm.plans_global_id,  -- Added plans_global_id here
+            dpm.plans_hotel_id,   -- Added plans_hotel_id here
+            h.name as hotel_name,
+            dpm.plan_name,
+            SUM(dpm.confirmed_stays) as confirmed_stays,
+            SUM(dpm.pending_stays) as pending_stays,
+            SUM(dpm.in_talks_stays) as in_talks_stays,
+            SUM(dpm.cancelled_stays) as cancelled_stays,
+            SUM(dpm.non_billable_cancelled_stays) as non_billable_cancelled_stays,
+            SUM(dpm.employee_stays) as employee_stays,
+            MAX(dpm.created_at) as created_at
+
+        FROM
+            daily_plan_metrics dpm
+        JOIN
+            hotels h ON dpm.hotel_id = h.id
+        WHERE
+            dpm.metric_date = $1
+        GROUP BY
+            dpm.month, dpm.hotel_id, dpm.plans_global_id, dpm.plans_hotel_id, h.name, dpm.plan_name, dpm.created_at
+        ORDER BY
+            dpm.hotel_id, dpm.month, h.name, dpm.plan_name;
+    `;
+
+    const values = [metricDate];
+
+    try {
+        const result = await pool.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving daily report data:', err);
+        throw new Error('Database error');
+    }
+};
+
 module.exports = {
   selectExportReservationList,
   selectExportReservationDetails,
   selectExportMealCount,
+  calculateAndSaveDailyMetrics,
+  selectDailyReportData,
+  getAvailableMetricDates,
 };
