@@ -70,47 +70,60 @@ const chartOption = ref({
   },
   yAxis: {
     type: 'value',
-    name: '確定予約数',
+    name: '予約数',
   },
   series: [],
 });
 
-const processedChartData = computed(() => {
-  const monthlyAggregatedData = props.reportData.reduce((acc, item) => {
-    const month = item.month.substring(0, 7); // Extract YYYY-MM from YYYY-MM-DD
-    if (!acc[month]) {
-      acc[month] = {};
-    }
-    if (!acc[month][item.hotel_name]) {
-      acc[month][item.hotel_name] = 0;
-    }
-    acc[month][item.hotel_name] += Number(item.confirmed_stays);
-    return acc;
-  }, {});
+  const processedChartData = computed(() => {
+    const monthlyAggregatedData = props.reportData.reduce((acc, item) => {
+      const month = item.month.substring(0, 7); // Extract YYYY-MM from YYYY-MM-DD
+      if (!acc[month]) {
+        acc[month] = { totalPendingStays: 0 }; // Initialize totalPendingStays for the month
+      }
+      if (!acc[month][item.hotel_name]) {
+        acc[month][item.hotel_name] = 0;
+      }
+      acc[month][item.hotel_name] += Number(item.confirmed_stays);
+      acc[month].totalPendingStays += Number(item.pending_stays); // Sum pending stays
+      return acc;
+    }, {});
 
-  const months = Object.keys(monthlyAggregatedData).sort();
-  const hotelNames = [...new Set(props.reportData.map(item => item.hotel_name))];
+    const months = Object.keys(monthlyAggregatedData).sort();
+    const hotelNames = [...new Set(props.reportData.map(item => item.hotel_name))];
 
-  const series = hotelNames.map(hotelName => {
-    const data = months.map(month => {
-      const value = monthlyAggregatedData[month][hotelName] || 0;
-      return value === 0 ? { value: 0, symbol: 'none' } : value;
+    const series = hotelNames.map(hotelName => {
+      const data = months.map(month => {
+        const value = monthlyAggregatedData[month][hotelName] || 0;
+        return value === 0 ? { value: 0, symbol: 'none' } : value;
+      });
+      return {
+        name: hotelName,
+        type: 'line',
+        smooth: true,
+        stack: 'total', // Add stack property for stacking
+        areaStyle: {}, // Add areaStyle for area chart
+        data: data,
+      };
     });
-    return {
-      name: hotelName,
+
+    // Add series for total pending stays
+    const totalPendingStaysSeries = {
+      name: '仮予約合計',
       type: 'line',
       smooth: true,
-      stack: 'total', // Add stack property for stacking
-      areaStyle: {}, // Add areaStyle for area chart
-      data: data,
+      stack: 'total',
+      areaStyle: {},
+      data: months.map(month => monthlyAggregatedData[month].totalPendingStays || 0),
     };
+    series.push(totalPendingStaysSeries);
+
+    hotelNames.push('仮予約合計'); // Add to legend data
+
+    return { hotelNames, months, series };
   });
-
-  return { hotelNames, months, series };
-});
-
 watch(processedChartData, (newData) => {
-  console.log('Chart Data:', newData);
+  //console.log('Chart Data:', newData);
   chartOption.value.xAxis.data = newData.months;
   chartOption.value.legend.data = newData.hotelNames;
   chartOption.value.series = newData.series;

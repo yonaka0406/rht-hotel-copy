@@ -110,10 +110,10 @@ const loadReport = async () => { // Made async to await getDailyReportData
 
     // If no data is available for today's date, generate it
     if (reportData.value.length === 0 && date === today) {
-        console.log('No data available for today. Generating daily metrics...');
+        //console.log('No data available for today. Generating daily metrics...');
         const result = await generateDailyMetricsForToday();
         if (result.success) {
-            console.log('Daily metrics generated. Re-loading report data...');
+            //console.log('Daily metrics generated. Re-loading report data...');
             await getDailyReportData(date); // Re-load data after generation
         } else {
             console.error('Failed to generate daily metrics:', result.error);
