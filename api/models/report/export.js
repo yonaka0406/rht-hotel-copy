@@ -416,20 +416,24 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
 
         const metricDate = new Date().toISOString().split('T')[0];
 
-        // Clear old metrics for the current day to avoid stale projections
         await client.query('DELETE FROM daily_plan_metrics WHERE metric_date = $1', [metricDate]);
 
-        const lastDateResult = await client.query('SELECT MAX(check_out) as last_date FROM reservations');
-        const lastDate = lastDateResult.rows[0].last_date || metricDate;
+        const hotelsWithReservationsResult = await client.query(`
+            SELECT r.hotel_id, MAX(r.check_out) as last_date
+            FROM reservations r
+            JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
+            WHERE rd.date >= $1
+            GROUP BY r.hotel_id;
+        `, [metricDate]);
 
-        const hotelsResult = await client.query('SELECT id FROM hotels');
-        const hotels = hotelsResult.rows;
+        const hotelsWithReservations = hotelsWithReservationsResult.rows;
 
-        for (const hotel of hotels) {
-            const hotelId = hotel.id;
+        for (const hotel of hotelsWithReservations) {
+            const hotelId = hotel.hotel_id;
+            const lastDate = hotel.last_date;
 
             const query = `
-                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays)
+                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays)
                 WITH months AS (
                     SELECT generate_series(
                         date_trunc('month', $1::date),
@@ -443,11 +447,13 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     $3 AS hotel_id,
                     rd.plans_global_id,
                     rd.plans_hotel_id,
-                    COALESCE(ph.name, pg.name) AS plan_name,
-                    COUNT(CASE WHEN r.status = 'confirmed' AND rd.cancelled IS NULL THEN rd.id END) AS confirmed_stays,
-                    COUNT(CASE WHEN r.status = 'temporary' AND rd.cancelled IS NULL THEN rd.id END) AS pending_stays,
-                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL THEN rd.id END) AS in_talks_stays,
-                    COUNT(CASE WHEN rd.cancelled IS NOT NULL THEN rd.id END) AS cancelled_stays
+                    COALESCE(ph.name, pg.name, '未設定') AS plan_name,
+                    COUNT(CASE WHEN r.status = 'confirmed' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS confirmed_stays,
+                    COUNT(CASE WHEN r.status = 'temporary' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS pending_stays,
+                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS in_talks_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS cancelled_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' THEN rd.id END) AS non_billable_cancelled_stays,
+                    COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays
                 FROM
                     months m
                 CROSS JOIN
@@ -462,7 +468,7 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     rd.hotel_id = $3
                     AND date_trunc('month', rd.date) = m.month
                 GROUP BY
-                    m.month, rd.plans_global_id, rd.plans_hotel_id, plan_name;
+                    m.month, rd.plans_global_id, rd.plans_hotel_id, ph.name, pg.name;
             `;
 
             await client.query(query, [metricDate, lastDate, hotelId]);
@@ -478,6 +484,22 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
     }
 };
 
+const getAvailableMetricDates = async (requestId) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT DISTINCT metric_date
+        FROM daily_plan_metrics
+        ORDER BY metric_date DESC;
+    `;
+    try {
+        const result = await pool.query(query);
+        return result.rows.map(row => row.metric_date);
+    } catch (err) {
+        console.error('Error retrieving available metric dates:', err);
+        throw new Error('Database error');
+    }
+};
+
 const selectDailyReportData = async (requestId, metricDate) => {
     const pool = getPool(requestId);
     const query = `
@@ -488,7 +510,9 @@ const selectDailyReportData = async (requestId, metricDate) => {
             SUM(dpm.confirmed_stays) as confirmed_stays,
             SUM(dpm.pending_stays) as pending_stays,
             SUM(dpm.in_talks_stays) as in_talks_stays,
-            SUM(dpm.cancelled_stays) as cancelled_stays
+            SUM(dpm.cancelled_stays) as cancelled_stays,
+            SUM(dpm.non_billable_cancelled_stays) as non_billable_cancelled_stays,
+            SUM(dpm.employee_stays) as employee_stays
         FROM
             daily_plan_metrics dpm
         JOIN

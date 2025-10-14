@@ -30,6 +30,8 @@
                     <Column field="pending_stays" header="仮予約"></Column>
                     <Column field="in_talks_stays" header="保留中"></Column>
                     <Column field="cancelled_stays" header="キャンセル"></Column>
+                    <Column field="non_billable_cancelled_stays" header="請求対象外キャンセル"></Column>
+                    <Column field="employee_stays" header="社員"></Column>
                 </DataTable>
             </div>
         </div>
