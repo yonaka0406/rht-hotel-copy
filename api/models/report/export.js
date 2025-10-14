@@ -413,8 +413,8 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
 
     try {
         await client.query('BEGIN');
-
-        const metricDate = new Date().toISOString().split('T')[0];
+        
+        const metricDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
 
         await client.query('DELETE FROM daily_plan_metrics WHERE metric_date = $1', [metricDate]);
 
@@ -466,7 +466,8 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     plans_global pg ON rd.plans_global_id = pg.id
                 WHERE
                     rd.hotel_id = $3
-                    AND date_trunc('month', rd.date) = m.month
+                    AND r.status <> 'block'
+                    AND date_trunc('month', rd.date) = m.month                    
                 GROUP BY
                     m.month, rd.plans_global_id, rd.plans_hotel_id, ph.name, pg.name;
             `;

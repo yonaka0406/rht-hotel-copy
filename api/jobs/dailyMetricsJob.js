@@ -1,15 +1,81 @@
 const cron = require('node-cron');
-const reportModel = require('../models/report');
+const db = require('../config/database');
 
 const performDailyMetricsCalculation = async () => {
-    console.log('Starting daily plan metrics calculation job...');
+    console.log('Starting daily plan metrics calculation job...');    
+    const client = await db.getProdPool().connect();
+
     try {
-        // The 'dev' parameter is a placeholder for the requestId.
-        // In a real scenario, you might have a system-level requestId for jobs.
-        await reportModel.calculateAndSaveDailyMetrics('dev');
+        await client.query('BEGIN');
+
+        const metricDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
+
+        await client.query('DELETE FROM daily_plan_metrics WHERE metric_date = $1', [metricDate]);
+
+        const hotelsWithReservationsResult = await client.query(`
+            SELECT r.hotel_id, MAX(r.check_out) as last_date
+            FROM reservations r
+            JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
+            WHERE rd.date >= $1
+            GROUP BY r.hotel_id;
+        `, [metricDate]);
+
+        const hotelsWithReservations = hotelsWithReservationsResult.rows;
+
+        for (const hotel of hotelsWithReservations) {
+            const hotelId = hotel.hotel_id;
+            const lastDate = hotel.last_date;
+
+            const query = `
+                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays)
+                WITH months AS (
+                    SELECT generate_series(
+                        date_trunc('month', $1::date),
+                        date_trunc('month', $2::date),
+                        '1 month'
+                    )::date AS month
+                )
+                SELECT
+                    $1 AS metric_date,
+                    m.month,
+                    $3 AS hotel_id,
+                    rd.plans_global_id,
+                    rd.plans_hotel_id,
+                    COALESCE(ph.name, pg.name, '未設定') AS plan_name,
+                    COUNT(CASE WHEN r.status = 'confirmed' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS confirmed_stays,
+                    COUNT(CASE WHEN r.status = 'temporary' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS pending_stays,
+                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS in_talks_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS cancelled_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' THEN rd.id END) AS non_billable_cancelled_stays,
+                    COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays
+                FROM
+                    months m
+                CROSS JOIN
+                    reservation_details rd
+                JOIN
+                    reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                LEFT JOIN
+                    plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+                LEFT JOIN
+                    plans_global pg ON rd.plans_global_id = pg.id
+                WHERE
+                    rd.hotel_id = $3
+                    AND r.status <> 'block'
+                    AND date_trunc('month', rd.date) = m.month
+                GROUP BY
+                    m.month, rd.plans_global_id, rd.plans_hotel_id, ph.name, pg.name;
+            `;
+
+            await client.query(query, [metricDate, lastDate, hotelId]);
+        }
+
+        await client.query('COMMIT');
         console.log('Daily plan metrics calculation job completed successfully.');
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error in daily plan metrics calculation job:', error);
+    } finally {
+        client.release();
     }
 };
 
