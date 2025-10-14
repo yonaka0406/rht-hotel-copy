@@ -78,7 +78,7 @@
                     :revenueData="revenueData"
                     :occupancyData="occupancyData"                
                 />
-                <div v-else class="text-gray-700 dark:text-gray-200 text-center">
+                <div v-else-if="selectedReportType === 'monthlySummary' && selectedView === null" class="text-gray-700 dark:text-gray-200 text-center mt-4">
                     <!-- This message shows if selectedReportType is a summary type but selectedView doesn't match any known summary view -->
                     レポートタイプに対応するサマリービューが見つかりません。
                 </div>
