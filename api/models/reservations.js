@@ -3762,7 +3762,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
         }
 
-        const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
+        const totalPeopleCount = (parseInt(roomDetail.RoomPaxMaleCount, 10) || 0) + (parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0) + (parseInt(roomDetail.RoomChildA70Count, 10) || 0) + (parseInt(roomDetail.RoomChildB50Count, 10) || 0) + (parseInt(roomDetail.RoomChildC30Count, 10) || 0) + (parseInt(roomDetail.RoomChildDNoneCount, 10) || 0);
 
         const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
         if (addons && Array.isArray(addons)) {
@@ -4666,7 +4666,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
         }
 
-        const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
+        const totalPeopleCount = (parseInt(roomDetail.RoomPaxMaleCount, 10) || 0) + (parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0) + (parseInt(roomDetail.RoomChildA70Count, 10) || 0) + (parseInt(roomDetail.RoomChildB50Count, 10) || 0) + (parseInt(roomDetail.RoomChildC30Count, 10) || 0) + (parseInt(roomDetail.RoomChildDNoneCount, 10) || 0);
 
         const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
         if (addons && Array.isArray(addons)) {
