@@ -271,7 +271,7 @@ const toast = useToast();
 import { Panel, Dialog, Card, DataTable, Column, FloatLabel, Textarea, InputText, InputNumber, DatePicker, InputMask, Checkbox, Select, Button, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Divider } from 'primevue';
 
 // Components
-import PlanVisibilitySettings from '../components/PlanVisibilitySettings.vue';
+import PlanVisibilitySettings from './components/PlanVisibilitySettings.vue';
 import ManageHotelRoomsDialog from './components/ManageHotelRoomsDialog.vue';
 import ManageHotelAddRoomDialog from './components/ManageHotelAddRoomDialog.vue';
 
