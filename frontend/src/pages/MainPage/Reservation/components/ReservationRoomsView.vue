@@ -484,6 +484,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 
 import ReservationDayDetail from '@/pages/MainPage/Reservation/components/ReservationDayDetail.vue';
 import ReservationGuestListDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationGuestListDialog.vue';
+import { formatDate, formatDateWithDay } from '@/utils/dateUtils';
 
 const props = defineProps({
     reservation_details: {
@@ -514,17 +515,7 @@ import { useParkingStore } from '@/composables/useParkingStore';
 const { parkingLots, fetchParkingLots, fetchParkingReservations } = useParkingStore();
 
 // Helper
-const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
-const formatDateWithDay = (date) => {
-    const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
-    const parsedDate = new Date(date);
-    return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-};
+
 const formatCurrency = (value) => {
     if (value == null) return '';
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
