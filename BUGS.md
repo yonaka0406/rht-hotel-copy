@@ -5,31 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### October 15, 2025
-
-#### Bug #82: Room Period Change in Multi-Room Reservation Not Creating New Reservation
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: 
-  When changing the period of a single room in a multiple room reservation, the system fails to move the single room to a new reservation as expected.
-- **Expected Behavior**:
-  - When modifying the stay period of one room in a multi-room reservation, the system should:
-    1. Create a new reservation for the modified room with the new dates
-    2. Keep the remaining rooms in the original reservation
-    3. Maintain all guest and booking information for both reservations
-- **Current Behavior**:
-  - The room period change is not properly handled, and the room is not moved to a new reservation
-  - This may cause booking conflicts and data inconsistency
-- **Reproduction Steps**:
-  1. Create a reservation with multiple rooms
-  2. Edit one room's stay period to be different from the others
-  3. Save the changes
-  4. Observe that the room is not properly moved to a new reservation
-- **Affected Components**:
-  - Reservation editing functionality
-  - Room management system
-  - Reservation splitting logic
-
 ### October 14, 2025
 
 #### Feature Request #81: Add 水回り (Wet Area) Boolean Field to Rooms
@@ -647,5 +622,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: September 19, 2025*
-*Total Bugs: 2* (last one #57)
-*Total Feature Requests: 28* (last one #74)
+*Total Bugs: 2* (last one #83)
+*Total Feature Requests: 28* (last one #AA)
