@@ -267,20 +267,17 @@ const highlightRow = (index) => {
 const showTooltip = (event, room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);
   if (roomInfo && roomInfo.reservation_id) {
-    const originalReservation = reservedRooms.value.find(r => r.reservation_id === roomInfo.reservation_id && formatDate(new Date(r.date)) === date);
-    if (originalReservation) {
-      tooltipContent.value = `
-        部屋番号: ${originalReservation.room_number || 'N/A'}<br>  
-        顧客: ${originalReservation.client_name_original || originalReservation.client_name}<br>
-        プラン: ${originalReservation.plan_name || 'N/A'}<br>        
-        支払いタイミング: ${paymentTimingInfo[originalReservation.payment_timing]?.label || originalReservation.payment_timing || 'N/A'}<br>
-        チェックイン日: ${formatDate(new Date(originalReservation.check_in))}<br>
-        チェックアウト日: ${formatDate(new Date(originalReservation.check_out))}
-      `;
-      tooltipVisible.value = true;
-      tooltipX.value = event.pageX + 10;
-      tooltipY.value = event.pageY + 10;
-    }
+    tooltipContent.value = `
+      部屋番号: ${roomInfo.room_number || 'N/A'}<br>  
+      顧客: ${roomInfo.client_name_original || roomInfo.client_name}<br>
+      プラン: ${roomInfo.plan_name || 'N/A'}<br>        
+      支払いタイミング: ${paymentTimingInfo[roomInfo.payment_timing]?.label || roomInfo.payment_timing || 'N/A'}<br>
+      チェックイン日: ${formatDate(new Date(roomInfo.check_in))}<br>
+      チェックアウト日: ${formatDate(new Date(roomInfo.check_out))}
+    `;
+    tooltipVisible.value = true;
+    tooltipX.value = event.pageX + 10;
+    tooltipY.value = event.pageY + 10;
   } else {
     tooltipVisible.value = false;
   }
