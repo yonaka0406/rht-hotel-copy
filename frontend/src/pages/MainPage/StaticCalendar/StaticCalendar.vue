@@ -39,7 +39,8 @@
                 駐車場</th>
               <th v-for="(roomType, typeIndex) in headerRoomsData.roomTypes" :key="typeIndex"
                 :colspan="roomType.colspan"
-                class="px-2 py-2 text-center font-bold sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.backgroundColor, color: roomType.textColor, left: '180px' }">
+                class="px-2 py-2 text-center font-bold sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.backgroundColor, color: roomType.textColor, left: '180px' }"
+                v-tooltip.top="roomType.name">
                 {{ roomType.name }}
               </th>
             </tr>
