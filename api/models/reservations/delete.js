@@ -1,4 +1,5 @@
 let getPool = require('../../config/database').getPool;
+const format = require('pg-format');
 
 const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, updated_by) => {
   const pool = getPool(requestId);

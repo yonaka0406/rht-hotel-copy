@@ -6,6 +6,7 @@ const { getAllPlanAddons } = require('../planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
 const logger = require('../../config/logger');
+const { deleteReservationAddonsByDetailId } = require('./delete');
 
 // Helper
 const formatDate = (date) => {
