@@ -5,7 +5,7 @@
                 <div class="grid grid-cols-7 gap-4 w-full">
                     <div class="col-span-3 text-left">
                         部屋： {{ `${group.details[0]?.room_number} - ${group.room_type} (${group.details[0]?.capacity})
-                        ${group.details[0]?.smoking ? ' 🚬' : ''}` }}
+                        ${group.details[0]?.smoking ? ' 🚬' : ''} ${group.details[0]?.has_wet_area ? ' 🚿' : ''}` }}
                     </div>
                     <div class="flex items-center justify-center">
                         <Badge v-if="getCancelledDaysCount(group) > 0 && !isFullyCancelled(group)"
@@ -733,6 +733,11 @@ const groupedRooms = computed(() => {
             groups[key] = { room_id: item.room_id, room_type: item.room_type_name, details: [] };
         }
         groups[key].details.push(item);
+    });
+
+    // Add console.log for debugging
+    Object.values(groups).forEach(group => {
+        console.log('Group Detail 0:', group.details[0]);
     });
 
     return Object.values(groups);

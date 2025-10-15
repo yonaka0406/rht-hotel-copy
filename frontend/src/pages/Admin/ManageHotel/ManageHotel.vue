@@ -216,6 +216,7 @@ const fetchRoomTypes = async () => {
         capacity: item.room_capacity,
         smoking: item.room_smoking_idc,
         for_sale: item.room_for_sale_idc,
+        has_wet_area: item.room_has_wet_area_idc,
         room_type_id: item.room_type_id,
       };
       roomsList.push(room);

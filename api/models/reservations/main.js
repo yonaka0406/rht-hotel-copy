@@ -43,6 +43,7 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
       r.floor,
       r.capacity,
       r.smoking,
+      r.has_wet_area,
       r.for_sale
     FROM
       rooms r
@@ -187,8 +188,9 @@ const selectReservation = async (requestId, id, hotel_id) => {
       rd.room_id,
       rm.room_number,
       rm.smoking,
+      rm.has_wet_area,
       rm.capacity,
-      rm.floor,
+      rm.floor,      
       rd.plans_global_id,
       rd.plans_hotel_id,
       rd.plan_type,
@@ -400,6 +402,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
           ,rooms.capacity
           ,rooms.for_sale
           ,rooms.smoking
+          ,rooms.has_wet_area
           ,room_types.name as room_type_name
           ,reservation_details.number_of_people
           ,reservation_details.price
