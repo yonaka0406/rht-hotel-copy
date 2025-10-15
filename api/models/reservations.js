@@ -2055,6 +2055,17 @@ const updateRoomByCalendar = async (requestId, roomData) => {
           //console.log(`${result.rowCount} reservation_details records updated.`);
         } else {
           //console.log('Duration has changed. Recreating reservation_details records.');
+
+          const reservationIdForDetails = newReservationId;
+
+          if (newReservationId !== id) { // isSplitting
+            const moveQuery = `
+              UPDATE reservation_details
+              SET reservation_id = $1
+              WHERE reservation_id = $2 AND hotel_id = $3 AND room_id = $4
+            `;
+            await client.query(moveQuery, [newReservationId, id, hotel_id, old_room_id]);
+          }
     
           // Get all original details to preserve plans day by day
           const originalDetailsQuery = `
@@ -2063,7 +2074,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
             ORDER BY date ASC
           `;
-          const originalDetailsResult = await client.query(originalDetailsQuery, [id, hotel_id, old_room_id]);
+          const originalDetailsResult = await client.query(originalDetailsQuery, [reservationIdForDetails, hotel_id, old_room_id]);
           const originalDetailsMap = new Map(originalDetailsResult.rows.map(d => [formatDate(new Date(d.date)), d]));
     
           // --- NEW LOGIC: START ---
@@ -2076,7 +2087,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
             ORDER BY date ASC LIMIT 1
           `;
-          const sourceResult = await client.query(sourceDetailQuery, [id, hotel_id, old_room_id]);
+          const sourceResult = await client.query(sourceDetailQuery, [reservationIdForDetails, hotel_id, old_room_id]);
     
           if (sourceResult.rows.length > 0) {
             const sourceDetailId = sourceResult.rows[0].id;
@@ -2101,7 +2112,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               AND (date < $4 OR date >= $5)
             RETURNING id, date;
           `;
-          const deleteResult = await client.query(deleteOldQuery, [id, hotel_id, old_room_id, new_check_in, new_check_out]);
+          const deleteResult = await client.query(deleteOldQuery, [reservationIdForDetails, hotel_id, old_room_id, new_check_in, new_check_out]);
           //console.log(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
     
           // 3. Create all required new dates
