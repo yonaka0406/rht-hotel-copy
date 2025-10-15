@@ -14,7 +14,7 @@ const ManageUsers = () => import('@/pages/Admin/ManageUsers.vue');
 const ManageRoles = () => import('@/pages/Admin/ManageRoles/ManageRolesPage.vue');
 const ManageParking = () => import('@/pages/Admin/ManageParking.vue');
 const ManageHotels = () => import('@/pages/Admin/ManageHotels.vue');
-const ManageHotel = () => import('@/pages/Admin/ManageHotel.vue');
+const ManageHotel = () => import('@/pages/Admin/ManageHotel/ManageHotel.vue');
 const ManagePlans = () => import('@/pages/Admin/ManagePlans.vue');
 const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
 const ManageCalendar = () => import('@/pages/Admin/ManageCalendar.vue');
