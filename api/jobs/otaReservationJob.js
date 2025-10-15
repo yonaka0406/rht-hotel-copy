@@ -64,7 +64,7 @@ async function fetchAndProcessReservations() {
       console.log('Skipping OTA reservation job in development environment.');
       return;
     }
-    fetchAndProcessReservations();
+    setTimeout(fetchAndProcessReservations, 30000); // 30-second delay
   }
   
   module.exports = { startScheduling };
