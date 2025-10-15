@@ -246,7 +246,17 @@ export function useHotelStore() {
 
     // Computed property to return sorted rooms
     const selectedHotelRooms = computed(() => {
-        return [...hotelRooms.value].sort((a, b) => a.room_number - b.room_number);
+        return [...hotelRooms.value].sort((a, b) => {
+            // Sort by room_type_name first
+            if (a.room_type_name < b.room_type_name) {
+                return -1;
+            }
+            if (a.room_type_name > b.room_type_name) {
+                return 1;
+            }
+            // If room_type_name is the same, sort by room_number
+            return a.room_number - b.room_number;
+        })
     });
 
     // Defensive computed for Select :options

@@ -14,7 +14,7 @@ const ManageUsers = () => import('@/pages/Admin/ManageUsers.vue');
 const ManageRoles = () => import('@/pages/Admin/ManageRoles/ManageRolesPage.vue');
 const ManageParking = () => import('@/pages/Admin/ManageParking.vue');
 const ManageHotels = () => import('@/pages/Admin/ManageHotels.vue');
-const ManageHotel = () => import('@/pages/Admin/ManageHotel.vue');
+const ManageHotel = () => import('@/pages/Admin/ManageHotel/ManageHotel.vue');
 const ManagePlans = () => import('@/pages/Admin/ManagePlans.vue');
 const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
 const ManageCalendar = () => import('@/pages/Admin/ManageCalendar.vue');
@@ -32,7 +32,7 @@ const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator/RoomIndicator
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/Reservation/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
-const StaticCalendar = () => import('@/pages/MainPage/StaticCalendar.vue');
+const StaticCalendar = () => import('@/pages/MainPage/StaticCalendar/StaticCalendar.vue');
 const ParkingCalendar = () => import('@/pages/MainPage/ParkingCalendar.vue');
 const ReservationList = () => import('@/pages/MainPage/ReservationList.vue');
 const BillingInvoices = () => import('@/pages/MainPage/BillingInvoices.vue');

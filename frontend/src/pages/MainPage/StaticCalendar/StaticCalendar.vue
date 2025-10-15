@@ -29,17 +29,18 @@
           <thead>
             <tr>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-20" style="height: 19px; width: 100px;" rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-20" style="height: 19px; width: 100px;" rowspan="3">
                 日付</th>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 100px;" rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 100px;" rowspan="3">
                 空室</th>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 140px;" rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 140px;" rowspan="3">
                 駐車場</th>
               <th v-for="(roomType, typeIndex) in headerRoomsData.roomTypes" :key="typeIndex"
                 :colspan="roomType.colspan"
-                class="px-2 py-2 text-center font-bold dark:text-gray-100 sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.color, left: '180px' }">
+                class="px-2 py-2 text-center font-bold sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.backgroundColor, color: roomType.textColor, left: '180px' }"
+                v-tooltip.top="roomType.name">
                 {{ roomType.name }}
               </th>
             </tr>
@@ -48,6 +49,11 @@
                 class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 50px; top: 19px; left: 180px;"
                 :class="{ 'pale-yellow-bg': highlightedRooms.has(roomNumber.room_id) }">
                 <span class="text-xs">{{ roomNumber.room_number }}</span>
+                <div class="flex justify-center items-center gap-1">
+                  <span v-if="roomNumber.smoking" class="emoji-small">🚬</span>
+                  <span v-if="roomNumber.has_wet_area" class="emoji-small">🚿</span>
+                  <span v-if="roomNumber.capacity > 1" class="emoji-small capacity-badge">{{ roomNumber.capacity }}</span>
+                </div>
               </th>
             </tr>
           </thead>
@@ -181,21 +187,7 @@ const { reservedRooms, fetchReservedRooms } = useReservationStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
 
-// Helper function
-const formatDate = (date) => {
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
-    throw new Error("Invalid Date object provided to formatDate.");
-  }
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-const formatDateWithDay = (date) => {
-  const options = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' };
-  const parsedDate = new Date(date);
-  return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-};
+import { formatDate, formatDateWithDay } from '@/utils/dateUtils';
 
 // Room type color assignment
 const roomTypeGrayTones = [
@@ -212,9 +204,22 @@ const roomTypeGrayTones = [
 const roomTypeColorMap = new Map();
 let colorIndex = 0;
 
+// Helper to calculate luminance (for determining text color contrast)
+function getLuminance(hexColor) {
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+
+  // Perceived luminance (ITU-R BT.709)
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
 const getRoomTypeColor = (roomTypeName) => {
   if (!roomTypeColorMap.has(roomTypeName)) {
-    roomTypeColorMap.set(roomTypeName, roomTypeGrayTones[colorIndex % roomTypeGrayTones.length]);
+    const bgColor = roomTypeGrayTones[colorIndex % roomTypeGrayTones.length];
+    const luminance = getLuminance(bgColor);
+    const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF'; // Use black for light backgrounds, white for dark
+    roomTypeColorMap.set(roomTypeName, { backgroundColor: bgColor, textColor: textColor });
     colorIndex++;
   }
   return roomTypeColorMap.get(roomTypeName);
@@ -262,20 +267,17 @@ const highlightRow = (index) => {
 const showTooltip = (event, room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);
   if (roomInfo && roomInfo.reservation_id) {
-    const originalReservation = reservedRooms.value.find(r => r.reservation_id === roomInfo.reservation_id && formatDate(new Date(r.date)) === date);
-    if (originalReservation) {
-      tooltipContent.value = `
-        部屋番号: ${originalReservation.room_number || 'N/A'}<br>  
-        顧客: ${originalReservation.client_name_original || originalReservation.client_name}<br>
-        プラン: ${originalReservation.plan_name || 'N/A'}<br>        
-        支払いタイミング: ${paymentTimingInfo[originalReservation.payment_timing]?.label || originalReservation.payment_timing || 'N/A'}<br>
-        チェックイン日: ${formatDate(new Date(originalReservation.check_in))}<br>
-        チェックアウト日: ${formatDate(new Date(originalReservation.check_out))}
-      `;
-      tooltipVisible.value = true;
-      tooltipX.value = event.pageX + 10;
-      tooltipY.value = event.pageY + 10;
-    }
+    tooltipContent.value = `
+      部屋番号: ${roomInfo.room_number || 'N/A'}<br>  
+      顧客: ${roomInfo.client_name_original || roomInfo.client_name}<br>
+      プラン: ${roomInfo.plan_name || 'N/A'}<br>        
+      支払いタイミング: ${paymentTimingInfo[roomInfo.payment_timing]?.label || roomInfo.payment_timing || 'N/A'}<br>
+      チェックイン日: ${formatDate(new Date(roomInfo.check_in))}<br>
+      チェックアウト日: ${formatDate(new Date(roomInfo.check_out))}
+    `;
+    tooltipVisible.value = true;
+    tooltipX.value = event.pageX + 10;
+    tooltipY.value = event.pageY + 10;
   } else {
     tooltipVisible.value = false;
   }
@@ -522,20 +524,19 @@ const headerRoomsData = computed(() => {
   selectedHotelRooms.value.forEach(room => {
     if (room.room_type_name !== currentRoomType) {
       if (currentRoomType !== null) {
-        roomTypes.push({ name: currentRoomType, colspan: currentColspan, color: getRoomTypeColor(currentRoomType) });
+        roomTypes.push({ name: currentRoomType, colspan: currentColspan, ...getRoomTypeColor(currentRoomType) });
       }
       currentRoomType = room.room_type_name;
       currentColspan = 1;
     } else {
       currentColspan++;
     }
-    roomNumbers.push({ room_id: room.room_id, room_number: room.room_number });
+    roomNumbers.push({ room_id: room.room_id, room_number: room.room_number, smoking: room.room_smoking_idc, has_wet_area: room.room_has_wet_area_idc, capacity: room.room_capacity });
   });
 
   if (currentRoomType !== null) {
-    roomTypes.push({ name: currentRoomType, colspan: currentColspan, color: getRoomTypeColor(currentRoomType) });
-  }
-
+            roomTypes.push({ name: currentRoomType, colspan: currentColspan, ...getRoomTypeColor(currentRoomType) });  }
+  
   return { roomTypes, roomNumbers };
 });
 
@@ -720,6 +721,23 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.emoji-small {
+  font-size: 0.7em; /* Adjust as needed */
+}
+
+.capacity-badge {
+  background-color: #e0e0e0; /* Light gray background */
+  color: #333; /* Darker text color */
+  padding: 0.1em 0.4em; /* Smaller padding */
+  border-radius: 0.5em; /* Rounded corners */
+  font-weight: bold;
+}
+
+.tag-xxs .p-tag-value {
+  font-size: 0.6em; /* Even smaller than text-xs */
+  padding: 0.1rem 0.3rem; /* Adjust padding as needed */
+}
+
 .table-container {
   width: 100%;
   overflow-x: auto;

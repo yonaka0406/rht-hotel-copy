@@ -20,177 +20,11 @@
     </Panel>
   </div>
 
-  <Dialog v-model:visible="dialogVisible" :modal="true" header="ホテル編集" :style="{ width: '75vw' }" class="p-fluid">
-    <Card>
-      <template #content>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col">
-            <label for="email" class="font-medium mb-2 block">正式名称</label>
-            <InputText id="formal_name" v-model="selectedHotel.formal_name" required />
-          </div>
-          <div class="flex flex-col">
-            <label for="email" class="font-medium mb-2 block">名称</label>
-            <InputText id="name" v-model="selectedHotel.name" required />
-          </div>
-          <div class="flex flex-col">
-            <label for="email" class="font-medium mb-2 block">メールアドレス</label>
-            <InputText id="email" v-model="selectedHotel.email" required />
-          </div>
-          <div class="flex flex-col">
-            <label for="phone_number" class="font-medium mb-2 block">電話番号</label>
-            <InputMask id="phone_number" v-model="selectedHotel.phone_number" mask="(999) 999-9999" required />
-          </div>
-          <div class="flex flex-col">
-            <label for="postal_code" class="font-medium mb-2 block">郵便番号</label>
-            <InputText id="postal_code" v-model="selectedHotel.postal_code" />
-          </div>
-          <div class="flex flex-col">
-            <label for="address" class="font-medium mb-2 block">住所</label>
-            <InputText id="address" v-model="selectedHotel.address" />
-          </div>
-          <div class="flex flex-col">
-            <div class="flex justify-between items-center mb-2">
-              <label for="google_drive_url" class="font-medium flex items-center">
-                <span class="p-inputgroup-addon">
-                  <i class="pi pi-google mr-1"></i>
-                </span>
-                グーグルドライブURL
-              </label>
-              <Button icon="pi pi-external-link" @click="openGoogleDriveUrl"
-                :disabled="!selectedHotel.google_drive_url" />
-            </div>
-            <div class="p-inputgroup">
-              <InputText id="google_drive_url" v-model="selectedHotel.google_drive_url" fluid />
-            </div>
-          </div>
-          <div class="flex flex-col">
-            <label for="latitude" class="font-medium mb-2 block">緯度</label>
-            <InputNumber id="latitude" v-model="selectedHotel.latitude" :minFractionDigits="6" />
-          </div>
-          <div class="flex flex-col">
-            <label for="longitude" class="font-medium mb-2 block">経度</label>
-            <InputNumber id="longitude" v-model="selectedHotel.longitude" :minFractionDigits="6" />
-          </div>
-          <div class="flex flex-col">
-            <label for="facility_type" class="font-medium mb-2 block">施設区分</label>
-            <InputText id="facility_type" v-model="selectedHotel.facility_type" disabled />
-          </div>
-          <div class="flex flex-col">
-            <label for="open_date" class="font-medium mb-2 block">オープン日</label>
-            <DatePicker id="open_date" v-model="selectedHotel.open_date" dateFormat="yy-mm-dd" disabled />
-          </div>
-          <div class="flex flex-col">
-            <label for="sort_order" class="font-medium mb-2 block">表示順</label>
-            <InputNumber id="sort_order" v-model="selectedHotel.sort_order" />
-          </div>
-        </div>
-      </template>
-    </Card>
-
-    <Divider />
-
-    <Card>
-      <template #content>
-        <h2 class="text-xl font-bold mb-2">御振込先情報</h2>
-
-        <div class="grid grid-cols-12 gap-2 mb-4">
-          <div class="col-span-3 mt-6">
-            <FloatLabel>
-              <InputText v-model="selectedHotel.bank_name" fluid />
-              <label>銀行名</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-3 mt-6">
-            <FloatLabel>
-              <InputText v-model="selectedHotel.bank_branch_name" fluid />
-              <label>支店名</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-2 mt-6">
-            <FloatLabel>
-              <InputText v-model="selectedHotel.bank_account_type" fluid />
-              <label>口座種類</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-3 mt-6">
-            <FloatLabel>
-              <InputText v-model="selectedHotel.bank_account_number" fluid />
-              <label>口座番号</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-6 mt-6">
-            <FloatLabel>
-              <InputText v-model="selectedHotel.bank_account_name" fluid />
-              <label>口座名義</label>
-            </FloatLabel>
-          </div>
-
-        </div>
-      </template>
-    </Card>
-
-    <Divider />
-
-    <Card>
-      <template #content>
-        <h2 class="text-xl font-bold mb-2">サイトコントローラー連携情報</h2>
-
-        <div class="grid grid-cols-7 gap-2 mb-4">
-          <div class="col-span-2 mt-6">
-            <FloatLabel>
-              <InputText v-model="siteControllerNewEntry.name" fluid disabled />
-              <label>サイトコントローラー名</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-2 mt-6">
-            <FloatLabel>
-              <InputText v-model="siteControllerNewEntry.user_id" fluid />
-              <label>ユーザー</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-2 mt-6">
-            <FloatLabel>
-              <InputText v-model="siteControllerNewEntry.password" fluid />
-              <label>パスワード</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1 flex justify-center items-center mt-6">
-            <Button @click="siteControllerAddEntry">追加</Button>
-          </div>
-        </div>
-
-        <DataTable :value="siteController" class="p-datatable-sm">
-          <Column field="name" header="サイトコントローラー名" />
-          <Column field="user_id" header="ユーザー" />
-          <Column field="password" header="パスワード" />
-          <Column header="操作">
-            <template #body="slotProps">
-              <Button @click="siteControllerDeleteEntry(slotProps.index)" severity="danger" size="sm" icon="pi pi-trash"
-                outlined />
-            </template>
-          </Column>
-        </DataTable>
-      </template>
-    </Card>
-
-    <Divider />
-
-    <Card>
-      <template #title>
-        プラン表示設定
-      </template>
-      <template #content>
-        <PlanVisibilitySettings :hotelId="selectedHotel.id" v-if="selectedHotel && selectedHotel.id" />
-      </template>
-    </Card>
-
-    <template #footer>
-      <Button label="保存" icon="pi pi-check" @click="saveHotel" class="p-button-success p-button-text p-button-sm" />
-      <Button label="キャンセル" icon="pi pi-times" @click="dialogVisible = false"
-        class="p-button-danger p-button-text p-button-sm" text />
-    </template>
-
-  </Dialog>
+  <ManageHotelEditDialog
+    v-model:visible="dialogVisible"
+    :selectedHotel="selectedHotel"
+    @hotel-updated="onHotelUpdated"
+  />
 
   <Dialog v-model:visible="roomTypesDialogVisible" :modal="true" header="部屋タイプ編集" :style="{ width: '600px' }"
     class="p-fluid">
@@ -263,7 +97,7 @@ import { ref, reactive, onMounted } from 'vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
-const { hotels, fetchHotels, fetchHotelSiteController, editHotel, editHotelSiteController } = useHotelStore();
+const { hotels, fetchHotels } = useHotelStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -271,9 +105,9 @@ const toast = useToast();
 import { Panel, Dialog, Card, DataTable, Column, FloatLabel, Textarea, InputText, InputNumber, DatePicker, InputMask, Checkbox, Select, Button, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Divider } from 'primevue';
 
 // Components
-import PlanVisibilitySettings from './components/PlanVisibilitySettings.vue';
-import ManageHotelRoomsDialog from './components/dialogs/ManageHotelRoomsDialog.vue';
-import ManageHotelAddRoomDialog from './components/dialogs/ManageHotelAddRoomDialog.vue';
+import ManageHotelEditDialog from './components/ManageHotelEditDialog.vue';
+import ManageHotelRoomsDialog from './components/ManageHotelRoomsDialog.vue';
+import ManageHotelAddRoomDialog from './components/ManageHotelAddRoomDialog.vue';
 
 const authToken = localStorage.getItem('authToken');
 
@@ -288,68 +122,16 @@ function onCellEditComplete(event) {
 
 // Hotels
 const dialogVisible = ref(false);
-const siteController = ref(null);
-const siteControllerNewEntry = ref({
-  hotel_id: '',
-  name: 'TL-リンカーン',
-  user_id: '',
-  password: ''
-});
-const siteControllerReset = () => {
-  siteController.value = [{
-    hotel_id: null,
-    name: null,
-    user_id: null,
-    password: null,
-  }]
-};
-const siteControllerAddEntry = () => {
-  if (siteControllerNewEntry.value.name && siteControllerNewEntry.value.user_id && siteControllerNewEntry.value.password) {
-    siteController.value.push({ ...siteControllerNewEntry.value })
-    siteControllerNewEntry.value.name = 'TL-リンカーン';
-    siteControllerNewEntry.value.user_id = '';
-    siteControllerNewEntry.value.password = '';
-  }
-};
-const siteControllerDeleteEntry = (index) => {
-  siteController.value.splice(index, 1)
-};
+const selectedHotel = ref(null);
 
 const selectHotelData = async (hotel) => {
   selectedHotel.value = { ...hotel };
-  selectedHotel.value.facility_type = selectedHotel.value.facility_type === 'New' ? '新築' : '中古';
-  selectedHotel.value.open_date = new Date(selectedHotel.value.open_date);
-  selectedHotel.value.sort_order = selectedHotel.value.sort_order || 0;
-
-  siteControllerReset();
-  siteController.value = await fetchHotelSiteController(selectedHotel.value.id);
-  siteControllerNewEntry.value.hotel_id = selectedHotel.value.id;
-
   dialogVisible.value = true;
 };
-const saveHotel = async () => {
-  const names = siteController.value.map(item => item.name)
-  const hasDuplicate = names.length !== new Set(names).size
 
-  if (hasDuplicate) {
-    toast.add({
-      severity: 'error',
-      summary: 'エラー',
-      detail: 'サイトコントローラー二重登録はできません。',
-      life: 3000
-    })
-    return
-  }
-
-  try {
-    await editHotel(selectedHotel.value.id, selectedHotel.value);
-    await editHotelSiteController(selectedHotel.value.id, siteController.value);
-    await fetchHotels();
-    dialogVisible.value = false;
-    toast.add({ severity: 'success', summary: '成功', detail: 'ホテル更新されました。', life: 3000 });
-  } catch (error) {
-    toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルの保存に失敗しました', life: 3000 });
-  }
+const onHotelUpdated = async () => {
+  await fetchHotels();
+  toast.add({ severity: 'success', summary: '成功', detail: 'ホテル更新されました。', life: 3000 });
 };
 
 // Rooms
@@ -363,7 +145,6 @@ const roomTypesDialogVisible = ref(false);
 const roomTypeDialog = ref(false);
 const roomsDialogVisible = ref(false);
 const roomDialog = ref(false);
-const selectedHotel = ref(null);
 const roomsDialogRef = ref(null);
 
 const openRoomDialog = () => {
@@ -435,6 +216,7 @@ const fetchRoomTypes = async () => {
         capacity: item.room_capacity,
         smoking: item.room_smoking_idc,
         for_sale: item.room_for_sale_idc,
+        has_wet_area: item.room_has_wet_area_idc,
         room_type_id: item.room_type_id,
       };
       roomsList.push(room);
@@ -577,11 +359,6 @@ const saveRoomType = async () => {
   }
 };
 
-const openGoogleDriveUrl = () => {
-  if (selectedHotel.value.google_drive_url) {
-    window.open(selectedHotel.value.google_drive_url, '_blank');
-  }
-};
 
 onMounted(async () => {
   await fetchHotels();

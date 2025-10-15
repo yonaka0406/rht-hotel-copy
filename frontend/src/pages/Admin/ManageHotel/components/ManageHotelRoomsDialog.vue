@@ -45,6 +45,13 @@
                 </div>
               </template>
             </Column>
+            <Column field="has_wet_area" header="水回り">
+              <template #body="slotProps">
+                <div class="flex items-center justify-center">
+                  <Checkbox v-model="slotProps.data.has_wet_area" binary @change="onCellEditComplete({ data: slotProps.data, field: 'has_wet_area', newValue: slotProps.data.has_wet_area })"/>
+                </div>
+              </template>
+            </Column>
           </DataTable>
         </AccordionContent>
       </AccordionPanel>
@@ -151,6 +158,7 @@ const saveChanges = async () => {
         capacity: room.capacity,
         smoking: room.smoking,
         for_sale: room.for_sale,
+        has_wet_area: room.has_wet_area,
         hotel_id: props.hotelId
       });
     }

@@ -44,6 +44,7 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       ,reservation_details.room_id
       ,rooms.room_number
       ,rooms.smoking
+      ,rooms.has_wet_area
       ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
       ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
@@ -104,8 +105,9 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
       reservation_details.room_id,
       rooms.room_number,
       rooms.smoking,
+      rooms.has_wet_area,
       rooms.capacity,
-      rooms.floor,
+      rooms.floor,      
       reservation_details.plans_global_id,
       reservation_details.plans_hotel_id,
       reservation_details.plan_type,

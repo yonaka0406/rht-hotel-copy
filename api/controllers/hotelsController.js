@@ -135,7 +135,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   const roomCreate = async (req, res) => {
     const pool = getPool(req.requestId);
     const client = await pool.connect();  
-    const { floor, room_number, room_type, room_type_id, capacity, smoking, for_sale, hotel_id: hotelIdFromBody } = req.body;    
+    const { floor, room_number, room_type, room_type_id, capacity, smoking, for_sale, has_wet_area, hotel_id: hotelIdFromBody } = req.body;    
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
@@ -176,11 +176,11 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       
       // Insert room with the room_type_id
       const insertRoomQuery = `
-        INSERT INTO rooms (room_type_id, floor, room_number, capacity, smoking, for_sale, hotel_id, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        INSERT INTO rooms (room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id, created_by, updated_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id
       `;
-      const result = await pool.query(insertRoomQuery, [finalRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, numericHotelId, created_by, updated_by]);
+      const result = await pool.query(insertRoomQuery, [finalRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, has_wet_area, numericHotelId, created_by, updated_by]);
       
       await client.query('COMMIT');
       res.status(201).json({
@@ -358,7 +358,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   };
   const editRoom = async (req, res) => {
     const { id: idParam } = req.params;
-    const { room_type_id, floor, room_number, capacity, smoking, for_sale, hotel_id: hotelIdFromBody } = req.body;
+    const { room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id: hotelIdFromBody } = req.body;
     const updated_by = req.user.id;
 
     let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, numericHotelId;
@@ -374,7 +374,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     }
 
     try {
-      const updatedRoom = await updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, updated_by, numericHotelId);
+      const updatedRoom = await updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, has_wet_area, updated_by, numericHotelId);
       if (!updatedRoom) {
         return res.status(404).json({ message: 'Room not found' });
       }

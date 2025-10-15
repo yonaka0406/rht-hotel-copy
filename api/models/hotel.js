@@ -150,6 +150,7 @@ const updateHotelSiteController = async (requestId, id, data) => {
 
     await Promise.all(insertPromises);
     await client.query('COMMIT');
+    return true;
 
   } catch (error) {
     await client.query('ROLLBACK');
@@ -172,10 +173,10 @@ const updateRoomType = async (requestId, id, name, description, updated_by, hote
     throw new Error('Database error');
   }
 };
-const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by, hotelId) => {
+const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, updated_by, hotelId) => {
   const pool = getPool(requestId);
-  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, updated_by = $7 WHERE id = $8 AND hotel_id = $9 RETURNING *';
-  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by, id, hotelId];
+  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, has_wet_area = $7, updated_by = $8 WHERE id = $9 AND hotel_id = $10 RETURNING *';
+  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, updated_by, id, hotelId];
 
   try {
     const result = await pool.query(query, values);
@@ -405,7 +406,26 @@ const getAllHotelRoomTypesById = async (requestId, id) => {
 };
 const getAllRoomsByHotelId = async (requestId, id) => {
   const pool = getPool(requestId);
-  const query = 'SELECT hotels.*, room_types.id as room_type_id, room_types.name as room_type_name, room_types.description as room_type_description, rooms.id as room_id, rooms.floor as room_floor, rooms.room_number, rooms.capacity as room_capacity, rooms.for_sale as room_for_sale_idc, rooms.smoking as room_smoking_idc FROM hotels JOIN room_types ON hotels.id = room_types.hotel_id LEFT JOIN rooms ON room_types.id = rooms.room_type_id WHERE hotels.id = $1 ORDER BY room_types.id, rooms.floor, rooms.room_number ASC';
+  const query = `
+    SELECT 
+      hotels.*, 
+      room_types.id as room_type_id, 
+      room_types.name as room_type_name, 
+      room_types.description as room_type_description, 
+      rooms.id as room_id, 
+      rooms.floor as room_floor, 
+      rooms.room_number, 
+      rooms.capacity as room_capacity, 
+      rooms.for_sale as room_for_sale_idc, 
+      rooms.smoking as room_smoking_idc, 
+      rooms.has_wet_area as room_has_wet_area_idc 
+    FROM 
+      hotels JOIN room_types ON hotels.id = room_types.hotel_id 
+      LEFT JOIN rooms ON room_types.id = rooms.room_type_id 
+    WHERE hotels.id = $1 
+    ORDER BY 
+      room_types.id, rooms.floor, rooms.room_number ASC
+  `;
   const values = [id];
 
   try {
@@ -498,6 +518,7 @@ const getRoomAssignmentOrder = async (requestId, hotelId) => {
       r.capacity,
       r.smoking,
       r.for_sale,
+      r.has_wet_area,
       r.room_type_id
     FROM rooms r
     JOIN room_types rt ON r.room_type_id = rt.id AND r.hotel_id = rt.hotel_id

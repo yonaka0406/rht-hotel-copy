@@ -176,6 +176,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,body.room_number
       ,body.capacity
       ,body.smoking
+      ,body.has_wet_area
       ,body.for_sale
       ,body.room_type_name
       ,body.number_of_people
@@ -244,6 +245,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
             ,rooms.room_number
             ,rooms.capacity
             ,rooms.smoking
+            ,rooms.has_wet_area
             ,rooms.for_sale
             ,room_types.name AS room_type_name
           ,rd.number_of_people
