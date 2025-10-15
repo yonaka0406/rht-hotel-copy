@@ -39,7 +39,7 @@
                 駐車場</th>
               <th v-for="(roomType, typeIndex) in headerRoomsData.roomTypes" :key="typeIndex"
                 :colspan="roomType.colspan"
-                class="px-2 py-2 text-center font-bold dark:text-gray-100 sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.color, left: '180px' }">
+                class="px-2 py-2 text-center font-bold sticky top-0 z-10" :style="{ height: '19px', width: (roomType.colspan * 50) + 'px', backgroundColor: roomType.backgroundColor, color: roomType.textColor, left: '180px' }">
                 {{ roomType.name }}
               </th>
             </tr>
@@ -203,9 +203,22 @@ const roomTypeGrayTones = [
 const roomTypeColorMap = new Map();
 let colorIndex = 0;
 
+// Helper to calculate luminance (for determining text color contrast)
+function getLuminance(hexColor) {
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+
+  // Perceived luminance (ITU-R BT.709)
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
 const getRoomTypeColor = (roomTypeName) => {
   if (!roomTypeColorMap.has(roomTypeName)) {
-    roomTypeColorMap.set(roomTypeName, roomTypeGrayTones[colorIndex % roomTypeGrayTones.length]);
+    const bgColor = roomTypeGrayTones[colorIndex % roomTypeGrayTones.length];
+    const luminance = getLuminance(bgColor);
+    const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF'; // Use black for light backgrounds, white for dark
+    roomTypeColorMap.set(roomTypeName, { backgroundColor: bgColor, textColor: textColor });
     colorIndex++;
   }
   return roomTypeColorMap.get(roomTypeName);
@@ -513,7 +526,7 @@ const headerRoomsData = computed(() => {
   selectedHotelRooms.value.forEach(room => {
     if (room.room_type_name !== currentRoomType) {
       if (currentRoomType !== null) {
-        roomTypes.push({ name: currentRoomType, colspan: currentColspan, color: getRoomTypeColor(currentRoomType) });
+        roomTypes.push({ name: currentRoomType, colspan: currentColspan, ...getRoomTypeColor(currentRoomType) });
       }
       currentRoomType = room.room_type_name;
       currentColspan = 1;
@@ -524,10 +537,8 @@ const headerRoomsData = computed(() => {
   });
 
   if (currentRoomType !== null) {
-    roomTypes.push({ name: currentRoomType, colspan: currentColspan, color: getRoomTypeColor(currentRoomType) });
-  }
-
-  console.log('roomNumbers:', roomNumbers);
+            roomTypes.push({ name: currentRoomType, colspan: currentColspan, ...getRoomTypeColor(currentRoomType) });  }
+  
   return { roomTypes, roomNumbers };
 });
 
