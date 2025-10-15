@@ -727,7 +727,7 @@ const updateReservationType = async (event) => {
         try {
             await setReservationType(selectedOption);
             // Update the local state on success
-            reservationType.value = selectedOption === 'employee' ? '社員' : '通常予約';
+            reservationTypeSelected.value = selectedOption;
 
             toast.add({
                 severity: 'success',
