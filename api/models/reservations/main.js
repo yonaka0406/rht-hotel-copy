@@ -1,11 +1,11 @@
-let getPool = require('../config/database').getPool;
+let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
-const { toFullWidthKana, processNameString } = require('../models/clients');
-const { getPlanByKey } = require('../models/plan');
-const { getAllPlanAddons } = require('../models/planAddon');
-const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
-const { selectTLRoomMaster, selectTLPlanMaster } = require('../ota/xmlModel');
-const logger = require('../config/logger');
+const { toFullWidthKana, processNameString } = require('../clients');
+const { getPlanByKey } = require('../plan');
+const { getAllPlanAddons } = require('../planAddon');
+const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
+const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
+const logger = require('../../config/logger');
 
 // Helper
 const formatDate = (date) => {
