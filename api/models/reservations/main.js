@@ -2602,9 +2602,9 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
     if (clientGender === 'other') {
       
-      const grandTotal = (parseInt(roomDetail.RoomPaxMaleCount, 10) || 0) + (parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0);
-      const maleTotal = parseInt(roomDetail.RoomPaxMaleCount, 10) || 0;
-      const femaleTotal = parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0;
+      const grandTotal = (parseInt(BasicInformation.TotalPaxMaleCount, 10) || 0) + (parseInt(BasicInformation.TotalPaxFemaleCount, 10) || 0);
+      const maleTotal = parseInt(BasicInformation.TotalPaxMaleCount, 10) || 0;
+      const femaleTotal = parseInt(BasicInformation.TotalPaxFemaleCount, 10) || 0;
 
       if (grandTotal > 0 && maleTotal > 0 && grandTotal === maleTotal) {
         clientGender = 'male';
@@ -3516,9 +3516,9 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
     if (clientGender === 'other') {
 
-      const grandTotal = (parseInt(roomDetail.RoomPaxMaleCount, 10) || 0) + (parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0);
-      const maleTotal = parseInt(roomDetail.RoomPaxMaleCount, 10) || 0;
-      const femaleTotal = parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0;
+      const grandTotal = (parseInt(BasicInformation.TotalPaxMaleCount, 10) || 0) + (parseInt(BasicInformation.TotalPaxFemaleCount, 10) || 0);
+      const maleTotal = parseInt(BasicInformation.TotalPaxMaleCount, 10) || 0;
+      const femaleTotal = parseInt(BasicInformation.TotalPaxFemaleCount, 10) || 0;
 
       if (grandTotal > 0 && maleTotal > 0 && grandTotal === maleTotal) {
         clientGender = 'male';
