@@ -20,7 +20,7 @@
         @cell-contextmenu="showContextMenu"
       />
 -->
-      <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': isCompactView }"
+      <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': headerState.isCompactView }"
         ref="tableContainer" @scroll="onScroll">
         <table class="table-auto w-full mb-2" @dragover.prevent>
           <thead>
@@ -68,7 +68,7 @@
                   isCellFirst(room.room_id, fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms')?.reservation_id, date, dragMode === 'reorganizeRooms') ? 'cell-first' : '',
                   isCellLast(room.room_id, fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms')?.reservation_id, date, dragMode === 'reorganizeRooms') ? 'cell-last' : '',
                   'cursor-pointer',
-                  isCompactView ? 'compact-cell' : '',
+                  headerState.isCompactView ? 'compact-cell' : '',
                   isSelectedRoomByDay(room.room_id, date) ? 'selected-room-by-day' : '',
                   !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms') ? 'dark:bg-gray-800 dark:text-gray-100' : ''
                 ]" @mouseover="applyHover(roomIndex, dateIndex)" @mouseleave="removeHover(roomIndex, dateIndex)">
@@ -293,11 +293,10 @@ const goToReservation = () => {
 // State
 const headerState = ref({
   date: new Date().toISOString().split('T')[0],
-  isCompactView: false
+  isCompactView: true
 });
 const isUpdating = ref(false);
 const isLoading = ref(true);
-const isCompactView = ref(true);
 const centerDate = ref(formatDate(new Date()));
 const pinnedRowIndex = ref(null);
 
@@ -1523,6 +1522,8 @@ onMounted(async () => {
   await fetchHotels();
   await fetchHotel();
 
+  console.log('[ReservationsCalendar] isCompactView on load:', headerState.value.isCompactView);
+
   const today = new Date();
   const initialMinDate = new Date(today);
   initialMinDate.setDate(initialMinDate.getDate() - 10);
@@ -1644,10 +1645,7 @@ watch(() => headerState.value.date, (newDate) => {
   // Handle date change
   centerDate.value = newDate;
 });
-watch(() => headerState.value.isCompactView, (newViewMode) => {
-  // Handle view mode change
-  isCompactView.value = newViewMode;
-});
+
 
 </script>
 
@@ -1773,9 +1771,8 @@ thead th:last-child {
 .compact-view th,
 .compact-view td {
   padding: 4px 6px;
-  min-width: 20px;
-  /* Adjust as needed */
-  max-width: 100px;
+  min-width: 20px !important;
+  max-width: 100px !important;
   font-size: 10px;
 }
 
@@ -1785,7 +1782,7 @@ thead th:last-child {
   text-overflow: ellipsis;
   height: 10px;
   /* Adjust height */
-  width: 20px;
+  width: 20px !important;
   /* Adjust width */
   font-size: 10px;
 }
