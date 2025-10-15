@@ -1,24 +1,55 @@
 <template>
     <div class="grid grid-cols-12 gap-4">
         <div class="col-span-12">
-            <Card>
-                <template #title>日次レポート</template>
-                <template #content>
-                    <div class="grid grid-cols-12 gap-4 items-end">
-                        <div class="col-span-4">
-                            <FloatLabel>
-                                <DatePicker v-model="selectedDate" dateFormat="yy/mm/dd" class="w-full" :minDate="minDate" :maxDate="maxDate" />
-                                <label>日付</label>
-                            </FloatLabel>
-                        </div>
-                        <div class="col-span-2">
-                            <Button @click="loadReport" label="ロード" class="w-full" />
-                        </div>
-                                            </div>
-                </template>
-            </Card>
+            <Tabs value="0">
+                <TabList>
+                    <Tab value="0">日次レポート</Tab>
+                    <Tab value="1">日付比較</Tab>
+                </TabList>
+                <TabPanels>
+                    <TabPanel value="0">
+                        <Card>
+                            <template #content>
+                                <div class="grid grid-cols-12 gap-4 items-end">
+                                    <div class="col-span-4">
+                                        <FloatLabel>
+                                            <DatePicker v-model="selectedDate" dateFormat="yy/mm/dd" class="w-full" :minDate="minDate" :maxDate="maxDate" />
+                                            <label>日付</label>
+                                        </FloatLabel>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <Button @click="loadReport" label="ロード" class="w-full" />
+                                    </div>
+                                </div>
+                            </template>
+                        </Card>
+                    </TabPanel>
+                    <TabPanel value="1">
+                        <Card>
+                            <template #content>
+                                <div class="grid grid-cols-12 gap-4 items-end">
+                                    <div class="col-span-4">
+                                        <FloatLabel>
+                                            <DatePicker v-model="date1" dateFormat="yy/mm/dd" class="w-full" :minDate="minDate" :maxDate="maxDate" />
+                                            <label>日付1</label>
+                                        </FloatLabel>
+                                    </div>
+                                    <div class="col-span-4">
+                                        <FloatLabel>
+                                            <DatePicker v-model="date2" dateFormat="yy/mm/dd" class="w-full" :minDate="minDate" :maxDate="maxDate" />
+                                            <label>日付2</label>
+                                        </FloatLabel>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <Button @click="compareDates" label="比較" class="w-full" />
+                                    </div>
+                                </div>
+                            </template>
+                        </Card>
+                    </TabPanel>
+                </TabPanels>
+            </Tabs>
         </div>
-
         <div class="col-span-12" v-if="isLoading">
             <ProgressSpinner />
         </div>
@@ -66,6 +97,11 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import Tabs from 'primevue/tabs';
+import TabList from 'primevue/tablist';
+import Tab from 'primevue/tab';
+import TabPanels from 'primevue/tabpanels';
+import TabPanel from 'primevue/tabpanel';
 import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 import FloatLabel from 'primevue/floatlabel';
@@ -91,6 +127,13 @@ const minDate = ref(null);
 const maxDate = ref(new Date());
 const dt = ref();
 const loadedDateTitle = ref('レポートデータ'); // New reactive variable for card title
+
+const date1 = ref(new Date());
+const date2 = ref(new Date());
+
+const compareDates = () => {
+    console.log('Comparing dates', date1.value, date2.value);
+};
 
 onMounted(async () => {
     await getAvailableMetricDates();
