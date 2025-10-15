@@ -32,7 +32,7 @@ const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator/RoomIndicator
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/Reservation/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
-const StaticCalendar = () => import('@/pages/MainPage/StaticCalendar.vue');
+const StaticCalendar = () => import('@/pages/MainPage/StaticCalendar/StaticCalendar.vue');
 const ParkingCalendar = () => import('@/pages/MainPage/ParkingCalendar.vue');
 const ReservationList = () => import('@/pages/MainPage/ReservationList.vue');
 const BillingInvoices = () => import('@/pages/MainPage/BillingInvoices.vue');
