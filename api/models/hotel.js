@@ -150,6 +150,7 @@ const updateHotelSiteController = async (requestId, id, data) => {
 
     await Promise.all(insertPromises);
     await client.query('COMMIT');
+    return true;
 
   } catch (error) {
     await client.query('ROLLBACK');
