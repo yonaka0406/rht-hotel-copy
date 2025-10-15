@@ -27,13 +27,23 @@ const performDailyMetricsCalculation = async () => {
             const lastDate = hotel.last_date;
 
             const query = `
-                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays)
+                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, normal_sales, cancellation_sales)
                 WITH months AS (
                     SELECT generate_series(
                         date_trunc('month', $1::date),
                         date_trunc('month', $2::date),
                         '1 month'
                     )::date AS month
+                ),
+                addon_sums AS (
+                    SELECT
+                        ra.hotel_id,
+                        ra.reservation_detail_id,
+                        SUM(ra.price * ra.quantity) AS total_addon_price
+                    FROM
+                        reservation_addons ra
+                    GROUP BY
+                        ra.hotel_id, ra.reservation_detail_id
                 )
                 SELECT
                     $1 AS metric_date,
@@ -47,7 +57,9 @@ const performDailyMetricsCalculation = async () => {
                     COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS in_talks_stays,
                     COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS cancelled_stays,
                     COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' THEN rd.id END) AS non_billable_cancelled_stays,
-                    COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays
+                    COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS normal_sales,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS cancellation_sales
                 FROM
                     months m
                 CROSS JOIN
@@ -58,6 +70,8 @@ const performDailyMetricsCalculation = async () => {
                     plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
                 LEFT JOIN
                     plans_global pg ON rd.plans_global_id = pg.id
+                LEFT JOIN
+                    addon_sums ads ON rd.hotel_id = ads.hotel_id AND rd.id = ads.reservation_detail_id
                 WHERE
                     rd.hotel_id = $3
                     AND r.status <> 'block'

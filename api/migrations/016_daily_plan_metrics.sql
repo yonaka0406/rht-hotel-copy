@@ -12,6 +12,8 @@ CREATE TABLE daily_plan_metrics (
     cancelled_stays INT NOT NULL DEFAULT 0,
     non_billable_cancelled_stays INT NOT NULL DEFAULT 0,
     employee_stays INT NOT NULL DEFAULT 0,
+    normal_sales BIGINT NOT NULL DEFAULT 0,
+    cancellation_sales BIGINT NOT NULL DEFAULT 0;
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id) ON DELETE CASCADE,
     UNIQUE (metric_date, month, hotel_id, plans_global_id, plans_hotel_id)
