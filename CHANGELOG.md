@@ -8,10 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Feature: Added 水回り (Wet Area) boolean field to rooms for better room facility tracking
-- Enhancement: Improved static calendar organization with room type grouping and numerical ordering
-- Bugfix: Multi-room reservation single room period change creates a new reservation
-
 ---
 ## Future Releases
 
@@ -530,11 +526,24 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Refactor room update to update only changed reservation duration plans
 - Feature: Separated Addon rate and Plan rate in Monthly Report Sales by Plan view
 
+---
+
 ## [1.1.22] - 2025-10-14
 
 - Feature: Added Daily Report Data Download functionality for viewing confirmed stays by plan type
 - Bugfix: Resolved issue where Room Indicator showed both original and new rooms after a room change
 - Bugfix: Disabled reservation plan recalculation when changing rooms to maintain original pricing
+
+---
+
+## [1.1.23] - 2025-10-15
+
+- Feature: Added 水回り (Wet Area) boolean field to rooms for better room facility tracking
+- Enhancement: Improved static calendar organization with room type grouping and numerical ordering
+- Bugfix: Multi-room reservation single room period change creates a new reservation
+- Feature: Added sales information to the daily metrics routine.
+
+---
 
 ## Version History
 
