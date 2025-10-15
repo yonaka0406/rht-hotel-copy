@@ -32,6 +32,11 @@
               <th v-for="(room, roomIndex) in selectedHotelRooms" :key="roomIndex"
                 class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 aspect-square w-32 h-16 sticky top-0 z-10">
                 {{ room.room_type_name }} <br />
+                <div class="flex justify-center items-center gap-1">
+                  <span v-if="room.room_smoking_idc">🚬</span>
+                  <span v-if="room.room_has_wet_area_idc">🚿</span>
+                  <span v-if="room.room_capacity > 1" class="capacity-badge">{{ room.room_capacity }}</span>
+                </div>
                 <span class="text-lg">{{ room.room_number }}</span>
               </th>
             </tr>
@@ -1647,6 +1652,14 @@ watch(() => headerState.value.isCompactView, (newViewMode) => {
 </script>
 
 <style scoped>
+.capacity-badge {
+  background-color: #e0e0e0; /* Light gray background */
+  color: #333; /* Darker text color */
+  padding: 0.1em 0.4em; /* Smaller padding */
+  border-radius: 0.5em; /* Rounded corners */
+  font-weight: bold;
+}
+
 .overflow-x-auto {
   overflow-x: auto;
   max-width: 100%;
