@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Feature: Added 水回り (Wet Area) boolean field to rooms for better room facility tracking
+- Enhancement: Improved static calendar organization with room type grouping and numerical ordering
 - Bugfix: Multi-room reservation single room period change creates a new reservation
 
 ---

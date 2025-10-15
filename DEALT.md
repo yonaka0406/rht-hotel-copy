@@ -4,6 +4,49 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### October 15, 2025
 
+#### Feature Request #81: Add 水回り (Wet Area) Boolean Field to Rooms
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  Add a boolean field to track whether a room has 水回り (wet area) facilities.
+- **Requirements**:
+  - Add a new boolean field `has_wet_area` to the rooms table
+  - Update room creation/editing forms to include this field
+  - Add filter/sort options in room management
+  - Include in room type templates if applicable
+- **Expected Behavior**:
+  - Staff can mark rooms as having wet area facilities
+  - The field is visible in room details and listings
+  - Can be used for filtering and reporting
+- **Affected Components**:
+  - Room management interface
+  - Database schema
+  - Room type templates
+  - Reporting module
+- **Additional Notes**:
+  - Consider adding this to room type defaults
+  - Update any relevant reports or exports to include this information
+  - May be useful for accessibility reporting
+
+### Bug #80: Order Static Calendar by Room Type and Number
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  The static calendar display should be ordered by room type first and then by room number for better organization and usability.
+- **Current Behavior**:
+  - Rooms appear in an inconsistent order in the static calendar view
+  - No clear organization by room type or number
+- **Expected Behavior**:
+  - Rooms should be grouped by room type
+  - Within each room type, rooms should be ordered numerically
+  - The order should be consistent across all calendar views
+- **Affected Components**:
+  - Static calendar view
+  - Room assignment interface
+- **Additional Notes**:
+  - Consider making the sort order configurable in system settings
+  - Ensure the ordering is maintained during all operations (filtering, searching, etc.)
+
 #### Bug #83: Room Period Change in Multi-Room Reservation Not Creating New Reservation
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
