@@ -16,18 +16,12 @@ export function useRoomCategorization(selectedDate) {
 
     const allReservations = reservedRoomsDayView.value?.filter(room => room.cancelled === null) || [];
 
-    // Filter out duplicate reservations based on their unique 'id'
-    const uniqueReservations = [];
-    const seenReservationIds = new Set();
-    allReservations.forEach(reservation => {
-      if (reservation.id && !seenReservationIds.has(reservation.id)) {
-        uniqueReservations.push(reservation);
-        seenReservationIds.add(reservation.id);
-      }
-    });
+
+
+
 
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
-    const blockedRooms = uniqueReservations
+    const blockedRooms = allReservations
       .filter(room => room.status === 'block')
       .map(room => ({
         ...room,
@@ -110,13 +104,13 @@ export function useRoomCategorization(selectedDate) {
       return acc;
     }, {});
 
-    const finalCheckOutRooms = Object.values(checkoutGroups).map(group => {
+    const finalCheckOutRooms = Object.values(checkoutGroups).flatMap(group => {
       if (group.length <= 1) {
-        return group[0]; // No conflict
+        return group; // No conflict, return the array which may contain one room or be empty
       }
 
-      // If there's a conflict, find the correct room.
-      // The correct room is the one the guest occupies on the night before checkout.
+      // If there's a conflict (e.g., room change), find the correct rooms.
+      // The correct rooms are those the guest occupies on the night before checkout.
       
       // The check_out date string is in UTC. We need to parse it into a Date object,
       // which will represent the date in the browser's local timezone (JST for the user).
@@ -129,18 +123,24 @@ export function useRoomCategorization(selectedDate) {
       // Use the existing formatDate utility to get YYYY-MM-DD in the local timezone.
       const dayBeforeCheckoutStr = formatDate(dayBeforeCheckout);
 
-      let finalRoom = group.find(room =>
+      let finalRooms = group.filter(room =>
         room.details && room.details.some(detail => detail.date === dayBeforeCheckoutStr)
       );
 
       // Fallback: if for some reason the above logic fails, take the one with more details,
       // as it implies a longer stay in that room.
-      if (!finalRoom) {
-        console.warn("Could not determine final checkout room. Falling back to longest stay.", group);
-        finalRoom = group.reduce((a, b) => (a.details && b.details && a.details.length > b.details.length ? a : b));
+      if (finalRooms.length === 0) {
+        // Sort by number of details and take all that have the max length
+        const maxLength = Math.max(...group.map(r => r.details?.length || 0));
+        if (maxLength > 0) {
+          finalRooms = group.filter(r => r.details?.length === maxLength);
+        } else {
+          // If no details at all, return the original group to avoid losing data
+          finalRooms = group;
+        }
       }
       
-      return finalRoom;
+      return finalRooms;
     }).filter(Boolean);
 
     categorizedRooms.checkOut = finalCheckOutRooms;
@@ -154,7 +154,7 @@ export function useRoomCategorization(selectedDate) {
     ]);
     
     // Also exclude rooms that have reservations overlapping this date (but not checking out today)
-    uniqueReservations.forEach(room => {
+    allReservations.forEach(room => {
       if (room.status === 'block') return;
       
       const checkInDate = new Date(room.check_in);
