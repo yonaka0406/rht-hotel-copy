@@ -569,13 +569,13 @@ const openWaitlistDialog = () => { // This is the new, simplified version for th
 
 const handleWaitlistSubmitted = () => {
     // Optional: any action needed in parent after waitlist is submitted
-    console.log("Waitlist entry submitted (event received in parent)");
+    //console.log("Waitlist entry submitted (event received in parent)");
 };
 
 const addReservationCombo = () => {
     comboRow.value.reservation_type = 'stay';
 
-    console.log('addReservationCombo:', comboRow.value);
+    //console.log('addReservationCombo:', comboRow.value);
     const roomType = roomTypes.value.find(rt => rt.room_type_id === comboRow.value.room_type_id);
     reservationCombos.value.push({
         ...comboRow.value,
@@ -592,9 +592,9 @@ const addParkingCombo = () => {
     comboRow.value.reservation_type = 'parking';
     comboRow.value.number_of_people = null;
 
-    console.log('addParkingCombo - initial comboRow:', JSON.parse(JSON.stringify(comboRow.value)));
-    console.log('addParkingCombo - selectedAddon:', selectedAddon.value);
-    console.log('addParkingCombo - addonOptions:', JSON.parse(JSON.stringify(addonOptions.value)));
+    //console.log('addParkingCombo - initial comboRow:', JSON.parse(JSON.stringify(comboRow.value)));
+    //console.log('addParkingCombo - selectedAddon:', selectedAddon.value);
+    //console.log('addParkingCombo - addonOptions:', JSON.parse(JSON.stringify(addonOptions.value)));
 
     // Find the selected vehicle category
     const selectedVehicle = vehicleCategories.value.find(vc => vc.id === comboRow.value.vehicle_category_id);
@@ -627,7 +627,7 @@ const addParkingCombo = () => {
         room_type_name: `駐車場 (${vehicleName})`
     };
 
-    console.log('addParkingCombo - updated combo:', JSON.parse(JSON.stringify(updatedCombo)));
+    //console.log('addParkingCombo - updated combo:', JSON.parse(JSON.stringify(updatedCombo)));
 
     // Push the new object to the array
     reservationCombos.value.push(updatedCombo);
@@ -1324,7 +1324,7 @@ const submitMultiBlock = async () => {
 
             // If we have reservation IDs, we could store them for future reference
             if (response.room_ids?.length > 0) {
-                console.log('Created temporary block reservations:', response.room_ids);
+                //console.log('Created temporary block reservations:', response.room_ids);
             }
         } else {
             throw new Error(response.message || '部屋のブロックに失敗しました');

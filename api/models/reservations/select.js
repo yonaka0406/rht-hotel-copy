@@ -1,0 +1,341 @@
+let getPool = require('../../config/database').getPool;
+
+const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
+  const pool = getPool(requestId);
+  const query = `
+    WITH reservation_guests AS (
+      SELECT DISTINCT ON (reservation_details_id, hotel_id)
+        hotel_id,
+        reservation_details_id,
+        c.id as client_id,
+        c.name_kanji,
+        c.name_kana,
+        c.name
+      FROM
+        reservation_clients rc
+        JOIN clients c ON rc.client_id = c.id
+      WHERE
+        rc.hotel_id = $1
+      ORDER BY
+        reservation_details_id, hotel_id, rc.created_at
+    )
+    SELECT
+      reservation_details.id
+      ,reservation_details.hotel_id
+      ,reservation_details.reservation_id
+      ,CASE 
+        WHEN reservations.type IN ('ota', 'web') AND rg.client_id IS NOT NULL THEN rg.client_id
+        ELSE reservations.reservation_client_id
+       END as client_id
+      ,CASE 
+        WHEN reservations.type IN ('ota', 'web') AND rg.client_id IS NOT NULL THEN COALESCE(rg.name_kanji, rg.name_kana, rg.name)
+        ELSE COALESCE(clients.name_kanji, clients.name_kana, clients.name) 
+       END as client_name
+      ,reservations.check_in
+      ,reservations.check_out
+      ,reservations.number_of_people
+      ,reservations.status      
+      ,reservations.type
+      ,reservations.payment_timing
+      ,reservations.created_at
+      ,reservation_details.date
+      ,rooms.room_type_id
+      ,room_types.name AS room_type_name
+      ,reservation_details.room_id
+      ,rooms.room_number
+      ,rooms.smoking
+      ,reservation_details.plans_global_id
+      ,reservation_details.plans_hotel_id
+      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
+	    ,COALESCE(plans_hotel.color, plans_global.color) AS plan_color
+      ,reservation_details.number_of_people
+      ,reservation_details.price
+
+    FROM
+      reservation_details
+      JOIN rooms ON reservation_details.room_id = rooms.id AND reservation_details.hotel_id = rooms.hotel_id
+      JOIN room_types ON room_types.id = rooms.room_type_id AND room_types.hotel_id = rooms.hotel_id
+      JOIN reservations ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id
+      LEFT JOIN clients ON clients.id = reservations.reservation_client_id
+      LEFT JOIN plans_global ON reservation_details.plans_global_id = plans_global.id
+      LEFT JOIN plans_hotel ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+      LEFT JOIN reservation_guests rg ON rg.reservation_details_id = reservation_details.id AND rg.hotel_id = reservation_details.hotel_id
+    WHERE
+      reservation_details.hotel_id = $1
+      AND reservation_details.date >= $2 AND reservation_details.date <= $3
+      AND reservation_details.cancelled IS NULL      
+    ORDER BY
+      reservation_details.room_id
+      ,reservation_details.date
+  `;
+
+  const values = [hotel_id, start_date, end_date];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reserved rooms:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectReservationDetail = async (requestId, id, hotel_id) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      reservation_details.id,
+      reservation_details.hotel_id,
+      reservation_details.reservation_id,
+      clients.id AS client_id,
+      COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS client_name,
+      reservations.check_in,
+      reservations.check_out,
+      reservations.number_of_people AS reservation_number_of_people,
+      reservations.status,  
+      reservations.type,
+      reservations.agent,
+      reservations.ota_reservation_id,
+      reservations.comment,
+      reservations.has_important_comment,
+      reservation_details.date,
+      rooms.room_type_id,
+      room_types.name AS room_type_name,
+      reservation_details.room_id,
+      rooms.room_number,
+      rooms.smoking,
+      rooms.capacity,
+      rooms.floor,
+      reservation_details.plans_global_id,
+      reservation_details.plans_hotel_id,
+      reservation_details.plan_type,
+      reservation_details.plan_name,
+      reservation_details.number_of_people,
+      reservation_details.price AS plan_total_price,
+      COALESCE(ra.total_price, 0) AS addon_total_price, 
+      CASE 
+        WHEN reservation_details.plan_type = 'per_room' 
+        THEN reservation_details.price 
+        ELSE reservation_details.price * reservation_details.number_of_people
+      END + COALESCE(ra.total_price, 0) AS price,
+      COALESCE(rc.clients_json, '[]'::json) AS reservation_clients,
+      COALESCE(ra.addons_json, '[]'::json) AS reservation_addons,
+      COALESCE(rr.rates_json, '[]'::json) AS reservation_rates
+    FROM
+      reservation_details
+      JOIN reservations 
+        ON reservations.id = reservation_details.reservation_id 
+        AND reservations.hotel_id = reservation_details.hotel_id
+      JOIN clients 
+        ON clients.id = reservations.reservation_client_id
+      JOIN rooms 
+        ON rooms.id = reservation_details.room_id 
+        AND rooms.hotel_id = reservation_details.hotel_id
+      JOIN room_types 
+        ON room_types.id = rooms.room_type_id 
+        AND room_types.hotel_id = rooms.hotel_id      
+      LEFT JOIN (
+          SELECT
+            ra.reservation_detail_id,
+            SUM(ra.price * ra.quantity) AS total_price,
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'addon_id', ra.id,
+                    'addons_global_id', ra.addons_global_id,
+                    'addons_hotel_id', ra.addons_hotel_id,
+                    'addon_name', ra.addon_name,
+                    'addon_type', ra.addon_type,
+                    'quantity', ra.quantity,
+                    'price', ra.price
+                )
+            ) AS addons_json
+          FROM reservation_addons ra
+          JOIN reservation_details rd 
+            ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+          WHERE rd.id = $1 AND rd.hotel_id = $2
+          GROUP BY ra.reservation_detail_id
+        ) ra ON reservation_details.id = ra.reservation_detail_id
+      LEFT JOIN (
+          SELECT 
+            rc.reservation_details_id,
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'client_id', rc.client_id,
+                'name', c.name,
+                'name_kana', c.name_kana,
+                'name_kanji', c.name_kanji,
+                'email', c.email,
+                'phone', c.phone,
+                'gender', c.gender,
+                'address1', ad.street,
+                'address2', ad.city,
+                'postal_code', ad.postal_code
+              )
+            ) AS clients_json
+          FROM reservation_clients rc
+          JOIN clients c ON rc.client_id = c.id
+          LEFT JOIN (
+            SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
+            FROM addresses
+          ) ad ON ad.client_id = c.id AND ad.rn = 1
+          JOIN reservation_details rd 
+            ON rd.id = rc.reservation_details_id AND rd.hotel_id = rc.hotel_id
+          WHERE rd.id = $1 AND rd.hotel_id = $2
+          GROUP BY rc.reservation_details_id
+        ) rc ON rc.reservation_details_id = reservation_details.id
+      LEFT JOIN (
+          SELECT 
+            rr.reservation_details_id,
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'adjustment_type', rr.adjustment_type,
+                'adjustment_value', rr.adjustment_value,
+                'tax_type_id', rr.tax_type_id,
+                'tax_rate', rr.tax_rate,
+                'price', rr.price              
+              )
+            ) AS rates_json
+          FROM reservation_rates rr
+          JOIN reservation_details rd 
+            ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+          WHERE rd.id = $1 AND rd.hotel_id = $2
+          GROUP BY rr.reservation_details_id
+        ) rr ON rr.reservation_details_id = reservation_details.id
+    WHERE reservation_details.id = $1 AND reservation_details.hotel_id = $2
+  `;
+
+  const values = [id, hotel_id];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservation detail:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectReservationAddons = async (requestId, id, hotelId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT * FROM reservation_addons
+    WHERE reservation_detail_id = $1 AND hotel_id = $2
+  `;
+
+  const values = [id, hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservation addons:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectReservationClientIds = async (requestId, hotelId, reservationId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT DISTINCT
+      id, name, name_kana, name_kanji, COALESCE(name_kanji, name_kana, name) AS display_name, legal_or_natural_person, gender, date_of_birth, email, phone, fax
+    FROM
+    (
+      SELECT c.*      
+      FROM reservations r
+        JOIN clients c 
+          ON c.id = r.reservation_client_id
+      WHERE r.id = $1 AND r.hotel_id = $2
+
+      UNION ALL
+
+      SELECT c.*
+      FROM reservation_details rd
+        JOIN reservation_clients rc ON rc.reservation_details_id = rd.id AND rc.hotel_id = rd.hotel_id
+        JOIN clients c ON c.id = rc.client_id
+      WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
+    ) AS ALL_CLIENTS
+  `;
+
+  const values = [reservationId, hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservations:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectReservationPayments = async (requestId, hotelId, reservationId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT 
+      rp.*,
+      pt.name AS payment_type_name,
+      pt.transaction AS transaction_type,
+      r.room_number,
+      COALESCE(c.name_kanji, c.name_kana, c.name) AS payer_name
+    FROM 
+      reservation_payments rp
+      JOIN payment_types pt 
+        ON rp.payment_type_id = pt.id
+      JOIN rooms r
+        ON rp.room_id = r.id AND rp.hotel_id = r.hotel_id
+      JOIN clients c
+        ON rp.client_id = c.id
+    WHERE 
+        rp.hotel_id = $1
+        AND rp.reservation_id = $2
+    ORDER BY 
+        rp.date,
+        rp.client_id,
+        rp.value;
+  `;
+
+  const values = [hotelId, reservationId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservations:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectReservationParking = async (requestId, hotel_id, reservation_id) => {
+  const pool = getPool(requestId);
+  const query = `
+      SELECT rp.*, 
+        ps.spot_number, 
+        ps.spot_type, 
+        ps.capacity_units,
+        pl.name as parking_lot_name,
+        vc.name as vehicle_category_name,
+        vc.capacity_units_required,
+        rd.room_id,
+        rd.date as reservation_date
+      FROM reservation_parking rp
+      LEFT JOIN parking_spots ps ON rp.parking_spot_id = ps.id
+      LEFT JOIN parking_lots pl 
+        ON ps.parking_lot_id = pl.id AND pl.hotel_id = rp.hotel_id
+      LEFT JOIN vehicle_categories vc ON rp.vehicle_category_id = vc.id
+      JOIN reservation_details rd ON rp.reservation_details_id = rd.id AND rp.hotel_id = rd.hotel_id
+      WHERE rp.hotel_id = $1 
+      AND rd.reservation_id = $2
+      ORDER BY rp.date, ps.spot_number
+  `;
+  const values = [hotel_id, reservation_id];
+  const result = await pool.query(query, values);
+  return result.rows;
+};
+
+module.exports = {  
+  selectReservedRooms,
+  selectReservationDetail,
+  selectReservationAddons,
+  selectReservationClientIds,
+  selectReservationPayments,
+  selectReservationParking
+}

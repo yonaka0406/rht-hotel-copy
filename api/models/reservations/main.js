@@ -1,11 +1,12 @@
-let getPool = require('../config/database').getPool;
+let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
-const { toFullWidthKana, processNameString } = require('../models/clients');
-const { getPlanByKey } = require('../models/plan');
-const { getAllPlanAddons } = require('../models/planAddon');
-const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
-const { selectTLRoomMaster, selectTLPlanMaster } = require('../ota/xmlModel');
-const logger = require('../config/logger');
+const { toFullWidthKana, processNameString } = require('../clients');
+const { getPlanByKey } = require('../plan');
+const { getAllPlanAddons } = require('../planAddon');
+const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
+const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
+const logger = require('../../config/logger');
+const { deleteReservationAddonsByDetailId } = require('./delete');
 
 // Helper
 const formatDate = (date) => {
@@ -150,85 +151,6 @@ const selectAndLockAvailableParkingSpot = async (requestId, hotelId, checkIn, ch
   }
 };
 
-const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
-  const pool = getPool(requestId);
-  const query = `
-    WITH reservation_guests AS (
-      SELECT DISTINCT ON (reservation_details_id, hotel_id)
-        hotel_id,
-        reservation_details_id,
-        c.id as client_id,
-        c.name_kanji,
-        c.name_kana,
-        c.name
-      FROM
-        reservation_clients rc
-        JOIN clients c ON rc.client_id = c.id
-      WHERE
-        rc.hotel_id = $1
-      ORDER BY
-        reservation_details_id, hotel_id, rc.created_at
-    )
-    SELECT
-      reservation_details.id
-      ,reservation_details.hotel_id
-      ,reservation_details.reservation_id
-      ,CASE 
-        WHEN reservations.type IN ('ota', 'web') AND rg.client_id IS NOT NULL THEN rg.client_id
-        ELSE reservations.reservation_client_id
-       END as client_id
-      ,CASE 
-        WHEN reservations.type IN ('ota', 'web') AND rg.client_id IS NOT NULL THEN COALESCE(rg.name_kanji, rg.name_kana, rg.name)
-        ELSE COALESCE(clients.name_kanji, clients.name_kana, clients.name) 
-       END as client_name
-      ,reservations.check_in
-      ,reservations.check_out
-      ,reservations.number_of_people
-      ,reservations.status      
-      ,reservations.type
-      ,reservations.payment_timing
-      ,reservations.created_at
-      ,reservation_details.date
-      ,rooms.room_type_id
-      ,room_types.name AS room_type_name
-      ,reservation_details.room_id
-      ,rooms.room_number
-      ,rooms.smoking
-      ,reservation_details.plans_global_id
-      ,reservation_details.plans_hotel_id
-      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
-	    ,COALESCE(plans_hotel.color, plans_global.color) AS plan_color
-      ,reservation_details.number_of_people
-      ,reservation_details.price
-
-    FROM
-      reservation_details
-      JOIN rooms ON reservation_details.room_id = rooms.id AND reservation_details.hotel_id = rooms.hotel_id
-      JOIN room_types ON room_types.id = rooms.room_type_id AND room_types.hotel_id = rooms.hotel_id
-      JOIN reservations ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id
-      LEFT JOIN clients ON clients.id = reservations.reservation_client_id
-      LEFT JOIN plans_global ON reservation_details.plans_global_id = plans_global.id
-      LEFT JOIN plans_hotel ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
-      LEFT JOIN reservation_guests rg ON rg.reservation_details_id = reservation_details.id AND rg.hotel_id = reservation_details.hotel_id
-    WHERE
-      reservation_details.hotel_id = $1
-      AND reservation_details.date >= $2 AND reservation_details.date <= $3
-      AND reservation_details.cancelled IS NULL      
-    ORDER BY
-      reservation_details.room_id
-      ,reservation_details.date
-  `;
-
-  const values = [hotel_id, start_date, end_date];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reserved rooms:', err);
-    throw new Error('Database error');
-  }
-};
 const selectReservation = async (requestId, id, hotel_id) => {
   const pool = getPool(requestId);
 
@@ -392,140 +314,7 @@ const selectReservation = async (requestId, id, hotel_id) => {
     throw new Error('Database error');
   }
 };
-const selectReservationDetail = async (requestId, id, hotel_id) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT
-      reservation_details.id,
-      reservation_details.hotel_id,
-      reservation_details.reservation_id,
-      clients.id AS client_id,
-      COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS client_name,
-      reservations.check_in,
-      reservations.check_out,
-      reservations.number_of_people AS reservation_number_of_people,
-      reservations.status,  
-      reservations.type,
-      reservations.agent,
-      reservations.ota_reservation_id,
-      reservations.comment,
-      reservations.has_important_comment,
-      reservation_details.date,
-      rooms.room_type_id,
-      room_types.name AS room_type_name,
-      reservation_details.room_id,
-      rooms.room_number,
-      rooms.smoking,
-      rooms.capacity,
-      rooms.floor,
-      reservation_details.plans_global_id,
-      reservation_details.plans_hotel_id,
-      reservation_details.plan_type,
-      reservation_details.plan_name,
-      reservation_details.number_of_people,
-      reservation_details.price AS plan_total_price,
-      COALESCE(ra.total_price, 0) AS addon_total_price, 
-      CASE 
-        WHEN reservation_details.plan_type = 'per_room' 
-        THEN reservation_details.price 
-        ELSE reservation_details.price * reservation_details.number_of_people
-      END + COALESCE(ra.total_price, 0) AS price,
-      COALESCE(rc.clients_json, '[]'::json) AS reservation_clients,
-      COALESCE(ra.addons_json, '[]'::json) AS reservation_addons,
-      COALESCE(rr.rates_json, '[]'::json) AS reservation_rates
-    FROM
-      reservation_details
-      JOIN reservations 
-        ON reservations.id = reservation_details.reservation_id 
-        AND reservations.hotel_id = reservation_details.hotel_id
-      JOIN clients 
-        ON clients.id = reservations.reservation_client_id
-      JOIN rooms 
-        ON rooms.id = reservation_details.room_id 
-        AND rooms.hotel_id = reservation_details.hotel_id
-      JOIN room_types 
-        ON room_types.id = rooms.room_type_id 
-        AND room_types.hotel_id = rooms.hotel_id      
-      LEFT JOIN (
-          SELECT
-            ra.reservation_detail_id,
-            SUM(ra.price * ra.quantity) AS total_price,
-            JSON_AGG(
-                JSON_BUILD_OBJECT(
-                    'addon_id', ra.id,
-                    'addons_global_id', ra.addons_global_id,
-                    'addons_hotel_id', ra.addons_hotel_id,
-                    'addon_name', ra.addon_name,
-                    'addon_type', ra.addon_type,
-                    'quantity', ra.quantity,
-                    'price', ra.price
-                )
-            ) AS addons_json
-          FROM reservation_addons ra
-          JOIN reservation_details rd 
-            ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
-          WHERE rd.id = $1 AND rd.hotel_id = $2
-          GROUP BY ra.reservation_detail_id
-        ) ra ON reservation_details.id = ra.reservation_detail_id
-      LEFT JOIN (
-          SELECT 
-            rc.reservation_details_id,
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'client_id', rc.client_id,
-                'name', c.name,
-                'name_kana', c.name_kana,
-                'name_kanji', c.name_kanji,
-                'email', c.email,
-                'phone', c.phone,
-                'gender', c.gender,
-                'address1', ad.street,
-                'address2', ad.city,
-                'postal_code', ad.postal_code
-              )
-            ) AS clients_json
-          FROM reservation_clients rc
-          JOIN clients c ON rc.client_id = c.id
-          LEFT JOIN (
-            SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
-            FROM addresses
-          ) ad ON ad.client_id = c.id AND ad.rn = 1
-          JOIN reservation_details rd 
-            ON rd.id = rc.reservation_details_id AND rd.hotel_id = rc.hotel_id
-          WHERE rd.id = $1 AND rd.hotel_id = $2
-          GROUP BY rc.reservation_details_id
-        ) rc ON rc.reservation_details_id = reservation_details.id
-      LEFT JOIN (
-          SELECT 
-            rr.reservation_details_id,
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'adjustment_type', rr.adjustment_type,
-                'adjustment_value', rr.adjustment_value,
-                'tax_type_id', rr.tax_type_id,
-                'tax_rate', rr.tax_rate,
-                'price', rr.price              
-              )
-            ) AS rates_json
-          FROM reservation_rates rr
-          JOIN reservation_details rd 
-            ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
-          WHERE rd.id = $1 AND rd.hotel_id = $2
-          GROUP BY rr.reservation_details_id
-        ) rr ON rr.reservation_details_id = reservation_details.id
-    WHERE reservation_details.id = $1 AND reservation_details.hotel_id = $2
-  `;
 
-  const values = [id, hotel_id];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservation detail:', err);
-    throw new Error('Database error');
-  }
-};
 const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservationId) => {
   const pool = getPool(requestId);
   const query = `
@@ -553,98 +342,7 @@ const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservat
     throw new Error('Database error');
   }
 };
-const selectReservationAddons = async (requestId, id, hotelId) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT * FROM reservation_addons
-    WHERE reservation_detail_id = $1 AND hotel_id = $2
-  `;
 
-  const values = [id, hotelId];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservation addons:', err);
-    throw new Error('Database error');
-  }
-};
-const selectReservationBalance = async (requestId, hotelId, reservationId) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT
-      details.hotel_id,
-      details.reservation_id,
-      details.room_id,
-      details.total_price,
-      COALESCE(payments.total_payment, 0) AS total_payment,
-      COALESCE(details.total_price, 0) - COALESCE(payments.total_payment, 0) AS balance
-    FROM (
-      SELECT
-        rd.hotel_id,
-        rd.reservation_id,
-        rd.room_id,
-        SUM(
-            CASE
-                WHEN rd.billable IS TRUE AND rd.cancelled IS NULL THEN rd.price
-                WHEN rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
-                ELSE 0
-            END
-        ) + COALESCE(SUM(ra_agg.total_addon_price), 0) AS total_price
-      FROM
-        reservation_details rd
-      LEFT JOIN (
-          SELECT
-              rr_sub.reservation_details_id,
-              SUM(rr_sub.price) AS base_rate_price
-          FROM
-              reservation_rates rr_sub
-          WHERE
-              rr_sub.adjustment_type = 'base_rate'
-          GROUP BY
-              rr_sub.reservation_details_id
-      ) AS rr_agg ON rd.id = rr_agg.reservation_details_id
-      LEFT JOIN (
-          SELECT
-              ra_sub.reservation_detail_id,
-              SUM(ra_sub.quantity * ra_sub.price) AS total_addon_price
-          FROM
-              reservation_addons ra_sub
-          GROUP BY
-              ra_sub.reservation_detail_id
-      ) AS ra_agg ON rd.id = ra_agg.reservation_detail_id
-      WHERE
-        rd.hotel_id = $1 AND rd.reservation_id = $2
-      GROUP BY
-        rd.hotel_id, rd.reservation_id, rd.room_id
-    ) AS details
-    LEFT JOIN (
-      SELECT
-        hotel_id,
-        reservation_id,
-        room_id,
-        SUM(value) AS total_payment
-      FROM
-        reservation_payments
-      WHERE
-        hotel_id = $1 AND reservation_id = $2
-      GROUP BY
-        hotel_id, reservation_id, room_id
-    ) AS payments ON details.hotel_id = payments.hotel_id AND details.reservation_id = payments.reservation_id AND details.room_id = payments.room_id
-    ORDER BY
-      1, 2, 6 DESC;
-  `;
-
-  const values = [hotelId, reservationId];
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservation:', err);
-    throw new Error('Database error');
-  }
-};
 const selectMyHoldReservations = async (requestId, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -676,6 +374,7 @@ const selectMyHoldReservations = async (requestId, user_id) => {
     throw new Error('Database error');
   }
 };
+
 const selectReservationsToday = async (requestId, hotelId, date) => {
   const pool = getPool(requestId);
   const query = `
@@ -815,6 +514,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
     throw new Error('Database error');
   }
 };
+
 const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn, checkOut) => {
   const pool = getPool(requestId);
   try {
@@ -844,101 +544,6 @@ const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn
     console.error('Error getting available dates:', error);
     throw error;
   }
-};
-const selectReservationClientIds = async (requestId, hotelId, reservationId) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT DISTINCT
-      id, name, name_kana, name_kanji, COALESCE(name_kanji, name_kana, name) AS display_name, legal_or_natural_person, gender, date_of_birth, email, phone, fax
-    FROM
-    (
-      SELECT c.*      
-      FROM reservations r
-        JOIN clients c 
-          ON c.id = r.reservation_client_id
-      WHERE r.id = $1 AND r.hotel_id = $2
-
-      UNION ALL
-
-      SELECT c.*
-      FROM reservation_details rd
-        JOIN reservation_clients rc ON rc.reservation_details_id = rd.id AND rc.hotel_id = rd.hotel_id
-        JOIN clients c ON c.id = rc.client_id
-      WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
-    ) AS ALL_CLIENTS
-  `;
-
-  const values = [reservationId, hotelId];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservations:', err);
-    throw new Error('Database error');
-  }
-};
-const selectReservationPayments = async (requestId, hotelId, reservationId) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT 
-      rp.*,
-      pt.name AS payment_type_name,
-      pt.transaction AS transaction_type,
-      r.room_number,
-      COALESCE(c.name_kanji, c.name_kana, c.name) AS payer_name
-    FROM 
-      reservation_payments rp
-      JOIN payment_types pt 
-        ON rp.payment_type_id = pt.id
-      JOIN rooms r
-        ON rp.room_id = r.id AND rp.hotel_id = r.hotel_id
-      JOIN clients c
-        ON rp.client_id = c.id
-    WHERE 
-        rp.hotel_id = $1
-        AND rp.reservation_id = $2
-    ORDER BY 
-        rp.date,
-        rp.client_id,
-        rp.value;
-  `;
-
-  const values = [hotelId, reservationId];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservations:', err);
-    throw new Error('Database error');
-  }
-};
-const selectReservationParking = async (requestId, hotel_id, reservation_id) => {
-  const pool = getPool(requestId);
-  const query = `
-      SELECT rp.*, 
-        ps.spot_number, 
-        ps.spot_type, 
-        ps.capacity_units,
-        pl.name as parking_lot_name,
-        vc.name as vehicle_category_name,
-        vc.capacity_units_required,
-        rd.room_id,
-        rd.date as reservation_date
-      FROM reservation_parking rp
-      LEFT JOIN parking_spots ps ON rp.parking_spot_id = ps.id
-      LEFT JOIN parking_lots pl 
-        ON ps.parking_lot_id = pl.id AND pl.hotel_id = rp.hotel_id
-      LEFT JOIN vehicle_categories vc ON rp.vehicle_category_id = vc.id
-      JOIN reservation_details rd ON rp.reservation_details_id = rd.id AND rp.hotel_id = rd.hotel_id
-      WHERE rp.hotel_id = $1 
-      AND rd.reservation_id = $2
-      ORDER BY rp.date, ps.spot_number
-  `;
-  const values = [hotel_id, reservation_id];
-  const result = await pool.query(query, values);
-  return result.rows;
 };
 
 const getHotelIdByReservationId = async (requestId, reservationId) => {
@@ -1119,6 +724,7 @@ const addReservationDetail = async (requestId, detail) => {
     throw new Error('Database error');
   }
 };
+
 const addReservationDetailsBatch = async (requestId, details, client = null) => {
   const pool = getPool(requestId);
   let shouldReleaseClient = false;
@@ -1223,6 +829,7 @@ const addReservationAddon = async (requestId, addon) => {
     throw new Error('Database error');
   }
 };
+
 const addReservationClient = async (requestId, reservationClient) => {
   const pool = getPool(requestId);
   const query = `
@@ -1248,6 +855,7 @@ const addReservationClient = async (requestId, reservationClient) => {
     throw new Error('Database error');
   }
 };
+
 const addRoomToReservation = async (requestId, reservationId, numberOfPeople, roomId, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -1296,61 +904,6 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
-const insertReservationPayment = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-  let invoiceId = null;
-
-  try {
-    await client.query('BEGIN');
-
-    if (paymentTypeId === 5) {
-      // Check if an invoice already exists for the given criteria
-      const existingInvoiceResult = await client.query(
-        `
-          SELECT * 
-          FROM invoices
-          WHERE id = $1 AND hotel_id = $2;
-        `,
-        [reservationId, hotelId]
-      );
-
-      if (existingInvoiceResult.rows.length > 0) {
-        invoiceId = existingInvoiceResult.rows[0].id;
-      } else {
-        // Create a new invoice if one doesn't exist
-        const newInvoiceResult = await client.query(
-          `
-          INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
-          VALUES ($1, $2, $3, $4, NULL, $5)
-          RETURNING id;
-          `,
-          [reservationId, hotelId, date, clientId, userId]
-        );
-        invoiceId = newInvoiceResult.rows[0].id;
-      }
-    }
-
-    const query = `
-      INSERT INTO reservation_payments (
-        hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-      RETURNING *;
-    `;
-    const values = [hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, invoiceId, userId];
-
-    const result = await client.query(query, values);
-
-    await client.query('COMMIT');
-    return result.rows[0];
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error adding payment to reservation:', err);
-    throw new Error('Database error');
-  } finally {
-    client.release();
-  }
-};
 
 const updateBlockToReservation = async (requestId, reservationId, clientId, userId) => {
   const pool = getPool(requestId);
@@ -1376,74 +929,6 @@ const updateBlockToReservation = async (requestId, reservationId, clientId, user
     throw new Error('Database error');
   }
 };
-
-const insertBulkReservationPayment = async (requestId, data, userId) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // Insert into invoices table and get the generated UUID
-    const invoiceInsertResult = await client.query(
-      `
-        INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
-        VALUES (gen_random_uuid(), $1, $2, $3, NULL, $4)
-        RETURNING *;
-      `,
-      [data[0].hotel_id, data[0].date, data[0].client_id, userId]
-    );
-    const invoiceId = invoiceInsertResult.rows[0].id;
-
-    // Process each reservation in the data array
-    for (const reservation of data) {
-
-      const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id);
-      let remainingPayment = reservation.period_payable;
-      // Insert payment for each room, distributing the period_payable amount
-      for (const balanceRow of balanceRows) {
-        if (remainingPayment <= 0) break;
-
-        // Cap the payment to the room's balance
-        const roomPayment = Math.min(remainingPayment, balanceRow.balance);
-
-        if (roomPayment > 0) {
-          const query = `
-            INSERT INTO reservation_payments (
-              hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-            RETURNING *;
-          `;
-
-          await client.query(query, [
-            reservation.hotel_id,
-            reservation.reservation_id,
-            reservation.date,
-            balanceRow.room_id,
-            reservation.client_id,
-            5,
-            roomPayment,
-            reservation.details || null,
-            invoiceId,
-            userId
-          ]);
-
-          // Reduce the remaining payment amount
-          remainingPayment -= roomPayment;
-        }
-      }
-    }
-
-    await client.query('COMMIT');
-    return { success: true };
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error adding room to reservation:', err);
-    throw new Error('Database error');
-  } finally {
-    client.release();
-  }
-};
-
 
 // Update entry
 const updateReservationDetail = async (requestId, reservationData) => {
@@ -1487,6 +972,7 @@ const updateReservationDetail = async (requestId, reservationData) => {
     throw new Error('Database error');
   }
 };
+
 const updateReservationStatus = async (requestId, reservationData) => {
   const { id, hotel_id, status, updated_by } = reservationData;
 
@@ -1601,6 +1087,7 @@ const updateReservationStatus = async (requestId, reservationData) => {
     client.release();
   }
 };
+
 const updateReservationDetailStatus = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   // Get a client from the pool to run multiple queries in a single transaction
@@ -1767,6 +1254,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     client.release();
   }
 };
+
 const updateReservationComment = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   const { id, hotelId, comment, updated_by } = reservationData;
@@ -1795,6 +1283,7 @@ const updateReservationComment = async (requestId, reservationData) => {
     throw new Error('Database error');
   }
 };
+
 const updateReservationCommentFlag = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   const { id, hotelId, has_important_comment, updated_by } = reservationData;
@@ -1822,6 +1311,7 @@ const updateReservationCommentFlag = async (requestId, reservationData) => {
     throw new Error('Database error');
   }
 };
+
 const updateReservationTime = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   const { id, hotelId, indicator, time, updated_by } = reservationData;
@@ -1863,85 +1353,7 @@ const updateReservationTime = async (requestId, reservationData) => {
     throw new Error('Database error');
   }
 };
-const updateReservationType = async (requestId, reservationData) => {
-  const { id, hotel_id, type, updated_by } = reservationData;
-  const pool = getPool(requestId);
-  const client = await pool.connect();
 
-  try {
-    // Start the transaction
-    await client.query('BEGIN');
-
-    // 1. Get the current status from the database to use in our logic.
-    const currentReservation = await client.query(
-      `SELECT status FROM reservations WHERE id = $1::UUID AND hotel_id = $2`,
-      [id, hotel_id]
-    );
-
-    if (currentReservation.rows.length === 0) {
-      throw new Error('Reservation not found');
-    }
-
-    const { status } = currentReservation.rows[0];
-
-    // 2. Update the reservation type and status (if applicable) in one query.
-    const result = await client.query(
-      `UPDATE reservations
-       SET type = $1,
-           updated_by = $2,
-           status = CASE WHEN $1 = 'employee' THEN 'confirmed' ELSE status END
-       WHERE id = $3::UUID AND hotel_id = $4
-       RETURNING *`,
-      [type, updated_by, id, hotel_id]
-    );
-
-    // 3. Calculate the billable status based on the new type and the original status.
-    const billable = type !== 'employee' && !['hold', 'provisory'].includes(status);
-
-    // 4. Update the billable status in reservation_details.
-    await client.query(
-      `UPDATE reservation_details
-       SET billable = $1,
-           updated_by = $2
-       WHERE reservation_id = $3::UUID AND hotel_id = $4`,
-      [billable, updated_by, id, hotel_id]
-    );
-
-    await client.query('COMMIT');
-    return result.rows[0];
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error updating reservation type:', err);
-    throw new Error('Database transaction failed');
-  } finally {
-    client.release();
-  }
-};
-const updateReservationResponsible = async (requestId, id, updatedFields, user_id) => {
-  const pool = getPool(requestId);
-  const query = `
-      UPDATE reservations
-      SET
-        reservation_client_id = $1,          
-        updated_by = $2          
-      WHERE id = $3::UUID AND hotel_id = $4
-      RETURNING *;
-  `;
-  const values = [
-    updatedFields.client_id,
-    user_id,
-    id,
-    updatedFields.hotel_id,
-  ];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  } catch (err) {
-    console.error('Error updating reservation:', err);
-    throw new Error('Database error');
-  }
-};
 const updateRoomByCalendar = async (requestId, roomData) => {
   //console.log('--- Starting updateRoomByCalendar ---');
   //console.log('Received roomData:', roomData);
@@ -2309,6 +1721,7 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
 
 
 };
+
 const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated_by) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2404,6 +1817,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     // console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
+
 const updateReservationGuest = async (requestId, oldValue, newValue) => {
   const pool = getPool(requestId);
   const query = `
@@ -2425,6 +1839,7 @@ const updateReservationGuest = async (requestId, oldValue, newValue) => {
     console.error('Error updating reservation guest:', err);
   }
 };
+
 const updateClientInReservation = async (requestId, oldValue, newValue) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2462,6 +1877,7 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
   }
 
 };
+
 const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding) => {
   //console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
   if (!plan) {
@@ -2541,6 +1957,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     client.release();
   }
 };
+
 const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id) => {
   if (!Array.isArray(addons)) {
     addons = [];
@@ -2564,6 +1981,7 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
   );
   await Promise.all(addOnPromises);
 };
+
 const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -2580,6 +1998,7 @@ const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {
     console.error('Error updating reservation guest:', err);
   }
 };
+
 const updateReservationRoom = async (requestId, reservation_id, room_id_old, room_id_new, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -2598,6 +2017,7 @@ const updateReservationRoom = async (requestId, reservation_id, room_id_old, roo
     console.error('Error updating reservation guest:', err);
   }
 };
+
 const updateReservationRoomWithCreate = async (requestId, reservation_id, room_id_old, room_id_new, numberOfPeople, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2651,6 +2071,7 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
     client.release();
   }
 };
+
 const updateReservationRoomPlan = async (requestId, data) => {
   //console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
   const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, overrideRounding } = data;
@@ -2718,6 +2139,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
     */
   }
 };
+
 const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id, overrideRounding) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2774,6 +2196,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
+
 const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, overrideRounding = false, client = null) => {
   const pool = getPool(requestId);
 
@@ -2860,267 +2283,6 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       dbClient.release();
       //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
     }
-  }
-};
-
-// Delete
-const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, updated_by) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    // Temporarily disable logging triggers    
-    await client.query('ALTER TABLE reservation_details DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_payments DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_clients DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_addons DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_rates DISABLE TRIGGER USER;');
-
-    const setSessionQuery = `SET SESSION "my_app.user_id" = '${updated_by}';`;
-    await client.query(setSessionQuery);
-    
-    // Perform the delete operation
-    const deleteQuery = {
-      text: `
-        WITH deleted AS (
-          DELETE FROM reservations
-          WHERE id = $1 AND hotel_id = $2
-          RETURNING *
-        )
-        SELECT
-          COALESCE((SELECT COUNT(*) > 0 FROM deleted), false) AS success,
-          COALESCE((SELECT COUNT(*) FROM deleted), 0) AS count;
-      `,
-      values: [reservation_id, hotel_id],
-    };
-    const result = await client.query(deleteQuery);
-
-    // Re-enable logging triggers    
-    await client.query('ALTER TABLE reservation_details ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_payments ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_clients ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER USER;');
-
-    await client.query('COMMIT');
-
-    return result.rows[0] || { success: false, count: 0 };
-
-  } catch (err) {
-    // Ensure triggers are re-enabled even on rollback
-    try {      
-      await client.query('ALTER TABLE reservation_details ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_payments ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_clients ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER USER;');
-    } catch (reEnableErr) {
-      console.error('Error re-enabling triggers after rollback:', reEnableErr);
-    }
-
-    await client.query('ROLLBACK');
-    console.error(`[${requestId}] Transaction failed. Rolling back. Error:`, {
-      error: err.message,
-      stack: err.stack
-    });
-    throw err;
-  } finally {
-    client.release();
-  }
-};
-const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by) => {
-  const pool = getPool(requestId);
-  const query = format(`
-    -- Set the updated_by value in a session variable
-    SET SESSION "my_app.user_id" = %L;
-
-    DELETE FROM reservation_addons
-    WHERE reservation_detail_id = %L AND hotel_id = %L AND addon_type <> 'parking'
-    RETURNING *;
-  `, updated_by, reservation_detail_id, hotel_id);
-
-  try {
-    const result = await pool.query(query);
-    return result.rowCount;
-  } catch (err) {
-    console.error('Error deleting reservation addon:', err);
-    throw new Error('Database error');
-  }
-};
-const deleteReservationClientsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
-  const pool = getPool(requestId);
-  const query = format(`
-    -- Set the updated_by value in a session variable
-    SET SESSION "my_app.user_id" = %L;
-
-    DELETE FROM reservation_clients
-    WHERE reservation_details_id = %L
-    RETURNING *;
-  `, updated_by, reservation_detail_id);
-
-  try {
-    const result = await pool.query(query);
-    return result.rowCount;
-  } catch (err) {
-    console.error('Error deleting reservation clients:', err);
-    throw new Error('Database error');
-  }
-};
-const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, numberOfPeople, updated_by) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-
-  try {
-    // console.log('Starting transaction...');
-    await client.query('BEGIN');
-
-    // Set session
-    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, updated_by);
-    await client.query(setSessionQuery);
-
-    // Update the number_of_people field in the reservations table
-    const updateQuery = `
-      UPDATE reservations
-      SET number_of_people = number_of_people - $1
-      WHERE id = $2 and hotel_id = $3
-      RETURNING number_of_people;
-    `;
-    const updateResult = await client.query(updateQuery, [numberOfPeople, reservationId, hotelId]);
-
-    // Check if the number_of_people is now <= 0
-    if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
-      await client.query('ROLLBACK');
-      console.warn('Rollback: number_of_people is <= 0');
-      return { success: false, message: 'Invalid operation: number_of_people would be zero or negative' };
-    }
-
-    // Delete the reservation details
-
-    const deleteQuery = `
-      DELETE FROM reservation_details
-      WHERE reservation_id = $1 and room_id = $2
-      RETURNING *;
-    `;
-    const deleteResults = await client.query(deleteQuery, [reservationId, roomId]);
-
-    // Commit the transaction
-    await client.query('COMMIT');
-
-    return { success: true };
-
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error deleting room:', err);
-    throw new Error('Database error');
-  } finally {
-    client.release();
-  }
-};
-const deleteReservationPayment = async (requestId, id, userId) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    // Set session
-    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, userId);
-    await client.query(setSessionQuery);
-
-    const reservationPaymentResult = await client.query(`
-        SELECT *
-        FROM reservation_payments
-        WHERE id = $1;
-      `, [id]
-    );
-    const reservationPayment = reservationPaymentResult.rows[0];
-
-    const existingInvoiceResult = await client.query(
-      `
-        SELECT * 
-        FROM reservation_payments
-        WHERE invoice_id = $1 AND hotel_id = $2 AND date = $3 AND client_id = $4;
-      `,
-      [reservationPayment.invoice_id, reservationPayment.hotel_id, reservationPayment.date, reservationPayment.client_id]
-    );
-
-    // Delete the invoice if it exists only for this payment
-    if (existingInvoiceResult.rows.length === 1) {
-      const invoiceId = existingInvoiceResult.rows[0].invoice_id;
-
-      const deleteInvoiceQuery = `
-        DELETE FROM invoices
-        WHERE id = $1 AND hotel_id = $2
-        RETURNING *;
-      `;
-      await client.query(deleteInvoiceQuery, [invoiceId, reservationPayment.hotel_id]);
-    }
-
-    // Delete the payment record itself
-    const deleteQuery = `
-      DELETE FROM reservation_payments
-      WHERE id = $1
-      RETURNING *;
-    `;
-    const deleteResults = await client.query(deleteQuery, [id]);
-
-    await client.query('COMMIT');
-    return { success: true };
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-};
-
-const deleteParkingReservation = async (requestId, id, userId) => {
-  const pool = getPool(requestId);
-  // Changed the query from UPDATE to a direct DELETE.
-  // The RETURNING * clause ensures the deleted row is returned, maintaining consistency with the front end's expectations.
-  const query = `
-    DELETE FROM reservation_parking
-    WHERE id = $1
-    RETURNING *;
-  `;
-
-  // The userId is no longer needed for the query itself.
-  const values = [id];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  } catch (error) {
-    console.error('Error deleting parking reservation:', error);
-    throw new Error('Database error while deleting parking reservation');
-  }
-};
-
-const deleteBulkParkingReservations = async (requestId, ids, userId) => {
-  if (!Array.isArray(ids) || ids.length === 0) {
-    throw new Error('No parking reservation IDs provided for deletion');
-  }
-
-  const pool = getPool(requestId);
-  // Changed the query from UPDATE to a direct DELETE.
-  // The RETURNING * clause ensures the deleted rows are returned.
-  const query = `
-    DELETE FROM reservation_parking
-    WHERE id = ANY($1::uuid[])
-    RETURNING *;
-  `;
-
-  // The userId is no longer needed for the query itself.
-  const values = [ids];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (error) {
-    console.error('Error bulk deleting parking reservations:', error);
-    throw new Error('Database error while bulk deleting parking reservations');
   }
 };
 
@@ -5031,6 +4193,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     }
   }
 };
+
 const cancelOTAReservation = async (requestId, hotel_id, data, client = null) => {
   let internalClient;
   let shouldRelease = false;
@@ -5518,6 +4681,7 @@ const insertAggregatedRates = async (client, rates, hotel_id, reservation_detail
 
   await Promise.all(insertPromises);
 };
+
 const cancelReservationRooms = async (requestId, hotelId, reservationId, detailIds, updated_by, billable = false) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -5632,36 +4796,25 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
 module.exports = {
   selectAvailableRooms,
   selectAvailableParkingSpots,
-  selectAndLockAvailableParkingSpot,
-  selectReservedRooms,
-  selectReservation,
-  selectReservationDetail,
-  selectReservationAddons,
-  selectReservationBalance,
+  selectAndLockAvailableParkingSpot,  
+  selectReservation,  
   selectMyHoldReservations,
   selectReservationsToday,
-  selectAvailableDatesForChange,
-  selectReservationClientIds,
-  selectReservationPayments,
-  selectReservationParking,
-  getHotelIdByReservationId, // Add this line
+  selectAvailableDatesForChange,  
+  getHotelIdByReservationId,
   selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,
   addReservationDetailsBatch,
   addReservationAddon,
   addReservationClient,
-  addRoomToReservation,
-  insertReservationPayment,
-  insertBulkReservationPayment,
+  addRoomToReservation,    
   updateReservationDetail,
   updateReservationStatus,
   updateReservationDetailStatus,
   updateReservationComment,
   updateReservationCommentFlag,
   updateReservationTime,
-  updateReservationType,
-  updateReservationResponsible,
   updateRoomByCalendar,
   updateCalendarFreeChange,
   updateReservationRoomGuestNumber,
@@ -5675,19 +4828,12 @@ module.exports = {
   updateReservationRoomPlan,
   updateReservationRoomPattern,
   updateBlockToReservation,
-  deleteHoldReservationById,
-  deleteReservationAddonsByDetailId,
-  deleteReservationClientsByDetailId,
-  deleteReservationRoom,
-  deleteReservationPayment,
   addOTAReservation,
   editOTAReservation,
   cancelOTAReservation,
   insertCopyReservation,
   sanitizeName,
-  selectFailedOtaReservations,
-  deleteParkingReservation,
-  deleteBulkParkingReservations,
+  selectFailedOtaReservations,    
   calculatePriceFromRates,
   insertAggregatedRates,
   cancelReservationRooms,
