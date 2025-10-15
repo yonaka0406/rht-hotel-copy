@@ -29,13 +29,13 @@
           <thead>
             <tr>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-20" style="height: 19px; width: 100px;" rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 sticky top-0 left-0 z-20" style="height: 19px; width: 100px;" rowspan="3">
                 日付</th>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 100px;" rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 100px;" rowspan="3">
                 空室</th>
               <th
-                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 140px;" rowspan="2">
+                class="px-2 py-2 text-center font-bold bg-white dark:text-gray-100 sticky top-0 z-30" style="height: 19px; width: 40px; left: 140px;" rowspan="3">
                 駐車場</th>
               <th v-for="(roomType, typeIndex) in headerRoomsData.roomTypes" :key="typeIndex"
                 :colspan="roomType.colspan"
@@ -48,6 +48,11 @@
                 class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 50px; top: 19px; left: 180px;"
                 :class="{ 'pale-yellow-bg': highlightedRooms.has(roomNumber.room_id) }">
                 <span class="text-xs">{{ roomNumber.room_number }}</span>
+                <div class="flex justify-center items-center gap-1">
+                  <span v-if="roomNumber.smoking" class="emoji-small">🚬</span>
+                  <span v-if="roomNumber.has_wet_area" class="emoji-small">🚿</span>
+                  <span v-if="roomNumber.capacity > 1" class="emoji-small capacity-badge">{{ roomNumber.capacity }}</span>
+                </div>
               </th>
             </tr>
           </thead>
@@ -182,8 +187,6 @@ import { useParkingStore } from '@/composables/useParkingStore';
 const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
 
 import { formatDate, formatDateWithDay } from '@/utils/dateUtils';
-
-
 
 // Room type color assignment
 const roomTypeGrayTones = [
@@ -517,13 +520,14 @@ const headerRoomsData = computed(() => {
     } else {
       currentColspan++;
     }
-    roomNumbers.push({ room_id: room.room_id, room_number: room.room_number });
+    roomNumbers.push({ room_id: room.room_id, room_number: room.room_number, smoking: room.room_smoking_idc, has_wet_area: room.room_has_wet_area_idc, capacity: room.room_capacity });
   });
 
   if (currentRoomType !== null) {
     roomTypes.push({ name: currentRoomType, colspan: currentColspan, color: getRoomTypeColor(currentRoomType) });
   }
 
+  console.log('roomNumbers:', roomNumbers);
   return { roomTypes, roomNumbers };
 });
 
@@ -708,6 +712,23 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.emoji-small {
+  font-size: 0.7em; /* Adjust as needed */
+}
+
+.capacity-badge {
+  background-color: #e0e0e0; /* Light gray background */
+  color: #333; /* Darker text color */
+  padding: 0.1em 0.4em; /* Smaller padding */
+  border-radius: 0.5em; /* Rounded corners */
+  font-weight: bold;
+}
+
+.tag-xxs .p-tag-value {
+  font-size: 0.6em; /* Even smaller than text-xs */
+  padding: 0.1rem 0.3rem; /* Adjust padding as needed */
+}
+
 .table-container {
   width: 100%;
   overflow-x: auto;
