@@ -559,8 +559,8 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: 'キャンセル', key: 'cancelled_stays', width: 10 },
             { header: 'キャンセル(請求対象外)', key: 'non_billable_cancelled_stays', width: 20 },
             { header: '社員', key: 'employee_stays', width: 10 },
-            { header: '通常売上', key: 'normal_sales', width: 15 },
-            { header: 'キャンセル売上', key: 'cancellation_sales', width: 15 },
+            { header: '通常売上(税込)', key: 'normal_sales', width: 15 },
+            { header: 'キャンセル売上(税込)', key: 'cancellation_sales', width: 15 },
             { header: '作成日時', key: 'created_at', width: 20 },
         ];
 
@@ -661,6 +661,10 @@ const getExportDailyReportExcel = async (req, res) => {
             });
             column.width = Math.min(Math.max(maxLength + 2, 10), 50);
         });
+
+        // Add a note about tax-inclusive values
+        summarySheet.addRow([]); // Empty row for spacing
+        summarySheet.addRow(['売上は税込みです。']);
 
         for (const dateKey in groupedReportData) {
             const worksheet = workbook.addWorksheet(`${dateKey}`);
