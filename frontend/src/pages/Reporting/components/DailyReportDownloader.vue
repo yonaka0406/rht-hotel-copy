@@ -54,7 +54,7 @@
                 </TabPanels>
             </Tabs>
         </div>
-        
+
         <div class="col-span-12" v-if="isLoading">
             <ProgressSpinner />
         </div>
@@ -68,7 +68,8 @@
                         <DataTable :value="processedReportData" ref="dt" paginator :rows="10"
                             :rowsPerPageOptions="[5, 10, 20, 50]" tableStyle="min-width: 50rem"
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
-                            currentPageReportTemplate="{first}-{last} of {totalRecords}" :exportFilename="`daily_report_${loadedDateTitle.split(' - ')[1]}`">
+                            currentPageReportTemplate="{first}-{last} of {totalRecords}"
+                            :exportFilename="`daily_report_${loadedDateTitle.split(' - ')[1]}`">
                             <template #paginatorend> <!-- Use #paginatorend slot -->
                                 <Button type="button" icon="pi pi-download" text @click="dt.exportCSV()"
                                     :disabled="!reportData.length" label="CSVダウンロード" />
@@ -102,21 +103,29 @@
             <Card>
                 <template #title>比較結果 ({{ formatDate(date2) }} vs {{ formatDate(date1) }})</template>
                 <template #content>
-                    <DataTable
-                        :value="comparisonData"
-                        paginator
-                        :rows="10"
-                        :rowsPerPageOptions="[5, 10, 20, 50]"
-                        tableStyle="min-width: 50rem"
+                    <DataTable :value="comparisonData" v-model:filters="filters" filterDisplay="row" paginator
+                        :rows="10" :rowsPerPageOptions="[5, 10, 20, 50]" tableStyle="min-width: 50rem"
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
-                        currentPageReportTemplate="{first}-{last} of {totalRecords}"
-                    >
+                        currentPageReportTemplate="{first}-{last} of {totalRecords}">
                         <template #paginatorend> <!-- Use #paginatorend slot -->
                             <Button type="button" icon="pi pi-download" text @click="exportComparisonToExcel()"
                                 :disabled="!comparisonData.length" label="Excelダウンロード" />
                         </template>
-                        <Column field="hotel_name" header="ホテル名" headerClass="text-center"></Column>
-                        <Column field="month" header="月" headerClass="text-center"></Column>
+                        <Column field="hotel_name" header="ホテル名" headerClass="text-center" filter="true"
+                            :showFilterMenu="false">
+                            <template #filter="{ filterModel, filterCallback }">
+                                <MultiSelect v-model="filterModel.value" :options="hotelNameOptions"
+                                    placeholder="ホテル名で検索" class="p-column-filter" @change="filterCallback()">
+                                </MultiSelect>
+                            </template>
+                        </Column>
+                        <Column field="month" header="月" headerClass="text-center" filter="true"
+                            :showFilterMenu="false">
+                            <template #filter="{ filterModel, filterCallback }">
+                                <MultiSelect v-model="filterModel.value" :options="monthOptions" placeholder="月で検索"
+                                    class="p-column-filter" @change="filterCallback()"></MultiSelect>
+                            </template>
+                        </Column>
                         <Column header="確定宿泊数" bodyStyle="text-align: right" headerClass="text-center">
                             <template #body="slotProps">
                                 <div class="grid grid-cols-2">
@@ -148,7 +157,8 @@
                                 <div class="grid grid-cols-2">
                                     <div class="col-span-1">
                                         {{ (slotProps.data.total_sales_date2 || 0).toLocaleString() }}
-                                        <br /><small>{{ (slotProps.data.total_sales_date1 || 0).toLocaleString() }}</small>
+                                        <br /><small>{{ (slotProps.data.total_sales_date1 || 0).toLocaleString()
+                                            }}</small>
                                     </div>
                                     <div class="col-span-1">
                                         <Badge v-bind="getBadgeProps(slotProps.data.total_sales_change || 0)"></Badge>
@@ -181,13 +191,22 @@ import Column from 'primevue/column';
 import ProgressSpinner from 'primevue/progressspinner';
 import Card from 'primevue/card';
 import Badge from 'primevue/badge';
+import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import DailyReportConfirmedReservationsChart from './charts/DailyReportConfirmedReservationsChart.vue'; // Import Card component
 import { useReportStore } from '@/composables/useReportStore';
 import { formatDate, formatDateTime } from '@/utils/dateUtils';
+import { FilterMatchMode } from '@primevue/core/api';
 
 const toast = useToast();
+
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    hotel_name: { value: null, matchMode: FilterMatchMode.IN },
+    month: { value: null, matchMode: FilterMatchMode.IN },
+});
 
 const {
     availableDates,
@@ -222,7 +241,7 @@ const compareDates = async () => {
     }
 
     isLoading.value = true;
-    
+
     const d1 = formatDate(date1.value);
     const d2 = formatDate(date2.value);
 
@@ -335,9 +354,9 @@ const loadReport = async () => { // Made async to await getDailyReportData
     await getDailyReportData(date); // Attempt to load data
 
     // If no data is available for today's date, generate it
-    if (reportData.value.length === 0 && date === today) {        
+    if (reportData.value.length === 0 && date === today) {
         const result = await generateDailyMetricsForToday();
-        if (result.success) {            
+        if (result.success) {
             await getDailyReportData(date); // Re-load data after generation
         } else {
             console.error('Failed to generate daily metrics:', result.error);
@@ -348,13 +367,13 @@ const loadReport = async () => { // Made async to await getDailyReportData
 };
 
 const exportComparisonToExcel = async () => {
-    
+
     if (!comparedDate1.value || !comparedDate2.value) {
         toast.add({ severity: 'warn', summary: '警告', detail: '比較する日付が設定されていません。先に日付を比較してください。', life: 3000 });
         return;
     }
 
-    try {        
+    try {
         await downloadDailyReportExcel(comparedDate1.value, comparedDate2.value);
         toast.add({ severity: 'success', summary: '成功', detail: 'Excelファイルが正常にダウンロードされました。', life: 3000 });
     } catch (error) {
@@ -367,5 +386,13 @@ const processedReportData = computed(() => {
         month: formatDate(item.month),
         created_at: formatDateTime(item.created_at), // Format the created_at field
     }));
+});
+
+const hotelNameOptions = computed(() => {
+    return [...new Set(comparisonData.value.map(item => item.hotel_name))];
+});
+
+const monthOptions = computed(() => {
+    return [...new Set(comparisonData.value.map(item => item.month))];
 });
 </script>
