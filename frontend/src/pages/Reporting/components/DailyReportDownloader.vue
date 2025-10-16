@@ -47,6 +47,9 @@
                                     <div class="col-span-2">
                                         <Button @click="compareDates" label="比較" class="w-full" />
                                     </div>
+                                    <div class="col-span-2">
+                                        <Button @click="exportComparisonToExcel" label="Excelダウンロード" class="w-full" />
+                                    </div>
                                 </div>
                             </template>
                         </Card>
@@ -191,7 +194,8 @@ const {
     isLoading,
     getAvailableMetricDates,
     getDailyReportData,
-    generateDailyMetricsForToday, // Import new function
+    generateDailyMetricsForToday,
+    exportDailyReportExcel, // Import new function
 } = useReportStore();
 
 const selectedDate = ref(new Date());
@@ -333,6 +337,17 @@ const loadReport = async () => { // Made async to await getDailyReportData
     }
 
     loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
+};
+
+const exportComparisonToExcel = async () => {
+    const d1 = formatDate(date1.value);
+    const d2 = formatDate(date2.value);
+    try {
+        await exportDailyReportExcel(hotelId.value, d1, d2);
+        toast.add({ severity: 'success', summary: '成功', detail: 'Excelファイルが正常にダウンロードされました。', life: 3000 });
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: 'Excelファイルのダウンロードに失敗しました。', life: 3000 });
+    }
 };
 const processedReportData = computed(() => {
     return reportData.value.map(item => ({
