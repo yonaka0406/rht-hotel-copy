@@ -83,5 +83,5 @@ module.exports = {
     getWaitlistEntriesToday,
     fetchBookingSourceBreakdown,
     fetchPaymentTimingBreakdown,
-    fetchBookerTypeBreakdown, // Export the new controller function
+    fetchBookerTypeBreakdown,
 };
