@@ -526,6 +526,7 @@ const selectDailyReportData = async (requestId, metricDate) => {
     const pool = getPool(requestId);
     const query = `
         SELECT
+            dpm.metric_date,
             dpm.month,
             dpm.hotel_id,
             dpm.plans_global_id,  -- Added plans_global_id here
@@ -549,7 +550,7 @@ const selectDailyReportData = async (requestId, metricDate) => {
         WHERE
             dpm.metric_date = $1
         GROUP BY
-            dpm.month, dpm.hotel_id, dpm.plans_global_id, dpm.plans_hotel_id, h.name, dpm.plan_name, dpm.created_at
+            dpm.metric_date, dpm.month, dpm.hotel_id, dpm.plans_global_id, dpm.plans_hotel_id, h.name, dpm.plan_name, dpm.created_at
         ORDER BY
             dpm.hotel_id, dpm.month, h.name, dpm.plan_name;
     `;
