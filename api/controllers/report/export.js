@@ -525,7 +525,27 @@ const getExportDailyReportExcel = async (req, res) => {
             return res.status(404).send("No data available for the given dates.");
         }
 
+        // Helper to aggregate sales data by hotel and month
+        const aggregateSalesData = (data) => {
+            const aggregated = {};
+            const months = new Set();
+
+            data.forEach(row => {
+                const hotelName = row.hotel_name;
+                const month = formatDate(row.month); // Use formatDate to ensure consistent month key
+                const totalSales = parseInt(row.normal_sales || 0) + parseInt(row.cancellation_sales || 0);
+
+                if (!aggregated[hotelName]) {
+                    aggregated[hotelName] = {};
+                }
+                aggregated[hotelName][month] = (aggregated[hotelName][month] || 0) + totalSales;
+                months.add(month);
+            });
+            return { aggregated, months: Array.from(months).sort() };
+        };
+
         const workbook = new ExcelJS.Workbook();
+        const summarySheet = workbook.addWorksheet('売上サマリー');
 
         // Define columns (common for all sheets)
         const columns = [
@@ -543,6 +563,82 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: 'キャンセル売上', key: 'cancellation_sales', width: 15 },
             { header: '作成日時', key: 'created_at', width: 20 },
         ];
+
+        // Process data for summary tables
+        const aggregatedData1 = aggregateSalesData(groupedReportData[date1] || []);
+        const aggregatedData2 = aggregateSalesData(groupedReportData[date2] || []);
+
+        const allHotelNames = Array.from(new Set([
+            ...Object.keys(aggregatedData1.aggregated),
+            ...Object.keys(aggregatedData2.aggregated)
+        ])).sort();
+
+        const allMonths = Array.from(new Set([
+            ...aggregatedData1.months,
+            ...aggregatedData2.months
+        ])).sort();
+
+        // Helper to write a summary table
+        const writeSummaryTable = (sheet, title, aggregatedData, months, startRow) => {
+            sheet.getCell(`A${startRow}`).value = title;
+            sheet.getCell(`A${startRow}`).font = { bold: true, size: 12 };
+            startRow++;
+
+            const headers = ['ホテル名', ...months];
+            sheet.addRow(headers);
+            sheet.getRow(startRow).font = { bold: true };
+            startRow++;
+
+            allHotelNames.forEach(hotelName => {
+                const rowData = [hotelName];
+                months.forEach(month => {
+                    rowData.push(aggregatedData.aggregated[hotelName]?.[month] || 0);
+                });
+                sheet.addRow(rowData);
+                startRow++;
+            });
+            return startRow + 2; // Add some space after the table
+        };
+
+        // Write Summary Table for date1
+        let currentRow = 1;
+        currentRow = writeSummaryTable(summarySheet, `売上サマリー (${date1})`, aggregatedData1, allMonths, currentRow);
+
+        // Write Summary Table for date2
+        if (date1 !== date2) {
+            currentRow = writeSummaryTable(summarySheet, `売上サマリー (${date2})`, aggregatedData2, allMonths, currentRow);
+
+            // Write Difference Table
+            summarySheet.getCell(`A${currentRow}`).value = `差分 (${date2} - ${date1})`;
+            summarySheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+            currentRow++;
+
+            const diffHeaders = ['ホテル名', ...allMonths];
+            summarySheet.addRow(diffHeaders);
+            summarySheet.getRow(currentRow).font = { bold: true };
+            currentRow++;
+
+            allHotelNames.forEach(hotelName => {
+                const rowData = [hotelName];
+                allMonths.forEach(month => {
+                    const sales1 = aggregatedData1.aggregated[hotelName]?.[month] || 0;
+                    const sales2 = aggregatedData2.aggregated[hotelName]?.[month] || 0;
+                    rowData.push(sales2 - sales1);
+                });
+                summarySheet.addRow(rowData);
+                currentRow++;
+            });
+        }
+
+        // Auto-fit columns for summary sheet
+        summarySheet.columns.forEach(column => {
+            let maxLength = 0;
+            column.eachCell({ includeEmpty: true }, cell => {
+                const cellValue = cell.value ? cell.value.toString() : '';
+                maxLength = Math.max(maxLength, cellValue.length);
+            });
+            column.width = Math.min(Math.max(maxLength + 2, 10), 50);
+        });
 
         for (const dateKey in groupedReportData) {
             const worksheet = workbook.addWorksheet(`${dateKey}`);
