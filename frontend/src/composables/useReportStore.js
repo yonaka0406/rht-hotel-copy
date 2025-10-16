@@ -48,47 +48,6 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyReport = async (metricDate) => {
-        try {
-            const response = await fetch(`/report/daily/download/${metricDate}?format=csv`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch CSV");
-            }
-
-            const blob = await response.blob();
-            const dlURL = window.URL.createObjectURL(blob);
-
-            try {
-                const link = document.createElement("a");
-                link.href = dlURL;
-                link.setAttribute("download", `daily_report_${metricDate}.csv`);
-                document.body.appendChild(link);
-
-                if (typeof link.click === 'function') {
-                    link.click();
-                }
-
-                document.body.removeChild(link);
-            } catch (e) {
-                console.debug('Download functionality not available in current environment');
-            }
-
-            return { success: true };
-
-        } catch (error) {
-            console.error("エクスポートエラー:", error);
-            console.error('Export failed:', error.message);
-            throw error;
-        }
-    };
-
     const fetchActiveReservationsChange = async (hotelId, dateString) => {
         try {
             // If hotelId is null, 0, or 'all', pass 'all' to the backend,
@@ -313,6 +272,44 @@ export function useReportStore() {
         } catch (error) {
             console.error('Failed to fetch accounting data by plan:', error);
             return [];
+        }
+    };
+
+    const downloadDailyReportExcel = async (startDate, endDate) => {        
+        try {            
+            const response = await api.get(`/report/daily/download-excel/${startDate}/${endDate}`, { responseType: 'blob' });
+
+            if (!response) { // api.get might return null on auth errors or other issues
+                return 'no_data'; // Or throw a more specific error if needed
+            }
+
+            const blob = response; // response is already the blob
+            if (blob.size === 0) {
+                return 'no_data';
+            }
+            const dlURL = window.URL.createObjectURL(blob);
+
+            try {
+                const link = document.createElement("a");
+                link.href = dlURL;
+                link.setAttribute("download", `daily_report_${startDate}_${endDate}.xlsx`);
+                document.body.appendChild(link);
+
+                if (typeof link.click === 'function') {
+                    link.click();
+                }
+
+                document.body.removeChild(link);
+            } catch (e) {
+                console.debug('Download functionality not available in current environment');
+            }
+
+            return { success: true };
+
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            console.error('Export failed:', error.message);
+            throw error;
         }
     };
 
@@ -759,7 +756,7 @@ export function useReportStore() {
         isLoading,
         getAvailableMetricDates,
         getDailyReportData,
-        downloadDailyReport,
+        downloadDailyReportExcel,
         fetchCountReservation,
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
@@ -784,6 +781,6 @@ export function useReportStore() {
         fetchBookerTypeBreakdown,
         fetchForecastDataByPlan,
         fetchAccountingDataByPlan,
-        generateDailyMetricsForToday, // Export the new function
+        generateDailyMetricsForToday,
     };
 }

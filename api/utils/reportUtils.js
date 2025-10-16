@@ -9,6 +9,20 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const formatDateTime = (date) => {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+      console.error("Invalid Date object:", date);
+      throw new Error("The provided input is not a valid Date object:");
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 const translateStatus = (status) => {
   switch (status) {
     case 'hold':
@@ -82,6 +96,7 @@ const translateMealType = (type) => {
 
 module.exports = {
   formatDate,
+  formatDateTime,
   translateStatus,
   translatePaymentTiming,
   translateType,

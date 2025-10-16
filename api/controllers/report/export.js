@@ -2,7 +2,7 @@ const reportModel = require('../../models/report');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
 
-const { formatDate, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
+const { formatDate, formatDateTime, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
 
 const getExportReservationList = async (req, res) => {
     const hotelId = req.params.hid;
@@ -503,6 +503,204 @@ const generateDailyMetrics = async (req, res) => {
     }
 };
 
+const getExportDailyReportExcel = async (req, res) => {
+    const { date1, date2 } = req.params;
+
+    try {
+        const groupedReportData = {};
+
+        const dailyData1 = await reportModel.selectDailyReportData(req.requestId, date1);
+        if (dailyData1 && dailyData1.length > 0) {
+            groupedReportData[date1] = dailyData1;
+        }
+
+        if (date1 !== date2) {
+            const dailyData2 = await reportModel.selectDailyReportData(req.requestId, date2);
+            if (dailyData2 && dailyData2.length > 0) {
+                groupedReportData[date2] = dailyData2;
+            }
+        }
+
+        if (Object.keys(groupedReportData).length === 0) {
+            return res.status(404).send("No data available for the given dates.");
+        }
+
+        // Helper to aggregate sales data by hotel and month
+        const aggregateSalesData = (data) => {
+            const aggregated = {};
+            const months = new Set();
+
+            data.forEach(row => {
+                const hotelName = row.hotel_name;
+                const month = formatDate(row.month); // Use formatDate to ensure consistent month key
+                const totalSales = parseInt(row.normal_sales || 0) + parseInt(row.cancellation_sales || 0);
+
+                if (!aggregated[hotelName]) {
+                    aggregated[hotelName] = {};
+                }
+                aggregated[hotelName][month] = (aggregated[hotelName][month] || 0) + totalSales;
+                months.add(month);
+            });
+            return { aggregated, months: Array.from(months).sort() };
+        };
+
+        const workbook = new ExcelJS.Workbook();
+        const summarySheet = workbook.addWorksheet('売上サマリー');
+
+        // Define columns (common for all sheets)
+        const columns = [
+            { header: 'ホテルID', key: 'hotel_id', width: 10 },
+            { header: 'ホテル名', key: 'hotel_name', width: 20 },
+            { header: '月', key: 'month', width: 15 },
+            { header: 'プラン名', key: 'plan_name', width: 30 },
+            { header: '確定', key: 'confirmed_stays', width: 10 },
+            { header: '仮予約', key: 'pending_stays', width: 10 },
+            { header: '保留中', key: 'in_talks_stays', width: 10 },
+            { header: 'キャンセル', key: 'cancelled_stays', width: 10 },
+            { header: 'キャンセル(請求対象外)', key: 'non_billable_cancelled_stays', width: 20 },
+            { header: '社員', key: 'employee_stays', width: 10 },
+            { header: '通常売上(税込)', key: 'normal_sales', width: 15 },
+            { header: 'キャンセル売上(税込)', key: 'cancellation_sales', width: 15 },
+            { header: '作成日時', key: 'created_at', width: 20 },
+        ];
+
+        // Process data for summary tables
+        const aggregatedData1 = aggregateSalesData(groupedReportData[date1] || []);
+        const aggregatedData2 = aggregateSalesData(groupedReportData[date2] || []);
+
+        const allHotelNames = Array.from(new Set([
+            ...Object.keys(aggregatedData1.aggregated),
+            ...Object.keys(aggregatedData2.aggregated)
+        ])).sort();
+
+        const allMonths = Array.from(new Set([
+            ...aggregatedData1.months,
+            ...aggregatedData2.months
+        ])).sort();
+
+        // Helper to write a summary table
+        const writeSummaryTable = (sheet, title, aggregatedData, months, startRow) => {
+            sheet.getCell(`A${startRow}`).value = title;
+            sheet.getCell(`A${startRow}`).font = { bold: true, size: 12 };
+            startRow++;
+
+            const headers = ['ホテル名', ...months];
+            const headerRow = sheet.addRow(headers);
+            headerRow.font = { bold: true };
+            startRow++;
+
+            // Apply number format to month headers
+            months.forEach((month, index) => {
+                const cell = headerRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                cell.numFmt = 'yyyy"年"m"月";@';
+            });
+
+            allHotelNames.forEach(hotelName => {
+                const rowData = [hotelName];
+                months.forEach(month => {
+                    rowData.push(aggregatedData.aggregated[hotelName]?.[month] || 0);
+                });
+                const dataRow = sheet.addRow(rowData);
+                // Apply number format to sales data cells
+                months.forEach((month, index) => {
+                    const cell = dataRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                    cell.numFmt = '_ * #,##0_ ;_ * -#,##0_ ;_ * "-"_ ;_ @';
+                });
+                startRow++;
+            });
+            return startRow + 2; // Add some space after the table
+        };
+
+        // Write Summary Table for date1
+        let currentRow = 1;
+        currentRow = writeSummaryTable(summarySheet, `売上サマリー (${date1})`, aggregatedData1, allMonths, currentRow);
+
+        // Write Summary Table for date2
+        if (date1 !== date2) {
+            currentRow = writeSummaryTable(summarySheet, `売上サマリー (${date2})`, aggregatedData2, allMonths, currentRow);
+
+            // Write Difference Table
+            summarySheet.getCell(`A${currentRow}`).value = `差分 (${date2} - ${date1})`;
+            summarySheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
+            currentRow++;
+
+            const diffHeaders = ['ホテル名', ...allMonths];
+            const diffHeaderRow = summarySheet.addRow(diffHeaders);
+            diffHeaderRow.font = { bold: true };
+            currentRow++;
+
+            // Apply number format to month headers in difference table
+            allMonths.forEach((month, index) => {
+                const cell = diffHeaderRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                cell.numFmt = 'yyyy"年"m"月";@';
+            });
+
+            allHotelNames.forEach(hotelName => {
+                const rowData = [hotelName];
+                allMonths.forEach(month => {
+                    const sales1 = aggregatedData1.aggregated[hotelName]?.[month] || 0;
+                    const sales2 = aggregatedData2.aggregated[hotelName]?.[month] || 0;
+                    rowData.push(sales2 - sales1);
+                });
+                const dataRow = summarySheet.addRow(rowData);
+                // Apply number format to sales data cells in difference table
+                allMonths.forEach((month, index) => {
+                    const cell = dataRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                    cell.numFmt = '_ * #,##0_ ;_ * -#,##0_ ;_ * "-"_ ;_ @';
+                });
+                currentRow++;
+            });
+        }
+
+        // Auto-fit columns for summary sheet
+        summarySheet.columns.forEach(column => {
+            let maxLength = 0;
+            column.eachCell({ includeEmpty: true }, cell => {
+                const cellValue = cell.value ? cell.value.toString() : '';
+                maxLength = Math.max(maxLength, cellValue.length);
+            });
+            column.width = Math.min(Math.max(maxLength + 2, 10), 50);
+        });
+
+        // Add a note about tax-inclusive values
+        summarySheet.addRow([]); // Empty row for spacing
+        summarySheet.addRow(['売上は税込みです。']);
+
+        for (const dateKey in groupedReportData) {
+            const worksheet = workbook.addWorksheet(`${dateKey}`);
+            worksheet.columns = columns;
+
+            groupedReportData[dateKey].forEach(row => {
+                worksheet.addRow({
+                    hotel_id: row.hotel_id,
+                    hotel_name: row.hotel_name,
+                    month: formatDate(row.month),
+                    plan_name: row.plan_name,
+                    confirmed_stays: parseInt(row.confirmed_stays || 0),
+                    pending_stays: parseInt(row.pending_stays || 0),
+                    in_talks_stays: parseInt(row.in_talks_stays || 0),
+                    cancelled_stays: parseInt(row.cancelled_stays || 0),
+                    non_billable_cancelled_stays: parseInt(row.non_billable_cancelled_stays || 0),
+                    employee_stays: parseInt(row.employee_stays || 0),
+                    normal_sales: parseInt(row.normal_sales || 0),
+                    cancellation_sales: parseInt(row.cancellation_sales || 0),
+                    created_at: formatDateTime(row.created_at),
+                });
+            });
+        }
+
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename=daily_report_${date1}_${date2}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error("Error generating daily report Excel:", err);
+        res.status(500).send("Error generating daily report Excel");
+    }
+};
+
 module.exports = {
     getExportReservationList,
     getExportReservationDetails,
@@ -510,5 +708,6 @@ module.exports = {
     getDailyReport,
     getDailyReportData,
     getAvailableMetricDates,
-    generateDailyMetrics, // Export the new function
+    generateDailyMetrics,
+    getExportDailyReportExcel,
 };

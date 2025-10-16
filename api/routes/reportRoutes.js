@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getForecastDataByPlan, getAccountingDataByPlan,
     getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory,
-    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, getChannelSummary, getCheckInOutReport, getDailyReport, getDailyReportData, getAvailableMetricDates, generateDailyMetrics } = require('../controllers/report');const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
+    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, 
+    getChannelSummary, getCheckInOutReport, getDailyReportData, getAvailableMetricDates, generateDailyMetrics, getExportDailyReportExcel } = require('../controllers/report');const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
 // Existing routes
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
@@ -20,7 +21,7 @@ router.get('/report/download/res/meals/:hid/:sdate/:edate', authMiddleware, getE
 // Daily Report
 router.get('/report/daily/available-dates', authMiddleware, getAvailableMetricDates);
 router.get('/report/daily/data/:date', authMiddleware, getDailyReportData);
-router.get('/report/daily/download/:date', authMiddleware, getDailyReport);
+router.get('/report/daily/download-excel/:date1/:date2', authMiddleware, getExportDailyReportExcel);
 router.post('/report/daily/generate-for-today', authMiddleware, generateDailyMetrics);
 
 // Internal route
