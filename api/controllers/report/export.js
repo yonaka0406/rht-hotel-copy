@@ -585,16 +585,27 @@ const getExportDailyReportExcel = async (req, res) => {
             startRow++;
 
             const headers = ['ホテル名', ...months];
-            sheet.addRow(headers);
-            sheet.getRow(startRow).font = { bold: true };
+            const headerRow = sheet.addRow(headers);
+            headerRow.font = { bold: true };
             startRow++;
+
+            // Apply number format to month headers
+            months.forEach((month, index) => {
+                const cell = headerRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                cell.numFmt = 'yyyy"年"m"月";@';
+            });
 
             allHotelNames.forEach(hotelName => {
                 const rowData = [hotelName];
                 months.forEach(month => {
                     rowData.push(aggregatedData.aggregated[hotelName]?.[month] || 0);
                 });
-                sheet.addRow(rowData);
+                const dataRow = sheet.addRow(rowData);
+                // Apply number format to sales data cells
+                months.forEach((month, index) => {
+                    const cell = dataRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                    cell.numFmt = '_ * #,##0_ ;_ * -#,##0_ ;_ * "-"_ ;_ @';
+                });
                 startRow++;
             });
             return startRow + 2; // Add some space after the table
@@ -614,9 +625,15 @@ const getExportDailyReportExcel = async (req, res) => {
             currentRow++;
 
             const diffHeaders = ['ホテル名', ...allMonths];
-            summarySheet.addRow(diffHeaders);
-            summarySheet.getRow(currentRow).font = { bold: true };
+            const diffHeaderRow = summarySheet.addRow(diffHeaders);
+            diffHeaderRow.font = { bold: true };
             currentRow++;
+
+            // Apply number format to month headers in difference table
+            allMonths.forEach((month, index) => {
+                const cell = diffHeaderRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                cell.numFmt = 'yyyy"年"m"月";@';
+            });
 
             allHotelNames.forEach(hotelName => {
                 const rowData = [hotelName];
@@ -625,7 +642,12 @@ const getExportDailyReportExcel = async (req, res) => {
                     const sales2 = aggregatedData2.aggregated[hotelName]?.[month] || 0;
                     rowData.push(sales2 - sales1);
                 });
-                summarySheet.addRow(rowData);
+                const dataRow = summarySheet.addRow(rowData);
+                // Apply number format to sales data cells in difference table
+                allMonths.forEach((month, index) => {
+                    const cell = dataRow.getCell(index + 2); // +2 because 'ホテル名' is column 1
+                    cell.numFmt = '_ * #,##0_ ;_ * -#,##0_ ;_ * "-"_ ;_ @';
+                });
                 currentRow++;
             });
         }
