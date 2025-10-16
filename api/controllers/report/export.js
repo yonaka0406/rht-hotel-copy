@@ -2,7 +2,7 @@ const reportModel = require('../../models/report');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
 
-const { formatDate, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
+const { formatDate, formatDateTime, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
 
 const getExportReservationList = async (req, res) => {
     const hotelId = req.params.hid;
@@ -507,28 +507,28 @@ const getExportDailyReportExcel = async (req, res) => {
     const { date1, date2 } = req.params;
 
     try {
-        const allReportData = [];
-        let currentDate = new Date(date1);
-        const endDate = new Date(date2);
+        const groupedReportData = {};
 
-        while (currentDate <= endDate) {
-            const dateString = currentDate.toISOString().split('T')[0];
-            const dailyData = await reportModel.selectDailyReportData(req.requestId, dateString);
-            if (dailyData && dailyData.length > 0) {
-                allReportData.push(...dailyData);
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
+        const dailyData1 = await reportModel.selectDailyReportData(req.requestId, date1);
+        if (dailyData1 && dailyData1.length > 0) {
+            groupedReportData[date1] = dailyData1;
         }
 
-        if (!allReportData || allReportData.length === 0) {
+        if (date1 !== date2) {
+            const dailyData2 = await reportModel.selectDailyReportData(req.requestId, date2);
+            if (dailyData2 && dailyData2.length > 0) {
+                groupedReportData[date2] = dailyData2;
+            }
+        }
+
+        if (Object.keys(groupedReportData).length === 0) {
             return res.status(404).send("No data available for the given dates.");
         }
 
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('日次レポート');
 
-        // Define columns
-        worksheet.columns = [
+        // Define columns (common for all sheets)
+        const columns = [
             { header: 'ホテルID', key: 'hotel_id', width: 10 },
             { header: 'ホテル名', key: 'hotel_name', width: 20 },
             { header: '月', key: 'month', width: 15 },
@@ -544,24 +544,28 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: '作成日時', key: 'created_at', width: 20 },
         ];
 
-        // Add data to worksheet
-        allReportData.forEach(row => {
-            worksheet.addRow({
-                hotel_id: row.hotel_id,
-                hotel_name: row.hotel_name,
-                month: formatDate(row.month),
-                plan_name: row.plan_name,
-                confirmed_stays: row.confirmed_stays,
-                pending_stays: row.pending_stays,
-                in_talks_stays: row.in_talks_stays,
-                cancelled_stays: row.cancelled_stays,
-                non_billable_cancelled_stays: row.non_billable_cancelled_stays,
-                employee_stays: row.employee_stays,
-                normal_sales: row.normal_sales,
-                cancellation_sales: row.cancellation_sales,
-                created_at: formatDateTime(row.created_at),
+        for (const dateKey in groupedReportData) {
+            const worksheet = workbook.addWorksheet(`${dateKey}`);
+            worksheet.columns = columns;
+
+            groupedReportData[dateKey].forEach(row => {
+                worksheet.addRow({
+                    hotel_id: row.hotel_id,
+                    hotel_name: row.hotel_name,
+                    month: formatDate(row.month),
+                    plan_name: row.plan_name,
+                    confirmed_stays: row.confirmed_stays,
+                    pending_stays: row.pending_stays,
+                    in_talks_stays: row.in_talks_stays,
+                    cancelled_stays: row.cancelled_stays,
+                    non_billable_cancelled_stays: row.non_billable_cancelled_stays,
+                    employee_stays: row.employee_stays,
+                    normal_sales: row.normal_sales,
+                    cancellation_sales: row.cancellation_sales,
+                    created_at: formatDateTime(row.created_at),
+                });
             });
-        });
+        }
 
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         res.setHeader("Content-Disposition", `attachment; filename=daily_report_${date1}_${date2}.xlsx`);
