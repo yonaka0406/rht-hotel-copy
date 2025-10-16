@@ -68,10 +68,10 @@
                         <DataTable :value="processedReportData" ref="dt" paginator :rows="10"
                             :rowsPerPageOptions="[5, 10, 20, 50]" tableStyle="min-width: 50rem"
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
-                            currentPageReportTemplate="{first}-{last} of {totalRecords}">
+                            currentPageReportTemplate="{first}-{last} of {totalRecords}" :exportFilename="`daily_report_${loadedDateTitle.split(' - ')[1]}`">
                             <template #paginatorend> <!-- Use #paginatorend slot -->
                                 <Button type="button" icon="pi pi-download" text @click="dt.exportCSV()"
-                                    :disabled="!reportData.length" label="ダウンロード" />
+                                    :disabled="!reportData.length" label="CSVダウンロード" />
                             </template>
                             <Column field="hotel_id" header="ホテルID" class="hidden"></Column>
                             <Column field="hotel_name" header="ホテル名"></Column>
