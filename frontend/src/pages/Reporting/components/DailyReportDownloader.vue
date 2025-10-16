@@ -99,19 +99,71 @@
     </div>
 
     <!-- Comparison Report -->
-    <div class="col-span-12" v-if="comparisonData.date1 && Number(activeTab) === 1">
-        <Card>
-            <template #title>Comparison Result</template>
-            <template #content>
-                <pre>{{ comparisonData }}</pre>
-            </template>
-        </Card>
-    </div>
-
+            <div class="col-span-12" v-if="comparisonData.length && Number(activeTab) === 1">
+                <Card>
+                    <template #title>比較結果 ({{ formatDate(date2) }} vs {{ formatDate(date1) }})</template>
+                    <template #content>
+                        <DataTable
+                            :value="comparisonData"
+                            paginator
+                            :rows="10"
+                            :rowsPerPageOptions="[5, 10, 20, 50]"
+                            tableStyle="min-width: 50rem"
+                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
+                            currentPageReportTemplate="{first}-{last} of {totalRecords}"
+                        >
+                            <Column field="hotel_name" header="ホテル名" headerClass="text-center"></Column>
+                            <Column field="month" header="月" headerClass="text-center"></Column>
+                            <Column header="確定宿泊数" bodyStyle="text-align: right" headerClass="text-center">
+                                <template #body="slotProps">
+                                    <div class="grid grid-cols-2">
+                                        <div class="col-span-1">
+                                            {{ slotProps.data.confirmed_stays_date2.toLocaleString() }}
+                                            <br /><small>{{ slotProps.data.confirmed_stays_date1.toLocaleString() }}</small>
+                                        </div>
+                                        <div class="col-span-1">
+                                            <Badge v-bind="getBadgeProps(slotProps.data.confirmed_stays_change)"></Badge>
+                                        </div>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="キャンセル宿泊数" bodyStyle="text-align: right" headerClass="text-center">
+                                <template #body="slotProps">
+                                    <div class="grid grid-cols-2">
+                                        <div class="col-span-1">
+                                            {{ slotProps.data.cancelled_stays_date2.toLocaleString() }}
+                                            <br /><small>{{ slotProps.data.cancelled_stays_date1.toLocaleString() }}</small>
+                                        </div>
+                                        <div class="col-span-1">
+                                            <Badge v-bind="getBadgeProps(slotProps.data.cancelled_stays_change)"></Badge>
+                                        </div>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="売上合計" bodyStyle="text-align: right" headerClass="text-center">
+                                <template #body="slotProps">
+                                    <div class="grid grid-cols-2">
+                                        <div class="col-span-1">
+                                            {{ (slotProps.data.total_sales_date2 || 0).toLocaleString() }}
+                                            <br /><small>{{ (slotProps.data.total_sales_date1 || 0).toLocaleString() }}</small>
+                                        </div>
+                                        <div class="col-span-1">
+                                            <Badge v-bind="getBadgeProps(slotProps.data.total_sales_change || 0)"></Badge>
+                                        </div>
+                                    </div>
+                                </template>
+                            </Column>
+                        </DataTable>
+                    </template>
+                    <template #footer class="text-right">
+                        売上は税込み、単位は円です。
+                    </template>
+                </Card>
+            </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import Tabs from 'primevue/tabs';
 import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
@@ -124,6 +176,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import ProgressSpinner from 'primevue/progressspinner';
 import Card from 'primevue/card';
+import Badge from 'primevue/badge';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import DailyReportConfirmedReservationsChart from './charts/DailyReportConfirmedReservationsChart.vue'; // Import Card component
@@ -161,20 +214,94 @@ const compareDates = async () => {
     }
 
     isLoading.value = true;
-
+    
     await getDailyReportData(formatDate(date1.value));
     const data1 = JSON.parse(JSON.stringify(reportData.value));
 
     await getDailyReportData(formatDate(date2.value));
     const data2 = JSON.parse(JSON.stringify(reportData.value));
 
-    comparisonData.value = {
-        date1: { date: formatDate(date1.value), data: data1 },
-        date2: { date: formatDate(date2.value), data: data2 }
+    const calculateChange = (value2, value1) => {
+        if (value1 === null || value1 === undefined || isNaN(value1)) {
+            return value2 === null || value2 === undefined || isNaN(value2) || value2 === 0 ? 0 : Infinity;
+        }
+        if (value1 === 0) {
+            return value2 === 0 ? 0 : Infinity;
+        }
+        return ((value2 - value1) / value1) * 100;
     };
 
-    console.log('Comparison data:', comparisonData.value);
+    // Aggregate data1 and data2 by hotel_id and month
+    const aggregateData = (data) => {
+        const aggregated = new Map();
+        data.forEach(item => {
+            const key = `${item.hotel_id}-${formatDate(item.month)}`;
+            if (!aggregated.has(key)) {
+                aggregated.set(key, {
+                    hotel_id: item.hotel_id,
+                    hotel_name: item.hotel_name,
+                    month: item.month,
+                    confirmed_stays: 0,
+                    cancelled_stays: 0,
+                    total_sales: 0,
+                    cancelled_sales: 0,
+                });
+            }
+            const current = aggregated.get(key);
+            current.confirmed_stays += Number(item.confirmed_stays);
+            current.cancelled_stays += Number(item.cancelled_stays);
+            current.total_sales += Number(item.normal_sales) + Number(item.cancellation_sales);
+            current.cancelled_sales += Number(item.cancellation_sales);
+        });
+        return aggregated;
+    };
+
+    const aggregatedData1 = aggregateData(data1);
+    const aggregatedData2 = aggregateData(data2);
+
+    // Process data for comparison
+    const processed = [];
+    aggregatedData2.forEach(item2 => {
+        const key = `${item2.hotel_id}-${formatDate(item2.month)}`;
+        const item1 = aggregatedData1.get(key);
+
+        const confirmedStaysChange = item1 ? calculateChange(item2.confirmed_stays, item1.confirmed_stays) : (item2.confirmed_stays !== 0 ? Infinity : 0);
+        const cancelledStaysChange = item1 ? calculateChange(item2.cancelled_stays, item1.cancelled_stays) : (item2.cancelled_stays !== 0 ? Infinity : 0);
+        const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);
+        const cancelledSalesChange = item1 ? calculateChange(item2.cancelled_sales, item1.cancelled_sales) : (item2.cancelled_sales !== 0 ? Infinity : 0);
+
+        processed.push({
+            hotel_name: item2.hotel_name,
+            month: formatDate(item2.month),
+            confirmed_stays_date2: item2.confirmed_stays,
+            confirmed_stays_change: confirmedStaysChange,
+            confirmed_stays_date1: item1 ? item1.confirmed_stays : 0,
+            cancelled_stays_date2: item2.cancelled_stays,
+            cancelled_stays_change: cancelledStaysChange,
+            cancelled_stays_date1: item1 ? item1.cancelled_stays : 0,
+            total_sales_date2: item2.total_sales,
+            total_sales_change: totalSalesChange,
+            total_sales_date1: item1 ? item1.total_sales : 0,
+        });
+    });
+
+    comparisonData.value = processed;
+
     isLoading.value = false;
+};
+const getBadgeProps = (change) => {
+    if (!isFinite(change)) { // Handles null, undefined, NaN
+        return { value: '0%', severity: 'secondary' };
+    }
+    if (change === Infinity) {
+        return { value: '+∞%', severity: 'success' };
+    }
+    if (change === -Infinity) {
+        return { value: '-∞%', severity: 'danger' };
+    }
+    const value = change.toFixed(2) + '%';
+    const severity = change > 0 ? 'success' : (change < 0 ? 'danger' : 'info');
+    return { value, severity };
 };
 
 onMounted(async () => {
@@ -187,7 +314,6 @@ onMounted(async () => {
 });
 
 const loadReport = async () => { // Made async to await getDailyReportData
-    console.log('loadReport called');
     if (!selectedDate.value) return;
     const date = formatDate(selectedDate.value);
     const today = formatDate(new Date()); // Get today's date formatted
