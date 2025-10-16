@@ -503,6 +503,57 @@ const generateDailyMetrics = async (req, res) => {
     }
 };
 
+const exportDailyReportExcel = async (hotelId, date1, date2) => {
+    try {
+        if (limitedFunctionality.value) {
+            console.debug('API not available, export functionality limited');
+            throw new Error('API not available, export functionality limited');
+        }
+
+        const response = await fetch(`/api/report/daily/download-excel/${hotelId}/${date1}/${date2}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            },
+        });
+
+        if (response.status === 404) {
+            return 'no_data';
+        }
+        if (!response.ok) {
+            throw new Error("Failed to fetch Excel file");
+        }
+
+        const blob = await response.blob();
+        if (blob.size === 0) {
+            return 'no_data';
+        }
+        const dlURL = window.URL.createObjectURL(blob);
+
+        try {
+            const link = document.createElement("a");
+            link.href = dlURL;
+            link.setAttribute("download", `daily_report_${date1}_${date2}.xlsx`);
+            document.body.appendChild(link);
+
+            if (typeof link.click === 'function') {
+                link.click();
+            }
+
+            document.body.removeChild(link);
+        } catch (e) {
+            console.debug('Download functionality not available in current environment');
+        }
+
+        return { success: true };
+
+    } catch (error) {
+        console.error("エクスポートエラー:", error);
+        console.error('Export failed:', error.message);
+        throw error;
+    }
+};
+
 module.exports = {
     getExportReservationList,
     getExportReservationDetails,
@@ -510,5 +561,6 @@ module.exports = {
     getDailyReport,
     getDailyReportData,
     getAvailableMetricDates,
-    generateDailyMetrics, // Export the new function
+    generateDailyMetrics,
+    exportDailyReportExcel,
 };
