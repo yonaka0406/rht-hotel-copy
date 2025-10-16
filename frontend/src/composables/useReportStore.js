@@ -275,10 +275,8 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyReportExcel = async (startDate, endDate) => {
-        console.log('[useReportStore] downloadDailyReportExcel called with:', startDate, endDate);
-        try {
-            console.log('[useReportStore] Making API call using api.get to:', `/report/daily/download-excel/${startDate}/${endDate}`);
+    const downloadDailyReportExcel = async (startDate, endDate) => {        
+        try {            
             const response = await api.get(`/report/daily/download-excel/${startDate}/${endDate}`, { responseType: 'blob' });
 
             if (!response) { // api.get might return null on auth errors or other issues
