@@ -195,7 +195,7 @@ const {
     getAvailableMetricDates,
     getDailyReportData,
     generateDailyMetricsForToday,
-    exportDailyReportExcel, // Import new function
+    downloadDailyReportExcel,
 } = useReportStore();
 
 const selectedDate = ref(new Date());
@@ -340,10 +340,12 @@ const loadReport = async () => { // Made async to await getDailyReportData
 };
 
 const exportComparisonToExcel = async () => {
+    console.log('[DailyReportDownloader] exportComparisonToExcel called');
     const d1 = formatDate(date1.value);
     const d2 = formatDate(date2.value);
     try {
-        await exportDailyReportExcel(hotelId.value, d1, d2);
+        console.log('[DailyReportDownloader] downloadExcelReportFromStore called');
+        await downloadDailyReportExcel(d1, d2);
         toast.add({ severity: 'success', summary: '成功', detail: 'Excelファイルが正常にダウンロードされました。', life: 3000 });
     } catch (error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: 'Excelファイルのダウンロードに失敗しました。', life: 3000 });

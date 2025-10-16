@@ -503,54 +503,75 @@ const generateDailyMetrics = async (req, res) => {
     }
 };
 
-const exportDailyReportExcel = async (hotelId, date1, date2) => {
+const getExportDailyReportExcel = async (req, res) => {
+    const { date1, date2 } = req.params;
+
     try {
-        if (limitedFunctionality.value) {
-            console.debug('API not available, export functionality limited');
-            throw new Error('API not available, export functionality limited');
+        const allReportData = [];
+        let currentDate = new Date(date1);
+        const endDate = new Date(date2);
+
+        while (currentDate <= endDate) {
+            const dateString = currentDate.toISOString().split('T')[0];
+            const dailyData = await reportModel.selectDailyReportData(req.requestId, dateString);
+            if (dailyData && dailyData.length > 0) {
+                allReportData.push(...dailyData);
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        const response = await fetch(`/api/report/daily/download-excel/${hotelId}/${date1}/${date2}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            },
+        if (!allReportData || allReportData.length === 0) {
+            return res.status(404).send("No data available for the given dates.");
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('日次レポート');
+
+        // Define columns
+        worksheet.columns = [
+            { header: 'ホテルID', key: 'hotel_id', width: 10 },
+            { header: 'ホテル名', key: 'hotel_name', width: 20 },
+            { header: '月', key: 'month', width: 15 },
+            { header: 'プラン名', key: 'plan_name', width: 30 },
+            { header: '確定', key: 'confirmed_stays', width: 10 },
+            { header: '仮予約', key: 'pending_stays', width: 10 },
+            { header: '保留中', key: 'in_talks_stays', width: 10 },
+            { header: 'キャンセル', key: 'cancelled_stays', width: 10 },
+            { header: 'キャンセル(請求対象外)', key: 'non_billable_cancelled_stays', width: 20 },
+            { header: '社員', key: 'employee_stays', width: 10 },
+            { header: '通常売上', key: 'normal_sales', width: 15 },
+            { header: 'キャンセル売上', key: 'cancellation_sales', width: 15 },
+            { header: '作成日時', key: 'created_at', width: 20 },
+        ];
+
+        // Add data to worksheet
+        allReportData.forEach(row => {
+            worksheet.addRow({
+                hotel_id: row.hotel_id,
+                hotel_name: row.hotel_name,
+                month: formatDate(row.month),
+                plan_name: row.plan_name,
+                confirmed_stays: row.confirmed_stays,
+                pending_stays: row.pending_stays,
+                in_talks_stays: row.in_talks_stays,
+                cancelled_stays: row.cancelled_stays,
+                non_billable_cancelled_stays: row.non_billable_cancelled_stays,
+                employee_stays: row.employee_stays,
+                normal_sales: row.normal_sales,
+                cancellation_sales: row.cancellation_sales,
+                created_at: formatDateTime(row.created_at),
+            });
         });
 
-        if (response.status === 404) {
-            return 'no_data';
-        }
-        if (!response.ok) {
-            throw new Error("Failed to fetch Excel file");
-        }
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename=daily_report_${date1}_${date2}.xlsx`);
 
-        const blob = await response.blob();
-        if (blob.size === 0) {
-            return 'no_data';
-        }
-        const dlURL = window.URL.createObjectURL(blob);
+        await workbook.xlsx.write(res);
+        res.end();
 
-        try {
-            const link = document.createElement("a");
-            link.href = dlURL;
-            link.setAttribute("download", `daily_report_${date1}_${date2}.xlsx`);
-            document.body.appendChild(link);
-
-            if (typeof link.click === 'function') {
-                link.click();
-            }
-
-            document.body.removeChild(link);
-        } catch (e) {
-            console.debug('Download functionality not available in current environment');
-        }
-
-        return { success: true };
-
-    } catch (error) {
-        console.error("エクスポートエラー:", error);
-        console.error('Export failed:', error.message);
-        throw error;
+    } catch (err) {
+        console.error("Error generating daily report Excel:", err);
+        res.status(500).send("Error generating daily report Excel");
     }
 };
 
@@ -562,5 +583,5 @@ module.exports = {
     getDailyReportData,
     getAvailableMetricDates,
     generateDailyMetrics,
-    exportDailyReportExcel,
+    getExportDailyReportExcel,
 };

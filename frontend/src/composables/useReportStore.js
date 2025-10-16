@@ -275,28 +275,17 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyReportExcel = async (hotelId, startDate, endDate) => {
+    const downloadDailyReportExcel = async (startDate, endDate) => {
+        console.log('[useReportStore] downloadDailyReportExcel called with:', startDate, endDate);
         try {
-            if (limitedFunctionality.value) {
-                console.debug('API not available, export functionality limited');
-                throw new Error('API not available, export functionality limited');
+            console.log('[useReportStore] Making API call using api.get to:', `/report/daily/download-excel/${startDate}/${endDate}`);
+            const response = await api.get(`/report/daily/download-excel/${startDate}/${endDate}`, { responseType: 'blob' });
+
+            if (!response) { // api.get might return null on auth errors or other issues
+                return 'no_data'; // Or throw a more specific error if needed
             }
 
-            const response = await fetch(`/api/report/daily/download-excel/${hotelId}/${startDate}/${endDate}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                },
-            });
-
-            if (response.status === 404) {
-                return 'no_data';
-            }
-            if (!response.ok) {
-                throw new Error("Failed to fetch Excel file");
-            }
-
-            const blob = await response.blob();
+            const blob = response; // response is already the blob
             if (blob.size === 0) {
                 return 'no_data';
             }
