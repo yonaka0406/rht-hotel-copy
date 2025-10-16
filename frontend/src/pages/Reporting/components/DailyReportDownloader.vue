@@ -47,9 +47,6 @@
                                     <div class="col-span-2">
                                         <Button @click="compareDates" label="比較" class="w-full" />
                                     </div>
-                                    <div class="col-span-2">
-                                        <Button @click="exportComparisonToExcel" label="Excelダウンロード" class="w-full" />
-                                    </div>
                                 </div>
                             </template>
                         </Card>
@@ -99,70 +96,74 @@
                     :metricDate="loadedDateTitle.split(' - ')[1]" />
             </div>
         </div>
-    </div>
 
-    <!-- Comparison Report -->
-            <div class="col-span-12" v-if="comparisonData.length && Number(activeTab) === 1">
-                <Card>
-                    <template #title>比較結果 ({{ formatDate(date2) }} vs {{ formatDate(date1) }})</template>
-                    <template #content>
-                        <DataTable
-                            :value="comparisonData"
-                            paginator
-                            :rows="10"
-                            :rowsPerPageOptions="[5, 10, 20, 50]"
-                            tableStyle="min-width: 50rem"
-                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
-                            currentPageReportTemplate="{first}-{last} of {totalRecords}"
-                        >
-                            <Column field="hotel_name" header="ホテル名" headerClass="text-center"></Column>
-                            <Column field="month" header="月" headerClass="text-center"></Column>
-                            <Column header="確定宿泊数" bodyStyle="text-align: right" headerClass="text-center">
-                                <template #body="slotProps">
-                                    <div class="grid grid-cols-2">
-                                        <div class="col-span-1">
-                                            {{ slotProps.data.confirmed_stays_date2.toLocaleString() }}
-                                            <br /><small>{{ slotProps.data.confirmed_stays_date1.toLocaleString() }}</small>
-                                        </div>
-                                        <div class="col-span-1">
-                                            <Badge v-bind="getBadgeProps(slotProps.data.confirmed_stays_change)"></Badge>
-                                        </div>
+        <!-- Comparison Report -->
+        <div class="col-span-12" v-if="comparisonData.length && Number(activeTab) === 1">
+            <Card>
+                <template #title>比較結果 ({{ formatDate(date2) }} vs {{ formatDate(date1) }})</template>
+                <template #content>
+                    <DataTable
+                        :value="comparisonData"
+                        paginator
+                        :rows="10"
+                        :rowsPerPageOptions="[5, 10, 20, 50]"
+                        tableStyle="min-width: 50rem"
+                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
+                        currentPageReportTemplate="{first}-{last} of {totalRecords}"
+                    >
+                        <template #paginatorend> <!-- Use #paginatorend slot -->
+                            <Button type="button" icon="pi pi-download" text @click="exportComparisonToExcel()"
+                                :disabled="!comparisonData.length" label="Excelダウンロード" />
+                        </template>
+                        <Column field="hotel_name" header="ホテル名" headerClass="text-center"></Column>
+                        <Column field="month" header="月" headerClass="text-center"></Column>
+                        <Column header="確定宿泊数" bodyStyle="text-align: right" headerClass="text-center">
+                            <template #body="slotProps">
+                                <div class="grid grid-cols-2">
+                                    <div class="col-span-1">
+                                        {{ slotProps.data.confirmed_stays_date2.toLocaleString() }}
+                                        <br /><small>{{ slotProps.data.confirmed_stays_date1.toLocaleString() }}</small>
                                     </div>
-                                </template>
-                            </Column>
-                            <Column header="キャンセル宿泊数" bodyStyle="text-align: right" headerClass="text-center">
-                                <template #body="slotProps">
-                                    <div class="grid grid-cols-2">
-                                        <div class="col-span-1">
-                                            {{ slotProps.data.cancelled_stays_date2.toLocaleString() }}
-                                            <br /><small>{{ slotProps.data.cancelled_stays_date1.toLocaleString() }}</small>
-                                        </div>
-                                        <div class="col-span-1">
-                                            <Badge v-bind="getBadgeProps(slotProps.data.cancelled_stays_change)"></Badge>
-                                        </div>
+                                    <div class="col-span-1">
+                                        <Badge v-bind="getBadgeProps(slotProps.data.confirmed_stays_change)"></Badge>
                                     </div>
-                                </template>
-                            </Column>
-                            <Column header="売上合計" bodyStyle="text-align: right" headerClass="text-center">
-                                <template #body="slotProps">
-                                    <div class="grid grid-cols-2">
-                                        <div class="col-span-1">
-                                            {{ (slotProps.data.total_sales_date2 || 0).toLocaleString() }}
-                                            <br /><small>{{ (slotProps.data.total_sales_date1 || 0).toLocaleString() }}</small>
-                                        </div>
-                                        <div class="col-span-1">
-                                            <Badge v-bind="getBadgeProps(slotProps.data.total_sales_change || 0)"></Badge>
-                                        </div>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="キャンセル宿泊数" bodyStyle="text-align: right" headerClass="text-center">
+                            <template #body="slotProps">
+                                <div class="grid grid-cols-2">
+                                    <div class="col-span-1">
+                                        {{ slotProps.data.cancelled_stays_date2.toLocaleString() }}
+                                        <br /><small>{{ slotProps.data.cancelled_stays_date1.toLocaleString() }}</small>
                                     </div>
-                                </template>
-                            </Column>
-                        </DataTable>
-                    </template>
-                    <template #footer class="text-right">
-                        売上は税込み、単位は円です。
-                    </template>
-                </Card>
-            </div>
+                                    <div class="col-span-1">
+                                        <Badge v-bind="getBadgeProps(slotProps.data.cancelled_stays_change)"></Badge>
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="売上合計" bodyStyle="text-align: right" headerClass="text-center">
+                            <template #body="slotProps">
+                                <div class="grid grid-cols-2">
+                                    <div class="col-span-1">
+                                        {{ (slotProps.data.total_sales_date2 || 0).toLocaleString() }}
+                                        <br /><small>{{ (slotProps.data.total_sales_date1 || 0).toLocaleString() }}</small>
+                                    </div>
+                                    <div class="col-span-1">
+                                        <Badge v-bind="getBadgeProps(slotProps.data.total_sales_change || 0)"></Badge>
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </template>
+                <template #footer class="text-right">
+                    売上は税込み、単位は円です。
+                </template>
+            </Card>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -209,6 +210,9 @@ const comparisonData = ref({});
 const date1 = ref(new Date(new Date().setDate(new Date().getDate() - 1)));
 const date2 = ref(new Date());
 
+const comparedDate1 = ref(null);
+const comparedDate2 = ref(null);
+
 const compareDates = async () => {
     if (!date1.value || !date2.value) return;
 
@@ -219,11 +223,17 @@ const compareDates = async () => {
 
     isLoading.value = true;
     
-    await getDailyReportData(formatDate(date1.value));
+    const d1 = formatDate(date1.value);
+    const d2 = formatDate(date2.value);
+
+    await getDailyReportData(d1);
     const data1 = JSON.parse(JSON.stringify(reportData.value));
 
-    await getDailyReportData(formatDate(date2.value));
+    await getDailyReportData(d2);
     const data2 = JSON.parse(JSON.stringify(reportData.value));
+
+    comparedDate1.value = d1;
+    comparedDate2.value = d2;
 
     const calculateChange = (value2, value1) => {
         if (value1 === null || value1 === undefined || isNaN(value1)) {
@@ -325,11 +335,9 @@ const loadReport = async () => { // Made async to await getDailyReportData
     await getDailyReportData(date); // Attempt to load data
 
     // If no data is available for today's date, generate it
-    if (reportData.value.length === 0 && date === today) {
-        //console.log('No data available for today. Generating daily metrics...');
+    if (reportData.value.length === 0 && date === today) {        
         const result = await generateDailyMetricsForToday();
-        if (result.success) {
-            //console.log('Daily metrics generated. Re-loading report data...');
+        if (result.success) {            
             await getDailyReportData(date); // Re-load data after generation
         } else {
             console.error('Failed to generate daily metrics:', result.error);
@@ -340,12 +348,14 @@ const loadReport = async () => { // Made async to await getDailyReportData
 };
 
 const exportComparisonToExcel = async () => {
-    console.log('[DailyReportDownloader] exportComparisonToExcel called');
-    const d1 = formatDate(date1.value);
-    const d2 = formatDate(date2.value);
-    try {
-        console.log('[DailyReportDownloader] downloadExcelReportFromStore called');
-        await downloadDailyReportExcel(d1, d2);
+    
+    if (!comparedDate1.value || !comparedDate2.value) {
+        toast.add({ severity: 'warn', summary: '警告', detail: '比較する日付が設定されていません。先に日付を比較してください。', life: 3000 });
+        return;
+    }
+
+    try {        
+        await downloadDailyReportExcel(comparedDate1.value, comparedDate2.value);
         toast.add({ severity: 'success', summary: '成功', detail: 'Excelファイルが正常にダウンロードされました。', life: 3000 });
     } catch (error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: 'Excelファイルのダウンロードに失敗しました。', life: 3000 });
