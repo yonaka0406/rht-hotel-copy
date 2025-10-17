@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Bugfix: Ensured the hotel rooms were being updated on Room Indicator page load to solve a problem where some users were not seeing the available rooms.
+
 ---
 ## Future Releases
 
@@ -547,6 +549,9 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ## Version History
 
+## Version History
+
+- **1.1.23** (2025-10-15) - Added Wet Area field for rooms, improved static calendar organization, fixed multi-room reservation issues, and enhanced daily metrics with sales information.
 - **1.1.22** (2025-10-14) - Introduced Daily Report Data Download for plan-based stay analysis. Fixed room indicator display to show only current room after changes and disabled plan recalculations during room modifications to preserve original pricing.
 - **1.1.21** (2025-10-14) - Enhanced financial reporting with accurate addon sales totals and tax-exclusive values in exports. Improved room management with better addon quantity handling and UI state management for guest number controls. Added plan/addon rate separation in Monthly Reports.
 - **1.1.20** (2025-10-06) - Fixed invoice PDF issues and OTA client gender selection. Enhanced PDFs with client names, added plan-based forecast reports, and introduced Admin validation tools.
