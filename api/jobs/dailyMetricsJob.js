@@ -11,6 +11,7 @@ const performDailyMetricsCalculation = async () => {
         const metricDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
 
         await client.query('DELETE FROM daily_plan_metrics WHERE metric_date = $1', [metricDate]);
+        await client.query("SELECT setval('daily_plan_metrics_id_seq', COALESCE((SELECT MAX(id) + 1 FROM daily_plan_metrics), 1), false);");
 
         const hotelsWithReservationsResult = await client.query(`
             SELECT r.hotel_id, MAX(r.check_out) as last_date
