@@ -9,13 +9,13 @@
                     <div><strong>TEL:</strong> {{ reservationInfo.client_phone || '' }}</div>
                     <div><strong>FAX:</strong> {{ reservationInfo.client_fax || '' }}</div>
                     <div class="col-span-2"><strong>宿泊者:</strong>
-                        <template v-if="reservationInfo.reservation_clients && reservationInfo.reservation_clients.length > 0">
-                            <span v-for="(client, index) in reservationInfo.reservation_clients" :key="index">
+                        <template v-if="allReservationClients && allReservationClients.length > 0">
+                            <span v-for="(client, index) in allReservationClients" :key="client.client_id">
                                 {{ client.name_kanji || client.name_kana || client.name }}
-                                <template v-if="index < reservationInfo.reservation_clients.length - 1">, </template>
+                                <template v-if="index < allReservationClients.length - 1">, </template>
                             </span>
                             <!-- Debug log for reservation_clients -->
-                            <span style="display: none;">{{ console.log('reservationInfo.reservation_clients:', reservationInfo.reservation_clients) }}</span>
+                            <span style="display: none;">{{ console.log('allReservationClients:', allReservationClients) }}</span>
                         </template>
                         <template v-else>{{ reservationInfo.client_name }}</template>
                     </div>
@@ -131,7 +131,9 @@ const calculateTotalOnSitePayment = (payments) => {
 };
 
 const generateSlackMessage = () => {
+    console.log('generateSlackMessage called');
     const info = props.reservationInfo;
+    console.log('Full reservationInfo prop:', info);
     if (!info) {
         slackMessage.value = '予約情報がありません。';
         return;
@@ -182,17 +184,17 @@ const generateSlackMessage = () => {
 
         // Construct the message
 
-        let guestNames = '';
+            let guestNames = '';
 
-        if (info.reservation_clients && info.reservation_clients.length > 0) {
+            if (allReservationClients && allReservationClients.length > 0) {
 
-            guestNames = info.reservation_clients.map(client => client.name_kanji || client.name_kana || client.name).join(', ');
+                guestNames = allReservationClients.map(client => client.name_kanji || client.name_kana || client.name).join(', ');
 
-        } else {
+            } else {
 
-            guestNames = info.client_name || '';
+                guestNames = info.client_name || '';
 
-        }
+            }
 
     
 
@@ -352,6 +354,31 @@ const roomDetailsForDisplay = computed(() => {
     }));
 
     return formattedDetails;
+});
+
+const allReservationClients = computed(() => {
+    const uniqueClients = new Map(); // Use a Map to store unique clients by client_id
+
+    if (props.reservationInfo && props.reservationInfo.reservation_clients && props.reservationInfo.reservation_clients.length > 0) {
+        props.reservationInfo.reservation_clients.forEach(client => {
+            uniqueClients.set(client.client_id, client);
+        });
+    }
+
+    // Also check groupedRooms for clients if they are attached to individual details
+    if (props.groupedRooms && props.groupedRooms.length > 0) {
+        props.groupedRooms.forEach(group => {
+            group.details.forEach(detail => {
+                if (detail.reservation_clients && detail.reservation_clients.length > 0) {
+                    detail.reservation_clients.forEach(client => {
+                        uniqueClients.set(client.client_id, client);
+                    });
+                }
+            });
+        });
+    }
+
+    return Array.from(uniqueClients.values());
 });
 
 const copyToClipboard = async () => {
