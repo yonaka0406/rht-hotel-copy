@@ -5,8 +5,7 @@
             <Fieldset legend="予約概要" class="mb-4">
                 <div class="grid grid-cols-2 gap-2">
                     <div class="col-span-2"><strong>予約者名:</strong> {{ reservationInfo.client_name }}</div>
-                    <div><strong>TEL:</strong> {{ reservationInfo.client_phone || '' }}</div>
-                    <div><strong>FAX:</strong> {{ reservationInfo.client_fax || '' }}</div>
+                    <div class="col-span-2"><strong>宿泊期間:</strong> {{ formattedCheckInDate }} ({{ formattedCheckInTime }}) - {{ formattedCheckOutDate }}</div>
                     <div><strong>TEL:</strong> {{ reservationInfo.client_phone || '' }}</div>
                     <div><strong>FAX:</strong> {{ reservationInfo.client_fax || '' }}</div>
                     <div class="col-span-2"><strong>宿泊者:</strong>
@@ -15,10 +14,11 @@
                                 {{ client.name_kanji || client.name_kana || client.name }}
                                 <template v-if="index < reservationInfo.reservation_clients.length - 1">, </template>
                             </span>
+                            <!-- Debug log for reservation_clients -->
+                            <span style="display: none;">{{ console.log('reservationInfo.reservation_clients:', reservationInfo.reservation_clients) }}</span>
                         </template>
                         <template v-else>{{ reservationInfo.client_name }}</template>
                     </div>
-                    <div class="col-span-2"><strong>宿泊期間:</strong> {{ formattedCheckInDate }} ({{ formattedCheckInTime }}) - {{ formattedCheckOutDate }}</div>
                     <div><strong>人数:</strong> {{ groupedRooms.length }}室 {{ reservationInfo.reservation_number_of_people }}名</div>
                                         <div><strong>喫煙/禁煙: </strong>
                                             <template v-if="smokingRoomsCount > 0">喫煙{{ smokingRoomsCount }}室</template>
@@ -26,7 +26,7 @@
                                             <template v-if="nonSmokingRoomsCount > 0">禁煙{{ nonSmokingRoomsCount }}室</template>
                                         </div>
                     <div><strong>プラン:</strong> {{ planNamesList }}</div>
-                    <div><strong>土日:</strong> {{ reservationInfo.weekend_stay || '未設定' }}</div>
+                    <div v-if="weekendPlanNamesList"><strong>土日:</strong> {{ weekendPlanNamesList }}</div>
                     <div><strong>駐車場:</strong> {{ parkingDetails }}</div>
                     <div><strong>清算方法:</strong> {{ paymentDetailsDisplay }}</div>
                     <div><strong>予約経路:</strong> {{ translatedReservationType }}</div>
@@ -40,8 +40,8 @@
             <Fieldset legend="部屋詳細">
                 <DataTable :value="roomDetailsForDisplay" size="small">
                     <Column field="date" header="日付"></Column>
-                    <Column field="non_smoking_rooms" header="禁煙部屋"></Column>
-                    <Column field="smoking_rooms" header="喫煙部屋"></Column>
+                    <Column field="non_smoking_rooms" header="禁煙部屋" bodyStyle="text-align: center"></Column>
+                    <Column field="smoking_rooms" header="喫煙部屋" bodyStyle="text-align: center"></Column>
                     <Column field="plan_name" header="プラン"></Column>
                 </DataTable>
             </Fieldset>
@@ -116,6 +116,20 @@ const getJapaneseWeekday = (dateString) => {
     return date.toLocaleDateString('ja-JP', options).replace('.', '');
 };
 
+const ON_SITE_PAYMENT_METHOD = '現地決済';
+
+const calculateTotalOnSitePayment = (payments) => {
+    let total = 0;
+    if (payments && payments.length > 0) {
+        payments.forEach(payment => {
+            if (payment?.payment_method === ON_SITE_PAYMENT_METHOD) {
+                total += payment?.amount || 0;
+            }
+        });
+    }
+    return total;
+};
+
 const generateSlackMessage = () => {
     const info = props.reservationInfo;
     if (!info) {
@@ -156,14 +170,7 @@ const generateSlackMessage = () => {
     const checkOutDate = info.check_out ? formatDate(new Date(info.check_out)) : '';
 
     // Payment
-    let totalOnSitePayment = 0;
-    if (props.reservation_payments && props.reservation_payments.length > 0) {
-        props.reservation_payments.forEach(payment => {
-            if (payment.payment_method === '現地決済') { // Assuming '現地決済' is the value for on-site payment
-                totalOnSitePayment += payment.amount;
-            }
-        });
-    }
+    const totalOnSitePayment = calculateTotalOnSitePayment(props.reservation_payments);
     const translatedPaymentTiming = translatePaymentTiming(info.payment_timing);
     let paymentDetails = info.payment_timing === 'on-site' ? `${translatedPaymentTiming} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : translatedPaymentTiming;
 
@@ -190,18 +197,18 @@ const generateSlackMessage = () => {
     
 
         slackMessage.value = `【${clientName}】
-
-                TEL/FAX：${clientPhone}/${clientFax}
-
-    宿泊者：${guestNames}
-
-    部屋番号：${uniqueRoomNumbers}
-
-    宿泊期間：${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)})-${checkOutDate} (${getJapaneseWeekday(info.check_out)})人数：${props.groupedRooms.length}室　${info.reservation_number_of_people}名
-            喫煙/禁煙: ${smokingRoomsCount > 0 ? `喫煙${smokingRoomsCount}室` : ''}${smokingRoomsCount > 0 && nonSmokingRoomsCount > 0 ? ' / ' : ''}${nonSmokingRoomsCount > 0 ? `禁煙${nonSmokingRoomsCount}室` : ''}            プラン：${weekdayPlanNamesList || '未設定'}
-            土日：${weekendPlanNamesList || '未設定'}
-駐車場：${parkingCount > 0 ? `${parkingCount}台` : '未設定'}
-            清算方法：${paymentDetails}　※現地決済の場合は${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}も反映備考：${info.comment || 'キャンセルポリシー説明済'}
+TEL/FAX：${clientPhone}/${clientFax}
+予約担当者：${info.responsible_person_name || '未設定'}
+宿泊者：${guestNames}
+部屋番号：${uniqueRoomNumbers}
+宿泊期間：${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)})-${checkOutDate} (${getJapaneseWeekday(info.check_out)})
+人数：${props.groupedRooms.length}室　${info.reservation_number_of_people}名
+喫煙/禁煙: ${smokingRoomsCount > 0 ? `喫煙${smokingRoomsCount}室` : ''}${smokingRoomsCount > 0 && nonSmokingRoomsCount > 0 ? ' / ' : ''}${nonSmokingRoomsCount > 0 ? `禁煙${nonSmokingRoomsCount}室` : ''}
+プラン：${weekdayPlanNamesList || '未設定'}
+${weekendPlanNamesList ? `土日：${weekendPlanNamesList}
+` : ''}駐車場：${parkingCount > 0 ? `${parkingCount}台` : '未設定'}
+清算方法：${paymentDetails}　※現地決済の場合は${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}も反映
+備考：${info.comment || 'キャンセルポリシー説明済'}
 現場：${info.site_name || '未設定'}
 予約経路：${translateType(info.type)}`;
     console.log('Generated Slack message:', slackMessage.value);
@@ -286,23 +293,23 @@ const weekendPlanNamesList = computed(() => {
 });
 
 const parkingDetails = computed(() => {
+    console.log('parkingDetails computed property - props.parking_reservations:', props.parking_reservations);
     let parkingCount = 0;
-    if (props.parking_reservations && props.parking_reservations.parking && props.parking_reservations.parking.length > 0) {
-        parkingCount = props.parking_reservations.parking.length;
+    if (props.parking_reservations?.parking?.length > 0) {
+        const uniqueSpots = new Set();
+        props.parking_reservations.parking.forEach(p => {
+            if (p.spot_number) {
+                uniqueSpots.add(p.spot_number);
+            }
+        });
+        parkingCount = uniqueSpots.size;
     }
     return parkingCount > 0 ? `${parkingCount}台` : '未設定';
 });
 
 const paymentDetailsDisplay = computed(() => {
     const info = props.reservationInfo;
-    let totalOnSitePayment = 0;
-    if (props.reservation_payments && props.reservation_payments.length > 0) {
-        props.reservation_payments.forEach(payment => {
-            if (payment.payment_method === '現地決済') {
-                totalOnSitePayment += payment.amount;
-            }
-        });
-    }
+    const totalOnSitePayment = calculateTotalOnSitePayment(props.reservation_payments);
     const translatedPaymentTiming = translatePaymentTiming(info.payment_timing);
     return info.payment_timing === 'on-site' ? `${translatedPaymentTiming} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : translatedPaymentTiming;
 });
@@ -315,10 +322,11 @@ const roomDetailsForDisplay = computed(() => {
     if (props.groupedRooms && props.groupedRooms.length > 0) {
         props.groupedRooms.forEach(group => {
             group.details.forEach(detail => {
-                const date = formatDate(new Date(detail.date)); // Assuming detail.date is available
+                const date = detail.date ? formatDate(new Date(detail.date)) : '未設定';
+                const weekday = detail.date ? getJapaneseWeekday(detail.date) : '';
                 if (!detailsByDate[date]) {
                     detailsByDate[date] = {
-                        date: `${date} (${getJapaneseWeekday(detail.date)})`,
+                        date: `${date} ${weekday ? `(${weekday})` : ''}`,
                         non_smoking_rooms: 0,
                         smoking_rooms: 0,
                         plan_name: new Set(), // Use a Set to collect unique plan names for the date
