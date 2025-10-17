@@ -323,7 +323,7 @@ const compareDates = async () => {
     isLoading.value = false;
 };
 const getBadgeProps = (change) => {
-    if (!isFinite(change)) { // Handles null, undefined, NaN
+    if (!isFinite(change) || change === 0) { // Handles null, undefined, NaN
         return { value: '0%', severity: 'secondary' };
     }
     if (change === Infinity) {
@@ -333,7 +333,7 @@ const getBadgeProps = (change) => {
         return { value: '-∞%', severity: 'danger' };
     }
     const value = change.toFixed(2) + '%';
-    const severity = change > 0 ? 'success' : (change < 0 ? 'danger' : 'info');
+    const severity = change > 0 ? 'success' : (change < 0 ? 'danger' : 'secondary');
     return { value, severity };
 };
 
