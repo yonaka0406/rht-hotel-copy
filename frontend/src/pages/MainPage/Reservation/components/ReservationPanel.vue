@@ -653,7 +653,7 @@ const groupedRooms = computed(() => {
     const groups = {};
 
     props.reservation_details.forEach((item) => {
-        const key = `${item.room_id}-${item.room_type}`;
+        const key = `${item.room_id}-${item.room_type_name}`;
         if (!groups[key]) {
             groups[key] = { room_id: item.room_id, room_type: item.room_type_name, details: [] };
         }
