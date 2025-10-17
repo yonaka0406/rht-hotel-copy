@@ -2728,8 +2728,10 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     }
 
     let reservationType = 'ota';
-    if (BasicInformation.TravelAgencyBookingNumber && BasicInformation.TravelAgencyBookingNumber.startsWith('TY')) {
-        reservationType = 'web';
+    if (
+      BasicInformation.TravelAgencyBookingNumber && (BasicInformation.TravelAgencyBookingNumber.startsWith('TY') || agentName === 'tripla株式会社')
+    ) {
+      reservationType = 'web';
     }
 
     // Insert reservations
