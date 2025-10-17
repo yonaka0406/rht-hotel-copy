@@ -8,7 +8,10 @@
           <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ metric.title }}</span>
         </template>
         <template #content>
-          <p class="text-3xl font-bold text-gray-800 dark:text-white pt-1">{{ metric.count }}</p>
+          <p v-if="!isLoading" class="text-3xl font-bold text-gray-800 dark:text-white pt-1">{{ metric.count }}</p>
+          <div v-else class="flex justify-center">
+            <Skeleton width="3rem" height="2rem" class="mt-1"></Skeleton>
+          </div>
         </template>
       </Card>
     </div>
@@ -18,11 +21,16 @@
 <script setup>
 import { computed } from 'vue';
 import Card from 'primevue/card';
+import Skeleton from 'primevue/skeleton';
 
 const props = defineProps({
   roomGroups: {
     type: Array,
     required: true,
+  },
+  isLoading: {
+    type: Boolean,
+    default: false,
   },
 });
 

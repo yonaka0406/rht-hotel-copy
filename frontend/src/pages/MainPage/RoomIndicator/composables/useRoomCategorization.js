@@ -16,10 +16,6 @@ export function useRoomCategorization(selectedDate) {
 
     const allReservations = reservedRoomsDayView.value?.filter(room => room.cancelled === null) || [];
 
-
-
-
-
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
     const blockedRooms = allReservations
       .filter(room => room.status === 'block')
@@ -48,24 +44,24 @@ export function useRoomCategorization(selectedDate) {
       checkIn: [],
       occupied: []
     };
-    
+
     // console.log("[useRoomCategorization] All Reservations:", allReservations);
     allReservations.forEach(room => {
       // console.log("[useRoomCategorization] Processing room:", room.room_id, "Reservation ID:", room.id);
       // console.log("[useRoomCategorization] Room details:", room);
       if (room.status === 'block') return; // Already handled
-      
+
       const checkInDate = new Date(room.check_in);
       const checkOutDate = new Date(room.check_out);
-      
+
       if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
         console.warn('[useRoomCategorization] Invalid checkInDate or checkOutDate for room:', room);
         return;
       }
-      
+
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
-      
+
       // console.log(`[useRoomCategorization] Room ${room.room_id}: isCheckInToday=${isCheckInToday}, isCheckOutToday=${isCheckOutToday}`);
       // Priority 1: Check-out today (highest priority)
       if (isCheckOutToday) {
@@ -84,8 +80,8 @@ export function useRoomCategorization(selectedDate) {
         }
       }
       // Priority 3: Currently allocated/reserved for this date (regardless of check-in status)
-      else if (checkInDate <= selectedDateObj && 
-              checkOutDate > selectedDateObj) {
+      else if (checkInDate <= selectedDateObj &&
+        checkOutDate > selectedDateObj) {
         // Room is allocated/reserved for this date period
         if (!categorizedRooms.occupied.some(existingRoom => existingRoom.room_id === room.room_id)) {
           categorizedRooms.occupied.push(room);
@@ -111,11 +107,11 @@ export function useRoomCategorization(selectedDate) {
 
       // If there's a conflict (e.g., room change), find the correct rooms.
       // The correct rooms are those the guest occupies on the night before checkout.
-      
+
       // The check_out date string is in UTC. We need to parse it into a Date object,
       // which will represent the date in the browser's local timezone (JST for the user).
       const localCheckOutDate = new Date(group[0].check_out);
-      
+
       // Get the date for the day before checkout.
       const dayBeforeCheckout = new Date(localCheckOutDate);
       dayBeforeCheckout.setDate(localCheckOutDate.getDate() - 1);
@@ -139,7 +135,7 @@ export function useRoomCategorization(selectedDate) {
           finalRooms = group;
         }
       }
-      
+
       return finalRooms;
     }).filter(Boolean);
 
@@ -152,29 +148,13 @@ export function useRoomCategorization(selectedDate) {
       ...categorizedRooms.occupied.map(room => room.room_id)
       // NOTE: We DON'T exclude check-out rooms because they become free after checkout
     ]);
-    
-    // Also exclude rooms that have reservations overlapping this date (but not checking out today)
-    allReservations.forEach(room => {
-      if (room.status === 'block') return;
-      
-      const checkInDate = new Date(room.check_in);
-      const checkOutDate = new Date(room.check_out);
-      const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
-      
-      if (!isNaN(checkInDate.getTime()) && !isNaN(checkOutDate.getTime()) && 
-          checkInDate <= selectedDateObj && checkOutDate > selectedDateObj &&
-          !isCheckOutToday && // Don't exclude if checking out today (becomes free)
-          !unavailableRoomIds.has(room.room_id)) {
-        unavailableRoomIds.add(room.room_id);
-      }
-    });
 
-    const freeRooms = selectedHotelRooms.value?.filter((room) => 
-      room.room_for_sale_idc === true && 
+        // Note: categorizedRooms.occupied already contains overlapping rooms (excluding check-outs)
+        // and is already included in unavailableRoomIds above, so no additional exclusion needed.
+    const freeRooms = selectedHotelRooms.value?.filter((room) =>
+      room.room_for_sale_idc === true &&
       !unavailableRoomIds.has(room.room_id)
-    ) || [];
-
-    const result = [
+    ) || []; const result = [
       { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
       { title: '本日チェックアウト', rooms: categorizedRooms.checkOut, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
       { title: '滞在', rooms: categorizedRooms.occupied, color: 'bg-yellow-100', darkColor: 'dark:bg-yellow-900/30' },

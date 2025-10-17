@@ -3,7 +3,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 items-center">
 
       <div class="lg:col-span-4">
-        <SummaryMetricsPanel :roomGroups="roomGroups" />
+        <SummaryMetricsPanel :roomGroups="roomGroups" :isLoading="isLoading" />
       </div>
 
       <div class="lg:col-span-3 flex lg:justify-center items-start">
@@ -43,7 +43,7 @@
 
 <script setup>
   // Vue
-  import { ref, computed, watch, onUnmounted, onErrorCaptured } from 'vue';
+  import { ref, computed, watch, onUnmounted, onErrorCaptured, onMounted } from 'vue';
   import { useRouter } from 'vue-router';
   const router = useRouter(); 
   import RoomGroupPanel from './components/RoomGroupPanel.vue';
@@ -76,6 +76,26 @@
       
   const isUpdating = ref(false);
   const isLoading = ref(false);
+
+  onMounted(async () => {
+    isLoading.value = true;
+    try {
+      await fetchHotels(); // Fetch all hotels and set selectedHotelId
+      if (selectedHotelId.value) {
+        await fetchHotel(); // Fetch rooms for the selected hotel
+      }
+    } catch (error) {
+      console.error('Failed to load hotel data:', error);
+      toast.add({
+        severity: 'error',
+        summary: 'エラー',
+        detail: 'ホテルデータの読み込みに失敗しました。ページを更新してください。',
+        life: 5000
+      });
+    } finally {
+      isLoading.value = false;
+    }
+  });
 
   const { reservationDrawerRef, selectedDate, handleReservationUpdated, openNewReservation, openEditReservation } = useReservationActions();
 

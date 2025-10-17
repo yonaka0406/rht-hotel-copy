@@ -73,7 +73,6 @@ export function useHotelStore() {
         }
     };
     const fetchHotel = async () => {
-        
         if (hotels.value.length > 0 && !selectedHotelId.value) {
             // console.log('From Hotel Store => No hotel was previously selected.');
             selectedHotelId.value = hotels.value[0].id;
@@ -240,7 +239,7 @@ export function useHotelStore() {
         if (newHotelId) {
             // console.log('From Hotel Store => selectedHotelId changed.');
             // fetchHotel when necessary
-            // fetchHotel(); // Re-fetch hotel and rooms when the hotel ID changes
+            fetchHotel(); // Re-fetch hotel and rooms when the hotel ID changes
         }
     });
 
