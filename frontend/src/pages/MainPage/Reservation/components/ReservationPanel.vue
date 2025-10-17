@@ -448,6 +448,19 @@
         :reservationDetails="reservation_details" 
         v-if="reservation_details?.length > 0"
     />
+
+    <ReservationAnnounceDialog
+        v-model:visible="visibleSlackDialog"
+        :reservationInfo="reservationInfo"
+        :groupedRooms="groupedRooms"
+        :paymentTimingSelected="paymentTimingSelected"
+        :reservationType="reservationType"
+        :checkInTime="checkInTime"
+        :parking_reservations="props.parking_reservations"
+        :reservation_payments="props.reservation_payments"
+        ref="reservationAnnounceDialogRef"
+    />
+
 </template>
 
 <script setup>
@@ -462,6 +475,7 @@ import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialo
 
 import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
 import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAddRoomDialog.vue';
+import ReservationAnnounceDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAnnounceDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
 // Primevue
@@ -475,6 +489,7 @@ import {
 } from 'primevue';
 
 const reservationAddRoomDialogRef = ref(null);
+const reservationAnnounceDialogRef = ref(null);
 
 const props = defineProps({
     reservation_id: {
@@ -484,6 +499,14 @@ const props = defineProps({
     reservation_details: {
         type: [Object],
         required: true,
+    },
+    parking_reservations: {
+        type: [Object, Array],
+        default: () => ({}),
+    },
+    reservation_payments: {
+        type: [Object, Array],
+        default: () => [],
     },
 });
 
@@ -1121,6 +1144,7 @@ const showHistoryDialog = () => {
 
 const showCancellationCalculator = ref(false);
 const showCopyDialog = ref(false);
+const visibleSlackDialog = ref(false);
 
 // Tab Apply Plan
 const isPatternInput = ref(false);
@@ -1406,6 +1430,11 @@ const actionOptions = [
         label: '予約を複製',
         icon: 'pi pi-copy',
         command: () => { showCopyDialog.value = true; }
+    },
+    {
+        label: '予約報告書',
+        icon: 'pi pi-slack',
+        command: () => { visibleSlackDialog.value = true; }
     }
 ];
 const onActionClick = () => {
@@ -1430,6 +1459,12 @@ onMounted(async () => {
     numberOfNights.value = (new Date(reservationInfo.value.check_out) - new Date(reservationInfo.value.check_in)) / (1000 * 60 * 60 * 24);
     numberOfNightsTotal.value = reservationInfo.value.reservation_number_of_people * numberOfNights.value;
 });
+
+const openSlackDialog = () => {
+    visibleSlackDialog.value = true;
+};
+
+// Watcher
 
 // Watcher
 watch(addons, (newValue, oldValue) => {
