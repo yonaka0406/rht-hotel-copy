@@ -9,13 +9,14 @@
                 </TabList>
                 <TabPanels>
                     <TabPanel value="0">
-                        <Card>
+                        <Message severity="info" :closable="false">データは毎日16時30分に更新されますが、「ロード」ボタンをクリックすることでそれ以前に手動で更新できます。</Message>
+                        <Card class="mt-4">
                             <template #content>
                                 <div class="grid grid-cols-12 gap-4 items-end">
                                     <div class="col-span-4">
                                         <FloatLabel>
                                             <DatePicker v-model="selectedDate" dateFormat="yy/mm/dd" class="w-full"
-                                                :minDate="minDate" :maxDate="maxDate" />
+                                                :minDate="minDateDailyReport" :maxDate="maxDateDailyReport" />
                                             <label>日付</label>
                                         </FloatLabel>
                                     </div>
@@ -27,20 +28,21 @@
                         </Card>
                     </TabPanel>
                     <TabPanel value="1">
-                        <Card>
+                        <Message severity="info" :closable="false" v-if="showComparisonDataNotReadyMessage">本日のデータはまだ利用できません。「日次レポート」タブで手動で更新できます。</Message>
+                        <Card :class="{ 'mt-4': showComparisonDataNotReadyMessage }">
                             <template #content>
                                 <div class="grid grid-cols-12 gap-4 items-end">
                                     <div class="col-span-4">
                                         <FloatLabel>
                                             <DatePicker v-model="date1" dateFormat="yy/mm/dd" class="w-full"
-                                                :minDate="minDate" :maxDate="maxDate" />
+                                                :minDate="minDateComparison" :maxDate="maxDateComparison" />
                                             <label>日付1</label>
                                         </FloatLabel>
                                     </div>
                                     <div class="col-span-4">
                                         <FloatLabel>
                                             <DatePicker v-model="date2" dateFormat="yy/mm/dd" class="w-full"
-                                                :minDate="minDate" :maxDate="maxDate" />
+                                                :minDate="minDateComparison" :maxDate="maxDateComparison" />
                                             <label>日付2</label>
                                         </FloatLabel>
                                     </div>
@@ -69,7 +71,7 @@
                             :rowsPerPageOptions="[5, 10, 20, 50]" tableStyle="min-width: 50rem"
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport PaginatorEnd"
                             currentPageReportTemplate="{first}-{last} of {totalRecords}"
-                            :exportFilename="`daily_report_${loadedDateTitle.split(' - ')[1]}`">
+                            :exportFilename="`daily_report_${loadedDate}`">
                             <template #paginatorend> <!-- Use #paginatorend slot -->
                                 <Button type="button" icon="pi pi-download" text @click="dt.exportCSV()"
                                     :disabled="!reportData.length" label="CSVダウンロード" />
@@ -94,7 +96,7 @@
 
             <div class="col-span-12">
                 <DailyReportConfirmedReservationsChart :reportData="reportData"
-                    :metricDate="loadedDateTitle.split(' - ')[1]" />
+                    :metricDate="loadedDate" />
             </div>
         </div>
 
@@ -193,6 +195,7 @@ import Card from 'primevue/card';
 import Badge from 'primevue/badge';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
+import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import DailyReportConfirmedReservationsChart from './charts/DailyReportConfirmedReservationsChart.vue'; // Import Card component
@@ -219,10 +222,13 @@ const {
 } = useReportStore();
 
 const selectedDate = ref(new Date());
-const minDate = ref(null);
-const maxDate = ref(new Date());
+const minDateDailyReport = ref(null);
+const maxDateDailyReport = ref(new Date());
+const minDateComparison = ref(null);
+const maxDateComparison = ref(new Date());
 const dt = ref();
-const loadedDateTitle = ref('レポートデータ'); // New reactive variable for card title
+const loadedDateTitle = ref('レポートデータ');
+const loadedDate = ref(''); // New reactive variable for card title
 const activeTab = ref(0);
 const comparisonData = ref({});
 
@@ -341,8 +347,14 @@ onMounted(async () => {
     await getAvailableMetricDates();
     if (availableDates.value.length > 0) {
         const sortedDates = [...availableDates.value].sort((a, b) => a.getTime() - b.getTime());
-        minDate.value = sortedDates[0];
-        selectedDate.value = availableDates.value[0];
+        minDateDailyReport.value = sortedDates[0];
+        maxDateDailyReport.value = new Date(); // Max date for daily report is today
+        minDateComparison.value = sortedDates[0];
+        maxDateComparison.value = sortedDates[sortedDates.length - 1]; // Max date for comparison is latest available metric date
+
+        selectedDate.value = sortedDates[sortedDates.length - 1]; // Default to latest date for daily report
+        date2.value = sortedDates[sortedDates.length - 1]; // Default date2 to latest available date
+        date1.value = sortedDates.length > 1 ? sortedDates[sortedDates.length - 2] : sortedDates[0]; // Default date1 to second latest or minDate
     }
 });
 
@@ -364,10 +376,10 @@ const loadReport = async () => { // Made async to await getDailyReportData
     }
 
     loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
+    loadedDate.value = date;
 };
 
 const exportComparisonToExcel = async () => {
-
     if (!comparedDate1.value || !comparedDate2.value) {
         toast.add({ severity: 'warn', summary: '警告', detail: '比較する日付が設定されていません。先に日付を比較してください。', life: 3000 });
         return;
@@ -377,7 +389,8 @@ const exportComparisonToExcel = async () => {
         await downloadDailyReportExcel(comparedDate1.value, comparedDate2.value);
         toast.add({ severity: 'success', summary: '成功', detail: 'Excelファイルが正常にダウンロードされました。', life: 3000 });
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'エラー', detail: 'Excelファイルのダウンロードに失敗しました。', life: 3000 });
+        const errorMessage = error.message || JSON.stringify(error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: `Excelファイルのダウンロードに失敗しました: ${errorMessage}`, life: 3000 });
     }
 };
 const processedReportData = computed(() => {
@@ -394,5 +407,9 @@ const hotelNameOptions = computed(() => {
 
 const monthOptions = computed(() => {
     return [...new Set(comparisonData.value.map(item => item.month))];
+});
+
+const showComparisonDataNotReadyMessage = computed(() => {
+    return maxDateComparison.value && maxDateDailyReport.value && maxDateComparison.value.getTime() < maxDateDailyReport.value.getTime();
 });
 </script>
