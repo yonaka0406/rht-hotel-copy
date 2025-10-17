@@ -15,6 +15,7 @@ import { useToast } from 'primevue/usetoast';
 import {
     Dialog, Textarea, Button
 } from 'primevue';
+import { translatePaymentTiming } from '@/utils/reservationUtils';
 
 const toast = useToast();
 
@@ -31,6 +32,14 @@ const props = defineProps({
     paymentTimingSelected: String,
     reservationType: String,
     checkInTime: String,
+    parking_reservations: {
+        type: [Object, Array],
+        default: () => ({}),
+    },
+    reservation_payments: {
+        type: [Array, Object],
+        default: () => [],
+    },
 });
 
 const emit = defineEmits(['update:visible']);
@@ -68,9 +77,9 @@ const generateSlackMessage = () => {
 
     // Extract client details
     const clientName = info.client_name || '';
-    const clientTel = info.client_tel || '';
+    const clientPhone = info.client_phone || '';
     const clientFax = info.client_fax || '';
-    console.log('clientName:', clientName, 'clientTel:', clientTel, 'clientFax:', clientFax);
+    console.log('clientName:', clientName, 'clientPhone:', clientPhone, 'clientFax:', clientFax);
 
     // Room details
     let roomNumbers = new Set(); // Use a Set to store unique room numbers
@@ -102,33 +111,29 @@ const generateSlackMessage = () => {
     const checkOutDate = info.check_out ? formatDate(new Date(info.check_out)) : '';
     console.log('checkInDate:', checkInDate, 'checkOutDate:', checkOutDate);
 
-        // Payment
+            // Payment
 
-        let totalOnSitePayment = 0;
+            let totalOnSitePayment = 0;
 
-        if (props.reservation_payments && props.reservation_payments.length > 0) {
+            if (props.reservation_payments && props.reservation_payments.length > 0) {
 
-            props.reservation_payments.forEach(payment => {
+                props.reservation_payments.forEach(payment => {
 
-                if (payment.payment_method === '現地決済') { // Assuming '現地決済' is the value for on-site payment
+                    if (payment.payment_method === '現地決済') { // Assuming '現地決済' is the value for on-site payment
 
-                    totalOnSitePayment += payment.amount;
+                        totalOnSitePayment += payment.amount;
 
-                }
+                    }
 
-            });
+                });
 
-        }
+            }
 
-        let paymentDetails = props.paymentTimingSelected === 'on-site' ? `現地決済 ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : props.paymentTimingSelected;
+            const translatedPaymentTiming = translatePaymentTiming(props.paymentTimingSelected);
 
-        if (paymentDetails === 'not_set') paymentDetails = '未設定';
+            let paymentDetails = props.paymentTimingSelected === 'on-site' ? `${translatedPaymentTiming} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : translatedPaymentTiming;
 
-        if (paymentDetails === 'prepaid') paymentDetails = '事前決済';
-
-        if (paymentDetails === 'postpaid') paymentDetails = '後払い';
-
-        console.log('paymentDetails:', paymentDetails, 'total_price:', info.total_price);
+            console.log('paymentDetails:', paymentDetails, 'total_price:', info.total_price);
 
     
 
@@ -146,39 +151,39 @@ const generateSlackMessage = () => {
 
         // Construct the message
 
-        slackMessage.value = `【${clientName}】
+            slackMessage.value = `【${clientName}】
 
-    会社名/個人名：${clientName}
+        会社名/個人名：${clientName}
 
-    予約担当者：${info.responsible_person_name || '未設定'}
+        予約担当者：${info.responsible_person_name || '未設定'}
 
-    TEL/FAX：${clientTel}/${clientFax}
+        TEL/FAX：${clientPhone}/${clientFax}
 
-    部屋番号：${uniqueRoomNumbers}
+        部屋番号：${uniqueRoomNumbers}
 
-    宿泊期間：${checkInDate}-${checkOutDate}out
+        宿泊期間：${checkInDate}-${checkOutDate}out
 
-    人数：${props.groupedRooms.length}室　${info.reservation_number_of_people}名
+        人数：${props.groupedRooms.length}室　${info.reservation_number_of_people}名
 
-    喫煙/禁煙：喫煙${smokingRooms}室/禁煙${nonSmokingRooms}室
+        喫煙/禁煙：喫煙${smokingRooms}室/禁煙${nonSmokingRooms}室
 
-    プラン：${Array.from(planNames).join(', ')}
+        プラン：${Array.from(planNames).join(', ')}
 
-    土日：${info.weekend_stay || '未設定'}
+        土日：${info.weekend_stay || '未設定'}
 
-    駐車場：${parkingCount > 0 ? `${parkingCount}台` : '未設定'}
+        駐車場：${parkingCount > 0 ? `${parkingCount}台` : '未設定'}
 
-    現地決済：${paymentDetails}　※現地決済の場合は${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}も反映
+        現地決済：${paymentDetails}　※現地決済の場合は${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}も反映
 
-    備考：${info.comment || 'キャンセルポリシー説明済'}
+        備考：${info.comment || 'キャンセルポリシー説明済'}
 
-    チェックイン時間：${formatTime(props.checkInTime)}
+        チェックイン時間：${formatTime(props.checkInTime)}
 
-    現場：${info.site_name || '未設定'}
+        現場：${info.site_name || '未設定'}
 
-    予約経路：${props.reservationType}`;
+        予約経路：${props.reservationType}`;
 
-        console.log('Generated Slack message:', slackMessage.value);
+            console.log('Generated Slack message:', slackMessage.value);
 };
 
 const copyToClipboard = async () => {
