@@ -13,7 +13,7 @@
                         <Card class="mt-4">
                             <template #content>
                                 <div class="grid grid-cols-12 gap-4 items-end">
-                                    <div class="col-span-4">
+                                    <div class="col-span-4 mt-6">
                                         <FloatLabel>
                                             <DatePicker v-model="selectedDate" dateFormat="yy/mm/dd" class="w-full"
                                                 :minDate="minDateDailyReport" :maxDate="maxDateDailyReport" />
@@ -32,14 +32,14 @@
                         <Card :class="{ 'mt-4': showComparisonDataNotReadyMessage }">
                             <template #content>
                                 <div class="grid grid-cols-12 gap-4 items-end">
-                                    <div class="col-span-4">
+                                    <div class="col-span-4 mt-6">
                                         <FloatLabel>
                                             <DatePicker v-model="date1" dateFormat="yy/mm/dd" class="w-full"
                                                 :minDate="minDateComparison" :maxDate="maxDateComparison" />
                                             <label>日付1</label>
                                         </FloatLabel>
                                     </div>
-                                    <div class="col-span-4">
+                                    <div class="col-span-4 mt-6">
                                         <FloatLabel>
                                             <DatePicker v-model="date2" dateFormat="yy/mm/dd" class="w-full"
                                                 :minDate="minDateComparison" :maxDate="maxDateComparison" />
@@ -55,6 +55,7 @@
                     </TabPanel>
                 </TabPanels>
             </Tabs>
+            <Message severity="warn" :closable="false" v-if="showNoReportDataMessage" class="mt-4">レポートの種類を選択してください。</Message>
         </div>
 
         <div class="col-span-12" v-if="isLoading">
@@ -356,6 +357,7 @@ onMounted(async () => {
         date2.value = sortedDates[sortedDates.length - 1]; // Default date2 to latest available date
         date1.value = sortedDates.length > 1 ? sortedDates[sortedDates.length - 2] : sortedDates[0]; // Default date1 to second latest or minDate
     }
+
 });
 
 const loadReport = async () => { // Made async to await getDailyReportData
@@ -411,5 +413,9 @@ const monthOptions = computed(() => {
 
 const showComparisonDataNotReadyMessage = computed(() => {
     return maxDateComparison.value && maxDateDailyReport.value && maxDateComparison.value.getTime() < maxDateDailyReport.value.getTime();
+});
+
+const showNoReportDataMessage = computed(() => {
+    return !reportData.value.length && !comparisonData.value.length;
 });
 </script>
