@@ -726,11 +726,6 @@ const groupedRooms = computed(() => {
         groups[key].details.push(item);
     });
 
-    // Add console.log for debugging
-    Object.values(groups).forEach(group => {
-        console.log('Group Detail 0:', group.details[0]);
-    });
-
     return Object.values(groups);
 });
 const allRoomsHavePlan = computed(() => {
