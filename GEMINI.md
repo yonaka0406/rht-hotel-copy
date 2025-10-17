@@ -38,7 +38,7 @@ RHT Hotel is a comprehensive hotel property management system designed to stream
   - **Charting:** ECharts (`^5.6.0`) with `vue-echarts`
   - **Utilities:** `socket.io-client`, `papaparse` (CSV parsing)
 
-- **DevOps & Infrastructure:**
+- **DevOps & Infrastructure:
   - **Containerization:** Docker, Docker Compose
   - **Process Management:** PM2 (production), Nodemon (development)
 
@@ -215,3 +215,23 @@ frontend/src/
     -   **Composable Extraction:** Move complex business logic from `<script setup>` into reusable composable functions (e.g., `src/composables/useReservations.js`).
 
 **Note:** If you encounter issues with password prompts, ensure your `api/.env` file (or environment variables) correctly sets `POSTGRES_PASSWORD`. By default, it's `password`.
+
+## 12. Database Backup Commands
+
+Here are the commands used to create a backup of a table from the database container and copy it to the local machine.
+
+### Step 1: Create the backup file inside the container
+
+This command executes `pg_dump` inside the `db` container to create a SQL backup of a specific table. The output is redirected to a file inside the container's `/tmp` directory. This method is reliable for large tables as it avoids potential issues with terminal output truncation.
+
+```bash
+docker-compose exec -T db sh -c "pg_dump -U postgres -d wehub -t daily_plan_metrics --data-only --column-inserts --encoding=UTF8 > /tmp/daily_plan_metrics_backup.sql"
+```
+
+### Step 2: Copy the backup file to the local machine
+
+This command copies the backup file created in the previous step from the container to the local machine's `temp` directory.
+
+```bash
+docker cp wehub-db:/tmp/daily_plan_metrics_backup.sql C:\Users\almeida.ped_redhorse\Documents\GitHub\rht-hotel\temp
+```
