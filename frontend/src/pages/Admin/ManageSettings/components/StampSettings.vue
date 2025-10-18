@@ -35,7 +35,10 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useToast } from 'primevue/usetoast';
-import { Card, Button, Image, InputText } from "primevue";
+import Card from 'primevue/card';
+import Button from 'primevue/button';
+import Image from 'primevue/image';
+import InputText from 'primevue/inputtext';
 import { useSettingsStore } from '@/composables/useSettingsStore';
 
 const toast = useToast();

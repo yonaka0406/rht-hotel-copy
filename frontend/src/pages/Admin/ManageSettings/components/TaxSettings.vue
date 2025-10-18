@@ -76,14 +76,27 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useToast } from 'primevue/usetoast';
-import { Card, Button, DataTable, Column, Dialog, FloatLabel, InputText, InputNumber, ToggleSwitch, Textarea } from "primevue";
+import Card from 'primevue/card';
+import Button from 'primevue/button';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Dialog from 'primevue/dialog';
+import FloatLabel from 'primevue/floatlabel';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import ToggleSwitch from 'primevue/toggleswitch';
+import Textarea from 'primevue/textarea';
 import { useSettingsStore } from '@/composables/useSettingsStore';
 
 const toast = useToast();
 const { taxTypes, fetchTaxTypes, createTaxType, alterTaxTypeVisibility, alterTaxTypeDescription } = useSettingsStore();
 
 const showTaxDialog = ref(false);
-const newTaxData = ref(null);
+const newTaxData = ref({
+    name: '',
+    description: '',
+    percentage: 0
+});
 
 const resetNewTaxData = () => {
     newTaxData.value = { 
@@ -98,7 +111,7 @@ const addNewTaxData = async () => {
         toast.add({ severity: 'warn', summary: '入力エラー', detail: '名称を入力してください。', life: 3000 });
         return;
     }
-    const nameExists = taxTypes.value.some(tt => tt.name === newTaxData.value.name);
+    const nameExists = taxTypes.value?.some(tt => tt.name === newTaxData.value.name) || false;
     if (nameExists) {
         toast.add({ severity: 'warn', summary: '入力エラー', detail: 'この名称はすでに存在します。', life: 3000 });
         return;
@@ -106,12 +119,16 @@ const addNewTaxData = async () => {
 
     const processedTaxData = { ...newTaxData.value, percentage: newTaxData.value.percentage / 100 };
 
-    await createTaxType(processedTaxData);
-    toast.add({ severity: 'success', summary: '新規追加', detail: '税区分が追加されました。', life: 3000 });
-    
-    resetNewTaxData();
-    await fetchTaxTypes();
-    showTaxDialog.value = false;
+    try {
+        await createTaxType(processedTaxData);
+        toast.add({ severity: 'success', summary: '新規追加', detail: '税区分が追加されました。', life: 3000 });
+        
+        resetNewTaxData();
+        await fetchTaxTypes();
+        showTaxDialog.value = false;
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '作成に失敗しました。', life: 3000 });
+    }
 };
 
 const updateTaxDescription = async (taxType) => {
@@ -120,6 +137,7 @@ const updateTaxDescription = async (taxType) => {
         toast.add({ severity: 'success', summary: '更新完了', detail: '詳細を更新しました。', life: 3000 });
     } catch (error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '詳細の更新に失敗しました。', life: 3000 });
+        await fetchTaxTypes();
     }
 };
 
@@ -134,6 +152,5 @@ const toggleTaxVisibility = async (taxType) => {
 
 onMounted(async () => {
     await fetchTaxTypes();
-    resetNewTaxData();
 });
 </script>

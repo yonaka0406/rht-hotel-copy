@@ -9,7 +9,7 @@
 </template>
 
 <script setup>
-import { Panel } from "primevue";
+import Panel from 'primevue/panel';
 import PaymentSettings from './components/PaymentSettings.vue';
 import TaxSettings from './components/TaxSettings.vue';
 import StampSettings from './components/StampSettings.vue';

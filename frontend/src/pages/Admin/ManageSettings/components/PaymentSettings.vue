@@ -100,7 +100,17 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useToast } from 'primevue/usetoast';
-import { Card, Tag, Button, DataTable, Column, Dialog, FloatLabel, InputText, ToggleSwitch, Select, Textarea } from "primevue";
+import Card from 'primevue/card';
+import Tag from 'primevue/tag';
+import Button from 'primevue/button';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Dialog from 'primevue/dialog';
+import FloatLabel from 'primevue/floatlabel';
+import InputText from 'primevue/inputtext';
+import ToggleSwitch from 'primevue/toggleswitch';
+import Select from 'primevue/select';
+import Textarea from 'primevue/textarea';
 import { useSettingsStore } from '@/composables/useSettingsStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 
@@ -109,7 +119,12 @@ const { paymentTypes, fetchPaymentTypes, createPaymentType, alterPaymentTypeVisi
 const { hotels, fetchHotels } = useHotelStore();
 
 const showPaymentDialog = ref(false);
-const newPaymentData = ref(null);
+const newPaymentData = ref({
+    name: '',
+    description: '',
+    transaction: 'cash',
+    hotel_id: null
+});
 const transactionOptions = [
     { label: '現金', value: 'cash', color: '#28a745' },
     { label: '振込', value: 'wire', color: '#007bff' },
@@ -133,7 +148,7 @@ const addNewPaymentData = async () => {
         toast.add({ severity: 'warn', summary: '入力エラー', detail: '名称を入力してください。', life: 3000 });
         return;
     }
-    const nameExists = paymentTypes.value.some(pt => pt.name === newPaymentData.value.name);
+    const nameExists = paymentTypes.value?.some(pt => pt.name === newPaymentData.value.name) || false;
     if (nameExists) {
         toast.add({ severity: 'warn', summary: '入力エラー', detail: 'この名称はすでに存在します。', life: 3000 });
         return;
@@ -144,12 +159,16 @@ const addNewPaymentData = async () => {
         return;
     }
 
-    await createPaymentType(newPaymentData.value);
-    toast.add({ severity: 'success', summary: '新規追加', detail: '支払い方法追加されました。', life: 3000 });
-    
-    resetNewPaymentData();
-    await fetchPaymentTypes();
-    showPaymentDialog.value = false;
+    try {
+        await createPaymentType(newPaymentData.value);
+        toast.add({ severity: 'success', summary: '新規追加', detail: '支払い方法追加されました。', life: 3000 });
+        
+        resetNewPaymentData();
+        await fetchPaymentTypes();
+        showPaymentDialog.value = false;
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '作成に失敗しました。', life: 3000 });
+    }
 };
 
 const getTransactionLabel = (value) => {
@@ -168,6 +187,7 @@ const updatePaymentDescription = async (paymentType) => {
         toast.add({ severity: 'success', summary: '更新完了', detail: '詳細を更新しました。', life: 3000 });
     } catch (error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '詳細の更新に失敗しました。', life: 3000 });
+        await fetchPaymentTypes();
     }
 };
 
@@ -183,6 +203,5 @@ const togglePaymentVisibility = async (paymentType) => {
 onMounted(async () => {
     await fetchPaymentTypes();
     await fetchHotels();
-    resetNewPaymentData();
 });
 </script>
