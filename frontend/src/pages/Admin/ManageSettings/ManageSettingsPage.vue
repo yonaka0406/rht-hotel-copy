@@ -4,7 +4,7 @@
             <PaymentSettings />
             <TaxSettings />
             <StampSettings />
-        </Panel> 
+        </Panel>
     </div>
 </template>
 

@@ -147,6 +147,7 @@ const toggleTaxVisibility = async (taxType) => {
         toast.add({ severity: 'success', summary: '更新完了', detail: '表示設定を変更しました。', life: 3000 });
     } catch (error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '表示設定の更新に失敗しました。', life: 3000 });
+        await fetchTaxTypes();
     }
 };
 
