@@ -34,7 +34,7 @@
             </Fieldset>
 
             <Fieldset legend="備考" class="mb-4">
-                <p>{{ reservationInfo.comment || 'キャンセルポリシー説明済' }}</p>
+                <p style="white-space: pre-wrap;">{{ reservationInfo.comment || 'キャンセルポリシー説明済' }}</p>
             </Fieldset>
 
             <Fieldset legend="部屋詳細">
