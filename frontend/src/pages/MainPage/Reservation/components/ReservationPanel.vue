@@ -685,13 +685,17 @@ const allPeopleCountMatch = (group) => {
 };
 
 const allReservationClients = computed(() => {
-    const uniqueClients = new Map(); // Use a Map to store unique clients by client_id
+    const uniqueClients = new Map();
+    let fallbackId = 0;
 
     if (props.reservation_details && props.reservation_details.length > 0) {
         props.reservation_details.forEach(detail => {
             if (detail.reservation_clients && detail.reservation_clients.length > 0) {
                 detail.reservation_clients.forEach(client => {
-                    uniqueClients.set(client.client_id, client);
+                    // Use client_id as the key if available, otherwise generate a fallback key.
+                    // This prevents clients without a client_id from overwriting each other in the Map.
+                    const key = client.client_id ? client.client_id : `fallback-${fallbackId++}`;
+                    uniqueClients.set(key, client);
                 });
             }
         });
