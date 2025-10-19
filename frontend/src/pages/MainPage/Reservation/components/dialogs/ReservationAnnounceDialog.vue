@@ -135,63 +135,51 @@ const calculateTotalOnSitePayment = (payments) => {
 };
 
 const generateSlackMessage = () => {
-    console.log('generateSlackMessage called');
     const info = props.reservationInfo;
-    console.log('Full reservationInfo prop:', info);
     if (!info) {
         slackMessage.value = '予約情報がありません。';
         return;
     }
 
-    // Extract client details
     const clientName = info.client_name || '';
     const clientPhone = info.client_phone || '';
     const clientFax = info.client_fax || '';
-
-    // Room details
-    let roomNumbers = new Set(); // Use a Set to store unique room numbers
-
-    if (props.groupedRooms && props.groupedRooms.length > 0) {
-        props.groupedRooms.forEach(group => {
-            group.details.forEach(detail => {
-                roomNumbers.add(detail.room_number); // Add room number to the Set
-            });
-        });
-    }
-    const uniqueRoomNumbers = Array.from(roomNumbers).join(', '); // Convert Set to Array and join
-
-    // Dates
+    const uniqueRoomNumbers = Array.from(new Set(props.groupedRooms.flatMap(group => group.details.map(detail => detail.room_number)))).join(', ');
     const checkInDate = info.check_in ? formatDate(new Date(info.check_in)) : '';
     const checkOutDate = info.check_out ? formatDate(new Date(info.check_out)) : '';
-
-    // Payment
     const totalOnSitePayment = calculateTotalOnSitePayment(props.reservation_payments);
     const translatedPaymentTiming = translatePaymentTiming(info.payment_timing);
     let paymentDetails = info.payment_timing === 'on-site' ? `${translatedPaymentTiming} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : translatedPaymentTiming;
+    let guestNames = '';
+    if (props.allReservationClients && props.allReservationClients.length > 0) {
+        guestNames = props.allReservationClients.map(client => client.name_kanji || client.name_kana || client.name).join(', ');
+    } else {
+        guestNames = info.client_name || '';
+    }
 
-        // Construct the message
-        let guestNames = '';
-        if (props.allReservationClients && props.allReservationClients.length > 0) {
-            guestNames = props.allReservationClients.map(client => client.name_kanji || client.name_kana || client.name).join(', ');
-        } else {
-            guestNames = info.client_name || '';
-        }
+    let message = `🗓️【${clientName}】\n`;
+    message += `📞TEL/FAX：\t${clientPhone}/${clientFax}\n`;
+    message += `🧑‍💼予約担当者：\t${info.responsible_person_name || '未設定'}\n`;    
+    message += `⏳宿泊期間：\t${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)})-${checkOutDate} (${getJapaneseWeekday(info.check_out)})\n`;
+    message += `🌐予約経路：\t${translateType(info.type)}\n`;
+    message += `🧑人数：\t${info.reservation_number_of_people}名\n`;
+    message += `宿泊者：\t${guestNames}\n\n`;
 
-        slackMessage.value = `【${clientName}】
-TEL/FAX：${clientPhone}/${clientFax}
-予約担当者：${info.responsible_person_name || '未設定'}
-宿泊者：${guestNames}
-部屋番号：${uniqueRoomNumbers}
-宿泊期間：${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)})-${checkOutDate} (${getJapaneseWeekday(info.check_out)})
-人数：${info.reservation_number_of_people}名
-部屋数: ${smokingRoomsCount.value > 0 ? `喫煙 ${smokingRoomsCount.value}室` : ''}${smokingRoomsCount.value > 0 && nonSmokingRoomsCount.value > 0 ? ' / ' : ''}${nonSmokingRoomsCount.value > 0 ? `禁煙 ${nonSmokingRoomsCount.value}室` : ''}
-プラン：${weekdayPlanNamesList.value || '未設定'}
-${weekendPlanNamesList.value ? `土日：${weekendPlanNamesList.value}\n` : ''}駐車場：${parkingDetails.value}
-清算方法：${paymentDetails} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}
-備考：${info.comment || 'キャンセルポリシー説明済'}
-現場：${info.site_name || '未設定'}
-予約経路：${translateType(info.type)}`;
-    console.log('Generated Slack message:', slackMessage.value);
+    message += `🚪部屋数:\t${smokingRoomsCount.value > 0 ? `喫煙 ${smokingRoomsCount.value}室` : ''}${smokingRoomsCount.value > 0 && nonSmokingRoomsCount.value > 0 ? ' / ' : ''}${nonSmokingRoomsCount.value > 0 ? `禁煙 ${nonSmokingRoomsCount.value}室` : ''}\n`;
+    message += `部屋番号：\t${uniqueRoomNumbers}\n\n`;
+
+    message += `🥡プラン：\t${weekdayPlanNamesList.value || '未設定'}\n`;
+    if (weekendPlanNamesList.value) {
+        message += `週末プラン：\t${weekendPlanNamesList.value}\n\n`;
+    }
+    message += `🚗駐車場：\t${parkingDetails.value}\n`;
+    message += `💰清算方法：\t${paymentDetails} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}\n`;
+    
+    
+    message += `🏢現場：\t${info.site_name || '未設定'}\n`;
+    message += `📝備考：${info.comment || 'キャンセルポリシー説明済'}`;
+
+    slackMessage.value = message;
 };
 
 const formattedCheckInDate = computed(() => props.reservationInfo.check_in ? `${formatDate(new Date(props.reservationInfo.check_in))} (${getJapaneseWeekday(props.reservationInfo.check_in)})` : '');
@@ -337,7 +325,6 @@ const roomDetailsForDisplay = computed(() => {
 
 
 const copyToClipboard = async () => {
-    console.log('Copying to clipboard:', slackMessage.value);
     try {
         await navigator.clipboard.writeText(slackMessage.value);
         toast.add({ severity: 'success', summary: '成功', detail: 'Slackメッセージをクリップボードにコピーしました。', life: 3000 });
