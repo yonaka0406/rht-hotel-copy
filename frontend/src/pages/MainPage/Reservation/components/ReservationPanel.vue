@@ -453,6 +453,7 @@
         v-model:visible="visibleSlackDialog"
         :reservationInfo="reservationInfo"
         :groupedRooms="groupedRooms"
+        :allReservationClients="allReservationClients"
         :parking_reservations="props.parking_reservations"
         :reservation_payments="props.reservation_payments"
         ref="reservationAnnounceDialogRef"
@@ -682,6 +683,22 @@ const allPeopleCountMatch = (group) => {
         (detail) => detail.number_of_people === detail.reservation_clients.length
     );
 };
+
+const allReservationClients = computed(() => {
+    const uniqueClients = new Map(); // Use a Map to store unique clients by client_id
+
+    if (props.reservation_details && props.reservation_details.length > 0) {
+        props.reservation_details.forEach(detail => {
+            if (detail.reservation_clients && detail.reservation_clients.length > 0) {
+                detail.reservation_clients.forEach(client => {
+                    uniqueClients.set(client.client_id, client);
+                });
+            }
+        });
+    }
+
+    return Array.from(uniqueClients.values());
+});
 
 const isLongTermReservation = computed(() => numberOfNights.value >= 30);
 

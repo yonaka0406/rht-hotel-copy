@@ -9,21 +9,21 @@
                     <div><strong>TEL:</strong> {{ reservationInfo.client_phone || '' }}</div>
                     <div><strong>FAX:</strong> {{ reservationInfo.client_fax || '' }}</div>
                     <div class="col-span-2"><strong>宿泊者:</strong>
-                        <template v-if="allReservationClients && allReservationClients.length > 0">
-                            <span v-for="(client, index) in allReservationClients" :key="client.client_id">
+                        <template v-if="props.allReservationClients && props.allReservationClients.length > 0">
+                            <span v-for="(client, index) in props.allReservationClients" :key="client.client_id">
                                 {{ client.name_kanji || client.name_kana || client.name }}
-                                <template v-if="index < allReservationClients.length - 1">, </template>
+                                <template v-if="index < props.allReservationClients.length - 1">, </template>
                             </span>
                             <!-- Debug log for reservation_clients -->
-                            <span style="display: none;">{{ console.log('allReservationClients:', allReservationClients) }}</span>
+                            <span style="display: none;">{{ console.log('allReservationClients:', props.allReservationClients) }}</span>
                         </template>
                         <template v-else>{{ reservationInfo.client_name }}</template>
                     </div>
-                    <div><strong>人数:</strong> {{ groupedRooms.length }}室 {{ reservationInfo.reservation_number_of_people }}名</div>
-                                        <div><strong>喫煙/禁煙: </strong>
-                                            <template v-if="smokingRoomsCount > 0">喫煙{{ smokingRoomsCount }}室</template>
+                    <div><strong>人数:</strong> {{ reservationInfo.reservation_number_of_people }}名</div>
+                                        <div><strong>部屋数: </strong>
+                                            <template v-if="smokingRoomsCount > 0">喫煙 {{ smokingRoomsCount }}室</template>
                                             <template v-if="smokingRoomsCount > 0 && nonSmokingRoomsCount > 0"> / </template>
-                                            <template v-if="nonSmokingRoomsCount > 0">禁煙{{ nonSmokingRoomsCount }}室</template>
+                                            <template v-if="nonSmokingRoomsCount > 0">禁煙 {{ nonSmokingRoomsCount }}室</template>
                                         </div>
                     <div><strong>プラン:</strong> {{ planNamesList }}</div>
                     <div v-if="weekendPlanNamesList"><strong>土日:</strong> {{ weekendPlanNamesList }}</div>
@@ -73,6 +73,10 @@ const props = defineProps({
     groupedRooms: {
         type: Array,
         required: true,
+    },
+    allReservationClients: {
+        type: Array,
+        default: () => [],
     },
     parking_reservations: {
         type: [Object, Array],
@@ -146,22 +150,11 @@ const generateSlackMessage = () => {
 
     // Room details
     let roomNumbers = new Set(); // Use a Set to store unique room numbers
-    let smokingRooms = 0;
-    let nonSmokingRooms = 0;
-    let planNames = new Set();
 
     if (props.groupedRooms && props.groupedRooms.length > 0) {
         props.groupedRooms.forEach(group => {
             group.details.forEach(detail => {
                 roomNumbers.add(detail.room_number); // Add room number to the Set
-                if (detail.room_type_smoking) {
-                    smokingRooms++;
-                } else {
-                    nonSmokingRooms++;
-                }
-                if (detail.plan_name) {
-                    planNames.add(detail.plan_name);
-                }
             });
         });
     }
@@ -176,27 +169,13 @@ const generateSlackMessage = () => {
     const translatedPaymentTiming = translatePaymentTiming(info.payment_timing);
     let paymentDetails = info.payment_timing === 'on-site' ? `${translatedPaymentTiming} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : translatedPaymentTiming;
 
-    // Parking
-    let parkingCount = 0;
-    if (props.parking_reservations && props.parking_reservations.parking && props.parking_reservations.parking.length > 0) {
-        parkingCount = props.parking_reservations.parking.length;
-    }
-
         // Construct the message
-
-            let guestNames = '';
-
-            if (allReservationClients && allReservationClients.length > 0) {
-
-                guestNames = allReservationClients.map(client => client.name_kanji || client.name_kana || client.name).join(', ');
-
-            } else {
-
-                guestNames = info.client_name || '';
-
-            }
-
-    
+        let guestNames = '';
+        if (props.allReservationClients && props.allReservationClients.length > 0) {
+            guestNames = props.allReservationClients.map(client => client.name_kanji || client.name_kana || client.name).join(', ');
+        } else {
+            guestNames = info.client_name || '';
+        }
 
         slackMessage.value = `【${clientName}】
 TEL/FAX：${clientPhone}/${clientFax}
@@ -204,12 +183,11 @@ TEL/FAX：${clientPhone}/${clientFax}
 宿泊者：${guestNames}
 部屋番号：${uniqueRoomNumbers}
 宿泊期間：${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)})-${checkOutDate} (${getJapaneseWeekday(info.check_out)})
-人数：${props.groupedRooms.length}室　${info.reservation_number_of_people}名
-喫煙/禁煙: ${smokingRoomsCount > 0 ? `喫煙${smokingRoomsCount}室` : ''}${smokingRoomsCount > 0 && nonSmokingRoomsCount > 0 ? ' / ' : ''}${nonSmokingRoomsCount > 0 ? `禁煙${nonSmokingRoomsCount}室` : ''}
-プラン：${weekdayPlanNamesList || '未設定'}
-${weekendPlanNamesList ? `土日：${weekendPlanNamesList}
-` : ''}駐車場：${parkingCount > 0 ? `${parkingCount}台` : '未設定'}
-清算方法：${paymentDetails}　※現地決済の場合は${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}も反映
+人数：${info.reservation_number_of_people}名
+部屋数: ${smokingRoomsCount.value > 0 ? `喫煙 ${smokingRoomsCount.value}室` : ''}${smokingRoomsCount.value > 0 && nonSmokingRoomsCount.value > 0 ? ' / ' : ''}${nonSmokingRoomsCount.value > 0 ? `禁煙 ${nonSmokingRoomsCount.value}室` : ''}
+プラン：${weekdayPlanNamesList.value || '未設定'}
+${weekendPlanNamesList.value ? `土日：${weekendPlanNamesList.value}\n` : ''}駐車場：${parkingDetails.value}
+清算方法：${paymentDetails} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}
 備考：${info.comment || 'キャンセルポリシー説明済'}
 現場：${info.site_name || '未設定'}
 予約経路：${translateType(info.type)}`;
@@ -356,32 +334,10 @@ const roomDetailsForDisplay = computed(() => {
     return formattedDetails;
 });
 
-const allReservationClients = computed(() => {
-    const uniqueClients = new Map(); // Use a Map to store unique clients by client_id
 
-    if (props.reservationInfo && props.reservationInfo.reservation_clients && props.reservationInfo.reservation_clients.length > 0) {
-        props.reservationInfo.reservation_clients.forEach(client => {
-            uniqueClients.set(client.client_id, client);
-        });
-    }
-
-    // Also check groupedRooms for clients if they are attached to individual details
-    if (props.groupedRooms && props.groupedRooms.length > 0) {
-        props.groupedRooms.forEach(group => {
-            group.details.forEach(detail => {
-                if (detail.reservation_clients && detail.reservation_clients.length > 0) {
-                    detail.reservation_clients.forEach(client => {
-                        uniqueClients.set(client.client_id, client);
-                    });
-                }
-            });
-        });
-    }
-
-    return Array.from(uniqueClients.values());
-});
 
 const copyToClipboard = async () => {
+    console.log('Copying to clipboard:', slackMessage.value);
     try {
         await navigator.clipboard.writeText(slackMessage.value);
         toast.add({ severity: 'success', summary: '成功', detail: 'Slackメッセージをクリップボードにコピーしました。', life: 3000 });
