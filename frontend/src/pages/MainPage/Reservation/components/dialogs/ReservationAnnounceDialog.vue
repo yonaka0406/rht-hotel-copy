@@ -15,7 +15,6 @@
                                 <template v-if="index < props.allReservationClients.length - 1">, </template>
                             </span>
                             <!-- Debug log for reservation_clients -->
-                            <span style="display: none;">{{ console.log('allReservationClients:', props.allReservationClients) }}</span>
                         </template>
                         <template v-else>{{ reservationInfo.client_name }}</template>
                     </div>
@@ -58,7 +57,7 @@
 import { ref, computed, watch, defineProps, defineEmits } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import {
-    Dialog, Textarea, Button, Fieldset, DataTable, Column, Tag
+    Dialog, Button, Fieldset, DataTable, Column
 } from 'primevue';
 import { translatePaymentTiming, translateType } from '@/utils/reservationUtils';
 
@@ -108,14 +107,27 @@ const formatDate = (date) => {
 const formatTime = (time) => {
     if (!time) return "";
     if (time instanceof Date) {
-        return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     }
     const date = new Date(`1970-01-01T${time}`);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
 const getJapaneseWeekday = (dateString) => {
-    const date = new Date(dateString);
+    if (!dateString || typeof dateString !== 'string') return '';
+
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return '';
+
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+    const day = parseInt(parts[2], 10);
+
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return '';
+
+    const date = new Date(year, month, day);
+    if (isNaN(date.getTime())) return '';
+
     const options = { weekday: 'short' };
     return date.toLocaleDateString('ja-JP', options).replace('.', '');
 };
@@ -159,7 +171,7 @@ const generateSlackMessage = () => {
 
     let message = `🗓️【${clientName}】\n`;
     message += `📞TEL/FAX：\t${clientPhone}/${clientFax}\n`;
-    message += `🧑‍💼予約担当者：\t${info.responsible_person_name || '未設定'}\n`;    
+    message += `🧑‍💼予約担当者：\t${info.responsible_person_name || '未設定'}\n`;
     message += `⏳宿泊期間：\t${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)})-${checkOutDate} (${getJapaneseWeekday(info.check_out)})\n`;
     message += `🌐予約経路：\t${translateType(info.type)}\n`;
     message += `🧑人数：\t${info.reservation_number_of_people}名\n`;
@@ -173,7 +185,7 @@ const generateSlackMessage = () => {
         message += `週末プラン：\t${weekendPlanNamesList.value}\n\n`;
     }
     message += `🚗駐車場：\t${parkingDetails.value}\n`;
-    message += `💰清算方法：\t${paymentDetails} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}\n`;
+    message += `💰清算方法：\t${paymentDetails}\n`;
     
     
     message += `🏢現場：\t${info.site_name || '未設定'}\n`;
@@ -261,7 +273,6 @@ const weekendPlanNamesList = computed(() => {
 });
 
 const parkingDetails = computed(() => {
-    console.log('parkingDetails computed property - props.parking_reservations:', props.parking_reservations);
     let parkingCount = 0;
     if (props.parking_reservations?.parking?.length > 0) {
         const uniqueSpots = new Set();
