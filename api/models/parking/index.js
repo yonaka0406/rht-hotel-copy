@@ -1,7 +1,9 @@
 const main = require('./main');
-const vehicleModels = require('./vehicle');
+const vehicle = require('./vehicle');
+const parkingLot = require('./parkingLot');
 
 module.exports = {
   ...main,
-  ...vehicleModels,
+  ...vehicle,
+  ...parkingLot,
 };

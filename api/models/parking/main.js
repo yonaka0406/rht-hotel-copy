@@ -1,50 +1,12 @@
 let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
 const vehicle = require('./vehicle');
+const parkingLot = require('./parkingLot');
+const { formatDate } = require('../../utils/reportUtils');
 
-// Helper
-const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        console.error("Invalid Date object:", date);
-        throw new Error("The provided input is not a valid Date object:");
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
 
-// Parking Lot
-const getParkingLots = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
-    const query = 'SELECT * FROM parking_lots WHERE hotel_id = $1 ORDER BY id';
-    const values = [hotel_id];
-    const result = await pool.query(query, values);
-    return result.rows;
-};
 
-const createParkingLot = async (requestId, { hotel_id, name, description }) => {
-    const pool = getPool(requestId);
-    const query = 'INSERT INTO parking_lots (hotel_id, name, description) VALUES ($1, $2, $3) RETURNING *';
-    const values = [hotel_id, name, description];
-    const result = await pool.query(query, values);
-    return result.rows[0];
-};
 
-const updateParkingLot = async (requestId, id, { name, description }) => {
-    const pool = getPool(requestId);
-    const query = 'UPDATE parking_lots SET name = $1, description = $2 WHERE id = $3 RETURNING *';
-    const values = [name, description, id];
-    const result = await pool.query(query, values);
-    return result.rows[0];
-};
-
-const deleteParkingLot = async (requestId, id) => {
-    const pool = getPool(requestId);
-    const query = 'DELETE FROM parking_lots WHERE id = $1';
-    const values = [id];
-    await pool.query(query, values);
-};
 
 // Parking Spot
 const getParkingSpots = async (requestId, parking_lot_id) => {
@@ -874,10 +836,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
 module.exports = {
     ...vehicle,
-    getParkingLots,
-    createParkingLot,
-    updateParkingLot,
-    deleteParkingLot,
+    ...parkingLot,
     getParkingSpots,
     createParkingSpot,
     updateParkingSpot,
