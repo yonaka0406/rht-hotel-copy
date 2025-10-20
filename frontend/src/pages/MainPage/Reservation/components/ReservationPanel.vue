@@ -70,20 +70,22 @@
                 <span>
                     <i class="pi pi-arrow-down-right mr-1"></i>{{ reservationInfo.check_in }}
                 </span>
-                <div class="col-span-2">
-                    <i class="pi pi-clock mx-1"></i>
                     <DatePicker id="datepicker-timeonly" v-model="checkInTime" @update:modelValue="checkInChange"
-                        timeOnly style="width: 80px;" />
+                        timeOnly fluid />
+                <div class="col-span-1 flex items-center justify-start">
+                    <i class="pi pi-clock ml-1"></i>
                 </div>
                 <p class="font-bold">チェックアウト：</p>
                 <span>
                     <i class="pi pi-arrow-up-right mr-1"></i>{{ reservationInfo.check_out }}
                 </span>
-                <div class="col-span-2">
-                    <i class="pi pi-clock mx-1"></i>
-                    <DatePicker id="datepicker-timeonly" v-model="checkOutTime" @update:modelValue="checkOutChange"
-                        timeOnly style="width: 80px;" />
-                </div>
+                
+                <DatePicker id="datepicker-timeonly" v-model="checkOutTime" @update:modelValue="checkOutChange"
+                    timeOnly fluid />
+                <div class="col-span-1 flex items-center justify-start">
+                    <i class="pi pi-clock ml-1"></i>
+                </div>                
+                
             </div>
 
         </div>
