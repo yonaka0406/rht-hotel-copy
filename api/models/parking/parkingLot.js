@@ -1,5 +1,4 @@
 let getPool = require('../../config/database').getPool;
-const format = require('pg-format');
 
 // Parking Lot
 const getParkingLots = async (requestId, hotel_id) => {
@@ -11,26 +10,89 @@ const getParkingLots = async (requestId, hotel_id) => {
 };
 
 const createParkingLot = async (requestId, { hotel_id, name, description }) => {
+    // Validate hotel_id (assuming UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!hotel_id || typeof hotel_id !== 'string' || !uuidRegex.test(hotel_id)) {
+        throw new Error('Invalid Hotel ID format (UUID expected).');
+    }
+
+    // Validate name
+    const trimmedName = name ? String(name).trim() : '';
+    if (trimmedName.length === 0) {
+        throw new Error('Parking lot name cannot be empty.');
+    }
+
+    // Validate description
+    const trimmedDescription = description ? String(description).trim() : '';
+    const MAX_DESCRIPTION_LENGTH = 1000; // Example max length
+    if (trimmedDescription.length > MAX_DESCRIPTION_LENGTH) {
+        throw new Error(`Parking lot description exceeds maximum length of ${MAX_DESCRIPTION_LENGTH} characters.`);
+    }
+
     const pool = getPool(requestId);
     const query = 'INSERT INTO parking_lots (hotel_id, name, description) VALUES ($1, $2, $3) RETURNING *';
-    const values = [hotel_id, name, description];
+    const values = [hotel_id, trimmedName, trimmedDescription];
     const result = await pool.query(query, values);
     return result.rows[0];
 };
 
 const updateParkingLot = async (requestId, id, { name, description }) => {
+    // Validate id
+    if (!id) {
+        throw new Error('Parking lot ID must be provided.');
+    }
+
+    // Validate name
+    const trimmedName = name ? String(name).trim() : '';
+    if (trimmedName.length === 0) {
+        throw new Error('Parking lot name cannot be empty.');
+    }
+
+    // Validate description
+    const trimmedDescription = description ? String(description).trim() : '';
+
     const pool = getPool(requestId);
     const query = 'UPDATE parking_lots SET name = $1, description = $2 WHERE id = $3 RETURNING *';
-    const values = [name, description, id];
+    const values = [trimmedName, trimmedDescription, id];
     const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+        throw new Error(`Parking lot with ID ${id} not found.`);
+    }
+
     return result.rows[0];
 };
 
 const deleteParkingLot = async (requestId, id) => {
     const pool = getPool(requestId);
-    const query = 'DELETE FROM parking_lots WHERE id = $1';
-    const values = [id];
-    await pool.query(query, values);
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Check for references in parking_spots
+        const parkingSpotsQuery = 'SELECT COUNT(*) FROM parking_spots WHERE parking_lot_id = $1';
+        const parkingSpotsResult = await client.query(parkingSpotsQuery, [id]);
+        if (parseInt(parkingSpotsResult.rows[0].count, 10) > 0) {
+            throw new Error('Cannot delete parking lot: it contains existing parking spots.');
+        }
+
+        // If no references, proceed with deletion
+        const deleteQuery = 'DELETE FROM parking_lots WHERE id = $1';
+        const deleteValues = [id];
+        const result = await client.query(deleteQuery, deleteValues);
+
+        if (result.rowCount === 0) {
+            throw new Error(`Parking lot with ID ${id} not found.`);
+        }
+
+        await client.query('COMMIT');
+        return true;
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
 };
 
 module.exports = {
