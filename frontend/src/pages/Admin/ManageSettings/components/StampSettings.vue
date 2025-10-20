@@ -33,7 +33,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
+
+// Variable to store the currently active blob URL for revocation
+const activeBlobUrlRef = ref(null);
 import { useToast } from 'primevue/usetoast';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -52,19 +55,33 @@ const stampImageLoaded = ref(false);
 
 const updateStampUrl = async () => {
     stampImageLoaded.value = false;
+    let oldBlobUrl = activeBlobUrlRef.value; // Store the old blob URL
+
     try {
         const imageUrl = await getCompanyStampImageUrl();
         if (imageUrl) {
-            currentStampImageUrl.value = imageUrl + '?t=' + new Date().getTime(); // Add cache-busting query param
+            if (imageUrl.startsWith('blob:')) {
+                activeBlobUrlRef.value = imageUrl; // Set new active blob URL
+            } else {
+                activeBlobUrlRef.value = null; // Not a blob URL
+            }
+            currentStampImageUrl.value = imageUrl;
         } else {
+            activeBlobUrlRef.value = null;
             currentStampImageUrl.value = '';
             stampImageLoaded.value = false;
         }
     } catch (error) {
         console.error("ストアからの会社印鑑URL取得失敗:", error);
+        activeBlobUrlRef.value = null;
         currentStampImageUrl.value = '';
         stampImageLoaded.value = false;
         toast.add({ severity: 'error', summary: '印鑑取得エラー', detail: error.message || '印鑑画像の読み込みに失敗しました。', life: 3000 });
+    } finally {
+        // Revoke the old blob URL *after* the new one has been established
+        if (oldBlobUrl && oldBlobUrl !== activeBlobUrlRef.value) {
+            URL.revokeObjectURL(oldBlobUrl);
+        }
     }
 };
 
@@ -72,9 +89,22 @@ const handleStampImageLoad = () => {
     stampImageLoaded.value = true;
 };
 
-const handleStampImageError = () => {
-    console.warn('会社印鑑画像の読み込み失敗 元URL:', currentStampImageUrl.value);
-    stampImageLoaded.value = false;
+const handleStampImageError = (event) => {
+    const imageUrl = event && event.target ? event.target.src : currentStampImageUrl.value;
+
+    // Only log the warning and clear the image if it's not successfully loaded
+    if (!stampImageLoaded.value) {
+        console.warn('会社印鑑画像の読み込み失敗 元URL:', imageUrl);
+        // Only clear and revoke if the error is for the currently active image
+        if (activeBlobUrlRef.value === imageUrl) {
+            URL.revokeObjectURL(activeBlobUrlRef.value);
+            activeBlobUrlRef.value = null;
+            currentStampImageUrl.value = ''; // Clear the image source
+            // stampImageLoaded.value is already false here
+        }
+    }
+    // If stampImageLoaded.value is true, it means the image eventually loaded,
+    // so we ignore this error (it might be a transient error or a secondary load attempt)
 };
 
 const handleFileChange = (event) => {
@@ -144,5 +174,13 @@ const uploadStamp = async () => {
 
 onMounted(() => {
     updateStampUrl();
+});
+
+onBeforeUnmount(() => {
+    // Revoke any active blob URL when the component is unmounted
+    if (activeBlobUrlRef.value) {
+        URL.revokeObjectURL(activeBlobUrlRef.value);
+        activeBlobUrlRef.value = null;
+    }
 });
 </script>
