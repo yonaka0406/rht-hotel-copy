@@ -24,7 +24,7 @@
                                             <template v-if="smokingRoomsCount > 0 && nonSmokingRoomsCount > 0"> / </template>
                                             <template v-if="nonSmokingRoomsCount > 0">禁煙 {{ nonSmokingRoomsCount }}室</template>
                                         </div>
-                    <div><strong>プラン:</strong> {{ planNamesList }}</div>
+                    <div><strong>プラン:</strong> {{ weekdayPlanNamesList }}</div>
                     <div v-if="weekendPlanNamesList"><strong>土日:</strong> {{ weekendPlanNamesList }}</div>
                     <div><strong>駐車場:</strong> {{ parkingDetails }}</div>
                     <div><strong>清算方法:</strong> {{ paymentDetailsDisplay }}</div>
