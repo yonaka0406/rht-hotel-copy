@@ -14,6 +14,10 @@
 
     </div>
 
+    <div v-if="!hasLoadedRooms && !isLoading" class="text-center text-gray-500 dark:text-gray-400 py-4">
+      読み込みは完了しましたが、利用可能なデータがありません。
+    </div>
+
     <RoomGroupPanel
       v-if="selectedHotelId"
       :isLoading="isLoading"
@@ -76,14 +80,25 @@
       
   const isUpdating = ref(false);
   const isLoading = ref(false);
+  const hasLoadedRooms = ref(false); // New ref to track if rooms have been loaded
 
   onMounted(async () => {
     isLoading.value = true;
     try {
       await fetchHotels(); // Fetch all hotels and set selectedHotelId
-      if (selectedHotelId.value) {
-        await fetchHotel(); // Fetch rooms for the selected hotel
+
+      // Retry mechanism for fetchHotel if selectedHotelRooms is empty
+      let retries = 3;
+      while (retries > 0 && (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0)) {
+        if (selectedHotelId.value) {
+          await fetchHotel(); // Fetch rooms for the selected hotel
+        }
+        retries--;
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+        }
       }
+
     } catch (error) {
       console.error('Failed to load hotel data:', error);
       toast.add({
@@ -94,8 +109,26 @@
       });
     } finally {
       isLoading.value = false;
+      // Display warning toast only after loading has finished and if no rooms were loaded
+      if (!hasLoadedRooms.value) {
+        toast.add({
+          severity: 'warn',
+          summary: '警告',
+          detail: '空室データの読み込みに時間がかかっています。',
+          life: 5000
+        });
+      }
     }
   });
+
+  // Watch for selectedHotelRooms to update hasLoadedRooms
+  watch(selectedHotelRooms, (newValue) => {
+    if (newValue && newValue.length > 0) {
+      hasLoadedRooms.value = true;
+    } else {
+      hasLoadedRooms.value = false;
+    }
+  }, { immediate: true }); // Immediate to check initial value
 
   const { reservationDrawerRef, selectedDate, handleReservationUpdated, openNewReservation, openEditReservation } = useReservationActions();
 
