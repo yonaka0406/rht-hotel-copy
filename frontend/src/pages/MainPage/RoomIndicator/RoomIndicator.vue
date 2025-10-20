@@ -89,13 +89,28 @@
 
       // Retry mechanism for fetchHotel if selectedHotelRooms is empty
       let retries = 3;
-      while (retries > 0 && (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0)) {
+      let lastError = null;
+      while (retries > 0 && !selectedHotelRooms.value?.length) {
         if (selectedHotelId.value) {
-          await fetchHotel(); // Fetch rooms for the selected hotel
+          try {
+            await fetchHotel(); // Fetch rooms for the selected hotel
+          } catch (error) {
+            console.error(`Attempt ${4 - retries} failed to fetch hotel rooms:`, error);
+            lastError = error;
+          }
         }
         retries--;
-        if (retries > 0) {
+        if (retries > 0 && (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0)) {
           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+        }
+      }
+
+      if (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0) {
+        if (lastError) {
+          throw lastError; // Re-throw the last error if rooms are still empty after retries
+        } else {
+          // If no specific error but rooms are empty, throw a generic error
+          throw new Error('Failed to load hotel rooms after multiple attempts.');
         }
       }
 
@@ -123,11 +138,7 @@
 
   // Watch for selectedHotelRooms to update hasLoadedRooms
   watch(selectedHotelRooms, (newValue) => {
-    if (newValue && newValue.length > 0) {
-      hasLoadedRooms.value = true;
-    } else {
-      hasLoadedRooms.value = false;
-    }
+    hasLoadedRooms.value = Boolean(newValue?.length);
   }, { immediate: true }); // Immediate to check initial value
 
   const { reservationDrawerRef, selectedDate, handleReservationUpdated, openNewReservation, openEditReservation } = useReservationActions();
