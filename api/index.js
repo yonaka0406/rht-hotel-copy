@@ -2,6 +2,7 @@
 require('dotenv').config({ path: './api/.env' });
 // console.log(`[SERVER_STARTUP] After dotenv, process.env.NODE_ENV: ${process.env.NODE_ENV}`);
 const logger = require('./config/logger'); // Winston Logger
+const appConfig = require('./config/appConfig'); // Import appConfig
 
 const path = require('path');
 const express = require('express');
@@ -16,7 +17,7 @@ const { scheduleLoyaltyTierJob } = require('./jobs/loyaltyTierJob');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
-const crypto = require('crypto'); // Added for session secret
+
 const { startWaitlistJob } = require('./jobs/waitlistJob');
 const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
 
@@ -24,32 +25,7 @@ const app = express();
 app.locals.logger = logger; // Make logger globally available
 app.set('trust proxy', 1);
 
-// Environment configuration helper - Keep this function as is
-const getEnvConfig = (req) => {
-  // Default to dev configuration
-  let config = {
-    pgDatabase: process.env.PG_DATABASE,
-    frontendUrl: process.env.FRONTEND_URL,
-    frontendUrlHttp: process.env.FRONTEND_URL_HTTP
-  };
-  
-  // If request exists and comes from production domain
-  // Note: req.headers.origin might be empty for same-origin requests or affected by browser policies.
-  // The setupRequestContext middleware already handles robust environment detection.
-  if (req && req.headers.origin) {
-    const origin = req.headers.origin;
-    if (origin.includes('wehub.work') && !origin.includes('test.wehub.work')) {
-      // Use production configuration
-      config = {
-        pgDatabase: process.env.PROD_PG_DATABASE,
-        frontendUrl: process.env.PROD_FRONTEND_URL,
-        frontendUrlHttp: process.env.PROD_FRONTEND_URL_HTTP
-      };
-    }
-  }
-  
-  return config;
-};
+
 
 // Serve the static files from the Vue app's 'dist' directory //DOCKER CHANGE
 const frontendDistPath = path.join(__dirname, '../frontend/dist');
@@ -60,7 +36,7 @@ app.use(express.static(frontendDistPath));
 // Use dynamic origin based on request for more flexibility if needed,
 // but ensure it explicitly matches your frontend URL(s).
 app.use(cors((req, callback) => {
-  const envConfig = getEnvConfig(req);
+  const envConfig = appConfig.getEnvironmentConfig(req);
   const allowedOrigins = [envConfig.frontendUrl, envConfig.frontendUrlHttp]; // Use the determined frontend URL(s)
   // Add other specific origins if necessary, e.g., for local development: 'http://localhost:8080'
 
@@ -90,7 +66,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const absoluteStampPath = path.resolve(projectRoot, stampDirEnvPath);
 
 // Session Configuration
-const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const sessionSecret = appConfig.session.secret;
 
 // Log information about the session secret being used
 if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length < 16) { // Example minimum length
@@ -98,9 +74,7 @@ if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length 
     // Consider exiting if the secret is critically misconfigured for a production-like environment:
     // if (process.env.NODE_ENV === 'production') { process.exit(1); }
 }
-if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === crypto.randomBytes(32).toString('hex'))) {
-  logger.warn('[SESSION_INIT] WARNING: In production, SESSION_SECRET should be a strong, static secret defined in your environment variables. A dynamically generated secret will invalidate sessions on each restart.');
-}
+
 
 let sessionPool;
 try {
@@ -140,8 +114,6 @@ app.use((req, res, next) => {
 });
 
 // Determine if we're in a secure environment (HTTPS)
-const isSecureEnvironment = process.env.NODE_ENV !== 'local';
-// logger.info(`[SESSION_CONFIG] NODE_ENV: ${process.env.NODE_ENV}, Secure cookies: ${isSecureEnvironment}, SameSite: ${isSecureEnvironment ? 'None' : 'Lax'}`);
 
 app.use(session({
   store: sessionStore, // Use the created sessionStore
@@ -149,10 +121,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: isSecureEnvironment, // Only secure in production (local/dev use HTTP)
+    secure: appConfig.isSecure(), // Only secure in production (local/dev use HTTP)
     httpOnly: true,
     maxAge: 30 * 60 * 1000, // 30 minutes (increased from 5 mins for testing stability)
-    sameSite: isSecureEnvironment ? 'None' : 'Lax', // Use None for production, Lax for local/development
+    sameSite: appConfig.isSecure() ? 'None' : 'Lax', // Use None for production, Lax for local/development
     // domain: 'test.wehub.work' // No need to set domain if same-domain
   }
 }));
@@ -215,7 +187,7 @@ app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(absoluteStampPat
 
 // Make config available to route handlers
 app.use((req, res, next) => {
-  req.envConfig = getEnvConfig(req);  
+  req.envConfig = appConfig.getEnvironmentConfig(req);  
   next();
 });
 
