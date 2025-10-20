@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Bugfix: Ensured the hotel rooms were being updated on Room Indicator page load to solve a problem where some users were not seeing the available rooms.
-
 ---
 ## Future Releases
 
@@ -544,6 +542,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Enhancement: Improved static calendar organization with room type grouping and numerical ordering
 - Bugfix: Multi-room reservation single room period change creates a new reservation
 - Feature: Added sales information to the daily metrics routine.
+
+---
+
+## [1.1.24] - 2025-10-20
+
+- Bugfix: Ensured the hotel rooms were being updated on Room Indicator page load to solve a problem where some users were not seeing the available rooms.
+- Feature: Added to the Reservation Edit page a button to copy the reservation information to Slack.
 
 ---
 

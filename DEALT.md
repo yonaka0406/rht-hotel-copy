@@ -2,6 +2,53 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### October 20, 2025
+
+#### Feature Request #78: Add Slack Text Generation in ReservationPanel
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  Add a dialog in ReservationPanel to generate pre-formatted text for Slack communication, including key reservation details.
+- **Requirements**:
+  - Add a "Copy to Slack" button in ReservationPanel
+  - Generate text in the following format:
+    ```
+    【[予約者名]】
+    会社名/個人名：[予約者名]
+    予約担当者：
+    TEL/FAX：[TEL]/[FAX]
+    部屋番号：[部屋番号]
+    宿泊期間：[チェックイン日]-[チェックアウト日]out
+    人数：[部屋数]室　[人数]名
+    喫煙/禁煙：喫煙[喫煙室数]室/禁煙[禁煙室数]室
+    プラン：
+    土日：
+    駐車場：[駐車場利用台数]
+    現地決済：[支払い]　※現地決済の場合は[請求金額]も反映
+    備考：キャンセルポリシー説明済
+    チェックイン時間：[チェックイン時間]
+    現場：
+    予約経路：
+    ```
+  - Auto-populate fields with reservation data
+  - Include copy-to-clipboard functionality
+  - Support both Japanese and English interfaces
+- **Expected Behavior**:
+  - Users can quickly generate and copy formatted reservation details for Slack
+  - All placeholders are replaced with actual reservation data
+  - The dialog is accessible from the ReservationPanel
+  - Text is properly formatted for easy reading in Slack
+- **Affected Components**:
+  - ReservationPanel component
+  - Reservation details view
+  - Clipboard functionality
+- **Additional Notes**:
+  - Consider adding a preview of the generated text
+  - Allow customization of the template in system settings
+  - Include error handling for missing data
+  - Consider adding a history of copied messages
+  - Ensure proper handling of special characters and line breaks
+
 ### October 15, 2025
 
 #### Feature Request #81: Add 水回り (Wet Area) Boolean Field to Rooms
