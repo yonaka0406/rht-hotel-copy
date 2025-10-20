@@ -37,6 +37,8 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 
 // Variable to store the currently active blob URL for revocation
 const activeBlobUrlRef = ref(null);
+
+let errorLogTimeout = null; // To store the timeout ID
 import { useToast } from 'primevue/usetoast';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
@@ -55,6 +57,10 @@ const stampImageLoaded = ref(false);
 
 const updateStampUrl = async () => {
     stampImageLoaded.value = false;
+    if (errorLogTimeout) {
+        clearTimeout(errorLogTimeout); // Clear any pending error logs
+        errorLogTimeout = null;
+    }
     let oldBlobUrl = activeBlobUrlRef.value; // Store the old blob URL
 
     try {
@@ -87,24 +93,34 @@ const updateStampUrl = async () => {
 
 const handleStampImageLoad = () => {
     stampImageLoaded.value = true;
+    if (errorLogTimeout) {
+        clearTimeout(errorLogTimeout); // If image loads, cancel any pending error logs
+        errorLogTimeout = null;
+    }
 };
 
 const handleStampImageError = (event) => {
     const imageUrl = event && event.target ? event.target.src : currentStampImageUrl.value;
 
-    // Only log the warning and clear the image if it's not successfully loaded
-    if (!stampImageLoaded.value) {
-        console.warn('会社印鑑画像の読み込み失敗 元URL:', imageUrl);
-        // Only clear and revoke if the error is for the currently active image
-        if (activeBlobUrlRef.value === imageUrl) {
-            URL.revokeObjectURL(activeBlobUrlRef.value);
-            activeBlobUrlRef.value = null;
-            currentStampImageUrl.value = ''; // Clear the image source
-            // stampImageLoaded.value is already false here
-        }
+    // Clear any existing timeout to avoid duplicate logs
+    if (errorLogTimeout) {
+        clearTimeout(errorLogTimeout);
     }
-    // If stampImageLoaded.value is true, it means the image eventually loaded,
-    // so we ignore this error (it might be a transient error or a secondary load attempt)
+
+    // Set a timeout to log the error if the image doesn't load successfully within a short period
+    errorLogTimeout = setTimeout(() => {
+        if (!stampImageLoaded.value) { // Only log if the image is still not loaded
+            console.warn('会社印鑑画像の読み込み失敗 元URL:', imageUrl);
+            // Only clear and revoke if the error is for the currently active image
+            if (activeBlobUrlRef.value === imageUrl) {
+                URL.revokeObjectURL(activeBlobUrlRef.value);
+                activeBlobUrlRef.value = null;
+                currentStampImageUrl.value = ''; // Clear the image source
+                stampImageLoaded.value = false;
+            }
+        }
+        errorLogTimeout = null; // Clear the timeout ID after execution
+    }, 100); // 100ms delay to allow handleStampImageLoad to potentially fire
 };
 
 const handleFileChange = (event) => {
