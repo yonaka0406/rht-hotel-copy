@@ -23,7 +23,7 @@ const getCountReservation = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getCountReservation] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -68,7 +68,7 @@ const getCountReservationDetails = async (req, res) => {
 
     res.json(mergedData);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getCountReservationDetails] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -89,7 +89,7 @@ const getOccupationByPeriod = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getOccupationByPeriod] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -109,7 +109,7 @@ const getReservationListView = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getReservationListView] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -129,7 +129,7 @@ const getForecastData = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getForecastData] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -142,7 +142,7 @@ const getAccountingData = async (req, res) => {
     }
     res.json(data);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] [Request ${req.requestId}] Error in getAccountingData:`, error);
+    logger.error(`[getAccountingData] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: 'Error fetching accounting data' });
   }
 };
@@ -156,7 +156,7 @@ const getForecastDataByPlan = async (req, res) => {
     }
     res.json(data);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] [Request ${req.requestId}] Error in getForecastDataByPlan:`, error);
+    logger.error(`[getForecastDataByPlan] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: 'Error fetching forecast data by plan' });
   }
 };
@@ -170,7 +170,7 @@ const getAccountingDataByPlan = async (req, res) => {
     }
     res.json(data);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] [Request ${req.requestId}] Error in getAccountingDataByPlan:`, error);
+    logger.error(`[getAccountingDataByPlan] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: 'Error fetching accounting data by plan' });
   }
 };
@@ -189,7 +189,7 @@ const getReservationsInventory = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getReservationsInventory] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -207,7 +207,7 @@ const getAllInventory = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getAllInventory] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -228,11 +228,12 @@ const getReservationsForGoogle = async (req, res) => {
     const formattedData = formatDataForSheet(dataToAppend);
     
     const sheetName = `H_${hotelId}`;
+
     await appendDataToSheet(sheetId, sheetName, formattedData);
 
     res.json({success: 'Sheet update request made'});
   } catch (err) {
-    console.error(err);
+    logger.error(`[getReservationsForGoogle] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -294,13 +295,14 @@ const getParkingReservationsForGoogle = async (req, res) => {
 
     const formattedData = formatParkingDataForSheet(dataToAppend);
 
-    const authClient = await authorize();
+    // const authClient = await authorize(); // Unused
     const sheetName = `P_${hotelId}`; // distinguish parking from rooms
+
     await appendDataToSheet(sheetId, sheetName, formattedData);
 
     res.json({ success: 'Parking sheet update request made' });
   } catch (err) {
-    console.error(err);
+    logger.error(`[getParkingReservationsForGoogle] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -372,7 +374,7 @@ const createNewGoogleSheet =  async (req, res) => {
             } 
         });
     } catch (error) {
-        logger.error('Error creating new sheet', { ...context, error: error.message });
+        logger.error(`[createNewGoogleSheet] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack, ...context });
         return res.status(500).json({ 
             success: false, 
             message: 'Failed to create spreadsheet',
@@ -393,7 +395,7 @@ const getActiveReservationsChange = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(`[${req.requestId}] Error in getActiveReservationsChange:`, err);
+    logger.error(`[getActiveReservationsChange] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -411,7 +413,7 @@ const getMonthlyReservationEvolution = async (req, res) => {
     res.json(data);
 
   } catch (err) {
-    console.error(`[${req.requestId}] Error in getMonthlyReservationEvolution:`, err.message);
+    logger.error(`[getMonthlyReservationEvolution] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     if (err.message === 'Invalid hotel_id format.' || err.message === 'Invalid target_month format. Expected YYYY-MM-DD.') {
       res.status(400).json({ error: err.message });
     } else if (err.message === 'Database error') { // Or a more generic check if the model throws this
@@ -437,7 +439,7 @@ const getSalesByPlan = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getSalesByPlan] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -454,7 +456,7 @@ const getOccupationBreakdown = async (req, res) => {
     }
     res.json(data); // The query now returns multiple rows (an array of objects)
   } catch (err) {
-    console.error(err);
+    logger.error(`[getOccupationBreakdown] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -469,7 +471,7 @@ const getChannelSummary = async (req, res) => {
     }
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getChannelSummary] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -488,7 +490,7 @@ const getCheckInOutReport = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(`[getCheckInOutReport] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Internal server error' });
   }
 };

@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { google } = require('googleapis');
 const logger = require('../config/logger');
+const redisClient = require('../config/redis');
 
 const credentialsPath = path.join(__dirname, '../config/google_sheets_credentials.json');
 const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json');
@@ -45,7 +46,16 @@ class SheetsConnectionManager {
         return this.authClient;
     }
 
-    async executeRequest(requestFn) {
+    async executeRequest(requestFn, params = {}) {
+        try {
+            const timestamp = Date.now();
+            const redisKey = `google_api_request:${timestamp}`;
+            const redisValue = JSON.stringify(params);
+            await redisClient.setex(redisKey, 86400, redisValue); // 86400 seconds = 24 hours
+        } catch (redisErr) {
+            logger.warn(`[SheetsConnectionManager] Failed to log API request to Redis: ${redisErr.message}`);
+        }
+
         return new Promise((resolve, reject) => {
             this.requestQueue.push({ requestFn, resolve, reject });
             this.processQueue();
@@ -165,7 +175,7 @@ async function checkSheetExists(spreadsheetId, sheetName) {
             }
             throw err;
         }
-    });
+    }, { spreadsheetId, sheetName, function: 'checkSheetExists' });
 }
 
 /**
@@ -197,7 +207,7 @@ async function createSheetInSpreadsheet(spreadsheetId, sheetName) {
             logger.error('Error creating sheet', { ...context, error: err });
             throw err;
         }
-    });
+    }, { spreadsheetId, sheetName, function: 'createSheetInSpreadsheet' });
 }
 
 /**
@@ -223,7 +233,7 @@ async function createSheet(title) {
             logger.error('Error creating spreadsheet file', { ...context, error });
             throw error;
         }
-    });
+    }, { title, function: 'createSheet' });
 }
 
 /**
@@ -242,7 +252,7 @@ async function clearSheetData(spreadsheetId, sheetName) {
                 spreadsheetId: spreadsheetId,
                 range: `${sheetName}!A1:Z`,
             });
-        });
+        }, { spreadsheetId, range: `${sheetName}!A1:Z`, function: 'clear' });
 
         await connectionManager.executeRequest(async (sheetsService) => {
             logger.info(`Adding headers to sheet: ${sheetName}`, context);
@@ -254,7 +264,7 @@ async function clearSheetData(spreadsheetId, sheetName) {
                     values: headers,
                 },
             });
-        });
+        }, { spreadsheetId, range: `${sheetName}!A1`, function: 'updateHeaders' });
 
         logger.info(`Sheet "${sheetName}" cleared and headers added successfully`, context);
 
@@ -279,7 +289,7 @@ async function ensureSheetExists(spreadsheetId, sheetName) {
                 valueInputOption: 'USER_ENTERED',
                 resource: { values: headers },
             });
-        });
+        }, { spreadsheetId, range: `${sheetName}!A1`, function: 'updateHeaders' });
     }
 }
 
@@ -342,7 +352,7 @@ async function _appendInBatches(spreadsheetId, sheetName, values) {
                             insertDataOption: 'INSERT_ROWS',
                             resource: { values: batch },
                         });
-                    });
+                    }, { spreadsheetId, range: `${sheetName}!A1`, function: 'append', batchSize: batch.length });
                     
                     logger.info(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
                     batchSuccess = true;
