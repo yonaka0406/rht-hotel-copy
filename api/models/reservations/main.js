@@ -170,6 +170,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
       rd.billable,
       c.id AS client_id,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      c.phone as client_phone,
+      c.fax as client_fax,
       r.check_in,
       r.check_in_time,
       r.check_out,

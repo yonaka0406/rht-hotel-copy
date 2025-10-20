@@ -448,6 +448,17 @@
         :reservationDetails="reservation_details" 
         v-if="reservation_details?.length > 0"
     />
+
+    <ReservationAnnounceDialog
+        v-model:visible="visibleSlackDialog"
+        :reservationInfo="reservationInfo"
+        :groupedRooms="groupedRooms"
+        :allReservationClients="allReservationClients"
+        :parking_reservations="props.parking_reservations"
+        :reservation_payments="props.reservation_payments"
+        ref="reservationAnnounceDialogRef"
+    />
+
 </template>
 
 <script setup>
@@ -462,6 +473,7 @@ import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialo
 
 import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
 import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAddRoomDialog.vue';
+import ReservationAnnounceDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAnnounceDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
 // Primevue
@@ -475,6 +487,7 @@ import {
 } from 'primevue';
 
 const reservationAddRoomDialogRef = ref(null);
+const reservationAnnounceDialogRef = ref(null);
 
 const props = defineProps({
     reservation_id: {
@@ -484,6 +497,14 @@ const props = defineProps({
     reservation_details: {
         type: [Object],
         required: true,
+    },
+    parking_reservations: {
+        type: [Object, Array],
+        default: () => ({}),
+    },
+    reservation_payments: {
+        type: [Object, Array],
+        default: () => [],
     },
 });
 
@@ -630,7 +651,7 @@ const groupedRooms = computed(() => {
     const groups = {};
 
     props.reservation_details.forEach((item) => {
-        const key = `${item.room_id}-${item.room_type}`;
+        const key = `${item.room_id}-${item.room_type_name}`;
         if (!groups[key]) {
             groups[key] = { room_id: item.room_id, room_type: item.room_type_name, details: [] };
         }
@@ -662,6 +683,26 @@ const allPeopleCountMatch = (group) => {
         (detail) => detail.number_of_people === detail.reservation_clients.length
     );
 };
+
+const allReservationClients = computed(() => {
+    const uniqueClients = new Map();
+    let fallbackId = 0;
+
+    if (props.reservation_details && props.reservation_details.length > 0) {
+        props.reservation_details.forEach(detail => {
+            if (detail.reservation_clients && detail.reservation_clients.length > 0) {
+                detail.reservation_clients.forEach(client => {
+                    // Use client_id as the key if available, otherwise generate a fallback key.
+                    // This prevents clients without a client_id from overwriting each other in the Map.
+                    const key = client.client_id ? client.client_id : `fallback-${fallbackId++}`;
+                    uniqueClients.set(key, client);
+                });
+            }
+        });
+    }
+
+    return Array.from(uniqueClients.values());
+});
 
 const isLongTermReservation = computed(() => numberOfNights.value >= 30);
 
@@ -1121,6 +1162,7 @@ const showHistoryDialog = () => {
 
 const showCancellationCalculator = ref(false);
 const showCopyDialog = ref(false);
+const visibleSlackDialog = ref(false);
 
 // Tab Apply Plan
 const isPatternInput = ref(false);
@@ -1406,6 +1448,11 @@ const actionOptions = [
         label: '予約を複製',
         icon: 'pi pi-copy',
         command: () => { showCopyDialog.value = true; }
+    },
+    {
+        label: '予約報告書',
+        icon: 'pi pi-slack',
+        command: () => { visibleSlackDialog.value = true; }
     }
 ];
 const onActionClick = () => {
@@ -1430,6 +1477,12 @@ onMounted(async () => {
     numberOfNights.value = (new Date(reservationInfo.value.check_out) - new Date(reservationInfo.value.check_in)) / (1000 * 60 * 60 * 24);
     numberOfNightsTotal.value = reservationInfo.value.reservation_number_of_people * numberOfNights.value;
 });
+
+const openSlackDialog = () => {
+    visibleSlackDialog.value = true;
+};
+
+// Watcher
 
 // Watcher
 watch(addons, (newValue, oldValue) => {

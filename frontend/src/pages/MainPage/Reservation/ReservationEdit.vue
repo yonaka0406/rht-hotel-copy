@@ -9,7 +9,8 @@
             <template #title>予約編集 - {{ reservation_details?.[0]?.hotel_name }}</template>
             <template #content>
                 <ReservationPanel v-if="reservationId && reservation_details" :reservation_id="reservationId"
-                    :reservation_details="reservation_details" />
+                    :reservation_details="reservation_details" :parking_reservations="parking_reservations"
+                    :reservation_payments="reservation_payments" />
             </template>
         </Card>
 
