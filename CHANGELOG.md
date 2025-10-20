@@ -548,6 +548,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.1.24] - 2025-10-20
 
 - Bugfix: Ensured the hotel rooms were being updated on Room Indicator page load to solve a problem where some users were not seeing the available rooms.
+- Bugfix: Client selection in the room view was not filtering the clients correctly.
 - Feature: Added to the Reservation Edit page a button to copy the reservation information to Slack.
 
 ---
