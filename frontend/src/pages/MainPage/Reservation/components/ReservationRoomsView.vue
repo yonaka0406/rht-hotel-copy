@@ -276,10 +276,10 @@
                         <DataTable :value="guests" class="p-datatable-sm" scrollable responsive>
                             <Column field="name" header="宿泊者" style="width: 40%">
                                 <template #body="slotProps">
-                                    <AutoComplete v-model="slotProps.data.client" :placeholder="slotProps.data.guest_no"
-                                        :suggestions="filteredClients" optionLabel="display_name" @complete="filterClients"
-                                        field="display_name" @option-select="onClientSelect($event, slotProps.data)"
-                                        @change="onClientChange(slotProps.data)">
+                                    <AutoComplete v-model="guestInputs[slotProps.index].value" :placeholder="slotProps.data.guest_no"
+                                        :suggestions="filteredClients" optionLabel="display_name" @complete="debouncedFilterClients"
+                                        field="display_name" @option-select="onClientSelect($event, slotProps.data, slotProps.index)"
+                                        @change="onClientChange(slotProps.data, slotProps.index)">
                                         <template #option="slotProps">
                                             <div>
                                                 <p>
@@ -563,6 +563,15 @@ const normalizeKana = (str) => {
     );
 
     return normalizedStr;
+};
+
+const debounce = (func, delay) => {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
 };
 
 // Format
@@ -953,6 +962,7 @@ const applyRoomChanges = async () => {
 // Tab Set Clients
 const guests = ref();
 const filteredClients = ref([]);
+const guestInputs = ref([]); // New ref to hold input strings for each guest
 const genderOptions = [
     { label: '男性', value: 'male' },
     { label: '女性', value: 'female' },
@@ -965,37 +975,40 @@ const isValidPhone = ref(true);
 const initializeGuests = () => {
     const capacity = selectedGroup.value.details[0]?.capacity || 0;
     const reservationClients = selectedGroup.value.details[0]?.reservation_clients || '';
-    // console.log('Room capacity:', capacity);
-    // console.log('Existing guest in reservation:', reservationClients);
-        guests.value = Array.from({ length: capacity }, (_, i) => ({
-            guest_no: '宿泊者 ' + (i + 1),
-            client: {}, // Initialize client as an empty object
-            impediment: null,
-            isClientSelected: false
-        }));
-        if (reservationClients.length > 0) {
-            // Fill the array with reservation_clients data
-            reservationClients.forEach((client, i) => {
-                if (i < capacity) { // Important check: Don't exceed capacity
-                    guests.value[i] = { // Update existing guest object
-                        guest_no: '宿泊者 ' + (i + 1),
-                        client: { // Create a client object with necessary properties
-                            id: client.client_id || null,
-                            name: client.name,
-                            name_kana: client.name_kana,
-                            name_kanji: client.name_kanji,
-                            legal_or_natural_person: client.legal_or_natural_person,
-                            gender: client.gender,
-                            email: client.email,
-                            phone: client.phone,
-                            display_name: client.name_kanji || client.name_kana || client.name || '' // Add display_name
-                        },
-                        impediment: null,
-                        isClientSelected: true
-                    };
-                }
-            });
-        }}
+
+    guests.value = Array.from({ length: capacity }, (_, i) => ({
+        guest_no: '宿泊者 ' + (i + 1),
+        client: { display_name: '' }, // Initialize client with display_name
+        impediment: null,
+        isClientSelected: false
+    }));
+
+    guestInputs.value = Array.from({ length: capacity }, () => ref('')); // Initialize guestInputs
+
+    if (reservationClients.length > 0) {
+        reservationClients.forEach((client, i) => {
+            if (i < capacity) {
+                guests.value[i] = {
+                    guest_no: '宿泊者 ' + (i + 1),
+                    client: {
+                        id: client.client_id || null,
+                        name: client.name,
+                        name_kana: client.name_kana,
+                        name_kanji: client.name_kanji,
+                        legal_or_natural_person: client.legal_or_natural_person,
+                        gender: client.gender,
+                        email: client.email,
+                        phone: client.phone,
+                        display_name: client.name_kanji || client.name_kana || client.name || ''
+                    },
+                    impediment: null,
+                    isClientSelected: true
+                };
+                guestInputs.value[i].value = guests.value[i].client.display_name; // Set initial input value
+            }
+        });
+    }
+};
 const filterClients = (event) => {
     const query = event.query.toLowerCase();
     const normalizedQuery = normalizePhone(query);
@@ -1006,14 +1019,6 @@ const filterClients = (event) => {
         return;
     }
 
-    filteredClients.value = clients.value.filter((client) =>
-        client.legal_or_natural_person === 'natural' &&
-        (
-            (client.name && client.name.toLowerCase().includes(query)) ||
-            (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-            (client.name_kanji && client.name_kanji.toLowerCase().includes(query))
-        )
-    );
     filteredClients.value = clients.value.filter((client) => {
         if (client.legal_or_natural_person === 'natural') {
             // Name filtering (case-insensitive)
@@ -1033,10 +1038,10 @@ const filterClients = (event) => {
             return matchesName || matchesPhoneFax || matchesEmail;
         }
 
-        return;
+        return false; // Added return false for clients that are not 'natural' persons
     });
 };
-const onClientSelect = async (e, rowData) => {
+const onClientSelect = async (e, rowData, index) => {
     // Find the guest in the guests array that was just selected
     const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
 
@@ -1044,20 +1049,24 @@ const onClientSelect = async (e, rowData) => {
     if (guestIndex > -1) {
         guests.value[guestIndex].client = e.value; // Assign the entire client object
         guests.value[guestIndex].isClientSelected = true;
+        guestInputs.value[index].value = e.value.display_name; // Update input with selected client's display name
     }
 
     await fetchImpedimentsByClientId(guests.value[guestIndex].client.id);
     guests.value[guestIndex].impediment = clientImpediments.value;
 };
-const onClientChange = (rowData) => {
+const onClientChange = (rowData, index) => {
     // Find the guest in the guests array that was just selected
     const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
 
     if (guestIndex > -1) {
-        guests.value[guestIndex].client = {}; // Re-initialize client as an empty object
+        guests.value[guestIndex].client = { display_name: guestInputs.value[index].value }; // Re-initialize client as an empty object, keeping the typed text
         guests.value[guestIndex].isClientSelected = false;
     }
 };
+
+const debouncedFilterClients = debounce(filterClients, 300); // 300ms debounce delay
+
 const applyGuestChanges = async () => {
     // Check for blocking impediments
     if (hasBlockingImpediment.value) {
