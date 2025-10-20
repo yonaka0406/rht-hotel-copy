@@ -1,4 +1,4 @@
-let getPool = require('../config/database').getPool;
+let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
 
 // Helper
@@ -674,7 +674,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             //console.log(`\nProcessing assignment ${index + 1}/${assignments.length}:`, JSON.stringify(assignment, null, 2));
 
             const { 
-                hotel_id, reservation_id, vehicle_category_id, 
+                hotel_id, reservation_id, vehicle_category_id, roomId,
                 check_in, check_out, unit_price, number_of_vehicles = 1, spotId: preferredSpotId 
             } = assignment;
 
@@ -690,9 +690,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 text: `SELECT id, room_id, date 
                     FROM reservation_details 
                     WHERE reservation_id = $1 AND hotel_id = $2
-                    AND date >= $3 AND date <= $4
+                    AND date >= $3 AND date <= $4 AND room_id = $5
                     ORDER BY room_id, date`,
-                values: [reservation_id, hotel_id, formatDate(new Date(check_in)), formatDate(new Date(check_out))]
+                values: [reservation_id, hotel_id, formatDate(new Date(check_in)), formatDate(new Date(check_out)), roomId]
             };
 
             //console.log('Executing query:', {
