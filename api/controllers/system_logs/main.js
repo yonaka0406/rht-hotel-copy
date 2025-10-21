@@ -2,7 +2,7 @@ const systemLogsModel = require('../../models/system_logs');
 const { validateDateParam } = require('../../utils/validationUtils');
 
 const getReservationLogs = async (req, res) => {
-  const { date } = req.query;
+  const { date, limit, offset } = req.query;
   const validatedDate = validateDateParam(date);
 
   if (!validatedDate) {
@@ -10,10 +10,13 @@ const getReservationLogs = async (req, res) => {
   }
 
   try {
-    const logs = await systemLogsModel.getReservationLogsByDate(req.requestId, validatedDate);
+    const parsedLimit = parseInt(limit, 10);
+    const parsedOffset = parseInt(offset, 10);
+
+    const logs = await systemLogsModel.getReservationLogsByDate(req.requestId, validatedDate, parsedLimit, parsedOffset);
     res.status(200).json(logs);
   } catch (error) {
-    console.error(error);
+    req.app.locals.logger.error(error, { requestId: req.requestId, route: req.originalUrl });
     res.status(500).json({ message: 'Error fetching reservation logs' });
   }
 };

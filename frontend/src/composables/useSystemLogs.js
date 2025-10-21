@@ -10,8 +10,18 @@ export function useSystemLogs() {
 
   const fetchLogs = async (date) => {
     loading.value = true;
+
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!date || !dateRegex.test(date) || isNaN(Date.parse(date))) {
+      toast.add({ severity: 'error', summary: 'エラー', detail: '無効な日付形式です。YYYY-MM-DD形式で入力してください。', life: 3000 });
+      loading.value = false;
+      return;
+    }
+
     try {
-      const response = await get(`/reservation-logs?date=${date}`);
+      const encodedDate = encodeURIComponent(date);
+      const response = await get(`/reservation-logs?date=${encodedDate}`);
       logs.value = response;
     } catch (error) {
       console.error('予約ログの取得中にエラーが発生しました:', error);
