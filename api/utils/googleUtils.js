@@ -51,9 +51,9 @@ class SheetsConnectionManager {
             const timestamp = Date.now();
             const redisKey = `google_api_request:${timestamp}`;
             const redisValue = JSON.stringify(params);
-            await redisClient.setex(redisKey, 86400, redisValue); // 86400 seconds = 24 hours
+            // await redisClient.setex(redisKey, 86400, redisValue); // 86400 seconds = 24 hours
         } catch (redisErr) {
-            logger.warn(`[SheetsConnectionManager] Failed to log API request to Redis: ${redisErr.message}`);
+            // Silently fail if Redis logging fails, as it's not critical for the main operation.
         }
 
         return new Promise((resolve, reject) => {
