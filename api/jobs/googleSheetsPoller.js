@@ -6,10 +6,45 @@ const googleUtils = require('../utils/googleUtils');
 let isJobRunning = false;
 const POLLING_INTERVAL = 60 * 1000; // 60 seconds
 
-const headers = [['施設ID', '施設名', '予約詳細ID', '日付', '部屋タイプ', '部屋番号', '予約者', 'プラン', 'ステータス', '種類', 'エージェント']];
+const headers = [['施設ID', '施設名', '予約詳細ID', '日付', '部屋タイプ', '部屋番号', '予約者', 'プラン', 'ステータス', '種類', 'エージェント', '最終更新日時', '表示セル']];
 
 const MAIN_SHEET_ID = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // Prod ID
 const PARKING_SHEET_ID = '1LF3HOd7wyI0tlXuCqrnd-1m9OIoUb5EN7pegg0lJnt8'; // Prod ID
+
+/**
+ * Helper function to construct the display cell string based on reservation data.
+ * @param {object} reservation - The reservation object.
+ * @param {boolean} isParking - True if it's a parking reservation, false otherwise.
+ * @returns {string} The constructed display cell string.
+ */
+function buildDisplayCell(reservation, isParking = false) {
+    let displayCell = '';
+    const statusField = isParking ? reservation.reservation_status : reservation.status;
+    const typeField = isParking ? reservation.reservation_type : reservation.type;
+
+    if (statusField === "hold") {
+        displayCell += "㋭｜";
+    } else if (statusField === "provisory") {
+        displayCell += "㋕｜";
+    }
+
+    if (reservation.client_name) {
+        displayCell += String(reservation.client_name);
+    }
+
+    if (!isParking && reservation.plan_name) {
+        displayCell += "、" + String(reservation.plan_name);
+    } else if (isParking && reservation.vehicle_category_name) {
+        displayCell += "、" + String(reservation.vehicle_category_name);
+    }
+
+    if (reservation.agent) {
+        displayCell += "、㋔｜" + String(reservation.agent);
+    } else if (typeField === "employee") {
+        displayCell += "、㋛｜";
+    }
+    return displayCell;
+}
 
 /**
  * This job runs every minute, finds pending tasks in the google_sheets_queue,
@@ -114,30 +149,20 @@ function startGoogleSheetsPoller() {
 function transformDataForGoogleSheets(reservations) {
     // Format each reservation as an array in the same order as headers
     const rows = reservations.map(reservation => {
-      let displayCell = '';    
-      if (reservation.status === "hold") {
-        displayCell += "㋭｜";
-      } else if (reservation.status === "provisory") {
-        displayCell += "㋕｜";
-      }
-      if (reservation.client_name) {
-        displayCell += String(reservation.client_name || '');
-      }
-      if (reservation.plan_name) {
-        displayCell += "、" + String(reservation.plan_name || '');
-      }
-      if (reservation.agent) {
-        displayCell += "、㋔｜" + String(reservation.agent || '');
-      } else if (reservation.type === "employee") {
-        displayCell += "、㋛｜";
-      }
+      const reservationDate = new Date(reservation.date);
+      const formattedReservationDate = isNaN(reservationDate.getTime()) ? '' : reservationDate.toLocaleDateString('ja-JP');
+
+      const currentTimestamp = new Date();
+      const formattedTimestamp = isNaN(currentTimestamp.getTime()) ? '' : currentTimestamp.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+      const displayCell = buildDisplayCell(reservation);
   
       // Ensure all values are converted to strings
       return [
         String(reservation.hotel_id || ''),
         String(reservation.hotel_name || ''),
         String(reservation.reservation_detail_id || ''),
-        new Date(reservation.date).toLocaleDateString('ja-JP'),
+        formattedReservationDate,
         String(reservation.room_type_name || ''),
         String(reservation.room_number || ''),
         String(reservation.client_name || ''),
@@ -145,7 +170,7 @@ function transformDataForGoogleSheets(reservations) {
         String(reservation.status || ''),
         String(reservation.type || ''),
         String(reservation.agent || ''),
-        new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+        formattedTimestamp,
         displayCell
       ];
     });
@@ -156,31 +181,19 @@ function transformDataForGoogleSheets(reservations) {
 
 function transformParkingDataForGoogleSheets(reservations) {
     const rows = reservations.map(reservation => {
-      let displayCell = '';
+      const reservationDate = new Date(reservation.date);
+      const formattedReservationDate = isNaN(reservationDate.getTime()) ? '' : reservationDate.toLocaleDateString('ja-JP');
 
-      // Use reservation_status for Google display
-      if (reservation.reservation_status === "hold") {
-        displayCell += "㋭｜";
-      } else if (reservation.reservation_status === "provisory") {
-        displayCell += "㋕｜";
-      }
-      if (reservation.client_name) {
-        displayCell += reservation.client_name;
-      }
-      if (reservation.vehicle_category_name) {
-        displayCell += "、" + reservation.vehicle_category_name;
-      }
-      if (reservation.agent) {
-        displayCell += "、㋔｜" + reservation.agent;
-      } else if (reservation.reservation_type === "employee") {
-        displayCell += "、㋛｜";
-      }
+      const currentTimestamp = new Date();
+      const formattedTimestamp = isNaN(currentTimestamp.getTime()) ? '' : currentTimestamp.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+      const displayCell = buildDisplayCell(reservation, true);
 
       return [
         String(reservation.hotel_id || ''),
         String(reservation.hotel_name || ''),
         String(reservation.reservation_details_id || ''),
-        new Date(reservation.date).toLocaleDateString('ja-JP'),
+        formattedReservationDate,
         String(reservation.vehicle_category_name || ''),
         String(reservation.parking_lot_name || ''),
         String(reservation.spot_number || ''),
@@ -188,7 +201,7 @@ function transformParkingDataForGoogleSheets(reservations) {
         String(reservation.reservation_status || ''),
         String(reservation.reservation_type || ''),
         String(reservation.agent || ''),
-        new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+        formattedTimestamp,
         displayCell
       ];
     });

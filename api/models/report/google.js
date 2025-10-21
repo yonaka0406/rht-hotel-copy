@@ -29,13 +29,13 @@ const formatClientName = (name) => {
 };
 
 const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
-  const pool = (requestId && requestId.startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
 
   if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'development') {
     console.error("[selectReservationsForGoogle] Skip querying the view in local/test environments");
     // Skip querying the view in local/test environments
     return [];
   }
+  const pool = (requestId && requestId.startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
   const query = `
       SELECT
           r.hotel_id,
