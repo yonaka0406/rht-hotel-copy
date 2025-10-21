@@ -78,25 +78,37 @@ async function processGoogleQueue() {
             return;
         }
 
-        // --- 2. Process Each Task One-by-One ---
-        for (const task of tasks) {
-            const taskRequestId = `job-google-${task.id}`;
-            try {
-                // a) Main Sheet
-                const reservations = await googleReportModel.selectReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
-                const reservationValues = transformDataForGoogleSheets(reservations);
-                const mainSheetName = `H_${task.hotel_id}`;
+    const CHUNK_SIZE = 500; // Process reservations in chunks to manage memory
+
+    // --- 2. Process Each Task One-by-One ---
+    for (const task of tasks) {
+        const taskRequestId = `job-google-${task.id}`;
+        try {
+            // a) Main Sheet
+            const reservations = await googleReportModel.selectReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
+            const mainSheetName = `H_${task.hotel_id}`;
+
+            for (let i = 0; i < reservations.length; i += CHUNK_SIZE) {
+                const chunk = reservations.slice(i, i + CHUNK_SIZE);
+                const reservationValues = transformDataForGoogleSheets(chunk);
                 await googleUtils.appendDataToSheet(MAIN_SHEET_ID, mainSheetName, reservationValues);
-                // b) Parking Sheet
-                const parkingSheetName = `P_${task.hotel_id}`;
-                const parkingReservations = await googleReportModel.selectParkingReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
-                const parkingReservationValues = transformParkingDataForGoogleSheets(parkingReservations);
+            }
+
+            // b) Parking Sheet
+            const parkingSheetName = `P_${task.hotel_id}`;
+            const parkingReservations = await googleReportModel.selectParkingReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
+
+            for (let i = 0; i < parkingReservations.length; i += CHUNK_SIZE) {
+                const chunk = parkingReservations.slice(i, i + CHUNK_SIZE);
+                const parkingReservationValues = transformParkingDataForGoogleSheets(chunk);
                 await googleUtils.appendDataToSheet(PARKING_SHEET_ID, parkingSheetName, parkingReservationValues);
-                // c) Mark as processed
-                await client.query(
-                    `UPDATE google_sheets_queue SET status = 'processed', processed_at = NOW() WHERE id = $1`,
-                    [task.id]
-                );
+            }
+
+            // c) Mark as processed
+            await client.query(
+                `UPDATE google_sheets_queue SET status = 'processed', processed_at = NOW() WHERE id = $1`,
+                [task.id]
+            );
 
             } catch (googleError) {
                 // Mark as 'failed' so we don't retry a bad task forever
