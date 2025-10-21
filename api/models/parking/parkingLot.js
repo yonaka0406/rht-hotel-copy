@@ -1,4 +1,5 @@
 let getPool = require('../../config/database').getPool;
+const { validateIntegerParam } = require('../../utils/validationUtils');
 
 // Parking Lot
 const getParkingLots = async (requestId, hotel_id) => {
@@ -10,11 +11,7 @@ const getParkingLots = async (requestId, hotel_id) => {
 };
 
 const createParkingLot = async (requestId, { hotel_id, name, description }) => {
-    // Validate hotel_id (assuming UUID)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!hotel_id || typeof hotel_id !== 'string' || !uuidRegex.test(hotel_id)) {
-        throw new Error('Invalid Hotel ID format (UUID expected).');
-    }
+    const parsedHotelId = validateIntegerParam(hotel_id, 'Hotel ID');
 
     // Validate name
     const trimmedName = name ? String(name).trim() : '';
@@ -31,7 +28,7 @@ const createParkingLot = async (requestId, { hotel_id, name, description }) => {
 
     const pool = getPool(requestId);
     const query = 'INSERT INTO parking_lots (hotel_id, name, description) VALUES ($1, $2, $3) RETURNING *';
-    const values = [hotel_id, trimmedName, trimmedDescription];
+    const values = [parsedHotelId, trimmedName, trimmedDescription];
     const result = await pool.query(query, values);
     return result.rows[0];
 };
