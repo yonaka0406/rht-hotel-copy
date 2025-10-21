@@ -3,19 +3,30 @@
     <div class="card-body">
       <div class="mb-4">
         <FloatLabel>
-          <DatePicker v-model="selectedDate" inputId="log-date" class="w-full" />
+          <DatePicker v-model="selectedDate" inputId="log-date" class="w-full" dateFormat="yy/mm/dd" />
           <label for="log-date">日付を選択</label>
         </FloatLabel>
       </div>
-      <DataTable :value="logs" :loading="loading" responsiveLayout="scroll" emptyMessage="選択した日付にログがありません。">
-        <Column field="log_id" header="ログID"></Column>
+      <div class="flex justify-content-end mb-4">
+        <Button label="CSVエクスポート" icon="pi pi-download" @click="exportCsv" />
+      </div>
+      <DataTable ref="dt" :value="logs" :loading="loading" responsiveLayout="scroll" emptyMessage="選択した日付にログがありません。"
+        paginator :rows="rows" :totalRecords="totalRecords" @page="onPage"
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        :rowsPerPageOptions="[10, 20, 50, 100]"
+        currentPageReportTemplate="{first}-{last} of {totalRecords}">
+        <Column field="id" header="ログID"></Column>
         <Column field="log_time" header="ログ時刻">
           <template #body="slotProps">
             {{ new Date(slotProps.data.log_time).toLocaleString() }}
           </template>
         </Column>
         <Column field="user_id" header="ユーザーID"></Column>
-        <Column field="details" header="詳細"></Column>
+        <Column header="詳細">
+          <template #body="slotProps">
+            {{ slotProps.data.table_name }} - {{ slotProps.data.action }}
+          </template>
+        </Column>
       </DataTable>
     </div>
   </div>
@@ -26,6 +37,7 @@ import DatePicker from 'primevue/datepicker';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import FloatLabel from 'primevue/floatlabel';
+import Button from 'primevue/button'; // Import Button component
 import { ref, onMounted, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { formatDate } from '@/utils/dateUtils';
@@ -33,13 +45,29 @@ import { useSystemLogs } from '@/composables/useSystemLogs';
 
 const toast = useToast();
 const selectedDate = ref(new Date());
-const { logs, loading, fetchLogs } = useSystemLogs();
+const { logs, loading, fetchLogs: systemLogsFetchLogs } = useSystemLogs();
+
+const dt = ref(); // Reference to the DataTable
+
+// Removed rows ref
+// Removed totalRecords ref
+
+// Removed onPage function
+
+const loadLogs = async () => {
+  const date = formatDate(selectedDate.value);
+  const response = await systemLogsFetchLogs(date); // Removed rows.value
+  // totalRecords.value = response.totalRecords; // No longer needed if not displaying total records
+};
 
 onMounted(() => {
-  fetchLogs(formatDate(selectedDate.value));
+  loadLogs();
 });
 
 watch(selectedDate, (newDate) => {
-  fetchLogs(formatDate(newDate));
+  loadLogs();
 });
+
+
+      <DataTable ref="dt" :value="logs" :loading="loading" responsiveLayout="scroll" emptyMessage="選択した日付にログがありません。">
 </script>

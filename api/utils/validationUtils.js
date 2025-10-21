@@ -47,17 +47,17 @@ function validateUuidParam(uuidString, paramName) {
  */
 function validateDateStringParam(dateString, paramName) {
   if (dateString === undefined || dateString === null || String(dateString).trim() === '') {
-    throw new Error(`${paramName} is required and cannot be empty.`);
+    return null; // Return null for empty/undefined/null date strings
   }
   const regex = /^\d{4}-\d{2}-\d{2}$/;
   if (!regex.test(String(dateString))) {
-    throw new Error(`Invalid ${paramName} format. Must be YYYY-MM-DD. Received: '${dateString}'`);
+    return null; // Return null for invalid format
   }
   // Further check if it's a valid date (e.g., not 2023-02-30)
   const date = new Date(String(dateString));
   const [year, month, day] = String(dateString).split('-').map(Number);
   if (date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) {
-    throw new Error(`Invalid ${paramName} value. Date is not a real calendar date. Received: '${dateString}'`);
+    return null; // Return null for non-real calendar dates
   }
   return String(dateString);
 }
