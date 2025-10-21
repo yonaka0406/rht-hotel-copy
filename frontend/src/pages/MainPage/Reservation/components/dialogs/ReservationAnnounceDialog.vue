@@ -170,25 +170,25 @@ const generateSlackMessage = () => {
     }
 
     let message = `🗓️【${clientName}】\n`;
-    message += `📞TEL/FAX：\t${clientPhone}/${clientFax}\n`;
-    message += `🧑‍💼予約担当者：\t${info.responsible_person_name || '未設定'}\n`;
-    message += `⏳宿泊期間：\t${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)})-${checkOutDate} (${getJapaneseWeekday(info.check_out)})\n`;
-    message += `🌐予約経路：\t${translateType(info.type)}\n`;
-    message += `🧑人数：\t${info.reservation_number_of_people}名\n`;
-    message += `宿泊者：\t${guestNames}\n\n`;
+    message += `TEL/FAX：　${clientPhone} / ${clientFax}\n`;
+    message += `予約担当者：　${info.responsible_person_name || '未設定'}\n`;
+    message += `宿泊期間：　${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)}) - ${checkOutDate} (${getJapaneseWeekday(info.check_out)})\n`;
+    
+    message += `人数：　${info.reservation_number_of_people}名\n`;
+    message += `宿泊者：　${guestNames}\n`;
 
-    message += `🚪部屋数:\t${smokingRoomsCount.value > 0 ? `喫煙 ${smokingRoomsCount.value}室` : ''}${smokingRoomsCount.value > 0 && nonSmokingRoomsCount.value > 0 ? ' / ' : ''}${nonSmokingRoomsCount.value > 0 ? `禁煙 ${nonSmokingRoomsCount.value}室` : ''}\n`;
-    message += `部屋番号：\t${uniqueRoomNumbers}\n\n`;
+    message += `部屋数:　${smokingRoomsCount.value > 0 ? `喫煙 ${smokingRoomsCount.value}室` : ''}${smokingRoomsCount.value > 0 && nonSmokingRoomsCount.value > 0 ? ' / ' : ''}${nonSmokingRoomsCount.value > 0 ? `禁煙 ${nonSmokingRoomsCount.value}室` : ''}\n`;
+    message += `部屋番号：　${uniqueRoomNumbers}\n`;
 
-    message += `🥡プラン：\t${weekdayPlanNamesList.value || '未設定'}\n`;
+    message += `プラン：　${weekdayPlanNamesList.value || '未設定'}\n`;
     if (weekendPlanNamesList.value) {
-        message += `週末プラン：\t${weekendPlanNamesList.value}\n\n`;
+        message += `週末プラン：　${weekendPlanNamesList.value}\n`;
     }
-    message += `🚗駐車場：\t${parkingDetails.value}\n`;
-    message += `💰清算方法：\t${paymentDetails}\n`;
+    message += `駐車場：　${parkingDetails.value}\n`;
+    message += `清算方法：　${paymentDetails}\n`;
     
-    
-    message += `🏢現場：\t${info.site_name || '未設定'}\n`;
+    message += `予約経路：　未設定\n`;
+    message += `現場：　${info.site_name || '未設定'}\n`;
     message += `📝備考：${info.comment || 'キャンセルポリシー説明済'}`;
 
     slackMessage.value = message;
