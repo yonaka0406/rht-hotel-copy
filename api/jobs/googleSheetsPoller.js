@@ -111,39 +111,89 @@ function startGoogleSheetsPoller() {
     setInterval(processGoogleQueue, POLLING_INTERVAL);
 }
 
-function transformDataForGoogleSheets(data) {
-    return data.map(row => [
-        row.hotel_id,
-        row.hotel_name,
-        row.reservation_detail_id,
-        row.date,
-        row.room_type_name,
-        row.room_number,
-        row.client_name,
-        row.plan_name,
-        row.status,
-        row.type,
-        row.agent,
-    ]);
-}
+function transformDataForGoogleSheets(reservations) {
+    // Format each reservation as an array in the same order as headers
+    const rows = reservations.map(reservation => {
+      let displayCell = '';    
+      if (reservation.status === "hold") {
+        displayCell += "㋭｜";
+      } else if (reservation.status === "provisory") {
+        displayCell += "㋕｜";
+      }
+      if (reservation.client_name) {
+        displayCell += String(reservation.client_name || '');
+      }
+      if (reservation.plan_name) {
+        displayCell += "、" + String(reservation.plan_name || '');
+      }
+      if (reservation.agent) {
+        displayCell += "、㋔｜" + String(reservation.agent || '');
+      } else if (reservation.type === "employee") {
+        displayCell += "、㋛｜";
+      }
+  
+      // Ensure all values are converted to strings
+      return [
+        String(reservation.hotel_id || ''),
+        String(reservation.hotel_name || ''),
+        String(reservation.reservation_detail_id || ''),
+        new Date(reservation.date).toLocaleDateString('ja-JP'),
+        String(reservation.room_type_name || ''),
+        String(reservation.room_number || ''),
+        String(reservation.client_name || ''),
+        String(reservation.plan_name || ''),
+        String(reservation.status || ''),
+        String(reservation.type || ''),
+        String(reservation.agent || ''),
+        new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+        displayCell
+      ];
+    });
+    
+    // Return data rows
+    return [...rows];
+};
 
-function transformParkingDataForGoogleSheets(data) {
-    return data.map(row => [
-        row.hotel_id,
-        row.hotel_name,
-        row.reservation_details_id,
-        row.date,
-        row.vehicle_category_name,
-        row.parking_lot_name,
-        row.spot_number,
-        row.client_name,
-        row.reservation_status,
-        row.reservation_type,
-        row.agent,
-        row.parking_status,
-        row.addon_name,
-        row.comment,
-    ]);
-}
+function transformParkingDataForGoogleSheets(reservations) {
+    const rows = reservations.map(reservation => {
+      let displayCell = '';
+
+      // Use reservation_status for Google display
+      if (reservation.reservation_status === "hold") {
+        displayCell += "㋭｜";
+      } else if (reservation.reservation_status === "provisory") {
+        displayCell += "㋕｜";
+      }
+      if (reservation.client_name) {
+        displayCell += reservation.client_name;
+      }
+      if (reservation.vehicle_category_name) {
+        displayCell += "、" + reservation.vehicle_category_name;
+      }
+      if (reservation.agent) {
+        displayCell += "、㋔｜" + reservation.agent;
+      } else if (reservation.reservation_type === "employee") {
+        displayCell += "、㋛｜";
+      }
+
+      return [
+        String(reservation.hotel_id || ''),
+        String(reservation.hotel_name || ''),
+        String(reservation.reservation_details_id || ''),
+        new Date(reservation.date).toLocaleDateString('ja-JP'),
+        String(reservation.vehicle_category_name || ''),
+        String(reservation.parking_lot_name || ''),
+        String(reservation.spot_number || ''),
+        String(reservation.client_name || ''),
+        String(reservation.reservation_status || ''),
+        String(reservation.reservation_type || ''),
+        String(reservation.agent || ''),
+        new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+        displayCell
+      ];
+    });
+
+    return [...rows];
+};
 
 module.exports = { startGoogleSheetsPoller };

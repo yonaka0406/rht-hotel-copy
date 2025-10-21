@@ -1,4 +1,4 @@
-const { getPool } = require('../../config/database');
+const db = require('../../config/database');
 
 const replacements = {
   '株式会社': '㈱',
@@ -29,14 +29,13 @@ const formatClientName = (name) => {
 };
 
 const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
+  const pool = (requestId && requestId.startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
 
   if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'development') {
     console.error("[selectReservationsForGoogle] Skip querying the view in local/test environments");
     // Skip querying the view in local/test environments
     return [];
   }
-
-  const pool = getPool(requestId);
   const query = `
       SELECT
           r.hotel_id,
@@ -80,12 +79,15 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
   }
 };
 
+
+
 const selectParkingReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
   if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'development') {
     return [];
   }
 
-  const pool = getPool(requestId);
+  const pool = (requestId && requestId.startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
+
   const query = `
       SELECT
           pl.hotel_id,
