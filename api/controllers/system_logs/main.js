@@ -1,5 +1,6 @@
 const systemLogsModel = require('../../models/system_logs');
 const { validateDateStringParam } = require('../../utils/validationUtils');
+const { transformLogs } = require('./service/logTransformer');
 
 const getReservationLogs = async (req, res) => {
   const { date } = req.query; // Removed limit
@@ -13,7 +14,8 @@ const getReservationLogs = async (req, res) => {
     // Removed parsedLimit
 
     const { logs, totalRecords } = await systemLogsModel.getReservationLogsByDate(req.requestId, validatedDate); // Removed parsedLimit
-    res.status(200).json({ logs, totalRecords });
+    const transformedLogs = transformLogs(logs);
+    res.status(200).json({ logs: transformedLogs, totalRecords });
   } catch (error) {
     req.app.locals.logger.error(error, { requestId: req.requestId, route: req.originalUrl });
     res.status(500).json({ message: 'Error fetching reservation logs' });
