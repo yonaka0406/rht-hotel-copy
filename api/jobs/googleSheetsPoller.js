@@ -28,6 +28,7 @@ async function processGoogleQueue() {
     const client = await db.getProdPool().connect();
 
     try {
+        logger.warn('Fetching pending Google Sheets tasks...');
         // --- 1. Get Pending Tasks ---
         // Select all 'pending' tasks. The UNIQUE constraint in the DB
         // already ensures we don't have 60 duplicates. We just have 1.
@@ -36,7 +37,7 @@ async function processGoogleQueue() {
             `SELECT * FROM google_sheets_queue 
              WHERE status = 'pending' 
              ORDER BY created_at ASC 
-             LIMIT 50`
+             LIMIT 29`
         );
         tasks = rows;
 
@@ -49,17 +50,26 @@ async function processGoogleQueue() {
 
         // --- 2. Process Each Task One-by-One ---
         for (const task of tasks) {
+            logger.warn(`Processing task ${task.id}`, { task });
             const taskRequestId = `job-google-${task.id}`;
             try {
                 // a) Main Sheet
+                logger.warn(`Fetching reservations for task ${task.id}...`);
                 const reservations = await googleReportModel.selectReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
+                logger.warn(`Fetched ${reservations.length} reservations for task ${task.id}.`);
                 const reservationValues = transformDataForGoogleSheets(reservations);
+                logger.warn(`Appending ${reservationValues.length} reservation rows to main sheet for task ${task.id}.`);
                 await googleUtils.appendDataToSheet(MAIN_SHEET_ID, '予約データ', reservationValues);
+                logger.warn(`Successfully appended reservations for task ${task.id}.`);
 
                 // b) Parking Sheet
+                logger.warn(`Fetching parking reservations for task ${task.id}...`);
                 const parkingReservations = await googleReportModel.selectParkingReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
+                logger.warn(`Fetched ${parkingReservations.length} parking reservations for task ${task.id}.`);
                 const parkingReservationValues = transformParkingDataForGoogleSheets(parkingReservations);
+                logger.warn(`Appending ${parkingReservationValues.length} parking reservation rows to parking sheet for task ${task.id}.`);
                 await googleUtils.appendDataToSheet(PARKING_SHEET_ID, '駐車場データ', parkingReservationValues);
+                logger.warn(`Successfully appended parking reservations for task ${task.id}.`);
 
                 // c) Mark as processed
                 await client.query(

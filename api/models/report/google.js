@@ -29,7 +29,9 @@ const formatClientName = (name) => {
 };
 
 const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
+
   if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'development') {
+    console.error("[selectReservationsForGoogle] Skip querying the view in local/test environments");
     // Skip querying the view in local/test environments
     return [];
   }
