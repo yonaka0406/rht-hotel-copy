@@ -53,7 +53,6 @@ function buildDisplayCell(reservation, isParking = false) {
  */
 async function processGoogleQueue() {
     if (isJobRunning) {
-        defaultLogger.warn('Google Sheets Poller job already running. Skipping this run.');
         return;
     }
     isJobRunning = true;
@@ -63,7 +62,6 @@ async function processGoogleQueue() {
     const client = await db.getProdPool().connect();
 
     try {
-        logger.warn('Fetching pending Google Sheets tasks...');
         // --- 1. Get Pending Tasks ---
         // Select all 'pending' tasks. The UNIQUE constraint in the DB
         // already ensures we don't have 60 duplicates. We just have 1.
@@ -77,46 +75,30 @@ async function processGoogleQueue() {
         tasks = rows;
 
         if (tasks.length === 0) {
-            logger.info('No pending Google Sheets tasks.');
             return;
         }
 
-        logger.info(`Found ${tasks.length} pending Google Sheets tasks to process.`);
-
         // --- 2. Process Each Task One-by-One ---
         for (const task of tasks) {
-            logger.warn(`Processing task ${task.id}`, { task });
             const taskRequestId = `job-google-${task.id}`;
             try {
                 // a) Main Sheet
-                logger.warn(`Fetching reservations for task ${task.id}...`);
                 const reservations = await googleReportModel.selectReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
-                logger.warn(`Fetched ${reservations.length} reservations for task ${task.id}.`);
                 const reservationValues = transformDataForGoogleSheets(reservations);
                 const mainSheetName = `H_${task.hotel_id}`;
-                logger.warn(`Appending ${reservationValues.length} reservation rows to main sheet '${mainSheetName}' for task ${task.id}.`);
                 await googleUtils.appendDataToSheet(MAIN_SHEET_ID, mainSheetName, reservationValues);
-                logger.warn(`Successfully appended reservations for task ${task.id}.`);
-
                 // b) Parking Sheet
-                logger.warn(`Fetching parking reservations for task ${task.id}...`);
                 const parkingSheetName = `P_${task.hotel_id}`;
                 const parkingReservations = await googleReportModel.selectParkingReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
-                logger.warn(`Fetched ${parkingReservations.length} parking reservations for task ${task.id}.`);
                 const parkingReservationValues = transformParkingDataForGoogleSheets(parkingReservations);
-                logger.warn(`Appending ${parkingReservationValues.length} parking reservation rows to parking sheet '${parkingSheetName}' for task ${task.id}.`);
                 await googleUtils.appendDataToSheet(PARKING_SHEET_ID, parkingSheetName, parkingReservationValues);
-                logger.warn(`Successfully appended parking reservations for task ${task.id}.`);
-
                 // c) Mark as processed
                 await client.query(
                     `UPDATE google_sheets_queue SET status = 'processed', processed_at = NOW() WHERE id = $1`,
                     [task.id]
                 );
-                logger.info(`Successfully processed task ${task.id}`, { task });
 
             } catch (googleError) {
-                logger.error(`Failed to process Google task ${task.id}. Marking as failed.`, { taskId: task.id, error: googleError.message, stack: googleError.stack });
                 // Mark as 'failed' so we don't retry a bad task forever
                 try {
                     await client.query(
@@ -124,7 +106,6 @@ async function processGoogleQueue() {
                         [task.id]
                     );
                 } catch (dbError) {
-                    logger.error(`DB error while marking task ${task.id} as failed. Original googleError: ${googleError.message}`, { taskId: task.id, dbError: dbError.message, dbStack: dbError.stack });
                 }
             }
         }
@@ -132,16 +113,13 @@ async function processGoogleQueue() {
     } catch (error) {
         // This is a fatal error (e.g., DB connection lost).
         // Tasks will remain 'pending' and be retried on the next run.
-        logger.error('Fatal error in Google Sheets Poller job. Batch will be retried.', { error: error.message, stack: error.stack });
     } finally {
         isJobRunning = false;
         client.release();
-        logger.info('Google Sheets Poller run finished.');
     }
 }
 
 function startGoogleSheetsPoller() {
-    defaultLogger.info('Starting Google Sheets Polling Worker (runs every 60s)...');
     processGoogleQueue(); // Run immediately on start
     setInterval(processGoogleQueue, POLLING_INTERVAL);
 }
