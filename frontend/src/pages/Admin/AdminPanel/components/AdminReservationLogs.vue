@@ -48,16 +48,20 @@ const selectedDate = ref(new Date());
 const { logs, loading, fetchLogs: systemLogsFetchLogs } = useSystemLogs();
 
 const dt = ref(); // Reference to the DataTable
+const rows = ref(10); // Number of rows per page
+const totalRecords = ref(0); // Total number of records
 
-// Removed rows ref
-// Removed totalRecords ref
-
-// Removed onPage function
+const onPage = (event) => {
+  rows.value = event.rows;
+  // In a real application, you would re-fetch logs based on the new page and rows
+  // For now, we'll just update the rows value.
+  console.log('Pagination event:', event);
+};
 
 const loadLogs = async () => {
   const date = formatDate(selectedDate.value);
-  const response = await systemLogsFetchLogs(date); // Removed rows.value
-  // totalRecords.value = response.totalRecords; // No longer needed if not displaying total records
+  const response = await systemLogsFetchLogs(date);
+  totalRecords.value = response.totalRecords; // Assuming response contains totalRecords
 };
 
 onMounted(() => {
@@ -68,6 +72,7 @@ watch(selectedDate, (newDate) => {
   loadLogs();
 });
 
-
-      <DataTable ref="dt" :value="logs" :loading="loading" responsiveLayout="scroll" emptyMessage="選択した日付にログがありません。">
+const exportCsv = () => {
+  dt.value.exportCSV();
+};
 </script>
