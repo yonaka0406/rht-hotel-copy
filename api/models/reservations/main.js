@@ -4724,19 +4724,6 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
       return { success: false, message: 'No valid details to cancel' };
     }
 
-    // Get the number of people from the first cancelled detail
-    const peopleReduction = cancelResult.rows[0]?.number_of_people || 0;
-
-    // Update reservation's people count if needed
-    if (peopleReduction > 0) {
-      await client.query(
-        `UPDATE reservations 
-         SET number_of_people = GREATEST(0, number_of_people - $1)             
-         WHERE id = $2 AND hotel_id = $3`,
-        [peopleReduction, reservationId, hotelId]
-      );
-    }
-
     // Check if all details are now cancelled
     const { rows: [statusCheck] } = await client.query(
       `SELECT 
@@ -4760,6 +4747,44 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
         [reservationId, hotelId]
       );
     } else {
+      // If active details remain, update the main reservation's check_in and check_out dates
+      const { rows: [dateRange] } = await client.query(
+        `SELECT
+           MIN(date) as new_check_in,
+           MAX(date) + INTERVAL '1 day' as new_check_out
+         FROM reservation_details
+         WHERE reservation_id = $1 AND cancelled IS NULL`,
+        [reservationId]
+      );
+
+      if (dateRange.new_check_in && dateRange.new_check_out) {
+        await client.query(
+          `UPDATE reservations
+           SET check_in = $1, check_out = $2
+           WHERE id = $3 AND hotel_id = $4`,
+          [dateRange.new_check_in, dateRange.new_check_out, reservationId, hotelId]
+        );
+      }
+      // Recalculate the total number of people for the reservation based on the maximum number of people on any single active day
+      const { rows: [maxPeopleResult] } = await client.query(
+        `SELECT COALESCE(MAX(daily_people_sum), 0) as max_people
+         FROM (
+           SELECT date, SUM(number_of_people) as daily_people_sum
+           FROM reservation_details
+           WHERE reservation_id = $1 AND cancelled IS NULL
+           GROUP BY date
+         ) as daily_sums`,
+        [reservationId]
+      );
+
+      const newTotalPeople = parseInt(maxPeopleResult.max_people, 10);
+
+      await client.query(
+        `UPDATE reservations
+         SET number_of_people = $1
+         WHERE id = $2 AND hotel_id = $3`,
+        [newTotalPeople, reservationId, hotelId]
+      );
       //console.log('Active details remain, reservation remains active:', { reservationId, activeCount: parseInt(statusCheck.active_count, 10) });
     }
 
