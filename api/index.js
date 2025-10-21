@@ -217,6 +217,7 @@ const searchRoutes = require('./routes/searchRoutes'); // Import search routes
 const parkingRoutes = require('./routes/parkingRoutes');
 const guestRoutes = require('./routes/guestRoutes');
 const validationRoutes = require('./routes/validationRoutes');
+const systemLogsRoutes = require('./routes/systemLogsRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -242,6 +243,7 @@ app.use('/api/booking-engine', bookingEngineRoutes);
 app.use('/api', parkingRoutes);
 app.use('/api', guestRoutes);
 app.use('/api', validationRoutes);
+app.use('/api', systemLogsRoutes);
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {
