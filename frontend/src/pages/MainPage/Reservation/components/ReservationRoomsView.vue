@@ -340,7 +340,7 @@
                         <div v-if="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
                             <p class="col-span-2">部屋を予約から削除して、宿泊者の人数を減らします。</p>
                             <Button label="部屋削除" severity="danger" icon="pi pi-trash"
-                                @click="deleteRoom(selectedGroup)" />
+                                @click="deleteRoom(selectedGroup)" :disabled="isSubmitting" />
                         </div>
                         <div v-else="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
                             <p class="col-span-3">部屋を予約から削除より、予約を削除・キャンセルしてください。</p>
@@ -350,7 +350,7 @@
                             <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
                             <button class="bg-blue-500 text-white hover:bg-blue-600"
                                 @click="changeGuestNumber(selectedGroup, 'add')"
-                                :disabled="selectedGroup.details[0].number_of_people >= selectedGroup.details[0].capacity || isChangingGuestNumber"><i class="pi pi-plus"></i>
+                                :disabled="selectedGroup.details[0].number_of_people >= selectedGroup.details[0].capacity || isChangingGuestNumber || isSubmitting"><i class="pi pi-plus"></i>
                                 人数増加</button>
                         </div>
                         <div v-if="selectedGroup.details[0].number_of_people > 1"
@@ -358,7 +358,7 @@
                             <p class="col-span-2">予約の宿泊者の人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
                             <button class="bg-yellow-500 text-white hover:bg-yellow-600"
                                 @click="changeGuestNumber(selectedGroup, 'subtract')"
-                                :disabled="selectedGroup.details[0].number_of_people <= 1"><i class="pi pi-minus"></i>
+                                :disabled="selectedGroup.details[0].number_of_people <= 1 || isSubmitting"><i class="pi pi-minus"></i>
                                 人数削減</button>
                         </div>
 
@@ -423,11 +423,11 @@
                         </div>
                         <div v-if="!isRoomCancelled" class="flex justify-center items-center mt-4">
                             <Button label="キャンセル" icon="pi pi-times" class="p-button-danger"
-                                @click="cancelRoomReservation" />
+                                @click="cancelRoomReservation" :loading="isSubmitting" :disabled="isSubmitting" />
                         </div>
                         <div v-else class="flex justify-center items-center">
                             <Button label="復活" icon="pi pi-history" class="p-button-warn"
-                                @click="recoverRoomReservation" />
+                                @click="recoverRoomReservation" :loading="isSubmitting" :disabled="isSubmitting" />
                         </div>
                     </TabPanel>
                 </TabPanels>
@@ -443,21 +443,21 @@
                 <label for="overrideRounding" class="ml-2">端数処理を上書きする</label>
             </div>
             <Button v-if="tabsRoomEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
+                class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" :loading="isSubmitting" :disabled="isSubmitting" />
 
             <Button v-if="tabsRoomEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyPatternChanges" />
+                class="p-button-success p-button-text p-button-sm" @click="applyPatternChanges" :loading="isSubmitting" :disabled="isSubmitting" />
 
             <Button v-if="tabsRoomEditDialog === 1" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
+                class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" :loading="isSubmitting" :disabled="isSubmitting" />
             <Button v-if="tabsRoomEditDialog === 2" label="適用" icon="pi pi-check"
                 class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges"
-                :disabled="hasBlockingImpediment" />
+                :disabled="hasBlockingImpediment || isSubmitting" :loading="isSubmitting" />
             <Button v-if="tabsRoomEditDialog === 4" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
+                class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" :loading="isSubmitting" :disabled="isSubmitting" />
 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
-                    @click="closeRoomEditDialog" />
+                    @click="closeRoomEditDialog" :disabled="isSubmitting" />
             </div>
         </template>
     </Dialog>
@@ -481,6 +481,8 @@
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch } from 'vue';
+
+const isSubmitting = ref(false);
 
 import ReservationDayDetail from '@/pages/MainPage/Reservation/components/ReservationDayDetail.vue';
 import ReservationGuestListDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationGuestListDialog.vue';
@@ -856,6 +858,7 @@ const deleteAddon = (addon) => {
     }
 };
 const applyPlanChanges = async () => {
+    isSubmitting.value = true;
     try {
         const params = {
             hotel_id: reservationInfo.value.hotel_id,
@@ -896,9 +899,12 @@ const applyPlanChanges = async () => {
             detail: errorMessage,
             life: 5000
         });
+    } finally {
+        isSubmitting.value = false;
     }
 };
 const applyPatternChanges = async () => {
+    isSubmitting.value = true;
     try {
         const hasAtLeastOnePlan = Object.values(dayPlanSelections.value).some(v => v !== null);
         if (!hasAtLeastOnePlan) {
@@ -916,6 +922,8 @@ const applyPatternChanges = async () => {
     } catch (error) {
         console.error('Failed to apply changes:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
@@ -934,6 +942,8 @@ const filteredRooms = computed(() => {
         }));
 });
 const applyRoomChanges = async () => {
+    isSubmitting.value = true;
+    try {
     if (numberOfPeopleToMove.value <= 0) {
         toast.add({ severity: 'warn', summary: '警告', detail: `少なくとも一人入力してください。`, life: 3000 });
         return;
@@ -957,6 +967,12 @@ const applyRoomChanges = async () => {
 
     // Provide feedback to the user (optional)
     toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
+    } catch (error) {
+        console.error('Failed to apply changes:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
+    } finally {
+        isSubmitting.value = false;
+    }
 };
 
 // Tab Set Clients
@@ -1068,52 +1084,58 @@ const onClientChange = (rowData, index) => {
 const debouncedFilterClients = debounce(filterClients, 300); // 300ms debounce delay
 
 const applyGuestChanges = async () => {
-    // Check for blocking impediments
-    if (hasBlockingImpediment.value) {
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: 'ブロックされている宿泊者が含まれています。予約を続行できません。',
-            life: 5000
-        });
-        return;
-    }
-
-    const guestsWithId = guests.value.filter(guest => guest.client?.id !== null);
-    const idSet = new Set();
-    const duplicatedGuest = [];
-    let hasDuplicates = false;
-    const number_of_people = selectedGroup.value.details[0]?.number_of_people;
-    const guestCount = guests.value.filter(guest => guest.client?.name).length;
-
-    // Check if guest count exceeds number_of_people
-    if (guestCount > number_of_people) {
-        toast.add({
-            severity: 'warn',
-            summary: '警告',
-            detail: `予約の宿泊人数を超えています。 (最大: ${number_of_people}人)`,
-            life: 3000
-        });
-        return;
-    }
-    // Validate if the same person was selected more than once
-    for (const guest of guestsWithId) {
-        if (idSet.has(guest.client.id)) {
-            hasDuplicates = true;
-            duplicatedGuest.value = guest.client;
-            break;
+    isSubmitting.value = true;
+    try {
+        // Check for blocking impediments
+        if (hasBlockingImpediment.value) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: 'ブロックされている宿泊者が含まれています。予約を続行できません。',
+                life: 5000
+            });
+            return;
         }
-        idSet.add(guest.client.id);
-    }
 
-    if (hasDuplicates) {
-        toast.add({ severity: 'warn', summary: '警告', detail: `重複宿泊者:${duplicatedGuest.value.display_name}が選択されました。`, life: 3000 });
-        return;
-    } else {
+        const guestsWithId = guests.value.filter(guest => guest.client?.id !== null);
+        const idSet = new Set();
+        const duplicatedGuest = [];
+        let hasDuplicates = false;
+        const number_of_people = selectedGroup.value.details[0]?.number_of_people;
+        const guestCount = guests.value.filter(guest => guest.client?.name).length;
+
+        // Check if guest count exceeds number_of_people
+        if (guestCount > number_of_people) {
+            toast.add({
+                severity: 'warn',
+                summary: '警告',
+                detail: `予約の宿泊人数を超えています。 (最大: ${number_of_people}人)`,
+                life: 3000
+            });
+            return;
+        }
+        // Validate if the same person was selected more than once
+        for (const guest of guestsWithId) {
+            if (idSet.has(guest.client.id)) {
+                hasDuplicates = true;
+                duplicatedGuest.value = guest.client;
+                break;
+            }
+            idSet.add(guest.client.id);
+        }
+
+        if (hasDuplicates) {
+            toast.add({ severity: 'warn', summary: '警告', detail: `重複宿泊者:${duplicatedGuest.value.display_name}が選択されました。`, life: 3000 });
+            return;
+        }
+
         // console.log('No duplicates found, checking fields...');
         for (const guest of guests.value) {
+
             if (guest.client?.name) {
+
                 if (!guest.client.email && !guest.client.phone) {
+
                     toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.client.display_name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
                     return;
                 }
@@ -1156,11 +1178,17 @@ const applyGuestChanges = async () => {
         closeRoomEditDialog();
 
         toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
+    } catch (error) {
+        console.error('Failed to apply guest changes:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '宿泊者情報の更新に失敗しました。', life: 3000 });
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
 // Tab Modify Room
 const deleteRoom = async (group) => {
+    isSubmitting.value = true;
     try {
         // Input validation - this is crucial for production
         if (!group || !group.details || group.details.length === 0) {
@@ -1219,12 +1247,13 @@ const deleteRoom = async (group) => {
         // Don't close the dialog on error so user can retry
         // Re-throw if calling code needs to handle it
         throw error;
+    } finally {
+        isSubmitting.value = false;
     }
 };
-const isChangingGuestNumber = ref(false); // Keep this ref as it's used for disabling the button
 
 const changeGuestNumber = async (group, mode) => {
-    isChangingGuestNumber.value = true; // Set to true at the start
+    isSubmitting.value = true; // Set to true at the start
     // Add operation_mode to each detail in the group
     group.details.forEach(detail => {
         detail.operation_mode = mode === 'add' ? 1 : -1;
@@ -1240,7 +1269,7 @@ const changeGuestNumber = async (group, mode) => {
         console.error('Error updating reservation details:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約明細の更新に失敗しました。', life: 3000 });
     } finally {
-        isChangingGuestNumber.value = false; // Set to false in finally block
+        isSubmitting.value = false; // Set to false in finally block
     }
 };
 
@@ -1250,6 +1279,7 @@ const newCheckOut = ref(null);
 const minCheckIn = ref(null);
 const maxCheckOut = ref(null);
 const applyDateChanges = async () => {
+    isSubmitting.value = true;
     // Validation checks (your existing code is good)
     if (!newCheckIn.value) {
         toast.add({
@@ -1308,6 +1338,8 @@ const applyDateChanges = async () => {
             detail: '宿泊期間の更新に失敗しました。もう一度お試しください。',
             life: 5000
         });
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
@@ -1373,6 +1405,7 @@ const cancelRoomReservation = () => {
         return;
     }
 
+    isSubmitting.value = true;
     confirm.require({
         group: 'cancel-room',
         message: confirmationMessage,
@@ -1394,11 +1427,19 @@ const cancelRoomReservation = () => {
 };
 
 const recoverRoomReservation = async () => {
+    isSubmitting.value = true;
+    try {
     for (const detail of selectedGroup.value.details) {
         await setReservationDetailStatus(detail.id, detail.hotel_id, 'recovered');
     }
     toast.add({ severity: 'success', summary: '成功', detail: '部屋の予約が復活されました。', life: 3000 });
     closeRoomEditDialog();
+    } catch (error) {
+        console.error('Error recovering room reservation:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の予約の復活に失敗しました。', life: 3000 });
+    } finally {
+        isSubmitting.value = false;
+    }
 };
 
 const cancelAndRecover = async (billable, detailIds) => {
@@ -1408,6 +1449,7 @@ const cancelAndRecover = async (billable, detailIds) => {
     await cancelReservationRooms(hotelId, reservationId, detailIds, billable);
     toast.add({ severity: 'warn', summary: 'キャンセル', detail: '部屋の予約がキャンセルされました。', life: 3000 });
     closeRoomEditDialog();
+    isSubmitting.value = false;
 };
 
 const openRoomEditDialog = async (group) => {
