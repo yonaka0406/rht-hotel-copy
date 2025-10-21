@@ -553,6 +553,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.25] - 2025-10-21
+
+- Bugfix: Fixed date range cancellation to correctly update check-in/check-out dates and number of people in the reservation when cancelling specific dates.
+- Feature: Added `google_sheets_queue` table to manage and optimize Google Sheets API requests, improving reliability and performance of Google Drive exports.
+
+---
+
 ## Version History
 
 ## Version History
