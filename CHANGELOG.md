@@ -562,8 +562,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ## Version History
 
-## Version History
-
+- **1.1.25** (2025-10-21) - Fixed date range cancellation issues and added Google Sheets queue table for optimized API request handling, improving export reliability.
+- **1.1.24** (2025-10-20) - Improved Room Indicator loading, fixed client filtering, and added Slack integration for reservation information sharing.
 - **1.1.23** (2025-10-15) - Added Wet Area field for rooms, improved static calendar organization, fixed multi-room reservation issues, and enhanced daily metrics with sales information.
 - **1.1.22** (2025-10-14) - Introduced Daily Report Data Download for plan-based stay analysis. Fixed room indicator display to show only current room after changes and disabled plan recalculations during room modifications to preserve original pricing.
 - **1.1.21** (2025-10-14) - Enhanced financial reporting with accurate addon sales totals and tax-exclusive values in exports. Improved room management with better addon quantity handling and UI state management for guest number controls. Added plan/addon rate separation in Monthly Reports.

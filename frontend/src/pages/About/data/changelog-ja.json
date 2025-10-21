@@ -496,6 +496,23 @@
         { "type": "bugfix", "description": "複数部屋予約で1部屋の期間を変更した際に新しい予約が作成されてしまう問題を修正しました。" },
         { "type": "feature", "description": "日次メトリクスに売上情報を追加し、レポート機能を強化しました。" }
       ]
+    },
+    {
+      "version": "1.1.24",
+      "date": "2025-10-20",
+      "changes": [
+        { "type": "bugfix", "description": "ルームインジケーターのページ読み込み時に利用可能な部屋が正しく表示されない問題を修正しました。" },
+        { "type": "bugfix", "description": "ルームビューでのクライアント選択が正しくフィルタリングされない問題を修正しました。" },
+        { "type": "feature", "description": "予約編集ページに、予約情報をSlackにコピーするボタンを追加しました。" }
+      ]
+    },
+    {
+      "version": "1.1.25",
+      "date": "2025-10-21",
+      "changes": [
+        { "type": "bugfix", "description": "特定の日付範囲をキャンセルした際に、チェックイン/チェックアウト日と宿泊人数が正しく更新されない問題を修正しました。" },
+        { "type": "feature", "description": "Google Sheets APIリクエストを管理・最適化するための`google_sheets_queue`テーブルを追加し、Google Driveエクスポートの信頼性とパフォーマンスを向上させました。" }
+      ]
     }
   ],
   "backlog": [
