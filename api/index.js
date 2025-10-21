@@ -20,6 +20,7 @@ const { Pool } = require('pg');
 
 const { startWaitlistJob } = require('./jobs/waitlistJob');
 const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
+const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 
 const app = express();
 app.locals.logger = logger; // Make logger globally available
@@ -381,6 +382,8 @@ const listenForTableChanges = async () => {
 
           let response = null;
           
+          /*
+          // --- Old Logic ---
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
@@ -399,6 +402,31 @@ const listenForTableChanges = async () => {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' }
             });
+          }
+          */ 
+
+          // --- New Google Sheets Queue Logic ---
+          try {
+            // 1. Get Google params (same as before)
+            const googleRes = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            const googleData = await googleRes.json();
+      
+            // 2. INSERT task into queue. DO NOT call Google API.
+            if (googleData && googleData.length > 0) {
+              const prodDb = db.getProdPool();
+              await prodDb.query(
+                  `INSERT INTO google_sheets_queue (hotel_id, check_in, check_out, status) 
+                   VALUES ($1, $2, $3, 'pending')
+                   ON CONFLICT (hotel_id, check_in, check_out) WHERE status = 'pending'
+                   DO NOTHING`,
+                  [googleData[0].hotel_id, googleData[0].check_in, googleData[0].check_out]
+              );
+            }
+          } catch (queueError) {
+            logger.error('Failed to queue Google Sheets update for prod', { error: queueError.message, logId });
           }
           
 
@@ -573,6 +601,7 @@ if (process.env.NODE_ENV === 'production') {
     scheduleLoyaltyTierJob();
     startWaitlistJob();
     scheduleDailyMetricsJob();
+    startGoogleSheetsPoller();
     // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
     // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
