@@ -58,17 +58,19 @@ async function processGoogleQueue() {
                 const reservations = await googleReportModel.selectReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
                 logger.warn(`Fetched ${reservations.length} reservations for task ${task.id}.`);
                 const reservationValues = transformDataForGoogleSheets(reservations);
-                logger.warn(`Appending ${reservationValues.length} reservation rows to main sheet for task ${task.id}.`);
-                await googleUtils.appendDataToSheet(MAIN_SHEET_ID, '予約データ', reservationValues);
+                const mainSheetName = `H_${task.hotel_id}`;
+                logger.warn(`Appending ${reservationValues.length} reservation rows to main sheet '${mainSheetName}' for task ${task.id}.`);
+                await googleUtils.appendDataToSheet(MAIN_SHEET_ID, mainSheetName, reservationValues);
                 logger.warn(`Successfully appended reservations for task ${task.id}.`);
 
                 // b) Parking Sheet
                 logger.warn(`Fetching parking reservations for task ${task.id}...`);
+                const parkingSheetName = `P_${task.hotel_id}`;
                 const parkingReservations = await googleReportModel.selectParkingReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
                 logger.warn(`Fetched ${parkingReservations.length} parking reservations for task ${task.id}.`);
                 const parkingReservationValues = transformParkingDataForGoogleSheets(parkingReservations);
-                logger.warn(`Appending ${parkingReservationValues.length} parking reservation rows to parking sheet for task ${task.id}.`);
-                await googleUtils.appendDataToSheet(PARKING_SHEET_ID, '駐車場データ', parkingReservationValues);
+                logger.warn(`Appending ${parkingReservationValues.length} parking reservation rows to parking sheet '${parkingSheetName}' for task ${task.id}.`);
+                await googleUtils.appendDataToSheet(PARKING_SHEET_ID, parkingSheetName, parkingReservationValues);
                 logger.warn(`Successfully appended parking reservations for task ${task.id}.`);
 
                 // c) Mark as processed
