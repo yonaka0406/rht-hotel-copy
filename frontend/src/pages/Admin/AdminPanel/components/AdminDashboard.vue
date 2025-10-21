@@ -32,6 +32,15 @@
         </template>
         <AdminEmptyReservations ref="emptyReservationRef" />
     </Panel>
+
+    <Panel toggleable :collapsed="true" class="mt-4">
+        <template #header>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">予約ログ</h2>
+            </div>
+        </template>
+        <AdminReservationLogs />
+    </Panel>
 </template>
 
 <script setup>
@@ -48,6 +57,7 @@ import Panel from 'primevue/panel';
 import Badge from 'primevue/badge';
 import AdminDoubleBooking from './AdminDoubleBooking.vue';
 import AdminEmptyReservations from './AdminEmptyReservations.vue';
+import AdminReservationLogs from './AdminReservationLogs.vue';
 
 const doubleBookingRef = ref(null);
 const emptyReservationRef = ref(null);

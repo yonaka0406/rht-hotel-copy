@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const systemLogsController = require('../controllers/system_logs');
-const { protect } = require('../middleware/authMiddleware');
+const { getReservationLogs } = require('../controllers/system_logs');
+const { authMiddleware } = require('../middleware/authMiddleware');
 
-router.get('/reservation-logs', protect, systemLogsController.getReservationLogs);
+router.get('/reservation-logs', authMiddleware, getReservationLogs);
 
 module.exports = router;

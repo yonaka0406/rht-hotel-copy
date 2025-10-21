@@ -1,4 +1,4 @@
-const pool = require('../../../config/database');
+const pool = require('../../config/database');
 
 const getReservationLogsByDate = async (requestId, date) => {
   const client = await pool.get(requestId).connect();

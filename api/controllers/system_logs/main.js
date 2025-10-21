@@ -1,5 +1,5 @@
-const systemLogsModel = require('../models/system_logs');
-const { validateDateParam } = require('../utils/validationUtils');
+const systemLogsModel = require('../../models/system_logs');
+const { validateDateParam } = require('../../utils/validationUtils');
 
 const getReservationLogs = async (req, res) => {
   const { date } = req.query;
