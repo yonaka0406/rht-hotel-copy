@@ -1,10 +1,15 @@
-const { getPool } = require('../config/database');
+const db = require('../config/database');
 const defaultLogger = require('../config/logger');
-// We import the model function directly, which is much cleaner than fetch
 const googleReportModel = require('../models/report/google');
+const googleUtils = require('../utils/googleUtils');
 
 let isJobRunning = false;
 const POLLING_INTERVAL = 60 * 1000; // 60 seconds
+
+const headers = [['施設ID', '施設名', '予約詳細ID', '日付', '部屋タイプ', '部屋番号', '予約者', 'プラン', 'ステータス', '種類', 'エージェント']];
+
+const MAIN_SHEET_ID = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // Prod ID
+const PARKING_SHEET_ID = '1LF3HOd7wyI0tlXuCqrnd-1m9OIoUb5EN7pegg0lJnt8'; // Prod ID
 
 /**
  * This job runs every minute, finds pending tasks in the google_sheets_queue,
@@ -20,7 +25,7 @@ async function processGoogleQueue() {
     const logger = defaultLogger.child({ job: 'GoogleSheetsPoller' });
     
     let tasks = [];
-    const client = await getPool().connect();
+    const client = await db.getProdPool().connect();
 
     try {
         // --- 1. Get Pending Tasks ---
@@ -46,13 +51,15 @@ async function processGoogleQueue() {
         for (const task of tasks) {
             const taskRequestId = `job-google-${task.id}`;
             try {
-                // a) Main Sheet (Prod ID)
-                const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY';
-                await googleReportModel.generateGoogleReport(taskRequestId, sheetId, task.hotel_id, task.check_in, task.check_out);
+                // a) Main Sheet
+                const reservations = await googleReportModel.selectReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
+                const reservationValues = transformDataForGoogleSheets(reservations);
+                await googleUtils.appendDataToSheet(MAIN_SHEET_ID, '予約データ', reservationValues);
 
-                // b) Parking Sheet (Prod ID)
-                const parkingSheetId = '1LF3HOd7wyI0tlXuCqrnd-1m9OIoUb5EN7pegg0lJnt8';
-                await googleReportModel.generateGoogleParkingReport(taskRequestId, parkingSheetId, task.hotel_id, task.check_in, task.check_out);
+                // b) Parking Sheet
+                const parkingReservations = await googleReportModel.selectParkingReservationsForGoogle(taskRequestId, task.hotel_id, task.check_in, task.check_out);
+                const parkingReservationValues = transformParkingDataForGoogleSheets(parkingReservations);
+                await googleUtils.appendDataToSheet(PARKING_SHEET_ID, '駐車場データ', parkingReservationValues);
 
                 // c) Mark as processed
                 await client.query(
@@ -90,6 +97,41 @@ function startGoogleSheetsPoller() {
     defaultLogger.info('Starting Google Sheets Polling Worker (runs every 60s)...');
     processGoogleQueue(); // Run immediately on start
     setInterval(processGoogleQueue, POLLING_INTERVAL);
+}
+
+function transformDataForGoogleSheets(data) {
+    return data.map(row => [
+        row.hotel_id,
+        row.hotel_name,
+        row.reservation_detail_id,
+        row.date,
+        row.room_type_name,
+        row.room_number,
+        row.client_name,
+        row.plan_name,
+        row.status,
+        row.type,
+        row.agent,
+    ]);
+}
+
+function transformParkingDataForGoogleSheets(data) {
+    return data.map(row => [
+        row.hotel_id,
+        row.hotel_name,
+        row.reservation_details_id,
+        row.date,
+        row.vehicle_category_name,
+        row.parking_lot_name,
+        row.spot_number,
+        row.client_name,
+        row.reservation_status,
+        row.reservation_type,
+        row.agent,
+        row.parking_status,
+        row.addon_name,
+        row.comment,
+    ]);
 }
 
 module.exports = { startGoogleSheetsPoller };
