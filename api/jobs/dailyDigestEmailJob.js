@@ -109,10 +109,32 @@ const sendDailyDigestEmails = async (requestId) => {
         <div style="margin-top: 20px;">`;
 
       // Helper to generate HTML for a group of logs
-      const generateLogGroupHtml = (logs, title) => {
+      const generateLogGroupHtml = (logs, title, logType) => {
         if (logs.length === 0) return '';
-        let groupHtml = `<div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #d0e0f0;">
-          <h3 style="color: #34495e; margin-top: 0; border-bottom: 1px solid #a0c0e0; padding-bottom: 5px;">${title}</h3>`;
+        let bgColor = '#f0f8ff'; // Default light blue
+        let borderColor = '#d0e0f0'; // Default light blue border
+        let titleColor = '#34495e'; // Default title color
+        let titleBorderColor = '#a0c0e0'; // Default title border color
+
+        if (logType === 'added') {
+          bgColor = '#e6ffe6';
+          borderColor = '#a3e9a4';
+          titleColor = '#28a745';
+          titleBorderColor = '#28a745';
+        } else if (logType === 'edited') {
+          bgColor = '#e6f7ff';
+          borderColor = '#90cdf4';
+          titleColor = '#007bff';
+          titleBorderColor = '#007bff';
+        } else if (logType === 'deleted') {
+          bgColor = '#ffe6e6';
+          borderColor = '#f5c6cb';
+          titleColor = '#dc3545';
+          titleBorderColor = '#dc3545';
+        }
+
+        let groupHtml = `<div style="background-color: ${bgColor}; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid ${borderColor};">
+          <h3 style="color: ${titleColor}; margin-top: 0; border-bottom: 1px solid ${titleBorderColor}; padding-bottom: 5px;">${title}</h3>`;
         logs.forEach(log => {
           const reservationUrl = `${envFrontend}/reservations/edit/${log.record_id}`;
 
@@ -137,7 +159,7 @@ const sendDailyDigestEmails = async (requestId) => {
                                 (log.INSERT.changed && log.INSERT.comment) || null;
 
           groupHtml += `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #e9ecef;">
-            <h4 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: <a href="${reservationUrl}" style="color: #3498db; text-decoration: none;">${log.record_id} &#x2192;</a></h4>
+            <h4 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: ${logType === 'deleted' ? log.record_id : '<a href="' + reservationUrl + '" style="color: #3498db; text-decoration: none;">' + log.record_id + ' &#x2192;</a>'}</h4>
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
               <tr>
                 <td style="padding: 5px 0; font-weight: bold;">予約者:</td>
@@ -168,9 +190,9 @@ const sendDailyDigestEmails = async (requestId) => {
         return groupHtml;
       };
 
-      htmlContent += generateLogGroupHtml(groupedLogs.added, '本日追加された予約');
-      htmlContent += generateLogGroupHtml(groupedLogs.edited, '本日編集された予約');
-      htmlContent += generateLogGroupHtml(groupedLogs.deleted, '本日削除された予約');
+      htmlContent += generateLogGroupHtml(groupedLogs.added, '本日追加された予約', 'added');
+      htmlContent += generateLogGroupHtml(groupedLogs.edited, '本日編集された予約', 'edited');
+      htmlContent += generateLogGroupHtml(groupedLogs.deleted, '本日削除された予約', 'deleted');
 
       htmlContent += `</div>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 20px;">このメールは自動送信されたものです。</p>
