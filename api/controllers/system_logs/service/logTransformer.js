@@ -1,5 +1,5 @@
 const transformLogs = (logs, logger) => {
-  logger.info('First 2 log entries:', logs.slice(0, 2));
+  //logger.info('First 2 log entries:', logs.slice(0, 2));
   const actionCounts = {}; // Keep this for the console log
   const transformedData = {}; // This will store the final structured output
 
@@ -90,8 +90,8 @@ const transformLogs = (logs, logger) => {
     // --- End Transformation Logic ---
   });
 
-  logger.info('Log Action Counts:', actionCounts);
-  logger.info('Transformed Data (first 2 entries):', Object.values(transformedData).slice(0, 2));
+  //logger.info('Log Action Counts:', actionCounts);
+  //logger.info('Transformed Data (first 2 entries):', Object.values(transformedData).slice(0, 2));
 
   return transformedData;
 };

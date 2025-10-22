@@ -11,7 +11,7 @@ const formatLocalDateTime = (dateObj) => {
 };
 
 const getReservationDigestByDate = async (requestId, date) => {
-  console.log('Date passed to getReservationDigestByDate:', date);
+  //console.log('Date passed to getReservationDigestByDate:', date);
 
   const pool = database.getPool(requestId);
   const client = await pool.connect();
@@ -23,12 +23,11 @@ const getReservationDigestByDate = async (requestId, date) => {
     const startDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
     const nextDate = new Date(Date.UTC(year, month - 1, day + 1));
 
-    console.log('Transformed Start Date:', startDate);
-    console.log('Transformed Next Date:', nextDate);
+    //console.log('Transformed Start Date:', startDate);
+    //console.log('Transformed Next Date:', nextDate);
 
     // Query for logs (removed limit)
-    const logsQuery = {
-      text: `WITH RankedLogs AS (
+    const queryText = `WITH RankedLogs AS (
         SELECT
           lr.*,
           CASE
@@ -51,20 +50,19 @@ const getReservationDigestByDate = async (requestId, date) => {
         WHERE
           lr.log_time >= $1 AND lr.log_time < $2
           AND lr.table_name LIKE 'reservations_%'
-      )
-      SELECT
-        RankedLogs.*
-      FROM
-        RankedLogs
-      WHERE
-        rn = 1
-      ORDER BY
-        log_time DESC`,
-      values: [startDate, nextDate],
-    };
-    const logsResult = await client.query(logsQuery);
+    )
+    SELECT
+      RankedLogs.*
+    FROM
+      RankedLogs
+    WHERE
+      rn = 1
+    ORDER BY
+      log_time DESC`;
+    const queryValues = [startDate, nextDate];
 
-    // Query for total count (no change here, as it doesn't use limit/offset)
+    const logsResult = await client.query({ text: queryText, values: queryValues });
+
     const countQuery = {
       text: `SELECT COUNT(*) FROM logs_reservation WHERE log_time >= $1 AND log_time < $2 AND table_name LIKE 'reservations_%'`,
       values: [startDate, nextDate],
