@@ -47,6 +47,7 @@ const transformLogs = (logs, logger) => {
         // Initialize if not present
         if (!transformedData[reservationId]) {
           transformedData[reservationId] = {
+            record_id: reservationId, // Add record_id here
             hotel_id: log.hotel_id,
             hotel_name: log.hotel_name,
             'UPDATE': { changed: false },

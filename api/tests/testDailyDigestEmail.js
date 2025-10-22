@@ -95,8 +95,29 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
 
     filteredHotelLogs.forEach(log => {
       const reservationUrl = `${envFrontend}/reservations/edit/${log.record_id}`;
+
+      // Determine the values based on priority: DELETE > UPDATE > INSERT
+      const currentStatus = (log.DELETE.changed && log.DELETE.status) ||
+                            (log.UPDATE.changed && log.UPDATE.status) ||
+                            (log.INSERT.changed && log.INSERT.status) || null;
+      const currentCheckIn = (log.DELETE.changed && log.DELETE.check_in) ||
+                             (log.UPDATE.changed && log.UPDATE.check_in) ||
+                             (log.INSERT.changed && log.INSERT.check_in) || null;
+      const currentCheckOut = (log.DELETE.changed && log.DELETE.check_out) ||
+                              (log.UPDATE.changed && log.UPDATE.check_out) ||
+                              (log.INSERT.changed && log.INSERT.check_out) || null;
+      const currentNumberOfPeople = (log.DELETE.changed && log.DELETE.number_of_people) ||
+                                    (log.UPDATE.changed && log.UPDATE.number_of_people) ||
+                                    (log.INSERT.changed && log.INSERT.number_of_people) || null;
+      const currentType = (log.DELETE.changed && log.DELETE.type) ||
+                          (log.UPDATE.changed && log.UPDATE.type) ||
+                          (log.INSERT.changed && log.INSERT.type) || null;
+      const currentComment = (log.DELETE.changed && log.DELETE.comment) ||
+                            (log.UPDATE.changed && log.UPDATE.comment) ||
+                            (log.INSERT.changed && log.INSERT.comment) || null;
+
       htmlContent += `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #e9ecef;">
-        <h3 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: <a href="${reservationUrl}" style="color: #3498db; text-decoration: none;">${log.record_id}</a></h3>
+        <h3 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: <a href="${reservationUrl}" style="color: #3498db; text-decoration: none;">${log.record_id} &#x2192;</a></h3>
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
           <tr>
             <td style="padding: 5px 0; font-weight: bold; width: 120px;">ホテル名:</td>
@@ -104,36 +125,25 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
           </tr>
           <tr>
             <td style="padding: 5px 0; font-weight: bold;">ステータス:</td>
-            <td style="padding: 5px 0;">${translateStatus(log.status)}</td>
+            <td style="padding: 5px 0;">${translateStatus(currentStatus)}</td>
           </tr>
-          <tr>
-            <td style="padding: 5px 0; font-weight: bold;">チェックイン:</td>
-            <td style="padding: 5px 0;">${log.check_in || 'N/A'}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 0; font-weight: bold;">チェックアウト:</td>
-            <td style="padding: 5px 0;">${log.check_out || 'N/A'}</td>
-          </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold; width: 120px;">宿泊期間:</td>
+                <td style="padding: 5px 0;">${currentCheckIn || 'N/A'} - ${currentCheckOut || 'N/A'}</td>
+              </tr>
           <tr>
             <td style="padding: 5px 0; font-weight: bold;">人数:</td>
-            <td style="padding: 5px 0;">${log.number_of_people || 'N/A'}</td>
+            <td style="padding: 5px 0;">${currentNumberOfPeople || 'N/A'}</td>
           </tr>
           <tr>
             <td style="padding: 5px 0; font-weight: bold;">タイプ:</td>
-            <td style="padding: 5px 0;">${translateType(log.type) || 'N/A'}</td>
+            <td style="padding: 5px 0;">${translateType(currentType) || 'N/A'}</td>
           </tr>
           <tr>
             <td style="padding: 5px 0; font-weight: bold;">コメント:</td>
-            <td style="padding: 5px 0;">${log.comment || 'N/A'}</td>
+            <td style="padding: 5px 0;">${currentComment || 'N/A'}</td>
           </tr>
-          <tr>
-            <td style="padding: 5px 0; font-weight: bold;">アクション:</td>
-            <td style="padding: 5px 0;">`;
-        if (log.INSERT.changed) htmlContent += `作成 (ステータス: ${translateStatus(log.INSERT.status) || 'N/A'}) `;
-        if (log.UPDATE.changed) htmlContent += `更新 (ステータス: ${translateStatus(log.UPDATE.status) || 'N/A'}) `;
-        if (log.DELETE.changed) htmlContent += `削除 (ステータス: ${translateStatus(log.DELETE.status) || 'N/A'}) `;
-        htmlContent += `</td>
-            </tr>
+
           </table>
         </div>`;
       });
