@@ -31,21 +31,29 @@ const getReservationDigestByDate = async (requestId, date) => {
       text: `WITH RankedLogs AS (
         SELECT
           lr.*,
-          r.hotel_id,
-          h.name,
+          CASE
+            WHEN lr.action IN ('INSERT', 'DELETE') THEN (lr.changes->>'hotel_id')::integer
+            WHEN lr.action = 'UPDATE' THEN (lr.changes->'new'->>'hotel_id')::integer
+            ELSE r.hotel_id
+          END AS hotel_id,
+          CASE
+            WHEN lr.action IN ('INSERT', 'DELETE') THEN (SELECT h_log.name FROM hotels h_log WHERE h_log.id = (lr.changes->>'hotel_id')::integer)
+            WHEN lr.action = 'UPDATE' THEN (SELECT h_log.name FROM hotels h_log WHERE h_log.id = (lr.changes->'new'->>'hotel_id')::integer)
+            ELSE h.name
+          END AS hotel_name,
           ROW_NUMBER() OVER (PARTITION BY lr.record_id, lr.action ORDER BY lr.log_time DESC) as rn
         FROM
           logs_reservation lr
-        JOIN
+        LEFT JOIN
           reservations r ON lr.record_id = r.id
-        JOIN
+        LEFT JOIN
           hotels h ON r.hotel_id = h.id
         WHERE
           lr.log_time >= $1 AND lr.log_time < $2
           AND lr.table_name LIKE 'reservations_%'
       )
       SELECT
-        *
+        RankedLogs.*
       FROM
         RankedLogs
       WHERE
