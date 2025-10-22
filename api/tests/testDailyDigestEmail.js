@@ -5,7 +5,11 @@ const { sendGenericEmail } = require('../utils/emailUtils'); // The real email s
 const defaultLogger = require('../config/logger');
 
 // --- Configuration for testing ---
-const TEST_EMAIL_ADDRESS = "almeida.ped@redhorse-group.co.jp";
+const TEST_EMAIL_ADDRESS = process.env.EMAIL_USER;
+
+if (!TEST_EMAIL_ADDRESS) {
+  throw new Error("Environment variable EMAIL_USER is not set. Please set it in your .env file or as an environment variable.");
+}
 const SEND_ACTUAL_EMAIL = process.env.SEND_TEST_DAILY_DIGEST_EMAIL === 'true'; // Set in .env to true to send email
 
 // --- Mock sendGenericEmail to capture content or redirect ---
