@@ -741,6 +741,27 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
   }
 };
 
+const getAllHotelsWithEmail = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      id,
+      name,
+      email
+    FROM hotels
+    WHERE email IS NOT NULL AND email != ''
+    ORDER BY id ASC
+  `;
+
+  try {
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving hotels with email:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   getAllHotels,
   getHotelByID,
@@ -762,4 +783,5 @@ module.exports = {
   updateRoomAssignmentOrder,
   blockRoomsByRoomType,
   getVehicleCategoryCapacity,
+  getAllHotelsWithEmail,
 };
