@@ -178,7 +178,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
             </tr>
             <tr>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">ステータス:</td>
-              <td style="padding: 5px 0; width: 25%;">${translateStatus(currentStatus)}</td>
+              <td style="padding: 5px 0; width: 25%;">${currentStatus === 'cancelled' ? '<span style="color: red;">' + translateStatus(currentStatus) + '</span>' : translateStatus(currentStatus)}</td>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">タイプ:</td>
               <td style="padding: 5px 0; width: 25%;">${translateType(currentType) || 'N/A'}</td>
             </tr>
