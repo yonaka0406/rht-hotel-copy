@@ -88,6 +88,12 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
     };
 
     hotelLogs.forEach(log => {
+      // Check if the reservation was both inserted and deleted on the same day
+      if (log.INSERT.changed && log.DELETE.changed) {
+        // Skip this log as it was inserted and deleted on the same day
+        return;
+      }
+
       if (log.DELETE.changed) {
         groupedLogs.deleted.push(log);
       } else if (log.UPDATE.changed) { // Only if not deleted
@@ -204,13 +210,13 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
                 const statusText = translateStatus(currentStatus);
                 let style = '';
                 if (currentStatus === 'cancelled') {
-                  style = 'color: red;';
+                  style = 'color: red; padding: 2px 5px; border-radius: 3px;'; // Red color only, with padding and rounded edges
                 } else if (currentStatus === 'block') {
                   style = 'color: red; background-color: #ffe6e6; padding: 2px 5px; border-radius: 3px;'; // Red color, light red background
                 } else if (currentStatus === 'hold') {
                   style = 'color: #b8860b; background-color: #fffacd; padding: 2px 5px; border-radius: 3px;'; // Dark yellow color, yellow background
                 } else if (currentStatus === 'provisory') {
-                  style = 'color: #00008b;'; // Dark blue color
+                  style = 'color: #00008b; background-color: #e6f7ff; padding: 2px 5px; border-radius: 3px;'; // Dark blue color, light blue background
                 } else if (currentStatus === 'confirmed') {
                   style = 'color: #006400; background-color: #90ee90; padding: 2px 5px; border-radius: 3px;'; // Dark green color, light green background
                 }
