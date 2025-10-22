@@ -1,4 +1,8 @@
 const transformLogs = (logs, logger) => {
+  if (!Array.isArray(logs)) {
+    logger.warn('transformLogs received non-array input for logs. Returning empty result.', { inputType: typeof logs, inputValue: logs });
+    return {}; // Return empty object as transformedData is typically an object
+  }
   //logger.info('First 2 log entries:', logs.slice(0, 2));
   const actionCounts = {}; // Keep this for the console log
   const transformedData = {}; // This will store the final structured output
