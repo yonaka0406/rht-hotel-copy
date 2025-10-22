@@ -70,7 +70,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
 
     const { logs: rawLogs = [] } = await systemLogsModel.getReservationDigestByDate(requestId, formattedDate);
     const allLogs = transformLogs(rawLogs, defaultLogger); // Transform logs here
-    console.log('DEBUG: allLogs value:', allLogs);
+    console.log('DEBUG: allLogs value:', JSON.stringify(allLogs, null, 2));
 
     const logsByHotel = Object.values(allLogs).reduce((acc, log) => {
       if (log.hotel_id) {
