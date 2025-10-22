@@ -41,7 +41,7 @@
             {{ translateStatus(slotProps.data.status) }}
           </template>
           <template #filter="{ filterModel, filterCallback }">
-            <Select v-model="filterModel.value" :options="uniqueStatuses" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
+            <Select v-model="filterModel.value" :options="uniqueStatuses" optionLabel="label" optionValue="value" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
         <Column field="check_in" header="チェックイン" hidden></Column>
