@@ -36,9 +36,9 @@
             <Select v-model="filterModel.value" :options="uniqueHotelNames" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
-        <Column field="insert" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
+        <Column field="insert" header="作成" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
           <template #header>
-            作成 ({{ insertCount }})
+            <Badge :value="insertCount"></Badge>
           </template>
           <template #body="slotProps">
             <i v-if="slotProps.data.insert" class="pi pi-check-circle" style="color: green;"></i>
@@ -48,9 +48,9 @@
             <Select v-model="filterModel.value" :options="booleanFilterOptions" optionLabel="label" optionValue="value" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
-        <Column field="update" sortable filter filterField="update" :showFilterMatchModes="false" :showFilterMenu="false">
+        <Column field="update" header="更新" sortable filter filterField="update" :showFilterMatchModes="false" :showFilterMenu="false">
           <template #header>
-            更新 ({{ updateCount }})
+            <Badge :value="updateCount" severity="info"></Badge>
           </template>
           <template #body="slotProps">
             <i v-if="slotProps.data.update" class="pi pi-check-circle" style="color: green;"></i>
@@ -60,9 +60,9 @@
             <Select v-model="filterModel.value" :options="booleanFilterOptions" optionLabel="label" optionValue="value" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
-        <Column field="delete" sortable filter filterField="delete" :showFilterMatchModes="false" :showFilterMenu="false">
+        <Column field="delete" header="削除" sortable filter filterField="delete" :showFilterMatchModes="false" :showFilterMenu="false">
           <template #header>
-            削除 ({{ deleteCount }})
+            <Badge :value="deleteCount" severity="danger"></Badge>
           </template>
           <template #body="slotProps">
             <i v-if="slotProps.data.delete" class="pi pi-check-circle" style="color: green;"></i>
@@ -84,6 +84,7 @@ import Column from 'primevue/column';
 import FloatLabel from 'primevue/floatlabel';
 import Button from 'primevue/button'; // Import Button component
 import Select from 'primevue/select'; // Import Select component
+import Badge from 'primevue/badge'; // Import Badge component
 import { ref, onMounted, watch, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { formatDate } from '@/utils/dateUtils';
