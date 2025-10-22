@@ -172,7 +172,11 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
         groupHtml += `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #e9ecef;">
           <h4 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: <a href="${reservationUrl}" style="color: #3498db; text-decoration: none;">${log.record_id} &#x2192;</a></h4>
           <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                        <tr>
+            <tr>
+              <td style="padding: 5px 0; font-weight: bold;">予約者:</td>
+              <td style="padding: 5px 0;" colspan="3">${log.client_name || 'N/A'}</td>
+            </tr>
+            <tr>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">ステータス:</td>
               <td style="padding: 5px 0; width: 25%;">${translateStatus(currentStatus)}</td>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">タイプ:</td>
