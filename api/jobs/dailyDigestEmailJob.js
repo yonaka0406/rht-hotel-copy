@@ -1,26 +1,34 @@
-const systemLogsModel = require('../models/system_logs');
+const { defaultLogger } = require('../config/logger');
+const { sendGenericEmail } = require('../utils/emailUtils');
+const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
+const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
+const appConfig = require('../config/appConfig'); // Import appConfig
 const hotelModel = require('../models/hotel');
+const systemLogsModel = require('../models/system_logs/main');
 
-
-const cron = require('node-cron'); // Import node-cron
-const { defaultLogger } = require('../config/logger'); // Import default logger
-const { sendGenericEmail } = require('../utils/emailUtils'); // New import
-const { formatDate, translateStatus, translateType } = require('../utils/reportUtils'); // Import formatDate, translateStatus, translateType
+// Get .env accordingly
+let envFrontend;
+if (process.env.NODE_ENV === 'production') {
+  envFrontend = process.env.PROD_FRONTEND_URL;
+} else {
+  envFrontend = process.env.FRONTEND_URL;
+}
 
 const sendDailyDigestEmails = async (requestId) => {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  const formattedDate = formatDate(yesterday); // Format as YYYY-MM-DD
+  const formattedDate = formatDate(yesterday);
 
   defaultLogger.info(`[${requestId}] Starting daily digest email job for date: ${formattedDate}`);
 
   try {
     const hotels = await hotelModel.getAllHotelsWithEmail(requestId);
-    const { logs: allLogs } = await systemLogsModel.getReservationDigestByDate(requestId, formattedDate);
+    const { logs: rawLogs = [] } = await systemLogsModel.getReservationDigestByDate(requestId, formattedDate);
+    const allLogs = transformLogs(rawLogs, defaultLogger);
 
     // Group logs by hotel_id
-    const logsByHotel = allLogs.reduce((acc, log) => {
+    const logsByHotel = Object.values(allLogs).reduce((acc, log) => {
       if (log.hotel_id) { // Ensure hotel_id exists
         if (!acc[log.hotel_id]) {
           acc[log.hotel_id] = [];
@@ -38,8 +46,31 @@ const sendDailyDigestEmails = async (requestId) => {
 
       const hotelLogs = logsByHotel[hotel.id] || [];
 
-      if (hotelLogs.length === 0) {
-        defaultLogger.info(`[${requestId}] No reservation logs for hotel ${hotel.name} on ${formattedDate}. Skipping email.`);
+      // Group logs into categories: added, edited, and deleted
+      const groupedLogs = {
+        added: [],
+        edited: [],
+        deleted: []
+      };
+
+      hotelLogs.forEach(log => {
+        if (log.DELETE.changed) {
+          groupedLogs.deleted.push(log);
+        } else if (log.UPDATE.changed) {
+          groupedLogs.edited.push(log);
+        } else if (log.INSERT.changed) {
+          groupedLogs.added.push(log);
+        }
+      });
+
+      // Sort each group by status
+      groupedLogs.added.sort((a, b) => a.status.localeCompare(b.status));
+      groupedLogs.edited.sort((a, b) => a.status.localeCompare(b.status));
+      groupedLogs.deleted.sort((a, b) => a.status.localeCompare(b.status));
+
+      // Only send email if there are any relevant logs
+      if (groupedLogs.added.length === 0 && groupedLogs.edited.length === 0 && groupedLogs.deleted.length === 0) {
+        defaultLogger.info(`[${requestId}] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Skipping email.`);
         continue;
       }
 
@@ -49,49 +80,60 @@ const sendDailyDigestEmails = async (requestId) => {
         <p style="font-size: 16px; line-height: 1.6;">${formattedDate} の予約ログの概要です。</p>
         <div style="margin-top: 20px;">`;
 
-      hotelLogs.forEach(log => {
-        htmlContent += `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #e9ecef;">
-          <h3 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: ${log.record_id}</h3>
-          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold; width: 120px;">ホテル名:</td>
-              <td style="padding: 5px 0;">${log.hotel_name}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold;">ステータス:</td>
-              <td style="padding: 5px 0;">${translateStatus(log.status)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold;">チェックイン:</td>
-              <td style="padding: 5px 0;">${log.check_in || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold;">チェックアウト:</td>
-              <td style="padding: 5px 0;">${log.check_out || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold;">人数:</td>
-              <td style="padding: 5px 0;">${log.number_of_people || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold;">タイプ:</td>
-              <td style="padding: 5px 0;">${translateType(log.type) || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold;">コメント:</td>
-              <td style="padding: 5px 0;">${log.comment || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; font-weight: bold;">アクション:</td>
-              <td style="padding: 5px 0;">`;
-        if (log.INSERT.changed) htmlContent += `作成 (ステータス: ${translateStatus(log.INSERT.status) || 'N/A'}) `;
-        if (log.UPDATE.changed) htmlContent += `更新 (ステータス: ${translateStatus(log.UPDATE.status) || 'N/A'}) `;
-        if (log.DELETE.changed) htmlContent += `削除 (ステータス: ${translateStatus(log.DELETE.status) || 'N/A'}) `;
-        htmlContent += `</td>
-            </tr>
-          </table>
-        </div>`;
-      });
+      // Helper to generate HTML for a group of logs
+      const generateLogGroupHtml = (logs, title) => {
+        if (logs.length === 0) return '';
+        let groupHtml = `<h3 style="color: #34495e; margin-top: 20px; border-bottom: 1px solid #e9ecef; padding-bottom: 5px;">${title}</h3>`;
+        logs.forEach(log => {
+          const reservationUrl = `${envFrontend}/reservations/edit/${log.record_id}`;
+          groupHtml += `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #e9ecef;">
+            <h4 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: <a href="${reservationUrl}" style="color: #3498db; text-decoration: none;">${log.record_id}</a></h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold; width: 120px;">ホテル名:</td>
+                <td style="padding: 5px 0;">${log.hotel_name}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold;">ステータス:</td>
+                <td style="padding: 5px 0;">${translateStatus(log.status)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold;">チェックイン:</td>
+                <td style="padding: 5px 0;">${log.check_in || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold;">チェックアウト:</td>
+                <td style="padding: 5px 0;">${log.check_out || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold;">人数:</td>
+                <td style="padding: 5px 0;">${log.number_of_people || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold;">タイプ:</td>
+                <td style="padding: 5px 0;">${translateType(log.type) || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold;">コメント:</td>
+                <td style="padding: 5px 0;">${log.comment || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; font-weight: bold;">アクション:</td>
+                <td style="padding: 5px 0;">`;
+            if (log.INSERT.changed) groupHtml += `作成 (ステータス: ${translateStatus(log.INSERT.status) || 'N/A'}) `;
+            if (log.UPDATE.changed) groupHtml += `更新 (ステータス: ${translateStatus(log.UPDATE.status) || 'N/A'}) `;
+            if (log.DELETE.changed) groupHtml += `削除 (ステータス: ${translateStatus(log.DELETE.status) || 'N/A'}) `;
+            groupHtml += `</td>
+              </tr>
+            </table>
+          </div>`;
+        });
+        return groupHtml;
+      };
+
+      htmlContent += generateLogGroupHtml(groupedLogs.added, '本日追加された予約');
+      htmlContent += generateLogGroupHtml(groupedLogs.edited, '本日編集された予約');
+      htmlContent += generateLogGroupHtml(groupedLogs.deleted, '本日削除された予約');
 
       htmlContent += `</div>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 20px;">このメールは自動送信されたものです。</p>
@@ -100,8 +142,8 @@ const sendDailyDigestEmails = async (requestId) => {
       // Use the sendGenericEmail function
       await sendGenericEmail(
         hotel.email,
-        `日次予約ログダイジェスト - ${hotel.name} - ${formattedDate}`,
-        `日次予約ログダイジェスト - ${hotel.name} - ${formattedDate}\n\n${hotelLogs.map(log => `予約ID: ${log.record_id}, ホテル名: ${log.hotel_name}`).join('\n')}`,
+        `[WeHub.work] ダイジェスト：${formattedDate} - ${hotel.name}`,
+        `日次予約ログダイジェスト - ${hotel.name} - ${formattedDate}\n\n${hotelLogs.map(log => `予約ID: ${log.record_id}, ホテル名: ${log.hotel_name}`).join('\n')}`, // Simple text fallback
         htmlContent
       );
     }
@@ -112,7 +154,7 @@ const sendDailyDigestEmails = async (requestId) => {
 };
 
 const scheduleDailyDigestEmailJob = () => {
-  cron.schedule('0 3 * * *', async () => { // 3 AM daily
+  cron.schedule('0 1 * * *', async () => { // 1 AM daily
     const logger = defaultLogger.child({ job: 'DailyDigestEmailJob' }); // Create a child logger for this job
     logger.info('[DailyDigestEmailJob] Daily digest email job triggered by cron schedule.');
     // Generate a unique requestId for the job

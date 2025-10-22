@@ -39,7 +39,7 @@ const systemLogsModel = require('../models/system_logs');
 const hotelModel = require('../models/hotel');
 const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
 const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
-const appConfig = require('../../config/appConfig'); // Import appConfig
+const appConfig = require('../config/appConfig'); // Import appConfig
 
 // Get .env accordingly
 let envFrontend;
@@ -144,7 +144,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
 
     return {
       to: hotel.email,
-      subject: `[WeHub.work] ${formattedDate} ダイジェスト - ${hotel.name}`,
+      subject: `[WeHub.work] ダイジェスト：${formattedDate} - ${hotel.name}`,
       text: `日次予約ログダイジェスト - ${hotel.name} - ${formattedDate}\n\n${filteredHotelLogs.map(log => `予約ID: ${log.record_id}, ホテル名: ${log.hotel_name}`).join('\n')}`,
       html: htmlContent
     };
