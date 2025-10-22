@@ -30,8 +30,6 @@ const getReservationDigestByDate = async (requestId, date) => {
     const queryText = `WITH RankedLogs AS (
         SELECT
           lr.*,
-          r.reservation_client_id,
-          COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
           CASE
             WHEN lr.action IN ('INSERT', 'DELETE') THEN (lr.changes->>'hotel_id')::integer
             WHEN lr.action = 'UPDATE' THEN (lr.changes->'new'->>'hotel_id')::integer
@@ -42,6 +40,11 @@ const getReservationDigestByDate = async (requestId, date) => {
             WHEN lr.action = 'UPDATE' THEN (SELECT h_log.name FROM hotels h_log WHERE h_log.id = (lr.changes->'new'->>'hotel_id')::integer)
             ELSE h.name
           END AS hotel_name,
+          CASE -- Derive effective_reservation_client_id
+            WHEN lr.action IN ('INSERT', 'DELETE') THEN (lr.changes->>'reservation_client_id')::uuid
+            WHEN lr.action = 'UPDATE' THEN (lr.changes->'new'->>'reservation_client_id')::uuid
+            ELSE r.reservation_client_id
+          END AS effective_reservation_client_id,
           ROW_NUMBER() OVER (PARTITION BY lr.record_id, lr.action ORDER BY lr.log_time DESC) as rn
         FROM
           logs_reservation lr
@@ -49,16 +52,23 @@ const getReservationDigestByDate = async (requestId, date) => {
           reservations r ON lr.record_id = r.id
         LEFT JOIN
           hotels h ON r.hotel_id = h.id
-        LEFT JOIN
-          clients c ON r.reservation_client_id = c.id
         WHERE
           lr.log_time >= $1 AND lr.log_time < $2
           AND lr.table_name LIKE 'reservations_%'
+    ),
+    RankedLogsWithClient AS (
+        SELECT
+            rl.*,
+            COALESCE(c_log.name_kanji, c_log.name_kana, c_log.name) AS client_name
+        FROM
+            RankedLogs rl
+        LEFT JOIN
+            clients c_log ON rl.effective_reservation_client_id = c_log.id
     )
     SELECT
-      RankedLogs.*
+      RankedLogsWithClient.*
     FROM
-      RankedLogs
+      RankedLogsWithClient
     WHERE
       rn = 1
     ORDER BY
