@@ -11,9 +11,9 @@ const formatLocalDateTime = (dateObj) => {
 };
 
 const getReservationDigestByDate = async (requestId, date) => {
-  //console.log('Date passed to getReservationDigestByDate:', date);
+  console.log('Date passed to getReservationDigestByDate:', date);
 
-  const pool = database.getPool(requestId);
+  const pool = requestId ? database.getPool(requestId) : database.getProdPool();
   const client = await pool.connect();
   try {
     // Removed limit validation
