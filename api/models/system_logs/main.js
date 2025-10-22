@@ -30,6 +30,8 @@ const getReservationDigestByDate = async (requestId, date) => {
     const queryText = `WITH RankedLogs AS (
         SELECT
           lr.*,
+          r.reservation_client_id,
+          COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
           CASE
             WHEN lr.action IN ('INSERT', 'DELETE') THEN (lr.changes->>'hotel_id')::integer
             WHEN lr.action = 'UPDATE' THEN (lr.changes->'new'->>'hotel_id')::integer
@@ -47,6 +49,8 @@ const getReservationDigestByDate = async (requestId, date) => {
           reservations r ON lr.record_id = r.id
         LEFT JOIN
           hotels h ON r.hotel_id = h.id
+        LEFT JOIN
+          clients c ON r.reservation_client_id = c.id
         WHERE
           lr.log_time >= $1 AND lr.log_time < $2
           AND lr.table_name LIKE 'reservations_%'

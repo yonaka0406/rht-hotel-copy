@@ -47,9 +47,11 @@ const transformLogs = (logs, logger) => {
         // Initialize if not present
         if (!transformedData[reservationId]) {
           transformedData[reservationId] = {
-            record_id: reservationId, // Add record_id here
+            record_id: reservationId,
             hotel_id: log.hotel_id,
             hotel_name: log.hotel_name,
+            reservation_client_id: log.reservation_client_id,
+            client_name: log.client_name,
             'UPDATE': { changed: false },
             'INSERT': { changed: false },
             'DELETE': { changed: false }
