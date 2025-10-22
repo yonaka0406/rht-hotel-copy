@@ -36,6 +36,11 @@
             <Select v-model="filterModel.value" :options="uniqueHotelNames" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
+        <Column field="status" header="ステータス" sortable>
+          <template #body="slotProps">
+            {{ translateStatus(slotProps.data.status) }}
+          </template>
+        </Column>
         <Column field="insert" header="作成" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
           <template #header>
             <Badge :value="insertCount"></Badge>
@@ -89,6 +94,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { formatDate } from '@/utils/dateUtils';
 import { useSystemLogs } from '@/composables/useSystemLogs';
+import { translateStatus } from '@/utils/reservationUtils';
 import { FilterMatchMode } from '@primevue/core/api'; // Import FilterMatchMode
 
 const toast = useToast();
@@ -101,9 +107,13 @@ const transformedLogsForTable = computed(() => {
     record_id,
     hotel_id: data.hotel_id,
     hotel_name: data.hotel_name,
-    update: data.UPDATE || false,
-    insert: data.INSERT || false,
-    delete: data.DELETE || false,
+    update: data.UPDATE.changed || false,
+    insert: data.INSERT.changed || false,
+    delete: data.DELETE.changed || false,
+    // Determine the status to display based on which action occurred
+    status: (data.UPDATE.changed && data.UPDATE.status) ||
+            (data.INSERT.changed && data.INSERT.status) ||
+            (data.DELETE.changed && data.DELETE.status) || null,
     reservation_url: `wehub.work/reservations/edit/${record_id}` // Add the URL here
   }));
 });

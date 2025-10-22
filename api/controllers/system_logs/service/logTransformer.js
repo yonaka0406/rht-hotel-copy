@@ -40,16 +40,33 @@ const transformLogs = (logs, logger) => {
       }
 
       if (reservationId && log.action) {
+        // Initialize if not present
         if (!transformedData[reservationId]) {
           transformedData[reservationId] = {
             hotel_id: log.hotel_id,
             hotel_name: log.hotel_name,
-            'UPDATE': false,
-            'INSERT': false,
-            'DELETE': false
+            'UPDATE': { changed: false },
+            'INSERT': { changed: false },
+            'DELETE': { changed: false }
           };
         }
-        transformedData[reservationId][log.action] = true;
+
+        let extractedStatus = null;
+        if (log.changes) {
+          if (log.action === 'INSERT' || log.action === 'DELETE') {
+            extractedStatus = log.changes.status;
+          } else if (log.action === 'UPDATE' && log.changes.new) {
+            extractedStatus = log.changes.new.status;
+          }
+        }
+
+        // Update the specific action object
+        if (transformedData[reservationId][log.action]) { // Check if the action key exists
+          transformedData[reservationId][log.action] = {
+            changed: true,
+            status: extractedStatus, // Include status if extracted
+          };
+        }
       }
     }
     // --- End Transformation Logic ---
