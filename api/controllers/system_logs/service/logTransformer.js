@@ -51,12 +51,30 @@ const transformLogs = (logs, logger) => {
           };
         }
 
-        let extractedStatus = null;
+        let extractedValues = {
+          status: null,
+          check_in: null,
+          check_out: null,
+          number_of_people: null,
+          type: null,
+          comment: null // Add comment here
+        };
+
         if (log.changes) {
+          let source = null;
           if (log.action === 'INSERT' || log.action === 'DELETE') {
-            extractedStatus = log.changes.status;
+            source = log.changes;
           } else if (log.action === 'UPDATE' && log.changes.new) {
-            extractedStatus = log.changes.new.status;
+            source = log.changes.new;
+          }
+
+          if (source) {
+            extractedValues.status = source.status;
+            extractedValues.check_in = source.check_in;
+            extractedValues.check_out = source.check_out;
+            extractedValues.number_of_people = source.number_of_people;
+            extractedValues.type = source.type;
+            extractedValues.comment = source.comment; // Extract comment here
           }
         }
 
@@ -64,7 +82,7 @@ const transformLogs = (logs, logger) => {
         if (transformedData[reservationId][log.action]) { // Check if the action key exists
           transformedData[reservationId][log.action] = {
             changed: true,
-            status: extractedStatus, // Include status if extracted
+            ...extractedValues // Include all extracted values
           };
         }
       }

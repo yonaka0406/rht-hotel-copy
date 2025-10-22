@@ -44,6 +44,14 @@
             <Select v-model="filterModel.value" :options="uniqueStatuses" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
+        <Column field="check_in" header="チェックイン" hidden></Column>
+        <Column field="check_out" header="チェックアウト" hidden></Column>
+        <Column field="number_of_people" header="人数" hidden></Column>
+        <Column field="type" header="タイプ" hidden>
+          <template #body="slotProps">
+            {{ translateType(slotProps.data.type) }}
+          </template>
+        </Column>
         <Column field="insert" header="作成" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
           <template #header>
             <Badge :value="insertCount"></Badge>
@@ -97,7 +105,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { formatDate } from '@/utils/dateUtils';
 import { useSystemLogs } from '@/composables/useSystemLogs';
-import { translateStatus } from '@/utils/reservationUtils';
+import { translateStatus, translateType } from '@/utils/reservationUtils';
 import { FilterMatchMode } from '@primevue/core/api'; // Import FilterMatchMode
 
 const toast = useToast();
@@ -117,6 +125,18 @@ const transformedLogsForTable = computed(() => {
     status: (data.DELETE.changed && data.DELETE.status) ||
             (data.UPDATE.changed && data.UPDATE.status) ||
             (data.INSERT.changed && data.INSERT.status) || null,
+    check_in: (data.DELETE.changed && data.DELETE.check_in) ||
+              (data.UPDATE.changed && data.UPDATE.check_in) ||
+              (data.INSERT.changed && data.INSERT.check_in) || null,
+    check_out: (data.DELETE.changed && data.DELETE.check_out) ||
+               (data.UPDATE.changed && data.UPDATE.check_out) ||
+               (data.INSERT.changed && data.INSERT.check_out) || null,
+    number_of_people: (data.DELETE.changed && data.DELETE.number_of_people) ||
+                      (data.UPDATE.changed && data.UPDATE.number_of_people) ||
+                      (data.INSERT.changed && data.INSERT.number_of_people) || null,
+    type: (data.DELETE.changed && data.DELETE.type) ||
+          (data.UPDATE.changed && data.UPDATE.type) ||
+          (data.INSERT.changed && data.INSERT.type) || null,
     reservation_url: `wehub.work/reservations/edit/${record_id}` // Add the URL here
   }));
 });
