@@ -13,8 +13,8 @@ const getReservationLogs = async (req, res) => {
   try {
     // Removed parsedLimit
 
-    const { logs, totalRecords } = await systemLogsModel.getReservationLogsByDate(req.requestId, validatedDate); // Removed parsedLimit
-    const transformedLogs = transformLogs(logs);
+    const { logs, totalRecords } = await systemLogsModel.getReservationDigestByDate(req.requestId, validatedDate); // Removed parsedLimit
+    const transformedLogs = transformLogs(logs, req.app.locals.logger);
     res.status(200).json({ logs: transformedLogs, totalRecords });
   } catch (error) {
     req.app.locals.logger.error(error, { requestId: req.requestId, route: req.originalUrl });
