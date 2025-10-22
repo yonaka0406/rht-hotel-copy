@@ -10,21 +10,28 @@
       <div class="flex justify-content-end mb-4">
         <Button label="CSVエクスポート" icon="pi pi-download" @click="exportCsv" />
       </div>
-      <DataTable ref="dt" :value="logs" :loading="loading" responsiveLayout="scroll" emptyMessage="選択した日付にログがありません。"
+      <DataTable ref="dt" :value="transformedLogsForTable" :loading="loading" responsiveLayout="scroll" emptyMessage="選択した日付にログがありません。"
         paginator :rows="rows" :totalRecords="totalRecords" @page="onPage"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         :rowsPerPageOptions="[10, 20, 50, 100]"
         currentPageReportTemplate="{first}-{last} of {totalRecords}">
-        <Column field="id" header="ログID"></Column>
-        <Column field="log_time" header="ログ時刻">
+        <Column field="record_id" header="予約ID"></Column>
+        <Column field="insert" header="作成">
           <template #body="slotProps">
-            {{ new Date(slotProps.data.log_time).toLocaleString() }}
+            <i v-if="slotProps.data.insert" class="pi pi-check-circle" style="color: green;"></i>
+            <i v-else class="pi pi-times-circle" style="color: red;"></i>
           </template>
         </Column>
-        <Column field="user_id" header="ユーザーID"></Column>
-        <Column header="詳細">
+        <Column field="update" header="更新">
           <template #body="slotProps">
-            {{ slotProps.data.table_name }} - {{ slotProps.data.action }}
+            <i v-if="slotProps.data.update" class="pi pi-check-circle" style="color: green;"></i>
+            <i v-else class="pi pi-times-circle" style="color: red;"></i>
+          </template>
+        </Column>
+        <Column field="delete" header="削除">
+          <template #body="slotProps">
+            <i v-if="slotProps.data.delete" class="pi pi-check-circle" style="color: green;"></i>
+            <i v-else class="pi pi-times-circle" style="color: red;"></i>
           </template>
         </Column>
       </DataTable>
@@ -38,14 +45,24 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import FloatLabel from 'primevue/floatlabel';
 import Button from 'primevue/button'; // Import Button component
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { formatDate } from '@/utils/dateUtils';
 import { useSystemLogs } from '@/composables/useSystemLogs';
 
 const toast = useToast();
 const selectedDate = ref(new Date());
-const { logs, loading, fetchLogs: systemLogsFetchLogs } = useSystemLogs();
+const { logs: rawTransformedLogs, loading, fetchLogs: systemLogsFetchLogs } = useSystemLogs();
+
+const transformedLogsForTable = computed(() => {
+  if (!rawTransformedLogs.value) return [];
+  return Object.entries(rawTransformedLogs.value).map(([record_id, actions]) => ({
+    record_id,
+    update: actions.UPDATE || false,
+    insert: actions.INSERT || false,
+    delete: actions.DELETE || false,
+  }));
+});
 
 const dt = ref(); // Reference to the DataTable
 const rows = ref(10); // Number of rows per page
@@ -53,15 +70,13 @@ const totalRecords = ref(0); // Total number of records
 
 const onPage = (event) => {
   rows.value = event.rows;
-  // In a real application, you would re-fetch logs based on the new page and rows
-  // For now, we'll just update the rows value.
   console.log('Pagination event:', event);
 };
 
 const loadLogs = async () => {
   const date = formatDate(selectedDate.value);
   const response = await systemLogsFetchLogs(date);
-  totalRecords.value = response.totalRecords; // Assuming response contains totalRecords
+  totalRecords.value = Object.keys(response.logs || {}).length;
 };
 
 onMounted(() => {
