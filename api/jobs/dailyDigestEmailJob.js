@@ -56,17 +56,29 @@ const sendDailyDigestEmails = async (requestId) => {
       hotelLogs.forEach(log => {
         if (log.DELETE.changed) {
           groupedLogs.deleted.push(log);
-        } else if (log.UPDATE.changed) {
+        } else if (log.UPDATE.changed) { // Only if not deleted
           groupedLogs.edited.push(log);
-        } else if (log.INSERT.changed) {
+        } else if (log.INSERT.changed) { // Only if not deleted and not updated
           groupedLogs.added.push(log);
         }
       });
 
       // Sort each group by status
-      groupedLogs.added.sort((a, b) => a.status.localeCompare(b.status));
-      groupedLogs.edited.sort((a, b) => a.status.localeCompare(b.status));
-      groupedLogs.deleted.sort((a, b) => a.status.localeCompare(b.status));
+      groupedLogs.added.sort((a, b) => {
+        const statusA = (a.DELETE.changed && a.DELETE.status) || (a.UPDATE.changed && a.UPDATE.status) || (a.INSERT.changed && a.INSERT.status) || '';
+        const statusB = (b.DELETE.changed && b.DELETE.status) || (b.UPDATE.changed && b.UPDATE.status) || (b.INSERT.changed && b.INSERT.status) || '';
+        return statusA.localeCompare(statusB);
+      });
+      groupedLogs.edited.sort((a, b) => {
+        const statusA = (a.DELETE.changed && a.DELETE.status) || (a.UPDATE.changed && a.UPDATE.status) || (a.INSERT.changed && a.INSERT.status) || '';
+        const statusB = (b.DELETE.changed && b.DELETE.status) || (b.UPDATE.changed && b.UPDATE.status) || (b.INSERT.changed && b.INSERT.status) || '';
+        return statusA.localeCompare(statusB);
+      });
+      groupedLogs.deleted.sort((a, b) => {
+        const statusA = (a.DELETE.changed && a.DELETE.status) || (a.UPDATE.changed && a.UPDATE.status) || (a.INSERT.changed && a.INSERT.status) || '';
+        const statusB = (b.DELETE.changed && b.DELETE.status) || (b.UPDATE.changed && b.UPDATE.status) || (b.INSERT.changed && b.INSERT.status) || '';
+        return statusA.localeCompare(statusB);
+      });
 
       // Only send email if there are any relevant logs
       if (groupedLogs.added.length === 0 && groupedLogs.edited.length === 0 && groupedLogs.deleted.length === 0) {
@@ -78,12 +90,29 @@ const sendDailyDigestEmails = async (requestId) => {
       let htmlContent = `<div style="font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
         <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">日次予約ログダイジェスト - ${hotel.name}</h2>
         <p style="font-size: 16px; line-height: 1.6;">${formattedDate} の予約ログの概要です。</p>
+
+        <div style="display: flex; justify-content: space-around; margin-bottom: 20px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 150px; background-color: #e6ffe6; border: 1px solid #a3e9a4; border-radius: 8px; padding: 10px; margin: 5px; text-align: center;">
+            <h4 style="color: #28a745; margin: 0 0 5px 0;">追加</h4>
+            <p style="font-size: 24px; font-weight: bold; color: #28a745; margin: 0;">${groupedLogs.added.length}</p>
+          </div>
+          <div style="flex: 1; min-width: 150px; background-color: #e6f7ff; border: 1px solid #90cdf4; border-radius: 8px; padding: 10px; margin: 5px; text-align: center;">
+            <h4 style="color: #007bff; margin: 0 0 5px 0;">編集</h4>
+            <p style="font-size: 24px; font-weight: bold; color: #007bff; margin: 0;">${groupedLogs.edited.length}</p>
+          </div>
+          <div style="flex: 1; min-width: 150px; background-color: #ffe6e6; border: 1px solid #f5c6cb; border-radius: 8px; padding: 10px; margin: 5px; text-align: center;">
+            <h4 style="color: #dc3545; margin: 0 0 5px 0;">削除</h4>
+            <p style="font-size: 24px; font-weight: bold; color: #dc3545; margin: 0;">${groupedLogs.deleted.length}</p>
+          </div>
+        </div>
+
         <div style="margin-top: 20px;">`;
 
       // Helper to generate HTML for a group of logs
       const generateLogGroupHtml = (logs, title) => {
         if (logs.length === 0) return '';
-        let groupHtml = `<h3 style="color: #34495e; margin-top: 20px; border-bottom: 1px solid #e9ecef; padding-bottom: 5px;">${title}</h3>`;
+        let groupHtml = `<div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #d0e0f0;">
+          <h3 style="color: #34495e; margin-top: 0; border-bottom: 1px solid #a0c0e0; padding-bottom: 5px;">${title}</h3>`;
         logs.forEach(log => {
           const reservationUrl = `${envFrontend}/reservations/edit/${log.record_id}`;
 
@@ -110,10 +139,7 @@ const sendDailyDigestEmails = async (requestId) => {
           groupHtml += `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <h4 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: <a href="${reservationUrl}" style="color: #3498db; text-decoration: none;">${log.record_id} &#x2192;</a></h4>
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-              <tr>
-                <td style="padding: 5px 0; font-weight: bold; width: 120px;">ホテル名:</td>
-                <td style="padding: 5px 0;">${log.hotel_name}</td>
-              </tr>
+
               <tr>
                 <td style="padding: 5px 0; font-weight: bold;">ステータス:</td>
                 <td style="padding: 5px 0;">${translateStatus(currentStatus)}</td>
@@ -134,10 +160,10 @@ const sendDailyDigestEmails = async (requestId) => {
                 <td style="padding: 5px 0; font-weight: bold;">コメント:</td>
                 <td style="padding: 5px 0;">${currentComment || 'N/A'}</td>
               </tr>
-
             </table>
           </div>`;
         });
+        groupHtml += `</div>`; // Close the group div
         return groupHtml;
       };
 
