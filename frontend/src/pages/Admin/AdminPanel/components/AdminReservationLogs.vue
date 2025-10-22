@@ -36,9 +36,12 @@
             <Select v-model="filterModel.value" :options="uniqueHotelNames" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
-        <Column field="status" header="ステータス" sortable>
+        <Column field="status" header="ステータス" sortable filter filterField="status" :showFilterMatchModes="false" :showFilterMenu="false">
           <template #body="slotProps">
             {{ translateStatus(slotProps.data.status) }}
+          </template>
+          <template #filter="{ filterModel, filterCallback }">
+            <Select v-model="filterModel.value" :options="uniqueStatuses" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
         <Column field="insert" header="作成" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
@@ -111,9 +114,9 @@ const transformedLogsForTable = computed(() => {
     insert: data.INSERT.changed || false,
     delete: data.DELETE.changed || false,
     // Determine the status to display based on which action occurred
-    status: (data.UPDATE.changed && data.UPDATE.status) ||
-            (data.INSERT.changed && data.INSERT.status) ||
-            (data.DELETE.changed && data.DELETE.status) || null,
+    status: (data.DELETE.changed && data.DELETE.status) ||
+            (data.UPDATE.changed && data.UPDATE.status) ||
+            (data.INSERT.changed && data.INSERT.status) || null,
     reservation_url: `wehub.work/reservations/edit/${record_id}` // Add the URL here
   }));
 });
@@ -127,6 +130,16 @@ const uniqueHotelNames = computed(() => {
   return Array.from(names).sort();
 });
 
+const uniqueStatuses = computed(() => {
+  const statuses = new Set();
+  transformedLogsForTable.value.forEach(log => {
+    if (log.status) {
+      statuses.add(log.status);
+    }  });
+  // Map raw status values to translated ones for display in the filter dropdown
+  return Array.from(statuses).map(s => ({ label: translateStatus(s), value: s })).sort((a, b) => a.label.localeCompare(b.label));
+});
+
 const booleanFilterOptions = ref([
   { label: '全て', value: null },
   { label: 'はい', value: true },
@@ -135,6 +148,7 @@ const booleanFilterOptions = ref([
 
 const filters = ref({ // Add filters ref
   hotel_name: { value: null, matchMode: FilterMatchMode.EQUALS },
+  status: { value: null, matchMode: FilterMatchMode.EQUALS },
   insert: { value: null, matchMode: FilterMatchMode.EQUALS },
   update: { value: null, matchMode: FilterMatchMode.EQUALS },
   delete: { value: null, matchMode: FilterMatchMode.EQUALS }
