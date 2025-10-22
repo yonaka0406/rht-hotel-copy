@@ -30,13 +30,19 @@ const getReservationDigestByDate = async (requestId, date) => {
     const logsQuery = {
       text: `WITH RankedLogs AS (
         SELECT
-          *,
-          ROW_NUMBER() OVER (PARTITION BY record_id, action ORDER BY log_time DESC) as rn
+          lr.*,
+          r.hotel_id,
+          h.name,
+          ROW_NUMBER() OVER (PARTITION BY lr.record_id, lr.action ORDER BY lr.log_time DESC) as rn
         FROM
-          logs_reservation
+          logs_reservation lr
+        JOIN
+          reservations r ON lr.record_id = r.id
+        JOIN
+          hotels h ON r.hotel_id = h.id
         WHERE
-          log_time >= $1 AND log_time < $2
-          AND table_name LIKE 'reservations_%'
+          lr.log_time >= $1 AND lr.log_time < $2
+          AND lr.table_name LIKE 'reservations_%'
       )
       SELECT
         *

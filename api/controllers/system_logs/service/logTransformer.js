@@ -42,6 +42,8 @@ const transformLogs = (logs, logger) => {
       if (reservationId && log.action) {
         if (!transformedData[reservationId]) {
           transformedData[reservationId] = {
+            hotel_id: log.hotel_id,
+            hotel_name: log.name,
             'UPDATE': false,
             'INSERT': false,
             'DELETE': false

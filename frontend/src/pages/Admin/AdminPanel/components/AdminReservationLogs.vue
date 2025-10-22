@@ -14,21 +14,34 @@
         paginator :rows="rows" :totalRecords="totalRecords" @page="onPage"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
         :rowsPerPageOptions="[10, 20, 50, 100]"
-        currentPageReportTemplate="{first}-{last} of {totalRecords}">
-        <Column field="record_id" header="予約ID"></Column>
-        <Column field="insert" header="作成">
+        currentPageReportTemplate="{first}-{last} of {totalRecords}"
+        sortField="hotel_name" :sortOrder="1">
+        <Column header="予約ID" sortable field="record_id">
+          <template #body="slotProps">
+            <Button
+              :label="slotProps.data.record_id"
+              icon="pi pi-external-link"
+              class="p-button-sm p-button-text"
+              @click="openReservationEdit(slotProps.data.record_id)"
+              :disabled="slotProps.data.delete"
+            />
+          </template>
+        </Column>
+        <Column field="hotel_id" header="ホテルID" hidden sortable></Column>
+        <Column field="hotel_name" header="ホテル名" sortable></Column>
+        <Column field="insert" header="作成" sortable>
           <template #body="slotProps">
             <i v-if="slotProps.data.insert" class="pi pi-check-circle" style="color: green;"></i>
             <i v-else class="pi pi-times-circle" style="color: red;"></i>
           </template>
         </Column>
-        <Column field="update" header="更新">
+        <Column field="update" header="更新" sortable>
           <template #body="slotProps">
             <i v-if="slotProps.data.update" class="pi pi-check-circle" style="color: green;"></i>
             <i v-else class="pi pi-times-circle" style="color: red;"></i>
           </template>
         </Column>
-        <Column field="delete" header="削除">
+        <Column field="delete" header="削除" sortable>
           <template #body="slotProps">
             <i v-if="slotProps.data.delete" class="pi pi-check-circle" style="color: green;"></i>
             <i v-else class="pi pi-times-circle" style="color: red;"></i>
@@ -56,11 +69,13 @@ const { logs: rawTransformedLogs, loading, fetchLogs: systemLogsFetchLogs } = us
 
 const transformedLogsForTable = computed(() => {
   if (!rawTransformedLogs.value) return [];
-  return Object.entries(rawTransformedLogs.value).map(([record_id, actions]) => ({
+  return Object.entries(rawTransformedLogs.value).map(([record_id, data]) => ({
     record_id,
-    update: actions.UPDATE || false,
-    insert: actions.INSERT || false,
-    delete: actions.DELETE || false,
+    hotel_id: data.hotel_id,
+    hotel_name: data.hotel_name,
+    update: data.UPDATE || false,
+    insert: data.INSERT || false,
+    delete: data.DELETE || false,
   }));
 });
 
@@ -89,5 +104,10 @@ watch(selectedDate, (newDate) => {
 
 const exportCsv = () => {
   dt.value.exportCSV();
+};
+
+const openReservationEdit = (id) => {
+    const url = `/reservations/edit/${id}`;
+    window.open(url, '_blank');
 };
 </script>
