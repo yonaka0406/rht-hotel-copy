@@ -7,16 +7,17 @@
           <label for="log-date">日付を選択</label>
         </FloatLabel>
       </div>
-      <div class="flex justify-content-end mb-4">
-        <Button label="CSVエクスポート" icon="pi pi-download" @click="exportCsv" />
-      </div>
+
       <DataTable ref="dt" :value="transformedLogsForTable" :loading="loading" responsiveLayout="scroll" emptyMessage="選択した日付にログがありません。"
-        paginator :rows="rows" :totalRecords="totalRecords" @page="onPage"
-        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+        paginator :rows="rows" :totalRecords="totalRecords" @page="onPage" @filter="onFilter"
+        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown CustomExportButton"
         :rowsPerPageOptions="[10, 20, 50, 100]"
         currentPageReportTemplate="{first}-{last} of {totalRecords}"
         sortField="hotel_name" :sortOrder="1"
         v-model:filters="filters" filterDisplay="row">
+        <template #paginatorend>
+            <Button type="button" icon="pi pi-download" class="p-button-text" @click="exportCsv()" />
+        </template>
         <Column header="予約ID" sortable field="record_id">
           <template #body="slotProps">
             <Button
@@ -35,7 +36,10 @@
             <Select v-model="filterModel.value" :options="uniqueHotelNames" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
-        <Column field="insert" header="作成" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
+        <Column field="insert" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
+          <template #header>
+            作成 ({{ insertCount }})
+          </template>
           <template #body="slotProps">
             <i v-if="slotProps.data.insert" class="pi pi-check-circle" style="color: green;"></i>
             <i v-else class="pi pi-times-circle" style="color: red;"></i>
@@ -44,7 +48,10 @@
             <Select v-model="filterModel.value" :options="booleanFilterOptions" optionLabel="label" optionValue="value" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
-        <Column field="update" header="更新" sortable filter filterField="update" :showFilterMatchModes="false" :showFilterMenu="false">
+        <Column field="update" sortable filter filterField="update" :showFilterMatchModes="false" :showFilterMenu="false">
+          <template #header>
+            更新 ({{ updateCount }})
+          </template>
           <template #body="slotProps">
             <i v-if="slotProps.data.update" class="pi pi-check-circle" style="color: green;"></i>
             <i v-else class="pi pi-times-circle" style="color: red;"></i>
@@ -53,7 +60,10 @@
             <Select v-model="filterModel.value" :options="booleanFilterOptions" optionLabel="label" optionValue="value" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
           </template>
         </Column>
-        <Column field="delete" header="削除" sortable filter filterField="delete" :showFilterMatchModes="false" :showFilterMenu="false">
+        <Column field="delete" sortable filter filterField="delete" :showFilterMatchModes="false" :showFilterMenu="false">
+          <template #header>
+            削除 ({{ deleteCount }})
+          </template>
           <template #body="slotProps">
             <i v-if="slotProps.data.delete" class="pi pi-check-circle" style="color: green;"></i>
             <i v-else class="pi pi-times-circle" style="color: red;"></i>
@@ -119,9 +129,30 @@ const filters = ref({ // Add filters ref
   delete: { value: null, matchMode: FilterMatchMode.EQUALS }
 });
 
+const currentFilteredLogs = ref([]); // New ref to store filtered logs
+
 const dt = ref(); // Reference to the DataTable
 const rows = ref(10); // Number of rows per page
 const totalRecords = ref(0); // Total number of records
+
+const onFilter = (event) => {
+  currentFilteredLogs.value = event.filteredValue;
+};
+
+const insertCount = computed(() => {
+  if (!currentFilteredLogs.value) return 0;
+  return currentFilteredLogs.value.filter(log => log.insert).length;
+});
+
+const updateCount = computed(() => {
+  if (!currentFilteredLogs.value) return 0;
+  return currentFilteredLogs.value.filter(log => log.update).length;
+});
+
+const deleteCount = computed(() => {
+  if (!currentFilteredLogs.value) return 0;
+  return currentFilteredLogs.value.filter(log => log.delete).length;
+});
 
 const onPage = (event) => {
   rows.value = event.rows;
@@ -132,6 +163,8 @@ const loadLogs = async () => {
   const date = formatDate(selectedDate.value);
   const response = await systemLogsFetchLogs(date);
   totalRecords.value = Object.keys(response.logs || {}).length;
+  // Initialize currentFilteredLogs with all transformed logs
+  currentFilteredLogs.value = transformedLogsForTable.value;
 };
 
 onMounted(() => {
