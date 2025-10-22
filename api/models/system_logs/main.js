@@ -36,7 +36,7 @@ const getReservationDigestByDate = async (requestId, date) => {
           logs_reservation
         WHERE
           log_time >= $1 AND log_time < $2
-          AND (table_name LIKE 'reservations_%' OR table_name LIKE 'reservation_payments_%')
+          AND table_name LIKE 'reservations_%'
       )
       SELECT
         *
@@ -52,7 +52,7 @@ const getReservationDigestByDate = async (requestId, date) => {
 
     // Query for total count (no change here, as it doesn't use limit/offset)
     const countQuery = {
-      text: `SELECT COUNT(*) FROM logs_reservation WHERE log_time >= $1 AND log_time < $2 AND (table_name LIKE 'reservations_%' OR table_name LIKE 'reservation_payments_%')`,
+      text: `SELECT COUNT(*) FROM logs_reservation WHERE log_time >= $1 AND log_time < $2 AND table_name LIKE 'reservations_%'`,
       values: [startDate, nextDate],
     };
     const countResult = await client.query(countQuery);
