@@ -244,7 +244,7 @@ const scheduleDailyDigestEmailJob = () => {
     scheduled: true,
     timezone: "Asia/Tokyo"
   });
-  defaultLogger.info('Daily digest email job scheduled daily at 3 AM Asia/Tokyo.');
+
 };
 
 module.exports = {

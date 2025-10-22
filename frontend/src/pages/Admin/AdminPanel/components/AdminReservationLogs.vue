@@ -201,7 +201,6 @@ const deleteCount = computed(() => {
 
 const onPage = (event) => {
   rows.value = event.rows;
-  console.log('Pagination event:', event);
 };
 
 const loadLogs = async () => {
