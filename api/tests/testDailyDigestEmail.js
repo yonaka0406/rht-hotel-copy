@@ -124,10 +124,18 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
       return statusA.localeCompare(statusB);
     });
 
-    // Only send email if there are any relevant logs
+    // If there are no logs, send a specific email stating that.
     if (groupedLogs.added.length === 0 && groupedLogs.edited.length === 0 && groupedLogs.deleted.length === 0) {
-      defaultLogger.info(`[TestEmail] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}.`);
-      return null; // Return null if no relevant logs
+      defaultLogger.info(`[TestEmail] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Sending a 'no changes' email.`);
+      
+      let htmlContent = `<div style=\"font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;\">\r\n      <h2 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">日次予約ログダイジェスト - ${hotel.name}</h2>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">${formattedDate} の予約ログの概要です。</p>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">本日は予約の変更はありませんでした。</p>\r\n      </div>`;
+
+      return {
+        to: hotel.email,
+        subject: `[WeHub.work] ダイジェスト：${formattedDate} - ${hotel.name}`,
+        text: `日次予約ログダイジェスト - ${hotel.name} - ${formattedDate}\n\n本日は予約の変更はありませんでした。`,
+        html: htmlContent
+      };
     }
 
     let htmlContent = `<div style="font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">

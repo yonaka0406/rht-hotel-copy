@@ -86,9 +86,17 @@ const sendDailyDigestEmails = async (requestId) => {
         return statusA.localeCompare(statusB);
       });
 
-      // Only send email if there are any relevant logs
       if (groupedLogs.added.length === 0 && groupedLogs.edited.length === 0 && groupedLogs.deleted.length === 0) {
-        defaultLogger.info(`[${requestId}] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Skipping email.`);
+        defaultLogger.info(`[${requestId}] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Sending a 'no changes' email.`);
+        
+        let htmlContent = `<div style=\"font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;\">\r\n      <h2 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">日次予約ログダイジェスト - ${hotel.name}</h2>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">${formattedDate} の予約ログの概要です。</p>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">本日は予約の変更はありませんでした。</p>\r\n      </div>`;
+
+        await sendGenericEmail(
+          hotel.email,
+          `[WeHub.work] ダイジェスト：${formattedDate} - ${hotel.name}`,
+          `日次予約ログダイジェスト - ${hotel.name} - ${formattedDate}\n\n本日は予約の変更はありませんでした。`,
+          htmlContent
+        );
         continue;
       }
 
