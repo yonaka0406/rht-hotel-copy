@@ -11,7 +11,7 @@ let envFrontend;
 if (process.env.NODE_ENV === 'production') {
   envFrontend = process.env.PROD_FRONTEND_URL;
 } else {
-  envFrontend = process.env.FRONTEND_URL;
+  envFrontend = process.env.VITE_FRONTEND_URL;
 }
 
 const sendDailyDigestEmails = async (requestId) => {
@@ -141,24 +141,22 @@ const sendDailyDigestEmails = async (requestId) => {
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
 
               <tr>
-                <td style="padding: 5px 0; font-weight: bold;">ステータス:</td>
-                <td style="padding: 5px 0;">${translateStatus(currentStatus)}</td>
+                <td style="padding: 5px 0; font-weight: bold; width: 25%;">ステータス:</td>
+                <td style="padding: 5px 0; width: 25%;">${translateStatus(currentStatus)}</td>
+                <td style="padding: 5px 0; font-weight: bold; width: 25%;">タイプ:</td>
+                <td style="padding: 5px 0; width: 25%;">${translateType(currentType) || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 5px 0; font-weight: bold; width: 120px;">宿泊期間:</td>
-                <td style="padding: 5px 0;">${currentCheckIn || 'N/A'} - ${currentCheckOut || 'N/A'}</td>
+                <td style="padding: 5px 0;" colspan="3">${currentCheckIn || 'N/A'} - ${currentCheckOut || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 5px 0; font-weight: bold;">人数:</td>
-                <td style="padding: 5px 0;">${currentNumberOfPeople || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 5px 0; font-weight: bold;">タイプ:</td>
-                <td style="padding: 5px 0;">${translateType(currentType) || 'N/A'}</td>
-              </tr>
+                <td style="padding: 5px 0;" colspan="3">${currentNumberOfPeople || 'N/A'}</td>
+              </tr>              
               <tr>
                 <td style="padding: 5px 0; font-weight: bold;">コメント:</td>
-                <td style="padding: 5px 0;">${currentComment || 'N/A'}</td>
+                <td style="padding: 5px 0;" colspan="3">${currentComment || 'N/A'}</td>
               </tr>
             </table>
           </div>`;
