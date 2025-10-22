@@ -200,7 +200,22 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
             </tr>
             <tr>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">ステータス:</td>
-              <td style="padding: 5px 0; width: 25%;">${currentStatus === 'cancelled' ? '<span style="color: red;">' + translateStatus(currentStatus) + '</span>' : translateStatus(currentStatus)}</td>
+              <td style="padding: 5px 0; width: 25%;">${(() => {
+                const statusText = translateStatus(currentStatus);
+                let style = '';
+                if (currentStatus === 'cancelled') {
+                  style = 'color: red;';
+                } else if (currentStatus === 'block') {
+                  style = 'color: red; background-color: #ffe6e6; padding: 2px 5px; border-radius: 3px;'; // Red color, light red background
+                } else if (currentStatus === 'hold') {
+                  style = 'color: #b8860b; background-color: #fffacd; padding: 2px 5px; border-radius: 3px;'; // Dark yellow color, yellow background
+                } else if (currentStatus === 'provisory') {
+                  style = 'color: #00008b;'; // Dark blue color
+                } else if (currentStatus === 'confirmed') {
+                  style = 'color: #006400; background-color: #90ee90; padding: 2px 5px; border-radius: 3px;'; // Dark green color, light green background
+                }
+                return `<span style="${style}">${statusText}</span>`;
+              })()}</td>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">タイプ:</td>
               <td style="padding: 5px 0; width: 25%;">${translateType(currentType) || 'N/A'}</td>
             </tr>
