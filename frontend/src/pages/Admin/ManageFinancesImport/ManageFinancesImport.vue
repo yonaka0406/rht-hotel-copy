@@ -23,12 +23,15 @@
                                     <p class="text-sm text-gray-600 mb-3">
                                     以下のボタンをクリックしてCSVテンプレートをダウンロードし、予算データを入力してください。
                                     </p>
-                                    <Button
-                                    label="予算テンプレートをダウンロード"
-                                    icon="pi pi-download"
-                                    class="p-button-info"
-                                    @click="downloadTemplate('forecast')"
-                                    />
+                                    <div class="flex items-center gap-2">
+                                        <DatePicker v-model="forecastDate" dateFormat="yy/mm/dd" />
+                                        <Button
+                                        label="予算テンプレートをダウンロード"
+                                        icon="pi pi-download"
+                                        class="p-button-info"
+                                        @click="downloadTemplate('forecast', forecastDate)"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div class="border-t border-gray-200 pt-6">
@@ -78,12 +81,15 @@
                                     <p class="text-sm text-gray-600 mb-3">
                                     以下のボタンをクリックしてCSVテンプレートをダウンロードし、実績データを入力してください。
                                     </p>
-                                    <Button
-                                    label="実績テンプレートをダウンロード"
-                                    icon="pi pi-download"
-                                    class="p-button-success"
-                                    @click="downloadTemplate('accounting')"
-                                    />
+                                    <div class="flex items-center gap-2">
+                                        <DatePicker v-model="accountingDate" dateFormat="yy/mm/dd" />
+                                        <Button
+                                        label="実績テンプレートをダウンロード"
+                                        icon="pi pi-download"
+                                        class="p-button-success"
+                                        @click="downloadTemplate('accounting', accountingDate)"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div class="border-t border-gray-200 pt-6">
@@ -142,7 +148,7 @@
     });
       
     // Primevue
-    import { Tabs, TabList, Tab, TabPanels, TabPanel, Card, Button, FileUpload, Message, Toast, Panel } from 'primevue';
+    import { Tabs, TabList, Tab, TabPanels, TabPanel, Card, Button, FileUpload, Message, Toast, Panel, DatePicker } from 'primevue';
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
 
@@ -151,6 +157,9 @@
 
     // --- Active Tab State ---
     const activeTab = ref(0);
+
+    const forecastDate = ref(new Date());
+    const accountingDate = ref(new Date());
   
     const budgetItems = ['宿泊売上', '営業日数', '客室数', '販売客室数'];
 
@@ -172,9 +181,9 @@
         return new Date(year, month + 1, 0).getDate();
     };
   
-    const generateCSVData = (type) => {        
+    const generateCSVData = (type, date) => {        
         const csvRows = [];
-        const currentDate = new Date();
+        const currentDate = date;
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth(); // 0-indexed
     
@@ -245,8 +254,12 @@
         return csvRows.join('\n');
     };
     
-    const downloadTemplate = async (type) => {
+    const downloadTemplate = async (type, date) => {
         console.log('downloadTemplate was triggered');
+        if (!date) {
+            toast.add({ severity: 'warn', summary: '注意', detail: '日付を選択してください。', life: 3000 });
+            return;
+        }
         if (!hotels.value || hotels.value.length === 0 || !plans.value || plans.value.length === 0) {
             try {
                 await fetchHotels();
@@ -265,7 +278,7 @@
                 return;
             }
         }        
-        const csvContent = generateCSVData(type);
+        const csvContent = generateCSVData(type, date);
         const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });    
         const link = document.createElement('a');
         if (link.download !== undefined) {
@@ -278,7 +291,8 @@
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         toast.add({ severity: 'success', summary: '成功', detail: `${type === 'forecast' ? '予算' : '実績'}テンプレートがダウンロードされました。`, life: 3000 });
-        } else {
+        }
+        else {
         toast.add({ severity: 'error', summary: 'エラー', detail: 'お使いのブラウザはダウンロードに対応していません。', life: 3000 });
         }
     };
@@ -353,7 +367,7 @@
                         operating_days: null,
                         available_room_nights: null,
                         rooms_sold_nights: null,
-                    };                    
+                    };
                 }
 
                 // Get the English key corresponding to the Japanese budgetItemFromCsv

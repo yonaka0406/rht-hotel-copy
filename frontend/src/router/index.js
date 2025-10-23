@@ -21,7 +21,7 @@ const ManageCalendar = () => import('@/pages/Admin/ManageCalendar.vue');
 const ManageSettings = () => import('@/pages/Admin/ManageSettings/ManageSettingsPage.vue');
 const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
 const ManagePMSImport = () => import('@/pages/Admin/ManagePMSImport.vue');
-const ManageFinancesImport = () => import('@/pages/Admin/ManageFinancesImport.vue');
+const ManageFinancesImport = () => import('@/pages/Admin/ManageFinancesImport/ManageFinancesImport.vue');
 const ManageLoyaltyTiers = () => import('@/pages/Admin/ManageLoyaltyTiers.vue');
 const ManageWaitList = () => import('@/pages/Admin/ManageWaitList.vue');
 const ManageGoogleDrive = () => import('@/pages/Admin/ManageGoogleDrive.vue');
