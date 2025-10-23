@@ -289,6 +289,7 @@ export function useReportStore() {
             }
             const dlURL = window.URL.createObjectURL(blob);
 
+            // Handle file download
             try {
                 const link = document.createElement("a");
                 link.href = dlURL;
@@ -300,8 +301,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {
-                // console.debug('Download functionality not available in current environment');
+            } catch {                
             }
 
             return { success: true };
@@ -351,8 +351,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {
-                // console.debug('Download functionality not available in current environment');
+            } catch {                
             }
 
             return { success: true };
@@ -401,8 +400,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {
-                // console.debug('Download functionality not available in current environment');
+            } catch {                
             }
 
             return { success: true };
@@ -456,8 +454,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {
-                // console.debug('Download functionality not available in current environment');
+            } catch {                
             }
 
             return { success: true };

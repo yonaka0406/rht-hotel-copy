@@ -1,4 +1,4 @@
-import { ref, reactive, toRefs } from 'vue';
+import { reactive, toRefs } from 'vue';
 import { useToast } from 'primevue/usetoast';
 
 // Define shared state outside the function if it needs to be truly global singleton
