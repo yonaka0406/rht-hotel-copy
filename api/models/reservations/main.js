@@ -905,8 +905,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
     console.error('Error adding room to reservation:', err);
     throw new Error('Database error');
   } finally {
-    client.release();
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    client.release();    
   }
 };
 
@@ -3579,7 +3578,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       clientIdToUpdate,
     ];
     const newClient = await internalClient.query(query, values);
-    console.log('editOTAReservation client:', newClient.rows[0]);
+    //console.log('editOTAReservation client:', newClient.rows[0]);
 
     // Insert address
     if (Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr) {
@@ -3633,7 +3632,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         1
       ];
       const newAddress = await internalClient.query(query, values);
-      console.log('editOTAReservation addresses:', newAddress.rows[0]);
+      //console.log('editOTAReservation addresses:', newAddress.rows[0]);
     }
 
     // Insert reservations
@@ -3664,7 +3663,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     // console.log('editOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
     const reservation = await internalClient.query(query, values);
-    console.log('editOTAReservation reservations:', reservation.rows[0]);
+    //console.log('editOTAReservation reservations:', reservation.rows[0]);
 
     // Get available rooms for the reservation period
 
@@ -3753,7 +3752,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           const guestList = guestInformation?.GuestInformationList;
 
           if (guestList && Array.isArray(guestList) && guestList.length > 0) {
-            console.log('Processing guest information from GuestInformationList');
+            //console.log('Processing guest information from GuestInformationList');
             for (const guest of guestList) {
               const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
               const sanitizedName = sanitizeName(rawName);
@@ -3882,7 +3881,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           console.error("Error: Failed to create reservation detail.");
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
-        console.log('editOTAReservation reservation_details:', reservationDetails.rows[0]);
+        //console.log('editOTAReservation reservation_details:', reservationDetails.rows[0]);
 
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
@@ -3988,7 +3987,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
               //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
-              console.log('No reservationGuestId available to add to reservation_clients');
+              //console.log('No reservationGuestId available to add to reservation_clients');
             }
           } catch (error) {
             console.error('Error adding booker to reservation_clients:', error);
@@ -4004,7 +4003,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 ) VALUES ($1, $2, $3, 1, 1)
                 RETURNING *;
               `, [hotel_id, reservationDetailsId, client.id]);
-              console.log('Added guest to reservation_clients:', result.rows[0]);
+              //console.log('Added guest to reservation_clients:', result.rows[0]);
             } catch (error) {
               console.error('Error adding guest to reservation_clients:', error);
               throw error; // Re-throw to trigger transaction rollback
@@ -4025,7 +4024,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         ];
         // console.log('editOTAReservation reservation_rates:', values);
         const reservationRates = await internalClient.query(query, values);
-        console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
+        //console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
 
         // Insert addon information if addons exist
         if (addons && Array.isArray(addons) && addons.length > 0) {
@@ -4305,7 +4304,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
           cancellationCharge,
         ];
         const firstReservationDetail = await internalClient.query(query, values);
-        console.log('cancelOTAReservation reservation_details:', firstReservationDetail.rows[0]);
+        //console.log('cancelOTAReservation reservation_details:', firstReservationDetail.rows[0]);
 
         query = `
           UPDATE reservation_rates
@@ -4324,7 +4323,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
           cancellationCharge,
         ];
         const reservationRates = await internalClient.query(query, values);
-        console.log('cancelOTAReservation reservation_rates:', reservationRates.rows[0]);
+        //console.log('cancelOTAReservation reservation_rates:', reservationRates.rows[0]);
       } else {
         console.warn('No reservation details found to update reservation_rates.');
       }
@@ -4338,11 +4337,11 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
     console.error("Transaction failed, error message:", err.message);
     console.error("Full error object:", err);
     try {
-      console.log("Attempting to roll back transaction...");
+      //console.log("Attempting to roll back transaction...");
       if (shouldRelease) {
         await internalClient.query('ROLLBACK');
       }
-      console.log("Transaction successfully rolled back");
+      console.log("[cancelOTAReservation] Transaction successfully rolled back");
     } catch (rollbackErr) {
       console.error("Failed to roll back transaction:", rollbackErr);
     }
