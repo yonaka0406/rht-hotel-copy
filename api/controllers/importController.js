@@ -1,20 +1,54 @@
 const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData, insertAccountingData, getPrefilledData } = require('../models/import');
+const validationUtils = require('../utils/validationUtils');
 
-const getPrefilledDataController = async (req, res) => {
+async function getPrefilledTemplate(req, res) {
+  try {
     const { type, month1, month2 } = req.query;
 
-    if (!type || !month1 || !month2) {
-        return res.status(400).json({ error: 'Invalid parameters' });
+    // Validate parameters
+    const validatedType = validationUtils.validateNonEmptyStringParam(type, 'Template type');
+    const allowedTypes = ['forecast', 'accounting'];
+    if (!allowedTypes.includes(validatedType)) {
+      return res.status(400).json({ message: `Invalid template type specified. Only ${allowedTypes.join(' or ')} are supported.` });
     }
 
-    try {
-        const data = await getPrefilledData(req.requestId, type, month1, month2);
-        res.json(data);
-    } catch (err) {
-        console.error('Error getting prefilled data:', err);
-        res.status(500).json({ error: 'Failed to get prefilled data' });
+    const validatedMonth1 = validationUtils.validateDateStringParam(month1, 'Month 1');
+    if (!validatedMonth1) {
+      return res.status(400).json({ message: 'Invalid Month 1 format. Must be YYYY-MM-DD.' });
     }
-};
+
+    const validatedMonth2 = validationUtils.validateDateStringParam(month2, 'Month 2');
+    if (!validatedMonth2) {
+      return res.status(400).json({ message: 'Invalid Month 2 format. Must be YYYY-MM-DD.' });
+    }
+
+    // Placeholder for template generation logic
+    let templateData = {};
+
+    if (validatedType === 'forecast') {
+      // Logic for forecast template
+      templateData = {
+        message: `Generating forecast template for ${validatedMonth1} to ${validatedMonth2}`,
+        type: validatedType,
+        month1: validatedMonth1,
+        month2: validatedMonth2,
+      };
+    } else if (validatedType === 'accounting') {
+      // Logic for accounting template (placeholder for now)
+      templateData = {
+        message: `Generating accounting template for ${validatedMonth1} to ${validatedMonth2}`,
+        type: validatedType,
+        month1: validatedMonth1,
+        month2: validatedMonth2,
+      };
+    }
+
+    res.status(200).json(templateData);
+  } catch (error) {
+    console.error('Error generating pre-filled template:', error);
+    res.status(500).json({ message: 'Error generating pre-filled template', error: error.message });
+  }
+}
 
 const addYadomasterClients = async (req, res) => {
     const data = req.body;
