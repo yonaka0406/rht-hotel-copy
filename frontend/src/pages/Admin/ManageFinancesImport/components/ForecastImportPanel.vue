@@ -11,10 +11,11 @@
             <div>
                 <h3 class="text-lg font-medium text-gray-700 mb-2">ステップ1: テンプレートのダウンロード</h3>
                 <p class="text-sm text-gray-600 mb-3">
-                以下のボタンをクリックしてCSVテンプレートをダウンロードし、予算データを入力してください。
+                以下のボタンをクリックしてCSVテンプレートをダウンロードし、予算データを入力してください。<br />
+                テンプレートには、選択された月から12ヶ月分のデータが含まれます。
                 </p>
                 <div class="flex items-center gap-2">
-                    <DatePicker v-model="forecastDate" dateFormat="yy/mm/dd" />
+                    <DatePicker v-model="forecastDate" view="month" dateFormat="yy/mm" />
                     <Button
                     label="予算テンプレートをダウンロード"
                     icon="pi pi-download"
