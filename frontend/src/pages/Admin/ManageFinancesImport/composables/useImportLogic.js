@@ -78,7 +78,12 @@ export function useImportLogic() {
                     const row = [hotel.id, hotel.name, plan.id, plan.name, item];
                     monthHeaders.forEach(header => {
                         const [hYear, hMonth] = header.split('-').map(Number);
-                        const prefilledRow = prefilledData ? prefilledData.find(row => new Date(row.month).getFullYear() === hYear && new Date(row.month).getMonth() + 1 === hMonth && row.hotel_id === hotel.id && row.plan_global_id === plan.id) : null;
+                        const prefilledRow = prefilledData ? prefilledData.find(row =>
+                            new Date(row.month).getFullYear() === hYear &&
+                            new Date(row.month).getMonth() + 1 === hMonth &&
+                            Number(row.hotel_id) === hotel.id &&
+                            ((row.plan_global_id === null && plan.id === null) || (row.plan_global_id === plan.id))
+                        ) : null;
 
                         if (item === '営業日数') {
                             row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
@@ -89,9 +94,13 @@ export function useImportLogic() {
                                 : 0;
                             row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
                         } else if (item === '宿泊売上') {
-                            row.push(prefilledRow ? prefilledRow.accommodation_revenue : '');
+                            const valueToPush = prefilledRow ? prefilledRow.accommodation_revenue : '';
+                            console.log(`Pushing accommodation_revenue: ${valueToPush} for hotel ${hotel.id}, plan ${plan.id}, month ${header}`);
+                            row.push(valueToPush);
                         } else if (item === '販売客室数') {
-                            row.push(prefilledRow ? prefilledRow.rooms_sold_nights : '');
+                            const valueToPush = prefilledRow ? prefilledRow.rooms_sold_nights : '';
+                            console.log(`Pushing rooms_sold_nights: ${valueToPush} for hotel ${hotel.id}, plan ${plan.id}, month ${header}`);
+                            row.push(valueToPush);
                         } else {
                             row.push('');
                         }
@@ -229,21 +238,21 @@ export function useImportLogic() {
             const hotelId = parts[0];
             const hotelName = parts[1].replace(/^"|"$/g, '');
             const planGlobalId = parts[2];
-            console.log(`planGlobalId from CSV: ${planGlobalId}, Parsed: ${parseInt(planGlobalId, 10)}`);
             const planName = parts[3];
             const budgetItemFromCsv = parts[4];
 
             monthDateHeaders.forEach((monthString, monthIndex) => {
                 const valueString = parts[monthIndex + 5];
                 const value = valueString && valueString.trim() !== '' ? parseFloat(valueString) : 0;
-                const mapKey = `${hotelId}_${monthString}_${planGlobalId}`;
+                const parsedPlanGlobalId = planGlobalId && planGlobalId.trim() !== '' ? parseInt(planGlobalId, 10) : null;
+                const mapKey = `${hotelId}_${monthString}_${parsedPlanGlobalId}`;
 
                 if (!hotelMonthDataMap[mapKey]) {
                     hotelMonthDataMap[mapKey] = {
                         hotel_id: hotelId,
                         hotel_name: hotelName,
                         month: formatToFirstDayOfMonth(monthString),
-                        plan_global_id: planGlobalId && planGlobalId.trim() !== '' ? parseInt(planGlobalId, 10) : null,
+                        plan_global_id: parsedPlanGlobalId,
                         plan_name: planName,
                         accommodation_revenue: null,
                         operating_days: null,

@@ -20,26 +20,35 @@ async function getPrefilledTemplate(req, res) {
     if (!validatedMonth1) {
       return res.status(400).json({ message: 'Invalid Month 1 format. Must be YYYY-MM-DD.' });
     }
+    // Ensure month1 is the first day of the month
+    const startOfMonth1 = new Date(validatedMonth1);
+    startOfMonth1.setDate(1);
+    const formattedMonth1 = startOfMonth1.toISOString().slice(0, 10);
 
     const validatedMonth2 = validationUtils.validateDateStringParam(month2, 'Month 2');
     if (!validatedMonth2) {
       return res.status(400).json({ message: 'Invalid Month 2 format. Must be YYYY-MM-DD.' });
     }
+    // Ensure month2 is the first day of the month
+    const startOfMonth2 = new Date(validatedMonth2);
+    startOfMonth2.setDate(1);
+    const formattedMonth2 = startOfMonth2.toISOString().slice(0, 10);
 
     let csvContent;
     let filename;
 
     // Fetch prefilled data from the database
-    const prefilledData = await getPrefilledData(req.requestId, validatedType, validatedMonth1, validatedMonth2);
+    const prefilledData = await getPrefilledData(req.requestId, validatedType, formattedMonth1, formattedMonth2);
     const hotels = await getAllHotels(req.requestId);
     const plans = await getAllGlobalPlans(req.requestId);
+    plans.unshift({ id: null, name: 'プランなし' }); // Add a 'No Plan' option
 
     if (validatedType === 'forecast') {
-      csvContent = await csvGenerator.generateForecastCsv(validatedMonth1, validatedMonth2, prefilledData, hotels, plans);
-      filename = `forecast_template_${validatedMonth1}_to_${validatedMonth2}.csv`;
+      csvContent = await csvGenerator.generateForecastCsv(formattedMonth1, formattedMonth2, prefilledData, hotels, plans);
+      filename = `forecast_template_${formattedMonth1}_to_${formattedMonth2}.csv`;
     } else if (validatedType === 'accounting') {
-      csvContent = await csvGenerator.generateAccountingCsv(validatedMonth1, validatedMonth2, prefilledData, hotels, plans);
-      filename = `accounting_template_${validatedMonth1}_to_${validatedMonth2}.csv`;
+      csvContent = await csvGenerator.generateAccountingCsv(formattedMonth1, formattedMonth2, prefilledData, hotels, plans);
+      filename = `accounting_template_${formattedMonth1}_to_${formattedMonth2}.csv`;
     }
 
     res.header('Content-Type', 'text/csv');

@@ -459,16 +459,6 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 user_id
             ];
 
-            /*
-            console.log(`Executing UPSERT for hotel_id: ${forecast.hotel_id}, month: ${forecast.month}`, {
-                accommodation_revenue: currentValues[2],
-                operating_days: currentValues[3],
-                available_room_nights: currentValues[4],
-                rooms_sold_nights: currentValues[5]
-            });
-            */
-
-            // Return the promise from client.query
             return client.query(query, currentValues)
                 .then(res => {
                     // Attach forecast info to the result for easier processing/logging after Promise.all
