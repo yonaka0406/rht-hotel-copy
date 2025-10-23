@@ -93,7 +93,7 @@ export function useManageRoles() {
                 body: JSON.stringify(updatedRoleData),
             });
             if (response.ok) {
-                const data = await response.json();
+                await response.json();
                 toast.add({
                     severity: 'success',
                     summary: 'Role Updated',
@@ -181,7 +181,7 @@ export function useManageRoles() {
             });
 
             if (response.ok) {
-                const result = await response.json();
+                await response.json();
                 fetchRoles(); // Reload the list
             } else if (response.status === 403) {
                 console.error("Failed to delete role:", response.statusText);

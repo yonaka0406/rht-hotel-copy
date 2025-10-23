@@ -139,7 +139,7 @@ export function useProjectStore() {
             });
             const responseData = await response.json();
             if (!response.ok) {
-                console.error('Failed to update project.', error);
+                console.error('Failed to update project.');
                 throw new Error(responseData.message || `Failed to update project. ${response.status}`);
             }
             // Optionally, refresh the specific project in the allProjects list or refetch if necessary
@@ -193,7 +193,7 @@ const deleteProjectById = async (projectId) => {
             let errorData = { message: `HTTP error! Status: ${response.status}` };
             try {
                 errorData = await response.json();
-            } catch (e) {
+            } catch {
                 // Ignore if response is not JSON or already handled
             }
             throw new Error(errorData.message || `Failed to delete project. Status: ${response.status}`);

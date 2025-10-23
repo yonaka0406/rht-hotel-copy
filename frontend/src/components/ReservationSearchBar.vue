@@ -211,6 +211,7 @@ const removeFilter = (field) => {
 const clearAllFilters = () => {
   emit('clear-filters');
 };
+/*
 const getSuggestionTypeLabel = (type) => {
   const typeLabels = {
     'guest_name': '宿泊者名',
@@ -220,6 +221,7 @@ const getSuggestionTypeLabel = (type) => {
   };
   return typeLabels[type] || type;
 };
+*/
 const handleClickOutside = (event) => {
   if (!event.target.closest('.reservation-search-bar')) {
     showSuggestions.value = false;
@@ -256,6 +258,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateSuggestionDropdownPosition);
 });
+/*
 const handleSuggestionNavigation = (navigationInfo) => {
   let overallIndex = 0;
   const { category, index } = navigationInfo;
@@ -266,6 +269,7 @@ const handleSuggestionNavigation = (navigationInfo) => {
   }
   selectedSuggestionIndex.value = overallIndex;
 };
+*/
 const inputRef = ref(null);
 function focusInput() {
   nextTick(() => {

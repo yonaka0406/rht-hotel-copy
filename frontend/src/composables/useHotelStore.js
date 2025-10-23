@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const hotels = ref([]);
 const selectedHotel = ref(null);
@@ -221,7 +221,7 @@ export function useHotelStore() {
     const removeCalendarSettings = async (reservationId) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/hotel-calendar/unblock/${reservationId}`, {
+            await fetch(`/api/hotel-calendar/unblock/${reservationId}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,

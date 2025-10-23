@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePhoneticSearch } from './usePhoneticSearch.js'
 import { useHotelStore } from '@/composables/useHotelStore';
 
@@ -19,7 +19,7 @@ export function useReservationSearch() {
       const api = useApi()
       apiCall = api.apiCall
       apiInitialized = true
-    } catch (error) {
+    } catch {
       console.debug('API not available, search functionality limited')
       apiInitialized = true
     }
@@ -50,7 +50,7 @@ export function useReservationSearch() {
       try {
         const { default: cacheService } = await import('../services/SuggestionCacheService')
         suggestionCache = cacheService
-      } catch (error) {
+      } catch {
         console.debug('Suggestion cache service not available, using local cache')
         suggestionCache = {
           get: () => null,

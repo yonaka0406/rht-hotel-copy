@@ -165,11 +165,10 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import Button from 'primevue/button';
 
 const route = useRoute();
-const router = useRouter();
 
 // Define props
 const props = defineProps({
@@ -280,7 +279,7 @@ const checkVacancy = async () => {
     } else {
       vacancyAvailable.value = false;
     }
-  } catch (e) {
+  } catch {
     vacancyAvailable.value = false;
   }
 };
@@ -301,7 +300,7 @@ const confirmReservation = async () => {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      await response.json();
       // Mark reservation as confirmed to show success state
       reservationConfirmed.value = true;
     } else {

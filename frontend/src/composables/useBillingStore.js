@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 const billableList = ref(null);
 const billedList = ref(null);
@@ -59,7 +59,7 @@ export function useBillingStore() {
                 try {
                     const errorData = await response.json();
                     errorDetail = errorData.message || errorData.error || errorDetail;
-                } catch (e) {
+                } catch {
                     errorDetail = response.statusText || 'サーバーエラーが発生しました。';
                 }
                 throw new Error(errorDetail);
@@ -119,7 +119,6 @@ export function useBillingStore() {
         } catch (error) {
             console.error('Error in handleGenerateReceipt:', error);
             throw error; // Re-throw the error to be caught by the component
-        } finally {            
         }
     };
 
@@ -245,7 +244,7 @@ export function useBillingStore() {
                 try {
                     const errorData = await response.json();
                     errorDetail = errorData.message || errorData.error || errorDetail;
-                } catch (e) {
+                } catch {
                     errorDetail = response.statusText || 'Server error during consolidated receipt generation.';
                 }
                 throw new Error(errorDetail);

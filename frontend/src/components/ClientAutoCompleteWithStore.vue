@@ -28,8 +28,8 @@ const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear
 
 const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
 
-watch(() => props.modelValue, (val) => {
-  //console.log('[ClientAutoCompleteWithStore] props.modelValue changed:', val);
+watch(() => props.modelValue, () => {
+  //console.log('[ClientAutoCompleteWithStore] props.modelValue changed:', props.modelValue);
 });
 
 const selectedClientProxy = computed({
@@ -107,8 +107,8 @@ const handleClear = (event) => {
   emit('clear', event);
 };
 
-watch(selectedClientProxy, (val) => {
-  //console.log('[ClientAutoCompleteWithStore] v-model changed:', val);
+watch(selectedClientProxy, () => {
+  //console.log('[ClientAutoCompleteWithStore] v-model changed:', selectedClientProxy.value);
 });
 
 onMounted(async () => {

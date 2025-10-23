@@ -19,7 +19,7 @@ export function usePhoneticSearch() {
       const { useApi } = await import('./useApi')
       const api = useApi()
       apiCall = api.apiCall
-    } catch (error) {
+    } catch {
       // API not available (e.g., in tests), use local functionality only
       console.debug('API not available, using local phonetic search only')
     }

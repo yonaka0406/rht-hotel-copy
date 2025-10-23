@@ -1,4 +1,4 @@
-import { ref, computed, watch, toRef } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 /**
 * A composable to calculate cancellation fees for long-term reservations.

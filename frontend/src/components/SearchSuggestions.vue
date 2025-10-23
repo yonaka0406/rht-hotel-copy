@@ -377,7 +377,7 @@ export default {
         const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escapedQuery})`, 'gi');
         return text.replace(regex, '<strong>$1</strong>');
-      } catch (error) {
+      } catch {
         return text;
       }
     };

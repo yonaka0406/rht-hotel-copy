@@ -1,5 +1,4 @@
 import { ref } from 'vue';
-import { useApi } from './useApi';
 
 export function useGuestStore() {
     const isGenerating = ref(false);

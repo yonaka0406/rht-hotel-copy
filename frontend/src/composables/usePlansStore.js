@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 const plans = ref([]);
 const addons = ref([]);
@@ -184,8 +184,8 @@ export function usePlansStore() {
         } catch (err) {
             console.error('Error fetching global addons:', err)
             err.value = err.message || 'Failed to fetch global addons'
-        } finally {
         }
+
     };
 
     // Rates
