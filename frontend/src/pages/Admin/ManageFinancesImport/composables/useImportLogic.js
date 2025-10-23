@@ -71,10 +71,6 @@ export function useImportLogic() {
         // Add a 'No Plan' option to the plans array in the frontend
         plans.value.unshift({ id: null, name: 'プランなし' });
 
-        if (hotels.value && hotels.value.length > 0 && hotels.value.find(h => h.id === 10)) { // Check if hotel 10 exists before logging plans
-            console.log('Plans array in generateCSVData:', plans.value);
-        }
-
         const sortedHotels = [...hotels.value].sort((a, b) => a.id - b.id);
         const sortedPlans = [...plans.value].sort((a, b) => {
             if (a.id === null) return -1; // 'No Plan' comes first
@@ -93,22 +89,8 @@ export function useImportLogic() {
                             const isHotelMatch = Number(row.hotel_id) === hotel.id;
                             const isPlanMatch = (row.plan_global_id === null && plan.id === null) || (row.plan_global_id === plan.id);
 
-                            if (hotel.id === 10) {
-                                if (plan.id === null) {
-                                    console.log(`Checking for null plan.id: hotel ${hotel.id}, month ${header}, row.plan_global_id: ${row.plan_global_id}, plan.id: ${plan.id}, isPlanMatch: ${isPlanMatch}`);
-                                }
-                            }
-
                             return isMonthMatch && isHotelMatch && isPlanMatch;
                         }) : null;
-
-                        if (hotel.id === 10) {
-                            console.log(`Hotel: ${hotel.name}, Plan: ${plan.name}, Item: ${item}, Month: ${header}`);
-                            console.log(`Prefilled Row Found: ${!!prefilledRow}`);
-                            if (prefilledRow) {
-                                console.log(`Prefilled Row Data: ${JSON.stringify(prefilledRow)}`);
-                            }
-                        }
 
                         if (item === '営業日数') {
                             row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
@@ -120,15 +102,9 @@ export function useImportLogic() {
                             row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
                         } else if (item === '宿泊売上') {
                             const valueToPush = prefilledRow ? prefilledRow.accommodation_revenue : '';
-                            if (hotel.id === 10) {
-                                console.log(`Pushing accommodation_revenue: ${valueToPush} for hotel ${hotel.id}, plan ${plan.id}, month ${header}`);
-                            }
                             row.push(valueToPush);
                         } else if (item === '販売客室数') {
                             const valueToPush = prefilledRow ? prefilledRow.rooms_sold_nights : '';
-                            if (hotel.id === 10) {
-                                console.log(`Pushing rooms_sold_nights: ${valueToPush} for hotel ${hotel.id}, plan ${plan.id}, month ${header}`);
-                            }
                             row.push(valueToPush);
                         } else {
                             row.push('');
