@@ -411,6 +411,19 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
     try {
         await client.query('BEGIN');        
 
+        // Handle NULL plan_global_id separately: delete existing entries for the same hotel_id and forecast_month
+        // where plan_global_id is NULL, before inserting new ones.
+        const nullPlanForecasts = forecasts.filter(f => f.plan_global_id === null);
+        if (nullPlanForecasts.length > 0) {
+            const deleteQuery = `
+                DELETE FROM du_forecast
+                WHERE hotel_id = $1 AND forecast_month = $2 AND plan_global_id IS NULL;
+            `;
+            for (const forecast of nullPlanForecasts) {
+                await client.query(deleteQuery, [parseInt(forecast.hotel_id, 10), forecast.month]);
+            }
+        }
+
         const query = `
             INSERT INTO du_forecast (
                 hotel_id, forecast_month,
@@ -495,6 +508,19 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
     const client = await pool.connect();  
     try {
         await client.query('BEGIN');
+
+        // Handle NULL plan_global_id separately: delete existing entries for the same hotel_id and accounting_month
+        // where plan_global_id is NULL, before inserting new ones.
+        const nullPlanAccountingEntries = accountingEntries.filter(e => e.plan_global_id === null);
+        if (nullPlanAccountingEntries.length > 0) {
+            const deleteQuery = `
+                DELETE FROM du_accounting
+                WHERE hotel_id = $1 AND accounting_month = $2 AND plan_global_id IS NULL;
+            `;
+            for (const entry of nullPlanAccountingEntries) {
+                await client.query(deleteQuery, [parseInt(entry.hotel_id, 10), entry.month]);
+            }
+        }
 
         const query = `
             INSERT INTO du_accounting (

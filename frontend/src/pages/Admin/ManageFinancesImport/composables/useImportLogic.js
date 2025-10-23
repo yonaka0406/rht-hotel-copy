@@ -68,8 +68,10 @@ export function useImportLogic() {
             console.warn('CSV生成のためのプランデータが利用できません。');
             return "";
         }
-        // Add a 'No Plan' option to the plans array in the frontend
-        plans.value.unshift({ id: null, name: 'プランなし' });
+        // Add a 'No Plan' option to the plans array in the frontend, only if it doesn't already exist
+        if (!plans.value.some(plan => plan.id === null)) {
+            plans.value.unshift({ id: null, name: 'プランなし' });
+        }
 
         const sortedHotels = [...hotels.value].sort((a, b) => a.id - b.id);
         const sortedPlans = [...plans.value].sort((a, b) => {
