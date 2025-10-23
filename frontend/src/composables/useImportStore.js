@@ -1,8 +1,10 @@
+import { formatDate } from '@/utils/dateUtils';
+
 export function useImportStore() {
     const getPrefilledTemplateData = async (type, month1, month2) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/import/prefilled-template?type=${type}&month1=${month1.toISOString()}&month2=${month2.toISOString()}`, {
+            const response = await fetch(`/api/import/prefilled-template?type=${type}&month1=${formatDate(month1)}&month2=${formatDate(month2)}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
