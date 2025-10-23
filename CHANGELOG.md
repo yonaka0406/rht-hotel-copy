@@ -564,6 +564,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 - Feature: Daily Digest email routine added and table to check the logs in Admin panel.
 - Feature: Prefilled template download feature for finance imports via a new backend endpoint and CSV generator service. 
+- Bugfix: Fix addon quantity calculation per room.
 
 ---
 
