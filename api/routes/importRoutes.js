@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { addYadomasterClients, addYadomasterReservations, addYadomasterDetails, addYadomasterPayments, addYadomasterAddons, addYadomasterRates, addForecastData, addAccountingData } = require('../controllers/importController');
+const { addYadomasterClients, addYadomasterReservations, addYadomasterDetails, addYadomasterPayments, addYadomasterAddons, addYadomasterRates, addForecastData, addAccountingData, getPrefilledDataController } = require('../controllers/importController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 router.post('/import/yadomaster/clients', authMiddleware_manageDB, addYadomasterClients);
@@ -12,5 +12,7 @@ router.post('/import/yadomaster/reservation-rates', authMiddleware_manageDB, add
 
 router.post('/import/finance/forecast', authMiddleware_manageDB, addForecastData);
 router.post('/import/finance/accounting', authMiddleware_manageDB, addAccountingData);
+
+router.get('/import/prefilled-template', authMiddleware_manageDB, getPrefilledDataController);
 
 module.exports = router;

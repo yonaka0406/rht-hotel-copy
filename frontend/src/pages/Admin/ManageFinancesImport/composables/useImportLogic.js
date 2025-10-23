@@ -8,7 +8,7 @@ import { useToast } from 'primevue/usetoast';
 export function useImportLogic() {
     const toast = useToast();
     const { hotels, fetchHotels } = useHotelStore();
-    const { forecastAddData, accountingAddData } = useImportStore();
+    const { forecastAddData, accountingAddData, getPrefilledTemplateData } = useImportStore();
     const { plans, fetchPlansGlobal } = usePlansStore();
 
     onMounted(async () => {
@@ -29,7 +29,7 @@ export function useImportLogic() {
         return new Date(year, month + 1, 0).getDate();
     };
 
-    const generateCSVData = (type, date) => {
+    const generateCSVData = (type, date, prefilledData = null) => {
         const csvRows = [];
         const currentDate = date;
         const year = currentDate.getFullYear();
@@ -78,14 +78,20 @@ export function useImportLogic() {
                     const row = [hotel.id, hotel.name, plan.id, plan.name, item];
                     monthHeaders.forEach(header => {
                         const [hYear, hMonth] = header.split('-').map(Number);
+                        const prefilledRow = prefilledData ? prefilledData.find(row => new Date(row.month).getFullYear() === hYear && new Date(row.month).getMonth() + 1 === hMonth && row.hotel_id === hotel.id && row.plan_global_id === plan.id) : null;
+
                         if (item === '営業日数') {
-                            row.push(getDaysInMonth(hYear, hMonth - 1));
+                            row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
                         } else if (item === '客室数') {
                             const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);
                             const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
                                 ? hotel.total_rooms * daysInCurrentMonth
                                 : 0;
-                            row.push(totalRoomsForMonth);
+                            row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
+                        } else if (item === '宿泊売上') {
+                            row.push(prefilledRow ? prefilledRow.accommodation_revenue : '');
+                        } else if (item === '販売客室数') {
+                            row.push(prefilledRow ? prefilledRow.rooms_sold_nights : '');
                         } else {
                             row.push('');
                         }
@@ -136,6 +142,46 @@ export function useImportLogic() {
             toast.add({ severity: 'success', summary: '成功', detail: `${type === 'forecast' ? '予算' : '実績'}テンプレートがダウンロードされました。`, life: 3000 });
         } else {
             toast.add({ severity: 'error', summary: 'エラー', detail: 'お使いのブラウザはダウンロードに対応していません。', life: 3000 });
+        }
+    };
+
+    const downloadPrefilledTemplate = async (type, date) => {
+        if (!date) {
+            toast.add({ severity: 'warn', summary: '注意', detail: '日付を選択してください。', life: 3000 });
+            return;
+        }
+
+        const month1 = new Date(date);
+        const month2 = new Date(date);
+
+        if (type === 'forecast') {
+            month2.setMonth(month1.getMonth() + 12);
+        } else {
+            month1.setMonth(month2.getMonth() - 12);
+        }
+
+        try {
+            const prefilledData = await getPrefilledTemplateData(type, month1, month2);
+
+            const csvContent = generateCSVData(type, date, prefilledData);
+            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `${type}_prefilled_template_${new Date().toISOString().slice(0,10)}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                toast.add({ severity: 'success', summary: '成功', detail: `${type === 'forecast' ? '予算' : '実績'}テンプレートがダウンロードされました。`, life: 3000 });
+            } else {
+                toast.add({ severity: 'error', summary: 'エラー', detail: 'お使いのブラウザはダウンロードに対応していません。', life: 3000 });
+            }
+        } catch (error) {
+            console.error(`Error downloading prefilled ${type} template:`, error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: 'テンプレートのダウンロードに失敗しました。', life: 3000 });
         }
     };
 
@@ -294,9 +340,12 @@ export function useImportLogic() {
         });
     };
 
+
+
     return {
         maxFileSize,
         downloadTemplate,
         handleFileUpload,
+        downloadPrefilledTemplate,
     };
 }

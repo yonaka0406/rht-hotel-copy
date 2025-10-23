@@ -585,6 +585,34 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
     }
 }
 
+const getPrefilledData = async (requestId, type, month1, month2) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+
+    try {
+        const table = type === 'forecast' ? 'du_forecast' : 'du_accounting';
+        const monthColumn = type === 'forecast' ? 'forecast_month' : 'accounting_month';
+
+        const query = `
+            SELECT 
+                hotel_id, ${monthColumn} as month, accommodation_revenue, operating_days, 
+                available_room_nights, rooms_sold_nights, plan_global_id
+            FROM ${table}
+            WHERE ${monthColumn} >= $1 AND ${monthColumn} < $2
+        `;
+
+        const values = [month1, month2];
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (error) {
+        console.error(`Error fetching prefilled ${type} data:`, error);
+        throw error;
+    } finally {
+        client.release();
+    }
+};
+
+
 module.exports = {
     insertYadomasterClients,
     insertYadomasterReservations,
@@ -593,5 +621,6 @@ module.exports = {
     insertYadomasterAddons,
     insertYadomasterRates,
     insertForecastData,
-    insertAccountingData
+    insertAccountingData,
+    getPrefilledData
   };

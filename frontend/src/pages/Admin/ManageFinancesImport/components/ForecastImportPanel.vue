@@ -22,6 +22,12 @@
                     class="p-button-info"
                     @click="downloadTemplate('forecast', forecastDate)"
                     />
+                    <Button
+                    label="データ入力済みテンプレートをダウンロード"
+                    icon="pi pi-download"
+                    class="p-button-help"
+                    @click="downloadPrefilledTemplate('forecast', forecastDate)"
+                    />
                 </div>
             </div>
 
@@ -63,7 +69,7 @@ import { ref } from 'vue';
 import { Card, Button, FileUpload, Message, DatePicker } from 'primevue';
 import { useImportLogic } from '../composables/useImportLogic';
 
-const { maxFileSize, downloadTemplate, handleFileUpload } = useImportLogic();
+const { maxFileSize, downloadTemplate, handleFileUpload, downloadPrefilledTemplate } = useImportLogic();
 
 const forecastDate = ref(new Date());
 const forecastStatus = ref({ message: '', type: 'info' });

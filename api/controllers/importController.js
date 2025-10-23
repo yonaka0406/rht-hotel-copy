@@ -1,4 +1,20 @@
-const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData, insertAccountingData } = require('../models/import');
+const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData, insertAccountingData, getPrefilledData } = require('../models/import');
+
+const getPrefilledDataController = async (req, res) => {
+    const { type, month1, month2 } = req.query;
+
+    if (!type || !month1 || !month2) {
+        return res.status(400).json({ error: 'Invalid parameters' });
+    }
+
+    try {
+        const data = await getPrefilledData(req.requestId, type, month1, month2);
+        res.json(data);
+    } catch (err) {
+        console.error('Error getting prefilled data:', err);
+        res.status(500).json({ error: 'Failed to get prefilled data' });
+    }
+};
 
 const addYadomasterClients = async (req, res) => {
     const data = req.body;
@@ -137,5 +153,6 @@ module.exports = {
     addYadomasterAddons,
     addYadomasterRates,
     addForecastData,
-    addAccountingData
+    addAccountingData,
+    getPrefilledDataController
 };

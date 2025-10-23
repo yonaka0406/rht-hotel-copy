@@ -1,4 +1,25 @@
 export function useImportStore() {
+    const getPrefilledTemplateData = async (type, month1, month2) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/import/prefilled-template?type=${type}&month1=${month1.toISOString()}&month2=${month2.toISOString()}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch prefilled data');
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error(`Error fetching prefilled ${type} template data:`, error);
+            throw error;
+        }
+    };
+
     
     const yadomasterAddClients = async (array) => {        
         try {
@@ -176,7 +197,7 @@ export function useImportStore() {
         } catch (error) {
             console.error('Failed to import data', error);
         }
-    }
+    };
 
     return{
         yadomasterAddClients,
@@ -187,5 +208,6 @@ export function useImportStore() {
         yadomasterAddReservationRates,
         forecastAddData,
         accountingAddData,
+        getPrefilledTemplateData,
     };
 }

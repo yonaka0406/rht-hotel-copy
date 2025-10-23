@@ -22,6 +22,12 @@
                     class="p-button-success"
                     @click="downloadTemplate('accounting', accountingDate)"
                     />
+                    <Button
+                    label="データ入力済みテンプレートをダウンロード"
+                    icon="pi pi-download"
+                    class="p-button-help"
+                    @click="downloadPrefilledTemplate('accounting', accountingDate)"
+                    />
                 </div>
             </div>
 
@@ -63,7 +69,7 @@ import { ref } from 'vue';
 import { Card, Button, FileUpload, Message, DatePicker } from 'primevue';
 import { useImportLogic } from '../composables/useImportLogic';
 
-const { maxFileSize, downloadTemplate, handleFileUpload } = useImportLogic();
+const { maxFileSize, downloadTemplate, handleFileUpload, downloadPrefilledTemplate } = useImportLogic();
 
 const accountingDate = ref(new Date());
 const accountingStatus = ref({ message: '', type: 'info' });
