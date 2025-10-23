@@ -873,7 +873,10 @@
                 calculable: true,
                 orient: 'horizontal',
                 left: 'center',
-                bottom: '5%'
+                bottom: '5%',
+                inRange: {
+                    color: ['#FFFFF0', '#FFFACD', '#FFEFD5', '#FFE4B5', '#FFDAB9', '#F08080', '#CD5C5C', '#B22222'] // 8 pale yellow to red gradient colors
+                }
             },
             series: [{
                 name: '予約数',
@@ -1168,12 +1171,15 @@
                 valueFormatter: (value) => Math.round(value / 10000).toLocaleString('ja-JP') + valueLabel
             },
             legend: {
-                data: salesByPlanChartMode.value !== 'tax_included' ? ['通常売上', 'キャンセル売上', '計画売上'] : ['通常売上', 'キャンセル売上']
+                data: salesByPlanChartMode.value !== 'tax_included' ? ['通常売上', 'キャンセル売上', '計画売上'] : ['通常売上', 'キャンセル売上'],
+                top: '5%' // Move legend down slightly
             },
             grid: {
                 left: '3%',
                 right: '4%',
+                top: '15%', // Increased top to give more space for legend
                 bottom: '10%',
+                height: '65%', // Reduced height
                 containLabel: true
             },
             xAxis: {
@@ -1942,7 +1948,6 @@
                 accountingData.value = [];
             }
             salesByPlan.value = salesByPlanResult;
-            // console.log('Raw Sales by Plan Result:', salesByPlanResult);
             occupationBreakdownData.value = occupationBreakdownResult;
             bookingSourceData.value = bookingSourceResult;
             paymentTimingData.value = paymentResult;
@@ -1956,7 +1961,6 @@
             } else {
                 forecastDataByPlan.value = [];
             }
-            // console.log('Forecast Data By Plan:', forecastDataByPlan.value);
 
             // Assign reservation list data
             if (reservationListViewResult && Array.isArray(reservationListViewResult)) {
