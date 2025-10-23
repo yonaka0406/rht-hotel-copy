@@ -1,5 +1,4 @@
 import { ref, computed, watch } from 'vue'
-import { usePhoneticSearch } from './usePhoneticSearch.js'
 import { useHotelStore } from '@/composables/useHotelStore';
 
 /**
@@ -70,14 +69,7 @@ export function useReservationSearch() {
   let debounceTimer = null
   let currentSearchController = null
 
-  // Initialize phonetic search utilities
-  const {
-    phoneticMatch,
-    fuzzyPhoneticMatch,
-    normalizePhoneNumber,
-    normalizeEmail,
-    generateSearchVariants
-  } = usePhoneticSearch()
+
 
   // Computed properties
   const hasActiveSearch = computed(() => {

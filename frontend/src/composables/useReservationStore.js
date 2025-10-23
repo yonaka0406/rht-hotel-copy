@@ -250,8 +250,6 @@ export function useReservationStore() {
             throw new Error('Failed to update reservation client');
             }
     
-            const updatedReservation = await response.json();            
-
             setReservationIsUpdating(false);
             
         } catch (error) {
@@ -378,7 +376,6 @@ export function useReservationStore() {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
-            const id = data[0].hotel_id;
 
             const response = await fetch(`/api/reservation/update/free/calendar`, {
                 method: 'PUT',
@@ -582,7 +579,7 @@ export function useReservationStore() {
             throw error;
         }
     };
-    const changeReservationRoomGuestNumber = async (id, room, mode) => {
+    const changeReservationRoomGuestNumber = async (id, room) => {
         // console.log('From Reservation Store => changeReservationRoomGuestNumber');
         try {
             setReservationIsUpdating(true);
@@ -1311,8 +1308,8 @@ export function useReservationStore() {
             const dates = newValue.map(item => new Date(item.date));
             const validDates = dates.filter(date => !isNaN(date.getTime()));
             if (validDates.length > 0) {
-                const minDate = new Date(Math.min(...validDates));
-                const maxDate = new Date(Math.max(...validDates));                    
+                // const minDate = new Date(Math.min(...validDates));
+                // const maxDate = new Date(Math.max(...validDates));                    
                 // console.log('reservedRooms changed in Store: min', minDate.toLocaleDateString(),'max', maxDate.toLocaleDateString(), 'rows:', newValue.length);
             } else {
                 // console.log('No valid dates found in reservedRooms.');

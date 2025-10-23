@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 
 const users = ref([]);
 const logged_user = ref([]);

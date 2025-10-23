@@ -300,8 +300,8 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch (e) {
-                console.debug('Download functionality not available in current environment');
+            } catch {
+                // console.debug('Download functionality not available in current environment');
             }
 
             return { success: true };
@@ -351,8 +351,8 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch (e) {
-                console.debug('Download functionality not available in current environment');
+            } catch {
+                // console.debug('Download functionality not available in current environment');
             }
 
             return { success: true };
@@ -401,8 +401,8 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch (e) {
-                console.debug('Download functionality not available in current environment');
+            } catch {
+                // console.debug('Download functionality not available in current environment');
             }
 
             return { success: true };
@@ -456,8 +456,8 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch (e) {
-                console.debug('Download functionality not available in current environment');
+            } catch {
+                // console.debug('Download functionality not available in current environment');
             }
 
             return { success: true };
