@@ -411,6 +411,19 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
     try {
         await client.query('BEGIN');        
 
+        // Handle NULL plan_global_id separately: delete existing entries for the same hotel_id and forecast_month
+        // where plan_global_id is NULL, before inserting new ones.
+        const nullPlanForecasts = forecasts.filter(f => f.plan_global_id === null);
+        if (nullPlanForecasts.length > 0) {
+            const deleteQuery = `
+                DELETE FROM du_forecast
+                WHERE hotel_id = $1 AND forecast_month = $2 AND plan_global_id IS NULL;
+            `;
+            for (const forecast of nullPlanForecasts) {
+                await client.query(deleteQuery, [parseInt(forecast.hotel_id, 10), forecast.month]);
+            }
+        }
+
         const query = `
             INSERT INTO du_forecast (
                 hotel_id, forecast_month,
@@ -459,16 +472,6 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 user_id
             ];
 
-            /*
-            console.log(`Executing UPSERT for hotel_id: ${forecast.hotel_id}, month: ${forecast.month}`, {
-                accommodation_revenue: currentValues[2],
-                operating_days: currentValues[3],
-                available_room_nights: currentValues[4],
-                rooms_sold_nights: currentValues[5]
-            });
-            */
-
-            // Return the promise from client.query
             return client.query(query, currentValues)
                 .then(res => {
                     // Attach forecast info to the result for easier processing/logging after Promise.all
@@ -505,6 +508,19 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
     const client = await pool.connect();  
     try {
         await client.query('BEGIN');
+
+        // Handle NULL plan_global_id separately: delete existing entries for the same hotel_id and accounting_month
+        // where plan_global_id is NULL, before inserting new ones.
+        const nullPlanAccountingEntries = accountingEntries.filter(e => e.plan_global_id === null);
+        if (nullPlanAccountingEntries.length > 0) {
+            const deleteQuery = `
+                DELETE FROM du_accounting
+                WHERE hotel_id = $1 AND accounting_month = $2 AND plan_global_id IS NULL;
+            `;
+            for (const entry of nullPlanAccountingEntries) {
+                await client.query(deleteQuery, [parseInt(entry.hotel_id, 10), entry.month]);
+            }
+        }
 
         const query = `
             INSERT INTO du_accounting (
@@ -585,6 +601,34 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
     }
 }
 
+const getPrefilledData = async (requestId, type, month1, month2) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+
+    try {
+        const table = type === 'forecast' ? 'du_forecast' : 'du_accounting';
+        const monthColumn = type === 'forecast' ? 'forecast_month' : 'accounting_month';
+
+        const query = `
+            SELECT 
+                hotel_id, ${monthColumn} as month, accommodation_revenue, operating_days, 
+                available_room_nights, rooms_sold_nights, plan_global_id
+            FROM ${table}
+            WHERE ${monthColumn} >= $1 AND ${monthColumn} < $2
+        `;
+
+        const values = [month1, month2];
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (error) {
+        console.error(`Error fetching prefilled ${type} data:`, error);
+        throw error;
+    } finally {
+        client.release();
+    }
+};
+
+
 module.exports = {
     insertYadomasterClients,
     insertYadomasterReservations,
@@ -593,5 +637,6 @@ module.exports = {
     insertYadomasterAddons,
     insertYadomasterRates,
     insertForecastData,
-    insertAccountingData
+    insertAccountingData,
+    getPrefilledData
   };

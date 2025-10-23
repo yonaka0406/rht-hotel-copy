@@ -95,6 +95,7 @@ RHT Hotel is a comprehensive hotel property management system designed to stream
   - **Aggregation:** Create an `index.js` file within the controller's directory to aggregate and export all sub-controller methods.
   - **Usage:** Routes should import from this aggregated `index.js` (e.g., `const hotelControllers = require('../controllers/hotel');`) and call methods using the aggregated object (e.g., `hotelControllers.getHotels`).
 - **Controller Import Style:** When importing controllers into routes, prefer importing the entire controller module as a single object (e.g., `const controllers = require('../controllers/myController');`) rather than destructuring individual functions (e.g., `const { func1, func2 } = require('../controllers/myController');`). This enhances consistency and readability.
+- **Linting:** After each task is complete, run the linter. However, only fix the lint errors for the files that the current task is editing.
 
 ## 5. Setup & Environment
 
