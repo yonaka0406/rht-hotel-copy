@@ -111,14 +111,14 @@ export function useCancellationFeeCalculator(getReservationDetails, cancellation
     if (cancelStart <= checkOut && cancelStart >= checkIn) {
       cancelRangeStart = cancelStart;
     } else {
-            const nextDay = new Date(cancelDateObj);
-            nextDay.setDate(nextDay.getDate() + 1);
-            cancelRangeStart = formatDate(nextDay);
-        }
+      const nextDay = new Date(cancelDateObj);
+      nextDay.setDate(nextDay.getDate() + 1);
+      cancelRangeStart = formatDate(nextDay);
+    }
 
-        const endDate = new Date(cancelDateObj);
-        endDate.setDate(endDate.getDate() + ruleDays.value);
-        const cancelRangeEnd = formatDate(endDate);
+    const endDate = new Date(cancelDateObj);
+    endDate.setDate(endDate.getDate() + ruleDays.value);
+    const cancelRangeEnd = formatDate(endDate);
 
         // Determine the actual overlap between the reservation and the cancellation window
         const overlapRangeStart = checkIn > cancelRangeStart ? checkIn : cancelRangeStart;

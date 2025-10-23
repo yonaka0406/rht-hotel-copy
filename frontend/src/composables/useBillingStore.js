@@ -59,7 +59,8 @@ export function useBillingStore() {
                 try {
                     const errorData = await response.json();
                     errorDetail = errorData.message || errorData.error || errorDetail;
-                } catch {
+                } catch (err) {
+                    console.error('Failed to parse error response:', err);
                     errorDetail = response.statusText || 'サーバーエラーが発生しました。';
                 }
                 throw new Error(errorDetail);

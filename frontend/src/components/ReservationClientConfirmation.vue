@@ -279,7 +279,8 @@ const checkVacancy = async () => {
     } else {
       vacancyAvailable.value = false;
     }
-  } catch {
+  } catch (err) {
+    console.error('Error checking vacancy availability:', err);
     vacancyAvailable.value = false;
   }
 };

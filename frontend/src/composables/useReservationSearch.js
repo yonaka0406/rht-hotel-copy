@@ -19,7 +19,8 @@ export function useReservationSearch() {
       const api = useApi()
       apiCall = api.apiCall
       apiInitialized = true
-    } catch {
+    } catch (err) {
+      console.error('Failed to initialize API for search:', err)
       console.debug('API not available, search functionality limited')
       apiInitialized = true
     }
@@ -50,7 +51,8 @@ export function useReservationSearch() {
       try {
         const { default: cacheService } = await import('../services/SuggestionCacheService')
         suggestionCache = cacheService
-      } catch {
+      } catch (err) {
+        console.error('Failed to initialize suggestion cache service:', err)
         console.debug('Suggestion cache service not available, using local cache')
         suggestionCache = {
           get: () => null,
