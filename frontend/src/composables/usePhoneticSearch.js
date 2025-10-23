@@ -221,7 +221,7 @@ export function usePhoneticSearch() {
     if (!phone) return ''
     
     return phone
-      .replace(/[\s\-\(\)\+－]/g, '') // Remove spaces, hyphens, parentheses, plus (including full-width)
+      .replace(/[\s\-()+\uFF0D]/g, '') // Remove spaces, hyphens, parentheses, plus (including full-width)
       .replace(/[０-９]/g, (char) => // Convert full-width numbers
         String.fromCharCode(char.charCodeAt(0) - 0xFEE0)
       )

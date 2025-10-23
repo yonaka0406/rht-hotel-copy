@@ -91,9 +91,9 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, onBeforeUnmount, defineExpose } from 'vue';
-import { useReservationSearch } from '../composables/useReservationSearch';
-import SearchSuggestions from './SearchSuggestions.vue';
+import { ref, watch, nextTick, defineExpose } from 'vue';
+//import { useReservationSearch } from '../composables/useReservationSearch';
+//import SearchSuggestions from './SearchSuggestions.vue';
 import { InputText } from 'primevue';
 
 const props = defineProps({
@@ -221,12 +221,13 @@ const getSuggestionTypeLabel = (type) => {
   };
   return typeLabels[type] || type;
 };
-*/
+
 const handleClickOutside = (event) => {
   if (!event.target.closest('.reservation-search-bar')) {
     showSuggestions.value = false;
   }
 };
+/*
 const searchBarRef = ref(null);
 const suggestionDropdownStyle = ref({});
 

@@ -157,7 +157,7 @@ export default {
     const recentSearches = ref([]);
     const selectedCategory = ref('');
     const selectedItemIndex = ref(-1);
-    const suggestionCache = ref(new Map());
+    // const suggestionCache = ref(new Map()); // Commented out as it's not used
     
     // Computed properties
     const categorizedSuggestions = computed(() => {
@@ -541,7 +541,7 @@ export default {
     const getClientDisplayName = (item) => {
       return item.name_kanji || item.name_kana || item.name || '';
     };
-    
+    /*
     // Cache suggestions to reduce API calls
     const cacheSuggestion = (query, suggestions) => {
       suggestionCache.value.set(query.toLowerCase(), {
@@ -557,7 +557,7 @@ export default {
       }
       return null;
     };
-    
+    */
     // Lifecycle hooks
     onMounted(() => {
       loadRecentSearches();

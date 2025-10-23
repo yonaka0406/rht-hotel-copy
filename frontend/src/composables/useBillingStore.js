@@ -178,7 +178,7 @@ export function useBillingStore() {
             const pdfUrl = window.URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
             link.href = pdfUrl;
-            const sanitizedClientName = invoiceData.client_name.replace(/[\\/:\*\?"<>\|]/g, '_');
+            const sanitizedClientName = invoiceData.client_name.replace(/[/\\:*?"<>|]/g, '_');
             link.setAttribute('download', `請求書_${finalInvoiceNumber}_${sanitizedClientName}.pdf`);             
             document.body.appendChild(link);
             link.click();
@@ -308,7 +308,7 @@ export function useBillingStore() {
             const excelUrl = window.URL.createObjectURL(excelBlob);
             const link = document.createElement('a');
             link.href = excelUrl;
-            const sanitizedClientName = invoiceData.client_name.replace(/[\\/:\*\?"<>\|]/g, '_');
+            const sanitizedClientName = invoiceData.client_name.replace(/[/\\:*?"<>|]/g, '_');
             link.setAttribute('download', `請求書_${finalInvoiceNumber}_${sanitizedClientName}.xlsx`);
             document.body.appendChild(link);
             link.click();
