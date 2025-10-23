@@ -24,7 +24,7 @@
         </div>
     </div>
     <div v-else class="grid grid-cols-2 gap-2 gap-y-4">
-        <Message v-if="!allGroupsPeopleCountMatch" severity="warn" :closable="false">
+        <Message v-if="!allGroupsPeopleCountMatch" severity="warn" :closable="false" class="col-span-2">
             <div class="flex items-center">
                 <i class="pi pi-exclamation-triangle mr-2"></i>
                 <span>予約の人数と宿泊者の人数が一致していません。</span>
@@ -684,11 +684,22 @@ const allRoomsHavePlan = computed(() => {
     return allPlansSet && paymentTimingSet;
 });
 const allGroupsPeopleCountMatch = computed(() => {
-    return groupedRooms.value.every(group =>
-        group.details.every(
-            (detail) => detail.number_of_people === detail.reservation_clients.length
-        )
-    );
+    if (!reservationInfo.value || !groupedRooms.value.length) {
+        return true; // No reservation info or rooms, so no mismatch
+    }
+
+    const totalReservationPeople = reservationInfo.value.reservation_number_of_people;
+    let sumOfRoomPeople = 0;
+
+    groupedRooms.value.forEach(roomGroup => {
+        // Assuming number_of_people is consistent for a room across its details
+        // We take the number_of_people from the first detail of each room group
+        if (roomGroup.details.length > 0) {
+            sumOfRoomPeople += roomGroup.details[0].number_of_people;
+        }
+    });
+
+    return totalReservationPeople === sumOfRoomPeople;
 });
 const allReservationClients = computed(() => {
     const uniqueClients = new Map();
