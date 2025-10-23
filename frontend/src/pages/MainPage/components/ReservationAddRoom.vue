@@ -96,7 +96,7 @@ const maxDateRange = ref(null);
 const numberOfPeople = ref(1);
 const maxNumberOfPeople = ref(1);
 const numberOfNights = computed(() => {
-    if (today && tomorrow) {
+    if (today.value && tomorrow) {
         const checkInDate = today.value;
         const checkOutDate = tomorrow.value;
         const dayDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));

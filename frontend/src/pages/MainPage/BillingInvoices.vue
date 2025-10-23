@@ -372,11 +372,11 @@
     const selectedReservations = ref([]);
     const drawerSelectVisible = ref(false);    
     const totalPeople = computed(() => {
-        if(!selectedReservations){ return 0;}
+        if(!selectedReservations.value){ return 0;}
         return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.number_of_people || 0), 0);
     });
     const periodPrice = computed(() => {
-        if(!selectedReservations){ return 0;}        
+        if(!selectedReservations.value){ return 0;}        
         return selectedReservations.value.reduce((sum, reservation) => {
             const price = Number(reservation.period_price);
             if (!isNaN(price)) {

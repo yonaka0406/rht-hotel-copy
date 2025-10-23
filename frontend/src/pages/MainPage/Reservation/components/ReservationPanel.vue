@@ -24,6 +24,12 @@
         </div>
     </div>
     <div v-else class="grid grid-cols-2 gap-2 gap-y-4">
+        <Message v-if="!allGroupsPeopleCountMatch" severity="warn" :closable="false">
+            <div class="flex items-center">
+                <i class="pi pi-exclamation-triangle mr-2"></i>
+                <span>予約の人数と宿泊者の人数が一致していません。</span>
+            </div>
+        </Message>
         <div class="field flex flex-col">
             <div class="flex items-center justify-between mr-2 mb-2">
                 <p class="font-bold">予約者：</p>
@@ -465,7 +471,7 @@
 
 <script setup>
 // Vue
-import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
@@ -485,7 +491,7 @@ import { useConfirm } from "primevue/useconfirm";
 // Assign unique group names to each confirm instance
 const confirm = useConfirm();
 import {
-    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox
+    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message
 } from 'primevue';
 
 const reservationAddRoomDialogRef = ref(null);
@@ -513,8 +519,8 @@ const props = defineProps({
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
 const { setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern,
-    availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange,
-    setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming } = useReservationStore();
+    fetchAvailableRooms, getAvailableDatesForChange, setCalendarChange,
+    setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 
@@ -663,6 +669,11 @@ const groupedRooms = computed(() => {
     return Object.values(groups);
 
 });
+const allHavePlan = (group) => {
+    return group.details.every(
+        (detail) => detail.plans_global_id || detail.plans_hotel_id
+    );
+};
 const allRoomsHavePlan = computed(() => {
     // Check if every room in every group has a plan
     const allPlansSet = groupedRooms.value.every(group => allHavePlan(group));
@@ -672,20 +683,13 @@ const allRoomsHavePlan = computed(() => {
 
     return allPlansSet && paymentTimingSet;
 });
-const allHavePlan = (group) => {
-    return group.details.every(
-        (detail) => detail.plans_global_id || detail.plans_hotel_id
-    );
-};
 const allGroupsPeopleCountMatch = computed(() => {
-    return groupedRooms.value.every(group => allPeopleCountMatch(group));
-});
-const allPeopleCountMatch = (group) => {
-    return group.details.every(
-        (detail) => detail.number_of_people === detail.reservation_clients.length
+    return groupedRooms.value.every(group =>
+        group.details.every(
+            (detail) => detail.number_of_people === detail.reservation_clients.length
+        )
     );
-};
-
+});
 const allReservationClients = computed(() => {
     const uniqueClients = new Map();
     let fallbackId = 0;
@@ -723,8 +727,6 @@ const cancellationFeeMessage = computed(() => {
 
     const feeDate = new Date(cancellationFeeDate.value);
     feeDate.setHours(0, 0, 0, 0);
-
-    const formattedFeeDate = formatDate(feeDate);
 
     return `キャンセルポリシーは予約の規模に応じて、「〇日前まで」であればキャンセル料が発生しないように設定できます。`;
     
@@ -1479,9 +1481,7 @@ onMounted(async () => {
     numberOfNightsTotal.value = reservationInfo.value.reservation_number_of_people * numberOfNights.value;
 });
 
-const openSlackDialog = () => {
-    visibleSlackDialog.value = true;
-};
+
 
 // Watcher
 

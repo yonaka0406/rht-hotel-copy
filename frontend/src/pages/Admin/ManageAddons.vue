@@ -538,7 +538,7 @@
     const AddonSet = new Set();
     for (const addon of filteredAddons) {
       AddonSet.add(addon.name);
-      if (AddonSet.has(editGlobalAddon.name)) {
+      if (AddonSet.has(editGlobalAddon.value.name)) {
         toast.add({ 
           severity: 'error', 
           summary: 'エラー',
@@ -582,7 +582,7 @@
     const AddonSet = new Set();
     for (const addon of globalAddons.value) {
       AddonSet.add(addon.name);
-      if (AddonSet.has(newGlobalAddon.name)) {
+      if (AddonSet.has(newGlobalAddon.value.name)) {
         toast.add({ 
           severity: 'error', 
           summary: 'エラー',

@@ -451,7 +451,7 @@
     const PlanSet = new Set();
     for (const plan of globalPlans.value) {
       PlanSet.add(plan.name);
-      if (PlanSet.has(newGlobalPlan.name)) {
+      if (PlanSet.has(newGlobalPlan.value.name)) {
         toast.add({ 
           severity: 'error', 
           summary: 'エラー',
@@ -486,7 +486,7 @@
     const PlanSet = new Set();
     for (const plan of filteredPlans) {
       PlanSet.add(plan.name);
-      if (PlanSet.has(editGlobalPlan.name)) {
+      if (PlanSet.has(editGlobalPlan.value.name)) {
         toast.add({ 
           severity: 'error', 
           summary: 'エラー',

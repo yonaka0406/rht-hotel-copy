@@ -343,7 +343,7 @@ const loadTableData = async () => {
 const selectedReservations = ref([]);
 const drawerSelectVisible = ref(false);
 const totalPrice = computed(() => {
-    if (!selectedReservations) { return 0; }
+    if (!selectedReservations.value) { return 0; }
     return selectedReservations.value.reduce((sum, reservation) => {
         const price = Number(reservation.price);
         if (!isNaN(price)) {
@@ -355,7 +355,7 @@ const totalPrice = computed(() => {
     }, 0);
 });
 const totalPayments = computed(() => {
-    if (!selectedReservations) { return 0; }
+    if (!selectedReservations.value) { return 0; }
     return selectedReservations.value.reduce((sum, reservation) => {
         const payment = Number(reservation.payment);
         if (!isNaN(payment)) {
@@ -367,16 +367,16 @@ const totalPayments = computed(() => {
     }, 0);
 });
 const totalBalance = computed(() => {
-    if (!selectedReservations) { return 0; }
+    if (!selectedReservations.value) { return 0; }
     return selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.price || 0) - (reservation.payment || 0)), 0);
 });
 const totalPeopleNights = computed(() => {
-    if (!selectedReservations) { return 0; }
+    if (!selectedReservations.value) { return 0; }
     const formattedTotalPeopleNights = selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.number_of_people || 0) * (reservation.number_of_nights || 0)), 0);
     return formattedTotalPeopleNights.toLocaleString();
 });
 const totalPeople = computed(() => {
-    if (!selectedReservations) { return 0; }
+    if (!selectedReservations.value) { return 0; }
     return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.number_of_people || 0), 0);
 });
 

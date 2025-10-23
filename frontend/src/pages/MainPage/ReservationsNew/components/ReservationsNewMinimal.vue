@@ -252,7 +252,7 @@ const selectedCell = ref(null);
 const roomTypeInput = ref('');
 const loading = ref(false);
 const numberOfNights = computed(() => {
-  if (inDate && outDate) {
+  if (inDate.value && outDate) {
     const checkInDate = inDate.value;
     const checkOutDate = outDate.value;
     const dayDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
