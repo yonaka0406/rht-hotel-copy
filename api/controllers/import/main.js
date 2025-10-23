@@ -1,5 +1,8 @@
-const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData, insertAccountingData, getPrefilledData } = require('../models/import');
-const validationUtils = require('../utils/validationUtils');
+const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData, insertAccountingData, getPrefilledData } = require('../../models/import');
+const { getAllHotels } = require('../../models/hotel');
+const { getAllGlobalPlans } = require('../../models/plan');
+const validationUtils = require('../../utils/validationUtils');
+const csvGenerator = require('./services/csvGenerator');
 const { format } = require('fast-csv');
 
 async function getPrefilledTemplate(req, res) {
@@ -26,11 +29,16 @@ async function getPrefilledTemplate(req, res) {
     let csvContent;
     let filename;
 
+    // Fetch prefilled data from the database
+    const prefilledData = await getPrefilledData(req.requestId, validatedType, validatedMonth1, validatedMonth2);
+    const hotels = await getAllHotels(req.requestId);
+    const plans = await getAllGlobalPlans(req.requestId);
+
     if (validatedType === 'forecast') {
-      csvContent = await csvGenerator.generateForecastCsv(validatedMonth1, validatedMonth2);
+      csvContent = await csvGenerator.generateForecastCsv(validatedMonth1, validatedMonth2, prefilledData, hotels, plans);
       filename = `forecast_template_${validatedMonth1}_to_${validatedMonth2}.csv`;
     } else if (validatedType === 'accounting') {
-      csvContent = await csvGenerator.generateAccountingCsv(validatedMonth1, validatedMonth2);
+      csvContent = await csvGenerator.generateAccountingCsv(validatedMonth1, validatedMonth2, prefilledData, hotels, plans);
       filename = `accounting_template_${validatedMonth1}_to_${validatedMonth2}.csv`;
     }
 
@@ -172,62 +180,9 @@ const addAccountingData = async (req, res) => {
     }
 };
 
-const generateForecastCsv = async (month1, month2) => {
-  const startDate = new Date(month1);
-  const endDate = new Date(month2);
-  const data = [];
 
-  // Add header row
-  data.push(['Date', 'RoomType', 'BookedRooms', 'AvailableRooms', 'Revenue']);
 
-  // Generate dummy data for each day between month1 and month2
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const date = d.toISOString().split('T')[0];
-    data.push([date, 'Single', Math.floor(Math.random() * 10) + 5, Math.floor(Math.random() * 5) + 10, (Math.random() * 500 + 100).toFixed(2)]);
-    data.push([date, 'Double', Math.floor(Math.random() * 10) + 8, Math.floor(Math.random() * 5) + 12, (Math.random() * 700 + 150).toFixed(2)]);
-  }
 
-  return new Promise((resolve, reject) => {
-    const csvStream = format({ headers: false });
-    let csvString = '';
-
-    csvStream.on('data', chunk => (csvString += chunk.toString()));
-    csvStream.on('end', () => resolve(csvString));
-    csvStream.on('error', err => reject(err));
-
-    data.forEach(row => csvStream.write(row));
-    csvStream.end();
-  });
-};
-
-const generateAccountingCsv = async (month1, month2) => {
-  const startDate = new Date(month1);
-  const endDate = new Date(month2);
-  const data = [];
-
-  // Add header row
-  data.push(['Date', 'Category', 'Description', 'Amount']);
-
-  // Generate dummy data for each day between month1 and month2
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const date = d.toISOString().split('T')[0];
-    data.push([date, 'Income', 'Room Revenue', (Math.random() * 1000 + 500).toFixed(2)]);
-    data.push([date, 'Expense', 'Utilities', (Math.random() * 100 + 50).toFixed(2)]);
-    data.push([date, 'Expense', 'Salaries', (Math.random() * 500 + 200).toFixed(2)]);
-  }
-
-  return new Promise((resolve, reject) => {
-    const csvStream = format({ headers: false });
-    let csvString = '';
-
-    csvStream.on('data', chunk => (csvString += chunk.toString()));
-    csvStream.on('end', () => resolve(csvString));
-    csvStream.on('error', err => reject(err));
-
-    data.forEach(row => csvStream.write(row));
-    csvStream.end();
-  });
-};
 
 module.exports = {
     addYadomasterClients,

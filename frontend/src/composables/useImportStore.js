@@ -11,10 +11,7 @@ export function useImportStore() {
                 },
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch prefilled data');
-            }
-            const data = await response.json();
+            const data = await response.text();
             return data;
         } catch (error) {
             console.error(`Error fetching prefilled ${type} template data:`, error);

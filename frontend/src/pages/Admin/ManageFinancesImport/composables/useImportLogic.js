@@ -161,7 +161,8 @@ export function useImportLogic() {
         }
 
         try {
-            const prefilledData = await getPrefilledTemplateData(type, month1, month2);
+            const prefilledCsv = await getPrefilledTemplateData(type, month1, month2);
+            const prefilledData = parseCSVtoJSON(prefilledCsv);
 
             const csvContent = generateCSVData(type, date, prefilledData);
             const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
@@ -228,6 +229,7 @@ export function useImportLogic() {
             const hotelId = parts[0];
             const hotelName = parts[1].replace(/^"|"$/g, '');
             const planGlobalId = parts[2];
+            console.log(`planGlobalId from CSV: ${planGlobalId}, Parsed: ${parseInt(planGlobalId, 10)}`);
             const planName = parts[3];
             const budgetItemFromCsv = parts[4];
 
