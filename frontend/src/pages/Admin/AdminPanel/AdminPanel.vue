@@ -97,7 +97,7 @@
                 :handleLogoutAndCloseMobileSidebar="handleLogoutAndCloseMobileSidebar" />
 
             <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
-                <p class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ userNameDisplay }}管理者パネルへようこそ！</p>
+                <p class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ userNameDisplay }}さん、管理者パネルへようこそ！</p>
                 <AdminDashboard v-if="isRootAdminPath" />                
                 <router-view v-else />            </main>
         </div>
@@ -132,12 +132,10 @@ import { useToast } from 'primevue/usetoast';
 import AdminDashboard from './components/AdminDashboard.vue';
 import AdminMobileSidebar from './components/AdminMobileSidebar.vue';
 
-const userName = ref('');
-
 const isCollapsed = ref(false);
 const mobileSidebarVisible = ref(false);
 
-const userNameDisplay = computed(() => userName.value || 'ユーザー、');
+const userNameDisplay = computed(() => logged_user.value?.[0]?.name ? `${logged_user.value[0].name}` : 'ユーザー');
 const userNameDisplayShort = computed(() => (logged_user.value?.[0]?.name || 'ユーザー'));
 
 // Composables
@@ -165,14 +163,7 @@ const handleLogoutAndCloseMobileSidebar = () => {
 
 onMounted(async () => {
     primevue.config.ripple = true;
-
     await fetchUser();
-
-    if (logged_user.value && Array.isArray(logged_user.value) && logged_user.value.length > 0 && logged_user.value[0]?.name) {
-        userName.value = logged_user.value[0].name + '、';
-    } else {
-        userName.value = 'ユーザー、';
-    }
 });
 
 onUnmounted(() => {

@@ -20,6 +20,7 @@ const { Pool } = require('pg');
 
 const { startWaitlistJob } = require('./jobs/waitlistJob');
 const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
+const { scheduleDailyDigestEmailJob } = require('./jobs/dailyDigestEmailJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 
 const app = express();
@@ -217,6 +218,7 @@ const searchRoutes = require('./routes/searchRoutes'); // Import search routes
 const parkingRoutes = require('./routes/parkingRoutes');
 const guestRoutes = require('./routes/guestRoutes');
 const validationRoutes = require('./routes/validationRoutes');
+const systemLogsRoutes = require('./routes/systemLogsRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -242,6 +244,7 @@ app.use('/api/booking-engine', bookingEngineRoutes);
 app.use('/api', parkingRoutes);
 app.use('/api', guestRoutes);
 app.use('/api', validationRoutes);
+app.use('/api', systemLogsRoutes);
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {
@@ -602,6 +605,7 @@ if (process.env.NODE_ENV === 'production') {
     startWaitlistJob();
     scheduleDailyMetricsJob();
     startGoogleSheetsPoller();
+    scheduleDailyDigestEmailJob();
     // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
     // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
