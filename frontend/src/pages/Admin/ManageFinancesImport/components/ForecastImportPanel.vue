@@ -26,7 +26,8 @@
                     label="データ入力済みテンプレートをダウンロード"
                     icon="pi pi-download"
                     class="p-button-help"
-                    @click="downloadPrefilledTemplate('forecast', forecastDate)"
+                    @click="onDownloadPrefilledTemplate()"
+                    :loading="isDownloadingPrefilledTemplate"
                     />
                 </div>
             </div>
@@ -73,12 +74,22 @@ const { maxFileSize, downloadTemplate, handleFileUpload, downloadPrefilledTempla
 
 const forecastDate = ref(new Date());
 const forecastStatus = ref({ message: '', type: 'info' });
+const isDownloadingPrefilledTemplate = ref(false);
 
 const handleForecastUpload = async (event) => {
     try {
         await handleFileUpload(event, 'forecast', forecastStatus);
     } catch (error) {
         console.error("Forecast upload process failed:", error.message);
+    }
+};
+
+const onDownloadPrefilledTemplate = async () => {
+    isDownloadingPrefilledTemplate.value = true;
+    try {
+        await downloadPrefilledTemplate('forecast', forecastDate.value);
+    } finally {
+        isDownloadingPrefilledTemplate.value = false;
     }
 };
 </script>

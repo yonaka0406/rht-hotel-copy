@@ -26,7 +26,8 @@
                     label="データ入力済みテンプレートをダウンロード"
                     icon="pi pi-download"
                     class="p-button-help"
-                    @click="downloadPrefilledTemplate('accounting', accountingDate)"
+                    @click="onDownloadPrefilledTemplate()"
+                    :loading="isDownloadingPrefilledTemplate"
                     />
                 </div>
             </div>
@@ -73,12 +74,22 @@ const { maxFileSize, downloadTemplate, handleFileUpload, downloadPrefilledTempla
 
 const accountingDate = ref(new Date());
 const accountingStatus = ref({ message: '', type: 'info' });
+const isDownloadingPrefilledTemplate = ref(false);
 
 const handleAccountingUpload = async (event) => {
     try {
         await handleFileUpload(event, 'accounting', accountingStatus);
     } catch (error) {
         console.error("Accounting upload process failed:", error.message);
+    }
+};
+
+const onDownloadPrefilledTemplate = async () => {
+    isDownloadingPrefilledTemplate.value = true;
+    try {
+        await downloadPrefilledTemplate('accounting', accountingDate.value);
+    } finally {
+        isDownloadingPrefilledTemplate.value = false;
     }
 };
 </script>
