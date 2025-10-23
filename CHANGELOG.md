@@ -560,6 +560,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.26] - 2025-10-23
+
+- Feature: Daily Digest email routine added and table to check the logs in Admin panel.
+
+---
+
 ## Version History
 
 - **1.1.25** (2025-10-21) - Fixed date range cancellation issues and added Google Sheets queue table for optimized API request handling, improving export reliability.
