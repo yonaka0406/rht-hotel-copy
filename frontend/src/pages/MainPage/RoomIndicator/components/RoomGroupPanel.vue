@@ -18,8 +18,10 @@
       </div>
     </div>
     <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div v-for="group in roomGroups" :key="group.title" class="col-span-1 lg:col-span-1">
-        <div v-if="group.title !== '部屋ブロック' || (group.rooms.length > 0 && group.title === '部屋ブロック')"
+      <div v-for="group in filteredRoomGroups" 
+           :key="group.title" 
+           class="col-span-1 lg:col-span-1">
+        <div
           :class="`p-2 rounded-lg ${group.color} ${group.darkColor}`">
           <Card class="p-2 dark:bg-gray-700 dark:border-gray-600">
             <template #header>
@@ -185,6 +187,13 @@
 <script setup>
 // Vue
 import { computed } from 'vue';
+
+const filteredRoomGroups = computed(() => {
+  return props.roomGroups.filter(group => 
+    (group.title !== '部屋ブロック' && group.title !== '部屋移動') || 
+    (group.rooms.length > 0 && (group.title === '部屋ブロック' || group.title === '部屋移動'))
+  );
+});
 
 const props = defineProps({
   isLoading: {
