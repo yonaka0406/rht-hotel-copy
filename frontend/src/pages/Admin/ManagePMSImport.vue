@@ -529,9 +529,7 @@
 
         yadomasterReservations.value.toImport.forEach(reservation => {
             // Common fields
-            const reservationId = uuidv4();
-            const clientId = uuidv4();
-            const payerId = ref(uuidv4());
+            const reservationId = uuidv4();            
 
             let bookerClientId;
             const bookerKey = `${reservation.bookerName}-${reservation.bookerTel}`;
