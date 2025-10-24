@@ -1395,8 +1395,8 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     if (roomCount > 1 && mode === 'solo' && (new_check_in !== old_check_in || new_check_out !== old_check_out)) {
       //console.log('Condition met to split reservation. Creating a new reservation record.');
       const insertReservationQuery = `
-        INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_at, created_by, updated_by)
-        SELECT hotel_id, reservation_client_id, $1, $2, $6, status, created_at, created_by, $3
+        INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, type, agent, ota_reservation_id, payment_timing, comment, has_important_comment, created_at, created_by, updated_by)
+        SELECT hotel_id, reservation_client_id, $1, $2, $6, status, type, agent, ota_reservation_id, payment_timing, comment, has_important_comment, created_at, created_by, $3
         FROM reservations
         WHERE id = $4 AND hotel_id = $5
         RETURNING id
