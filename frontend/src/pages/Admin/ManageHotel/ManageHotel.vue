@@ -102,7 +102,7 @@ const { hotels, fetchHotels } = useHotelStore();
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
-import { Panel, Dialog, Card, DataTable, Column, FloatLabel, Textarea, InputText, InputNumber, DatePicker, InputMask, Checkbox, Select, Button, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Divider } from 'primevue';
+import { Panel, Dialog, DataTable, Column, Textarea, InputText, Button } from 'primevue';
 
 // Components
 import ManageHotelEditDialog from './components/ManageHotelEditDialog.vue';

@@ -176,7 +176,7 @@
 import { ref, reactive, watch } from 'vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useToast } from 'primevue/usetoast';
-import { Panel, Dialog, Card, DataTable, Column, FloatLabel, Textarea, InputText, InputNumber, DatePicker, InputMask, Checkbox, Select, Button, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Divider } from 'primevue';
+import { Dialog, Card, DataTable, Column, FloatLabel, InputText, InputNumber, DatePicker, InputMask, Button } from 'primevue';
 import PlanVisibilitySettings from './PlanVisibilitySettings.vue';
 
 const props = defineProps({
@@ -188,7 +188,7 @@ const emit = defineEmits(['update:visible', 'hotel-updated']);
 
 const toast = useToast();
 const { fetchHotelSiteController, editHotel, editHotelSiteController } = useHotelStore();
-const authToken = localStorage.getItem('authToken');
+
 
 const localSelectedHotel = ref({});
 const siteController = ref(null);

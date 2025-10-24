@@ -163,7 +163,7 @@ const applyToAllHotels = async () => {
         return;
     }
     try {
-        await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null, 0, comment.value, 'block');
+        const response = await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null, 0, comment.value, 'block');
         if (response.success) {
             await fetchBlockedRooms(selectedHotelId.value);
             toast.add({ severity: 'success', summary: '成功', detail: '全ホテルに適用しました。', life: 3000 });

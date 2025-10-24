@@ -204,7 +204,7 @@ export function useWaitlistStore() {
          * @param {number} [options.page=1] - Page number for pagination.
          * @param {number} [options.size=20] - Page size for pagination.
          */
-        async fetchWaitlistEntries(hotelId, options = {}, debugLabel = '') {
+        async fetchWaitlistEntries(hotelId, options = {}) {
             if (!hotelId) {
                 state.entries = [];
                 state.error = 'Hotel ID is required to fetch waitlist entries.';
