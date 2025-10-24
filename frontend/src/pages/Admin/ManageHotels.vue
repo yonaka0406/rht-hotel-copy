@@ -409,9 +409,7 @@
   import Badge from 'primevue/badge';
   import Checkbox from 'primevue/checkbox';
   
-  const frontendUrl = import.meta.env.VITE_FRONTEND_URL;  
   const currentStep = ref('1');
-  const loading = ref(false);
   const roomTypeDialog = ref(false);
   const saving = ref(false);
   const editingRoomType = ref(null);
@@ -663,26 +661,8 @@
     return true;
   };
 
-  const showError = (message) => {
-    toast.add({
-      severity: 'error',
-      summary: 'エラー',
-      detail: message,
-      life: 3000
-    });
-  };
-
   const activateCallback = async (newStep) => {
     currentStep.value = newStep;
-  };
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('ja-JP', {
-      style: 'currency',
-      currency: 'JPY',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
   };
 
   // Save Data

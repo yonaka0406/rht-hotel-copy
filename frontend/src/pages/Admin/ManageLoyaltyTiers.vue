@@ -136,6 +136,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import { useSettingsStore } from '@/composables/useSettingsStore';
 import { useHotelStore } from '@/composables/useHotelStore';
+import { formatCurrency } from '@/utils/formatUtils';
 
 const toast = useToast();
 const { loyaltyTiers, fetchLoyaltyTiers, saveLoyaltyTier } = useSettingsStore();
@@ -271,9 +272,11 @@ const getHotelNameById = (id) => {
   return hotel ? hotel.name : 'N/A';
 };
 
+/*
 const repeaterDisplayData = computed(() =>
   loyaltyTiers.value.filter(t => t.tier_name === 'repeater')
 );
+*/
 
 const hotelLoyalDisplayData = computed(() =>
   loyaltyTiers.value.filter(t => t.tier_name === 'hotel_loyal').map(t => ({
@@ -282,14 +285,11 @@ const hotelLoyalDisplayData = computed(() =>
   }))
 );
 
+/*
 const brandLoyalDisplayData = computed(() =>
   loyaltyTiers.value.filter(t => t.tier_name === 'brand_loyal')
 );
-
-const formatCurrency = (value) => {
-  if (value === null || value === undefined) return '';
-  return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
-};
+*/
 
 const editTierSetting = (setting) => {
   if (setting.tier_name === 'repeater') {

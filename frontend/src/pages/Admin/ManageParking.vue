@@ -541,7 +541,7 @@ const deleteCategory = async (categoryToDelete) => {
         loading.value = false;
     }
 };
-
+/*
 const capacityGradient = computed(() => {
     if (vehicleCategories.value.length < 2) {
         return 'none';
@@ -556,4 +556,5 @@ const capacityGradient = computed(() => {
     });
     return `linear-gradient(to right, ${stops.join(', ')})`;
 });
+*/
 </script>
