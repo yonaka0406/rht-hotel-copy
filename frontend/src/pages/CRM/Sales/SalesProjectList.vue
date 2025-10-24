@@ -121,7 +121,6 @@
 import { ref, onMounted, computed } from 'vue';
 import { useProjectStore } from '@/composables/useProjectStore';
 import { useClientStore } from '@/composables/useClientStore'; // Import useClientStore
-import { FilterMatchMode } from '@primevue/core/api';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -131,10 +130,6 @@ import Divider from 'primevue/divider';
 import FloatLabel from 'primevue/floatlabel'; // Import FloatLabel
 import Tag from 'primevue/tag'; // Import Tag
 import SplitButton from 'primevue/splitbutton'; // Import SplitButton
-import Calendar from 'primevue/calendar'; // Import Calendar
-import InputNumber from 'primevue/inputnumber'; // Import InputNumber
-import Accordion from 'primevue/accordion'; // Import Accordion - This might be removable if no other accordions
-import AccordionTab from 'primevue/accordiontab'; // Import AccordionTab - This might be removable
 import Dialog from 'primevue/dialog'; // Import Dialog
 import { useConfirm } from 'primevue/useconfirm'; // Import useConfirm
 import ConfirmDialog from 'primevue/confirmdialog'; // Import ConfirmDialog
@@ -204,13 +199,13 @@ const onPageChange = (event) => {
   currentRowsPerPage.value = event.rows;
   loadProjects();
 };
-
+/*
 const handleProjectAdded = () => { // This function might be replaced by onProjectSaved
   console.log('Project added event received (handleProjectAdded), refreshing project list...');
   currentPage.value = 1;
   loadProjects();
 };
-
+*/
 const openAddNewProjectDialog = () => {
   projectToEdit.value = null;
   displayProjectDialog.value = true;
@@ -279,21 +274,6 @@ const projectActionItems = ref([
     command: (project) => handleDeleteProject(project) // Command will be called with the project
   }
 ]);
-
-const formatJsonDisplay = (data) => {
-  if (typeof data === 'object' && data !== null) {
-    return JSON.stringify(data, null, 2);
-  }
-  if (typeof data === 'string') { // If it's a string, try to parse then stringify nicely
-      try {
-          return JSON.stringify(JSON.parse(data), null, 2);
-      } catch (e) {
-          // If parsing fails, return the original string
-          return data;
-      }
-  }
-  return String(data); // Fallback for other types
-};
 
 const formatCurrency = (value) => {
   if (value === null || typeof value === 'undefined' || value === '') return '';

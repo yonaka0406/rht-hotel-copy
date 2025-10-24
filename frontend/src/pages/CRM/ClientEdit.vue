@@ -82,7 +82,6 @@ import ClientImpedimentsTab from './components/ClientImpedimentsTab.vue';
 // Stores
 import { useClientStore } from '@/composables/useClientStore';
 const { selectedClient, selectedClientAddress, fetchClient } = useClientStore();
-import { useProjectStore } from '@/composables/useProjectStore';
 
 import { useCRMStore } from '@/composables/useCRMStore';
 const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();

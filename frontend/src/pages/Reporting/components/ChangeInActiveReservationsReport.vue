@@ -309,33 +309,7 @@
         return `${year}-${month}-${day}`;
     };
 
-    // Helper function to get the previous day in YYYY-MM-DD format
-    const getPreviousDay = (dateString) => {
-        if (!dateString) return 'N/A';
-        try {
-            const dateParts = dateString.split('-');
-            // Ensure date parts are valid before creating a Date object
-            if (dateParts.length === 3) {
-                const year = parseInt(dateParts[0], 10);
-                const month = parseInt(dateParts[1], 10) -1; // JS months are 0-indexed
-                const day = parseInt(dateParts[2], 10);
-
-                const currentDate = new Date(Date.UTC(year, month, day)); // Use UTC to avoid timezone issues with date-only
-                currentDate.setUTCDate(currentDate.getUTCDate() - 1);
-                
-                const prevYear = currentDate.getUTCFullYear();
-                const prevMonth = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
-                const prevDay = String(currentDate.getUTCDate()).padStart(2, '0');
-                return `${prevYear}-${prevMonth}-${prevDay}`;
-            }
-            return '無効な日付';
-
-        } catch (e) {
-            console.error("Error calculating previous date:", e);
-            return '日付計算エラー';
-        }
-    };
-
+    // Helper function to get the previous day in YYYY-MM-DD format    
     const formatInventoryDate = (isoDateString) => {
         if (!isoDateString) return 'N/A';
         try {

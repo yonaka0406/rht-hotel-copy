@@ -21,7 +21,7 @@
     import { useRoute, useRouter } from "vue-router";
     import ClientTopMenu from './components/ClientTopMenu.vue';    
     
-    import { Menu, Panel } from 'primevue';
+    import { Panel } from 'primevue';
 
     const route = useRoute();
     const router = useRouter();

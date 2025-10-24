@@ -23,7 +23,7 @@
     const { clientLog, fetchClientHistory } = useLogStore();    
 
     // Primevue
-    import { Panel, Timeline, ProgressSpinner } from 'primevue';
+    import { Timeline, ProgressSpinner } from 'primevue';
 
     // Helper
     const formatDateTime = (dateString) => {

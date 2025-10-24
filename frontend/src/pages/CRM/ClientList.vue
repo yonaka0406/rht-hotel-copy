@@ -238,11 +238,7 @@
     const tableSizeOptions = ref([
         { label: '小', value: 'small' },
         { label: '中', value: 'null' }
-    ]);
-    const person_type = ref([
-        { name: 'legal', value: 'legal' },
-        { name: 'natural', value: 'natural' },
-    ]);
+    ]);    
     const filters = ref({
         name: { value: null, matchMode: FilterMatchMode.CONTAINS },
         name_kanji: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -295,22 +291,7 @@
             phone: null,
             email: null,
         }
-    };
-    const normalizeKana = (str) => {
-        if (!str) return '';
-        let normalizedStr = str.normalize('NFKC');
-
-        // Convert Hiragana to Katakana
-        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) + 0x60) // Convert Hiragana to Katakana
-        );
-        // Convert half-width Katakana to full-width Katakana
-        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0) // Convert half-width to full-width Katakana
-        );
-
-        return normalizedStr;
-    };
+    };    
     const validateEmail = (email) => {
         isValidEmail.value = emailPattern.test(email);
     };

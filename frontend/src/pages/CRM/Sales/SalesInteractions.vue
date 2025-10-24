@@ -267,7 +267,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import SalesActionDialog from '../components/SalesActionDialog.vue';
 
 // Primevue
-import { Card, Dialog, InputText, DatePicker, Textarea, AutoComplete, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner, SplitButton } from 'primevue';
+import { Card, Dialog, InputText, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner, SplitButton } from 'primevue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();

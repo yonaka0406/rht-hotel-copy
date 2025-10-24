@@ -255,7 +255,7 @@ const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
 const confirmRoomMode = useConfirm();
-import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge } from 'primevue';
+import { Panel, Drawer, Card, Skeleton, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge } from 'primevue';
 
 // Stores  
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -278,11 +278,6 @@ const formatDate = (date) => {
 };
 const formatDateWithDay = (date) => {
   const options = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' };
-  const parsedDate = new Date(date);
-  return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-};
-const formatDateMonthDay = (date) => {
-  const options = { weekday: 'short', month: '2-digit', day: '2-digit' };
   const parsedDate = new Date(date);
   return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
 };

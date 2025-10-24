@@ -636,7 +636,7 @@ watch(scatterPlotSeriesData, (newData) => {
     };
 }, { deep: true, immediate: true });
 
-watch(() => chartData.value, async (newData) => {
+watch(() => chartData.value, async () => {
     if (selectedView.value === 'graph') {
         await nextTick();
         refreshAllCharts();

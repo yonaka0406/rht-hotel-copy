@@ -320,22 +320,7 @@
         return null;
     });
 
-    // Helper
-    const normalizeKana = (str) => {
-        if (!str) return '';
-        let normalizedStr = str.normalize('NFKC');
-        
-        // Convert Hiragana to Katakana
-        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
-            String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
-        );
-        // Convert half-width Katakana to full-width Katakana
-        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
-            String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
-        );
-        
-        return normalizedStr;
-    };
+    // Helper    
     const validateEmail = (email) => {
         isValidEmail.value = emailPattern.test(email);
     };
