@@ -25,6 +25,7 @@
     const { fetchClient } = useClientStore();
     import { useUserStore } from '@/composables/useUserStore';
     const { getUserById } = useUserStore();
+    import { translateStatus, translateType, translatePaymentTiming } from '@/utils/reservationUtils';
 
     // Primevue
     import { Panel, Timeline, ProgressSpinner } from 'primevue';
@@ -72,7 +73,7 @@
                 if (typeof value === 'object' && value.from !== undefined && value.to !== undefined) {
                     const oldValue = value.from !== null ? value.from : 'なし';
                     const newValue = value.to !== null ? value.to : 'なし';
-                    return `${getLabel(key)} 旧：${getValue(key, oldValue)}　新：${getValue(key, newValue)}`;
+                    return `${getLabel(key)} 旧：${getValue(key, oldValue)} 新：${getValue(key, newValue)}`;
                 }
                 return `${getLabel(key)}`;
             })
@@ -92,6 +93,7 @@
             type: '種類',
             agent: 'エージェント',
             comment: '備考',
+            has_important_comment: '重要コメント',
             payment_timing: '支払いタイミング',
             updated_by: '更新者',
         };
@@ -99,38 +101,16 @@
     };
     const getValue = (key, value) => {
         if (key === 'status') {
-            const statusLabels = {
-                hold: '保留',
-                provisory: '仮予約',
-                confirmed: '確定',
-                checked_in: 'チェックイン済み',
-                checked_out: 'チェックアウト済み',
-                cancelled: 'キャンセル済み',
-                block: 'ブロック'
-            };
-            return statusLabels[value] || value;
+            return translateStatus(value);
         }
         if (key === 'type') {
-            const typeLabels = {
-                default: '通常',
-                employee: '従業員',
-                ota: 'OTA予約',
-                web: 'ウェブ予約'
-            };
-            return typeLabels[value] || value;
+            return translateType(value);
         }
         if (key === 'reservation_client_id') {
-            //const client = await fetchClient(value);
-            //return client.client.name;
+            return value;
         }
         if (key === 'payment_timing') {
-            const paymentTimingLabels = {
-                not_set: '未設定',
-                prepaid: '前払い',
-                'on-site': '現地払い',
-                postpaid: '後払い',
-            };
-            return paymentTimingLabels[value] || value;
+            return translatePaymentTiming(value);
         }
 
         if (key === 'number_of_people') {
