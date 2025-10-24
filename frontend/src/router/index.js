@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 const WorkInProgress = () => import('@/components/WorkInProgress.vue');
 const ReservationClientConfirmation = () => import('@/components/ReservationClientConfirmation.vue');
 
-const Login = () => import('@/pages/Login.vue');
+const Login = () => import('@/pages/LoginPage.vue');
 const ForgotPassword = () => import('@/pages/ForgotPassword.vue');
 const ResetPassword = () => import('@/pages/ResetPassword.vue');
 const AuthCallback = () => import('@/pages/AuthCallback.vue');
@@ -27,7 +27,7 @@ const ManageWaitList = () => import('@/pages/Admin/ManageWaitList.vue');
 const ManageGoogleDrive = () => import('@/pages/Admin/ManageGoogleDrive.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
-const Dashboard = () => import('@/pages/MainPage/Dashboard.vue');
+const Dashboard = () => import('@/pages/MainPage/DashboardPage.vue');
 const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator/RoomIndicator.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/Reservation/ReservationEdit.vue');
