@@ -84,12 +84,7 @@
         }
         return [];
     });    
-    const totalPriceSum = computed(() => {
-        return clientReservations.value.reduce((sum, reservation) => {
-        return sum + (reservation.total_price || 0);
-        }, 0).toLocaleString();
-    });
-
+    
     const getValue = (key, value) => {
         if (key === 'status') {
             const statusLabels = {

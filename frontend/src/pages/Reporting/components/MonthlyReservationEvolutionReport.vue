@@ -45,8 +45,6 @@ import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount, shallowRef 
 import { useReportStore } from '@/composables/useReportStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import ProgressSpinner from 'primevue/progressspinner';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
 import Card from 'primevue/card'; // Assuming Card is kept from previous change
 
 // ECharts imports
@@ -91,7 +89,7 @@ const error = ref(null);
 // Console logs added previously can remain for user's debugging for now, or be removed if confident.
 // For this subtask, let's assume they remain.
 
-const formatDate = (dateString) => {
+const _formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -103,7 +101,7 @@ const formatTargetMonthForDisplay = (isoDateString) => {
         const date = new Date(isoDateString);
         if (isNaN(date.getTime())) return '無効な日付';
         return `${date.getFullYear()}年${String(date.getMonth() + 1).padStart(2, '0')}月`;
-    } catch (e) {
+    } catch (_e) {
         return '日付フォーマットエラー';
     }
 };
@@ -396,7 +394,7 @@ const echartsOptions = computed(() => {
 
 // Watch for prop changes to refetch data
 watch(() => [props.hotelId, props.targetMonth, props.triggerFetch],
-    ([newHotelId, newTargetMonth, newTriggerFetch], [oldHotelId, oldTargetMonth, oldTriggerFetch] = []) => {        
+    ([_newHotelId, _newTargetMonth, _newTriggerFetch], [_oldHotelId, _oldTargetMonth, _oldTriggerFetch] = []) => {        
         fetchReportData(); // Call the original handler
     },
     { immediate: true, deep: true }

@@ -73,8 +73,6 @@ const props = defineProps({
     mealReportData: Object // New prop for meal report data
 });
 
-const emits = defineEmits(['update:visible']);
-
 const selectedView = ref('週間');
 const viewOptions = ref([
     { name: '当日', value: '当日' },
@@ -200,8 +198,6 @@ const plainTextReportContent = computed(() => {
 
     return report;
 });
-
-const reportContent = plainTextReportContent;
 
 const copyReportToClipboard = async () => {
     try {

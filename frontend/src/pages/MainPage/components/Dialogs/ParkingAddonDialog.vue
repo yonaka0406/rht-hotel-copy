@@ -207,7 +207,7 @@
 
 <script setup>
 // Vue
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 // Props
 const props = defineProps({
@@ -324,7 +324,7 @@ const dateRange = computed(() => {
   return dates;
 });
 
-const selectedReservationDetails = computed(() => {
+const _selectedReservationDetails = computed(() => {
   if (!localAddonData.value.roomId || dateRange.value.length === 0) {
     return [];
   }
@@ -402,7 +402,7 @@ const saveDataForEmit = computed(() => {
   };
 });
 
-watch(saveDataForEmit, (newValue) => {
+watch(saveDataForEmit, (_newValue) => {
   // console.log('[ParkingAddonDialog] Save data changed:', JSON.parse(JSON.stringify(newValue)));
 }, { deep: true });
 
@@ -448,10 +448,6 @@ const validateForm = () => {
   return isValid && spotValidationValid.value;
 };
 
-const calculateTotalPrice = () => {
-  // This is automatically calculated by the computed property
-  // This method exists for explicit calculation triggers if needed
-};
 
 const onDateChange = () => {
   validateForm();

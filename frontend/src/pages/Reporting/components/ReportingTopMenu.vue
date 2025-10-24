@@ -104,11 +104,11 @@
     const emit = defineEmits(['date-change', 'period-change', 'hotel-change', 'report-type-change']);
 
     // Primevue
-    import { DatePicker, FloatLabel, MultiSelect, Select } from 'primevue';
+    import { DatePicker, MultiSelect, Select } from 'primevue';
 
     // Stores
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, selectedHotel, fetchHotels, fetchHotel } = useHotelStore();
+    const { hotels, fetchHotels } = useHotelStore();
 
     // State
     // Initialize with prop values if provided, otherwise use defaults
@@ -147,7 +147,7 @@
 
     // Computed property for single hotel selection, mapping to/from selectedHotels array
     const singleSelectedHotelId = computed({
-      get: () => (selectedHotels.value && selectedHotels.value.length > 0) ? selectedHotels.value[0] : null, // Changed default to null
+      get: () => (selectedHotels.value?.length > 0) ? selectedHotels.value[0] : null,
       set: (val) => { selectedHotels.value = (val === null || val === undefined) ? [] : [val]; }
     });
 

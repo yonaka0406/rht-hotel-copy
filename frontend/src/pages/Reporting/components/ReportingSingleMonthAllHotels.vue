@@ -266,7 +266,7 @@
         if (value === null || value === undefined) return '-';
         return parseFloat(value).toLocaleString('ja-JP', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
-    const calculateVariancePercentage = (period, forecast) => {
+    const _calculateVariancePercentage = (period, forecast) => {
         if (forecast === 0 || forecast === null || forecast === undefined) {
             return (period === 0 || period === null || period === undefined) ? '0.00' : 'N/A'; // Or handle as per requirement, e.g. 100% if period > 0
         }
@@ -303,7 +303,7 @@
         const uniqueNames = [...new Set(names)];
         return uniqueNames.join(', ');
     });
-    const periodMinDate = computed(() => {
+    const _periodMinDate = computed(() => {
         if (!props.revenueData || props.revenueData.length === 0) return 'N/A';
         const minDate = new Date(Math.min(...props.revenueData.map(item => new Date(item.month))));
         return minDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit' });

@@ -134,12 +134,7 @@
 
 <script setup>
 // Vue
-import { ref, computed, watch, watchEffect, onMounted } from 'vue';
-
-// Helper for deep watching objects
-const deepWatch = (source, cb) => {
-    return watch(source, cb, { deep: true });
-};
+import { ref, watch, onMounted } from 'vue';
 
 // Store
 import { useClientStore } from '@/composables/useClientStore';

@@ -120,7 +120,7 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { Dialog, Button } from 'primevue';
 import ReservationSearchBar from '../../../components/ReservationSearchBar.vue';
@@ -173,7 +173,7 @@ export default {
       clearSearch,
       removeFilter,
       clearAllFilters,
-      getSearchSuggestions
+      _getSearchSuggestions
     } = useReservationSearch();
     
     // Initialize phonetic search for highlighting
@@ -272,7 +272,7 @@ export default {
           month: '2-digit',
           day: '2-digit'
         });
-      } catch (error) {
+      } catch (_error) {
         return dateString;
       }
     };

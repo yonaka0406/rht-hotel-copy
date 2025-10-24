@@ -68,7 +68,7 @@
 </template>
 <script setup>
     // Vue
-    import { ref, onMounted, watch } from 'vue';
+    import { ref, onMounted } from 'vue';
     import { useRoute, useRouter } from 'vue-router';
     const route = useRoute();
     const router = useRouter();

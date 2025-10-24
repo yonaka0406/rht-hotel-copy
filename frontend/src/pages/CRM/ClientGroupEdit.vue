@@ -25,7 +25,7 @@
 <script setup>
     // Vue
     import { ref, watch } from "vue";
-    import { useRoute, useRouter } from 'vue-router';
+    import { useRoute } from 'vue-router';
     const route = useRoute();
 
 

@@ -292,27 +292,11 @@ const formatDateDisplay = (dateString) => {
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
 };
 
-const formatDateTimeDisplay = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-        return '';
-    }
-    return date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-};
 </script>
 
 <style scoped>
 .project-list-all-page {
   padding: 1rem;
-}
-.search-filters {
-  /* Tailwind 'my-4' handles margin, specific margin-bottom here might be redundant or override */
-  /* display: flex; already handled by Tailwind flex */
-  /* justify-content: space-between; already handled by Tailwind justify-between */
-}
-.add-project-form-container {
-  /* Tailwind 'my-4' handles margin */
 }
 .loading-spinner, .no-projects {
   text-align: center;

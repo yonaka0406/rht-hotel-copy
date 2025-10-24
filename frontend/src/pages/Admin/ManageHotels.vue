@@ -411,7 +411,7 @@
   
   // Stores
   import { useHotelStore } from '@/composables/useHotelStore';
-  const { hotels, fetchHotels, createHotel, createRoomType, createRoom } = useHotelStore();
+  const { createHotel, createRoomType, createRoom } = useHotelStore();
   
   const currentStep = ref('1');
 

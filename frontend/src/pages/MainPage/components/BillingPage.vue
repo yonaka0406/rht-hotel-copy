@@ -23,7 +23,7 @@
                     </template>
                     <template #content>
                         <Accordion :activeIndex="0">
-                            <AccordionPanel v-for="(group, index) in summarizedBilledList" :key="group.id"
+                            <AccordionPanel v-for="group in summarizedBilledList" :key="group.id"
                                 :value="group.id">
                                 <AccordionHeader>
                                     <div class="grid grid-cols-6 gap-4 w-full">
@@ -166,7 +166,7 @@
 </template>
 <script setup>
 // Vue
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, FloatLabel, DatePicker, InputText, Textarea, Button, Badge, Dialog, ProgressSpinner } from 'primevue';
 
 // Stores

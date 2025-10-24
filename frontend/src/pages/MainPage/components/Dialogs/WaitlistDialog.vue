@@ -240,8 +240,8 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue';
-import { Dialog, FloatLabel, AutoComplete, SelectButton, RadioButton, InputText, Textarea, InputNumber, Button, Select } from 'primevue';
+import { ref, watch, computed } from 'vue';
+import { Dialog, FloatLabel, SelectButton, RadioButton, InputText, Textarea, InputNumber, Button, Select } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useClientStore } from '@/composables/useClientStore';
@@ -402,7 +402,7 @@ const getClientNameString = (val) => {
   return '';
 };
 
-watch(() => internalForm.value.client_name_waitlist, (newName, oldName) => {
+watch(() => internalForm.value.client_name_waitlist, (newName, _oldName) => {
   //console.log('[WaitlistDialog] client_name_waitlist changed from', oldName, 'to', newName);
   const newNameStr = getClientNameString(newName);
   if (isClientSelectedForWaitlist.value && (

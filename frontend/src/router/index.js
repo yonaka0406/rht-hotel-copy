@@ -232,7 +232,7 @@ router.beforeEach((to, from, next) => {
       console.error('Network/request error during token verification:', {
         name: error.name,
         message: error.message,
-        ...(process.env.NODE_ENV === 'development' ? { stack: error.stack } : {})
+        ...(import.meta.env.DEV ? { stack: error.stack } : {})
       });
       
       // Don't log out on network errors, just continue

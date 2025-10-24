@@ -49,7 +49,7 @@
         if (typeof changedFields === 'string') {
             try {
                 changedFields = JSON.parse(changedFields); // Ensure it's an object
-            } catch (e) {
+            } catch (_error) {
                 return changedFields;
             }
         }

@@ -48,27 +48,26 @@
 </template>
 
 <script setup>
+// Vue
 import { ref, onMounted } from 'vue';
+
+import { useRoute } from 'vue-router';
+const route = useRoute();
+
+//Primevue
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
-import { useRoute } from 'vue-router';
-import { useConfirm } from "primevue/useconfirm";
+
 import { useToast } from 'primevue/usetoast';
-import { useCRMStore } from '@/composables/useCRMStore';
+const toast = useToast();
+
 import ImpedimentEditDialog from './ImpedimentEditDialog.vue';
 
-const route = useRoute();
-const confirm = useConfirm();
-const toast = useToast();
-const { 
-    clientImpediments, 
-    loadingImpediments, 
-    fetchImpedimentsByClientId,
-    createImpediment,
-    updateImpediment,
-} = useCRMStore();
+//Store
+import { useCRMStore } from '@/composables/useCRMStore';
+const { clientImpediments, loadingImpediments, fetchImpedimentsByClientId, createImpediment, updateImpediment } = useCRMStore();
 
 const clientId = route.params.clientId;
 const isDialogVisible = ref(false);

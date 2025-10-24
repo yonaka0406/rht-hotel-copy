@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import GlobalSearchModal from '../GlobalSearchModal.vue';
 import ReservationSearchBar from '../../../../components/ReservationSearchBar.vue';
-import { ref, defineComponent, h } from 'vue';
+import { ref } from 'vue';
 import PrimeVue from 'primevue/config';
 
 // Mock the composables and services
@@ -107,7 +107,7 @@ describe('GlobalSearchModal functionality', () => {
           month: '2-digit',
           day: '2-digit'
         });
-      } catch (error) {
+      } catch (_error) {
         return dateString;
       }
     };
@@ -176,7 +176,7 @@ describe('GlobalSearchModal functionality', () => {
               }
             }
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore regex errors
         }
       });

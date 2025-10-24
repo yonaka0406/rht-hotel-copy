@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { formatDate } from '@/utils/dateUtils';

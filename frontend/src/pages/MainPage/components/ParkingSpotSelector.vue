@@ -134,7 +134,6 @@ import { useParkingStore } from '@/composables/useParkingStore';
 import { useReservationStore } from '@/composables/useReservationStore';
 import Select from 'primevue/select';
 import FloatLabel from 'primevue/floatlabel';
-import Button from 'primevue/button';
 import Message from 'primevue/message';
 
 // Props
@@ -442,16 +441,16 @@ const onSpotChange = () => {
   emitSelectionChange();
 };
 
-const refreshAvailability = async () => {
-  await checkRealTimeAvailability();
-  validateSelection();
+const _refreshAvailability = async () => {
+  if (selectedVehicleCategoryId.value) {
+    loadCompatibleSpots();
+  }
 };
 
-const selectRecommendedSpot = (recommendedSpot) => {
-  const spot = compatibleSpots.value.find(s => s.id === recommendedSpot.spotId);
-  if (spot) {
-    selectedSpotId.value = spot.id;
-    onSpotChange();
+const _selectRecommendedSpot = (recommendedSpot) => {
+  if (recommendedSpot) {
+    selectedSpotId.value = recommendedSpot.id;
+    emitSelectionChange();
   }
 };
 
@@ -501,11 +500,13 @@ const getCapacityMatchClass = (spot) => {
   }
 };
 
-const formatDate = (dateString) => {
+const _formatDate = (dateString) => {
+  if (!dateString) return '';
   const date = new Date(dateString);
   return date.toLocaleDateString('ja-JP', {
-    month: 'short',
-    day: 'numeric'
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
   });
 };
 
