@@ -67,7 +67,7 @@
 
 <script setup>
 // Vue
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 const route = useRoute();
 
@@ -83,7 +83,7 @@ import ClientImpedimentsTab from './components/ClientImpedimentsTab.vue';
 import { useClientStore } from '@/composables/useClientStore';
 const { selectedClient, selectedClientAddress, fetchClient } = useClientStore();
 import { useProjectStore } from '@/composables/useProjectStore';
-const projectStore = useProjectStore();
+
 import { useCRMStore } from '@/composables/useCRMStore';
 const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 

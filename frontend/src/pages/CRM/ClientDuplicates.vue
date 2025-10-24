@@ -114,7 +114,7 @@ import ClientMerge from './components/ClientMerge.vue';
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import Divider from 'primevue/divider';
+
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 import InputText from 'primevue/inputtext';
@@ -177,7 +177,7 @@ const calculateDuplicates = async () => {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     try {
-        const clientsById = new Map(allClients.map(c => [c.id, c]));
+
         const potentialGroups = new Map();
 
         // --- Step 1: Group clients by potential duplicate keys (no change here) ---

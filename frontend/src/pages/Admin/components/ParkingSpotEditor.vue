@@ -159,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useApi } from '@/composables/useApi';
 import Button from 'primevue/button';
@@ -168,7 +168,7 @@ import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import FloatLabel from 'primevue/floatlabel';
-import Dropdown from 'primevue/dropdown';
+
 
 const customTypeDialogVisible = ref(false);
 const customType = ref({
@@ -205,7 +205,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:spots', 'save']);
 const toast = useToast();
-const { get } = useApi();
+const api = useApi();
 
 // Constants
 const cellSize = 20; // Base size in pixels (smaller for more precise placement)
@@ -404,9 +404,7 @@ watch(parkingSpots, (currentSpots) => {
 }, { deep: true });
 
 // Computed
-const selectedSpot = computed(() => {
-  return parkingSpots.value.find(spot => (spot.id || spot.tempId) === selectedSpotId.value);
-});
+
 
 // Methods
 function getSpotType(typeId) {
