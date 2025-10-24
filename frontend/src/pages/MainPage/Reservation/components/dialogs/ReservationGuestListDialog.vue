@@ -310,7 +310,7 @@ const initializeFields = (reservation) => {
 const initializeGroupGuests = (reservationArray) => {
     const newGuests = [];
     
-    reservationArray.forEach((roomReservation, roomIndex) => {
+    reservationArray.forEach((roomReservation, _roomIndex) => {
         const existingGuests = roomReservation.guests || [];
         const numberOfPeople = roomReservation.number_of_people || 0;
         
@@ -436,7 +436,7 @@ const generatePDF = async () => {
     const hotelId = Array.isArray(props.reservation) ? props.reservation[0].hotel_id : props.reservation.hotel_id;
     
     if (props.isGroup) {
-
+        // TODO: Implement PDF generation for group reservations
     } else {
         result = await generateGuestListPDF(hotelId, reservationId, guestData);
     }

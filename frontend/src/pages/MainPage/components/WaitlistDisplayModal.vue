@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { computed, watch, ref, h } from 'vue'; // defineProps and defineEmits are compiler macros
+import { computed, watch, ref } from 'vue'; // defineProps and defineEmits are compiler macros
 import Dialog from 'primevue/dialog';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -65,7 +65,7 @@ import axios from 'axios';
 // Tooltip directive is globally registered in main.js, so no need to import here.
 
 const confirm = useConfirm();
-const { entries, loading, pagination, fetchWaitlistEntries, sendManualNotification, cancelEntry } = useWaitlistStore();
+const { entries, loading, fetchWaitlistEntries, sendManualNotification, cancelEntry } = useWaitlistStore();
 const { selectedHotelId } = useHotelStore(); // This is a ref
 
 const props = defineProps({
@@ -104,7 +104,7 @@ const checkVacancy = async (entry) => {
     const response = await axios.post('/api/waitlist/check-vacancy', payload);
     vacancyStatus.value[entry.id] = response.data.available;
     return response.data.available;
-  } catch (e) {
+  } catch (_e) {
     vacancyStatus.value[entry.id] = false;
     return false;
   }
@@ -172,7 +172,6 @@ const getMainActionSeverity = (entry) => {
 
 const getActionItems = (entry) => {
   const items = [];
-  const disabled = vacancyStatus.value[entry.id] === false;
   
   if (entry.communication_preference === 'email') {
     items.push({

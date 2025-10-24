@@ -40,9 +40,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding reporting for parking spot utilization
   - Need to handle edge cases like partial winter availability
 
-
-### October 24, 2025
-
 #### Feature #86: OTA Reservation Display Enhancement
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical

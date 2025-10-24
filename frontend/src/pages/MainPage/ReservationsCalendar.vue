@@ -644,7 +644,7 @@ const openDrawer = (roomId, date) => {
       drawerVisible.value = true;
     }
   } else {
-
+    // TODO: Handle case where selectedRoom is not found
   }
 
 };
@@ -733,9 +733,6 @@ const speedDialModel = ref([
 ]);
 const contextMenuModel = ref([]);
 const showContextMenu = (event, room, date) => {
-  const roomInfo = fillRoomInfo(room.room_id, date);
-  const isReserved = isRoomReserved(room.room_id, date);
-
   const menuItems = [
     {
       label: 'デフォルト',
@@ -1064,23 +1061,7 @@ const isContiguous = (selected, key) => {
 
   return false;
 };
-const areSelectedDatesAvailableInRoom = (roomId) => {
-  if (!selectedRoomByDay.value || selectedRoomByDay.value.length === 0) {
-    return true;
-  }
 
-  for (const item of selectedRoomByDay.value) {
-    const itemRoomId = item.key.split('_')[0];
-    const itemDate = item.key.split('_')[1];
-    const newKey = `${roomId}_${itemDate}`;
-
-    if (reservedRoomsMap.value[newKey]) {
-      return false;
-    }
-  }
-
-  return true;
-};
 const startDrag = (event, roomId, date) => {
   // console.log('startDrag')
   const reservation = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms');
@@ -1125,7 +1106,7 @@ const endDrag = () => {
   draggingCheckOut.value = null;
   draggingRoomNumber.value = null;
 };
-const highlightDropZone = (event, roomId, date) => {
+const highlightDropZone = (event, _roomId, _date) => {
   const cell = event.target.closest('td');
   if (cell) {
     cell.classList.add('drop-zone');
@@ -1198,7 +1179,7 @@ const onDragStart = async (event, roomId, date) => {
     const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
     dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
 
-    const reservationData = await fetchReservation(reservation_id, selectedHotelId.value);
+    await fetchReservation(reservation_id, selectedHotelId.value);
 
     // console.log('dragFrom',dragFrom.value)
   } else {
@@ -1391,7 +1372,7 @@ const handleScroll = debounce(async (event) => {
   }
 }, 10);
 
-const handleTempBlock = (data) => {
+const handleTempBlock = (_data) => {
   // console.log('Temp block created:', data);
   // Close any open dialogs or drawers
   drawerVisible.value = false;
@@ -1503,7 +1484,7 @@ onMounted(async () => {
     // console.log('Connected to server');
   });
 
-  socket.value.on('tableUpdate', async (data) => {
+  socket.value.on('tableUpdate', async (_data) => {
     // Prevent fetching if bulk update is in progress
     if (isUpdating.value) {
       // console.log('Skipping fetchReservation because update is still running');
@@ -1554,7 +1535,7 @@ onUnmounted(() => {
 });
 
 // Watchers
-watch(reservationId, async (newReservationId, oldReservationId) => {
+watch(reservationId, async (newReservationId, _oldReservationId) => {
   if (newReservationId) {
 
     await fetchReservation(newReservationId, selectedHotelId.value);
@@ -1570,14 +1551,14 @@ watch(selectedHotelId, async (newVal, oldVal) => {
     isLoading.value = false;
   }
 }, { immediate: true });
-watch(drawerVisible, async (newVal, oldVal) => {
+watch(drawerVisible, async (newVal, _oldVal) => {
   if (newVal === false) {
     // console.log('Edit drawer became false');
     isUpdating.value = false;
     await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
   }
 });
-watch(centerDate, async (newVal, oldVal) => {
+watch(centerDate, async (newVal, _oldVal) => {
   // console.log("centerDate changed:",newVal);
   isLoading.value = true;
 
@@ -1628,7 +1609,7 @@ watch(centerDate, async (newVal, oldVal) => {
     }
   });
 });
-watch(dragMode, async (newVal, oldVal) => {
+watch(dragMode, async () => {
   // Clear cart items and reservation card data
   selectedRoomByDay.value = [];
   tempRoomData.value = [];

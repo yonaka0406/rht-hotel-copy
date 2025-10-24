@@ -353,23 +353,7 @@ onMounted(async () => {
   // console.groupEnd();
 });
 
-watch(
-  selectedHotelId,
-  (newVal, _oldVal) => {
-    // console.group('[SideMenu] Hotel Selection Changed');
-    // console.log('Previous Hotel ID:', oldVal);
-    // console.log('New Hotel ID:', newVal);
-    
-    if (newVal) {
 
-    } else {
-      // console.log('No hotel selected');
-    }
-    
-    // console.groupEnd();
-  },
-  { immediate: true }
-);
 
 const toggleSidebar = () => {
   emit('toggle');
