@@ -1,5 +1,8 @@
-/** @vitest-environment jsdom */
+// @vitest-environment jsdom
 // Test setup file for Vitest
+
+// Ensure global is available
+const { global } = globalThis;
 
 // Mock console methods to reduce noise in tests
 global.console = {

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi, beforeAll } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import { ref } from 'vue';

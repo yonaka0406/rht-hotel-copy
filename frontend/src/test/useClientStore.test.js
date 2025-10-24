@@ -1,6 +1,9 @@
-/** @vitest-environment jsdom */
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useClientStore } from '../composables/useClientStore.js'
+
+// Ensure global is available
+const { global } = globalThis;
 
 describe('useClientStore - error scenarios and recovery', () => {
   let store
