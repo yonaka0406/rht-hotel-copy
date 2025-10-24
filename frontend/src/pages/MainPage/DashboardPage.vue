@@ -571,8 +571,11 @@ const generateBarChartOptions = () => ({
         let name = '';
 
         const dailyValues = new Array(chartDisplayDateArray.length).fill(0);
+        // `dateArray` starts one day earlier than `chartDisplayDateArray`.
+        // `displayOffset` accounts for this difference to map `fetchedIndex` to `chartDisplayDateArray`.
+        const displayOffset = 1; 
 
-        dateArray.forEach((dateStr, index) => {
+        dateArray.forEach((dateStr, fetchedIndex) => {
             let value = 0;
 
             if (countData[dateStr]) {
@@ -582,19 +585,18 @@ const generateBarChartOptions = () => ({
                     name = foundItem.name || foundItem.addon_name || name; // Use addon_name for addons
                     value = parseInt(foundItem.quantity) || 0;
 
-                    // If it's a meal addon (lunch or breakfast), bump it to the following day
+                    // Calculate the base index in the `chartDisplayDateArray` corresponding to `fetchedIndex`.
+                    let targetDisplayIndex = fetchedIndex - displayOffset; 
+
+                    // If it's a meal addon (lunch or breakfast), it should be displayed on the *next* day.
+                    // So, we bump the `fetchedIndex` by 1 before applying the `displayOffset`.
                     if (foundItem.addon_type === 'lunch' || foundItem.addon_type === 'breakfast') {
-                        // Add to the next day relative to the *fetched* date array
-                        // And then adjust for the chart display array offset
-                        if (index + 1 - 1 >= 0 && index + 1 - 1 < chartDisplayDateArray.length) { // index + 1 is the bumped day, -1 for chartDisplayDateArray offset
-                            dailyValues[index + 1 - 1] = (dailyValues[index + 1 - 1] || 0) + value;
-                        }
-                    } else { // For dinner and other non-meal addons, keep on the current day
-                        // Add to the current day relative to the *fetched* date array
-                        // And then adjust for the chart display array offset
-                        if (index - 1 >= 0 && index - 1 < chartDisplayDateArray.length) { // index is current day, -1 for chartDisplayDateArray offset
-                            dailyValues[index - 1] = (dailyValues[index - 1] || 0) + value;
-                        }
+                        targetDisplayIndex = fetchedIndex + 1 - displayOffset; 
+                    }
+
+                    // Ensure the `targetDisplayIndex` is within the bounds of `chartDisplayDateArray`
+                    if (targetDisplayIndex >= 0 && targetDisplayIndex < chartDisplayDateArray.length) {
+                        dailyValues[targetDisplayIndex] = (dailyValues[targetDisplayIndex] || 0) + value;
                     }
                 }
             }
