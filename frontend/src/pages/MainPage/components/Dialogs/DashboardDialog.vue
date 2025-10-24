@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits, onMounted } from 'vue';
+import { ref, computed, defineProps, onMounted } from 'vue';
 import { Dialog, SelectButton, Button, DataTable, Column } from 'primevue';
 import { useToast } from "primevue/usetoast";
 
@@ -106,7 +106,6 @@ const plainTextReportContent = computed(() => {
         return 'データがありません。';
     }
 
-    const weekStartDate = new Date(props.dashboardSelectedDate);
     const weekEndDate = new Date(props.dashboardSelectedDate);
     weekEndDate.setDate(weekEndDate.getDate() + 6);
 
@@ -221,7 +220,6 @@ const displayReportData = computed(() => {
         return data;
     }
 
-    const weekStartDate = new Date(props.dashboardSelectedDate);
     const weekEndDate = new Date(props.dashboardSelectedDate);
     weekEndDate.setDate(weekEndDate.getDate() + 6);
 

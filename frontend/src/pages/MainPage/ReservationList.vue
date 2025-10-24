@@ -59,9 +59,9 @@
                 <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
 
                 <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
-                    <template #filter="{ filterModel, filterCallback }">
-                        <Select v-model="filterModel.value" :options="statusOptions" optionLabel="label"
-                            optionValue="value" @change="filterCallback" placeholder="選択" showClear fluid
+                    <template #filter="slotProps">
+                        <Select v-model="slotProps.filterModel.value" :options="statusOptions" optionLabel="label"
+                            optionValue="value" @change="slotProps.filterCallback" placeholder="選択" showClear fluid
                             size="small" />
                     </template>
                     <template #body="slotProps">
@@ -89,13 +89,13 @@
                 </Column>
                 <Column field="booker_name" filterField="booker_name" header="予約者" style="width:3%"
                     :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
+                    <template #filter="{ }">
                         <InputText v-model="clientFilterInput" type="text" placeholder="予約者 氏名・カナ・漢字検索" size="small" />
                     </template>
                 </Column>
                 <Column field="clients_json" filterField="clients_json" header="宿泊者・支払者" style="width:3%"
                     :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
+                    <template #filter="{ }">
                         <InputText v-model="clientsJsonFilterInput" type="text" placeholder="宿泊者・支払者 氏名・カナ・漢字検索"
                             size="small" />
                     </template>
@@ -126,7 +126,7 @@
                     </template>
                 </Column>
                 <Column field="price" header="料金" sortable style="width:2%" :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
+                    <template #filter="{ }">
                         <div class="grid grid-cols-1">
                             <Select v-model="priceFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid
                                 size="small" />
@@ -140,7 +140,7 @@
                     </template>
                 </Column>
                 <Column field="payment" header="支払い" sortable style="width:2%" :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
+                    <template #filter="{ }">
                         <div class="grid grid-cols-1">
                             <Select v-model="paymentFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid
                                 size="small" />

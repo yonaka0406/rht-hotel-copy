@@ -349,7 +349,7 @@ const actionTypeOptions = ref(
 );
 const statusOptions = ref(
     Object.entries(statusTranslations)
-        .filter(([value, label]) => value !== 'needs_follow_up') // Filter out 'needs_follow_up' from selectable options
+        .filter(([value, _label]) => value !== 'needs_follow_up') // Filter out 'needs_follow_up' from selectable options
         .map(([value, label]) => ({ label, value }))
 );
 

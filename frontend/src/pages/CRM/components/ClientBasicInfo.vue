@@ -379,7 +379,7 @@
     const newGroupComment = ref('');
     const saveGroup = async () => {
         
-        const result = await updateClientGroup(selectedGroupId.value, clientId.value);
+        const _result = await updateClientGroup(selectedGroupId.value, clientId.value);
         toast.add({
             severity: 'success',
             summary: 'Success',
@@ -392,7 +392,7 @@
 
     };
     const removeFromGroup = async () => {
-        const result = await updateClientGroup(null, clientId.value);
+        const _result = await updateClientGroup(null, clientId.value);
 
         toast.add({
             severity: 'error',
@@ -452,7 +452,7 @@
     // Watchers        
     watch(
         () => client.value.legal_or_natural_person, // Access with.value
-        (newValue, oldValue) => {            
+        (newValue, _oldValue) => {            
             if (newValue === 'legal') {           
                 client.value.gender = 'other';
             }            

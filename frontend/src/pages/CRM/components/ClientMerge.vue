@@ -242,7 +242,7 @@ const saveChanges = async () => {
 
         toast.add({ severity: 'success', summary: '成功', detail: '顧客合流が完了しました。', life: 3000 });
         emit('close');
-    } catch (error) {
+    } catch (_error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '顧客合流に失敗しました。', life: 3000 });
     } finally {
         isMerging.value = false;

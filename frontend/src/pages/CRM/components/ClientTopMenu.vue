@@ -62,30 +62,25 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/composables/useUserStore';
 import { useClientStore } from '@/composables/useClientStore';
-import { Menubar, InputText, AutoComplete, Skeleton } from 'primevue';
+import { Menubar, AutoComplete, Skeleton } from 'primevue';
 
 const router = useRouter();
 const { logged_user, fetchUser } = useUserStore();
 const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
 
 // Menubar
-const userMessage = ref('');
 const userGreeting = computed(() => {
     const now = new Date();
     const hour = now.getHours();
+    const name = logged_user.value?.[0]?.name || '';
 
     if (hour >= 5 && hour < 10) {
-        userMessage.value = 'おはようございます、' + logged_user.value[0]?.name;
-        // Good morning (5:00 AM - 9:59 AM)
+        return 'おはようございます、' + name;
     } else if (hour >= 10 && hour < 17) {
-        userMessage.value = 'こんにちは、' + logged_user.value[0]?.name;
-        // Good afternoon (10:00 AM - 4:59 PM)
+        return 'こんにちは、' + name;
     } else {
-        userMessage.value = 'こんばんは、' + logged_user.value[0]?.name;
-        // Good evening (5:00 PM - 4:59 AM)
+        return 'こんばんは、' + name;
     }
-
-    return userMessage;
 });
 const items = ref([
     {

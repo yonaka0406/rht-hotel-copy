@@ -151,7 +151,6 @@ const {
   isSearching,
   searchSuggestions,
   activeFilters,
-  searchError,
   hasActiveSearch,
   searchResultsCount,
   performSearch,

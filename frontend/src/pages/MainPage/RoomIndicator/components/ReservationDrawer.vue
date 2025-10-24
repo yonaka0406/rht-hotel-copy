@@ -80,7 +80,7 @@ const goToReservation = () => {
   router.push({ name: 'ReservationEdit', params: { reservation_id: selectedReservationID.value } });
 };
 
-const handleTempBlock = (data) => {
+const handleTempBlock = (_data) => {
   drawerVisible.value = false;
   emit('reservation-updated');
 };

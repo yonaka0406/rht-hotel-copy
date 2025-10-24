@@ -47,8 +47,8 @@
 
 <script setup>
   // Vue
-  import { ref, computed, watch, onMounted } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { ref, watch, onMounted } from 'vue';
+  
 
   import RoomGroupPanel from './components/RoomGroupPanel.vue';
   import SummaryMetricsPanel from './components/SummaryMetricsPanel.vue';
@@ -64,9 +64,9 @@
   //Stores
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
-  import { useClientStore } from '@/composables/useClientStore';
+  
 
-  import { useReservationStore } from '@/composables/useReservationStore';
+  
   import { useClientDisplay } from './composables/useClientDisplay';
   const { getClientName } = useClientDisplay();
 
