@@ -45,7 +45,7 @@
                             </div>
                         </template>
                     </AutoComplete>
-                    <label>個人氏名　||　法人名称</label>
+                    <label>個人氏名 || 法人名称</label>
                 </FloatLabel>
             </div>
 

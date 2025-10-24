@@ -22,8 +22,8 @@
                     <template #empty> 所属グループ見つかりません </template>
                     <template v-if="groupsIsLoading">
                         <Skeleton class="mb-3" width="100%" height="3rem" />                                
-                        <div class="grid grid-cols-6 gap-3 mb-3" v-for="i in 10":key="i"> 
-                            <Skeleton width="100%" height="1.5rem" v-for="j in 6":key="j" /> 
+                        <div class="grid grid-cols-6 gap-3 mb-3" v-for="i in 10" :key="i"> 
+                            <Skeleton width="100%" height="1.5rem" v-for="j in 6" :key="j" /> 
                         </div> 
                     </template>
                     <template v-else>

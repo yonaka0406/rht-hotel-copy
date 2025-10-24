@@ -150,7 +150,7 @@
                 v-model="newClient.name"
                 fluid
                 />
-                <label>個人氏名　||　法人名称　【漢字又はローマ字】</label>
+                <label>個人氏名 || 法人名称 【漢字又はローマ字】</label>
             </FloatLabel>
             </div>
             <div class="col-span-2 mb-6">

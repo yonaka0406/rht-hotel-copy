@@ -64,7 +64,7 @@
                 if (typeof value === 'object' && value.from !== undefined && value.to !== undefined) {
                     const oldValue = value.from !== null ? value.from : 'なし';
                     const newValue = value.to !== null ? value.to : 'なし';
-                    return `${getLabel(key)} 旧：${getValue(key, oldValue)}　新：${getValue(key, newValue)}`;
+                    return `${getLabel(key)} 旧：${getValue(key, oldValue)} 新：${getValue(key, newValue)}`;
                 }
                 return `${getLabel(key)}`;
             })

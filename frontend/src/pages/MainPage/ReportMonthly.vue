@@ -29,11 +29,11 @@
                     <div class="flex items-center gap-2">                        
                         <span class="font-bold ml-2 mt-2">
                             <div v-if="viewMode==='month'">
-                                <span>当月KPI<small>　PMSx計画</small></span><br/>
+                                <span>当月KPI<small> PMSx計画</small></span><br/>
                                 <small>（税抜き）</small>
                             </div>
                             <div v-else>
-                                <span>当年度累計KPI<small>　PMSx計画</small></span><br/>
+                                <span>当年度累計KPI<small> PMSx計画</small></span><br/>
                                 <small>（税抜き）</small>
                             </div>
                         </span>

@@ -175,13 +175,13 @@
             <component :is="activeComponent" />
         </div>
 
-        <Drawer v-model:visible="drawerVisible":modal="true":position="'bottom'":style="{height: '75vh'}":closable="true">
+        <Drawer v-model:visible="drawerVisible" :modal="true" :position="'bottom'" :style="{height: '75vh'}" :closable="true">
             <ReservationEdit
                 v-if="selectedReservation"
                 :reservation_id="selectedReservation.id"                       
             />
         </Drawer>
-        <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '37vh'}" :dismissable="false">
+        <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false" :position="'right'" :style="{width: '37vh'}" :dismissable="false">
             <template #header><span class="text-lg font-bold">選択された予約の詳細</span></template>            
             <div class="grid grid-cols-3 gap-4">
                 <Card>
