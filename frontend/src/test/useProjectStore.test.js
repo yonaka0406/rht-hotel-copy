@@ -1,3 +1,4 @@
+/* eslint-env vitest */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useProjectStore } from '../composables/useProjectStore.js'
 
