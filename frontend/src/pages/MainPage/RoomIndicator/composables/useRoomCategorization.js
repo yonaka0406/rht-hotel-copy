@@ -84,11 +84,10 @@ export function useRoomCategorization(selectedDate) {
     // In case of room changes, multiple rooms can be listed for checkout for the same reservation.
     // We need to select only the room the guest is in on the night before checkout.
     const checkoutGroups = categorizedRooms.checkOut.reduce((acc, room) => {
-      const reservationId = room.id;
-      if (!acc[reservationId]) {
-        acc[reservationId] = [];
+      if (!acc[room.id]) {
+        acc[room.id] = [];
       }
-      acc[reservationId].push(room);
+      acc[room.id].push(room);
       return acc;
     }, {});
 
