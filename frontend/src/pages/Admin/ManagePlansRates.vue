@@ -1185,8 +1185,7 @@
         // console.log('Selected Day:', selectedDay);
         // console.log('Selected Month:', selectedMonth);
         
-        filteredCurrentConditions.value.forEach((rate, index) => {
-            // console.group(`Rate #${index + 1}`);
+        filteredCurrentConditions.value.forEach((rate) => {
             // console.log('Rate:', rate);
             
             let match = false;

@@ -39,7 +39,6 @@
                 fluid
                 @blur="validatePassword"
                 autocomplete="current-password"
-                aria-autocomplete="list"
               />
               <label for="password" class="dark:text-gray-200">パスワード</label>
             </FloatLabel>
@@ -166,7 +165,7 @@
   };
 
   const validateEmail = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email.value) {
       emailError.value = 'メールアドレスは必須です。';
     } else if (!emailRegex.test(email.value)) {

@@ -547,7 +547,7 @@
               life: 3000
             });
           }
-        } catch (_error) {
+        } catch {
           toast.add({
             severity: 'error',
             summary: 'エラー',

@@ -126,7 +126,7 @@ const addNewTaxData = async () => {
         resetNewTaxData();
         await fetchTaxTypes();
         showTaxDialog.value = false;
-    } catch (_error) {
+    } catch {
         toast.add({ severity: 'error', summary: 'エラー', detail: '作成に失敗しました。', life: 3000 });
     }
 };
@@ -135,7 +135,7 @@ const updateTaxDescription = async (taxType) => {
     try {
         await alterTaxTypeDescription(taxType.id, taxType.description);
         toast.add({ severity: 'success', summary: '更新完了', detail: '詳細を更新しました。', life: 3000 });
-    } catch (error) {
+    } catch {
         toast.add({ severity: 'error', summary: 'エラー', detail: '詳細の更新に失敗しました。', life: 3000 });
         await fetchTaxTypes();
     }
@@ -145,7 +145,7 @@ const toggleTaxVisibility = async (taxType) => {
     try {
         await alterTaxTypeVisibility(taxType.id, taxType.visible);
         toast.add({ severity: 'success', summary: '更新完了', detail: '表示設定を変更しました。', life: 3000 });
-    } catch (error) {
+    } catch {
         toast.add({ severity: 'error', summary: 'エラー', detail: '表示設定の更新に失敗しました。', life: 3000 });
         await fetchTaxTypes();
     }

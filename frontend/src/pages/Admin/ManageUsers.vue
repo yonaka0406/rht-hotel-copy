@@ -383,8 +383,7 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { useConfirm } from "primevue/useconfirm";
-    const confirm = useConfirm();
+
     import { FilterMatchMode } from '@primevue/core/api';
     import InputText from 'primevue/inputtext';
     import Password from 'primevue/password';
@@ -655,7 +654,7 @@
     const sendResetPasswordEmail = async () => { 
         const authToken = localStorage.getItem('authToken');
         try {
-            const response = await fetch('/api/auth/forgot-password-admin', {
+            await fetch('/api/auth/forgot-password-admin', {
                 method: 'POST',
                 headers: {                            
                     'Authorization': `Bearer ${authToken}`,
@@ -673,7 +672,7 @@
                 life: 3000,
             });
             cancelEditDialog();
-        } catch (error) {                    
+        } catch () {                    
             toast.add({
                 severity: 'error',
                 summary: 'Error',
