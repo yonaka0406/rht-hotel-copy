@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from 'rollup-plugin-visualizer';
+import { fileURLToPath } from 'url';
 
 export default defineConfig({
   plugins: [
@@ -12,7 +13,7 @@ export default defineConfig({
   ].filter(Boolean),
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'), // Alias for cleaner imports
+      '@': path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src'), // Alias for cleaner imports
       'vue': 'vue/dist/vue.esm-bundler.js', // Alias for Vue runtime compilation
     },
   },

@@ -10,8 +10,7 @@ export default [
   ...pluginVue.configs["flat/essential"],
   {
     rules: {
-      'no-unused-vars': ['error', { 'argsIgnorePattern': '^_' }],
-      'vue/no-unused-vars': ['error', { 'argsIgnorePattern': '^_' }]
+      'no-unused-vars': ['error', { 'caughtErrorsIgnorePattern': '^_' }]
     }
   }
 ];
