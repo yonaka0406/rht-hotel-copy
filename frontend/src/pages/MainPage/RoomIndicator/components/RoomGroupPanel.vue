@@ -188,13 +188,6 @@
 // Vue
 import { computed } from 'vue';
 
-const filteredRoomGroups = computed(() => {
-  return props.roomGroups.filter(group => 
-    (group.title !== '部屋ブロック' && group.title !== '部屋移動') || 
-    (group.rooms.length > 0 && (group.title === '部屋ブロック' || group.title === '部屋移動'))
-  );
-});
-
 const props = defineProps({
   isLoading: {
     type: Boolean,
@@ -244,6 +237,20 @@ const props = defineProps({
     type: [String, Number],
     required: true,
   },
+});
+
+const filteredRoomGroups = computed(() => {
+  const specialTitles = ['部屋ブロック', '部屋移動'];
+  return props.roomGroups.filter(group => {
+    const isSpecial = specialTitles.includes(group.title);
+    const rooms = group.rooms || [];
+    
+    if (isSpecial) {
+      return rooms.length > 0;
+    }
+    
+    return true;
+  });
 });
 
 // Primevue
