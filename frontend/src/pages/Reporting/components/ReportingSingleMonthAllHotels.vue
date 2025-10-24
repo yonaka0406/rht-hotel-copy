@@ -303,11 +303,7 @@
         const uniqueNames = [...new Set(names)];
         return uniqueNames.join(', ');
     });
-    const _periodMinDate = computed(() => {
-        if (!props.revenueData || props.revenueData.length === 0) return 'N/A';
-        const minDate = new Date(Math.min(...props.revenueData.map(item => new Date(item.month))));
-        return minDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit' });
-    });
+    
     const periodMaxDate = computed(() => {
         if (!props.revenueData || props.revenueData.length === 0) return 'N/A';
         const maxDate = new Date(Math.max(...props.revenueData.map(item => new Date(item.month))));
