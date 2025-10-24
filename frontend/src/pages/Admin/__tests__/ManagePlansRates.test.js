@@ -1,9 +1,9 @@
 
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
-import ManagePlansRates from '../ManagePlansRates.vue';
+
 
 // Helper function to create a rate object
 const createRate = (adjustment_type, adjustment_value, condition_type = 'no_restriction', condition_value = null, tax_type_id = null) => ({

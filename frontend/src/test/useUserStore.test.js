@@ -1,5 +1,6 @@
 /* eslint-env vitest */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+/* global global, afterEach */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useUserStore } from '../composables/useUserStore.js'
 
 describe('useUserStore - error scenarios and recovery', () => {
