@@ -1,6 +1,16 @@
+/** @vitest-environment jsdom */
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useMetricsStore } from '../composables/useMetricsStore';
 
+// Ensure global is available
+const { global } = globalThis;
+
+/**
+ * Mocks the global fetch function to return a resolved promise with the provided data.
+ * 
+ * @param {any} data The data to be returned by the mock fetch function.
+ * @param {boolean} [ok=true] Whether the mock fetch function should return a successful response.
+ */
 function mockFetch(data, ok = true) {
   global.fetch = vi.fn().mockResolvedValue({
     ok,

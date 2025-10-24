@@ -1,5 +1,5 @@
+/** @vitest-environment jsdom */
 // Test setup file for Vitest
-import { vi } from 'vitest'
 
 // Mock console methods to reduce noise in tests
 global.console = {

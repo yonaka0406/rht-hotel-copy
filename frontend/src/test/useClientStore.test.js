@@ -1,14 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+/** @vitest-environment jsdom */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useClientStore } from '../composables/useClientStore.js'
 
 describe('useClientStore - error scenarios and recovery', () => {
   let store
   let originalFetch
+  
   beforeEach(() => {
     store = useClientStore()
     originalFetch = global.fetch
     global.fetch = vi.fn()
   })
+  
   afterEach(() => {
     global.fetch = originalFetch
   })
@@ -32,7 +35,11 @@ describe('useClientStore - error scenarios and recovery', () => {
   it('recovers after error on fetchClients', async () => {
     global.fetch.mockResolvedValueOnce({ ok: false, status: 500 })
     global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ clients: [] }) })
-    try { await store.fetchClients(1) } catch {}
+    
+    // First call fails
+    await expect(store.fetchClients(1)).rejects.toThrow()
+    
+    // Second call should succeed
     await expect(store.fetchClients(1)).resolves.not.toThrow()
   })
-}) 
+})

@@ -1,18 +1,24 @@
-/* eslint-env vitest */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useProjectStore } from '../composables/useProjectStore.js'
 
+// Ensure global is available
+const { global } = globalThis;
+
 describe('useProjectStore - error scenarios and recovery', () => {
-  let store
-  let originalFetch
+  let store;
+  let originalFetch;
+
   beforeEach(() => {
-    store = useProjectStore()
-    originalFetch = global.fetch
-    global.fetch = vi.fn()
-  })
+    store = useProjectStore();
+    originalFetch = global.fetch;
+    global.fetch = vi.fn();
+  });
+
   afterEach(() => {
-    global.fetch = originalFetch
-  })
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
 
   it('logs in English and throws on fetchRelatedProjects error', async () => {
     global.fetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })

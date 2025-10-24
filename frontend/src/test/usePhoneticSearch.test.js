@@ -377,7 +377,7 @@ describe('usePhoneticSearch', () => {
             convertTextWithAPI,
             getPhoneticVariantsWithAPI,
             phoneticMatchWithAPI,
-            generateSearchVariants
+            _generateSearchVariants
         } = usePhoneticSearch()
 
         describe('kanji to kana conversion', () => {
@@ -390,7 +390,7 @@ describe('usePhoneticSearch', () => {
                     { kanji: '高橋', expected: 'たかはし' }
                 ]
 
-                for (const { kanji, expected } of kanjiToHiraganaTests) {
+                for (const { kanji, expected: _expected } of kanjiToHiraganaTests) {
                     const result = await convertTextWithAPI(kanji, 'hiragana')
                     // In test environment, API fallback returns original text
                     // In production, this would return the expected hiragana
@@ -406,7 +406,7 @@ describe('usePhoneticSearch', () => {
                     { kanji: '鈴木', expected: 'suzuki' }
                 ]
 
-                for (const { kanji, expected } of kanjiToRomajiTests) {
+                for (const { kanji, expected: _expected } of kanjiToRomajiTests) {
                     const result = await convertTextWithAPI(kanji, 'romaji')
                     expect(typeof result).toBe('string')
                     expect(result.length).toBeGreaterThan(0)
@@ -662,8 +662,8 @@ describe('usePhoneticSearch', () => {
 
         it('should handle complex search scenarios', () => {
             // Test searching for "Tanaka" in kana forms (realistic scenario)
-            const searchTerms = ['tanaka', 'たなか', 'タナカ', 'tana']
-            const targets = ['タナカ太郎', 'タナカ　タロウ', 'たなか たろう', 'たなかたろう']
+            const _searchTerms = ['tanaka', 'たなか', 'タナカ', 'tana']
+            const _targets = ['タナカ太郎', 'タナカ　タロウ', 'たなか たろう', 'たなかたろう']
 
             // Test romaji to kana matching
             expect(phoneticMatch('tanaka', 'タナカ太郎')).toBe(true)
@@ -686,10 +686,10 @@ describe('usePhoneticSearch', () => {
             // In test environment, API calls will gracefully fallback to local conversion
 
             const kanjiNames = ['田中', '山田', '鈴木', '佐藤', '高橋', '大谷']
-            const expectedKana = ['たなか', 'やまだ', 'すずき', 'さとう', 'たかはし', 'おおたに']
+            const _expectedKana = ['たなか', 'やまだ', 'すずき', 'さとう', 'たかはし', 'おおたに']
 
             // These would work with API integration in production
-            kanjiNames.forEach((kanji, index) => {
+            kanjiNames.forEach((kanji, _index) => {
                 // Local conversion can't handle kanji, but API integration would
                 const variants = generateSearchVariants(kanji)
                 expect(variants).toContain(kanji) // Original kanji should be included

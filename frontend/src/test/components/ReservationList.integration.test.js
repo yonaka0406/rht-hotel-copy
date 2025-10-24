@@ -1,24 +1,30 @@
-// Move all vi.doMock calls to the very top
+import { describe, it, expect, afterEach, vi, beforeAll } from 'vitest';
+import { mount } from '@vue/test-utils';
+import PrimeVue from 'primevue/config';
+import { ref } from 'vue';
+
+// Mock data and refs
 let mockReservationListRef = undefined;
 let mockSearchResultsRef = undefined;
 let mockSearchQueryRef = undefined;
 let mockHasActiveSearchRef = undefined;
 
-vi.doMock('../../composables/useHotelStore', () => ({
+// Mock modules
+vi.mock('../../composables/useHotelStore', () => ({
   useHotelStore: () => ({
-    selectedHotelId: require('vue').ref(1),
+    selectedHotelId: ref(1),
     fetchHotels: vi.fn(),
     fetchHotel: vi.fn(),
   }),
 }));
 
-vi.doMock('primevue/usetoast', () => ({
+vi.mock('primevue/usetoast', () => ({
   useToast: () => ({
     add: vi.fn(),
   }),
 }));
 
-vi.doMock('../../composables/useReportStore', () => ({
+vi.mock('../../composables/useReportStore', () => ({
   useReportStore: () => ({
     get reservationList() { return mockReservationListRef; },
     fetchReservationListView: vi.fn(),
@@ -27,16 +33,17 @@ vi.doMock('../../composables/useReportStore', () => ({
     exportMealCount: vi.fn(),
   })
 }));
+
 const mockClearSearch = vi.fn();
-vi.doMock('../../composables/useReservationSearch', () => ({
+vi.mock('../../composables/useReservationSearch', () => ({
   useReservationSearch: () => ({
     get searchQuery() { return mockSearchQueryRef; },
     get searchResults() { return mockSearchResultsRef; },
-    isSearching: require('vue').ref(false),
-    searchSuggestions: require('vue').ref([]),
-    activeFilters: require('vue').ref([]),
-    searchActiveFilters: require('vue').ref([]),
-    get searchResultsCount() { return require('vue').ref(mockSearchResultsRef.value.length); },
+    isSearching: ref(false),
+    searchSuggestions: ref([]),
+    activeFilters: ref([]),
+    searchActiveFilters: ref([]),
+    get searchResultsCount() { return ref(mockSearchResultsRef ? mockSearchResultsRef.value.length : 0); },
     get hasActiveSearch() { return mockHasActiveSearchRef; },
     performSearch: vi.fn(),
     clearSearch: mockClearSearch,
@@ -45,11 +52,6 @@ vi.doMock('../../composables/useReservationSearch', () => ({
     clearAllFilters: vi.fn(),
   })
 }));
-
-import { describe, it, expect, afterEach } from 'vitest';
-import { mount } from '@vue/test-utils';
-import PrimeVue from 'primevue/config';
-import { ref } from 'vue';
 
 const mockReservations = [
   {

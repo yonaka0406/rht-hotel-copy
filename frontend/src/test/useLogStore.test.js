@@ -1,7 +1,15 @@
+// @vitest-environment jsdom
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useLogStore } from '../composables/useLogStore';
 
-// Helper to mock fetch
+// Ensure global is available
+const { global } = globalThis;
+
+/**
+ * Helper function to mock the global fetch API
+ * @param {any} data - The data to be returned by the mock
+ * @param {boolean} [ok=true] - Whether the response should be successful
+ */
 function mockFetch(data, ok = true) {
   global.fetch = vi.fn().mockResolvedValue({
     ok,

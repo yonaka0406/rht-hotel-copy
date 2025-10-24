@@ -7,7 +7,7 @@ vi.mock('../composables/usePhoneticSearch', () => ({
     usePhoneticSearch: () => ({
         phoneticMatch: vi.fn((search, target) => search === target),
         fuzzyPhoneticMatch: vi.fn((search, target, _threshold = 0.7) => search === target),
-        normalizePhoneNumber: vi.fn((phone) => phone?.replace(/[\s\-\()]/g, '') || ''),
+        normalizePhoneNumber: vi.fn((phone) => phone?.replace(/[\s-()]/g, '') || ''),
         normalizeEmail: vi.fn((email) => email?.toLowerCase().trim() || ''),
         generateSearchVariants: vi.fn((text) => [text])
     })

@@ -1,5 +1,9 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AccessibilityService } from '../AccessibilityService';
+
+// Ensure global is available
+const { global } = globalThis;
 
 describe('AccessibilityService', () => {
   let accessibilityService;
