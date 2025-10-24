@@ -194,7 +194,6 @@ import Column from 'primevue/column';
 import ProgressSpinner from 'primevue/progressspinner';
 import Card from 'primevue/card';
 import Badge from 'primevue/badge';
-import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
@@ -307,8 +306,7 @@ const compareDates = async () => {
 
         const confirmedStaysChange = item1 ? calculateChange(item2.confirmed_stays, item1.confirmed_stays) : (item2.confirmed_stays !== 0 ? Infinity : 0);
         const cancelledStaysChange = item1 ? calculateChange(item2.cancelled_stays, item1.cancelled_stays) : (item2.cancelled_stays !== 0 ? Infinity : 0);
-        const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);
-        const cancelledSalesChange = item1 ? calculateChange(item2.cancelled_sales, item1.cancelled_sales) : (item2.cancelled_sales !== 0 ? Infinity : 0);
+        const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);        
 
         processed.push({
             hotel_name: item2.hotel_name,
