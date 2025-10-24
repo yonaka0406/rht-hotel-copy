@@ -166,7 +166,7 @@ const addNewPaymentData = async () => {
         resetNewPaymentData();
         await fetchPaymentTypes();
         showPaymentDialog.value = false;
-    } catch () {
+    } catch {
         toast.add({ severity: 'error', summary: 'エラー', detail: '作成に失敗しました。', life: 3000 });
     }
 };
@@ -185,7 +185,7 @@ const updatePaymentDescription = async (paymentType) => {
     try {
         await alterPaymentTypeDescription(paymentType.id, paymentType.description);
         toast.add({ severity: 'success', summary: '更新完了', detail: '詳細を更新しました。', life: 3000 });
-    } catch () {
+    } catch {
         toast.add({ severity: 'error', summary: 'エラー', detail: '詳細の更新に失敗しました。', life: 3000 });
         await fetchPaymentTypes();
     }
@@ -195,7 +195,7 @@ const togglePaymentVisibility = async (paymentType) => {
     try {
         await alterPaymentTypeVisibility(paymentType.id, paymentType.visible);
         toast.add({ severity: 'success', summary: '更新完了', detail: '表示設定を変更しました。', life: 3000 });
-    } catch () {
+    } catch {
         toast.add({ severity: 'error', summary: 'エラー', detail: '表示設定の更新に失敗しました。', life: 3000 });
         await fetchPaymentTypes();
     }

@@ -672,7 +672,7 @@
                 life: 3000,
             });
             cancelEditDialog();
-        } catch () {                    
+        } catch (error) {                    
             toast.add({
                 severity: 'error',
                 summary: 'Error',

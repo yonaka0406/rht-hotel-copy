@@ -464,12 +464,12 @@ const viewDetails = (entry) => {
     selectedEntry.value = entry;
     detailDialogVisible.value = true;
 };
-
+/*
 const editEntry = (entry) => {
     editingEntry.value = { ...entry };
     editDialogVisible.value = true;
 };
-
+*/
 const saveEdit = async () => {
     if (!editingEntry.value) return;
     
@@ -484,7 +484,7 @@ const saveEdit = async () => {
         });
         editDialogVisible.value = false;
         loadData();
-    } catch (error) {
+    } catch (_error) {
         toast.add({
             severity: 'error',
             summary: 'エラー',
@@ -495,7 +495,7 @@ const saveEdit = async () => {
         saving.value = false;
     }
 };
-
+/*
 const deleteEntry = async (entry) => {
     // TODO: Implement delete functionality
     toast.add({
@@ -505,7 +505,9 @@ const deleteEntry = async (entry) => {
         life: 3000
     });
 };
+*/
 
+/*
 const sendNotification = async (entry) => {
     // TODO: Implement notification functionality
     toast.add({
@@ -515,7 +517,7 @@ const sendNotification = async (entry) => {
         life: 3000
     });
 };
-
+*/
 const onHotelChange = () => {
     pagination.page = 1;
     loadData();
@@ -588,14 +590,13 @@ onMounted(async () => {
 let lastChanged = null;
 
 watch(
-  () => filters.checkInStartDate,
-  (newVal, oldVal) => {
+  (_newVal, oldVal) => {
     lastChanged = 'start';
   }
 );
 watch(
   () => filters.checkInEndDate,
-  (newVal, oldVal) => {
+  (_newVal, oldVal) => {
     lastChanged = 'end';
   }
 );
