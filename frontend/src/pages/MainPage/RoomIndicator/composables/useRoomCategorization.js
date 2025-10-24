@@ -42,7 +42,8 @@ export function useRoomCategorization(selectedDate) {
     const categorizedRooms = {
       checkOut: [],
       checkIn: [],
-      occupied: []
+      occupied: [],
+      roomChange: []
     };
 
     // console.log("[useRoomCategorization] All Reservations:", allReservations);
@@ -141,16 +142,6 @@ export function useRoomCategorization(selectedDate) {
 
     categorizedRooms.checkOut = finalCheckOutRooms;
 
-    // 5. FREE ROOMS - Rooms that are available or will become available (including check-outs)
-    const unavailableRoomIds = new Set([
-      ...blockedRooms.map(room => room.room_id),
-      ...categorizedRooms.checkIn.map(room => room.room_id),
-      ...categorizedRooms.occupied.map(room => room.room_id)
-      // NOTE: We DON'T exclude check-out rooms because they become free after checkout
-    ]);
-
-        // Note: categorizedRooms.occupied already contains overlapping rooms (excluding check-outs)
-        // and is already included in unavailableRoomIds above, so no additional exclusion needed.
     // 4. ROOM CHANGES - Guests who changed rooms (were in a different room yesterday)
     const dayBefore = new Date(selectedDateObj);
     dayBefore.setDate(selectedDateObj.getDate() - 1);
@@ -188,24 +179,101 @@ export function useRoomCategorization(selectedDate) {
     
     Object.entries(roomsByReservation).forEach(([reservationId, rooms]) => {
       console.group(`Reservation ${reservationId}:`);
+      console.log('All rooms in reservation:', rooms.map(r => ({
+        room_id: r.room_id,
+        room_number: r.room_number,
+        details: r.details?.map(d => ({
+          date: d.date,
+          check_in: d.check_in,
+          check_out: d.check_out,
+          guest_id: d.guest_id
+        }))
+      })));
       
       // Get all rooms for the previous day
-      const previousDayRooms = rooms
-        .filter(room => room.details?.some(d => d.date === dayBeforeStr))
-        .map(room => ({
-          room_id: room.room_id,
-          room_number: room.room_number,
-          details: room.details.find(d => d.date === dayBeforeStr)
-        }));
+      const previousDayRooms = [];
+      
+      // Check all rooms in the reservation to see if they were occupied on the previous day
+      rooms.forEach(room => {
+        console.log(`Processing room ${room.room_number} (${room.room_id})`);
+        
+        if (!room.details || room.details.length === 0) {
+          console.log(`Room ${room.room_number} has no details, skipping`);
+          return;
+        }
+        
+        // Find details for the previous day
+        const prevDayDetail = room.details.find(d => d.date === dayBeforeStr);
+        
+        // If we have an exact detail for the previous day, use it
+        if (prevDayDetail) {
+          console.log(`Found detail for previous day (${dayBeforeStr}) in room ${room.room_number}:`, prevDayDetail);
+          previousDayRooms.push({
+            room_id: room.room_id,
+            room_number: room.room_number,
+            details: prevDayDetail
+          });
+        } 
+        // Otherwise, check if this room was occupied on the previous day by looking at check_in/check_out ranges
+        else {
+          // Find any detail where the previous day falls within its stay period
+          const relevantDetail = room.details.find(d => {
+            const checkIn = d.check_in || d.date;
+            const checkOut = d.check_out || d.date;
+            return checkIn <= dayBeforeStr && checkOut >= dayBeforeStr;
+          });
+            
+          if (relevantDetail) {
+            console.log(`Room ${room.room_number} was occupied on ${dayBeforeStr} (check_in: ${relevantDetail.check_in}, check_out: ${relevantDetail.check_out}), using detail from ${relevantDetail.date}:`, relevantDetail);
+            previousDayRooms.push({
+              room_id: room.room_id,
+              room_number: room.room_number,
+              details: relevantDetail
+            });
+          } else {
+            console.log(`Room ${room.room_number} was not occupied on ${dayBeforeStr}`);
+          }
+        }
+      });
       
       // Get all rooms for the current day
-      const currentDayRooms = rooms
-        .filter(room => room.details?.some(d => d.date === todayStr))
-        .map(room => ({
-          room_id: room.room_id,
-          room_number: room.room_number,
-          details: room.details.find(d => d.date === todayStr)
-        }));
+      const currentDayRooms = [];
+      
+      // Process rooms for current day
+      rooms.forEach(room => {
+        if (!room.details || room.details.length === 0) {
+          return;
+        }
+        
+        // Find details for the current day
+        const todayDetail = room.details.find(d => d.date === todayStr);
+        
+        // If we have an exact detail for today, use it
+        if (todayDetail) {
+          currentDayRooms.push({
+            room_id: room.room_id,
+            room_number: room.room_number,
+            details: todayDetail
+          });
+        } 
+        // Otherwise, check if this room is occupied today by looking at check_in/check_out ranges
+        else {
+          // Find any detail where today falls within its stay period
+          const relevantDetail = room.details.find(d => {
+            const checkIn = d.check_in || d.date;
+            const checkOut = d.check_out || d.date;
+            return checkIn <= todayStr && checkOut >= todayStr;
+          });
+            
+          if (relevantDetail) {
+            currentDayRooms.push({
+              room_id: room.room_id,
+              room_number: room.room_number,
+              details: relevantDetail
+            });
+          }
+        }
+      });
       
       console.log(`Previous day rooms (${dayBeforeStr}):`, previousDayRooms);
       console.log(`Current day rooms (${todayStr}):`, currentDayRooms);
@@ -259,9 +327,9 @@ export function useRoomCategorization(selectedDate) {
               roomChanges.push(roomToAdd);
             }
           });
+        } else {
+          console.log('No room change - same rooms on both days');
         }
-      } else {
-        console.log('No room change - same rooms on both days');
       }
       
       console.groupEnd();
@@ -291,6 +359,15 @@ export function useRoomCategorization(selectedDate) {
         room.details && room.details.some(detail => detail.date === todayStr)
       ) || [group[0]]; // Fallback to first room if no match found
     });
+
+    // 5. FREE ROOMS - Rooms that are available or will become available (including check-outs)
+    const unavailableRoomIds = new Set([
+      ...blockedRooms.map(room => room.room_id),
+      ...categorizedRooms.checkIn.map(room => room.room_id),
+      ...categorizedRooms.occupied.map(room => room.room_id),
+      ...finalRoomChanges.map(room => room.room_id)
+      // NOTE: We DON'T exclude check-out rooms because they become free after checkout
+    ]);
 
     // Note: categorizedRooms.occupied already contains overlapping rooms (excluding check-outs)
     // and is already included in unavailableRoomIds above, so no additional exclusion needed.
