@@ -1,13 +1,13 @@
 <template>
   <div class="p-4 max-w-7xl mx-auto">
-    <Stepper value="1">
+    <Stepper v-model:value="currentStep">
       <StepList>
           <Step value="1">ホテル情報</Step>
           <Step value="2">部屋タイプ</Step>
           <Step value="3">部屋</Step>
       </StepList>
       <StepPanels>
-        <StepPanel v-slot="{ activateCallback }" value="1">
+        <StepPanel v-slot="{ }" value="1">
           <div class="flex flex-col">
               <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-sm bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 <Card class="m-2">
@@ -87,11 +87,11 @@
               </div>
           </div>
           <div class="flex p-3 justify-end">
-              <Button label="次へ" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('2')" />
+              <Button label="次へ" icon="pi pi-arrow-right" iconPos="right" @click="currentStep = '2'" />
           </div>
         </StepPanel>
 
-        <StepPanel v-slot="{ activateCallback }" value="2">
+        <StepPanel v-slot="{ }" value="2">
           <div class="flex flex-col">
               <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-sm bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 <Card class="m-2">
@@ -135,13 +135,13 @@
                 </Card>
               </div>
               <div class="flex p-3 justify-between">
-                  <Button label="前へ" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('1')" />
-                  <Button label="次へ" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
+                  <Button label="前へ" severity="secondary" icon="pi pi-arrow-left" @click="currentStep = '1'" />
+                  <Button label="次へ" icon="pi pi-arrow-right" iconPos="right" @click="currentStep = '3'" />
               </div>
           </div>
         </StepPanel>
 
-        <StepPanel v-slot="{ activateCallback }" value="3">
+        <StepPanel v-slot="{ }" value="3">
           <div class="flex flex-col">
               <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-sm bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 
@@ -316,7 +316,7 @@
 
           <div class="p-3 flex justify-between">
             <Button label="前へ" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('2')" />
-            <Button label="ホテル作成" severity="primary" icon="pi pi-check" @click="saveHotelData" />
+            <Button label="ホテル作成" severity="primary" icon="pi pi-check" @click="saveHotelData" :disabled="!isHotelFormValid" />
           </div>
         </StepPanel>
 
@@ -408,6 +408,10 @@
   import AccordionContent from 'primevue/accordioncontent';
   import Badge from 'primevue/badge';
   import Checkbox from 'primevue/checkbox';
+  
+  // Stores
+  import { useHotelStore } from '@/composables/useHotelStore';
+  const { hotels, fetchHotels, createHotel, createRoomType, createRoom } = useHotelStore();
   
   const currentStep = ref('1');
 
@@ -621,57 +625,20 @@
 
   // Validation
 
-  const validateStep = () => {
-    
-    const hotelFieldsFilled = Object.values(hotel).every(value => value !== null && value !== '');    
 
-    if (!hotelFieldsFilled) {
-      toast.add({
-        severity: 'warn',
-        summary: '警告',
-        detail: 'ホテルに関するすべてのフィールドを記入してください。',
-        life: 3000
-      });
-      return false;
-    }
-    
+
+  const isHotelFormValid = computed(() => {
+    const hotelFieldsFilled = Object.values(hotel).every(value => value !== null && value !== '');
     const roomTypesFilled = roomTypes.value.length > 0;
-
-    if (!roomTypesFilled) {
-      toast.add({
-        severity: 'warn',
-        summary: '警告',
-        detail: '少なくとも1つの部屋タイプを追加してください。',
-        life: 3000
-      });
-      return false;
-    }
-
     const generatedRoomsFilled = generatedRooms.value.length > 0;
-
-    if (!generatedRoomsFilled) {
-      toast.add({
-        severity: 'warn',
-        summary: '警告',
-        detail: '少なくとも1つの部屋を作成してください。',
-        life: 3000
-      });
-      return false;
-    }
-
-    return true;
-  };
+    return hotelFieldsFilled && roomTypesFilled && generatedRoomsFilled;
+  });
 
 
 
   // Save Data
 
   const saveHotelData = async () => {
-    if (!validateStep()) {
-      return;
-    }
-
-    const authToken = localStorage.getItem('authToken');
 
     // Conversion from Datetime to Date
     let selectedDate = hotel.open_date;    
@@ -681,44 +648,19 @@
     hotel.open_date = selectedDate;
 
     try {
-      const hotelResponse = await fetch('/api/hotels', {
-        method: 'POST',        
-        headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(hotel)
-      });
-
-      if (!hotelResponse.ok) throw new Error('ホテルの作成に失敗しました');
-      
-      const hotelData = await hotelResponse.json();      
+      const hotelData = await createHotel(hotel);      
       
       for (const roomType of roomTypes.value) {
-        await fetch('/api/room-types', {
-          method: 'POST',
-          headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...roomType,
-            hotel_id: hotelData.id
-          })
+        await createRoomType({
+          ...roomType,
+          hotel_id: hotelData.id
         });
       }
       
       for (const room of generatedRooms.value) {
-        await fetch('/api/rooms', {
-          method: 'POST',
-          headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...room,
-            hotel_id: hotelData.id
-          })
+        await createRoom({
+          ...room,
+          hotel_id: hotelData.id
         });
       }
       
