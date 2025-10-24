@@ -159,7 +159,7 @@ export function useRoomCategorization(selectedDate) {
     // Find reservations with room changes
     const roomChanges = [];
     
-    Object.entries(roomsByReservation).forEach(([reservationId, rooms]) => {
+    Object.entries(roomsByReservation).forEach(([_reservationId, rooms]) => {
       // Get all rooms for the previous day
       const previousDayRooms = [];
       
