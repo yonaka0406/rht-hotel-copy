@@ -117,7 +117,6 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
-import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 
 const selectedHotel = ref(null);
@@ -190,8 +189,6 @@ const handleExportToGoogleSheets = async () => {
             throw new Error('エクスポートに失敗しました');
         }
 
-        const data = await response.json();
-
         toast.add({
             severity: 'success',
             summary: '成功',
@@ -225,8 +222,6 @@ const handleExportParkingToGoogleSheets = async () => {
         if (!response.ok) {
             throw new Error('駐車場予約のエクスポートに失敗しました');
         }
-
-        const data = await response.json();
 
         toast.add({
             severity: 'success',

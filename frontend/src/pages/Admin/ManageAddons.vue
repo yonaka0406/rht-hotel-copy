@@ -626,7 +626,6 @@
   const filteredHotelAddons = computed(() => {
     if (selectedHotel.value) {
       const filtered = hotelAddons.value.filter(addon => addon.hotel_id === selectedHotel.value.id);
-      //console.log('Filtered Hotel Addons:', filtered);
       return filtered;
     }
     return [];

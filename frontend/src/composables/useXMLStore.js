@@ -349,8 +349,8 @@ export function useXMLStore() {
             
             return data;
             
-        } catch (err) {
-          console.error(`Failed to update site controller for hotel ${hotel_id}:`, err);          
+        } catch (error) {
+          console.error(`Failed to update site controller for hotel ${hotel_id}:`, error);          
         }
     };
 
