@@ -12,9 +12,8 @@
             <p class="text-3xl font-bold text-gray-800 dark:text-white pt-1">{{ metric.count }}</p>
             <template v-if="metric.title === '滞在者数' && metric.roomMoveCount">
               <div class="flex items-center justify-center gap-2 mt-1">
-                <span class="text-sm text-gray-600 dark:text-gray-300">部屋移動</span>
+                <span class="text-sm text-gray-600 dark:text-gray-300">その内、部屋移動</span>
                 <Badge :value="metric.roomMoveCount" severity="warn" class="px-2 py-0.5 text-sm" />
-                <span class="text-sm text-gray-600 dark:text-gray-300">部屋</span>
               </div>
             </template>
             <template v-else-if="metric.title === '空室数' && metric.blockedRoomsCount">
@@ -76,7 +75,7 @@ const summaryMetrics = computed(() => {
       title: '滞在者数',
       icon: 'pi pi-users',
       iconColor: 'text-yellow-500',
-      count: occupiedCount,
+      count: occupiedCount + roomMoveCount,
       roomMoveCount: roomMoveCount > 0 ? roomMoveCount : undefined
     },
     {

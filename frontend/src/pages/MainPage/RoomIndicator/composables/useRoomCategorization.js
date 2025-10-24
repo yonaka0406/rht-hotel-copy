@@ -10,7 +10,6 @@ export function useRoomCategorization(selectedDate) {
   const roomGroups = computed(() => {
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
-      console.error("[useRoomCategorization] Invalid selectedDate.value:", selectedDate.value);
       return [];
     }
 
@@ -46,24 +45,19 @@ export function useRoomCategorization(selectedDate) {
       roomChange: []
     };
 
-    // console.log("[useRoomCategorization] All Reservations:", allReservations);
     allReservations.forEach(room => {
-      // console.log("[useRoomCategorization] Processing room:", room.room_id, "Reservation ID:", room.id);
-      // console.log("[useRoomCategorization] Room details:", room);
       if (room.status === 'block') return; // Already handled
 
       const checkInDate = new Date(room.check_in);
       const checkOutDate = new Date(room.check_out);
 
       if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
-        console.warn('[useRoomCategorization] Invalid checkInDate or checkOutDate for room:', room);
         return;
       }
 
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
 
-      // console.log(`[useRoomCategorization] Room ${room.room_id}: isCheckInToday=${isCheckInToday}, isCheckOutToday=${isCheckOutToday}`);
       // Priority 1: Check-out today (highest priority)
       if (isCheckOutToday) {
         if (!categorizedRooms.checkOut.some(existingRoom => existingRoom.room_id === room.room_id)) {
@@ -74,10 +68,7 @@ export function useRoomCategorization(selectedDate) {
       else if (isCheckInToday) {
         // Ensure room_id is unique in checkIn category
         if (!categorizedRooms.checkIn.some(existingRoom => existingRoom.room_id === room.room_id)) {
-          // console.log(`[useRoomCategorization] Pushing room ${room.room_id} to checkIn. Reservation ID: ${room.id}`);
           categorizedRooms.checkIn.push(room);
-        } else {
-          // console.log(`[useRoomCategorization] Room ${room.room_id} already in checkIn category. Skipping reservation ID: ${room.id}`);
         }
       }
       // Priority 3: Currently allocated/reserved for this date (regardless of check-in status)
@@ -147,14 +138,6 @@ export function useRoomCategorization(selectedDate) {
     dayBefore.setDate(selectedDateObj.getDate() - 1);
     const dayBeforeStr = formatDate(dayBefore);
     const todayStr = formatDate(selectedDateObj);
-    
-    console.log('Room Changes Debug:', {
-      selectedDate: selectedDateObj,
-      dayBefore: dayBefore,
-      dayBeforeStr,
-      todayStr,
-      formattedSelectedDate: formatDate(selectedDateObj)
-    });
 
     // Group rooms by reservation ID to handle cases where details are split across multiple room entries
     const roomsByReservation = {};
@@ -178,27 +161,12 @@ export function useRoomCategorization(selectedDate) {
     const roomChanges = [];
     
     Object.entries(roomsByReservation).forEach(([reservationId, rooms]) => {
-      console.group(`Reservation ${reservationId}:`);
-      console.log('All rooms in reservation:', rooms.map(r => ({
-        room_id: r.room_id,
-        room_number: r.room_number,
-        details: r.details?.map(d => ({
-          date: d.date,
-          check_in: d.check_in,
-          check_out: d.check_out,
-          guest_id: d.guest_id
-        }))
-      })));
-      
       // Get all rooms for the previous day
       const previousDayRooms = [];
       
       // Check all rooms in the reservation to see if they were occupied on the previous day
       rooms.forEach(room => {
-        console.log(`Processing room ${room.room_number} (${room.room_id})`);
-        
         if (!room.details || room.details.length === 0) {
-          console.log(`Room ${room.room_number} has no details, skipping`);
           return;
         }
         
@@ -207,7 +175,6 @@ export function useRoomCategorization(selectedDate) {
         
         // If we have an exact detail for the previous day, use it
         if (prevDayDetail) {
-          console.log(`Found detail for previous day (${dayBeforeStr}) in room ${room.room_number}:`, prevDayDetail);
           previousDayRooms.push({
             room_id: room.room_id,
             room_number: room.room_number,
@@ -224,14 +191,11 @@ export function useRoomCategorization(selectedDate) {
           });
             
           if (relevantDetail) {
-            console.log(`Room ${room.room_number} was occupied on ${dayBeforeStr} (check_in: ${relevantDetail.check_in}, check_out: ${relevantDetail.check_out}), using detail from ${relevantDetail.date}:`, relevantDetail);
             previousDayRooms.push({
               room_id: room.room_id,
               room_number: room.room_number,
               details: relevantDetail
             });
-          } else {
-            console.log(`Room ${room.room_number} was not occupied on ${dayBeforeStr}`);
           }
         }
       });
@@ -275,13 +239,8 @@ export function useRoomCategorization(selectedDate) {
         }
       });
       
-      console.log(`Previous day rooms (${dayBeforeStr}):`, previousDayRooms);
-      console.log(`Current day rooms (${todayStr}):`, currentDayRooms);
-      
       // If no rooms for either day, skip
       if (previousDayRooms.length === 0 || currentDayRooms.length === 0) {
-        console.log('No rooms found for one of the days, skipping');
-        console.groupEnd();
         return;
       }
       
@@ -302,7 +261,6 @@ export function useRoomCategorization(selectedDate) {
         const currRoom = currentDayRooms.find(r => r.details?.guest_id === guestId);
         
         if (prevRoom && currRoom && prevRoom.room_id !== currRoom.room_id) {
-          console.log(`Guest ${guestId} moved from room ${prevRoom.room_id} to ${currRoom.room_id}`);
           roomChanges.push(rooms.find(r => r.room_id === currRoom.room_id));
           hasRoomChange = true;
         }
@@ -318,21 +276,15 @@ export function useRoomCategorization(selectedDate) {
         const departedRooms = [...previousRoomIds].filter(id => !currentRoomIds.has(id));
         
         if (newRooms.length > 0 || departedRooms.length > 0) {
-          console.log(`Room change detected: ${[...previousRoomIds].join(', ')} -> ${[...currentRoomIds].join(', ')}`);
           // Only add the new rooms to changes
           newRooms.forEach(roomId => {
             const roomToAdd = rooms.find(r => r.room_id === roomId);
             if (roomToAdd) {
-              console.log(`Adding new room to changes: ${roomToAdd.room_number} (${roomToAdd.room_id})`);
               roomChanges.push(roomToAdd);
             }
           });
-        } else {
-          console.log('No room change - same rooms on both days');
         }
       }
-      
-      console.groupEnd();
     });
 
     // Remove room change guests from occupied category to avoid duplication
