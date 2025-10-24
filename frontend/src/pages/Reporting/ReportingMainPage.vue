@@ -433,7 +433,7 @@
                 );
 
                 hotelPmsDataForMonth.forEach(pmsRecord => {
-                    if (pmsRecord.hasOwnProperty('total_rooms_real') && pmsRecord.total_rooms_real !== null) {
+                    if (Object.prototype.hasOwnProperty.call(pmsRecord, 'total_rooms_real') && pmsRecord.total_rooms_real !== null) {
                         const realRooms = parseInt(pmsRecord.total_rooms_real, 10);
                         if (!isNaN(realRooms)) {
                             dailyRealRoomsMap.set(pmsRecord.date, realRooms);

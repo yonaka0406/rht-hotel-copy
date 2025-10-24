@@ -111,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, shallowRef, nextTick, computed } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
 import { useReportStore } from '@/composables/useReportStore';
 import ProgressSpinner from 'primevue/progressspinner';
 import Card from 'primevue/card';
@@ -160,13 +160,6 @@ const viewOptions = ref([
     { label: 'グラフ', value: 'graph' },
     { label: 'テーブル', value: 'table' }
 ]);
-
-const formattedMonth = computed(() => {
-    const date = props.selectedDate;
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `${year}-${month}`;
-});
 
 const { fetchChannelSummary, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown, fetchBookerTypeBreakdown, fetchReservationListView } = useReportStore();
 const chartData = ref([]);
@@ -730,14 +723,14 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart);
 });
 
-watch(() => [props.hotelId, props.triggerFetch, props.selectedDate], async ([newHotelId, newTrigger, newDate], [oldHotelId, oldTrigger, oldDate]) => {    
+watch(() => [props.hotelId, props.triggerFetch, props.selectedDate], async () => {    
     await fetchReportData();
     if (selectedView.value === 'graph') {
         refreshAllCharts();
     }
 }, { deep: true });
 
-watch(chartData, (newData) => {
+watch(chartData, () => {
     if (selectedView.value === 'graph') {
         refreshAllCharts();
     }

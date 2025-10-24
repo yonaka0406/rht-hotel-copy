@@ -637,7 +637,7 @@ watch(scatterPlotSeriesData, (newData) => {
     };
 }, { deep: true, immediate: true });
 
-watch(() => chartData.value, async (newData) => {
+watch(() => chartData.value, async () => {
     if (selectedView.value === 'graph') {
         await nextTick();
         refreshAllCharts();
@@ -712,7 +712,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart);
 });
 
-watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], ([newHotels, newTrigger, newDate], [oldHotels, oldTrigger, oldDate]) => {    
+watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], () => {    
     fetchReportData();
 }, { deep: true });
 

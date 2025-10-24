@@ -313,40 +313,9 @@
     const formatInventoryDate = (isoDateString) => {
         if (!isoDateString) return 'N/A';
         try {
-            const date = new Date(isoDateString);
-            // Adjust for local timezone. The toISOString gives UTC, so we construct date in a way that Date() parses it as local.
-            // A more robust way is to get individual date components in UTC and then create a new Date object for local display.
-            // However, for just displaying the date part, often the local time zone conversion by new Date() is sufficient if the server sends UTC.
-            // Let's ensure we are interpreting the date correctly.
-            // The issue states "2025-06-03T15:00:00.000Z, which should be displayed as 2025-06-04 because it is the local time."
-            // This implies the original date is UTC and needs to be shifted to the local timezone for display.
-
-            // Create a date object. By default, it should parse in local timezone if no Z is present,
-            // or in UTC if Z is present.
-            // To display correctly, we can add the timezone offset before formatting.
-            // However, a simpler way for date display is to use UTC methods and then format.
-            // For example, if "2025-06-03T15:00:00.000Z" is meant to be "2025-06-04" locally,
-            // it means the local timezone is such that 15:00 UTC on June 3rd is already June 4th.
-            // Example: Japan Standard Time (JST) is UTC+9. So 15:00 UTC is 24:00 JST (00:00 next day).
-
-            // Let's use UTC date parts to avoid local timezone interpretation issues during formatting
-            // and then construct the date string.
             // The key is that `new Date(isoDateString)` already converts it to the local timezone of the machine running the JS.
             // We just need to format it.
-
             const originalDate = new Date(isoDateString);
-
-            // Create a new date by adding the timezone offset to effectively get "local" date parts from UTC timestamp
-            // This is a common source of confusion. A simpler way:
-            // The date "2025-06-03T15:00:00.000Z" IS June 3rd in UTC.
-            // If it should be displayed as June 4th LOCALLY, it means the local timezone is such that 15:00 UTC on June 3rd is already June 4th.
-            // Example: Japan Standard Time (JST) is UTC+9. So 15:00 UTC is 24:00 JST (00:00 next day).
-
-            // Let's use UTC date parts to avoid local timezone interpretation issues during formatting
-            // and then construct the date string.
-            // The key is that `new Date(isoDateString)` already converts it to the local timezone of the machine running the JS.
-            // We just need to format it.
-
             const year = originalDate.getFullYear();
             const month = String(originalDate.getMonth() + 1).padStart(2, '0');
             const day = String(originalDate.getDate()).padStart(2, '0');

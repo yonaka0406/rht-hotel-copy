@@ -94,7 +94,7 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, setHotelId, selectedHotelId, hotelBlockedRooms, fetchBlockedRooms, fetchHotels } = useHotelStore();
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { holdReservations, failedOtaReservations, fetchFailedOtaReservations, setReservationId, reservedRooms } = useReservationStore();
+    const { holdReservations, failedOtaReservations, fetchFailedOtaReservations, setReservationId } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
     // Components (for Waitlist Modal and Global Search)
@@ -286,9 +286,6 @@
             }
             
             if (newHotelId && newHotelId !== oldHotelId) {
-                const hotel = hotels.value.find(h => h.id === newHotelId);
-                // console.log('[TopMenu] Watcher: Selected Hotel:', hotel ? `${hotel.name} (ID: ${hotel.id})` : 'Hotel not found in local list');
-                
                 try {
                     // console.log('[TopMenu] Watcher: Fetching waitlist entries...');
                     await waitlistStore.fetchWaitlistEntries(newHotelId, { 

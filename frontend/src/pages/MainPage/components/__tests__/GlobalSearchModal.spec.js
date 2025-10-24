@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import GlobalSearchModal from '../GlobalSearchModal.vue';
-import ReservationSearchBar from '../../../../components/ReservationSearchBar.vue';
 import { ref } from 'vue';
 import PrimeVue from 'primevue/config';
 

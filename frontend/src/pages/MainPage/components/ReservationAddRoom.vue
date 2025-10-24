@@ -201,7 +201,7 @@ const handleReservationSave = async (reservationData) => {
 
         if (response.ok) {
             const data = await response.json();
-            const { reservation, reservationDetails } = data;
+            const { reservation } = data;
             toast.add({ severity: 'success', summary: '成功', detail: '保留中予約作成されました。', life: 3000 });
 
             await fetchMyHoldReservations();
@@ -298,7 +298,7 @@ watch([today, tomorrow], ([checkInDate, checkOutDate]) => {
     }
 }, { immediate: true });
 watch(() => numberOfPeople.value,
-    (newNumber) => {
+    () => {
         reservationDetails.value.number_of_people = numberOfPeople.value;
     });
 

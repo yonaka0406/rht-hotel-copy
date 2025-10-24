@@ -13,7 +13,7 @@
         <img src="@/assets/logo-simple.png" alt="ホテル管理システム" class="h-8 mr-1" />
         <span class="text-2xl font-semibold">WeHub</span>
       </div>
-      <img v-else="isCollapsed" src="@/assets/logo-simple.png" alt="ホテル管理システム" class="h-8 mr-1" />
+      <img v-else src="@/assets/logo-simple.png" alt="ホテル管理システム" class="h-8 mr-1" />
 
       <Button @click="toggleSidebar"
         class="p-2 text-white rounded-md hover:bg-emerald-700 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
@@ -165,7 +165,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 // Define props
-const props = defineProps({
+defineProps({
   isCollapsed: {
     type: Boolean,
     required: true
@@ -355,14 +355,13 @@ onMounted(async () => {
 
 watch(
   selectedHotelId,
-  (newVal, oldVal) => {
+  (newVal, _oldVal) => {
     // console.group('[SideMenu] Hotel Selection Changed');
     // console.log('Previous Hotel ID:', oldVal);
     // console.log('New Hotel ID:', newVal);
     
     if (newVal) {
-      const hotel = hotels.value?.find(h => h.id === newVal);
-      // console.log('Selected Hotel:', hotel ? `${hotel.name} (ID: ${hotel.id})` : 'Hotel not found');
+
     } else {
       // console.log('No hotel selected');
     }
