@@ -261,7 +261,7 @@ const confirmDelete = (data) => {
 };
 const deleteBlockedRoomAction = async (id) => {
     try {
-        const response = await removeCalendarSettings(id);
+        await removeCalendarSettings(id);
 
         toast.add({ severity: 'success', summary: '成功', detail: '販売不可設定を削除しました。', life: 3000 });
         fetchBlockedRooms(selectedHotelId.value);

@@ -171,7 +171,7 @@ const saveChanges = async () => {
     
     toast.add({ severity: 'success', summary: '成功', detail: '部屋情報が更新されました。', life: 3000 });
     emit('save');
-  } catch (error) {
+  } catch {
     toast.add({ severity: 'error', summary: 'エラー', detail: '保存に失敗しました。', life: 3000 });
   }
 };

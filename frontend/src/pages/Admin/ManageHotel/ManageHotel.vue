@@ -233,8 +233,7 @@ const editRooms = async (hotel) => {
   try {
     selectedHotel.value = { ...hotel };
     await fetchRoomTypes(hotel.id);
-    roomsDialogVisible.value = true;
-  } catch (error) {
+  } catch {
     toast.add({
       severity: 'error',
       summary: 'エラー',
@@ -258,14 +257,14 @@ const editRoomTypes = async (hotel) => {
     selectedHotel.value = { ...hotel };
     await fetchRoomTypes(hotel.id);
     roomTypesDialogVisible.value = true;
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'エラー',
-      detail: '部屋の取得に失敗しました',
-      life: 3000
-    });
-  }
+    } catch {
+      toast.add({
+        severity: 'error',
+        summary: 'エラー',
+        detail: '部屋の取得に失敗しました',
+        life: 3000
+      });
+    }
 };
 const saveRoomTypes = async () => {
   try {
