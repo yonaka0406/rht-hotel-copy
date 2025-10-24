@@ -574,11 +574,11 @@
                 toast.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: data.error || 'Registration failed.',
+                    detail: result.error || 'Registration failed.',
                     life: 3000,
                 });
                 // If there's an error (e.g., email already exists), show error message
-                apiResponse = { type: 'error', message: result.error };
+                dialogErrorMessage.value = result.error;
             }                    
         } catch (err) {
             console.error(err);
@@ -588,7 +588,7 @@
                 detail: 'An error occurred. Please try again.',
                 life: 3000,
             });
-            apiResponse = { type: 'error', message: 'An error occurred. Please try again.' };                    
+            dialogErrorMessage.value = 'An error occurred. Please try again.';                    
         }
     };
 
@@ -638,11 +638,11 @@
                 toast.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: data.error || 'Update failed.',
+                    detail: result.error || 'Update failed.',
                     life: 3000,
                 });
                 // If there's an error (e.g., email already exists), show error message
-                apiResponse = { type: 'error', message: result.error };
+                dialogErrorMessage.value = result.error;
             }                    
         } catch (err) {
             console.error(err);
@@ -652,7 +652,7 @@
                 detail: 'An error occurred. Please try again.',
                 life: 3000,
             });
-            apiResponse = { type: 'error', message: 'An error occurred. Please try again.' };                    
+            dialogErrorMessage.value = 'An error occurred. Please try again.';                    
         }
         
     };

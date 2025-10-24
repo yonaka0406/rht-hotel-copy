@@ -1,5 +1,5 @@
 /* eslint-env vitest */
-/* global global, afterEach */
+/* global global */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useUserStore } from '../composables/useUserStore.js'
 

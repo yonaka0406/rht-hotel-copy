@@ -5,12 +5,12 @@ import pluginVue from "eslint-plugin-vue";
 
 
 export default [
-  {languageOptions: { globals: { ...globals.browser, node: true } }},
+  {languageOptions: { globals: { ...globals.browser, ...globals.vitest, node: true } }},
   pluginJs.configs.recommended,
   ...pluginVue.configs["flat/essential"],
   {
     rules: {
-      'no-unused-vars': ['error', { 'caughtErrorsIgnorePattern': '^_' }]
+      'no-unused-vars': ['error', { 'caughtErrorsIgnorePattern': '^_', 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_' }]
     }
   }
 ];

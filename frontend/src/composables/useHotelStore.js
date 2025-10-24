@@ -159,6 +159,33 @@ export function useHotelStore() {
         }
     };
 
+    const createHotel = async (hotelData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/hotels', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(hotelData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create hotel');
+            }
+
+            const result = await response.json();
+            // After creating a hotel, refresh the list of hotels
+            await fetchHotels();
+            return result;
+        } catch (error) {
+            console.error('Failed to create hotel', error);
+            throw error; // Re-throw to be handled by the component
+        }
+    };
+
     // Room
     const fetchHotelRoomTypes = async () => {
         try {
@@ -175,6 +202,56 @@ export function useHotelStore() {
             return result;                        
         } catch (error) {
             console.error('Failed to fetch hotels info', error);
+        }
+    };
+
+    const createRoomType = async (roomTypeData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/room-types', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(roomTypeData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create room type');
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to create room type', error);
+            throw error;
+        }
+    };
+
+    const createRoom = async (roomData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/rooms', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(roomData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create room');
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to create room', error);
+            throw error;
         }
     };    
     const fetchBlockedRooms = async () => {
@@ -351,6 +428,9 @@ export function useHotelStore() {
         removeCalendarSettings,
         getRoomAssignmentOrder,
         updateRoomAssignmentOrder,
-        updateRoom,      
+        updateRoom,
+        createHotel,
+        createRoomType,
+        createRoom,
     };    
 }

@@ -169,7 +169,7 @@
     };
 
     // Watch for dark mode changes and update charts
-    watch(isDark, (newVal) => {
+    watch(isDark, () => {
         // Dispose and re-init charts with new theme
         if (myHalfPie && myHalfPie.dispose) myHalfPie.dispose();
         if (loyaltyTierChartInstance && loyaltyTierChartInstance.dispose) loyaltyTierChartInstance.dispose();

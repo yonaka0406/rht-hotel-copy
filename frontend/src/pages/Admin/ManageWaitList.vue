@@ -589,17 +589,8 @@ onMounted(async () => {
 // Improved watcher: if end is set before or equal to start, set start to one day before end. If start is set after or equal to end, set end to one day after start.
 let lastChanged = null;
 
-watch(
-  (oldVal) => {
-    lastChanged = 'start';
-  }
-);
-watch(
-  () => filters.checkInEndDate,
-  (oldVal) => {
-    lastChanged = 'end';
-  }
-);
+
+
 
 watch([
   () => filters.checkInStartDate,

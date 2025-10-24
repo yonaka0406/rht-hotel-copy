@@ -24,16 +24,16 @@
 </template>
 <script setup>
     // Vue
-    import { ref, onMounted, watch } from "vue";
+    import { ref, watch } from "vue";
     import { useRoute, useRouter } from 'vue-router';
     const route = useRoute();
-    const router = useRouter();
+
 
     import ClientGroupBasicInfo from './components/ClientGroupBasicInfo.vue';
     import ClientGroupReservationHistory from './components/ClientGroupReservationHistory.vue';
 
     // Primevue    
-    import { Tabs, TabList, Tab, TabPanels, TabPanel, Badge } from 'primevue';
+    import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
