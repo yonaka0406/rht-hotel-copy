@@ -474,6 +474,12 @@
             }
         } catch (error) {
             console.error("Error fetching roles:", error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: 'ロールの取得に失敗しました。',
+                life: 3000,
+            });
         }
     };
 
@@ -672,7 +678,8 @@
                 life: 3000,
             });
             cancelEditDialog();
-        } catch (error) {                    
+        } catch (error) {
+            console.error("Error sending reset password email:", error);
             toast.add({
                 severity: 'error',
                 summary: 'Error',

@@ -662,9 +662,7 @@
     return true;
   };
 
-  const activateCallback = async (newStep) => {
-    currentStep.value = newStep;
-  };
+
 
   // Save Data
 
@@ -768,7 +766,7 @@
 
   watch(
     () => hotel.open_date,
-    (newVal, oldVal) => {
+    (newVal) => {
       // console.log('hotel changed from', oldVal, 'to', newVal);
 
       // If the date is already a Date object, format it to YYYY-MM-DD

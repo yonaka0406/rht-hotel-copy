@@ -44,7 +44,7 @@
 
     // Stores
     import { useXMLStore } from '@/composables/useXMLStore';
-    const { template, tlPlanMaster, fetchServiceName, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchTLPlanMaster, insertTLPlanMaster } = useXMLStore();
+    const { template, tlPlanMaster, fetchXMLTemplate, insertXMLResponse, fetchTLPlanMaster, insertTLPlanMaster } = useXMLStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, fetchPlansForHotel } = usePlansStore();
     
@@ -114,7 +114,7 @@
         const returnData = data['S:Envelope']['S:Body']['ns2:executeResponse']['return'];
 
         const planGroupList = returnData.planGroupList;        
-        const planList = returnData.planList;
+
         
         const plans = [];
         

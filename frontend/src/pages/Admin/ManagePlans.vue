@@ -382,7 +382,7 @@
   
 <script setup>
   // Vue
-  import { ref, computed, onMounted, watch } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
 
   import ManagePlansRates from '@/pages/Admin/ManagePlansRates.vue';
   import ManagePlansPatterns from '@/pages/Admin/ManagePlansPatterns.vue';

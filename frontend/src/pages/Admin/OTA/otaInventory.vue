@@ -95,7 +95,7 @@
 
     // Stores
     import { useXMLStore } from '@/composables/useXMLStore';
-    const { template, fetchServiceName, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchInventoryForTL, updateTLInventory } = useXMLStore();
+    const { template, fetchXMLTemplate, insertXMLResponse, fetchInventoryForTL, updateTLInventory } = useXMLStore();
     
     // Primevue
     import { useToast } from 'primevue/usetoast';

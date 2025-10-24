@@ -590,13 +590,13 @@ onMounted(async () => {
 let lastChanged = null;
 
 watch(
-  (_newVal, oldVal) => {
+  (oldVal) => {
     lastChanged = 'start';
   }
 );
 watch(
   () => filters.checkInEndDate,
-  (_newVal, oldVal) => {
+  (oldVal) => {
     lastChanged = 'end';
   }
 );

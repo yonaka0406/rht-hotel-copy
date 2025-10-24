@@ -51,7 +51,7 @@
 
     // Stores
     import { useXMLStore } from '@/composables/useXMLStore';
-    const { template, tlRoomMaster, fetchServiceName, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchTLRoomMaster, insertTLRoomMaster } = useXMLStore();
+    const { template, tlRoomMaster, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchTLRoomMaster, insertTLRoomMaster } = useXMLStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { fetchHotelRoomTypes } = useHotelStore();
     

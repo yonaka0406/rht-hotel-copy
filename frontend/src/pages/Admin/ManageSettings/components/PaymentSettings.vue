@@ -166,7 +166,7 @@ const addNewPaymentData = async () => {
         resetNewPaymentData();
         await fetchPaymentTypes();
         showPaymentDialog.value = false;
-    } catch {
+    } catch (_error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '作成に失敗しました。', life: 3000 });
     }
 };
