@@ -19,8 +19,7 @@
             <template v-else-if="metric.title === '空室数' && metric.blockedRoomsCount">
               <div class="flex items-center justify-center gap-2 mt-1">
                 <span class="text-sm text-gray-600 dark:text-gray-300">部屋ブロック</span>
-                <Badge :value="metric.blockedRoomsCount" severity="danger" class="px-2 py-0.5 text-sm" />
-                <span class="text-sm text-gray-600 dark:text-gray-300">部屋</span>
+                <Badge :value="metric.blockedRoomsCount" severity="danger" class="px-2 py-0.5 text-sm" />                
               </div>
             </template>
           </div>

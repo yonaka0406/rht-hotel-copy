@@ -171,8 +171,10 @@
                         </Column>
                     </DataTable>
                 </template>
-                <template #footer class="text-right">
-                    売上は税込み、単位は円です。
+                <template #footer>
+                    <div class="text-right">
+                        売上は税込み、単位は円です。
+                    </div>
                 </template>
             </Card>
         </div>
