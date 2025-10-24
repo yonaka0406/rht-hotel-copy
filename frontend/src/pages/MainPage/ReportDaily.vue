@@ -35,22 +35,10 @@
     </div>
 </template>
   
-<script>
+<script setup>
     import { computed, ref, } from "vue";
     
     import { Card } from 'primevue';
-  
-    export default {
-        components: {
-            Card
-        },
-        setup() {
-                
-            return {
-                
-            }
-        },        
-    };
 </script>
 <style scoped>
 </style>
