@@ -10,7 +10,6 @@ export function useRoomCategorization(selectedDate) {
   const roomGroups = computed(() => {
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
-      console.error("[useRoomCategorization] Invalid selectedDate.value:", selectedDate.value);
       return [];
     }
 
@@ -42,27 +41,23 @@ export function useRoomCategorization(selectedDate) {
     const categorizedRooms = {
       checkOut: [],
       checkIn: [],
-      occupied: []
+      occupied: [],
+      roomChange: []
     };
 
-    // console.log("[useRoomCategorization] All Reservations:", allReservations);
     allReservations.forEach(room => {
-      // console.log("[useRoomCategorization] Processing room:", room.room_id, "Reservation ID:", room.id);
-      // console.log("[useRoomCategorization] Room details:", room);
       if (room.status === 'block') return; // Already handled
 
       const checkInDate = new Date(room.check_in);
       const checkOutDate = new Date(room.check_out);
 
       if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
-        console.warn('[useRoomCategorization] Invalid checkInDate or checkOutDate for room:', room);
         return;
       }
 
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
 
-      // console.log(`[useRoomCategorization] Room ${room.room_id}: isCheckInToday=${isCheckInToday}, isCheckOutToday=${isCheckOutToday}`);
       // Priority 1: Check-out today (highest priority)
       if (isCheckOutToday) {
         if (!categorizedRooms.checkOut.some(existingRoom => existingRoom.room_id === room.room_id)) {
@@ -73,10 +68,7 @@ export function useRoomCategorization(selectedDate) {
       else if (isCheckInToday) {
         // Ensure room_id is unique in checkIn category
         if (!categorizedRooms.checkIn.some(existingRoom => existingRoom.room_id === room.room_id)) {
-          // console.log(`[useRoomCategorization] Pushing room ${room.room_id} to checkIn. Reservation ID: ${room.id}`);
           categorizedRooms.checkIn.push(room);
-        } else {
-          // console.log(`[useRoomCategorization] Room ${room.room_id} already in checkIn category. Skipping reservation ID: ${room.id}`);
         }
       }
       // Priority 3: Currently allocated/reserved for this date (regardless of check-in status)
@@ -141,22 +133,205 @@ export function useRoomCategorization(selectedDate) {
 
     categorizedRooms.checkOut = finalCheckOutRooms;
 
+    // 4. ROOM CHANGES - Guests who changed rooms (were in a different room yesterday)
+    const dayBefore = new Date(selectedDateObj);
+    dayBefore.setDate(selectedDateObj.getDate() - 1);
+    const dayBeforeStr = formatDate(dayBefore);
+    const todayStr = formatDate(selectedDateObj);
+
+    // Group rooms by reservation ID to handle cases where details are split across multiple room entries
+    const roomsByReservation = {};
+    
+    // First, find all unique reservation IDs that have room changes
+    const reservationIds = new Set(categorizedRooms.occupied.map(room => room.id));
+    
+    // For each reservation, find all rooms that belong to it
+    for (const reservationId of reservationIds) {
+      // Find all rooms with this reservation ID that have details
+      const roomsForReservation = categorizedRooms.occupied.filter(room => 
+        room.id === reservationId && room.details?.length > 0
+      );
+      
+      if (roomsForReservation.length > 0) {
+        roomsByReservation[reservationId] = roomsForReservation;
+      }
+    }
+
+    // Find reservations with room changes
+    const roomChanges = [];
+    
+    Object.entries(roomsByReservation).forEach(([reservationId, rooms]) => {
+      // Get all rooms for the previous day
+      const previousDayRooms = [];
+      
+      // Check all rooms in the reservation to see if they were occupied on the previous day
+      rooms.forEach(room => {
+        if (!room.details || room.details.length === 0) {
+          return;
+        }
+        
+        // Find details for the previous day
+        const prevDayDetail = room.details.find(d => d.date === dayBeforeStr);
+        
+        // If we have an exact detail for the previous day, use it
+        if (prevDayDetail) {
+          previousDayRooms.push({
+            room_id: room.room_id,
+            room_number: room.room_number,
+            details: prevDayDetail
+          });
+        } 
+        // Otherwise, check if this room was occupied on the previous day by looking at check_in/check_out ranges
+        else {
+          // Find any detail where the previous day falls within its stay period
+          const relevantDetail = room.details.find(d => {
+            const checkIn = d.check_in || d.date;
+            const checkOut = d.check_out || d.date;
+            return checkIn <= dayBeforeStr && checkOut >= dayBeforeStr;
+          });
+            
+          if (relevantDetail) {
+            previousDayRooms.push({
+              room_id: room.room_id,
+              room_number: room.room_number,
+              details: relevantDetail
+            });
+          }
+        }
+      });
+      
+      // Get all rooms for the current day
+      const currentDayRooms = [];
+      
+      // Process rooms for current day
+      rooms.forEach(room => {
+        if (!room.details || room.details.length === 0) {
+          return;
+        }
+        
+        // Find details for the current day
+        const todayDetail = room.details.find(d => d.date === todayStr);
+        
+        // If we have an exact detail for today, use it
+        if (todayDetail) {
+          currentDayRooms.push({
+            room_id: room.room_id,
+            room_number: room.room_number,
+            details: todayDetail
+          });
+        } 
+        // Otherwise, check if this room is occupied today by looking at check_in/check_out ranges
+        else {
+          // Find any detail where today falls within its stay period
+          const relevantDetail = room.details.find(d => {
+            const checkIn = d.check_in || d.date;
+            const checkOut = d.check_out || d.date;
+            return checkIn <= todayStr && checkOut >= todayStr;
+          });
+            
+          if (relevantDetail) {
+            currentDayRooms.push({
+              room_id: room.room_id,
+              room_number: room.room_number,
+              details: relevantDetail
+            });
+          }
+        }
+      });
+      
+      // If no rooms for either day, skip
+      if (previousDayRooms.length === 0 || currentDayRooms.length === 0) {
+        return;
+      }
+      
+      // Find if any guest was in a different room the previous day
+      // We need to track which guests were in which rooms
+      
+      // Get all guest IDs from both days
+      const guestIds = new Set([
+        ...previousDayRooms.flatMap(room => room.details?.guest_id ? [room.details.guest_id] : []),
+        ...currentDayRooms.flatMap(room => room.details?.guest_id ? [room.details.guest_id] : [])
+      ]);
+      
+      // Check each guest's room change
+      let hasRoomChange = false;
+      
+      for (const guestId of guestIds) {
+        const prevRoom = previousDayRooms.find(r => r.details?.guest_id === guestId);
+        const currRoom = currentDayRooms.find(r => r.details?.guest_id === guestId);
+        
+        if (prevRoom && currRoom && prevRoom.room_id !== currRoom.room_id) {
+          roomChanges.push(rooms.find(r => r.room_id === currRoom.room_id));
+          hasRoomChange = true;
+        }
+      }
+      
+      // If no guest-specific room change was found, check for any room that was occupied 
+      // on the previous day but not the current day
+      if (!hasRoomChange) {
+        const previousRoomIds = new Set(previousDayRooms.map(r => r.room_id));
+        const currentRoomIds = new Set(currentDayRooms.map(r => r.room_id));
+        
+        const newRooms = [...currentRoomIds].filter(id => !previousRoomIds.has(id));
+        const departedRooms = [...previousRoomIds].filter(id => !currentRoomIds.has(id));
+        
+        if (newRooms.length > 0 || departedRooms.length > 0) {
+          // Only add the new rooms to changes
+          newRooms.forEach(roomId => {
+            const roomToAdd = rooms.find(r => r.room_id === roomId);
+            if (roomToAdd) {
+              roomChanges.push(roomToAdd);
+            }
+          });
+        }
+      }
+    });
+
+    // Remove room change guests from occupied category to avoid duplication
+    categorizedRooms.occupied = categorizedRooms.occupied.filter(room => 
+      !roomChanges.some(changeRoom => changeRoom.id === room.id && changeRoom.room_id === room.room_id)
+    );
+
+    // In case of room changes, multiple rooms can be listed for the same reservation.
+    // We need to select only the room the guest is in on the selected date.
+    const roomChangeGroups = roomChanges.reduce((acc, room) => {
+      const reservationId = room.id;
+      if (!acc[reservationId]) {
+        acc[reservationId] = [];
+      }
+      acc[reservationId].push(room);
+      return acc;
+    }, {});
+
+    const finalRoomChanges = Object.values(roomChangeGroups).flatMap(group => {
+      if (group.length <= 1) return group;
+      
+      // Find the room where the guest is staying on the selected date
+      return group.filter(room => 
+        room.details && room.details.some(detail => detail.date === todayStr)
+      ) || [group[0]]; // Fallback to first room if no match found
+    });
+
     // 5. FREE ROOMS - Rooms that are available or will become available (including check-outs)
     const unavailableRoomIds = new Set([
       ...blockedRooms.map(room => room.room_id),
       ...categorizedRooms.checkIn.map(room => room.room_id),
-      ...categorizedRooms.occupied.map(room => room.room_id)
+      ...categorizedRooms.occupied.map(room => room.room_id),
+      ...finalRoomChanges.map(room => room.room_id)
       // NOTE: We DON'T exclude check-out rooms because they become free after checkout
     ]);
 
-        // Note: categorizedRooms.occupied already contains overlapping rooms (excluding check-outs)
-        // and is already included in unavailableRoomIds above, so no additional exclusion needed.
+    // Note: categorizedRooms.occupied already contains overlapping rooms (excluding check-outs)
+    // and is already included in unavailableRoomIds above, so no additional exclusion needed.
     const freeRooms = selectedHotelRooms.value?.filter((room) =>
       room.room_for_sale_idc === true &&
       !unavailableRoomIds.has(room.room_id)
-    ) || []; const result = [
+    ) || [];
+
+    const result = [
       { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
       { title: '本日チェックアウト', rooms: categorizedRooms.checkOut, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
+      { title: '部屋移動', rooms: finalRoomChanges, color: 'bg-purple-100', darkColor: 'dark:bg-purple-900/30' },
       { title: '滞在', rooms: categorizedRooms.occupied, color: 'bg-yellow-100', darkColor: 'dark:bg-yellow-900/30' },
       { title: '空室', rooms: freeRooms, color: 'bg-gray-100', darkColor: 'dark:bg-gray-800' },
       { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100', darkColor: 'dark:bg-red-900/30' },

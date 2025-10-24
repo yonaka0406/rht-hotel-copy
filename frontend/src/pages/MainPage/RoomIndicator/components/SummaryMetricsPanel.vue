@@ -8,7 +8,22 @@
           <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ metric.title }}</span>
         </template>
         <template #content>
-          <p v-if="!isLoading" class="text-3xl font-bold text-gray-800 dark:text-white pt-1">{{ metric.count }}</p>
+          <div v-if="!isLoading" class="text-center">
+            <p class="text-3xl font-bold text-gray-800 dark:text-white pt-1">{{ metric.count }}</p>
+            <template v-if="metric.title === '滞在者数' && metric.roomMoveCount">
+              <div class="flex items-center justify-center gap-2 mt-1">
+                <span class="text-sm text-gray-600 dark:text-gray-300">その内、部屋移動</span>
+                <Badge :value="metric.roomMoveCount" severity="warn" class="px-2 py-0.5 text-sm" />
+              </div>
+            </template>
+            <template v-else-if="metric.title === '空室数' && metric.blockedRoomsCount">
+              <div class="flex items-center justify-center gap-2 mt-1">
+                <span class="text-sm text-gray-600 dark:text-gray-300">部屋ブロック</span>
+                <Badge :value="metric.blockedRoomsCount" severity="danger" class="px-2 py-0.5 text-sm" />
+                <span class="text-sm text-gray-600 dark:text-gray-300">部屋</span>
+              </div>
+            </template>
+          </div>
           <div v-else class="flex justify-center">
             <Skeleton width="3rem" height="2rem" class="mt-1"></Skeleton>
           </div>
@@ -22,6 +37,7 @@
 import { computed } from 'vue';
 import Card from 'primevue/card';
 import Skeleton from 'primevue/skeleton';
+import Badge from 'primevue/badge';
 
 const props = defineProps({
   roomGroups: {
@@ -39,6 +55,8 @@ const summaryMetrics = computed(() => {
   const checkOutCount = props.roomGroups.find(g => g.title === '本日チェックアウト')?.rooms.length || 0;
   const occupiedCount = props.roomGroups.find(g => g.title === '滞在')?.rooms.length || 0;
   const freeRoomsCount = props.roomGroups.find(g => g.title === '空室')?.rooms.length || 0;
+  const roomMoveCount = props.roomGroups.find(g => g.title === '部屋移動')?.rooms.length || 0;
+  const blockedRoomsCount = props.roomGroups.find(g => g.title === '部屋ブロック')?.rooms.length || 0;
 
   return [
     {
@@ -57,13 +75,15 @@ const summaryMetrics = computed(() => {
       title: '滞在者数',
       icon: 'pi pi-users',
       iconColor: 'text-yellow-500',
-      count: occupiedCount
+      count: occupiedCount + roomMoveCount,
+      roomMoveCount: roomMoveCount > 0 ? roomMoveCount : undefined
     },
     {
       title: '空室数',
       icon: 'pi pi-home',
       iconColor: 'text-gray-500',
-      count: freeRoomsCount
+      count: freeRoomsCount,
+      blockedRoomsCount: blockedRoomsCount > 0 ? blockedRoomsCount : undefined
     },
   ];
 });
