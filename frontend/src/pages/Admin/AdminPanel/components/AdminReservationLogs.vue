@@ -94,6 +94,14 @@
 </template>
 
 <script setup>
+// Vue
+import { ref, onMounted, watch, computed } from 'vue';
+
+import { formatDate } from '@/utils/dateUtils';
+import { useSystemLogs } from '@/composables/useSystemLogs';
+import { translateStatus, translateType } from '@/utils/reservationUtils';
+
+// Primevue
 import DatePicker from 'primevue/datepicker';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -101,14 +109,8 @@ import FloatLabel from 'primevue/floatlabel';
 import Button from 'primevue/button'; // Import Button component
 import Select from 'primevue/select'; // Import Select component
 import Badge from 'primevue/badge'; // Import Badge component
-import { ref, onMounted, watch, computed } from 'vue';
-import { useToast } from 'primevue/usetoast';
-import { formatDate } from '@/utils/dateUtils';
-import { useSystemLogs } from '@/composables/useSystemLogs';
-import { translateStatus, translateType } from '@/utils/reservationUtils';
-import { FilterMatchMode } from '@primevue/core/api'; // Import FilterMatchMode
 
-const toast = useToast();
+import { FilterMatchMode } from '@primevue/core/api'; // Import FilterMatchMode
 
 const selectedDate = ref(new Date());
 const { logs: rawTransformedLogs, loading, fetchLogs: systemLogsFetchLogs } = useSystemLogs();
