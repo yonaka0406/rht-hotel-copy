@@ -5,6 +5,90 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### October 24, 2025
+
+#### Feature #87: Parking Module Enhancements
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  Enhance the parking module to support managing multiple parking spots with specific configurations and restrictions, similar to the room reservation system.
+- **Requirements**:
+  - **Multiple Spot Registration**:
+    - Allow adding/editing multiple parking spots in a single operation
+    - Add bulk selection and management features
+    - Support for selecting multiple consecutive spots at once
+  - **Spot Configuration**:
+    - Add "inline position" flag to mark spots that are in a row (縦列)
+    - Add "winter availability" flag to mark spots that are not available during winter
+    - Visual indicators in the UI for special spot attributes
+  - **Calendar View**:
+    - Implement a calendar view similar to room reservations
+    - Visual distinction for different spot types and restrictions
+    - Blocking functionality for maintenance or special events
+  - **Reservation Integration**:
+    - Allow assigning multiple parking spots to a single reservation
+    - Show parking spot assignments in the reservation details
+    - Validate spot availability based on restrictions
+- **User Story**:
+  As a hotel staff member,
+  I want to manage parking spots with the same flexibility as room reservations
+  So that I can efficiently handle parking assignments and restrictions
+- **Technical Notes**:
+  - Will require database updates for new spot attributes
+  - Need to update the parking spot management UI
+  - Should integrate with existing reservation system
+  - Consider adding reporting for parking spot utilization
+  - Need to handle edge cases like partial winter availability
+
+
+### October 24, 2025
+
+#### Feature #86: OTA Reservation Display Enhancement
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  Currently, OTA reservations are displayed with a single color in the calendar and statistics calendar views. The request is to display them using the same color scheme as regular reservations (based on their plan type) while maintaining a visual distinction for OTA bookings.
+- **Requirements**:
+  - Display OTA reservations with the same background color as their respective plan types (matching regular reservations)
+  - Add a visual distinction for OTA reservations, such as:
+    - Different text color (e.g., white text for OTA vs black for regular)
+    - A small OTA badge/icon next to the reservation
+    - A subtle border or pattern overlay
+  - Apply these changes to both the main calendar view and statistics calendar view
+  - Ensure the OTA status remains clearly visible in list and detailed views
+- **User Story**:
+  As a hotel staff member,
+  I want to see OTA reservations with the same color coding as regular reservations
+  So that I can quickly identify the plan type while still being able to distinguish OTA bookings
+- **Technical Notes**:
+  - Will require updates to the calendar rendering components
+  - Need to ensure the visual distinction is accessible (sufficient color contrast)
+  - Consider adding a legend/key to explain the OTA indicators
+  - May need to update any existing color scheme logic to accommodate this change
+
+
+### October 24, 2025
+
+#### Feature #85: Room Movement Date Range Selection
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  In the calendar view, when double-clicking to select dates for room movement, the current behavior only allows selecting one day at a time. The request is to modify this to allow selecting a range of dates in one action.
+- **Requirements**:
+  - When a user double-clicks on a date, if no range is currently selected, it should start a new range selection
+  - If a range is already started, the second click should complete the range selection (from first click to second click)
+  - If the user clicks on a date that's not contiguous with the current selection, it should start a new range instead of clearing the current selection
+  - The selection should work across multiple days, weeks, or months as needed
+  - The UI should clearly indicate the currently selected date range
+- **User Story**:
+  As a hotel staff member,
+  I want to select a date range for room movements in one action
+  So that I can move guests between rooms for multiple days more efficiently
+- **Technical Notes**:
+  - This will require updates to the calendar component's date selection logic
+  - Need to ensure the date range validation works with existing room availability checks
+  - Should maintain backward compatibility with any existing single-day selection functionality
+
 ### October 23, 2025
 
 #### Bug #84: Update Invoice with Customer Code
