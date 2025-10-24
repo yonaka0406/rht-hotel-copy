@@ -254,7 +254,7 @@ const saveHotel = async () => {
     emit('hotel-updated');
     emit('update:visible', false);
     toast.add({ severity: 'success', summary: '成功', detail: 'ホテル更新されました。', life: 3000 });
-  } catch (error) {
+  } catch (_error) {
     toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルの保存に失敗しました', life: 3000 });
   }
 };

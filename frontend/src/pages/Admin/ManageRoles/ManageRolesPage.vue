@@ -117,7 +117,6 @@ const {
     submitPermissionsChange,
     createRole,
     submitNewRole,
-    deleteRole,
     confirmDelete,
     cancelDialog,
 } = useManageRoles();

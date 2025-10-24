@@ -238,7 +238,7 @@
 
 <script setup>
     // Vue
-    import { ref, watch, computed, onMounted } from 'vue';
+    import { ref, computed, onMounted } from 'vue';
     const props = defineProps({
         plan: {
             type: Object,

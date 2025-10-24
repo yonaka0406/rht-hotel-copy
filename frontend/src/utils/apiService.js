@@ -1,5 +1,4 @@
 // utils/apiService.js
-import { useRouter } from 'vue-router';
 
 class ApiService {
   constructor() {

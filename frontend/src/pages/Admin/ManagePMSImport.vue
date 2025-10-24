@@ -304,7 +304,7 @@
 
             reader.readAsArrayBuffer(file);
             
-        } catch (error) {
+        } catch (_error) {
             loading.value = false;
         }
         

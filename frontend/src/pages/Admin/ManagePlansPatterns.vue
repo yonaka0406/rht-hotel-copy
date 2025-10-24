@@ -598,7 +598,7 @@
 
     });
 
-    watch(dayPlanSelections, (newSelections) => {
+    watch(dayPlanSelections, () => {
         // console.log('dayPlanSelections changed:', newSelections);
     }, { deep: true });
 

@@ -126,7 +126,7 @@ const addNewTaxData = async () => {
         resetNewTaxData();
         await fetchTaxTypes();
         showTaxDialog.value = false;
-    } catch (error) {
+    } catch (_error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '作成に失敗しました。', life: 3000 });
     }
 };

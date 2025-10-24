@@ -382,7 +382,7 @@
   
 <script setup>
   // Vue
-  import { ref, computed, watch, onMounted } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
 
   import ManagePlansRates from '@/pages/Admin/ManagePlansRates.vue';
   import ManagePlansPatterns from '@/pages/Admin/ManagePlansPatterns.vue';
@@ -410,7 +410,7 @@
   const globalPlans = ref([]);
   const hotelPlans = ref([]); 
   const loading = ref(false);
-  const error = ref(null);  
+  
   const sb_options = ref([
     { label: '部屋', value: 'per_room' },
     { label: '１人当たり', value: 'per_person' },

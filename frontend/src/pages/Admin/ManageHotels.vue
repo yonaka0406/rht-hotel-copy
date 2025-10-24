@@ -410,6 +410,7 @@
   import Checkbox from 'primevue/checkbox';
   
   const currentStep = ref('1');
+
   const roomTypeDialog = ref(false);
   const saving = ref(false);
   const editingRoomType = ref(null);
@@ -546,7 +547,7 @@
               life: 3000
             });
           }
-        } catch (error) {
+        } catch (_error) {
           toast.add({
             severity: 'error',
             summary: 'エラー',
