@@ -72,7 +72,6 @@ import Column from 'primevue/column';
 import Button from 'primevue/button';
 import ProgressSpinner from 'primevue/progressspinner';
 import ToggleButton from 'primevue/togglebutton';
-import Tooltip from 'primevue/tooltip';
 import { useValidationStore } from '@/composables/useValidationStore';
 import { formatDate } from '@/utils/dateUtils';
 import { translateStatus, translateType } from '@/utils/reservationUtils';

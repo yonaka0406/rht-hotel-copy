@@ -109,7 +109,6 @@ import { translateStatus, translateType } from '@/utils/reservationUtils';
 import { FilterMatchMode } from '@primevue/core/api'; // Import FilterMatchMode
 
 const toast = useToast();
-const selectedDate = ref(new Date());
 const { logs: rawTransformedLogs, loading, fetchLogs: systemLogsFetchLogs } = useSystemLogs();
 
 const transformedLogsForTable = computed(() => {
@@ -215,7 +214,7 @@ onMounted(() => {
   loadLogs();
 });
 
-watch(selectedDate, (newDate) => {
+watch(selectedDate, () => {
   loadLogs();
 });
 

@@ -301,8 +301,8 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {                
-            }
+            } catch { /* Ignore errors during link click, as it's a fallback */ }
+
 
             return { success: true };
 
@@ -351,8 +351,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {                
-            }
+} catch { /* Ignore errors during link click, as it's a fallback */ }
 
             return { success: true };
 
@@ -400,8 +399,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {                
-            }
+            } catch { /* Ignore errors during link click, as it's a fallback */ }
 
             return { success: true };
 
@@ -454,8 +452,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-            } catch {                
-            }
+            } catch { /* Ignore errors during link click, as it's a fallback */ }
 
             return { success: true };
 

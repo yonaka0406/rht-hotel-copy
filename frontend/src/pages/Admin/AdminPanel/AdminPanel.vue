@@ -120,13 +120,8 @@ const { logged_user, fetchUser } = useUserStore();
 import Menubar from 'primevue/menubar';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
-import Drawer from 'primevue/drawer';
 import { usePrimeVue } from 'primevue/config';
 const primevue = usePrimeVue();
-import Select from 'primevue/select';
-import InputText from 'primevue/inputtext';
-import DatePicker from 'primevue/datepicker';
-import { useToast } from 'primevue/usetoast';
 
 // Components
 import AdminDashboard from './components/AdminDashboard.vue';

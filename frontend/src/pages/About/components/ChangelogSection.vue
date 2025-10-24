@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { Select, Button } from 'primevue';
 import Tag from 'primevue/tag';
 import changelogData from '../data/changelog-ja.json';

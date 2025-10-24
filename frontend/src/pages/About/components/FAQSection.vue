@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import FAQSearchBar from './FAQSearchBar.vue';
 import FAQCategory from './FAQCategory.vue';
 import faqData from '../data/faq-content.json';
