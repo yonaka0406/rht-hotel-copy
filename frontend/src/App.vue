@@ -3,24 +3,14 @@
     <Toast />
     <ConfirmDialog />
     <main>
-        <router-view></router-view>
+      <router-view></router-view>
     </main>
   </div>
 </template>
 
-<script>
+<script setup>
 import Toast from 'primevue/toast';
-import ConfirmDialog from 'primevue/confirmdialog'; // Import ConfirmDialog
-
-export default {
-  name: 'App',
-  components: {
-    Toast,
-    ConfirmDialog, // Register ConfirmDialog
-  },
-}
+import ConfirmDialog from 'primevue/confirmdialog';
 </script>
 
-<style>
-
-</style>
+<style></style>
