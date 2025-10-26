@@ -568,6 +568,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.27] - 2025-10-27
+
+- Feature: Added to room indicator the clients changing room information.
+- Bugfix: On reservation split, keep the basic information such as comment, OTA ID and payment timing.
+
+---
+
 ## Version History
 
 - **1.1.25** (2025-10-21) - Fixed date range cancellation issues and added Google Sheets queue table for optimized API request handling, improving export reliability.
