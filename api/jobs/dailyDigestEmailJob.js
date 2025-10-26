@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { defaultLogger } = require('../config/logger');
+const defaultLogger = require('../config/logger');
 const { sendGenericEmail } = require('../utils/emailUtils');
 const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
 const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
