@@ -230,7 +230,7 @@ const selectXMLTemplate = async (requestId, hotel_id, name) => {
 
         return xml;
     } catch (error) {
-        console.error("Error selecting XML template:", error.message);
+        console.error(`Error selecting XML template for hotel_id ${hotel_id} and name ${name}:`, error.message);
         throw error; // Rethrow to be handled by the caller
     }
 };
