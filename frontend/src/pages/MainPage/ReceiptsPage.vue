@@ -53,7 +53,7 @@
                     <template #empty> 指定されている期間中に支払情報はありません。 </template>
                     
                     <Column field="client_name" filterField="client_name" header="顧客名" style="width:1%" :showFilterMenu="false">
-                        <template #filter="{ filterModel }">
+                        <template #filter="{ _filterModel }">
                             <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
                         </template>
                     </Column>
@@ -126,13 +126,13 @@
 </template>
 <script setup>
     // Vue
-    import { ref, shallowRef, watch, computed, onMounted } from 'vue';
+    import { ref, watch, computed, onMounted } from 'vue';
     import ReceiptGenerationDialog from '@/pages/MainPage/components/ReceiptGenerationDialog.vue';
 
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, Card, DatePicker, AutoComplete, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge, FloatLabel } from 'primevue';
+    import { Panel, DatePicker, InputText, Button, DataTable, Column } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -142,8 +142,6 @@
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
-    import { useSettingsStore } from '@/composables/useSettingsStore';
-    const settingsStore = useSettingsStore();
 
     // Helper function (can be moved to a utils file)
     const formatDate = (date) => {
@@ -215,7 +213,7 @@
     };
 
     // Generate consolidated receipt for a group
-    async function generateConsolidatedReceiptForGroup(groupItemData) {
+    async function _generateConsolidatedReceiptForGroup(groupItemData) {
         // Ensure groupKey is derived correctly from groupItemData, which is the first item of the group
         const groupKey = groupItemData.client_payment_date_group;
         const paymentsToConsolidate = getConsolidatablePayments(groupItemData);
@@ -504,7 +502,7 @@
     });
 
     watch(() => selectedHotelId.value,
-        async (newHotelId, oldHotelId) => {
+        async (_newHotelId, _oldHotelId) => {
             // Ensure hotels are loaded before trying to fetch dependent data
             if (!selectedHotelId.value && fetchHotels) { // Make sure fetchHotels is available
                 await fetchHotels();
