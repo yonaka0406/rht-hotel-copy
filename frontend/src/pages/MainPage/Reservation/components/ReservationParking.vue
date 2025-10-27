@@ -82,7 +82,7 @@
 
 <script setup>
 // Vue
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 import ParkingAddonDialog from '@/pages/MainPage/components/Dialogs/ParkingAddonDialog.vue';
 import ParkingActiveSpotsDialog from '@/pages/MainPage/components/Dialogs/ParkingActiveSpotsDialog.vue';
@@ -264,12 +264,6 @@ const canAddParking = computed(() => {
   return reservationDetailId.value && reservationDates.value.length > 0;
 });
 
-const fullyAssignedCount = computed(() => {
-  return parkingAssignments.value.filter(assignment => 
-    assignment.spotId && assignment.vehicleCategoryId
-  ).length;
-});
-
 const selectedRoomParkingSpots = computed(() => {
   if (!selectedRoomId.value) return [];
   
@@ -308,20 +302,6 @@ const openAddParkingDialog = () => {
     spotId: null
   };
   dialogInitialDates.value = reservationDates.value;
-  showParkingDialog.value = true;
-};
-
-const openEditParkingDialog = (assignment) => {
-  isEditMode.value = true;
-  editingAssignmentId.value = assignment.id;
-  dialogAddonData.value = {
-    name: assignment.name || '駐車場',
-    comment: assignment.comment || '',
-    unitPrice: assignment.unitPrice || 1000,
-    vehicleCategoryId: assignment.vehicleCategoryId,
-    spotId: assignment.spotId
-  };
-  dialogInitialDates.value = assignment.dates || reservationDates.value;
   showParkingDialog.value = true;
 };
 
