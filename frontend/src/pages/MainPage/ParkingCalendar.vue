@@ -777,7 +777,7 @@
         // console.log('Connected to server');
       });      
 
-      socket.value.on('tableUpdate', async (data) => {
+      socket.value.on('tableUpdate', async (_data) => {
         // Prevent fetching if bulk update is in progress
         if (isUpdating.value) {
           // console.log('Skipping fetchParkingReservationsLocal because update is still running');
