@@ -38,14 +38,17 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
     if (!allRoomsSelected) {
         console.log(`[${requestId}] Inside !allRoomsSelected block. allRoomsSelected is: ${allRoomsSelected}`);
         // Calculate total people being moved for the new reservation
+        // Calculate total people being moved for the new reservation by summing number_of_people for selected rooms on the original check-in date
         const peopleQuery = `
-            SELECT COUNT(DISTINCT room_id) as total_rooms_moved
-            FROM reservation_details
-            WHERE reservation_id = $1 AND room_id = ANY($2::int[]);
+            SELECT COALESCE(SUM(rd.number_of_people), 0) as total_people_moved
+            FROM reservation_details rd
+            WHERE rd.reservation_id = $1
+              AND rd.room_id = ANY($2::int[])
+              AND rd.date = $3;
         `;
         try {
-            const peopleResult = await client.query(peopleQuery, [originalReservationId, roomIds]);
-            totalPeopleMoved = peopleResult.rows[0].total_rooms_moved || 0;
+            const peopleResult = await client.query(peopleQuery, [originalReservationId, roomIds, originalReservation.check_in]);
+            totalPeopleMoved = peopleResult.rows[0].total_people_moved || 0;
         } catch (queryError) {
             console.error(`[${requestId}] Error executing peopleQuery:`, queryError);
             throw queryError;
@@ -85,7 +88,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
         const origCheckInDate = new Date(originalReservation.check_in);
 
         const newCheckInUTC = Date.UTC(newCheckInDate.getFullYear(), newCheckInDate.getMonth(), newCheckInDate.getDate());
-        const origCheckInUTC = Date.UTC(origCheckInDate.getUTCFullYear(), origCheckInDate.getUTCMonth(), origCheckInDate.getUTCDate());
+        const origCheckInUTC = Date.UTC(origCheckInDate.getFullYear(), origCheckInDate.getMonth(), origCheckInDate.getDate()); // Changed to local getters
 
         const dateShift = newCheckInUTC - origCheckInUTC;
         console.log(`[${requestId}] Date shift in ms: ${dateShift}`);
@@ -99,7 +102,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                 updated_by = $3
             WHERE reservation_id = $4 AND room_id = ANY($5::int[])
         `;
-        await client.query(updateDetailsQuery, [newReservationId, interval, userId, originalReservationId, roomIds]);
+        const updateResult = await client.query(updateDetailsQuery, [newReservationId, interval, userId, originalReservationId, roomIds]);
         console.log(`[${requestId}] Updated ${updateResult.rowCount} reservation_details.`);        
 
     } else { // Duration has changed. Recreating reservation_details records.
@@ -228,7 +231,12 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
 
     // Recalculate and update number_of_people for original reservation ONLY if not all rooms were selected
     if (!allRoomsSelected) {
-        const originalReservationPeopleSumQuery = 'SELECT COUNT(DISTINCT room_id) as total_people FROM reservation_details WHERE reservation_id = $1';
+        const originalReservationPeopleSumQuery = `
+            SELECT COALESCE(SUM(number_of_people), 0) as total_people
+            FROM reservation_details
+            WHERE reservation_id = $1
+              AND date = (SELECT MIN(date) FROM reservation_details WHERE reservation_id = $1);
+        `;
         const originalPeopleResult = await client.query(originalReservationPeopleSumQuery, [originalReservationId]);
         const originalTotalPeople = originalPeopleResult.rows[0].total_people || 0;
         await client.query('UPDATE reservations SET number_of_people = $1, updated_by = $2 WHERE id = $3', [originalTotalPeople, userId, originalReservationId]);
@@ -237,7 +245,12 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
 
         // If a new reservation was created, recalculate and update its number_of_people
         if (newReservationId !== originalReservationId) {
-            const newReservationPeopleSumQuery = 'SELECT COUNT(DISTINCT room_id) as total_people FROM reservation_details WHERE reservation_id = $1';
+            const newReservationPeopleSumQuery = `
+                SELECT COALESCE(SUM(number_of_people), 0) as total_people
+                FROM reservation_details
+                WHERE reservation_id = $1
+                  AND date = (SELECT MIN(date) FROM reservation_details WHERE reservation_id = $1);
+            `;
             const newPeopleResult = await client.query(newReservationPeopleSumQuery, [newReservationId]);
             const newTotalPeople = newPeopleResult.rows[0].total_people || 0;
             await client.query('UPDATE reservations SET number_of_people = $1, updated_by = $2 WHERE id = $3', [newTotalPeople, userId, newReservationId]);
