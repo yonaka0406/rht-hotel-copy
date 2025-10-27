@@ -763,9 +763,9 @@ const goToEditReservationPage = async (reservation_id) => {
 
 // Watcher
 watch(() => selectedHotel.value,
-  async (_newVal, _oldVal) => {
+  async (newVal, oldVal) => {
     //console.log('Watcher triggered:', { newVal, oldVal });
-    if (_newVal !== _oldVal && _oldVal !== null) {
+    if (newVal !== oldVal && oldVal !== null) {
       //console.log('New hotel selected.');
 
       // Reset and fetch new data
