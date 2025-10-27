@@ -184,7 +184,7 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { clients, selectedClientAddress, fetchClients, fetchClient, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
+    const { clients, fetchClients, fetchClient, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
     import { useReservationStore } from '@/composables/useReservationStore';
     const { setReservationClient } = useReservationStore();
 
