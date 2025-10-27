@@ -368,13 +368,16 @@
                                 </div>
                             </template>
                         </Card>
+                        <Message v-if="!areAllRoomsSelectedComputed" severity="info" :closable="false" class="mt-2 mb-6">
+                            選択された部屋は新しい予約に移動されます。
+                        </Message>
                         <p class="mt-2 mb-6"><span class="font-bold">注意：</span>全ての部屋宿泊期間を変更できる日付が表示されています。</p>
                         <div class="grid grid-cols-2 gap-4 items-center">
                             <div>
                                 <FloatLabel>
                                     <label for="checkin">チェックイン</label>
                                     <DatePicker id="checkin" v-model="newCheckIn" :showIcon="true"
-                                        :minDate="minCheckIn || undefined" :maxDate="maxCheckOut || undefined"
+                                        :minDate="computedMinCheckIn || undefined" :maxDate="computedMaxCheckOut || undefined"
                                         iconDisplay="input" dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
                                 </FloatLabel>
                             </div>
@@ -382,7 +385,7 @@
                                 <FloatLabel>
                                     <label for="checkout">チェックアウト</label>
                                     <DatePicker id="checkout" v-model="newCheckOut" :showIcon="true"
-                                        :minDate="minCheckIn || undefined" :maxDate="maxCheckOut || undefined"
+                                        :minDate="computedMinCheckIn || undefined" :maxDate="computedMaxCheckOut || undefined"
                                         iconDisplay="input" dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
                                 </FloatLabel>
                             </div>
@@ -749,6 +752,51 @@ const cancellationFeeMessage = computed(() => {
 
 const numberOfNights = ref(0);
 const numberOfNightsTotal = ref(0);
+
+const computedMinCheckIn = computed(() => {
+    let minDate = null;
+    const newSelectedRooms = selectedRoomsForChange.value;
+
+    if (newSelectedRooms.length > 0) {
+        const selectedChanges = roomsAvailableChanges.value.filter(change => newSelectedRooms.includes(change.roomId));
+
+        selectedChanges.forEach(change => {
+            if (change.results.earliestCheckIn) {
+                const earliestCheckInDate = new Date(change.results.earliestCheckIn);
+                if (!minDate || earliestCheckInDate > minDate) {
+                    minDate = earliestCheckInDate;
+                }
+            }
+        });
+    }
+    return minDate;
+});
+
+const computedMaxCheckOut = computed(() => {
+    let maxDate = null;
+    const newSelectedRooms = selectedRoomsForChange.value;
+
+    if (newSelectedRooms.length > 0) {
+        const selectedChanges = roomsAvailableChanges.value.filter(change => newSelectedRooms.includes(change.roomId));
+
+        selectedChanges.forEach(change => {
+            if (change.results.latestCheckOut) {
+                const latestCheckOutDate = new Date(change.results.latestCheckOut);
+                if (!maxDate || latestCheckOutDate < maxDate) {
+                    maxDate = latestCheckOutDate;
+                }
+            }
+        });
+    }
+    return maxDate;
+});
+
+const areAllRoomsSelectedComputed = computed(() => {
+    const roomIdsToChange = selectedRoomsForChange.value;
+    const allOriginalRoomIds = groupedRooms.value.map(group => group.room_id);
+    return roomIdsToChange.length === allOriginalRoomIds.length && roomIdsToChange.every(id => allOriginalRoomIds.includes(id));
+});
+
 // Reservation Type
 const updateReservationType = async (event) => {
 
@@ -1158,25 +1206,6 @@ const handleTabChange = async (newTabValue) => {
 
         const allChanges = await Promise.all(changesPromises);
 
-        minCheckIn.value = null;
-        maxCheckOut.value = null;
-
-        allChanges.forEach(change => {
-            if (change.results.earliestCheckIn) {
-                const earliestCheckInDate = new Date(change.results.earliestCheckIn);
-                if (!minCheckIn.value || earliestCheckInDate > minCheckIn.value) {
-                    minCheckIn.value = earliestCheckInDate;
-                }
-            }
-
-            if (change.results.latestCheckOut) {
-                const latestCheckOutDate = new Date(change.results.latestCheckOut);
-                if (!maxCheckOut.value || latestCheckOutDate < maxCheckOut.value) {
-                    maxCheckOut.value = latestCheckOutDate;
-                }
-            }
-        });
-
         roomsAvailableChanges.value = allChanges;
         selectedRoomsForChange.value = allChanges.map(change => change.roomId);
     }
@@ -1393,8 +1422,6 @@ const applyPatternChangesToAll = async () => {
 // Tab Modify Period
 const newCheckIn = ref(null);
 const newCheckOut = ref(null);
-const minCheckIn = ref(null);
-const maxCheckOut = ref(null);
 const roomsAvailableChanges = ref([]);
 const selectedRoomsForChange = ref([]);
 const applyDateChanges = async () => {
