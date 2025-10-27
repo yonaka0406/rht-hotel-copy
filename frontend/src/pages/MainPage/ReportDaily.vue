@@ -35,9 +35,7 @@
     </div>
 </template>
   
-<script setup>
-    import { computed, ref, } from "vue";
-    
+<script setup>       
     import { Card } from 'primevue';
 </script>
 <style scoped>
