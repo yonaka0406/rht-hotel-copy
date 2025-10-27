@@ -31,12 +31,10 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
     let newReservationId = originalReservationId;
     let totalPeopleMoved = 0;
 
-    console.log(`[${requestId}] allRoomsSelected: ${allRoomsSelected}`);
     // If not all rooms are selected, or if all rooms are selected but duration changes, create a new reservation
     // The logic here is: if allRoomsSelected is true, we update the original reservation.
     // If allRoomsSelected is false, we create a new reservation for the selected rooms.
     if (!allRoomsSelected) {
-        console.log(`[${requestId}] Inside !allRoomsSelected block. allRoomsSelected is: ${allRoomsSelected}`);
         // Calculate total people being moved for the new reservation
         // Calculate total people being moved for the new reservation by summing number_of_people for selected rooms on the original check-in date
         const peopleQuery = `
@@ -65,7 +63,6 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
             originalReservation.payment_timing, originalReservation.comment, originalReservation.has_important_comment, originalReservation.created_at, userId, userId
         ]);
         newReservationId = newReservationResult.rows[0].id;
-        console.log(`[${requestId}] New reservation created with ID: ${newReservationId}`);
 
         // Adjust number_of_people in the original reservation
         const updateOriginalReservationPeopleQuery = `
@@ -79,11 +76,9 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
     // Calculate the difference in days
     const oldDuration = (new Date(originalReservation.check_out).getTime() - new Date(originalReservation.check_in).getTime()) / (1000 * 60 * 60 * 24);
     const newDuration = (new Date(newCheckOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60 * 24);
-    console.log(`[${requestId}] Durations - Old: ${oldDuration} days, New: ${newDuration} days.`);
 
     // If the duration is the same, update the dates. Else, add dates and delete the old ones
     if (oldDuration === newDuration) {
-        console.log('Duration is the same. Updating existing reservation_details dates.');
         const newCheckInDate = new Date(newCheckIn);
         const origCheckInDate = new Date(originalReservation.check_in);
 
@@ -91,9 +86,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
         const origCheckInUTC = Date.UTC(origCheckInDate.getFullYear(), origCheckInDate.getMonth(), origCheckInDate.getDate()); // Changed to local getters
 
         const dateShift = newCheckInUTC - origCheckInUTC;
-        console.log(`[${requestId}] Date shift in ms: ${dateShift}`);
         const interval = `${dateShift / (1000 * 60 * 60 * 24)} days`;
-        console.log(`[${requestId}] Date shift interval: ${interval}`);
 
         const updateDetailsQuery = `
             UPDATE reservation_details
@@ -103,14 +96,11 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
             WHERE reservation_id = $4 AND room_id = ANY($5::int[])
         `;
         const updateResult = await client.query(updateDetailsQuery, [newReservationId, interval, userId, originalReservationId, roomIds]);
-        console.log(`[${requestId}] Updated ${updateResult.rowCount} reservation_details.`);        
 
     } else { // Duration has changed. Recreating reservation_details records.
-        console.log(`[${requestId}] Duration has changed. Recreating reservation_details records.`);
 
         // Loop through each room to process its details
         for (const roomId of roomIds) {
-            console.log(`[${requestId}] Processing room: ${roomId}`);
 
             // Get all original details for the room to copy plans, clients, addons
             const originalDetailsQuery = `
@@ -127,7 +117,6 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                 console.error(`[${requestId}] Error executing originalDetailsQuery for room ${roomId}:`, queryError);
                 throw queryError;
             }
-            console.log(`[${requestId}] Original details for room ${roomId}:`, originalDetails.length);
 
             // Fetch clients and addons from the first original detail (assuming they are consistent across days for a room)
             let clientsToCopy = [];
@@ -139,10 +128,8 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                 const sourceDetailId = templateDetail.id;
                 const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
                 clientsToCopy = clientsResult.rows;
-                console.log(`[${requestId}] Clients to copy for room ${roomId}:`, clientsToCopy.length);
                 const addonsResult = await client.query('SELECT addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate FROM reservation_addons WHERE reservation_detail_id = $1', [sourceDetailId]);
                 addonsToCopy = addonsResult.rows;
-                console.log(`[${requestId}] Addons to copy for room ${roomId}:`, addonsToCopy.length);
             } else {
                 // If no original details, create a basic template
                 templateDetail = {
@@ -167,7 +154,6 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
             if (datesToDelete.length > 0) {
                 const detailIdsToDelete = datesToDelete.map(d => d.id);
                 const deleteOldDetailsResult = await client.query('DELETE FROM reservation_details WHERE id = ANY($1::uuid[])', [detailIdsToDelete]);
-                console.log(`[${requestId}] Deleted ${deleteOldDetailsResult.rowCount} old details for room ${roomId} outside new range.`);
             }
 
             // Update existing details to point to new reservation (for overlapping dates)
@@ -178,7 +164,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                     SET reservation_id = $1, updated_by = $2
                     WHERE reservation_id = $3 AND room_id = $4 AND date = ANY($5::date[])
                 `;
-                                    const updateOverlappingResult = await client.query(updateOverlappingDetailsQuery, [newReservationId, userId, originalReservationId, roomId, overlappingDates]);                console.log(`[${requestId}] Updated ${updateOverlappingResult.rowCount} overlapping details for room ${roomId} to new reservation.`);
+                const updateOverlappingResult = await client.query(updateOverlappingDetailsQuery, [newReservationId, userId, originalReservationId, roomId, overlappingDates]);
             }
 
 
@@ -194,20 +180,17 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                     templateDetail.number_of_people, templateDetail.price, templateDetail.billable, userId, userId
                 ]);
                 const newDetailId = newDetailResult.rows[0].id;
-                console.log(`[${requestId}] Inserted new detail ${newDetailId} for room ${roomId} on ${date}.`);
 
                 // Copy clients and addons to the new detail
                 if (clientsToCopy.length > 0) {
                     for (const clientRow of clientsToCopy) {
                         await client.query('INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by) VALUES ($1, $2, $3, $4, $4)', [hotelId, newDetailId, clientRow.client_id, userId]);
-                        console.log(`[${requestId}] Copied client ${clientRow.client_id} to new detail ${newDetailId}.`);
                     }
                 }
                 if (addonsToCopy.length > 0) {
                     for (const addonRow of addonsToCopy) {
                         await client.query('INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
                         [hotelId, newDetailId, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name, addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, userId, userId]);
-                        console.log(`[${requestId}] Copied addon ${addonRow.addon_name} to new detail ${newDetailId}.`);
                     }
                 }
             }
@@ -225,7 +208,6 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
             WHERE id = $4 AND hotel_id = $5;
         `;
         await client.query(updateReservationDatesQuery, [newCheckIn, newCheckOut, userId, originalReservationId, hotelId]);
-        console.log(`[${requestId}] Updated check_in/check_out for original reservation ${originalReservationId} to ${newCheckIn}/${newCheckOut}.`);
     }
 
 
@@ -240,7 +222,6 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
         const originalPeopleResult = await client.query(originalReservationPeopleSumQuery, [originalReservationId]);
         const originalTotalPeople = originalPeopleResult.rows[0].total_people || 0;
         await client.query('UPDATE reservations SET number_of_people = $1, updated_by = $2 WHERE id = $3', [originalTotalPeople, userId, originalReservationId]);
-        console.log(`[${requestId}] Recalculated and updated people count for original reservation ${originalReservationId} to ${originalTotalPeople}.`);
     }
 
         // If a new reservation was created, recalculate and update its number_of_people
@@ -254,18 +235,15 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
             const newPeopleResult = await client.query(newReservationPeopleSumQuery, [newReservationId]);
             const newTotalPeople = newPeopleResult.rows[0].total_people || 0;
             await client.query('UPDATE reservations SET number_of_people = $1, updated_by = $2 WHERE id = $3', [newTotalPeople, userId, newReservationId]);
-            console.log(`[${requestId}] Recalculated and updated people count for new reservation ${newReservationId} to ${newTotalPeople}.`);
         }
 
         // Check if original reservation is now empty
         const remainingDetails = await client.query('SELECT 1 FROM reservation_details WHERE reservation_id = $1 LIMIT 1', [originalReservationId]);
         if (remainingDetails.rows.length === 0) {
             await client.query('DELETE FROM reservations WHERE id = $1', [originalReservationId]);
-            console.log(`[${requestId}] Deleted empty original reservation ${originalReservationId}.`);
         }
 
         await client.query('COMMIT');
-        console.log(`[${requestId}] Transaction committed.`);
         return { success: true, newReservationId };
     }
   } catch (error) {
@@ -274,7 +252,6 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
         throw error;
     } finally {
         client.release();
-        console.log(`[${requestId}] Database client released.`);
     }
 };
 
