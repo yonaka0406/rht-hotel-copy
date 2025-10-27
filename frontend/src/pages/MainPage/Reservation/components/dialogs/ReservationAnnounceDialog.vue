@@ -87,7 +87,7 @@ const props = defineProps({
     },
 });
 
-const _emit = defineEmits(['update:visible']);
+
 
 const slackMessage = ref('');
 
