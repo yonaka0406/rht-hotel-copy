@@ -825,7 +825,7 @@ watch([inDate, outDate], ([checkInDate, checkOutDate]) => {
   }
 }, { immediate: true });
 watch(() => numberOfPeople.value,
-  (_newNumber) => {
+  (_) => {
     reservationDetails.value.number_of_people = numberOfPeople.value;
   }
 );
@@ -860,18 +860,7 @@ watch(() => reservationDetails.value.name,
   },
   { immediate: true }
 );
-watch(reservationDetails, (_newVal, _oldVal) => {
-  //console.log('reservationDetails changed:', newVal);        
-}, { deep: true });
-watch(dateRange, (_newVal, _oldVal) => {
-  //console.log('dateRange changed:', newVal);        
-}, { deep: true });
-watch(() => generateDateRangeArray.value,
-  (_newVal, _oldVal) => {
-    //console.log('generateDateRangeArray updated:', newVal);          
-  },
-  { deep: true } // Use deep to watch for nested object changes
-);
+
 
 watch(reservation_id, async (newId) => {
   // console.log('Updated reservation_id:', newId);
