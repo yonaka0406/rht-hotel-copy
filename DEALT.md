@@ -2,6 +2,34 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### October 27, 2025
+
+#### Bug #84: Update Invoice with Customer Code
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  Update both the invoice filenames and content to include the 5-character customer code with leading zeros.
+- **Requirements**:
+  - **Filenames**:
+    - Format: `{customer_code}_{invoice_id}_{client_name}`
+    - Customer code should be 5 characters long, padded with leading zeros if necessary
+    - Apply to both PDF and Excel file exports
+  - **Invoice Content**:
+    - Add customer code field in a prominent location on the invoice
+    - Format: `顧客コード: 00001` (5 digits with leading zeros)
+    - Include in both PDF and Excel invoice outputs
+  - Maintain backward compatibility with existing file handling code
+- **Affected Components**:
+  - Invoice generation service
+  - File export functionality
+  - Invoice templates (PDF/Excel)
+  - Any code that handles invoice generation or file naming
+- **Technical Notes**:
+  - Ensure consistent customer code formatting (5 digits with leading zeros) across all instances
+  - Update any file path handling to accommodate the new format
+  - Update invoice templates to include the customer code field
+  - Update any documentation referencing the file naming convention or invoice layout
+
 ### October 20, 2025
 
 #### Feature Request #78: Add Slack Text Generation in ReservationPanel

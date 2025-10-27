@@ -572,14 +572,14 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 - Feature: Added to room indicator the clients changing room information.
 - Feature: Partial multiple rooms period change became possible.
+- Feature: Updated invoice generation to include 5-digit customer code in filenames and content.
 - Bugfix: On reservation split, keep the basic information such as comment, OTA ID and payment timing.
 - Bugfix: Static Calendar now displays the correct number of people in the reservation on double click Drawer.
 
 ---
 
 ## Version History
-
-- **1.1.27** (2025-10-27) - Enhanced room indicator with client change information and enabled partial period changes for multiple rooms. Improved reservation split functionality and fixed guest count display in Static Calendar.
+- **1.1.27** (2025-10-27) - Enhanced room indicator with client change information and enabled partial period changes for multiple rooms. Improved reservation split functionality and fixed guest count display in Static Calendar. Updated invoice generation to include 5-digit customer code.
 - **1.1.26** (2025-10-23) - Added Daily Digest email routine with admin panel logs and prefilled template download for finance imports. Fixed addon quantity calculation per room.
 - **1.1.25** (2025-10-21) - Fixed date range cancellation issues and added Google Sheets queue table for optimized API request handling, improving export reliability.
 - **1.1.24** (2025-10-20) - Improved Room Indicator loading, fixed client filtering, and added Slack integration for reservation information sharing.
