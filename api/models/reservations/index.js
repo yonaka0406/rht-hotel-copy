@@ -3,6 +3,7 @@ const selectModels = require('./select');
 const insertModels = require('./insert');
 const updateModels = require('./update');
 const deleteModels = require('./delete');
+const roomsModels = require('./rooms');
 
 module.exports = {
   ...main,
@@ -10,4 +11,5 @@ module.exports = {
   ...insertModels,
   ...updateModels,
   ...deleteModels,
+  ...roomsModels,
 };

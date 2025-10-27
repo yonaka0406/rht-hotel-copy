@@ -9,7 +9,7 @@ const {
   insertCopyReservation, selectReservationParking,
   deleteParkingReservation, deleteBulkParkingReservations,
   cancelReservationRooms: cancelReservationRoomsModel,
-  updatePaymentTiming,
+  updatePaymentTiming, updateReservationRoomsPeriod,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -1508,6 +1508,36 @@ const editPaymentTiming = async (req, res) => {
   }
 };
 
+const changeReservationRoomsPeriod = async (req, res) => {
+  const { reservationId } = req.params;
+  const { hotelId, newCheckIn, newCheckOut, roomIds, allRoomsSelected: allRoomsSelectedFromBody } = req.body;
+  const userId = req.user.id;
+
+  try {
+    let allRoomsSelected = allRoomsSelectedFromBody;
+
+    if (allRoomsSelected === undefined) {
+      const originalReservationDetails = await selectReservationDetail(req.requestId, reservationId, hotelId);
+      const originalRoomIds = [...new Set(originalReservationDetails.map(detail => detail.room_id))];
+      allRoomsSelected = originalRoomIds.length === roomIds.length && originalRoomIds.every(id => roomIds.includes(id));
+    }
+
+    const result = await updateReservationRoomsPeriod(req.requestId, {
+      originalReservationId: reservationId,
+      hotelId,
+      newCheckIn,
+      newCheckOut,
+      roomIds,
+      userId,
+      allRoomsSelected
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error changing reservation period:', error);
+    res.status(500).json({ error: 'Failed to change reservation period' });
+  }
+};
+
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, 
   getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability,
@@ -1520,4 +1550,5 @@ module.exports = {
   deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, 
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
   editPaymentTiming,
+  changeReservationRoomsPeriod,
 };

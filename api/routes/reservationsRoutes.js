@@ -49,6 +49,7 @@ router.put('/reservation/update/payment-timing/:id', authMiddlewareCRUDAccess, r
 router.put('/reservation/update/calendar/:id', authMiddlewareCRUDAccess, reservationsController.editRoomFromCalendar);
 router.put('/reservation/update/free/calendar', authMiddlewareCRUDAccess, reservationsController.editCalendarFreeChange);
 router.put('/reservation/update/room/guestnumber/:id', authMiddlewareCRUDAccess, reservationsController.editRoomGuestNumber);
+router.put('/reservation/update/period/:reservationId', authMiddlewareCRUDAccess, reservationsController.changeReservationRoomsPeriod);
 router.put('/reservation/convert/:id', authMiddlewareCRUDAccess, reservationsController.convertBlockToReservation);
 
 router.delete('/reservation/delete/hold/:hid/:id', authMiddlewareCRUDAccess, reservationsController.deleteHoldReservation);

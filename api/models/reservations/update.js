@@ -16,7 +16,9 @@ const updateReservationType = async (requestId, reservationData) => {
     );
 
     if (currentReservation.rows.length === 0) {
-      throw new Error('Reservation not found');
+      const error = new Error(`Reservation with ID ${id} and Hotel ID ${hotel_id} not found.`);
+      error.statusCode = 404; // Not Found
+      throw error;
     }
 
     const { status } = currentReservation.rows[0];
@@ -48,8 +50,14 @@ const updateReservationType = async (requestId, reservationData) => {
     return result.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error updating reservation type:', err);
-    throw new Error('Database transaction failed');
+    // Differentiate between expected business errors (e.g., 400, 404) and unexpected system errors
+    if (err.statusCode && err.statusCode < 500) {
+      throw err; // Re-throw business errors without logging as system failures
+    } else {
+      // Log unexpected system errors (500+ or missing statusCode)
+      console.error(`[${requestId}] System Error updating reservation type for reservation ${id}, hotel ${hotel_id}:`, err.message, err.stack);
+      throw new Error('Database transaction failed during reservation type update.');
+    }
   } finally {
     client.release();
   }
@@ -74,14 +82,74 @@ const updateReservationResponsible = async (requestId, id, updatedFields, user_i
 
   try {
     const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+      const error = new Error(`Reservation with ID ${id} and Hotel ID ${updatedFields.hotel_id} not found or no change was made.`);
+      error.statusCode = 404; // Not Found
+      throw error;
+    }
+
     return result.rows[0];
   } catch (err) {
-    console.error('Error updating reservation:', err);
-    throw new Error('Database error');
+    // Differentiate between expected business errors (e.g., 400, 404) and unexpected system errors
+    if (err.statusCode && err.statusCode < 500) {
+      throw err; // Re-throw business errors without logging as system failures
+    } else {
+      // Log unexpected system errors (500+ or missing statusCode)
+      console.error(`[${requestId}] System Error updating reservation responsible for reservation ${id}, hotel ${updatedFields.hotel_id}:`, err.message, err.stack);
+      throw new Error('Database error during reservation responsible update.');
+    }
+  }
+};
+
+const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTiming, userId) => {
+  const pool = getPool(requestId);
+
+  // Whitelist of allowed paymentTiming values
+  const allowedPaymentTimings = ['not_set', 'prepaid', 'on-site', 'postpaid'];
+
+  // 1. Validate incoming paymentTiming
+  if (!allowedPaymentTimings.includes(paymentTiming)) {
+    const error = new Error(`Invalid paymentTiming value: ${paymentTiming}. Allowed values are: ${allowedPaymentTimings.join(', ')}`);
+    error.statusCode = 400; // Bad Request
+    throw error;
+  }
+
+  const query = `
+    UPDATE reservations
+    SET
+      payment_timing = $1,
+      updated_by = $2
+    WHERE id = $3::UUID AND hotel_id = $4
+    RETURNING *;
+  `;
+  const values = [paymentTiming, userId, reservationId, hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+
+    // 2. Check if a row was updated
+    if (result.rowCount === 0) {
+      const error = new Error(`Reservation with ID ${reservationId} and Hotel ID ${hotelId} not found or no change was made.`);
+      error.statusCode = 404; // Not Found
+      throw error;
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    // Differentiate between expected business errors (e.g., 400, 404) and unexpected system errors
+    if (err.statusCode && err.statusCode < 500) {
+      throw err; // Re-throw business errors without logging as system failures
+    } else {
+      // Log unexpected system errors (500+ or missing statusCode)
+      console.error(`[${requestId}] System Error updating payment timing for reservation ${reservationId}, hotel ${hotelId}:`, err.message, err.stack);
+      throw new Error('Database error during payment timing update.');
+    }
   }
 };
 
 module.exports = {
     updateReservationType,
-    updateReservationResponsible    
+    updateReservationResponsible,
+    updatePaymentTiming
 }

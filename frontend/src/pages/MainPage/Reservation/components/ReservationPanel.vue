@@ -27,7 +27,7 @@
         <Message v-if="!allGroupsPeopleCountMatch" severity="warn" :closable="false" class="col-span-2">
             <div class="flex items-center">
                 <i class="pi pi-exclamation-triangle mr-2"></i>
-                <span>予約の人数と宿泊者の人数が一致していません。</span>
+                <span>予約の人数と宿泊者の人数が一致していない可能性があります。</span>
             </div>
         </Message>
         <div class="field flex flex-col">
@@ -368,13 +368,16 @@
                                 </div>
                             </template>
                         </Card>
+                        <Message v-if="!areAllRoomsSelectedComputed" severity="info" :closable="false" class="mt-2 mb-6">
+                            選択された部屋は新しい予約に移動されます。
+                        </Message>
                         <p class="mt-2 mb-6"><span class="font-bold">注意：</span>全ての部屋宿泊期間を変更できる日付が表示されています。</p>
                         <div class="grid grid-cols-2 gap-4 items-center">
                             <div>
                                 <FloatLabel>
                                     <label for="checkin">チェックイン</label>
                                     <DatePicker id="checkin" v-model="newCheckIn" :showIcon="true"
-                                        :minDate="minCheckIn || undefined" :maxDate="maxCheckOut || undefined"
+                                        :minDate="computedMinCheckIn || undefined" :maxDate="computedMaxCheckOut || undefined"
                                         iconDisplay="input" dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
                                 </FloatLabel>
                             </div>
@@ -382,7 +385,7 @@
                                 <FloatLabel>
                                     <label for="checkout">チェックアウト</label>
                                     <DatePicker id="checkout" v-model="newCheckOut" :showIcon="true"
-                                        :minDate="minCheckIn || undefined" :maxDate="maxCheckOut || undefined"
+                                        :minDate="computedMinCheckIn || undefined" :maxDate="computedMaxCheckOut || undefined"
                                         iconDisplay="input" dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
                                 </FloatLabel>
                             </div>
@@ -390,15 +393,22 @@
                         <Card class="mt-3 mb-3">
                             <template #title>部屋毎の状況</template>
                             <template #content>
-                                <div class="grid grid-cols-3 gap-4 items-center text-center font-bold">
+                                <div class="grid grid-cols-4 gap-4 items-center text-center font-bold">
                                     <p>部屋</p>
+                                    <p>選択</p>
                                     <p>最も早い日付</p>
                                     <p>最も遅い日付</p>
                                 </div>
                                 <div v-for="(change, index) in roomsAvailableChanges" :key="index" class="room-status">
-                                    <div class="grid grid-cols-3 gap-4 items-center">
+                                    <div class="grid grid-cols-4 gap-4 items-center">
                                         <p class="text-center">{{ change.roomValues.details[0].room_type_name + ' ' +
-                                            change.roomValues.details[0].room_number }}</p>
+                                            change.roomValues.details[0].room_number }}
+                                            <i v-if="hasRoomChange(change.roomValues)" class="pi pi-exclamation-triangle ml-2 text-orange-500"
+                                                v-tooltip.top="'この部屋には期間変更があります。'"></i>
+                                        </p>
+                                        <div class="flex justify-center">
+                                            <Checkbox v-model="selectedRoomsForChange" :value="change.roomId" :disabled="hasRoomChange(change.roomValues)" />
+                                        </div>
                                         <p class="text-center"
                                             :class="{ 'text-xs text-center': !change.results.earliestCheckIn }">
                                             {{ change.results.earliestCheckIn ? change.results.earliestCheckIn : '制限なし'
@@ -431,7 +441,7 @@
                 <Button v-if="tabsReservationBulkEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check"
                     class="p-button-success p-button-text p-button-sm" @click="applyPatternChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
                 <Button v-if="tabsReservationBulkEditDialog === 4" label="適用" icon="pi pi-check"
-                    class="p-button-success p-button-text p-button-sm" @click="applyDateChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
+                    class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" :loading="isSubmitting" :disabled="isSubmitting" />
 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
                     @click="closeReservationBulkEditDialog" :loading="isSubmitting" :disabled="isSubmitting" />
@@ -519,7 +529,7 @@ const props = defineProps({
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
 const { setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern,
-    fetchAvailableRooms, getAvailableDatesForChange, setCalendarChange,
+    fetchAvailableRooms, getAvailableDatesForChange, setCalendarChange, setReservationRoomsPeriod,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
@@ -615,6 +625,39 @@ const formatTime = (time) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+const hasRoomChange = (group) => {
+    if (!group || !group.details || group.details.length === 0) return false;
+
+    const reservationCheckIn = new Date(reservationInfo.value.check_in);
+    const reservationCheckOut = new Date(reservationInfo.value.check_out);
+
+    // Calculate the total number of nights for the entire reservation
+    const totalReservationNights = (reservationCheckOut.getTime() - reservationCheckIn.getTime()) / (1000 * 60 * 60 * 24);
+
+    // If the number of details (nights) for this room group is less than the total reservation nights,
+    // it implies a room change (i.e., this room is not present for the entire duration).
+    if (group.details.length < totalReservationNights) {
+        return true;
+    }
+
+    // Also check if the room's details span the *exact* period of the reservation.
+    const roomFirstDetailDate = new Date(group.details[0].date);
+    const roomLastDetailDate = new Date(group.details[group.details.length - 1].date);
+
+    // Check if the start date of this room's details matches the reservation check-in
+    if (formatDate(roomFirstDetailDate) !== formatDate(reservationCheckIn)) {
+        return true;
+    }
+
+    // Check if the end date of this room's details matches the reservation check-out last night
+    const reservationLastNightDate = new Date(reservationCheckOut.getTime() - (1000 * 60 * 60 * 24));
+    if (formatDate(roomLastDetailDate) !== formatDate(reservationLastNightDate)) {
+        return true;
+    }
+
+    return false;
+};
+
 // Computed
 const reservationInfo = computed(() => props.reservation_details?.[0]);
 const reservationStatus = computed(() => {
@@ -684,22 +727,34 @@ const allRoomsHavePlan = computed(() => {
     return allPlansSet && paymentTimingSet;
 });
 const allGroupsPeopleCountMatch = computed(() => {
-    if (!reservationInfo.value || !groupedRooms.value.length) {
-        return true; // No reservation info or rooms, so no mismatch
+    if (!reservationInfo.value || !props.reservation_details.length) {
+        return true; // No reservation info or details, so no mismatch
     }
 
     const totalReservationPeople = reservationInfo.value.reservation_number_of_people;
-    let sumOfRoomPeople = 0;
+    const reservationCheckIn = new Date(reservationInfo.value.check_in);
+    const reservationCheckOut = new Date(reservationInfo.value.check_out);
 
-    groupedRooms.value.forEach(roomGroup => {
-        // Assuming number_of_people is consistent for a room across its details
-        // We take the number_of_people from the first detail of each room group
-        if (roomGroup.details.length > 0) {
-            sumOfRoomPeople += roomGroup.details[0].number_of_people;
+    let currentDate = new Date(reservationCheckIn);
+    while (currentDate < reservationCheckOut) {
+        const formattedCurrentDate = formatDate(currentDate);
+        let peopleOnThisDate = 0;
+
+        // Sum people from all reservation_details that fall on the current date
+        props.reservation_details.forEach(detail => {
+            if (formatDate(new Date(detail.date)) === formattedCurrentDate) {
+                peopleOnThisDate += detail.number_of_people;
+            }
+        });
+
+        if (peopleOnThisDate !== totalReservationPeople) {
+            return false; // Mismatch found on this date
         }
-    });
 
-    return totalReservationPeople === sumOfRoomPeople;
+        currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
+    }
+
+    return true; // No mismatch found on any date
 });
 const allReservationClients = computed(() => {
     const uniqueClients = new Map();
@@ -745,6 +800,51 @@ const cancellationFeeMessage = computed(() => {
 
 const numberOfNights = ref(0);
 const numberOfNightsTotal = ref(0);
+
+const computedMinCheckIn = computed(() => {
+    let minDate = null;
+    const newSelectedRooms = selectedRoomsForChange.value;
+
+    if (newSelectedRooms.length > 0) {
+        const selectedChanges = roomsAvailableChanges.value.filter(change => newSelectedRooms.includes(change.roomId));
+
+        selectedChanges.forEach(change => {
+            if (change.results.earliestCheckIn) {
+                const earliestCheckInDate = new Date(change.results.earliestCheckIn);
+                if (!minDate || earliestCheckInDate > minDate) {
+                    minDate = earliestCheckInDate;
+                }
+            }
+        });
+    }
+    return minDate;
+});
+
+const computedMaxCheckOut = computed(() => {
+    let maxDate = null;
+    const newSelectedRooms = selectedRoomsForChange.value;
+
+    if (newSelectedRooms.length > 0) {
+        const selectedChanges = roomsAvailableChanges.value.filter(change => newSelectedRooms.includes(change.roomId));
+
+        selectedChanges.forEach(change => {
+            if (change.results.latestCheckOut) {
+                const latestCheckOutDate = new Date(change.results.latestCheckOut);
+                if (!maxDate || latestCheckOutDate < maxDate) {
+                    maxDate = latestCheckOutDate;
+                }
+            }
+        });
+    }
+    return maxDate;
+});
+
+const areAllRoomsSelectedComputed = computed(() => {
+    const roomIdsToChange = selectedRoomsForChange.value;
+    const allOriginalRoomIds = groupedRooms.value.map(group => group.room_id);
+    return roomIdsToChange.length === allOriginalRoomIds.length && roomIdsToChange.every(id => allOriginalRoomIds.includes(id));
+});
+
 // Reservation Type
 const updateReservationType = async (event) => {
 
@@ -1134,6 +1234,7 @@ const handleTabChange = async (newTabValue) => {
     // Period change
     if (tabsReservationBulkEditDialog.value === 4) {
         roomsAvailableChanges.value = [];
+        selectedRoomsForChange.value = [];
         const hotelId = reservationInfo.value.hotel_id;
         newCheckIn.value = new Date(reservationInfo.value.check_in);
         newCheckOut.value = new Date(reservationInfo.value.check_out);
@@ -1141,31 +1242,32 @@ const handleTabChange = async (newTabValue) => {
         const checkIn = formatDate(newCheckIn.value);
         const checkOut = formatDate(newCheckOut.value);
 
-        groupedRooms.value.every(async (room) => {
+        const changesPromises = groupedRooms.value.map(async (room) => {
             const roomId = room.room_id;
             const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
-
-            if (results.earliestCheckIn) {
-                const earliestCheckInDate = new Date(results.earliestCheckIn);
-                if (!minCheckIn.value || earliestCheckInDate > minCheckIn.value) {
-                    minCheckIn.value = earliestCheckInDate;
-                }
-            }
-
-            if (results.latestCheckOut) {
-                const latestCheckOutDate = new Date(results.latestCheckOut);
-                if (!maxCheckOut.value || latestCheckOutDate < maxCheckOut.value) {
-                    maxCheckOut.value = latestCheckOutDate;
-                }
-            }
-
-            // Store the results and room values in roomsAvailableChanges
-            roomsAvailableChanges.value.push({
+            return {
                 roomId: roomId,
                 roomValues: room,
                 results: results
-            });
+            };
         });
+
+        const allChanges = await Promise.all(changesPromises);
+
+        roomsAvailableChanges.value = allChanges;
+        selectedRoomsForChange.value = allChanges
+            .filter(change => !hasRoomChange(change.roomValues)) // Only select rooms without changes
+            .map(change => change.roomId);
+
+        // Add conditional toast warning
+        if (selectedRoomsForChange.value.length === 0 && allChanges.length > 0) {
+            toast.add({
+                severity: 'warn',
+                summary: '警告',
+                detail: '期間変更可能な部屋がありません。', // "No rooms available for period change."
+                life: 5000
+            });
+        }
     }
 };
 
@@ -1380,13 +1482,22 @@ const applyPatternChangesToAll = async () => {
 // Tab Modify Period
 const newCheckIn = ref(null);
 const newCheckOut = ref(null);
-const minCheckIn = ref(null);
-const maxCheckOut = ref(null);
 const roomsAvailableChanges = ref([]);
-const applyDateChangesToAll = async () => {
+const selectedRoomsForChange = ref([]);
+const applyDateChanges = async () => {
     isSubmitting.value = true;
     try {
-        // Checks            
+        // Checks
+        if (selectedRoomsForChange.value.length === 0) {
+            toast.add({
+                severity: 'warn',
+                summary: '警告',
+                detail: '変更する部屋を選択してください。',
+                life: 3000
+            });
+            return;
+        }
+
         if (!newCheckIn.value) {
             toast.add({
                 severity: 'warn',
@@ -1418,21 +1529,37 @@ const applyDateChangesToAll = async () => {
         const new_check_in = formatDate(new Date(newCheckIn.value));
         const new_check_out = formatDate(new Date(newCheckOut.value));
 
-        for (const room of roomsAvailableChanges.value) {
+        const roomIdsToChange = selectedRoomsForChange.value;
+        const id = reservationInfo.value.reservation_id;
 
-            const id = room.roomValues.details[0].reservation_id;
-            const old_check_in = room.roomValues.details[0].check_in;
-            const old_check_out = room.roomValues.details[0].check_out;
-            const old_room_id = room.roomId;
-            const new_room_id = room.roomId;
-            const number_of_people = room.roomValues.details[0].number_of_people;
+        // Add a check to prevent processing rooms that should be disabled
+        const roomsWithChangesAttempted = roomIdsToChange.filter(roomId => {
+            const roomChangeEntry = roomsAvailableChanges.value.find(change => change.roomId === roomId);
+            return roomChangeEntry && hasRoomChange(roomChangeEntry.roomValues);
+        });
 
-            await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'bulk');
+        if (roomsWithChangesAttempted.length > 0) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '期間変更ができない部屋が含まれています。',
+                life: 5000
+            });
+            return;
         }
+
+        const allOriginalRoomIds = groupedRooms.value.map(group => group.room_id);
+        const allRoomsSelected = roomIdsToChange.length === allOriginalRoomIds.length && roomIdsToChange.every(id => allOriginalRoomIds.includes(id));
+
+        const result = await setReservationRoomsPeriod(id, reservationInfo.value.hotel_id, new_check_in, new_check_out, roomIdsToChange, allRoomsSelected);
 
         closeReservationBulkEditDialog();
 
-        toast.add({ severity: 'success', summary: '成功', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '選択された部屋の宿泊期間が更新されました。', life: 3000 });
+
+        if (result.success && result.newReservationId) {
+            router.push({ name: 'ReservationEdit', params: { reservation_id: result.newReservationId } });
+        }
 
     } catch (error) {
         console.error('Error applying date changes:', error);
@@ -1506,4 +1633,24 @@ watch(addons, (newValue, oldValue) => {
         }));
     }
 }, { deep: true });
+
+watch([computedMinCheckIn, computedMaxCheckOut], ([newMin, newMax]) => {
+    // Adjust newCheckIn
+    if (newMin && (!newCheckIn.value || newCheckIn.value < newMin)) {
+        newCheckIn.value = newMin;
+    }
+
+    // Adjust newCheckOut
+    if (newMax && (!newCheckOut.value || newCheckOut.value > newMax)) {
+        newCheckOut.value = newMax;
+    }
+
+    // Ensure newCheckOut is always after newCheckIn
+    if (newCheckIn.value && newCheckOut.value && newCheckOut.value <= newCheckIn.value) {
+        // If newCheckOut is before or same as newCheckIn, adjust newCheckOut to be newCheckIn + 1 day
+        const adjustedCheckOut = new Date(newCheckIn.value);
+        adjustedCheckOut.setDate(adjustedCheckOut.getDate() + 1);
+        newCheckOut.value = adjustedCheckOut;
+    }
+}, { immediate: true });
 </script>
