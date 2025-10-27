@@ -232,7 +232,7 @@ onMounted(async () => {
     //console.log('[ReservationEdit] Setting up WebSocket listener for "tableUpdate".');
 
     // Listen for a SPECIFIC event, not a generic one
-    socket.value.on('tableUpdate', (data) => {
+    socket.value.on('tableUpdate', (_data) => {
         // This will now trigger on ANY 'tableUpdate' event from the server.
         //console.log('📬 [WebSocket] "tableUpdate" event received. Calling fetchAllReservationData.'); // Debug log
         fetchAllReservationData();
