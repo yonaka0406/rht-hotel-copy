@@ -31,6 +31,7 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
     let newReservationId = reservationId;
     let totalPeopleMoved = 0;
 
+    console.log(`[${requestId}] allRoomsSelected: ${allRoomsSelected}`);
     // If not all rooms are selected, or if all rooms are selected but duration changes, create a new reservation
     // The logic here is: if allRoomsSelected is true, we update the original reservation.
     // If allRoomsSelected is false, we create a new reservation for the selected rooms.

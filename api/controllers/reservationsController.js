@@ -1514,13 +1514,18 @@ const changeReservationRoomsPeriod = async (req, res) => {
   const userId = req.user.id;
 
   try {
+    const originalReservationDetails = await selectReservationDetail(req.requestId, reservationId, hotelId);
+    const originalRoomIds = [...new Set(originalReservationDetails.map(detail => detail.room_id))];
+    const allRoomsSelected = originalRoomIds.length === roomIds.length && originalRoomIds.every(id => roomIds.includes(id));
+
     const result = await updateReservationRoomsPeriod(req.requestId, {
       reservationId,
       hotelId,
       newCheckIn,
       newCheckOut,
       roomIds,
-      userId
+      userId,
+      allRoomsSelected
     });
     res.status(200).json(result);
   } catch (error) {

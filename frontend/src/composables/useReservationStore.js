@@ -1451,7 +1451,7 @@ export function useReservationStore() {
         }
     };
 
-    const setReservationRoomsPeriod = async (reservationId, hotelId, newCheckIn, newCheckOut, roomIds) => {
+    const setReservationRoomsPeriod = async (reservationId, hotelId, newCheckIn, newCheckOut, roomIds, allRoomsSelected) => {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -1465,7 +1465,8 @@ export function useReservationStore() {
                     hotelId,
                     newCheckIn,
                     newCheckOut,
-                    roomIds
+                    roomIds,
+                    allRoomsSelected
                 })
             });
 

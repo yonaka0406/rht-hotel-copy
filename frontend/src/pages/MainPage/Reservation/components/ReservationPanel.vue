@@ -1445,7 +1445,10 @@ const applyDateChanges = async () => {
         const roomIdsToChange = selectedRoomsForChange.value;
         const id = reservationInfo.value.reservation_id;
 
-        const result = await setReservationRoomsPeriod(id, reservationInfo.value.hotel_id, new_check_in, new_check_out, roomIdsToChange);
+        const allOriginalRoomIds = groupedRooms.value.map(group => group.room_id);
+        const allRoomsSelected = roomIdsToChange.length === allOriginalRoomIds.length && roomIdsToChange.every(id => allOriginalRoomIds.includes(id));
+
+        const result = await setReservationRoomsPeriod(id, reservationInfo.value.hotel_id, new_check_in, new_check_out, roomIdsToChange, allRoomsSelected);
 
         closeReservationBulkEditDialog();
 
