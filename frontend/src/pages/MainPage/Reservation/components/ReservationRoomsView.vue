@@ -1,6 +1,6 @@
 <template>
     <Accordion :activeIndex="0">
-        <AccordionPanel v-for="(group, _index) in groupedRooms" :key="group.room_id" :value="group.room_id">
+        <AccordionPanel v-for="group in groupedRooms" :key="group.room_id" :value="group.room_id">
             <AccordionHeader>
                 <div class="grid grid-cols-7 gap-4 w-full">
                     <div class="col-span-3 text-left">
