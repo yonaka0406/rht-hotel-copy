@@ -175,10 +175,6 @@
   const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
   import { useParkingStore } from '@/composables/useParkingStore';
   const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
-  import { useUserStore } from '@/composables/useUserStore';
-  const { logged_user } = useUserStore();
-  import { useReservationStore } from '@/composables/useReservationStore';
-  const { setReservationId } = useReservationStore();
   
   const allParkingSpots = ref([]);
   
@@ -196,12 +192,7 @@
     const options = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' };
     const parsedDate = new Date(date);
     return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-  };
-  const formatDateMonthDay = (date) => {
-    const options = { weekday: 'short', month: '2-digit', day: '2-digit' };
-    const parsedDate = new Date(date);
-    return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-  };
+  };  
   
   const isUpdating = ref(false);
   const isLoading = ref(true);
@@ -248,8 +239,7 @@
       dateRange.value = [...newDates, ...dateRange.value];
 
       // Fetch reservations for the entire new dateRange
-      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      debugLog('Available spots for 2025-09-12 after appending UP:', availableSpotsByDate.value['2025-09-12']);
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);      
   
     } else if (direction === "down") {
       const oldMaxDateValue = maxDate.value;
@@ -264,8 +254,7 @@
       dateRange.value = [...dateRange.value, ...newDates];
   
       // Fetch reservations for the entire new dateRange
-      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      debugLog('Available spots for 2025-09-12 after appending DOWN:', availableSpotsByDate.value['2025-09-12']);
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);      
     }
   };
   
@@ -320,16 +309,6 @@
     }
     return map;
   });
-  const tempSpotsMap = computed(() => {
-    const map = {};
-    if (Array.isArray(tempParkingReservations.value)) {
-      tempParkingReservations.value.forEach(reservation => {
-        const key = `${reservation.parking_spot_id}_${formatDate(new Date(reservation.date))}`;
-        map[key] = reservation;
-      });
-    }
-    return map;
-  });
   
   // Count of available spots
   const availableSpotsByDate = computed(() => {
@@ -376,7 +355,6 @@
         booker_name: reservation.booker_name || '',  // Add booker name if available
         reservation_id: reservation.reservation_id,
         ...reservation  // Spread all other reservation properties
-      };
     } else {
     }
     
@@ -560,7 +538,7 @@
     draggingCheckOut.value = null;
     draggingSpotNumber.value = null;
   };
-  const highlightDropZone = (event, roomId, date) => {
+  const highlightDropZone = (event, _roomId, _date) => {
     const cell = event.target.closest('td');
     if (cell) {
       cell.classList.add('drop-zone');
@@ -829,8 +807,7 @@
       if (dateRange.value && dateRange.value.length > 0) {
         await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       }
-      debugLog('Available spots for 2025-09-12 after initial load:', availableSpotsByDate.value['2025-09-12']);
-
+      
       nextTick(() => {
           const tableContainer = document.querySelector(".table-container");
           if (tableContainer) {
@@ -861,16 +838,7 @@
       tableContainer.value.removeEventListener("scroll", handleScroll);
     }
   });
-  
-  const DEBUG = true;
-  const DEBUG_VERBOSE = true;
-  const DEBUG_DATA_LOADING = true;
-  const debugLog = (...args) => DEBUG && console.log('[ParkingCalendar]', ...args);
-  const debugWarn = (...args) => DEBUG && console.warn('[ParkingCalendar]', ...args);
-  const debugError = (...args) => DEBUG && console.error('[ParkingCalendar]', ...args);
-  const debugVerbose = (...args) => DEBUG && DEBUG_VERBOSE && console.log('[ParkingCalendar]', ...args);
-  const debugData = (...args) => DEBUG && DEBUG_DATA_LOADING && console.log('[ParkingCalendar][DATA]', ...args);
-
+    
   // Needed Watchers
   watch(selectedHotelId, async (newVal, oldVal) => {
     isLoading.value = true;
@@ -880,8 +848,7 @@
       allParkingSpots.value = await fetchAllParkingSpotsByHotel(newVal);
       if (dateRange.value && dateRange.value.length > 0) {
         await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      }
-      debugLog('Available spots for 2025-09-12 after hotel change:', availableSpotsByDate.value['2025-09-12']);
+      }      
       isLoading.value = false;
     }
   }, { immediate: true });
@@ -902,8 +869,7 @@
     if (dateRange.value && dateRange.value.length > 0) {
       await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     }
-    debugLog('Available spots for 2025-09-12 after center date change:', availableSpotsByDate.value['2025-09-12']);
-
+    
     isLoading.value = false;
     // Scroll to the row for the selected date after table is rendered
     nextTick(() => {
@@ -950,8 +916,7 @@
   watch(drawerVisible, async (newVal, oldVal) => {
     if (newVal === false) {
       // Refresh data when drawer is closed
-      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      debugLog('Available spots for 2025-09-12 after drawer closes:', availableSpotsByDate.value['2025-09-12']);
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);      
     }
   });
 
