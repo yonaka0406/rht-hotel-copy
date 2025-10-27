@@ -118,22 +118,21 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
 import ReservationEdit from './Reservation/ReservationEdit.vue';
 import DashboardDialog from './components/Dialogs/DashboardDialog.vue'; // Updated import path and component name
 
-import { Panel, Drawer, Skeleton } from 'primevue';
+import { Panel, Drawer } from 'primevue';
 import { DataTable, Column } from 'primevue';
-import { Select, AutoComplete, DatePicker, Button } from 'primevue';
+import { DatePicker, Button } from 'primevue';
 
 import { useReportStore } from '@/composables/useReportStore';
 const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchCheckInOutReport } = useReportStore();
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, fetchHotels, fetchHotel, selectedHotel } = useHotelStore();
-import { useClientStore } from '@/composables/useClientStore';
 
 const checkInOutReportData = ref(null);
 
@@ -836,12 +835,6 @@ const generateBarStackChartOptions = () => ({
 };
 
 // Data Table
-const getVisibleClientNames = (clients) => {
-    const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
-    return parsedClients
-        .map(client => client.name_kanji || client.name_kana || client.name)
-        .join("\n")
-};
 const formatClientNames = (clients) => {
     const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
     if (parsedClients.length <= 2) return "";
