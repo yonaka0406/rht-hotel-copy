@@ -179,7 +179,8 @@ export function useBillingStore() {
             const link = document.createElement('a');
             link.href = pdfUrl;
             const sanitizedClientName = invoiceData.client_name.replace(/[/\\:*?"<>|]/g, '_');
-            link.setAttribute('download', `請求書_${finalInvoiceNumber}_${sanitizedClientName}.pdf`);             
+            const paddedCustomerCode = String(invoiceData.customer_code).padStart(5, '0');
+            link.setAttribute('download', `${paddedCustomerCode}_請求書_${finalInvoiceNumber}_${sanitizedClientName}.pdf`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -309,7 +310,8 @@ export function useBillingStore() {
             const link = document.createElement('a');
             link.href = excelUrl;
             const sanitizedClientName = invoiceData.client_name.replace(/[/\\:*?"<>|]/g, '_');
-            link.setAttribute('download', `請求書_${finalInvoiceNumber}_${sanitizedClientName}.xlsx`);
+            const paddedCustomerCode = String(invoiceData.customer_code).padStart(5, '0');
+            link.setAttribute('download', `${paddedCustomerCode}_請求書_${finalInvoiceNumber}_${sanitizedClientName}.xlsx`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

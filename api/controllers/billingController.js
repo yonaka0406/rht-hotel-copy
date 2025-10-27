@@ -176,7 +176,7 @@ function generateInvoiceHTML(html, data, userName) {
   modifiedHTML = modifiedHTML.replace(/{{ invoice_number }}/g, data.invoice_number);
   modifiedHTML = modifiedHTML.replace(/{{ invoice_date }}/g, data.date);
   modifiedHTML = modifiedHTML.replace(/{{ customer_name }}/g, data.client_name);
-  modifiedHTML = modifiedHTML.replace(/{{ customer_code }}/g, data.customer_code);
+  modifiedHTML = modifiedHTML.replace(/{{ customer_code }}/g, data.customer_code ? String(data.customer_code).padStart(5, '0') : '');
   modifiedHTML = modifiedHTML.replace(/{{ company_contact_person }}/g, userName);
 
   // Main Table
@@ -755,7 +755,7 @@ const generateInvoiceExcel = async (req, res) => {
       worksheet.getCell('L1').value = invoiceData.invoice_number;
       worksheet.getCell('L2').value = new Date(invoiceData.date);
       worksheet.getCell('A4').value = invoiceData.client_name;
-      worksheet.getCell('D5').value = invoiceData.customer_code;
+      worksheet.getCell('D5').value = invoiceData.customer_code ? String(invoiceData.customer_code).padStart(5, '0') : '';
       worksheet.getCell('D9').value = invoiceData.facility_name ? `${invoiceData.facility_name} 宿泊料` : '宿泊料';
       worksheet.getCell('D10').value = new Date(invoiceData.due_date);
       worksheet.getCell('D11').value = `${invoiceData.bank_name ?? ''} ${invoiceData.bank_branch_name ?? ''}`.trim();
