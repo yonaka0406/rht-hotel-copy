@@ -2,7 +2,7 @@ let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
 const { formatDate } = require('../../utils/reportUtils');
 
-const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected }) => {
+const updateReservationRoomsPeriod = async (requestId, { originalReservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected }) => {
   //console.log('--- Starting updateReservationRoomsPeriod ---');
   //console.log('Received roomData:', { reservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected });
   const pool = getPool(requestId);
@@ -17,7 +17,7 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
     await client.query(setSessionQuery);
 
     // 1. Get original reservation details
-    const originalReservationResult = await client.query('SELECT * FROM reservations WHERE id = $1 AND hotel_id = $2', [reservationId, hotelId]);
+    const originalReservationResult = await client.query('SELECT * FROM reservations WHERE id = $1 AND hotel_id = $2', [originalReservationId, hotelId]);
     const originalReservation = originalReservationResult.rows[0];
 
     if (!originalReservation) {
@@ -28,7 +28,7 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
     const shiftDirection = newCheckIn >= originalReservation.check_in ? 'DESC' : 'ASC';
     //console.log(`Shift direction calculated as: ${shiftDirection}`);
 
-    let newReservationId = reservationId;
+    let newReservationId = originalReservationId;
     let totalPeopleMoved = 0;
 
     console.log(`[${requestId}] allRoomsSelected: ${allRoomsSelected}`);
@@ -39,13 +39,17 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
         console.log(`[${requestId}] Inside !allRoomsSelected block. allRoomsSelected is: ${allRoomsSelected}`);
         // Calculate total people being moved for the new reservation
         const peopleQuery = `
-            SELECT room_id, number_of_people
+            SELECT COUNT(DISTINCT room_id) as total_rooms_moved
             FROM reservation_details
-            WHERE reservation_id = $1 AND room_id = ANY($2::int[])
-            GROUP BY room_id, number_of_people;
+            WHERE reservation_id = $1 AND room_id = ANY($2::int[]);
         `;
-        const peopleResult = await client.query(peopleQuery, [reservationId, roomIds]);
-        totalPeopleMoved = peopleResult.rows.reduce((sum, row) => sum + row.number_of_people, 0);
+        try {
+            const peopleResult = await client.query(peopleQuery, [originalReservationId, roomIds]);
+            totalPeopleMoved = peopleResult.rows[0].total_rooms_moved || 0;
+        } catch (queryError) {
+            console.error(`[${requestId}] Error executing peopleQuery:`, queryError);
+            throw queryError;
+        }
 
         const insertReservationQuery = `
             INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, type, agent, ota_reservation_id, payment_timing, comment, has_important_comment, created_at, created_by, updated_by)
@@ -66,7 +70,7 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
             SET number_of_people = number_of_people - $1
             WHERE id = $2 AND hotel_id = $3
         `;
-        await client.query(updateOriginalReservationPeopleQuery, [totalPeopleMoved, reservationId, hotelId]);
+        await client.query(updateOriginalReservationPeopleQuery, [totalPeopleMoved, originalReservationId, hotelId]);
     }
 
     // Calculate the difference in days
@@ -95,7 +99,7 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
                 updated_by = $3
             WHERE reservation_id = $4 AND room_id = ANY($5::int[])
         `;
-        const updateResult = await client.query(updateDetailsQuery, [newReservationId, interval, userId, reservationId, roomIds]);
+        await client.query(updateDetailsQuery, [newReservationId, interval, userId, originalReservationId, roomIds]);
         console.log(`[${requestId}] Updated ${updateResult.rowCount} reservation_details.`);        
 
     } else { // Duration has changed. Recreating reservation_details records.
@@ -112,8 +116,14 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
                 WHERE reservation_id = $1 AND room_id = $2
                 ORDER BY date ASC
             `;
-            const originalDetailsResult = await client.query(originalDetailsQuery, [reservationId, roomId]);
-            const originalDetails = originalDetailsResult.rows;
+            let originalDetails;
+            try {
+                const originalDetailsResult = await client.query(originalDetailsQuery, [originalReservationId, roomId]);
+                originalDetails = originalDetailsResult.rows;
+            } catch (queryError) {
+                console.error(`[${requestId}] Error executing originalDetailsQuery for room ${roomId}:`, queryError);
+                throw queryError;
+            }
             console.log(`[${requestId}] Original details for room ${roomId}:`, originalDetails.length);
 
             // Fetch clients and addons from the first original detail (assuming they are consistent across days for a room)
@@ -165,8 +175,7 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
                     SET reservation_id = $1, updated_by = $2
                     WHERE reservation_id = $3 AND room_id = $4 AND date = ANY($5::date[])
                 `;
-                const updateOverlappingResult = await client.query(updateOverlappingDetailsQuery, [newReservationId, userId, reservationId, roomId, overlappingDates]);
-                console.log(`[${requestId}] Updated ${updateOverlappingResult.rowCount} overlapping details for room ${roomId} to new reservation.`);
+                                    const updateOverlappingResult = await client.query(updateOverlappingDetailsQuery, [newReservationId, userId, originalReservationId, roomId, overlappingDates]);                console.log(`[${requestId}] Updated ${updateOverlappingResult.rowCount} overlapping details for room ${roomId} to new reservation.`);
             }
 
 
@@ -201,16 +210,27 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
             }
         }
 
-        // 5. Update people count on original reservation
-        const updateOrigQuery = 'UPDATE reservations SET number_of_people = number_of_people - $1, updated_by = $2 WHERE id = $3';
-        await client.query(updateOrigQuery, [totalPeopleMoved, userId, reservationId]);
-        console.log(`[${requestId}] Updated people count on original reservation ${reservationId}.`);
+        // Recalculate and update number_of_people for original reservation
+        const originalReservationPeopleSumQuery = 'SELECT COUNT(DISTINCT room_id) as total_people FROM reservation_details WHERE reservation_id = $1';
+        const originalPeopleResult = await client.query(originalReservationPeopleSumQuery, [originalReservationId]);
+        const originalTotalPeople = originalPeopleResult.rows[0].total_people || 0;
+        await client.query('UPDATE reservations SET number_of_people = $1, updated_by = $2 WHERE id = $3', [originalTotalPeople, userId, originalReservationId]);
+        console.log(`[${requestId}] Recalculated and updated people count for original reservation ${originalReservationId} to ${originalTotalPeople}.`);
+
+        // If a new reservation was created, recalculate and update its number_of_people
+        if (newReservationId !== originalReservationId) {
+            const newReservationPeopleSumQuery = 'SELECT COUNT(DISTINCT room_id) as total_people FROM reservation_details WHERE reservation_id = $1';
+            const newPeopleResult = await client.query(newReservationPeopleSumQuery, [newReservationId]);
+            const newTotalPeople = newPeopleResult.rows[0].total_people || 0;
+            await client.query('UPDATE reservations SET number_of_people = $1, updated_by = $2 WHERE id = $3', [newTotalPeople, userId, newReservationId]);
+            console.log(`[${requestId}] Recalculated and updated people count for new reservation ${newReservationId} to ${newTotalPeople}.`);
+        }
 
         // Check if original reservation is now empty
-        const remainingDetails = await client.query('SELECT 1 FROM reservation_details WHERE reservation_id = $1 LIMIT 1', [reservationId]);
+        const remainingDetails = await client.query('SELECT 1 FROM reservation_details WHERE reservation_id = $1 LIMIT 1', [originalReservationId]);
         if (remainingDetails.rows.length === 0) {
-            await client.query('DELETE FROM reservations WHERE id = $1', [reservationId]);
-            console.log(`[${requestId}] Deleted empty original reservation ${reservationId}.`);
+            await client.query('DELETE FROM reservations WHERE id = $1', [originalReservationId]);
+            console.log(`[${requestId}] Deleted empty original reservation ${originalReservationId}.`);
         }
 
         await client.query('COMMIT');

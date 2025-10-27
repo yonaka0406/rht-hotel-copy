@@ -1523,7 +1523,7 @@ const changeReservationRoomsPeriod = async (req, res) => {
     }
 
     const result = await updateReservationRoomsPeriod(req.requestId, {
-      reservationId,
+      originalReservationId: reservationId,
       hotelId,
       newCheckIn,
       newCheckOut,
