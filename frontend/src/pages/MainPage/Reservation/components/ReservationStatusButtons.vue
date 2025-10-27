@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
@@ -82,7 +82,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits([
+const _emit = defineEmits([
     'updateReservationStatus',
     'revertCheckout',
     'handleCancel',
@@ -121,7 +121,7 @@ const deleteReservation = () => {
                     detail: `保留中予約が削除されました。`,
                     life: 3000
                 });
-            } catch (e) {
+            } catch (_e) {
                 toast.add({
                     severity: 'warn',
                     summary: '警告',

@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, toRefs, defineProps, defineEmits, watch, onMounted } from 'vue';
+import { ref, defineProps, defineEmits, watch, onMounted } from 'vue';
 import Dialog from 'primevue/dialog';
 import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
@@ -68,7 +68,7 @@ const props = defineProps({
     },
 });
 
-const emits = defineEmits(['update:visible']);
+const _emits = defineEmits(['update:visible']);
 
 const isLoading = ref(true);
 const cancellationDate = ref(new Date());

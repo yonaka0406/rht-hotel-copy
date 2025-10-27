@@ -1,6 +1,6 @@
 <template>
     <Accordion :activeIndex="0">
-        <AccordionPanel v-for="(group, index) in groupedRooms" :key="group.room_id" :value="group.room_id">
+        <AccordionPanel v-for="(group, _index) in groupedRooms" :key="group.room_id" :value="group.room_id">
             <AccordionHeader>
                 <div class="grid grid-cols-7 gap-4 w-full">
                     <div class="col-span-3 text-left">
@@ -346,7 +346,7 @@
                             <Button label="部屋削除" severity="danger" icon="pi pi-trash"
                                 @click="deleteRoom(selectedGroup)" :disabled="isSubmitting" />
                         </div>
-                        <div v-else="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
+                        <div v-else class="grid grid-cols-3 gap-4 items-center mb-4">
                             <p class="col-span-3">部屋を予約から削除より、予約を削除・キャンセルしてください。</p>
                         </div>
                         <div v-if="selectedGroup.details[0].number_of_people < selectedGroup.details[0].capacity"
@@ -506,7 +506,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
-import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button, Badge, ConfirmDialog, Checkbox } from 'primevue';
+import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button, Badge, ConfirmDialog, Checkbox, Message } from 'primevue';
 
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
@@ -616,7 +616,7 @@ const debounce = (func, delay) => {
 
 // Format
 
-const formattedGroupDetails = (details) => {
+const _formattedGroupDetails = (details) => {
     // Before matchingGroupDetails this function was used
     // console.log(details)
     return details.map((item) => ({
@@ -777,10 +777,10 @@ const groupedRooms = computed(() => {
 
     return Object.values(groups);
 });
-const allRoomsHavePlan = computed(() => {
+const _allRoomsHavePlan = computed(() => {
     return groupedRooms.value.every(group => allHavePlan(group));
 });
-const allGroupsPeopleCountMatch = computed(() => {
+const _allGroupsPeopleCountMatch = computed(() => {
     return groupedRooms.value.every(group => allPeopleCountMatch(group));
 });
 
@@ -908,7 +908,7 @@ const applyPlanChanges = async () => {
             overrideRounding: overrideRounding.value
         };
 
-        const result = await setRoomPlan(params);
+        const _result = await setRoomPlan(params);
 
         closeRoomEditDialog();
 
@@ -1298,7 +1298,7 @@ const changeGuestNumber = async (group, mode) => {
     });
 
     try {
-        const response = await changeReservationRoomGuestNumber(group.details[0].reservation_id, group);
+        const _response = await changeReservationRoomGuestNumber(group.details[0].reservation_id, group);
 
         // Provide feedback to the user
         toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
