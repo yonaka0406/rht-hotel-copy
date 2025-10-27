@@ -840,7 +840,7 @@
   });
     
   // Needed Watchers
-  watch(selectedHotelId, async (newVal, oldVal) => {
+  watch(selectedHotelId, async (newVal, _oldVal) => {
     isLoading.value = true;
     if (oldVal !== null && newVal !== null) {
       await fetchHotel();
@@ -852,7 +852,7 @@
       isLoading.value = false;
     }
   }, { immediate: true });
-  watch(centerDate, async (newVal, oldVal) => {
+  watch(centerDate, async (newVal, _oldVal) => {
   
     isLoading.value = true;
   
