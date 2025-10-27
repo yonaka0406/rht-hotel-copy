@@ -571,6 +571,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.1.27] - 2025-10-27
 
 - Feature: Added to room indicator the clients changing room information.
+- Feature: Partial multiple rooms period change became possible.
 - Bugfix: On reservation split, keep the basic information such as comment, OTA ID and payment timing.
 
 ---
