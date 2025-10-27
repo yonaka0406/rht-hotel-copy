@@ -242,7 +242,8 @@
       }
       toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に複製されました。', life: 3000 });
       emit('update:visible', false);
-    } catch (_error) {
+    } catch (error) {
+      console.error('Error copying reservation:', error);
       toast.add({ severity: 'error', summary: 'エラー', detail: '予約の複製中にエラーが発生しました。', life: 3000 });
     }
   };
