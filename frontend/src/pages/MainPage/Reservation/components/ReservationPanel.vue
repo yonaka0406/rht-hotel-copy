@@ -390,15 +390,19 @@
                         <Card class="mt-3 mb-3">
                             <template #title>部屋毎の状況</template>
                             <template #content>
-                                <div class="grid grid-cols-3 gap-4 items-center text-center font-bold">
+                                <div class="grid grid-cols-4 gap-4 items-center text-center font-bold">
                                     <p>部屋</p>
+                                    <p>選択</p>
                                     <p>最も早い日付</p>
                                     <p>最も遅い日付</p>
                                 </div>
                                 <div v-for="(change, index) in roomsAvailableChanges" :key="index" class="room-status">
-                                    <div class="grid grid-cols-3 gap-4 items-center">
+                                    <div class="grid grid-cols-4 gap-4 items-center">
                                         <p class="text-center">{{ change.roomValues.details[0].room_type_name + ' ' +
                                             change.roomValues.details[0].room_number }}</p>
+                                        <div class="flex justify-center">
+                                            <Checkbox v-model="selectedRoomsForChange" :value="change.roomId" />
+                                        </div>
                                         <p class="text-center"
                                             :class="{ 'text-xs text-center': !change.results.earliestCheckIn }">
                                             {{ change.results.earliestCheckIn ? change.results.earliestCheckIn : '制限なし'
@@ -431,7 +435,7 @@
                 <Button v-if="tabsReservationBulkEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check"
                     class="p-button-success p-button-text p-button-sm" @click="applyPatternChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
                 <Button v-if="tabsReservationBulkEditDialog === 4" label="適用" icon="pi pi-check"
-                    class="p-button-success p-button-text p-button-sm" @click="applyDateChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
+                    class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" :loading="isSubmitting" :disabled="isSubmitting" />
 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
                     @click="closeReservationBulkEditDialog" :loading="isSubmitting" :disabled="isSubmitting" />
@@ -519,7 +523,7 @@ const props = defineProps({
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
 const { setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern,
-    fetchAvailableRooms, getAvailableDatesForChange, setCalendarChange,
+    fetchAvailableRooms, getAvailableDatesForChange, setCalendarChange, setReservationRoomsPeriod,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
@@ -1134,6 +1138,7 @@ const handleTabChange = async (newTabValue) => {
     // Period change
     if (tabsReservationBulkEditDialog.value === 4) {
         roomsAvailableChanges.value = [];
+        selectedRoomsForChange.value = [];
         const hotelId = reservationInfo.value.hotel_id;
         newCheckIn.value = new Date(reservationInfo.value.check_in);
         newCheckOut.value = new Date(reservationInfo.value.check_out);
@@ -1141,31 +1146,39 @@ const handleTabChange = async (newTabValue) => {
         const checkIn = formatDate(newCheckIn.value);
         const checkOut = formatDate(newCheckOut.value);
 
-        groupedRooms.value.every(async (room) => {
+        const changesPromises = groupedRooms.value.map(async (room) => {
             const roomId = room.room_id;
             const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
+            return {
+                roomId: roomId,
+                roomValues: room,
+                results: results
+            };
+        });
 
-            if (results.earliestCheckIn) {
-                const earliestCheckInDate = new Date(results.earliestCheckIn);
+        const allChanges = await Promise.all(changesPromises);
+
+        minCheckIn.value = null;
+        maxCheckOut.value = null;
+
+        allChanges.forEach(change => {
+            if (change.results.earliestCheckIn) {
+                const earliestCheckInDate = new Date(change.results.earliestCheckIn);
                 if (!minCheckIn.value || earliestCheckInDate > minCheckIn.value) {
                     minCheckIn.value = earliestCheckInDate;
                 }
             }
 
-            if (results.latestCheckOut) {
-                const latestCheckOutDate = new Date(results.latestCheckOut);
+            if (change.results.latestCheckOut) {
+                const latestCheckOutDate = new Date(change.results.latestCheckOut);
                 if (!maxCheckOut.value || latestCheckOutDate < maxCheckOut.value) {
                     maxCheckOut.value = latestCheckOutDate;
                 }
             }
-
-            // Store the results and room values in roomsAvailableChanges
-            roomsAvailableChanges.value.push({
-                roomId: roomId,
-                roomValues: room,
-                results: results
-            });
         });
+
+        roomsAvailableChanges.value = allChanges;
+        selectedRoomsForChange.value = allChanges.map(change => change.roomId);
     }
 };
 
@@ -1383,10 +1396,21 @@ const newCheckOut = ref(null);
 const minCheckIn = ref(null);
 const maxCheckOut = ref(null);
 const roomsAvailableChanges = ref([]);
-const applyDateChangesToAll = async () => {
+const selectedRoomsForChange = ref([]);
+const applyDateChanges = async () => {
     isSubmitting.value = true;
     try {
-        // Checks            
+        // Checks
+        if (selectedRoomsForChange.value.length === 0) {
+            toast.add({
+                severity: 'warn',
+                summary: '警告',
+                detail: '変更する部屋を選択してください。',
+                life: 3000
+            });
+            return;
+        }
+
         if (!newCheckIn.value) {
             toast.add({
                 severity: 'warn',
@@ -1418,21 +1442,18 @@ const applyDateChangesToAll = async () => {
         const new_check_in = formatDate(new Date(newCheckIn.value));
         const new_check_out = formatDate(new Date(newCheckOut.value));
 
-        for (const room of roomsAvailableChanges.value) {
+        const roomIdsToChange = selectedRoomsForChange.value;
+        const id = reservationInfo.value.reservation_id;
 
-            const id = room.roomValues.details[0].reservation_id;
-            const old_check_in = room.roomValues.details[0].check_in;
-            const old_check_out = room.roomValues.details[0].check_out;
-            const old_room_id = room.roomId;
-            const new_room_id = room.roomId;
-            const number_of_people = room.roomValues.details[0].number_of_people;
-
-            await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'bulk');
-        }
+        const result = await setReservationRoomsPeriod(id, reservationInfo.value.hotel_id, new_check_in, new_check_out, roomIdsToChange);
 
         closeReservationBulkEditDialog();
 
-        toast.add({ severity: 'success', summary: '成功', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '選択された部屋の宿泊期間が更新されました。', life: 3000 });
+
+        if (result.success && result.newReservationId) {
+            router.push({ name: 'ReservationEdit', params: { reservation_id: result.newReservationId } });
+        }
 
     } catch (error) {
         console.error('Error applying date changes:', error);
