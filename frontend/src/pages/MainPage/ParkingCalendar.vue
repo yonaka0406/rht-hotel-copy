@@ -355,15 +355,15 @@
         booker_name: reservation.booker_name || '',  // Add booker name if available
         reservation_id: reservation.reservation_id,
         ...reservation  // Spread all other reservation properties
-    } else {
+      }
+    } else {        
+      return { 
+        status: 'available', 
+        client_name: '', 
+        booker_name: '',
+        reservation_id: null 
+      };
     }
-    
-    return { 
-      status: 'available', 
-      client_name: '', 
-      booker_name: '',
-      reservation_id: null 
-    };
   };
   const getCellStyle = (spotId, date) => {
     const spotInfo = fillSpotInfo(spotId, date);
