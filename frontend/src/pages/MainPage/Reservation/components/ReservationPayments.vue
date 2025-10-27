@@ -176,15 +176,13 @@ import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
 import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column } from 'primevue';
 
-const isDialogVisible = ref(false);
-
 // Stores
 import { useSettingsStore } from '@/composables/useSettingsStore';
 const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservationIsUpdating, fetchReservationClientIds, addReservationPayment, deleteReservationPayment } = useReservationStore();
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
+const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
@@ -497,7 +495,7 @@ onMounted(async () => {
 });
 
 // Watcher
-watch(newPayment, (newVal, oldVal) => {
+watch(newPayment, (_newVal, _oldVal) => {
 
     const price = pricePerRoom.value[newPayment.value.room_id] || 0;
     const payment = paymentPerRoom.value[newPayment.value.room_id] || 0;
@@ -506,7 +504,7 @@ watch(newPayment, (newVal, oldVal) => {
 
 }, { deep: true });
 
-watch(reservationIsUpdating, async (newVal, oldVal) => {
+watch(reservationIsUpdating, async (newVal, _oldVal) => {
     if (newVal === true) {
         // console.log("Updating...");            
     }
@@ -516,7 +514,7 @@ watch(reservationIsUpdating, async (newVal, oldVal) => {
     }
 });
 
-watch(remainingBalance, async (newVal, oldVal) => {
+watch(remainingBalance, async (_newVal, _oldVal) => {
     // console.log('watch remainingBalance', oldVal, newVal);
 
     const price = pricePerRoom.value[newPayment.value.room_id] || 0;
