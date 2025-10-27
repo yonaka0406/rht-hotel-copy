@@ -27,7 +27,7 @@
         <Message v-if="!allGroupsPeopleCountMatch" severity="warn" :closable="false" class="col-span-2">
             <div class="flex items-center">
                 <i class="pi pi-exclamation-triangle mr-2"></i>
-                <span>予約の人数と宿泊者の人数が一致していません。</span>
+                <span>予約の人数と宿泊者の人数が一致していない可能性があります。</span>
             </div>
         </Message>
         <div class="field flex flex-col">
@@ -223,7 +223,7 @@
                 <TabList>
                     <Tab value="0">プラン適用</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'"
-                        value="4" :disabled="hasAnyRoomChange">期間</Tab>
+                        value="4">期間</Tab>
                 </TabList>
 
 
@@ -402,9 +402,12 @@
                                 <div v-for="(change, index) in roomsAvailableChanges" :key="index" class="room-status">
                                     <div class="grid grid-cols-4 gap-4 items-center">
                                         <p class="text-center">{{ change.roomValues.details[0].room_type_name + ' ' +
-                                            change.roomValues.details[0].room_number }}</p>
+                                            change.roomValues.details[0].room_number }}
+                                            <i v-if="hasRoomChange(change.roomValues)" class="pi pi-exclamation-triangle ml-2 text-orange-500"
+                                                v-tooltip.top="'この部屋には期間変更があります。'"></i>
+                                        </p>
                                         <div class="flex justify-center">
-                                            <Checkbox v-model="selectedRoomsForChange" :value="change.roomId" />
+                                            <Checkbox v-model="selectedRoomsForChange" :value="change.roomId" :disabled="hasRoomChange(change.roomValues)" />
                                         </div>
                                         <p class="text-center"
                                             :class="{ 'text-xs text-center': !change.results.earliestCheckIn }">
@@ -724,27 +727,35 @@ const allRoomsHavePlan = computed(() => {
     return allPlansSet && paymentTimingSet;
 });
 const allGroupsPeopleCountMatch = computed(() => {
-    if (!reservationInfo.value || !groupedRooms.value.length) {
-        return true; // No reservation info or rooms, so no mismatch
+    if (!reservationInfo.value || !props.reservation_details.length) {
+        return true; // No reservation info or details, so no mismatch
     }
 
     const totalReservationPeople = reservationInfo.value.reservation_number_of_people;
-    let sumOfRoomPeople = 0;
+    const reservationCheckIn = new Date(reservationInfo.value.check_in);
+    const reservationCheckOut = new Date(reservationInfo.value.check_out);
 
-    groupedRooms.value.forEach(roomGroup => {
-        // Assuming number_of_people is consistent for a room across its details
-        // We take the number_of_people from the first detail of each room group
-        if (roomGroup.details.length > 0) {
-            sumOfRoomPeople += roomGroup.details[0].number_of_people;
+    let currentDate = new Date(reservationCheckIn);
+    while (currentDate < reservationCheckOut) {
+        const formattedCurrentDate = formatDate(currentDate);
+        let peopleOnThisDate = 0;
+
+        // Sum people from all reservation_details that fall on the current date
+        props.reservation_details.forEach(detail => {
+            if (formatDate(new Date(detail.date)) === formattedCurrentDate) {
+                peopleOnThisDate += detail.number_of_people;
+            }
+        });
+
+        if (peopleOnThisDate !== totalReservationPeople) {
+            return false; // Mismatch found on this date
         }
-    });
 
-    return totalReservationPeople === sumOfRoomPeople;
-});
-const hasAnyRoomChange = computed(() => {
-    return groupedRooms.value.some(group => hasRoomChange(group));
-});
+        currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
+    }
 
+    return true; // No mismatch found on any date
+});
 const allReservationClients = computed(() => {
     const uniqueClients = new Map();
     let fallbackId = 0;
@@ -1244,7 +1255,9 @@ const handleTabChange = async (newTabValue) => {
         const allChanges = await Promise.all(changesPromises);
 
         roomsAvailableChanges.value = allChanges;
-        selectedRoomsForChange.value = allChanges.map(change => change.roomId);
+        selectedRoomsForChange.value = allChanges
+            .filter(change => !hasRoomChange(change.roomValues)) // Only select rooms without changes
+            .map(change => change.roomId);
     }
 };
 
@@ -1508,6 +1521,22 @@ const applyDateChanges = async () => {
 
         const roomIdsToChange = selectedRoomsForChange.value;
         const id = reservationInfo.value.reservation_id;
+
+        // Add a check to prevent processing rooms that should be disabled
+        const roomsWithChangesAttempted = roomIdsToChange.filter(roomId => {
+            const roomChangeEntry = roomsAvailableChanges.value.find(change => change.roomId === roomId);
+            return roomChangeEntry && hasRoomChange(roomChangeEntry.roomValues);
+        });
+
+        if (roomsWithChangesAttempted.length > 0) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '期間変更ができない部屋が含まれています。',
+                life: 5000
+            });
+            return;
+        }
 
         const allOriginalRoomIds = groupedRooms.value.map(group => group.room_id);
         const allRoomsSelected = roomIdsToChange.length === allOriginalRoomIds.length && roomIdsToChange.every(id => allOriginalRoomIds.includes(id));
