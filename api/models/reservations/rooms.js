@@ -95,7 +95,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                 updated_by = $3
             WHERE reservation_id = $4 AND room_id = ANY($5::int[])
         `;
-        const updateResult = await client.query(updateDetailsQuery, [newReservationId, interval, userId, originalReservationId, roomIds]);
+        await client.query(updateDetailsQuery, [newReservationId, interval, userId, originalReservationId, roomIds]);
 
     } else { // Duration has changed. Recreating reservation_details records.
 
