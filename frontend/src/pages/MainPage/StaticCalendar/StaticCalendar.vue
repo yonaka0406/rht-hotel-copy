@@ -419,7 +419,6 @@ const uniqueLegendItems = computed(() => {
 
   legendItems.push({ plan_name: '仮予約', plan_color: '#ead59f' });
   legendItems.push({ plan_name: '社員', plan_color: '#f3e5f5' });
-  legendItems.push({ plan_name: 'OTA', plan_color: '#9fead5' });
   legendItems.push({ plan_name: '保留', plan_color: '#FFC107' });
 
   return legendItems;
@@ -607,8 +606,8 @@ const getCellStyle = (room_id, date) => {
     roomColor = '#fca5a5';
     style = { backgroundColor: `${roomColor}` };
   } else if (roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web')) {
-    roomColor = '#9fead5';
-    style = { backgroundColor: `${roomColor}` };
+    roomColor = roomInfo.plan_color || '#9fead5';
+    style = { backgroundColor: `${roomColor}`, border: '2px solid #9fead5' };
   } else if (roomInfo && roomInfo.plan_color) {
     roomColor = roomInfo.plan_color;
     style = { backgroundColor: `${roomColor}` };
