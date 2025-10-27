@@ -119,7 +119,7 @@
                         value="2">宿泊者</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'"
                         value="3">追加・削除</Tab>
-                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'"
+                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'"
                         value="4">期間</Tab>
                     <Tab value="5">キャンセル</Tab>
                 </TabList>
