@@ -1557,4 +1557,24 @@ watch(addons, (newValue, oldValue) => {
         }));
     }
 }, { deep: true });
+
+watch([computedMinCheckIn, computedMaxCheckOut], ([newMin, newMax]) => {
+    // Adjust newCheckIn
+    if (newMin && (!newCheckIn.value || newCheckIn.value < newMin)) {
+        newCheckIn.value = newMin;
+    }
+
+    // Adjust newCheckOut
+    if (newMax && (!newCheckOut.value || newCheckOut.value > newMax)) {
+        newCheckOut.value = newMax;
+    }
+
+    // Ensure newCheckOut is always after newCheckIn
+    if (newCheckIn.value && newCheckOut.value && newCheckOut.value <= newCheckIn.value) {
+        // If newCheckOut is before or same as newCheckIn, adjust newCheckOut to be newCheckIn + 1 day
+        const adjustedCheckOut = new Date(newCheckIn.value);
+        adjustedCheckOut.setDate(adjustedCheckOut.getDate() + 1);
+        newCheckOut.value = adjustedCheckOut;
+    }
+}, { immediate: true });
 </script>
