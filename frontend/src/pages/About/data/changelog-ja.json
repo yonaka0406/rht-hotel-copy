@@ -513,7 +513,24 @@
         { "type": "bugfix", "description": "特定の日付範囲をキャンセルした際に、チェックイン/チェックアウト日と宿泊人数が正しく更新されない問題を修正しました。" },
         { "type": "feature", "description": "Google Sheets APIリクエストを管理・最適化するための`google_sheets_queue`テーブルを追加し、Google Driveエクスポートの信頼性とパフォーマンスを向上させました。" }
       ]
-    }
+    },
+    {
+      "version": "1.1.26",
+      "date": "2025-10-23",
+      "changes": [
+        { "type": "feature", "description": "日次ダイジェストメールのルーチンを追加し、管理パネルでログを確認できるテーブルを追加しました。" },
+        { "type": "feature", "description": "新しいバックエンドエンドポイントとCSVジェネレーターサービスを介して、財務インポート用の事前入力済みテンプレートのダウンロード機能を追加しました。" },
+        { "type": "bugfix", "description": "部屋ごとのアドオン数量計算を修正しました。" }
+      ]
+    },
+    {
+      "version": "1.1.27",
+      "date": "2025-10-27",
+      "changes": [
+        { "type": "feature", "description": "部屋インジケーターに部屋移動する顧客情報を追加しました。" },
+        { "type": "bugfix", "description": "予約分割時に、コメント、OTA ID、支払いタイミングなどの基本情報を保持するように修正しました。" }
+      ]
+    }    
   ],
   "backlog": [
     { "description": "通知：アラート通知設定（例：大口予約受注後1ヶ月後のアラート等）。" },    
