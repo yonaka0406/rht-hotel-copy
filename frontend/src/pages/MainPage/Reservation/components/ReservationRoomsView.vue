@@ -34,7 +34,7 @@
                 </div>
             </AccordionHeader>
             <Message v-if="hasRoomChange(group)" severity="warn" :closable="false" class="mt-2 mb-2">
-                この部屋には期間変更があります。期間変更タブは無効化されています。
+                この部屋には部屋移動があります。期間変更タブは無効化されています。
             </Message>
             <AccordionContent>
                 <DataTable :value="matchingGroupDetails(group.details)" :rowStyle="rowStyle" :rowExpansion="true"

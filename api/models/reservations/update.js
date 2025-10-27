@@ -116,12 +116,14 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
 
     return result.rows[0];
   } catch (err) {
-    console.error(`[${requestId}] Error updating payment timing for reservation ${reservationId}, hotel ${hotelId}:`, err.message, err.stack);
-    // Re-throw specific errors or a generic database error
-    if (err.statusCode) {
-      throw err; // Re-throw custom errors with status codes
+    // Differentiate between expected business errors (e.g., 400, 404) and unexpected system errors
+    if (err.statusCode && err.statusCode < 500) {
+      throw err; // Re-throw business errors without logging as system failures
+    } else {
+      // Log unexpected system errors (500+ or missing statusCode)
+      console.error(`[${requestId}] System Error updating payment timing for reservation ${reservationId}, hotel ${hotelId}:`, err.message, err.stack);
+      throw new Error('Database error during payment timing update.');
     }
-    throw new Error('Database error during payment timing update.');
   }
 };
 

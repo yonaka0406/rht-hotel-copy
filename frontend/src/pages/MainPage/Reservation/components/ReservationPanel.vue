@@ -1258,6 +1258,16 @@ const handleTabChange = async (newTabValue) => {
         selectedRoomsForChange.value = allChanges
             .filter(change => !hasRoomChange(change.roomValues)) // Only select rooms without changes
             .map(change => change.roomId);
+
+        // Add conditional toast warning
+        if (selectedRoomsForChange.value.length === 0 && allChanges.length > 0) {
+            toast.add({
+                severity: 'warn',
+                summary: '警告',
+                detail: '期間変更可能な部屋がありません。', // "No rooms available for period change."
+                life: 5000
+            });
+        }
     }
 };
 
