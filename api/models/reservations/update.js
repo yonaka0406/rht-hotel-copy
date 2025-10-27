@@ -83,6 +83,17 @@ const updateReservationResponsible = async (requestId, id, updatedFields, user_i
 
 const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTiming, userId) => {
   const pool = getPool(requestId);
+
+  // Whitelist of allowed paymentTiming values
+  const allowedPaymentTimings = ['not_set', 'prepaid', 'on-site', 'postpaid'];
+
+  // 1. Validate incoming paymentTiming
+  if (!allowedPaymentTimings.includes(paymentTiming)) {
+    const error = new Error(`Invalid paymentTiming value: ${paymentTiming}. Allowed values are: ${allowedPaymentTimings.join(', ')}`);
+    error.statusCode = 400; // Bad Request
+    throw error;
+  }
+
   const query = `
     UPDATE reservations
     SET
@@ -95,10 +106,22 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
 
   try {
     const result = await pool.query(query, values);
+
+    // 2. Check if a row was updated
+    if (result.rowCount === 0) {
+      const error = new Error(`Reservation with ID ${reservationId} and Hotel ID ${hotelId} not found or no change was made.`);
+      error.statusCode = 404; // Not Found
+      throw error;
+    }
+
     return result.rows[0];
   } catch (err) {
-    console.error('Error updating payment timing:', err);
-    throw new Error('Database error');
+    console.error(`[${requestId}] Error updating payment timing for reservation ${reservationId}, hotel ${hotelId}:`, err.message, err.stack);
+    // Re-throw specific errors or a generic database error
+    if (err.statusCode) {
+      throw err; // Re-throw custom errors with status codes
+    }
+    throw new Error('Database error during payment timing update.');
   }
 };
 
