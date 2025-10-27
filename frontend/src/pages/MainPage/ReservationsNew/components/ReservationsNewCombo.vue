@@ -1016,7 +1016,7 @@ const submitReservation = async () => {
 
             // One assignment per parking combo, backend will expand it further
             const assignments = parkingCombos.map((parkingCombo, _index) => {
-                //console.log(`Processing parking combo ${index + 1}:`, parkingCombo);
+
 
                 return {
                     hotel_id: hotelId,
