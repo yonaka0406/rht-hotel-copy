@@ -102,7 +102,6 @@ const filteredRooms = computed(() => {
         }));
 });
 
-const noRoomsAvailable = computed(() => filteredRooms.value.length === 0);
 const hasAnyAvailableRooms = computed(() => availableRooms.value.length > 0);
 
 const openAddRoomDialog = async () => {
