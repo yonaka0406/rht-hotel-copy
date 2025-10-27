@@ -689,7 +689,7 @@
         const endDateObj = normalizeDate(new Date(metricsEffectiveEndDate.value));
         const dailyActualAvailableRoomsMap = new Map();
         allReservationsData.value.forEach(res => {
-            if (res.date && res.total_rooms_real !== undefined && res.total_rooms_real !== null && res.total_rooms_real !== undefined) {
+            if (res.date && res.total_rooms_real != null) {
                 const realRooms = parseInt(res.total_rooms_real);
                 // Store it only if it's a valid number (including 0).
                 if (!isNaN(realRooms)) {
