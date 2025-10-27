@@ -181,7 +181,7 @@
 
     // Options for dialog (Passed to dialog)
     const actionTypeOptions = computed(() =>
-        Object.entries(actionTypeTranslations).map(([value, label]) => ({ label, value }))
+        Object.entries(actionTypeTranslations).map(([value, _label]) => ({ _label, value }))
     );
     const statusOptions = computed(() =>
         Object.entries(statusTranslations)
