@@ -36,6 +36,7 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
     // The logic here is: if allRoomsSelected is true, we update the original reservation.
     // If allRoomsSelected is false, we create a new reservation for the selected rooms.
     if (!allRoomsSelected) {
+        console.log(`[${requestId}] Inside !allRoomsSelected block. allRoomsSelected is: ${allRoomsSelected}`);
         // Calculate total people being moved for the new reservation
         const peopleQuery = `
             SELECT room_id, number_of_people
