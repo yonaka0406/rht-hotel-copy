@@ -122,15 +122,14 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
                     };
 
                     const insertDetailQuery = `
-                        INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, created_by, updated_by)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12) RETURNING id;
-                    `;
-                    const newDetailResult = await client.query(insertDetailQuery, [
-                        hotelId, newReservationId, date, roomId,
-                        template.plans_global_id, template.plans_hotel_id, template.plan_name, template.plan_type,
-                        template.number_of_people, template.price, template.billable, userId
-                    ]);
-                    const newDetailId = newDetailResult.rows[0].id;
+                                            INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, created_by, updated_by)
+                                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id;
+                                        `;
+                                        const newDetailResult = await client.query(insertDetailQuery, [
+                                            hotelId, newReservationId, date, roomId,
+                                            template.plans_global_id, template.plans_hotel_id, template.plan_name, template.plan_type,
+                                            template.number_of_people, template.price, template.billable, userId, userId
+                                        ]);                    const newDetailId = newDetailResult.rows[0].id;
                     console.log(`[${requestId}] Inserted new detail ${newDetailId} for room ${roomId} on ${date}.`);
 
                     // Copy clients and addons to the new detail
@@ -142,9 +141,8 @@ const updateReservationRoomsPeriod = async (requestId, { reservationId, hotelId,
                     }
                     if (addonsToCopy.length > 0) {
                         for (const addonRow of addonsToCopy) {
-                            await client.query('INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)',
-                            [hotelId, newDetailId, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name, addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, userId]);
-                            console.log(`[${requestId}] Copied addon ${addonRow.addon_name} to new detail ${newDetailId}.`);
+                                                    await client.query('INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+                                                    [hotelId, newDetailId, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name, addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, userId, userId]);                            console.log(`[${requestId}] Copied addon ${addonRow.addon_name} to new detail ${newDetailId}.`);
                         }
                     }
                 }
