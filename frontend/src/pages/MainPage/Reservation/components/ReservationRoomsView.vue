@@ -615,16 +615,6 @@ const debounce = (func, delay) => {
 };
 
 // Format
-
-const _formattedGroupDetails = (details) => {
-    // Before matchingGroupDetails this function was used
-    // console.log(details)
-    return details.map((item) => ({
-        ...item,
-        price: formatCurrency(item.price),
-        display_date: formatDateWithDay(item.date),
-    }));
-};
 const matchingGroupDetails = (details) => {
 
     // Check if details is empty
@@ -777,12 +767,7 @@ const groupedRooms = computed(() => {
 
     return Object.values(groups);
 });
-const _allRoomsHavePlan = computed(() => {
-    return groupedRooms.value.every(group => allHavePlan(group));
-});
-const _allGroupsPeopleCountMatch = computed(() => {
-    return groupedRooms.value.every(group => allPeopleCountMatch(group));
-});
+
 
 const getCancelledDaysCount = (group) => {
     if (!group || !group.details) return 0;
