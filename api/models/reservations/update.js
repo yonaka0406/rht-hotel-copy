@@ -81,7 +81,29 @@ const updateReservationResponsible = async (requestId, id, updatedFields, user_i
   }
 };
 
+const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTiming, userId) => {
+  const pool = getPool(requestId);
+  const query = `
+    UPDATE reservations
+    SET
+      payment_timing = $1,
+      updated_by = $2
+    WHERE id = $3::UUID AND hotel_id = $4
+    RETURNING *;
+  `;
+  const values = [paymentTiming, userId, reservationId, hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error updating payment timing:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
     updateReservationType,
-    updateReservationResponsible    
+    updateReservationResponsible,
+    updatePaymentTiming
 }
