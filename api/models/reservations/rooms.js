@@ -210,12 +210,30 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
             }
         }
 
-        // Recalculate and update number_of_people for original reservation
+    // Update the check_in and check_out dates of the original reservation
+    // This applies when allRoomsSelected is true, as newReservationId will be originalReservationId
+    // If !allRoomsSelected, newReservationId will be the ID of the new reservation, 
+    // and the original reservation's dates will be recalculated based on remaining details.
+    // For now, we only update the original reservation's dates if all rooms are selected.
+    if (allRoomsSelected) {
+        const updateReservationDatesQuery = `
+            UPDATE reservations
+            SET check_in = $1, check_out = $2, updated_by = $3
+            WHERE id = $4 AND hotel_id = $5;
+        `;
+        await client.query(updateReservationDatesQuery, [newCheckIn, newCheckOut, userId, originalReservationId, hotelId]);
+        console.log(`[${requestId}] Updated check_in/check_out for original reservation ${originalReservationId} to ${newCheckIn}/${newCheckOut}.`);
+    }
+
+
+    // Recalculate and update number_of_people for original reservation ONLY if not all rooms were selected
+    if (!allRoomsSelected) {
         const originalReservationPeopleSumQuery = 'SELECT COUNT(DISTINCT room_id) as total_people FROM reservation_details WHERE reservation_id = $1';
         const originalPeopleResult = await client.query(originalReservationPeopleSumQuery, [originalReservationId]);
         const originalTotalPeople = originalPeopleResult.rows[0].total_people || 0;
         await client.query('UPDATE reservations SET number_of_people = $1, updated_by = $2 WHERE id = $3', [originalTotalPeople, userId, originalReservationId]);
         console.log(`[${requestId}] Recalculated and updated people count for original reservation ${originalReservationId} to ${originalTotalPeople}.`);
+    }
 
         // If a new reservation was created, recalculate and update its number_of_people
         if (newReservationId !== originalReservationId) {
