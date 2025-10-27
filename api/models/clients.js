@@ -1156,6 +1156,67 @@ const deleteImpediment = async (requestId, impedimentId) => {
   }
 };
 
+const getAllClientsForExport = async (requestId, filters = {}) => {
+  const pool = getPool(requestId);
+  let query = `
+    SELECT
+      c.name_kanji,
+      c.name_kana,
+      c.name,
+      CASE
+        WHEN c.gender = 'male' THEN '男性'
+        WHEN c.gender = 'female' THEN '女性'
+        ELSE 'その他・未設定'
+      END AS gender,
+      c.email,
+      c.phone,
+      c.fax,
+      CASE
+        WHEN c.billing_preference = 'paper' THEN '紙請求'
+        ELSE '電子'
+      END AS billing_preference,
+      c.website,
+      c.customer_id,
+      CASE
+        WHEN ci.restriction_level = 'block' THEN '取引禁止'
+        WHEN ci.restriction_level = 'warning' THEN '取引注意'
+        ELSE ci.restriction_level::TEXT
+      END AS restriction_level,
+      c.id,
+      c.comment,
+      c.created_at
+    FROM
+      clients c
+      LEFT JOIN (
+        SELECT DISTINCT client_id, restriction_level
+        FROM client_impediments
+        WHERE restriction_level = 'block' AND is_active = true
+        UNION ALL
+        SELECT DISTINCT client_id, restriction_level
+        FROM client_impediments
+        WHERE restriction_level = 'warning' AND is_active = true
+      ) ci ON c.id = ci.client_id
+    WHERE
+      c.id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
+  `;
+  const values = [];
+
+  if (filters.created_after) {
+    values.push(filters.created_after);
+    query += ` AND c.created_at >= $${values.length}`;
+  }
+
+  query += ` ORDER BY customer_id, name_kana, name_kanji, created_at`;
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving all clients for export:', err);
+    throw new Error('Database error');
+  }
+};
+
 
 module.exports = {
   toFullWidthKana,
@@ -1190,4 +1251,5 @@ module.exports = {
   getImpedimentsByClientId,
   updateImpediment,
   deleteImpediment,
+  getAllClientsForExport,
 };

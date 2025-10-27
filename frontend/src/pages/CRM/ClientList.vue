@@ -13,6 +13,12 @@
                             @click="dialogOpenClose(true)"
                             class="mr-6"
                         />
+                        <Button
+                            label="ダウンロード"
+                            icon="pi pi-download"
+                            @click="openExportDialog"
+                            class="mr-6"
+                        />
                         <SelectButton v-model="tableSize" :options="tableSizeOptions"
                         optionLabel="label" dataKey="label" />
                     </div>
@@ -219,19 +225,61 @@
             <Button label="保存" icon="pi pi-check" @click="submitClient" class="p-button-success p-button-text p-button-sm" />
         </template>
     </Dialog>
+
+    <Dialog
+        class="dark:bg-gray-800 dark:text-gray-200"
+        v-model:visible="exportDialogVisible"
+        header="顧客データのエクスポート"
+        :closable="true"
+        :modal="true"
+        :style="{ width: '30vw' }"
+    >
+        <div class="grid grid-cols-1 gap-4 pt-4">
+            <div class="col-span-1">
+                <FloatLabel>
+                    <DatePicker v-model="createdAfter" showIcon fluid />
+                    <label>以降に作成された顧客</label>
+                </FloatLabel>
+            </div>
+        </div>
+        <template #footer>
+            <Button label="閉じる" icon="pi pi-times" @click="closeExportDialog" class="p-button-danger p-button-text p-button-sm" />
+            <Button label="ダウンロード" icon="pi pi-download" @click="downloadClients" class="p-button-success p-button-text p-button-sm" />
+        </template>
+    </Dialog>
 </template>
 
 <script setup>
     import { ref, onMounted } from "vue";
     import { useRouter } from 'vue-router';
     import { useClientStore } from '@/composables/useClientStore';    
-    import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button, Tag, Select } from 'primevue';
+    import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button, Tag, Select, DatePicker } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
     import { useToast } from 'primevue/usetoast'; // Import useToast
 
     const router = useRouter();
     const { clients, clientsIsLoading, createBasicClient } = useClientStore();
     const toast = useToast(); // Initialize toast
+
+    const exportDialogVisible = ref(false);
+    const createdAfter = ref(null);
+
+    const openExportDialog = () => {
+      exportDialogVisible.value = true;
+    };
+
+    const closeExportDialog = () => {
+      exportDialogVisible.value = false;
+    };
+
+    const downloadClients = () => {
+      let url = '/api/clients/export';
+      if (createdAfter.value) {
+        url += `?created_after=${createdAfter.value.toISOString()}`;
+      }
+      window.open(url, '_blank');
+      closeExportDialog();
+    };
 
     // Data table
     const tableSize = ref({ label: '中', value: 'null' });

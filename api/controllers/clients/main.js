@@ -1,6 +1,6 @@
-const clientsModel = require('../models/clients');
-const reservationsModel = require('../models/reservations');
-const logger = require('../config/logger');
+const clientsModel = require('../../models/clients');
+const reservationsModel = require('../../models/reservations');
+const logger = require('../../config/logger');
 
 // GET
 const getClients = async (req, res) => {
@@ -446,6 +446,33 @@ const handleDeleteImpediment = async (req, res) => {
   }
 };
 
+const { exportClientsToFile } = require('./services/exportService');
+
+const exportClients = async (req, res) => {
+  const { created_after } = req.query;
+
+  try {
+    const clients = await clientsModel.getAllClientsForExport(req.requestId, { created_after });
+
+    const workbook = await exportClientsToFile(clients);
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=clients.xlsx'
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exporting clients:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 module.exports = { 
   getClients, 
@@ -471,4 +498,5 @@ module.exports = {
   handleGetImpedimentsByClientId,
   handleUpdateImpediment,
   handleDeleteImpediment,
+  exportClients,
 };
