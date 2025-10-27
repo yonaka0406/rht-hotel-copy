@@ -87,7 +87,7 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['update:visible']);
+const _emit = defineEmits(['update:visible']);
 
 const slackMessage = ref('');
 
@@ -226,7 +226,7 @@ const nonSmokingRoomsCount = computed(() => {
     return uniqueNonSmokingRooms.size;
 });
 
-const planNamesList = computed(() => {
+const _planNamesList = computed(() => {
     let planNames = new Set();
     if (props.groupedRooms && props.groupedRooms.length > 0) {
         props.groupedRooms.forEach(group => {
