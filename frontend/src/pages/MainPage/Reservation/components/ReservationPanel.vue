@@ -223,7 +223,7 @@
                 <TabList>
                     <Tab value="0">プラン適用</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'"
-                        value="4">期間</Tab>
+                        value="4" :disabled="hasAnyRoomChange">期間</Tab>
                 </TabList>
 
 
@@ -622,6 +622,39 @@ const formatTime = (time) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+const hasRoomChange = (group) => {
+    if (!group || !group.details || group.details.length === 0) return false;
+
+    const reservationCheckIn = new Date(reservationInfo.value.check_in);
+    const reservationCheckOut = new Date(reservationInfo.value.check_out);
+
+    // Calculate the total number of nights for the entire reservation
+    const totalReservationNights = (reservationCheckOut.getTime() - reservationCheckIn.getTime()) / (1000 * 60 * 60 * 24);
+
+    // If the number of details (nights) for this room group is less than the total reservation nights,
+    // it implies a room change (i.e., this room is not present for the entire duration).
+    if (group.details.length < totalReservationNights) {
+        return true;
+    }
+
+    // Also check if the room's details span the *exact* period of the reservation.
+    const roomFirstDetailDate = new Date(group.details[0].date);
+    const roomLastDetailDate = new Date(group.details[group.details.length - 1].date);
+
+    // Check if the start date of this room's details matches the reservation check-in
+    if (formatDate(roomFirstDetailDate) !== formatDate(reservationCheckIn)) {
+        return true;
+    }
+
+    // Check if the end date of this room's details matches the reservation check-out last night
+    const reservationLastNightDate = new Date(reservationCheckOut.getTime() - (1000 * 60 * 60 * 24));
+    if (formatDate(roomLastDetailDate) !== formatDate(reservationLastNightDate)) {
+        return true;
+    }
+
+    return false;
+};
+
 // Computed
 const reservationInfo = computed(() => props.reservation_details?.[0]);
 const reservationStatus = computed(() => {
@@ -708,6 +741,10 @@ const allGroupsPeopleCountMatch = computed(() => {
 
     return totalReservationPeople === sumOfRoomPeople;
 });
+const hasAnyRoomChange = computed(() => {
+    return groupedRooms.value.some(group => hasRoomChange(group));
+});
+
 const allReservationClients = computed(() => {
     const uniqueClients = new Map();
     let fallbackId = 0;

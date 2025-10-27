@@ -4,8 +4,9 @@
             <AccordionHeader>
                 <div class="grid grid-cols-7 gap-4 w-full">
                     <div class="col-span-3 text-left">
-                        部屋： {{ `${group.details[0]?.room_number} - ${group.room_type} (${group.details[0]?.capacity})
-                        ${group.details[0]?.smoking ? ' 🚬' : ''} ${group.details[0]?.has_wet_area ? ' 🚿' : ''}` }}
+                        部屋： {{ `${group.details[0]?.room_number} - ${group.room_type} (${group.details[0]?.capacity})\r\n                        ${group.details[0]?.smoking ? ' 🚬' : ''} ${group.details[0]?.has_wet_area ? ' 🚿' : ''}` }}
+                        <i v-if="hasRoomChange(group)" class="pi pi-exclamation-triangle ml-2 text-orange-500"
+                            v-tooltip.top="'この部屋には期間変更があります。'"></i>
                     </div>
                     <div class="flex items-center justify-center">
                         <Badge v-if="getCancelledDaysCount(group) > 0 && !isFullyCancelled(group)"
@@ -32,6 +33,9 @@
                     </div>
                 </div>
             </AccordionHeader>
+            <Message v-if="hasRoomChange(group)" severity="warn" :closable="false" class="mt-2 mb-2">
+                この部屋には期間変更があります。期間変更タブは無効化されています。
+            </Message>
             <AccordionContent>
                 <DataTable :value="matchingGroupDetails(group.details)" :rowStyle="rowStyle" :rowExpansion="true"
                     v-model:expandedRows="expandedRows[group.room_id]" dataKey="id" sortField="display_date"
@@ -120,7 +124,7 @@
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'"
                         value="3">追加・削除</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'"
-                        value="4">期間</Tab>
+                        value="4" :disabled="hasRoomChange(selectedGroup)">期間</Tab>
                     <Tab value="5">キャンセル</Tab>
                 </TabList>
 
@@ -532,6 +536,40 @@ const allPeopleCountMatch = (group) => {
         (detail) => detail.number_of_people === detail.reservation_clients.length
     );
 };
+
+const hasRoomChange = (group) => {
+    if (!group || !group.details || group.details.length === 0) return false;
+
+    const reservationCheckIn = new Date(reservationInfo.value.check_in);
+    const reservationCheckOut = new Date(reservationInfo.value.check_out);
+
+    // Calculate the total number of nights for the entire reservation
+    const totalReservationNights = (reservationCheckOut.getTime() - reservationCheckIn.getTime()) / (1000 * 60 * 60 * 24);
+
+    // If the number of details (nights) for this room group is less than the total reservation nights,
+    // it implies a room change (i.e., this room is not present for the entire duration).
+    if (group.details.length < totalReservationNights) {
+        return true;
+    }
+
+    // Also check if the room's details span the *exact* period of the reservation.
+    const roomFirstDetailDate = new Date(group.details[0].date);
+    const roomLastDetailDate = new Date(group.details[group.details.length - 1].date);
+
+    // Check if the start date of this room's details matches the reservation check-in
+    if (formatDate(roomFirstDetailDate) !== formatDate(reservationCheckIn)) {
+        return true;
+    }
+
+    // Check if the end date of this room's details matches the reservation check-out last night
+    const reservationLastNightDate = new Date(reservationCheckOut.getTime() - (1000 * 60 * 60 * 24));
+    if (formatDate(roomLastDetailDate) !== formatDate(reservationLastNightDate)) {
+        return true;
+    }
+
+    return false;
+};
+
 const normalizePhone = (phone) => {
     if (!phone) return '';
 
