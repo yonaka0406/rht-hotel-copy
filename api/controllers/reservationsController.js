@@ -9,7 +9,7 @@ const {
   insertCopyReservation, selectReservationParking,
   deleteParkingReservation, deleteBulkParkingReservations,
   cancelReservationRooms: cancelReservationRoomsModel,
-  updatePaymentTiming,
+  updatePaymentTiming, updateReservationRoomsPeriod,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -1508,6 +1508,27 @@ const editPaymentTiming = async (req, res) => {
   }
 };
 
+const changeReservationRoomsPeriod = async (req, res) => {
+  const { reservationId } = req.params;
+  const { hotelId, newCheckIn, newCheckOut, roomIds } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const result = await updateReservationRoomsPeriod(req.requestId, {
+      reservationId,
+      hotelId,
+      newCheckIn,
+      newCheckOut,
+      roomIds,
+      userId
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error changing reservation period:', error);
+    res.status(500).json({ error: 'Failed to change reservation period' });
+  }
+};
+
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, 
   getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability,
@@ -1520,4 +1541,5 @@ module.exports = {
   deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, 
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
   editPaymentTiming,
+  changeReservationRoomsPeriod,
 };

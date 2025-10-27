@@ -1451,6 +1451,40 @@ export function useReservationStore() {
         }
     };
 
+    const setReservationRoomsPeriod = async (reservationId, hotelId, newCheckIn, newCheckOut, roomIds) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/reservation/update/period/${reservationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    hotelId,
+                    newCheckIn,
+                    newCheckOut,
+                    roomIds
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}: Failed to update reservation period`);
+            }
+
+            const result = await response.json();
+            return result;
+
+        } catch (error) {
+            console.error('Error updating reservation period:', error);
+            throw error;
+        } finally {
+            setReservationIsUpdating(false);
+        }
+    };
+
     return {
         reservationIsUpdating,
         availableRooms,
@@ -1507,6 +1541,7 @@ export function useReservationStore() {
         fetchParkingSpotAvailability,
         cancelReservationRooms,
         setPaymentTiming,
+        setReservationRoomsPeriod,
         blockMultipleRooms,
     };
 }
