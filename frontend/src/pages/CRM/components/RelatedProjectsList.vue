@@ -35,7 +35,7 @@
 
 <script setup>
     // Vue
-    import { ref, onMounted, computed, watch, toRefs, defineExpose } from 'vue';
+    import { onMounted, watch, toRefs, defineExpose } from 'vue';
     const props = defineProps({
         currentClientId: {
             type: String,
