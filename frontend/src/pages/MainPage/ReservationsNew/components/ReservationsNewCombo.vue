@@ -266,7 +266,7 @@
             <template #footer>
                 <Button label="閉じる" icon="pi pi-times" @click="closeDialog"
                     class="p-button-danger p-button-text p-button-sm" :disabled="isSubmitting" />
-                <Button :label="isSubmitting ? '処理中...' : '保存'" icon="pi" :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi-check'" @click="submitReservation"
+                <Button :label="isSubmitting ? '処理中...' : '保存'" :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi-check'" @click="submitReservation"
                     class="p-button-success p-button-text p-button-sm" 
                     :disabled="(impedimentStatus && impedimentStatus.level === 'block') || isSubmitting" />
             </template>
@@ -311,11 +311,9 @@ import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.v
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading, createBasicClient, fetchAllClientsForFiltering } = useClientStore();
+const { clients, fetchAllClientsForFiltering } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo, blockMultipleRooms  } = useReservationStore();
-import { useWaitlistStore } from '@/composables/useWaitlistStore';
-const waitlistStore = useWaitlistStore();
+const { availableRooms, fetchAvailableRooms, setReservationId, fetchMyHoldReservations, createHoldReservationCombo, blockMultipleRooms  } = useReservationStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { vehicleCategories, fetchVehicleCategories, checkRealTimeAvailability, saveParkingAssignments } = useParkingStore();
 import { usePlansStore } from '@/composables/usePlansStore';
@@ -452,33 +450,6 @@ const isParkingAddButtonDisabled = computed(() => {
 });
 const availableParkingSpots = ref([]);
 
-// Check if check-in date is today or in the future
-const isCheckInDateValid = computed(() => {
-    if (!comboRow.value.check_in) return false;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of day
-
-    const checkInDate = new Date(comboRow.value.check_in);
-    checkInDate.setHours(0, 0, 0, 0); // Set to start of day
-
-    return checkInDate >= today;
-});
-
-// Check if waitlist button should be highlighted (when no rooms available)
-const isWaitlistHighlighted = computed(() => {
-    if (!reservationCombos.value.length) return false;
-
-    // Check if any room type has 0 available rooms
-    for (const combo of reservationCombos.value) {
-        const roomData = countOfRoomTypes.value.find(room => room.room_type_id === combo.room_type_id);
-        if (roomData && roomData.quantity === 0) {
-            return true;
-        }
-    }
-    return false;
-});
-
 const numberOfRooms = ref(1);
 const numberOfPeople = ref(1);
 const comboRow = ref({
@@ -543,29 +514,6 @@ const openWaitlistDialogDirect = () => { // Opens waitlist dialog without requir
 defineExpose({
     openWaitlistDialogDirect
 });
-
-const openWaitlistDialog = () => { // This is the new, simplified version for the parent
-    if (!reservationCombos.value.length) {
-        toast.add({ severity: 'warn', summary: '情報不足', detail: 'まず予約コンボに部屋を追加してください。', life: 3000 });
-        return;
-    }
-
-    const primaryComboItem = reservationCombos.value[0];
-    let notesContent = "希望の組み合わせ：\n";
-    reservationCombos.value.forEach(c => {
-        notesContent += `- ${c.room_type_name}: ${c.number_of_rooms}室, ${c.number_of_people}名\n`;
-    });
-
-    // Set refs that will be passed as props to the new WaitlistDialog component
-    waitlistInitialRoomTypeId.value = primaryComboItem.room_type_id;
-    waitlistInitialCheckInDate.value = formatDate(primaryComboItem.check_in);
-    waitlistInitialCheckOutDate.value = formatDate(primaryComboItem.check_out);
-    waitlistInitialNumberOfGuests.value = totalPeople.value;
-    waitlistInitialNotes.value = notesContent.trim();
-    // selectedSmokingPreference from parent is no longer passed as a prop.
-
-    waitlistDialogVisibleState.value = true;
-};
 
 const handleWaitlistSubmitted = () => {
     // Optional: any action needed in parent after waitlist is submitted
@@ -1067,7 +1015,7 @@ const submitReservation = async () => {
             //console.log('Processing parking assignments for reservation ID:', reservationId);
 
             // One assignment per parking combo, backend will expand it further
-            const assignments = parkingCombos.map((parkingCombo, index) => {
+            const assignments = parkingCombos.map((parkingCombo, _index) => {
                 //console.log(`Processing parking combo ${index + 1}:`, parkingCombo);
 
                 return {
@@ -1126,7 +1074,7 @@ function consolidateStayReservations(stayReservationCombos) {
     // but only for stay-type reservations
     const consolidated = {};
 
-    stayReservationCombos.forEach((combo, index) => {
+    stayReservationCombos.forEach((combo, _index) => {
         const key = combo.room_type_id.toString();
         if (!consolidated[key]) {
             consolidated[key] = {
@@ -1229,15 +1177,6 @@ const fetchParkingAddons = async () => {
             life: 3000
         });
     }
-};
-
-const onHotelChange = async (event) => {
-    await fetchHotel(event.value);
-    comboRow.value.room_type_id = null;
-    comboRow.value.vehicle_category_id = null;
-    selectedAddon.value = addonOptions.value[0]?.id || null;
-    await fetchAvailableRooms();
-    await updateParkingSpots();
 };
 
 const hasStayReservation = computed(() => {
