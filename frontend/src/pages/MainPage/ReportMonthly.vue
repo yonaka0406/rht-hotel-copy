@@ -389,7 +389,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown, fetchBookerTypeBreakdown, fetchForecastDataByPlan } = useReportStore();
+    const { fetchCountReservation, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown, fetchBookerTypeBreakdown, fetchForecastDataByPlan } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -632,7 +632,7 @@
     const revPAR = ref(0);
     const OCC = ref(0);
     const displayedCumulativeSales = ref(0);
-    const displayedCumulativeSalesNet = ref(0);
+    
     // Forecast Data
     const forecastSales = ref(0);
     const forecastADR = ref(0);
@@ -689,7 +689,7 @@
         const endDateObj = normalizeDate(new Date(metricsEffectiveEndDate.value));
         const dailyActualAvailableRoomsMap = new Map();
         allReservationsData.value.forEach(res => {
-            if (res.date && res.hasOwnProperty('total_rooms_real') && res.total_rooms_real !== null && res.total_rooms_real !== undefined) {
+            if (res.date && res.total_rooms_real !== undefined && res.total_rooms_real !== null && res.total_rooms_real !== undefined) {
                 const realRooms = parseInt(res.total_rooms_real);
                 // Store it only if it's a valid number (including 0).
                 if (!isNaN(realRooms)) {
