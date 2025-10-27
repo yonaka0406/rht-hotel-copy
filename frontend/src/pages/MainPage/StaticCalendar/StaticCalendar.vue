@@ -500,7 +500,7 @@ const selectedClientReservations = computed(() => {
       client_name: first.client_name_original || first.client_name,
       check_in: formatDate(checkIn),
       check_out: formatDate(checkOut),
-      number_of_people: first.number_of_people,
+      number_of_people: first.total_number_of_people,
       payment_timing: first.payment_timing,
       num_rooms: numRooms,
       smoking_count: smokingCount,

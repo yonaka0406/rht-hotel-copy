@@ -33,7 +33,7 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
        END as client_name
       ,reservations.check_in
       ,reservations.check_out
-      ,reservations.number_of_people
+      ,reservations.number_of_people AS total_number_of_people
       ,reservations.status      
       ,reservations.type
       ,reservations.payment_timing

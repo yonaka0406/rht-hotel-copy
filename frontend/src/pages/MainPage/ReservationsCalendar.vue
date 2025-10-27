@@ -1176,6 +1176,7 @@ const onDragStart = async (event, roomId, date) => {
     const room_number = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_number;
     const room_type_name = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_type_name;
     const number_of_people = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').number_of_people;
+    // Check if we need to use total_number_of_people from the reservation object (aliased in backend query)
     const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
     dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
 
@@ -1429,6 +1430,7 @@ const openClientDialog = () => {
             check_out: reservation.check_out,
             number_of_nights: calculateNights(new Date(reservation.check_in), new Date(reservation.check_out)),
             number_of_people: reservation.number_of_people || 1
+            // Use total_number_of_people from the reservation object (aliased in backend query)
         };
     }
 
