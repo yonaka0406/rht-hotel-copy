@@ -266,7 +266,7 @@
             <template #footer>
                 <Button label="閉じる" icon="pi pi-times" @click="closeDialog"
                     class="p-button-danger p-button-text p-button-sm" :disabled="isSubmitting" />
-                <Button :label="isSubmitting ? '処理中...' : '保存'" :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi-check'" @click="submitReservation"
+                <Button :label="isSubmitting ? '処理中...' : '保存'" :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-check'" @click="submitReservation"
                     class="p-button-success p-button-text p-button-sm" 
                     :disabled="(impedimentStatus && impedimentStatus.level === 'block') || isSubmitting" />
             </template>
