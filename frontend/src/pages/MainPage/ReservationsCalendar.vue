@@ -732,7 +732,7 @@ const speedDialModel = ref([
   },
 ]);
 const contextMenuModel = ref([]);
-const showContextMenu = (event, room, date) => {
+const showContextMenu = (event, _room, _date) => {
   const menuItems = [
     {
       label: 'デフォルト',
