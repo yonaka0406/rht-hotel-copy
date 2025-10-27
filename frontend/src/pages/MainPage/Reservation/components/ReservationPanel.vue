@@ -529,7 +529,7 @@ const props = defineProps({
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
 const { setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern,
-    fetchAvailableRooms, getAvailableDatesForChange, setCalendarChange, setReservationRoomsPeriod,
+    fetchAvailableRooms, getAvailableDatesForChange, setReservationRoomsPeriod,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
