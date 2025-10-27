@@ -222,8 +222,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import Panel from 'primevue/panel';
 import FloatLabel from 'primevue/floatlabel'
-import { DatePicker, InputNumber, InputText, AutoComplete, Select, SelectButton, RadioButton } from 'primevue';
-import { DataTable, Column } from 'primevue';
+import { DatePicker, InputNumber, InputText, AutoComplete, SelectButton, RadioButton } from 'primevue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button'
 import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
@@ -234,7 +233,7 @@ const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHo
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
+const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchMyHoldReservations } = useReservationStore();
 import { useCRMStore } from '@/composables/useCRMStore';
 const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 
@@ -246,11 +245,9 @@ const minCheckOutDate = ref(outDate.value);
 const centralDate = ref(new Date());
 const roomDataCache = ref(new Map());
 const generateDateRangeArray = ref([]);
-const dateColumns = ref([]);
 const numberOfPeople = ref(1);
 const selectedCell = ref(null);
 const roomTypeInput = ref('');
-const loading = ref(false);
 const numberOfNights = computed(() => {
   if (inDate.value && outDate) {
     const checkInDate = inDate.value;
@@ -679,7 +676,7 @@ const submitReservation = async () => {
 
     if (response.ok) {
       const data = await response.json();
-      const { reservation, reservationDetails } = data;
+      const { reservation } = data;
       toast.add({ severity: 'success', summary: '成功', detail: '保留中予約作成されました。', life: 3000 });
 
       await fetchMyHoldReservations();
@@ -766,9 +763,9 @@ const goToEditReservationPage = async (reservation_id) => {
 
 // Watcher
 watch(() => selectedHotel.value,
-  async (newVal, oldVal) => {
+  async (_newVal, _oldVal) => {
     //console.log('Watcher triggered:', { newVal, oldVal });
-    if (newVal !== oldVal && oldVal !== null) {
+    if (_newVal !== _oldVal && _oldVal !== null) {
       //console.log('New hotel selected.');
 
       // Reset and fetch new data
@@ -828,7 +825,7 @@ watch([inDate, outDate], ([checkInDate, checkOutDate]) => {
   }
 }, { immediate: true });
 watch(() => numberOfPeople.value,
-  (newNumber) => {
+  (_newNumber) => {
     reservationDetails.value.number_of_people = numberOfPeople.value;
   }
 );
@@ -844,12 +841,12 @@ watch(() => reservationDetails.value.legal_or_natural_person,
   },
 );
 watch(() => reservationDetails.value.name,
-  (newValue, oldValue) => {
+  (_newValue, _oldValue) => {
     //console.log('Changed name:', newValue); 
     if (selectedClient.value) {
       const selectedName = selectedClient.value.name_kanji || selectedClient.value.name;
       //console.log('Selected name:', selectedName); 
-      if (newValue && newValue !== oldValue && newValue !== selectedName) {
+      if (_newValue && _newValue !== _oldValue && _newValue !== selectedName) {
         // Reset fields if name changes and a client was previously selected
         reservationDetails.value.client_id = null;
         reservationDetails.value.legal_or_natural_person = 'legal';
@@ -863,14 +860,14 @@ watch(() => reservationDetails.value.name,
   },
   { immediate: true }
 );
-watch(reservationDetails, (newVal, oldVal) => {
+watch(reservationDetails, (_newVal, _oldVal) => {
   //console.log('reservationDetails changed:', newVal);        
 }, { deep: true });
-watch(dateRange, (newVal, oldVal) => {
+watch(dateRange, (_newVal, _oldVal) => {
   //console.log('dateRange changed:', newVal);        
 }, { deep: true });
 watch(() => generateDateRangeArray.value,
-  (newVal, oldVal) => {
+  (_newVal, _oldVal) => {
     //console.log('generateDateRangeArray updated:', newVal);          
   },
   { deep: true } // Use deep to watch for nested object changes
