@@ -199,7 +199,7 @@
         if (firstInput.value && firstInput.value.$el && firstInput.value.$el.querySelector('input')) {
           firstInput.value.$el.querySelector('input').focus();
         }
-      } catch (error) {
+      } catch (_error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約情報の取得に失敗しました。', life: 3000 });
       } finally {
         loading.value = false;
@@ -217,7 +217,7 @@
         if (firstInput.value && firstInput.value.$el && firstInput.value.$el.querySelector('input')) {
           firstInput.value.$el.querySelector('input').focus();
         }
-      } catch (error) {
+      } catch (_error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約情報の取得に失敗しました。', life: 3000 });
       } finally {
         loading.value = false;
@@ -242,7 +242,7 @@
       }
       toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に複製されました。', life: 3000 });
       emit('update:visible', false);
-    } catch (error) {
+    } catch (_error) {
       toast.add({ severity: 'error', summary: 'エラー', detail: '予約の複製中にエラーが発生しました。', life: 3000 });
     }
   };
