@@ -63,7 +63,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
   defaultLogger.warn(`[TestEmail] Generating email content for hotel ID: ${hotelId} on date: ${formattedDate}`);
 
   try {
-    const hotel = await hotelModel.getHotelByID(requestId, hotelId); // Assuming getHotelByID exists and works
+    const hotel = await hotelModel.getHotelByID(requestId, hotelId, getProdPool());
     if (!hotel) {
       defaultLogger.error(`[TestEmail] Hotel with ID ${hotelId} not found.`);
       return null;
