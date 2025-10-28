@@ -24,7 +24,7 @@ const getHotelByID = async (requestId, id, dbPool = null) => {
   const values = [id];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await selectedPool.query(query, values);
     return result.rows[0]; // Return the first user found (or null if none)
   } catch (err) {
     console.error('Error finding hotel by id:', err);
