@@ -296,8 +296,12 @@ const runTest = async () => {
     defaultLogger.warn(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
     defaultLogger.warn(`[TestEmail] hotel.email: ${hotel.email}`);
     defaultLogger.warn(`[TestEmail] !hotel.email: ${!hotel.email}`);
-    if (!hotel || !hotel.email) {
-      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found or has no email. Exiting test.`);
+    if (!hotel) {
+      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found. Exiting test.`);
+      return;
+    }
+    if (!hotel.email) {
+      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} has no email. Exiting test.`);
       return;
     }
 
