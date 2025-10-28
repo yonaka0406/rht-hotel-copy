@@ -10,10 +10,10 @@ const formatLocalDateTime = (dateObj) => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
-const getReservationDigestByDate = async (requestId, date) => {
+const getReservationDigestByDate = async (requestId, date, dbPool = null) => {
   console.log('Date passed to getReservationDigestByDate:', date);
 
-  const pool = requestId ? database.getPool(requestId) : database.getProdPool();
+  const pool = dbPool || database.getPool(requestId);
   const client = await pool.connect();
   try {
     // Removed limit validation

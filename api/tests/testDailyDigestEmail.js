@@ -4,6 +4,11 @@ const { sendDailyDigestEmails } = require('../jobs/dailyDigestEmailJob');
 const { sendGenericEmail } = require('../utils/emailUtils'); // The real email sender
 const defaultLogger = require('../config/logger');
 const { getProdPool } = require('../config/database');
+const systemLogsModel = require('../models/system_logs');
+const hotelModel = require('../models/hotel');
+const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
+const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
+const appConfig = require('../config/appConfig'); // Import appConfig
 
 // --- Configuration for testing ---
 const TEST_EMAIL_ADDRESS = process.env.EMAIL_USER;
@@ -40,12 +45,6 @@ const mockSendGenericEmail = async (to, subject, text, html) => {
 // Let's create a function that directly generates the email content for a specific hotel.
 // This will require duplicating some logic from sendDailyDigestEmails, but it's cleaner for testing.
 
-const systemLogsModel = require('../models/system_logs');
-const hotelModel = require('../models/hotel');
-const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
-const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
-const appConfig = require('../config/appConfig'); // Import appConfig
-
 // Get .env accordingly
 let envFrontend;
 if (process.env.NODE_ENV === 'production') {
@@ -69,7 +68,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
       return null;
     }
 
-    const { logs: rawLogs = [] } = await systemLogsModel.getReservationDigestByDate(requestId, formattedDate);
+    const { logs: rawLogs = [] } = await systemLogsModel.getReservationDigestByDate(requestId, formattedDate, getProdPool());
     const allLogs = transformLogs(rawLogs, defaultLogger); // Transform logs here
     console.log('DEBUG: allLogs value:', JSON.stringify(allLogs, null, 2));
 
