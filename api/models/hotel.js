@@ -741,8 +741,8 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
   }
 };
 
-const getAllHotelsWithEmail = async (requestId) => {
-  const pool = getPool(requestId);
+const getAllHotelsWithEmail = async (requestId, dbPool = null) => {
+  const pool = dbPool || getPool(requestId);
   const query = `
     SELECT
       id,

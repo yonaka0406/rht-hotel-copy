@@ -292,9 +292,9 @@ const runTest = async () => {
 
   try {
     const hotel = await hotelModel.getHotelByID(requestId, testHotelId, getProdPool()); // Fetch specific hotel using prod pool
-    console.log(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
-    console.log(`[TestEmail] hotel.email: ${hotel.email}`);
-    console.log(`[TestEmail] !hotel.email: ${!hotel.email}`);
+    defaultLogger.warn(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
+    defaultLogger.warn(`[TestEmail] hotel.email: ${hotel.email}`);
+    defaultLogger.warn(`[TestEmail] !hotel.email: ${!hotel.email}`);
     if (hotel === null || hotel === undefined) {
       defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found (explicit check). Exiting test.`);
       return;
