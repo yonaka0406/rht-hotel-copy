@@ -3,6 +3,7 @@ require('dotenv').config({ path: './.env' }); // Load environment variables
 const { sendDailyDigestEmails } = require('../jobs/dailyDigestEmailJob');
 const { sendGenericEmail } = require('../utils/emailUtils'); // The real email sender
 const defaultLogger = require('../config/logger');
+const { getProdPool } = require('../config/database');
 
 // --- Configuration for testing ---
 const TEST_EMAIL_ADDRESS = process.env.EMAIL_USER;
