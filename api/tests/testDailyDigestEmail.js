@@ -286,14 +286,16 @@ const runTest = async () => {
   const testDate = process.env.TEST_DAILY_DIGEST_DATE || formatDate(new Date(new Date().setDate(new Date().getDate() - 1))); // Defaults to yesterday
   const testHotelId = parseInt(process.env.TEST_DAILY_DIGEST_HOTEL_ID || '10', 10); // Default to hotel ID 10
 
-  defaultLogger.info(`[TestEmail] Running daily digest email test.`);
-  defaultLogger.info(`[TestEmail] Test Date: ${testDate}`);
-  defaultLogger.info(`[TestEmail] Test Hotel ID: ${testHotelId}`);
-  defaultLogger.info(`[TestEmail] Send Actual Email: ${SEND_ACTUAL_EMAIL}`);
+  defaultLogger.warn(`[TestEmail] Running daily digest email test.`);
+  defaultLogger.warn(`[TestEmail] Test Date: ${testDate}`);
+  defaultLogger.warn(`[TestEmail] Test Hotel ID: ${testHotelId}`);
+  defaultLogger.warn(`[TestEmail] Send Actual Email: ${SEND_ACTUAL_EMAIL}`);
 
   try {
     const hotel = await hotelModel.getHotelByID(requestId, testHotelId, getProdPool()); // Fetch specific hotel using prod pool
     defaultLogger.warn(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
+    defaultLogger.warn(`[TestEmail] hotel.email: ${hotel.email}`);
+    defaultLogger.warn(`[TestEmail] !hotel.email: ${!hotel.email}`);
     if (!hotel || !hotel.email) {
       defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found or has no email. Exiting test.`);
       return;
