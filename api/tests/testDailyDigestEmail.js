@@ -21,14 +21,14 @@ const mockSendGenericEmail = async (to, subject, text, html) => {
   capturedEmailContent = { to, subject, text, html }; // Capture the email content
 
   if (SEND_ACTUAL_EMAIL) {
-    defaultLogger.info(`[TestEmail] Sending actual email to: ${TEST_EMAIL_ADDRESS}`);
+    defaultLogger.warn(`[TestEmail] Sending actual email to: ${TEST_EMAIL_ADDRESS}`);
     // Redirect to the test email address
     await originalSendGenericEmail(TEST_EMAIL_ADDRESS, subject, text, html);
   } else {
-    defaultLogger.info(`[TestEmail] Captured email for: ${to}`);
-    defaultLogger.info(`[TestEmail] Subject: ${subject}`);
-    defaultLogger.info(`[TestEmail] Text Body:\n${text}`);
-    defaultLogger.info(`[TestEmail] HTML Body:\n${html}`);
+    defaultLogger.warn(`[TestEmail] Captured email for: ${to}`);
+    defaultLogger.warn(`[TestEmail] Subject: ${subject}`);
+    defaultLogger.warn(`[TestEmail] Text Body:\n${text}`);
+    defaultLogger.warn(`[TestEmail] HTML Body:\n${html}`);
   }
 };
 
@@ -60,7 +60,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
   yesterday.setDate(today.getDate() - 1);
   const formattedDate = formatDate(yesterday);
 
-  defaultLogger.info(`[TestEmail] Generating email content for hotel ID: ${hotelId} on date: ${formattedDate}`);
+  defaultLogger.warn(`[TestEmail] Generating email content for hotel ID: ${hotelId} on date: ${formattedDate}`);
 
   try {
     const hotel = await hotelModel.getHotelByID(requestId, hotelId); // Assuming getHotelByID exists and works
@@ -127,7 +127,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
 
     // If there are no logs, send a specific email stating that.
     if (groupedLogs.added.length === 0 && groupedLogs.edited.length === 0 && groupedLogs.deleted.length === 0) {
-      defaultLogger.info(`[TestEmail] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Sending a 'no changes' email.`);
+      defaultLogger.warn(`[TestEmail] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Sending a 'no changes' email.`);
       
       let htmlContent = `<div style=\"font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;\">\r\n      <h2 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">日次予約ログダイジェスト - ${hotel.name}</h2>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">${formattedDate} の予約ログの概要です。</p>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">本日は予約の変更はありませんでした。</p>\r\n      </div>`;
 
@@ -293,11 +293,11 @@ const runTest = async () => {
 
   try {
     const hotel = await hotelModel.getHotelByID(requestId, testHotelId, getProdPool()); // Fetch specific hotel using prod pool
-    defaultLogger.warn(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
-    defaultLogger.warn(`[TestEmail] hotel.email: ${hotel.email}`);
-    defaultLogger.warn(`[TestEmail] !hotel.email: ${!hotel.email}`);
-    if (!hotel) {
-      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found. Exiting test.`);
+    console.log(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
+    console.log(`[TestEmail] hotel.email: ${hotel.email}`);
+    console.log(`[TestEmail] !hotel.email: ${!hotel.email}`);
+    if (hotel === null || hotel === undefined) {
+      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found (explicit check). Exiting test.`);
       return;
     }
     if (!hotel.email) {
@@ -305,7 +305,7 @@ const runTest = async () => {
       return;
     }
 
-    defaultLogger.info(`[TestEmail] Processing email for hotel: ${hotel.name} (ID: ${hotel.id})`);
+    defaultLogger.warn(`[TestEmail] Processing email for hotel: ${hotel.name} (ID: ${hotel.id})`);
 
     const emailData = await generateTestEmailContent(requestId, hotel.id, testDate);
 
@@ -314,17 +314,17 @@ const runTest = async () => {
         try {
           // Send to the TEST_EMAIL_ADDRESS, but use the hotel's subject and content
           await originalSendGenericEmail(TEST_EMAIL_ADDRESS, emailData.subject, emailData.text, emailData.html);
-          defaultLogger.info(`[TestEmail] Test email for hotel ${hotel.name} sent successfully to ${TEST_EMAIL_ADDRESS}.`);
+          defaultLogger.warn(`[TestEmail] Test email for hotel ${hotel.name} sent successfully to ${TEST_EMAIL_ADDRESS}.`);
         } catch (error) {
           defaultLogger.error(`[TestEmail] Failed to send test email for hotel ${hotel.name}:`, error);
         }
       } else {
-        defaultLogger.info(`[TestEmail] --- Generated Email Content for Hotel: ${hotel.name} ---`);
-        defaultLogger.info(`[TestEmail] To: ${TEST_EMAIL_ADDRESS}`); // Still show test address as recipient
-        defaultLogger.info(`[TestEmail] Subject: ${emailData.subject}`);
-        defaultLogger.info(`[TestEmail] Text Body:\n${emailData.text}`);
-        defaultLogger.info(`[TestEmail] HTML Body:\n${emailData.html}`);
-        defaultLogger.info(`[TestEmail] --- End Generated Email Content for Hotel: ${hotel.name} ---`);
+        defaultLogger.warn(`[TestEmail] --- Generated Email Content for Hotel: ${hotel.name} ---`);
+        defaultLogger.warn(`[TestEmail] To: ${TEST_EMAIL_ADDRESS}`); // Still show test address as recipient
+        defaultLogger.warn(`[TestEmail] Subject: ${emailData.subject}`);
+        defaultLogger.warn(`[TestEmail] Text Body:\n${emailData.text}`);
+        defaultLogger.warn(`[TestEmail] HTML Body:\n${emailData.html}`);
+        defaultLogger.warn(`[TestEmail] --- End Generated Email Content for Hotel: ${hotel.name} ---`);
       }
     } else {
       defaultLogger.warn(`[TestEmail] No email content generated for hotel ${hotel.name}.`);
