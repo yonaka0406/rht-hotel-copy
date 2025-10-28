@@ -6,7 +6,7 @@ const { transformLogs } = require('../controllers/system_logs/service/logTransfo
 const appConfig = require('../config/appConfig'); // Import appConfig
 const hotelModel = require('../models/hotel');
 const systemLogsModel = require('../models/system_logs/main');
-const database = require('../../config/database');
+const database = require('../config/database');
 
 // Get .env accordingly
 let envFrontend;
