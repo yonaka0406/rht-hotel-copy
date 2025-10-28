@@ -291,7 +291,8 @@ const runTest = async () => {
   defaultLogger.info(`[TestEmail] Send Actual Email: ${SEND_ACTUAL_EMAIL}`);
 
   try {
-    const hotel = await hotelModel.getHotelByID(requestId, testHotelId); // Fetch specific hotel
+    const hotel = await hotelModel.getHotelByID(requestId, testHotelId, getProdPool()); // Fetch specific hotel using prod pool
+    defaultLogger.info(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
     if (!hotel || !hotel.email) {
       defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found or has no email. Exiting test.`);
       return;

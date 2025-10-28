@@ -18,8 +18,8 @@ const getAllHotels = async (requestId) => {
     throw new Error('Database error');
   }
 };
-const getHotelByID = async (requestId, id) => {
-  const pool = getPool(requestId);
+const getHotelByID = async (requestId, id, dbPool = null) => {
+  const selectedPool = dbPool || getPool(requestId);
   const query = 'SELECT hotels.* FROM hotels WHERE hotels.id = $1';
   const values = [id];
 
