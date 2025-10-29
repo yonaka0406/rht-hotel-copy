@@ -21,13 +21,12 @@ export function useReservationActions() {
   const openNewReservation = (room) => {
     reservationDrawerRef.value?.openNewReservation(room);
   };
-  
-  const openEditReservation = (room) => {        
+
+  const openEditReservation = (room) => {
     reservationDrawerRef.value?.openEditReservation(room);
   };
 
   onMounted(async () => {
-    const routeDate = router.currentRoute.value.params.date;
     if (!routeDate) {
       router.replace({ params: { date: formatDate(selectedDate.value) } });
     }
@@ -35,7 +34,7 @@ export function useReservationActions() {
     await fetchRoomsForIndicator(selectedHotelId.value, formatDate(selectedDate.value));
   });
 
-  watch(selectedHotelId, async (newValue, oldValue) => {            
+  watch(selectedHotelId, async (newValue, oldValue) => {
     try {
       if (newValue !== oldValue) {
         selectedDate.value = today;
@@ -46,11 +45,11 @@ export function useReservationActions() {
       console.error('Error in selectedHotelId watcher:', error);
     }
   });
-  
+
   watch(selectedDate, async (newValue, oldValue) => {
     if (newValue && oldValue && formatDate(newValue) !== formatDate(oldValue)) { // Compare formatted dates to avoid unnecessary fetches for same date object but different instances
       await fetchRoomsForIndicator(selectedHotelId.value, formatDate(selectedDate.value));
-      
+
       // Update URL parameter
       router.push({ params: { date: formatDate(selectedDate.value) } });
     }

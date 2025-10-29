@@ -7,9 +7,8 @@ export function usePlanSummary(selectedDate) {
 
   const planSummary = computed(() => {
     const roomPlans = {};
-    console.log('roomsForIndicator.value:', roomsForIndicator.value);
     const reservations = roomsForIndicator.value?.filter(room => room.cancelled === null && room.status !== 'cancelled') || [];
-    const selectedDateStr = formatDate(selectedDate.value);
+
     
     // Process each reservation detail (which is a room for the selected date)
     reservations.forEach(roomDetail => {
@@ -24,7 +23,7 @@ export function usePlanSummary(selectedDate) {
         roomPlans[roomNumber] = {};
       }
       
-      // Iterate through all details for this reservation/room to get the full plan count
+      // Iterate through all roomDetail entries for this room to get the full plan count
       roomDetail.details?.forEach(detail => {
         const planName = detail.plan_name || '未設定';
         const planColor = detail.plan_color || '#CCCCCC';
