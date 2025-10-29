@@ -28,11 +28,13 @@
                 </OverlayBadge>
 
                 <!-- OTA Notifications Icon -->
-                <OverlayBadge :value="otaNotificationsBadgeCount" class="mr-2" severity="danger">
-                    <Button class="p-button p-button-text dark:text-white" aria-label="OTA通知" @click="showOtaDrawer = true">
-                        <i class="pi pi-globe" :class="{ 'animate-pulse-red': otaNotificationsBadgeCount > 0 }" style="font-size:larger" />
-                    </Button>
-                </OverlayBadge>
+                <template v-if="otaNotificationsBadgeCount > 0">
+                    <OverlayBadge :value="otaNotificationsBadgeCount" class="mr-2" severity="danger">
+                        <Button class="p-button p-button-text dark:text-white" aria-label="OTA通知" @click="showOtaDrawer = true">
+                            <i class="pi pi-globe animate-pulse-red" style="font-size:larger" />
+                        </Button>
+                    </OverlayBadge>
+                </template>
                 
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="notificationsBadgeCount" class="mr-2" :severity="notificationSeverity">
