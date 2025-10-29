@@ -11,6 +11,7 @@ const failedOtaReservations = ref([]);
 const reservationId = ref(null);
 const reservationDetails = ref({});
 const reservedRoomsDayView = ref([]);
+const roomsForIndicator = ref([]);
 const parkingSpotAvailability = ref([]);
 
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -871,6 +872,33 @@ export function useReservationStore() {
             console.error("Error fetching reservations:", error);
         }
     };
+    const fetchRoomsForIndicator = async (hotelId, date) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/room-indicator/${hotelId}/${date}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch room indicator data');
+            }
+
+            const data = await response.json();
+            roomsForIndicator.value = data;
+            return data;
+
+        } catch (error) {
+            console.error('Error fetching room indicator data:', error);
+            roomsForIndicator.value = [];
+            return null;
+        }
+    };
     const fetchReservationPayments = async (hotelId, reservation_id) => {
         try{
             const authToken = localStorage.getItem('authToken');
@@ -1497,6 +1525,7 @@ export function useReservationStore() {
         reservationId,
         reservationDetails,
         reservedRoomsDayView,
+        roomsForIndicator,
         getReservationId,
         getReservationHotelId,
         getAvailableDatesForChange,
@@ -1527,6 +1556,7 @@ export function useReservationStore() {
         fetchFailedOtaReservations,
         fetchReservationsToday,
         fetchReservationPayments,
+        fetchRoomsForIndicator,
         addRoomToReservation,
         moveReservationRoom,
         addReservationPayment,
