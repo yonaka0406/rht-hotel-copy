@@ -10,7 +10,8 @@ export function useReservationActions() {
   const { selectedHotelId, fetchHotel } = useHotelStore();
 
   const reservationDrawerRef = ref(null);
-  const selectedDate = ref(new Date());
+  const routeDate = router.currentRoute.value.params.date;
+  const selectedDate = ref(routeDate ? new Date(routeDate) : new Date());
   const today = new Date();
 
   const handleReservationUpdated = async () => {
@@ -26,13 +27,8 @@ export function useReservationActions() {
   };
 
   onMounted(async () => {
-    // Initialize selectedDate from URL parameter or default to today
     const routeDate = router.currentRoute.value.params.date;
-    if (routeDate) {
-      selectedDate.value = new Date(routeDate);
-    } else {
-      selectedDate.value = new Date();
-      // If no date in URL, update URL to today's date
+    if (!routeDate) {
       router.replace({ params: { date: formatDate(selectedDate.value) } });
     }
     // Initial fetch after selectedDate is set
