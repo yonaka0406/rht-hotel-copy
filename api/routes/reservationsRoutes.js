@@ -10,6 +10,7 @@ router.get('/reservation/detail/info', authMiddleware, reservationsController.ge
 router.get('/reservation/hold-list', authMiddleware, reservationsController.getMyHoldReservations);
 router.get('/reservation/failed-ota', authMiddleware, reservationsController.getFailedOtaReservations);
 router.get('/reservation/today/:hid/:date', authMiddleware, reservationsController.getReservationsToday);
+router.get('/reservation/room-indicator/:hid/:date', authMiddleware, reservationsController.getRoomsForIndicator);
 router.get('/reservation/query/:hid/:rid/:ci/:co', authMiddleware, reservationsController.getAvailableDatesForChange);
 router.get('/reservation/list/clients/:hid/:id', authMiddleware, reservationsController.getReservationClientIds);
 router.get('/reservation/payment/list/:hid/:id', authMiddleware, reservationsController.getReservationPayments);
