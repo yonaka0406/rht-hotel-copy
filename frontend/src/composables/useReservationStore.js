@@ -890,8 +890,8 @@ export function useReservationStore() {
             }
 
             const data = await response.json();
-            roomsForIndicator.value = data;
-            return data;
+            roomsForIndicator.value = Array.isArray(data.rooms) ? data.rooms : [];
+            return roomsForIndicator.value;
 
         } catch (error) {
             console.error('Error fetching room indicator data:', error);

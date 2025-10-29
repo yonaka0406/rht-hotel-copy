@@ -4,7 +4,7 @@ import { useHotelStore } from '@/composables/useHotelStore';
 import { formatDate } from '@/utils/dateUtils';
 
 export function useRoomCategorization(selectedDate) {
-  const { reservedRoomsDayView } = useReservationStore();
+const { roomsForIndicator } = useReservationStore();
   const { selectedHotelRooms } = useHotelStore();
 
   const roomGroups = computed(() => {
@@ -13,7 +13,7 @@ export function useRoomCategorization(selectedDate) {
       return [];
     }
 
-    const allReservations = reservedRoomsDayView.value?.filter(room => room.cancelled === null) || [];
+    const allReservations = roomsForIndicator.value?.filter(room => room.cancelled === null) || [];
 
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
     const blockedRooms = allReservations

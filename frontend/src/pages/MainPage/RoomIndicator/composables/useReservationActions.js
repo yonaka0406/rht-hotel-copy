@@ -6,7 +6,7 @@ import { formatDate } from '@/utils/dateUtils';
 
 export function useReservationActions() {
   const router = useRouter();
-  const { fetchReservationsToday } = useReservationStore();
+  const { fetchRoomsForIndicator } = useReservationStore();
   const { selectedHotelId, fetchHotel } = useHotelStore();
 
   const reservationDrawerRef = ref(null);
@@ -15,7 +15,7 @@ export function useReservationActions() {
   const today = new Date();
 
   const handleReservationUpdated = async () => {
-    await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+    await fetchRoomsForIndicator(selectedHotelId.value, formatDate(selectedDate.value));
   };
 
   const openNewReservation = (room) => {
@@ -32,7 +32,7 @@ export function useReservationActions() {
       router.replace({ params: { date: formatDate(selectedDate.value) } });
     }
     // Initial fetch after selectedDate is set
-    await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+    await fetchRoomsForIndicator(selectedHotelId.value, formatDate(selectedDate.value));
   });
 
   watch(selectedHotelId, async (newValue, oldValue) => {            
@@ -40,7 +40,7 @@ export function useReservationActions() {
       if (newValue !== oldValue) {
         selectedDate.value = today;
         await fetchHotel();
-        await fetchReservationsToday(selectedHotelId.value, formatDate(today));
+        await fetchRoomsForIndicator(selectedHotelId.value, formatDate(today));
       }
     } catch (error) {
       console.error('Error in selectedHotelId watcher:', error);
@@ -49,7 +49,7 @@ export function useReservationActions() {
   
   watch(selectedDate, async (newValue, oldValue) => {
     if (newValue && oldValue && formatDate(newValue) !== formatDate(oldValue)) { // Compare formatted dates to avoid unnecessary fetches for same date object but different instances
-      await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+      await fetchRoomsForIndicator(selectedHotelId.value, formatDate(selectedDate.value));
       
       // Update URL parameter
       router.push({ params: { date: formatDate(selectedDate.value) } });
