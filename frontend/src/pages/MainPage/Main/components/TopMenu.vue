@@ -396,6 +396,11 @@
       animation: pulse-red 1.5s infinite;
       color: #ef4444; /* red-500 */
     }
+    .p-toolbar-group-end .p-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 </style>
 <style>
 .small-tooltip {

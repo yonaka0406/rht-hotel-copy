@@ -4557,7 +4557,7 @@ const selectFailedOtaReservations = async (requestId) => {
     WHERE      
       f.status = 'failed'
     ORDER BY 
-      f.created_at DESC;
+      f.created_at;
   `;
 
   try {

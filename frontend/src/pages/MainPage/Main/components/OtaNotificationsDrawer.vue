@@ -21,21 +21,23 @@
                 </div>
                 <span class="text-sm text-red-600 dark:text-red-400">{{ reservation.ota_reservation_id }}</span>
               </div>
-              <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 mb-2">
-                <i class="pi pi-building text-yellow-500 text-xs" />
-                <span>施設:</span>
-                <span class="font-medium">{{ reservation.hotel_name }}</span>
-              </div>
-              <div class="grid grid-cols-2 gap-x-4 text-sm">
-                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
-                  <i class="pi pi-calendar text-blue-500 text-xs" />
-                  <span>受信日:</span>
-                  <span class="font-medium">{{ formatDateJP(reservation.date_received) }}</span>
+              <div class="flex items-center gap-x-4 text-gray-700 dark:text-gray-300 mb-2 text-sm">
+                <div class="flex items-center gap-1">
+                  <i class="pi pi-building text-yellow-500 text-xs" />
+                  <span>施設:</span>
+                  <span class="font-medium">{{ reservation.hotel_name }}</span>
                 </div>
-                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                <div class="flex items-center gap-1">
                   <i class="pi pi-tag text-purple-500 text-xs" />
                   <span>種別:</span>
                   <span class="font-medium">{{ getOtaTransactionLabel(reservation.transaction_type) }}</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-x-4 text-sm">
+                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 col-span-2">
+                  <i class="pi pi-calendar text-blue-500 text-xs" />
+                  <span>受信日:</span>
+                  <span class="font-medium">{{ formatDateTimeJP(reservation.created_at) }}</span>
                 </div>
                 <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
                   <i class="pi pi-calendar-plus text-green-500 text-xs" />
@@ -61,6 +63,7 @@
 <script setup>
 import { defineProps, defineEmits } from 'vue';
 import { Drawer, VirtualScroller } from 'primevue';
+import { formatDate, formatDateTimeJP, formatDateJP } from '@/utils/dateUtils';
 
 const props = defineProps({
   visible: Boolean,
@@ -78,20 +81,6 @@ const getOtaTransactionLabel = (transactionType) => {
     'default': 'その他'
   };
   return typeMap[transactionType] || typeMap.default;
-};
-
-const formatDateJP = (dateString) => {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch (e) {
-    return dateString;
-  }
 };
 
 </script>
