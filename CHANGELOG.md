@@ -581,6 +581,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.1.28] - 2025-10-30
 
 - Feature: Added separate OTA notifications drawer with dedicated icon in the main navigation for better organization of OTA-related alerts and failures.
+- Bugfix: Fixed Room Indicator date cancellation handling to properly manage room status when dates within a stay are cancelled.
 
 ---
 
