@@ -26,6 +26,13 @@
                         <i class="pi pi-calendar-clock" style="font-size:larger" />
                     </Button>
                 </OverlayBadge>
+
+                <!-- OTA Notifications Icon -->
+                <OverlayBadge :value="otaNotificationsBadgeCount" class="mr-2" severity="danger">
+                    <Button class="p-button p-button-text dark:text-white" aria-label="OTA通知" @click="showOtaDrawer = true">
+                        <i class="pi pi-globe" :class="{ 'animate-pulse-red': otaNotificationsBadgeCount > 0 }" style="font-size:larger" />
+                    </Button>
+                </OverlayBadge>
                 
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="notificationsBadgeCount" class="mr-2" :severity="notificationSeverity">
@@ -58,11 +65,17 @@
         </template>
     </Toolbar>
     
+    <!-- Drawer for OTA Notifications -->
+    <OtaNotificationsDrawer
+        v-model:visible="showOtaDrawer"
+        :failed-ota-reservations="failedOtaReservations"
+        @go-to-edit-reservation="goToEditReservationPage"
+    />
+
     <!-- Drawer for Notifications -->
     <NotificationsDrawer
         v-model:visible="showDrawer"
         :hold-reservations="holdReservations"
-        :failed-ota-reservations="failedOtaReservations"
         :temp-blocked-reservations="tempBlockedReservations"
         :notification-severity="notificationSeverity"
         @go-to-edit-reservation="goToEditReservationPage"
@@ -101,6 +114,7 @@
     import WaitlistDisplayModal from './WaitlistDisplayModal.vue';
     import GlobalSearchModal from './GlobalSearchModal.vue';
     import NotificationsDrawer from './NotificationsDrawer.vue';
+    import OtaNotificationsDrawer from './OtaNotificationsDrawer.vue';
 
     // Primevue
     import { Toolbar, OverlayBadge, Select, Button } from 'primevue';
@@ -110,6 +124,7 @@
 
     // --- Reactive State ---
     const showDrawer = ref(false);
+    const showOtaDrawer = ref(false);
     // const waitlistBadgeCount = ref(0); // Will be replaced by a computed property
     const isWaitlistModalVisible = ref(false); // Controls visibility of the waitlist modal
     const isGlobalSearchVisible = ref(false); // Controls visibility of the global search modal
@@ -151,11 +166,14 @@
         return greetingText;
     });
 
+    const otaNotificationsBadgeCount = computed(() => {
+        return Array.isArray(failedOtaReservations.value) ? failedOtaReservations.value.length : 0;
+    });
+
     const notificationsBadgeCount = computed(() => {
         const holdCount = Array.isArray(holdReservations.value) ? holdReservations.value.length : 0;
         const tempBlockedCount = Array.isArray(tempBlockedReservations.value) ? tempBlockedReservations.value.length : 0;
-        const failedOtaCount = Array.isArray(failedOtaReservations.value) ? failedOtaReservations.value.length : 0;
-        return holdCount + tempBlockedCount + failedOtaCount;
+        return holdCount + tempBlockedCount;
     });
 
     // Computed property for dynamic severity string based on notification count    
@@ -214,6 +232,7 @@
         await setReservationId(reservation_id); // Set the reservation context in the store
 
         showDrawer.value = false; // Close the notification drawer
+        showOtaDrawer.value = false; // Close the OTA notification drawer
 
         // Navigate to the reservation editing page
         router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });
@@ -359,6 +378,21 @@
         display: inline-block; /* Important for transforms to work correctly on inline elements like <i> */
         transform-origin: top center; /* Bell swings from its top center */
         animation: gentle-bell-shake 2s ease-in-out infinite; /* Animation properties: name, duration, timing function, iteration count */
+    }
+
+    @keyframes pulse-red {
+      0%, 100% {
+        transform: scale(1);
+        text-shadow: 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+      50% {
+        transform: scale(1.1);
+        text-shadow: 0 0 10px rgba(239, 68, 68, 1);
+      }
+    }
+    .animate-pulse-red {
+      animation: pulse-red 1.5s infinite;
+      color: #ef4444; /* red-500 */
     }
 </style>
 <style>
