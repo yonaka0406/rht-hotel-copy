@@ -319,7 +319,16 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
               WHERE d->>'date' = (rd.date - INTERVAL '1 day')::date::text
                 AND d->>'cancelled' IS NULL
           )
-      ) AS early_checkout
+      ) AS early_checkout,
+      (
+          rd.cancelled IS NULL
+          AND EXISTS (
+              SELECT 1
+              FROM json_array_elements(details_agg.details) AS d
+              WHERE d->>'date' = (rd.date - INTERVAL '1 day')::date::text
+                AND d->>'cancelled' IS NOT NULL
+          )
+      ) AS late_checkin
     FROM
       reservation_details rd
       JOIN reservations res ON res.id = rd.reservation_id AND res.hotel_id = rd.hotel_id

@@ -58,16 +58,14 @@ const { roomsForIndicator } = useReservationStore();
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
 
-      console.log(`Room ${room.room_number}: isCheckOutToday=${isCheckOutToday}, early_checkout=${room.early_checkout}`);
       // Priority 1: Check-out today (highest priority) or early_checkout
       if (isCheckOutToday || room.early_checkout) {
-        console.log('categorizedRooms.checkOut before push:', categorizedRooms.checkOut);
         if (!categorizedRooms.checkOut.some(existingRoom => existingRoom.room_id === room.room_id)) {
           categorizedRooms.checkOut.push(room);
         }
       }
-      // Priority 2: Check-in today (only if not checking out)
-      else if (isCheckInToday) {
+      // Priority 2: Check-in today (only if not checking out) or late_checkin
+      else if (isCheckInToday || room.late_checkin) {
         // Ensure room_id is unique in checkIn category
         if (!categorizedRooms.checkIn.some(existingRoom => existingRoom.room_id === room.room_id)) {
           categorizedRooms.checkIn.push(room);
