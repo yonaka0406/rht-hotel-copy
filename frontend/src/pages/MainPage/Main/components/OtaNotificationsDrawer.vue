@@ -21,6 +21,11 @@
                 </div>
                 <span class="text-sm text-red-600 dark:text-red-400">{{ reservation.ota_reservation_id }}</span>
               </div>
+              <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 mb-2">
+                <i class="pi pi-building text-yellow-500 text-xs" />
+                <span>施設:</span>
+                <span class="font-medium">{{ reservation.hotel_name }}</span>
+              </div>
               <div class="grid grid-cols-2 gap-x-4 text-sm">
                 <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
                   <i class="pi pi-calendar text-blue-500 text-xs" />
@@ -55,14 +60,25 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue';
-import { Drawer, Button, VirtualScroller } from 'primevue';
+import { Drawer, VirtualScroller } from 'primevue';
 
 const props = defineProps({
   visible: Boolean,
   failedOtaReservations: Array,
 });
 
-const emit = defineEmits(['update:visible', 'goToEditReservation']);
+const emit = defineEmits(['update:visible']);
+
+// OTA Transaction Type Mapping
+const getOtaTransactionLabel = (transactionType) => {
+  const typeMap = {
+    'NewBookReport': '新規予約',
+    'ModificationReport': '予約変更',
+    'CancellationReport': '予約キャンセル',
+    'default': 'その他'
+  };
+  return typeMap[transactionType] || typeMap.default;
+};
 
 const formatDateJP = (dateString) => {
   if (!dateString) return '';
@@ -78,12 +94,4 @@ const formatDateJP = (dateString) => {
   }
 };
 
-const getOtaTransactionLabel = (transactionType) => {
-  const labels = {
-    'new': '新規予約',
-    'modify': '予約変更',
-    'cancel': 'キャンセル',
-  };
-  return labels[transactionType] || transactionType;
-};
 </script>

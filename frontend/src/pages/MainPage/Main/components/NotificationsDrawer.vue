@@ -102,17 +102,6 @@ import { defineProps, defineEmits, computed, onMounted } from 'vue';
 import Drawer from 'primevue/drawer';
 import VirtualScroller from 'primevue/virtualscroller';
 
-// OTA Transaction Type Mapping
-const getOtaTransactionLabel = (transactionType) => {
-  const typeMap = {
-    'NewBookReport': '新規予約',
-    'ModificationReport': '予約変更',
-    'CancellationReport': '予約キャンセル',
-    'default': 'その他'
-  };
-  return typeMap[transactionType] || typeMap.default;
-};
-
 const props = defineProps({
   visible: Boolean,
   holdReservations: {

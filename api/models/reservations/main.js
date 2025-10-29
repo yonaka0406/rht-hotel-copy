@@ -4542,19 +4542,22 @@ const selectFailedOtaReservations = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT
-      id,
-      ota_reservation_id,
-      reservation_data->'TransactionType'->>'SystemDate' AS date_received,
-      reservation_data->'TransactionType'->>'DataClassification' AS transaction_type,
-      reservation_data->'BasicInformation'->>'CheckInDate' AS check_in_date,
-      reservation_data->'BasicInformation'->>'CheckOutDate' AS check_out_date,
-      created_at
-    FROM
-      ota_reservation_queue
-    WHERE
-      status = 'failed'
-    ORDER BY
-      created_at DESC;
+      f.id,
+      f.ota_reservation_id,
+      f.reservation_data->'TransactionType'->>'SystemDate' AS date_received,
+      f.reservation_data->'TransactionType'->>'DataClassification' AS transaction_type,
+      f.reservation_data->'BasicInformation'->>'CheckInDate' AS check_in_date,
+      f.reservation_data->'BasicInformation'->>'CheckOutDate' AS check_out_date,
+      f.created_at,
+      h.id AS hotel_id,
+      h.name AS hotel_name
+    FROM 
+      ota_reservation_queue f
+      JOIN hotels h ON f.hotel_id = h.id
+    WHERE      
+      f.status = 'failed'
+    ORDER BY 
+      f.created_at DESC;
   `;
 
   try {
