@@ -4699,29 +4699,56 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
     await client.query('BEGIN');
     await client.query(format(`SET SESSION "my_app.user_id" = %L;`, updated_by));
 
-    // Mark the reservation details as cancelled
-    const cancelDetailsQuery = `
-      UPDATE reservation_details 
-      SET 
-        cancelled = gen_random_uuid(),
-        billable = $1,
-        updated_by = $2        
-      WHERE id = ANY($3::uuid[]) 
-        AND reservation_id = $4::uuid
-        AND hotel_id = $5
-        AND cancelled IS NULL
-      RETURNING id, number_of_people;
-    `;
+    const cancelledDetails = [];
 
-    const cancelResult = await client.query(cancelDetailsQuery, [
-      billable,
-      updated_by,
-      detailIds,
-      reservationId,
-      hotelId
-    ]);
+    for (const detailId of detailIds) {
+      let calculatedPrice;
 
-    if (cancelResult.rowCount === 0) {
+      // Get the current rates for this reservation detail
+      const ratesQuery = `
+        SELECT * FROM reservation_rates 
+        WHERE reservation_details_id = $1 AND hotel_id = $2
+      `;
+      const ratesResult = await client.query(ratesQuery, [detailId, hotelId]);
+
+      if (billable) {
+        // When cancelling with a fee, exclude flat_fee rates for price calculation
+        const ratesToUse = ratesResult.rows.filter(rate => rate.adjustment_type !== 'flat_fee');
+        calculatedPrice = calculatePriceFromRates(ratesToUse);
+      } else {
+        // When cancelling without a fee, the price should be 0
+        calculatedPrice = 0;
+      }
+
+      // Mark the reservation detail as cancelled and update the price
+      const cancelDetailQuery = `
+        UPDATE reservation_details 
+        SET 
+          cancelled = gen_random_uuid(),
+          billable = $1,
+          updated_by = $2,
+          price = $3
+        WHERE id = $4::uuid
+          AND reservation_id = $5::uuid
+          AND hotel_id = $6
+          AND cancelled IS NULL
+        RETURNING id, number_of_people;
+      `;
+      const cancelResult = await client.query(cancelDetailQuery, [
+        billable,
+        updated_by,
+        calculatedPrice,
+        detailId,
+        reservationId,
+        hotelId
+      ]);
+
+      if (cancelResult.rowCount > 0) {
+        cancelledDetails.push(cancelResult.rows[0]);
+      }
+    }
+
+    if (cancelledDetails.length === 0) {
       await client.query('ROLLBACK');
       return { success: false, message: 'No valid details to cancel' };
     }
@@ -4729,19 +4756,13 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
     // Check if all details are now cancelled
     const { rows: [statusCheck] } = await client.query(
       `SELECT 
-         COUNT(*) FILTER (WHERE cancelled IS NULL) as active_count,
-         COUNT(*) as total_count
+         COUNT(*) FILTER (WHERE cancelled IS NULL) as active_count
        FROM reservation_details 
        WHERE reservation_id = $1`,
       [reservationId]
     );
 
-    //console.log('Cancellation status check:', { reservationId, activeCount: statusCheck.active_count, totalCount: statusCheck.total_count });
-
-    // If no active details remain, cancel the entire reservation
     if (parseInt(statusCheck.active_count, 10) === 0) {
-      //console.log('No active details remaining, cancelling reservation:', reservationId);
-
       await client.query(
         `UPDATE reservations 
          SET status = 'cancelled'             
@@ -4749,7 +4770,6 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
         [reservationId, hotelId]
       );
     } else {
-      // If active details remain, update dates and max daily sum of people
       const { rows: [reservationStats] } = await client.query(
         `WITH daily_sums AS (
             SELECT
@@ -4775,10 +4795,10 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
               number_of_people = $3
             WHERE id = $4 AND hotel_id = $5`,
           [
-            reservationStats.new_check_in, 
-            reservationStats.new_check_out, 
-            reservationStats.new_number_of_people, 
-            reservationId, 
+            reservationStats.new_check_in,
+            reservationStats.new_check_out,
+            reservationStats.new_number_of_people,
+            reservationId,
             hotelId
           ]
         );
@@ -4788,8 +4808,8 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
     await client.query('COMMIT');
     return {
       success: true,
-      cancelledDetails: cancelResult.rows,
-      reservationCancelled: statusCheck.active_count === 0
+      cancelledDetails: cancelledDetails,
+      reservationCancelled: parseInt(statusCheck.active_count, 10) === 0
     };
 
   } catch (error) {
