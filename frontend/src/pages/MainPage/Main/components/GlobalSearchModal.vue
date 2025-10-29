@@ -124,10 +124,10 @@ import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { Dialog, Button } from 'primevue';
 import ReservationSearchBar from '../../../components/ReservationSearchBar.vue';
-import { useReservationSearch } from '../../../composables/useReservationSearch';
-import { usePhoneticSearch } from '../../../composables/usePhoneticSearch';
-import accessibilityService from '../../../services/AccessibilityService';
-import { translateStatus } from '../../../utils/reservationUtils';
+import { useReservationSearch } from '../../../../composables/useReservationSearch';
+import { usePhoneticSearch } from '../../../../composables/usePhoneticSearch';
+import accessibilityService from '../../../../services/AccessibilityService';
+import { translateStatus } from '../../../../utils/reservationUtils';
 
 const props = defineProps({
   visible: {
