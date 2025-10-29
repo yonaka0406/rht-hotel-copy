@@ -34,13 +34,13 @@ export function useReservationActions() {
     await fetchRoomsForIndicator(selectedHotelId.value, formatDate(selectedDate.value));
   });
 
-  watch(selectedHotelId, async (newValue, oldValue) => {
+  watch(selectedHotelId, async (newValue) => {
     try {
-      if (newValue !== oldValue) {
+      if (formatDate(selectedDate.value) !== formatDate(today)) {
         selectedDate.value = today;
-        await fetchHotel();
-        await fetchRoomsForIndicator(selectedHotelId.value, formatDate(today));
       }
+      await fetchHotel();
+      await fetchRoomsForIndicator(newValue, formatDate(selectedDate.value));
     } catch (error) {
       console.error('Error in selectedHotelId watcher:', error);
     }

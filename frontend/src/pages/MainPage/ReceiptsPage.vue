@@ -53,7 +53,7 @@
                     <template #empty> 指定されている期間中に支払情報はありません。 </template>
                     
                     <Column field="client_name" filterField="client_name" header="顧客名" style="width:1%" :showFilterMenu="false">
-                        <template #filter="{ _filterModel }">
+                        <template #filter>
                             <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
                         </template>
                     </Column>

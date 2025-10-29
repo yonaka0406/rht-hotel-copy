@@ -58,7 +58,7 @@ const { roomsForIndicator } = useReservationStore();
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
 
-      console.log(`Processing Room ${room.room_number}: has_less_dates=${room.has_less_dates}, late_checkin=${room.late_checkin}, isCheckInToday=${isCheckInToday}, isCheckOutToday=${isCheckOutToday}`);
+
 
       // Priority 1: Check-out today (highest priority) or early_checkout
       if (isCheckOutToday || room.early_checkout) {
@@ -83,8 +83,8 @@ const { roomsForIndicator } = useReservationStore();
       }
     });
 
-    console.log('categorizedRooms.occupied after forEach:', categorizedRooms.occupied);
-    console.log('categorizedRooms.roomChange after population:', categorizedRooms.roomChange);
+
+
 
     // In case of room changes, multiple rooms can be listed for checkout for the same reservation.
     // We need to select only the room the guest is in on the night before checkout.

@@ -1,8 +1,8 @@
 import { computed } from 'vue';
 import { useReservationStore } from '@/composables/useReservationStore';
-import { formatDate } from '@/utils/dateUtils';
 
-export function usePlanSummary(selectedDate) {
+
+export function usePlanSummary() {
   const { roomsForIndicator } = useReservationStore();
 
   const planSummary = computed(() => {
