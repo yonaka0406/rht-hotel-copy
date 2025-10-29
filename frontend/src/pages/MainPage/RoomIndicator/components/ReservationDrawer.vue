@@ -70,7 +70,7 @@ const openNewReservation = (room) => {
 };
 
 const openEditReservation = (room) => {
-  selectedReservationID.value = room.id;
+  selectedReservationID.value = room.reservation_id;
   selectedRoomID.value = room.room_id;
   hasReservation.value = true;
   drawerVisible.value = true;

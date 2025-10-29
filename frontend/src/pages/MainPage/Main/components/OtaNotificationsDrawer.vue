@@ -63,14 +63,14 @@
 <script setup>
 import { defineProps, defineEmits } from 'vue';
 import { Drawer, VirtualScroller } from 'primevue';
-import { formatDate, formatDateTimeJP, formatDateJP } from '@/utils/dateUtils';
+import { formatDateTimeJP, formatDateJP } from '@/utils/dateUtils';
 
-const props = defineProps({
+defineProps({
   visible: Boolean,
   failedOtaReservations: Array,
 });
 
-const emit = defineEmits(['update:visible']);
+defineEmits(['update:visible']);
 
 // OTA Transaction Type Mapping
 const getOtaTransactionLabel = (transactionType) => {
