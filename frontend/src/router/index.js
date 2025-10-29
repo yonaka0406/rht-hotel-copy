@@ -26,7 +26,7 @@ const ManageLoyaltyTiers = () => import('@/pages/Admin/ManageLoyaltyTiers.vue');
 const ManageWaitList = () => import('@/pages/Admin/ManageWaitList.vue');
 const ManageGoogleDrive = () => import('@/pages/Admin/ManageGoogleDrive.vue');
 
-const MainPage = () => import('@/pages/MainPage/MainPage.vue');
+const MainPage = () => import('@/pages/MainPage/Main/MainLayout.vue');
 const Dashboard = () => import('@/pages/MainPage/DashboardPage.vue');
 const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator/RoomIndicator.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew/ReservationsNew.vue');
