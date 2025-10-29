@@ -13,7 +13,7 @@ const { roomsForIndicator } = useReservationStore();
       return [];
     }
 
-    const allReservations = roomsForIndicator.value?.filter(room => room.cancelled === null) || [];
+    const allReservations = roomsForIndicator.value?.filter(room => room.cancelled === null || room.early_checkout === true) || [];
 
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
     const blockedRooms = allReservations
@@ -58,8 +58,10 @@ const { roomsForIndicator } = useReservationStore();
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
       const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
 
-      // Priority 1: Check-out today (highest priority)
-      if (isCheckOutToday) {
+      console.log(`Room ${room.room_number}: isCheckOutToday=${isCheckOutToday}, early_checkout=${room.early_checkout}`);
+      // Priority 1: Check-out today (highest priority) or early_checkout
+      if (isCheckOutToday || room.early_checkout) {
+        console.log('categorizedRooms.checkOut before push:', categorizedRooms.checkOut);
         if (!categorizedRooms.checkOut.some(existingRoom => existingRoom.room_id === room.room_id)) {
           categorizedRooms.checkOut.push(room);
         }
