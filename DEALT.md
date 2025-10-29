@@ -2,6 +2,23 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### October 29, 2025
+
+#### Feature Request #C: Separate OTA Notifications Drawer
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Move OTA notifications to a dedicated icon and separate drawer for better organization
+  - Keep the notification badge count on the main navigation
+  - Allow users to quickly access OTA-specific notifications without cluttering the main notification center
+  - Include filtering options for different OTA providers
+- **Technical Notes**:
+  - Create a new icon in the main navigation
+  - Implement a dedicated drawer component for OTA notifications
+  - Ensure real-time updates for new OTA notifications
+  - Maintain backward compatibility with existing notification systems
+  - Consider adding sound/vibration for high-priority OTA notifications
+
 ### October 27, 2025
 
 #### Bug #84: Update Invoice with Customer Code

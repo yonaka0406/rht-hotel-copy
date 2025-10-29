@@ -35,21 +35,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Update the availability calendar to reflect the cancelled dates
   - Consider adding visual indicators for split stays in the room indicator
 
-#### Feature Request #C: Separate OTA Notifications Drawer
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  - Move OTA notifications to a dedicated icon and separate drawer for better organization
-  - Keep the notification badge count on the main navigation
-  - Allow users to quickly access OTA-specific notifications without cluttering the main notification center
-  - Include filtering options for different OTA providers
-- **Technical Notes**:
-  - Create a new icon in the main navigation
-  - Implement a dedicated drawer component for OTA notifications
-  - Ensure real-time updates for new OTA notifications
-  - Maintain backward compatibility with existing notification systems
-  - Consider adding sound/vibration for high-priority OTA notifications
-
 #### Feature Request #B: Merge and Split Reservations
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
