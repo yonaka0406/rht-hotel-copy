@@ -154,9 +154,10 @@ const selectAndLockAvailableParkingSpot = async (requestId, hotelId, checkIn, ch
 
 const selectReservation = async (requestId, id, hotel_id) => {
   const pool = getPool(requestId);
+  const { validate: uuidValidate } = require('uuid');
 
   // Validate that id is not null or undefined
-  if (!id) {
+  if (!id || id === 'null' || id === 'undefined' || !uuidValidate(id)) {
     logger.error('[selectReservation] Invalid reservation ID provided', { id });
     throw new Error('Invalid reservation ID: ID cannot be null or undefined');
   }

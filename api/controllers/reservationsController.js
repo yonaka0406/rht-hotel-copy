@@ -98,6 +98,12 @@ const getReservedRooms = async (req, res) => {
 
 const getReservation = async (req, res) => {
   const { id, hotel_id } = req.query;
+  const { validate: uuidValidate } = require('uuid');
+
+  if (!id || id === 'null' || id === 'undefined' || !uuidValidate(id)) {
+    logger.warn(`[getReservation] Invalid reservation ID received: ${id}`);
+    return res.status(400).json({ error: 'A valid reservation ID must be provided.' });
+  }
 
   try {
     const reservation = await selectReservation(req.requestId, id, hotel_id);
