@@ -57,7 +57,7 @@ export const formatDateTimeJP = (dateString) => {
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${year}年${month}月${day}日 ${hours}:${minutes}`;
-  } catch (e) {
+  } catch (_e) {
     return dateString;
   }
 };
@@ -70,7 +70,7 @@ export const formatDateJP = (dateString) => {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     return `${year}年${month}月${day}日`;
-  } catch (e) {
+  } catch (_e) {
     return dateString;
   }
 };
