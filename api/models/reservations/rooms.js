@@ -255,7 +255,81 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
     }
 };
 
+const selectRoomsForIndicator = async (requestId, hotelId, date) => {
+  const pool = getPool(requestId);
+  
+  const query = `
+    SELECT
+      r.id AS room_id,
+      r.room_number,
+      r.floor,
+      r.capacity,
+      r.for_sale,
+      r.smoking,
+      r.has_wet_area,
+      rt.name AS room_type_name,
+      res.id AS reservation_id,
+      res.check_in,
+      res.check_out,
+      res.check_in_time,
+      res.check_out_time,
+      res.status,
+      res.payment_timing,
+      res.has_important_comment,
+      c.name AS client_name,
+      rd.id AS reservation_detail_id,
+      rd.date,
+      rd.cancelled,
+      rd.number_of_people,
+      rd.price,
+      rd.plan_name,
+      rd.plan_type,
+      details_agg.details
+    FROM
+      rooms r
+      JOIN room_types rt ON r.room_type_id = rt.id AND r.hotel_id = rt.hotel_id
+      LEFT JOIN reservation_details rd ON r.id = rd.room_id AND rd.hotel_id = r.hotel_id AND rd.date = $2
+      LEFT JOIN reservations res ON rd.reservation_id = res.id AND rd.hotel_id = res.hotel_id
+      LEFT JOIN clients c ON res.reservation_client_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'date', rd_inner.date,
+              'plans_global_id', rd_inner.plans_global_id,
+              'plans_hotel_id', rd_inner.plans_hotel_id,
+              'plan_name', COALESCE(ph.name, pg.name),
+              'plan_type', rd_inner.plan_type,
+              'plan_color', COALESCE(ph.color, pg.color),
+              'cancelled', rd_inner.cancelled
+            ) ORDER BY rd_inner.date
+          ) AS details
+        FROM
+          reservation_details rd_inner
+          LEFT JOIN plans_hotel ph ON ph.hotel_id = rd_inner.hotel_id AND ph.id = rd_inner.plans_hotel_id
+          LEFT JOIN plans_global pg ON pg.id = rd_inner.plans_global_id
+        WHERE
+          rd_inner.reservation_id = res.id
+      ) details_agg ON true
+    WHERE
+      r.hotel_id = $1
+    ORDER BY
+      r.floor,
+      r.room_number;
+  `;
+
+  const values = [hotelId, date];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching room indicator data:', err);
+    throw new Error('Database error');
+  }
+};
 
 module.exports = {
-    updateReservationRoomsPeriod,
+  updateReservationRoomsPeriod,
+  selectRoomsForIndicator
 };
