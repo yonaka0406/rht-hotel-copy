@@ -327,9 +327,80 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
           ) details_agg ON true
     WHERE
       rd.hotel_id = $1 AND rd.date = $2
-    ORDER BY
+
+    UNION ALL
+
+    SELECT
+      r.id AS room_id,
+      r.room_number,
       r.floor,
-      r.room_number;
+      r.capacity,
+      r.for_sale,
+      r.smoking,
+      r.has_wet_area,
+      rt.name AS room_type_name,
+      res.id AS reservation_id,
+      res.check_in,
+      res.check_out,
+      res.check_in_time,
+      res.check_out_time,
+      res.status,
+      res.payment_timing,
+      res.has_important_comment,
+      COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      rd.id AS reservation_detail_id,
+      rd.date,
+      rd.cancelled,
+      rd.number_of_people,
+      rd.price,
+      rd.plan_name,
+      rd.plan_type,
+      details_agg.details,
+      (details_agg.details_count < (res.check_out - res.check_in)) AS has_less_dates,
+      
+      -- Early checkout logic
+      (
+        rd.cancelled IS NOT NULL
+        AND EXISTS (
+            SELECT 1
+            FROM json_array_elements(details_agg.details) AS d
+            WHERE d->>'date' = (rd.date - INTERVAL '1 day')::date::text
+              AND d->>'cancelled' IS NULL
+        )
+      ) AS early_checkout
+
+    FROM reservation_details rd
+    JOIN reservations res ON res.id = rd.reservation_id AND res.hotel_id = rd.hotel_id
+    JOIN clients c ON c.id = res.reservation_client_id
+    JOIN rooms r ON r.id = rd.room_id
+    JOIN room_types rt ON rt.id = r.room_type_id
+
+    LEFT JOIN LATERAL (
+        SELECT
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'date', rd_inner.date,
+              'plans_global_id', rd_inner.plans_global_id,
+              'plans_hotel_id', rd_inner.plans_hotel_id,
+              'plan_name', COALESCE(ph.name, pg.name),
+              'plan_type', rd_inner.plan_type,
+              'plan_color', COALESCE(ph.color, pg.color),
+              'cancelled', rd_inner.cancelled
+            ) ORDER BY rd_inner.date
+          ) AS details,
+          COUNT(*) AS details_count
+        FROM reservation_details rd_inner
+        LEFT JOIN plans_hotel ph ON ph.hotel_id = rd_inner.hotel_id AND ph.id = rd_inner.plans_hotel_id
+        LEFT JOIN plans_global pg ON pg.id = rd_inner.plans_global_id
+        WHERE rd_inner.reservation_id = res.id
+          AND rd_inner.hotel_id = res.hotel_id
+          AND rd_inner.room_id = rd.room_id
+    ) details_agg ON true
+
+    WHERE rd.hotel_id = $1 AND res.check_out = ($2::date + INTERVAL '1 day')::date AND rd.date = $2 AND rd.cancelled IS NULL
+    ORDER BY
+      floor,
+      room_number;
       
   `;
 
