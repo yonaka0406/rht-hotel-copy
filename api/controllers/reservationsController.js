@@ -8,7 +8,7 @@ const {
   updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
   insertCopyReservation, selectReservationParking, deleteParkingReservation, deleteBulkParkingReservations, cancelReservationRooms: cancelReservationRoomsModel,
-  updatePaymentTiming, updateReservationRoomsPeriod,
+  updatePaymentTiming, updateReservationRoomsPeriod, splitReservation,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -1568,6 +1568,23 @@ const changeReservationRoomsPeriod = async (req, res) => {
   }
 };
 
+const actionSplitReservation = async (req, res) => {
+  const { originalReservationId, hotelId, reservationDetailIdsToMove } = req.body;
+  const userId = req.user.id;
+
+  if (!originalReservationId || !hotelId || !reservationDetailIdsToMove || !Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0) {
+    return res.status(400).json({ error: 'Missing or invalid parameters for splitting a reservation.' });
+  }
+
+  try {
+    const newReservationId = await splitReservation(req.requestId, originalReservationId, hotelId, reservationDetailIdsToMove, userId);
+    res.status(201).json({ message: 'Reservation split successfully.', newReservationId });
+  } catch (error) {
+    console.error('Error splitting reservation:', error);
+    res.status(500).json({ error: 'Failed to split reservation.' });
+  }
+};
+
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getRoomsForIndicator,
   getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability, getHotelIdForReservation,
@@ -1578,5 +1595,5 @@ module.exports = {
   editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber,
   deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations,
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
-  editPaymentTiming, changeReservationRoomsPeriod,
+  editPaymentTiming, changeReservationRoomsPeriod, actionSplitReservation,
 };

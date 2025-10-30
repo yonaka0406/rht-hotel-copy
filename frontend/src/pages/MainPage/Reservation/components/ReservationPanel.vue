@@ -456,6 +456,12 @@
         v-model:visible="showCopyDialog"
     />
 
+    <ReservationSplitDialog
+        :reservation_id="props.reservation_id"
+        :reservation_details="props.reservation_details"
+        v-model:visible="showSplitDialog"
+    />
+
     <CancellationCalculatorDialog 
         v-model:visible="showCancellationCalculator" 
         :reservationDetails="reservation_details" 
@@ -488,6 +494,7 @@ import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/component
 import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAddRoomDialog.vue';
 import ReservationAnnounceDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAnnounceDialog.vue';
 import ReservationCancelDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCancelDialog.vue';
+import ReservationSplitDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationSplitDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
 // Primevue
@@ -1253,6 +1260,7 @@ const showHistoryDialog = () => {
 
 const showCancellationCalculator = ref(false);
 const showCopyDialog = ref(false);
+const showSplitDialog = ref(false);
 const visibleSlackDialog = ref(false);
 
 // Tab Apply Plan
@@ -1568,6 +1576,11 @@ const actionOptions = [
         label: '予約報告書',
         icon: 'pi pi-slack',
         command: () => { visibleSlackDialog.value = true; }
+    },
+    {
+        label: '予約分割',
+        icon: 'pi pi-th-large',
+        command: () => { showSplitDialog.value = true; }
     }
 ];
 const onActionClick = () => {

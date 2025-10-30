@@ -1514,6 +1514,37 @@ export function useReservationStore() {
         }
     };
 
+    const splitReservation = async (originalReservationId, hotelId, reservationDetailIdsToMove) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/split`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    originalReservationId,
+                    hotelId,
+                    reservationDetailIdsToMove,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to split reservation');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();
+        } catch (error) {
+            setReservationIsUpdating(false);
+            console.error('Error splitting reservation:', error);
+            throw error;
+        }
+    };
+
+
     return {
         reservationIsUpdating,
         availableRooms,
@@ -1574,5 +1605,6 @@ export function useReservationStore() {
         setPaymentTiming,
         setReservationRoomsPeriod,
         blockMultipleRooms,
+        splitReservation,
     };
 }
