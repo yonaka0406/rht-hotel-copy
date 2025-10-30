@@ -589,6 +589,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.1.29] - 2025-10-31
 
 - Feature: Added ability to change cancellation type (with or without fee) directly from the date details dialog
+- Feature: Added client list download functionality in CRM module with CSV/Excel export options and filtering capabilities
+- Feature: Enhanced OTA reservation display with plan-based coloring while maintaining visual distinction for OTA bookings
 
 ---
 
