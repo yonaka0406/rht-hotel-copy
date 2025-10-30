@@ -2,8 +2,10 @@
     <Dialog v-model:visible="showDialog" header="予約分割" modal>
         <div class="p-fluid">
             <div class="field">
-                <label for="dates">日付範囲</label>
-                <DatePicker v-model="selectedDates" selectionMode="range" :manualInput="false" showIcon fluid />
+                <FloatLabel>
+                    <DatePicker id="dates" v-model="selectedDates" selectionMode="range" :manualInput="false" showIcon fluid :minDate="minDate" :maxDate="maxDate" dateFormat="yy-mm-dd" />
+                    <label for="dates">日付範囲</label>
+                </FloatLabel>
             </div>
             <div class="field">
                 <label>部屋</label>
@@ -26,6 +28,7 @@ import Dialog from 'primevue/dialog';
 import DatePicker from 'primevue/datepicker';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
+import FloatLabel from 'primevue/floatlabel';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { useToast } from 'primevue/usetoast';
 
@@ -64,6 +67,20 @@ const rooms = computed(() => {
     return Array.from(roomMap.values());
 });
 
+const minDate = computed(() => {
+    if (!props.reservation_details || props.reservation_details.length === 0) {
+        return null;
+    }
+    return new Date(props.reservation_details[0].check_in);
+});
+
+const maxDate = computed(() => {
+    if (!props.reservation_details || props.reservation_details.length === 0) {
+        return null;
+    }
+    return new Date(props.reservation_details[0].check_out);
+});
+
 const reservationDetailIdsToMove = computed(() => {
     if (!selectedDates.value || selectedDates.value.length !== 2 || !selectedRooms.value.length) {
         return [];
@@ -73,10 +90,14 @@ const reservationDetailIdsToMove = computed(() => {
         return [];
     }
 
+    // Set endDate to the end of the day to include all of it.
+    const inclusiveEndDate = new Date(endDate);
+    inclusiveEndDate.setHours(23, 59, 59, 999);
+
     return props.reservation_details
         .filter(detail => {
             const detailDate = new Date(detail.date);
-            return detailDate >= startDate && detailDate <= endDate && selectedRooms.value.includes(detail.room_id);
+            return detailDate >= startDate && detailDate <= inclusiveEndDate && selectedRooms.value.includes(detail.room_id);
         })
         .map(detail => detail.id);
 });
