@@ -57,30 +57,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding reporting for parking spot utilization
   - Need to handle edge cases like partial winter availability
 
-#### Feature #86: OTA Reservation Display Enhancement
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  Currently, OTA reservations are displayed with a single color in the calendar and statistics calendar views. The request is to display them using the same color scheme as regular reservations (based on their plan type) while maintaining a visual distinction for OTA bookings.
-- **Requirements**:
-  - Display OTA reservations with the same background color as their respective plan types (matching regular reservations)
-  - Add a visual distinction for OTA reservations, such as:
-    - Different text color (e.g., white text for OTA vs black for regular)
-    - A small OTA badge/icon next to the reservation
-    - A subtle border or pattern overlay
-  - Apply these changes to both the main calendar view and statistics calendar view
-  - Ensure the OTA status remains clearly visible in list and detailed views
-- **User Story**:
-  As a hotel staff member,
-  I want to see OTA reservations with the same color coding as regular reservations
-  So that I can quickly identify the plan type while still being able to distinguish OTA bookings
-- **Technical Notes**:
-  - Will require updates to the calendar rendering components
-  - Need to ensure the visual distinction is accessible (sufficient color contrast)
-  - Consider adding a legend/key to explain the OTA indicators
-  - May need to update any existing color scheme logic to accommodate this change
-
-
 ### October 24, 2025
 
 #### Feature #85: Room Movement Date Range Selection
@@ -154,22 +130,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Include year-over-year comparison for the same date groups
   - Allow saving frequently used custom groups for quick access
   - Ensure the system can handle large date ranges efficiently
-
-### October 01, 2025
-
-#### Feature Request #73: Client List Download
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: Add functionality to download the complete client list from the CRM module.
-- **Requirements**:
-  - Handle large datasets efficiently (currently ~9,000 entries)
-  - Include all client fields in the export
-  - Provide download options: CSV and Excel formats
-  - Add filters to customize the exported data
-  - Include progress indicator for large exports
-  - Add to the CRM module interface
-  - Consider server-side processing for better performance
-  - Implement rate limiting to prevent server overload
 
 ### September 26, 2025
 

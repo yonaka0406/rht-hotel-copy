@@ -586,6 +586,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.29] - 2025-10-31
+
+- Feature: Added ability to change cancellation type (with or without fee) directly from the date details dialog
+
+---
+
 ## Version History
 - **1.1.27** (2025-10-27) - Enhanced room indicator with client change information and enabled partial period changes for multiple rooms. Improved reservation split functionality and fixed guest count display in Static Calendar. Updated invoice generation to include 5-digit customer code.
 - **1.1.26** (2025-10-23) - Added Daily Digest email routine with admin panel logs and prefilled template download for finance imports. Fixed addon quantity calculation per room.
