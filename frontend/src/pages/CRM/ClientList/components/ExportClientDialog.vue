@@ -46,18 +46,18 @@
                 </FloatLabel>
             </div>
             <div class="col-span-1 text-right">
-                <span class="text-sm text-gray-500 dark:text-gray-400">エクスポートされる顧客数: {{ clientCount }}</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400">エクスポートされる顧客数: {{ formattedClientCount }}</span>
             </div>
         </div>
         <template #footer>
-            <Button label="閉じる" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
-            <Button label="ダウンロード" icon="pi pi-download" @click="downloadClients" class="p-button-success p-button-text p-button-sm" />
+            <Button label="閉じる" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" :disabled="loading" />
+            <Button label="ダウンロード" icon="pi pi-download" @click="downloadClients" class="p-button-success p-button-text p-button-sm" :disabled="loading" :loading="loading" />
         </template>
     </Dialog>
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch } from 'vue';
+import { ref, defineProps, defineEmits, watch, computed } from 'vue';
 import { Dialog, Button, DatePicker, FloatLabel, InputText, Select } from 'primevue';
 import { useClientStore } from '@/composables/useClientStore';
 import { useToast } from 'primevue/usetoast'; // Import useToast
@@ -81,6 +81,11 @@ const toast = useToast(); // Initialize toast
 
 const createdAfter = ref(null);
 const clientCount = ref(0);
+const loading = ref(false);
+
+const formattedClientCount = computed(() => {
+    return new Intl.NumberFormat('ja-JP').format(clientCount.value);
+});
 
 // Local ref for filters, initialized from initialFilters prop
 const exportFilters = ref({
@@ -134,6 +139,7 @@ const closeDialog = () => {
 };
 
 const downloadClients = async () => {
+  loading.value = true; // Set loading to true when download starts
   try {
     const filtersToSend = {
         created_after: createdAfter.value ? createdAfter.value.toISOString() : null,
@@ -155,6 +161,8 @@ const downloadClients = async () => {
         detail: `クライアントのエクスポートに失敗しました: ${error.message || '不明なエラー'}`,
         life: 3000,
     });
+  } finally {
+    loading.value = false; // Set loading to false when download finishes (success or failure)
   }
 };
 </script>
