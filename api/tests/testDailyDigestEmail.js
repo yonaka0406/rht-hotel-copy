@@ -1,8 +1,14 @@
-require('dotenv').config({ path: './api/.env' }); // Load environment variables
+require('dotenv').config({ path: './.env' }); // Load environment variables
 
 const { sendDailyDigestEmails } = require('../jobs/dailyDigestEmailJob');
 const { sendGenericEmail } = require('../utils/emailUtils'); // The real email sender
 const defaultLogger = require('../config/logger');
+const { getProdPool } = require('../config/database');
+const systemLogsModel = require('../models/system_logs');
+const hotelModel = require('../models/hotel');
+const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
+const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
+const appConfig = require('../config/appConfig'); // Import appConfig
 
 // --- Configuration for testing ---
 const TEST_EMAIL_ADDRESS = process.env.EMAIL_USER;
@@ -20,14 +26,14 @@ const mockSendGenericEmail = async (to, subject, text, html) => {
   capturedEmailContent = { to, subject, text, html }; // Capture the email content
 
   if (SEND_ACTUAL_EMAIL) {
-    defaultLogger.info(`[TestEmail] Sending actual email to: ${TEST_EMAIL_ADDRESS}`);
+    defaultLogger.warn(`[TestEmail] Sending actual email to: ${TEST_EMAIL_ADDRESS}`);
     // Redirect to the test email address
     await originalSendGenericEmail(TEST_EMAIL_ADDRESS, subject, text, html);
   } else {
-    defaultLogger.info(`[TestEmail] Captured email for: ${to}`);
-    defaultLogger.info(`[TestEmail] Subject: ${subject}`);
-    defaultLogger.info(`[TestEmail] Text Body:\n${text}`);
-    defaultLogger.info(`[TestEmail] HTML Body:\n${html}`);
+    defaultLogger.warn(`[TestEmail] Captured email for: ${to}`);
+    defaultLogger.warn(`[TestEmail] Subject: ${subject}`);
+    defaultLogger.warn(`[TestEmail] Text Body:\n${text}`);
+    defaultLogger.warn(`[TestEmail] HTML Body:\n${html}`);
   }
 };
 
@@ -38,12 +44,6 @@ const mockSendGenericEmail = async (to, subject, text, html) => {
 
 // Let's create a function that directly generates the email content for a specific hotel.
 // This will require duplicating some logic from sendDailyDigestEmails, but it's cleaner for testing.
-
-const systemLogsModel = require('../models/system_logs');
-const hotelModel = require('../models/hotel');
-const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
-const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
-const appConfig = require('../config/appConfig'); // Import appConfig
 
 // Get .env accordingly
 let envFrontend;
@@ -59,16 +59,16 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
   yesterday.setDate(today.getDate() - 1);
   const formattedDate = formatDate(yesterday);
 
-  defaultLogger.info(`[TestEmail] Generating email content for hotel ID: ${hotelId} on date: ${formattedDate}`);
+  defaultLogger.warn(`[TestEmail] Generating email content for hotel ID: ${hotelId} on date: ${formattedDate}`);
 
   try {
-    const hotel = await hotelModel.getHotelByID(requestId, hotelId); // Assuming getHotelByID exists and works
+    const hotel = await hotelModel.getHotelByID(requestId, hotelId, getProdPool());
     if (!hotel) {
       defaultLogger.error(`[TestEmail] Hotel with ID ${hotelId} not found.`);
       return null;
     }
 
-    const { logs: rawLogs = [] } = await systemLogsModel.getReservationDigestByDate(requestId, formattedDate);
+    const { logs: rawLogs = [] } = await systemLogsModel.getReservationDigestByDate(requestId, formattedDate, getProdPool());
     const allLogs = transformLogs(rawLogs, defaultLogger); // Transform logs here
     console.log('DEBUG: allLogs value:', JSON.stringify(allLogs, null, 2));
 
@@ -126,7 +126,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
 
     // If there are no logs, send a specific email stating that.
     if (groupedLogs.added.length === 0 && groupedLogs.edited.length === 0 && groupedLogs.deleted.length === 0) {
-      defaultLogger.info(`[TestEmail] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Sending a 'no changes' email.`);
+      defaultLogger.warn(`[TestEmail] No relevant reservation logs for hotel ${hotel.name} on ${formattedDate}. Sending a 'no changes' email.`);
       
       let htmlContent = `<div style=\"font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;\">\r\n      <h2 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">日次予約ログダイジェスト - ${hotel.name}</h2>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">${formattedDate} の予約ログの概要です。</p>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">本日は予約の変更はありませんでした。</p>\r\n      </div>`;
 
@@ -285,19 +285,26 @@ const runTest = async () => {
   const testDate = process.env.TEST_DAILY_DIGEST_DATE || formatDate(new Date(new Date().setDate(new Date().getDate() - 1))); // Defaults to yesterday
   const testHotelId = parseInt(process.env.TEST_DAILY_DIGEST_HOTEL_ID || '10', 10); // Default to hotel ID 10
 
-  defaultLogger.info(`[TestEmail] Running daily digest email test.`);
-  defaultLogger.info(`[TestEmail] Test Date: ${testDate}`);
-  defaultLogger.info(`[TestEmail] Test Hotel ID: ${testHotelId}`);
-  defaultLogger.info(`[TestEmail] Send Actual Email: ${SEND_ACTUAL_EMAIL}`);
+  defaultLogger.warn(`[TestEmail] Running daily digest email test.`);
+  defaultLogger.warn(`[TestEmail] Test Date: ${testDate}`);
+  defaultLogger.warn(`[TestEmail] Test Hotel ID: ${testHotelId}`);
+  defaultLogger.warn(`[TestEmail] Send Actual Email: ${SEND_ACTUAL_EMAIL}`);
 
   try {
-    const hotel = await hotelModel.getHotelByID(requestId, testHotelId); // Fetch specific hotel
-    if (!hotel || !hotel.email) {
-      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found or has no email. Exiting test.`);
+    const hotel = await hotelModel.getHotelByID(requestId, testHotelId, getProdPool()); // Fetch specific hotel using prod pool
+    defaultLogger.warn(`[TestEmail] Retrieved hotel object: ${JSON.stringify(hotel)}`);
+    defaultLogger.warn(`[TestEmail] hotel.email: ${hotel.email}`);
+    defaultLogger.warn(`[TestEmail] !hotel.email: ${!hotel.email}`);
+    if (hotel === null || hotel === undefined) {
+      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} not found (explicit check). Exiting test.`);
+      return;
+    }
+    if (!hotel.email) {
+      defaultLogger.warn(`[TestEmail] Hotel with ID ${testHotelId} has no email. Exiting test.`);
       return;
     }
 
-    defaultLogger.info(`[TestEmail] Processing email for hotel: ${hotel.name} (ID: ${hotel.id})`);
+    defaultLogger.warn(`[TestEmail] Processing email for hotel: ${hotel.name} (ID: ${hotel.id})`);
 
     const emailData = await generateTestEmailContent(requestId, hotel.id, testDate);
 
@@ -306,17 +313,17 @@ const runTest = async () => {
         try {
           // Send to the TEST_EMAIL_ADDRESS, but use the hotel's subject and content
           await originalSendGenericEmail(TEST_EMAIL_ADDRESS, emailData.subject, emailData.text, emailData.html);
-          defaultLogger.info(`[TestEmail] Test email for hotel ${hotel.name} sent successfully to ${TEST_EMAIL_ADDRESS}.`);
+          defaultLogger.warn(`[TestEmail] Test email for hotel ${hotel.name} sent successfully to ${TEST_EMAIL_ADDRESS}.`);
         } catch (error) {
           defaultLogger.error(`[TestEmail] Failed to send test email for hotel ${hotel.name}:`, error);
         }
       } else {
-        defaultLogger.info(`[TestEmail] --- Generated Email Content for Hotel: ${hotel.name} ---`);
-        defaultLogger.info(`[TestEmail] To: ${TEST_EMAIL_ADDRESS}`); // Still show test address as recipient
-        defaultLogger.info(`[TestEmail] Subject: ${emailData.subject}`);
-        defaultLogger.info(`[TestEmail] Text Body:\n${emailData.text}`);
-        defaultLogger.info(`[TestEmail] HTML Body:\n${emailData.html}`);
-        defaultLogger.info(`[TestEmail] --- End Generated Email Content for Hotel: ${hotel.name} ---`);
+        defaultLogger.warn(`[TestEmail] --- Generated Email Content for Hotel: ${hotel.name} ---`);
+        defaultLogger.warn(`[TestEmail] To: ${TEST_EMAIL_ADDRESS}`); // Still show test address as recipient
+        defaultLogger.warn(`[TestEmail] Subject: ${emailData.subject}`);
+        defaultLogger.warn(`[TestEmail] Text Body:\n${emailData.text}`);
+        defaultLogger.warn(`[TestEmail] HTML Body:\n${emailData.html}`);
+        defaultLogger.warn(`[TestEmail] --- End Generated Email Content for Hotel: ${hotel.name} ---`);
       }
     } else {
       defaultLogger.warn(`[TestEmail] No email content generated for hotel ${hotel.name}.`);

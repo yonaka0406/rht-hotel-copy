@@ -1,5 +1,6 @@
 const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
+  selectRoomsForIndicator,
   selectFailedOtaReservations,
   selectParkingSpotAvailability,
   getHotelIdByReservationId, // Import the new function
@@ -97,6 +98,12 @@ const getReservedRooms = async (req, res) => {
 
 const getReservation = async (req, res) => {
   const { id, hotel_id } = req.query;
+  const { validate: uuidValidate } = require('uuid');
+
+  if (!id || id === 'null' || id === 'undefined' || !uuidValidate(id)) {
+    logger.warn(`[getReservation] Invalid reservation ID received: ${id}`);
+    return res.status(400).json({ error: 'A valid reservation ID must be provided.' });
+  }
 
   try {
     const reservation = await selectReservation(req.requestId, id, hotel_id);
@@ -163,6 +170,31 @@ const getReservationsToday = async (req, res) => {
     console.error('Error fetching reservations:', error);
     return res.status(500).json({
       error: 'Database error occurred while fetching reservations.',
+      details: error.message
+    });
+  }
+};
+
+const getRoomsForIndicator = async (req, res) => {
+  const { hid, date } = req.params;
+
+  if (!hid || isNaN(parseInt(hid))) {
+    return res.status(400).json({ error: 'Invalid hotel ID' });
+  }
+
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!date || !dateRegex.test(date)) {
+    return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+  }
+
+  try {
+    const hotelId = parseInt(hid, 10);
+    const rooms = await selectRoomsForIndicator(req.requestId, hotelId, date);
+    return res.status(200).json({ rooms: rooms || [] });
+  } catch (error) {
+    console.error('Error fetching rooms for indicator:', error);
+    return res.status(500).json({
+      error: 'Database error occurred while fetching rooms for indicator.',
       details: error.message
     });
   }
@@ -1540,6 +1572,7 @@ const changeReservationRoomsPeriod = async (req, res) => {
 
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, 
+  getRoomsForIndicator,
   getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability,
   getHotelIdForReservation, // Add this line
   createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, 

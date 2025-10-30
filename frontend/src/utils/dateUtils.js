@@ -46,3 +46,31 @@ export const formatDateTime = (dateString) => {
 
   return formattedDate.replace(/\//g, '/');
 };
+
+export const formatDateTimeJP = (dateString) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}年${month}月${day}日 ${hours}:${minutes}`;
+  } catch (_e) {
+    return dateString;
+  }
+};
+
+export const formatDateJP = (dateString) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}年${month}月${day}日`;
+  } catch (_e) {
+    return dateString;
+  }
+};

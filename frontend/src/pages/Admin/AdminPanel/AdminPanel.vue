@@ -15,7 +15,7 @@
                     :class="isCollapsed ? 'w-full justify-center mt-2' : ''" aria-label="サイドバーの切り替え" />
             </div>
 
-            <nav class="flex-1 space-y-1 mt-4 p-2">
+            <nav class="flex-1 space-y-1 mt-4 p-2 overflow-y-auto max-h-[calc(100vh-200px)]">
                 <template v-for="(item, index) in adminSidebarItems" :key="'desktop-' + item.key + '-' + index">
                     <div v-if="item.type === 'header'"
                         :class="['px-4 py-2 text-xs text-yellow-300 uppercase font-semibold tracking-wider', isCollapsed ? 'text-center mt-2' : '']">

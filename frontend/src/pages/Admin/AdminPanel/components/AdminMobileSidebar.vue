@@ -5,7 +5,7 @@
                 <img src="@/assets/logo-simple.png" alt="管理者パネル" class="h-8 mr-2" />
                 <span class="text-xl font-semibold text-gray-800 dark:text-gray-200">管理者パネル</span>
             </div>
-            <nav class="flex-1 space-y-1 p-4 overflow-y-auto">
+            <nav class="flex-1 space-y-1 p-4 overflow-y-auto max-h-[calc(100vh-160px)]">
                 <template v-for="(item, index) in adminSidebarItems" :key="'mobile-' + item.key + '-' + index">
                     <div v-if="item.type === 'header'"
                         class="px-2 py-2 text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wider mt-1">

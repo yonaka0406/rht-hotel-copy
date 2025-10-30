@@ -18,13 +18,13 @@ const getAllHotels = async (requestId) => {
     throw new Error('Database error');
   }
 };
-const getHotelByID = async (requestId, id) => {
-  const pool = getPool(requestId);
+const getHotelByID = async (requestId, id, dbPool = null) => {
+  const selectedPool = dbPool || getPool(requestId);
   const query = 'SELECT hotels.* FROM hotels WHERE hotels.id = $1';
   const values = [id];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await selectedPool.query(query, values);
     return result.rows[0]; // Return the first user found (or null if none)
   } catch (err) {
     console.error('Error finding hotel by id:', err);
@@ -741,8 +741,8 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
   }
 };
 
-const getAllHotelsWithEmail = async (requestId) => {
-  const pool = getPool(requestId);
+const getAllHotelsWithEmail = async (requestId, dbPool = null) => {
+  const pool = dbPool || getPool(requestId);
   const query = `
     SELECT
       id,

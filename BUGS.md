@@ -5,6 +5,23 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### October 29, 2025
+
+#### Feature Request #B: Merge and Split Reservations
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - Add functionality to merge consecutive reservations or reservations with the same check-in/out period and booker
+  - Implement vertical merging (same room, different dates) and horizontal merging (same dates, different rooms)
+  - Allow splitting of merged reservations back into individual components
+  - Provide visual indicators for merged reservations in the calendar view
+  - Include confirmation dialogs to prevent accidental merges/splits
+- **Technical Notes**:
+  - Need to handle room assignments, pricing, and availability when merging/splitting
+  - Should maintain a history of merged/split operations for auditing
+  - Consider impact on reporting and invoicing for merged reservations
+  - Ensure proper handling of special requests and add-ons during merge/split operations
+
 ### October 24, 2025
 
 #### Feature #87: Parking Module Enhancements
@@ -610,6 +627,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: September 19, 2025*
-*Total Bugs: 2* (last one #84)
-*Total Feature Requests: 28* (last one #AA)
+*Last Updated: October 29, 2025*
+*Total Bugs: 3* (last one #87)
+*Total Feature Requests: 30* (last one #C)

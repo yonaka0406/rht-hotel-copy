@@ -2,6 +2,51 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### October 29, 2025
+
+#### Bug #87: Room Indicator Page - Date Cancellation Handling
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - The Room Indicator page does not properly handle cases where a date within an in/out period is cancelled, and the client needs to vacate and re-enter the room.
+  - Currently, the system doesn't properly reflect the room status during the cancelled period, which can lead to double-booking or incorrect room status display.
+- **Steps to Reproduce**:
+  1. Create a reservation with a multi-day stay (e.g., Oct 1-5)
+  2. Cancel one of the middle days (e.g., Oct 3)
+  3. Observe the Room Indicator page during the cancelled period
+- **Expected Behavior**:
+  - The room should show as available for the cancelled date
+  - The guest should be able to check out and check back in for the remaining dates
+  - The room status should update accordingly in real-time
+- **Actual Behavior**:
+  - The room status may show as occupied for the entire original period
+  - The system may not allow new bookings for the cancelled date
+  - The guest's remaining stay may not be properly reflected
+- **Affected Components**:
+  - Room Indicator component
+  - Reservation status tracking
+  - Room availability calculations
+- **Technical Notes**:
+  - Need to update the room status calculation to handle partial cancellations
+  - Ensure the system properly manages check-out/check-in for split stays
+  - Update the availability calendar to reflect the cancelled dates
+  - Consider adding visual indicators for split stays in the room indicator
+
+#### Feature Request #C: Separate OTA Notifications Drawer
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Move OTA notifications to a dedicated icon and separate drawer for better organization
+  - Keep the notification badge count on the main navigation
+  - Allow users to quickly access OTA-specific notifications without cluttering the main notification center
+  - Include filtering options for different OTA providers
+- **Technical Notes**:
+  - Create a new icon in the main navigation
+  - Implement a dedicated drawer component for OTA notifications
+  - Ensure real-time updates for new OTA notifications
+  - Maintain backward compatibility with existing notification systems
+  - Consider adding sound/vibration for high-priority OTA notifications
+
 ### October 27, 2025
 
 #### Bug #84: Update Invoice with Customer Code
