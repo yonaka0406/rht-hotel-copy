@@ -78,42 +78,50 @@
                 </div>
                 <div v-else>
                   <div v-if="isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')"
-                    class="flex items-center">
-                    <div>
-                      <template
-                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').type === 'employee'">
-                        <i class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>
-                      </template>
-                      <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'hold'">
-                        <i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>
-                      </template>
-                      <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
-                        <i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>
-                      </template>
-                      <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
-                        <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>
-                      </template>
-                      <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
-                        <i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>
-                      </template>
-                      <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
-                        <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>
-                      </template>
-                      <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '11111111-1111-1111-1111-111111111111'">
-                        <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
-                      </template>
-                      <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '22222222-2222-2222-2222-222222222222'">
-                        <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>
-                      </template>
+                    class="flex">
+                    <div class="flex flex-col">
+                      <div>
+                        <template
+                          v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').type === 'employee'">
+                          <i class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>
+                        </template>
+                        <template
+                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'hold'">
+                          <i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>
+                        </template>
+                        <template
+                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
+                          <i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>
+                        </template>
+                        <template
+                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
+                          <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>
+                        </template>
+                        <template
+                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
+                          <i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>
+                        </template>
+                        <template
+                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
+                          <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>
+                        </template>
+                        <template
+                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '11111111-1111-1111-1111-111111111111'">
+                          <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
+                        </template>
+                        <template
+                          v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '22222222-2222-2222-2222-222222222222'">
+                          <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>
+                        </template>
+                      </div>
+                      <div>
+                        <template
+                          v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').type === 'ota'">
+                          <i class="pi pi-globe bg-blue-200 p-1 rounded dark:bg-blue-800"></i>
+                        </template>
+                      </div>
                     </div>
-                    <div class="ml-1 dark:text-gray-100">
+                    <div class="ml-1 dark:text-gray-100 flex items-center">
                       {{ fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_name || '予約情報あり' }}
                     </div>
                   </div>
@@ -490,7 +498,7 @@ const getCellStyle = (room_id, date, useTemp = false) => {
     style = { backgroundColor: `${roomColor}` };
   } else if (roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web')) {
     roomColor = roomInfo.plan_color || '#9fead5';
-    style = { backgroundColor: `${roomColor}`, border: '2px solid #9fead5' };
+    style = { backgroundColor: `${roomColor}` };
   } else if (roomInfo && roomInfo.plan_color) {
     roomColor = roomInfo.plan_color;
     style = { backgroundColor: `${roomColor}` };
