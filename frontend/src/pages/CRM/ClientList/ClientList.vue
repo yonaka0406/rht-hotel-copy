@@ -220,7 +220,7 @@
     import { ref, onMounted } from "vue";
     import { useRouter } from 'vue-router';
     import { useClientStore } from '@/composables/useClientStore';    
-    import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button, Tag, Select, DatePicker } from 'primevue';
+    import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button, Tag, Select } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
     import { useToast } from 'primevue/usetoast'; // Import useToast
     import ExportClientDialog from './components/ExportClientDialog.vue';
@@ -282,7 +282,6 @@
         { label: '女性', value: 'female' },
         { label: 'その他', value: 'other' },
     ];
-    const emailPattern = /^[^\s@]+@[^\s@]+\\.[^\s@]+$/; // Stricter email regex\n    const isValidEmail = ref(true);\n    const phonePattern = /^\\+(?:[0-9] ?){6,14}[0-9]$/; // E.164 based phone regex\n    const isValidPhone = ref(true);
     const dialogVisible = ref(false);
     const dialogOpenClose = (bool) => {
         dialogVisible.value = bool;
@@ -298,6 +297,10 @@
             email: null,
         }
     };    
+    const emailPattern = /^[^\s@]+@[^\s@]+\\.[^\s@]+$/;
+    const isValidEmail = ref(true);    
+    const phonePattern = /^\\+(?:[0-9] ?){6,14}[0-9]$/;
+    const isValidPhone = ref(true);
     const validateEmail = (email) => {
         isValidEmail.value = emailPattern.test(email);
     };

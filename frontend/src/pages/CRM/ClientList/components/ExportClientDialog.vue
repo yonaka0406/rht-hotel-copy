@@ -17,19 +17,19 @@
             </div>
             <div class="col-span-1 mt-6">
                 <FloatLabel>
-                    <InputText v-model="exportFilters.name" @input="updateClientCount" fluid />
+                    <InputText v-model="exportFilters.name" @input="debouncedUpdateClientCount" fluid />
                     <label>氏名・名称</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 mt-6">
                 <FloatLabel>
-                    <InputText v-model="exportFilters.phone" @input="updateClientCount" fluid />
+                    <InputText v-model="exportFilters.phone" @input="debouncedUpdateClientCount" fluid />
                     <label>電話番号</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 mt-6">
                 <FloatLabel>
-                    <InputText v-model="exportFilters.email" @input="updateClientCount" fluid />
+                    <InputText v-model="exportFilters.email" @input="debouncedUpdateClientCount" fluid />
                     <label>メールアドレス</label>
                 </FloatLabel>
             </div>
@@ -57,10 +57,24 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch, computed } from 'vue';
+import { ref, defineProps, defineEmits, watch, computed, onUnmounted } from 'vue'; // Add onUnmounted
 import { Dialog, Button, DatePicker, FloatLabel, InputText, Select } from 'primevue';
 import { useClientStore } from '@/composables/useClientStore';
 import { useToast } from 'primevue/usetoast'; // Import useToast
+
+// Debounce function (simple setTimeout-based)
+const debounce = (func, delay) => {
+  let timeout;
+  const debounced = function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), delay);
+  };
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+  };
+  return debounced;
+};
 
 const props = defineProps({
     visible: {
@@ -117,6 +131,13 @@ const updateClientCount = async () => {
     };
     clientCount.value = await fetchExportClientsCount(filtersToSend);
 };
+
+const debouncedUpdateClientCount = debounce(updateClientCount, 500); // 500ms debounce
+
+onUnmounted(() => {
+  // Clear any pending debounced calls on component unmount
+  debouncedUpdateClientCount.cancel && debouncedUpdateClientCount.cancel();
+});
 
 watch(() => props.visible, async (newValue) => {
     if (newValue) {
