@@ -595,6 +595,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## Version History
+- **1.1.28** (2025-10-30) - Added OTA notifications drawer for better alert management and fixed bulk cancellation pricing. Improved date cancellation handling in Room Indicator to properly manage room status during partial stay cancellations.
 - **1.1.27** (2025-10-27) - Enhanced room indicator with client change information and enabled partial period changes for multiple rooms. Improved reservation split functionality and fixed guest count display in Static Calendar. Updated invoice generation to include 5-digit customer code.
 - **1.1.26** (2025-10-23) - Added Daily Digest email routine with admin panel logs and prefilled template download for finance imports. Fixed addon quantity calculation per room.
 - **1.1.25** (2025-10-21) - Fixed date range cancellation issues and added Google Sheets queue table for optimized API request handling, improving export reliability.
