@@ -133,12 +133,13 @@ const getAllClients = async (requestId, limit, offset) => {
   const pool = getPool(requestId);
   const query = `
     SELECT
-      clients.*
-      ,CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key
-      ,CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
+      clients.*,
+      COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS name,
+      CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key,
+      CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
     FROM clients
     WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
-    ORDER BY name ASC
+    ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC
     LIMIT $1 OFFSET $2
   `;
   try {
@@ -907,12 +908,13 @@ const findLegalPersonClients = async (requestId, queryParams = {}) => {
     const offset = queryParams.offset || 0;
     const sql = `
         SELECT clients.*,
+                COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS name,
                 CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key,
                 TRUE AS is_legal_person
         FROM clients
         WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
           AND clients.legal_or_natural_person = 'legal'
-        ORDER BY name ASC
+        ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC
         LIMIT $1 OFFSET $2;
     `;
     try {

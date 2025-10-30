@@ -64,22 +64,7 @@
                                 <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称検索" />
                             </template>
                         </Column>
-                        <Column header="氏名・名称（漢字）" filterField="name_kanji" sortable>
-                            <template #body="{ data }">
-                                {{ data.name_kanji }}
-                            </template>
-                            <template #filter="{ filterModel, filterCallback }">
-                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（漢字）検索" />
-                            </template>
-                        </Column>
-                        <Column header="氏名・名称（カナ）" filterField="name_kana" sortable>
-                            <template #body="{ data }">
-                                {{ data.name_kana }}
-                            </template>
-                            <template #filter="{ filterModel, filterCallback }">
-                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（カナ）検索" />
-                            </template>
-                        </Column>
+
                         <!-- Loyalty Tier Column with Filter -->
                         <Column field="loyalty_tier" header="ロイヤルティ層" sortable :showFilterMenu="false">
                             <template #body="{ data }">
@@ -224,29 +209,7 @@
             <Button label="閉じる" icon="pi pi-times" @click="dialogOpenClose(false)" class="p-button-danger p-button-text p-button-sm" />
             <Button label="保存" icon="pi pi-check" @click="submitClient" class="p-button-success p-button-text p-button-sm" />
         </template>
-    </Dialog>
-
-    <Dialog
-        class="dark:bg-gray-800 dark:text-gray-200"
-        v-model:visible="exportDialogVisible"
-        header="顧客データのエクスポート"
-        :closable="true"
-        :modal="true"
-        :style="{ width: '30vw' }"
-    >
-        <div class="grid grid-cols-1 gap-4 pt-4">
-            <div class="col-span-1">
-                <FloatLabel>
-                    <DatePicker v-model="createdAfter" showIcon fluid />
-                    <label>以降に作成された顧客</label>
-                </FloatLabel>
-            </div>
-        </div>
-        <template #footer>
-            <Button label="閉じる" icon="pi pi-times" @click="closeExportDialog" class="p-button-danger p-button-text p-button-sm" />
-            <Button label="ダウンロード" icon="pi pi-download" @click="downloadClients" class="p-button-success p-button-text p-button-sm" />
-        </template>
-    </Dialog>
+    <ExportClientDialog :visible="exportDialogVisible" @close="closeExportDialog" />
 </template>
 
 <script setup>
@@ -256,13 +219,9 @@
     import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button, Tag, Select, DatePicker } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
     import { useToast } from 'primevue/usetoast'; // Import useToast
-
-    const router = useRouter();
-    const { clients, clientsIsLoading, createBasicClient } = useClientStore();
-    const toast = useToast(); // Initialize toast
+    import ExportClientDialog from './components/ExportClientDialog.vue';
 
     const exportDialogVisible = ref(false);
-    const createdAfter = ref(null);
 
     const openExportDialog = () => {
       exportDialogVisible.value = true;
@@ -272,14 +231,11 @@
       exportDialogVisible.value = false;
     };
 
-    const downloadClients = () => {
-      let url = '/api/clients/export';
-      if (createdAfter.value) {
-        url += `?created_after=${createdAfter.value.toISOString()}`;
-      }
-      window.open(url, '_blank');
-      closeExportDialog();
-    };
+    const router = useRouter();
+    const { clients, clientsIsLoading, createBasicClient } = useClientStore();
+    const toast = useToast(); // Initialize toast
+
+
 
     // Data table
     const tableSize = ref({ label: '中', value: 'null' });
