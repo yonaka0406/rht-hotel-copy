@@ -217,11 +217,15 @@
                                         :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-times'"
                                         class="p-button-danger" />
                                 </div>
-                                <div v-else class="flex justify-center items-center">
+                                <div v-else class="flex justify-center items-center gap-2">
                                     <Button :label="isSubmitting ? '処理中...' : '復活'" @click="dayRecover"
                                         :disabled="isSubmitting"
                                         :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-history'"
                                         class="p-button-warn" />
+                                    <Button :label="isSubmitting ? '処理中...' : 'キャンセル変更'" @click="dayCancel"
+                                        :disabled="isSubmitting"
+                                        :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-times'"
+                                        class="p-button-danger" />
                                 </div>
                             </TabPanel>
                         </TabPanels>
