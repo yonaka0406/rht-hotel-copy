@@ -11,7 +11,7 @@ const {
   linkPaymentToReceipt
 } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-const { getBrowser } = require('../services/puppeteerService');
+const { getBrowser, closeBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -88,6 +88,7 @@ const generateInvoice = async (req, res) => {
   const userId = req.user.id;
   const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');
 
+  let browser;
   let page;
 
   try {
@@ -100,7 +101,7 @@ const generateInvoice = async (req, res) => {
     const userInfo = await getUsersByID(req.requestId, userId);
 
     // Get browser instance from the service
-    const browser = await getBrowser();
+    browser = await getBrowser();
     page = await browser.newPage();
     page.on('console', msg => {
       console.log('PAGE LOG:', msg.type(), msg.text());
@@ -154,6 +155,9 @@ const generateInvoice = async (req, res) => {
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
+    }
+    if (browser) {
+      await closeBrowser(browser);
     }
   }
 };
@@ -240,6 +244,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const taxBreakdownData = req.body.taxBreakdownData;
   const forceRegenerate = req.body.forceRegenerate;
 
+  let browser;
   let page;
 
   //console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
@@ -473,7 +478,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
       generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf) :
       generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
 
-    const browser = await getBrowser();
+    browser = await getBrowser();
     page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -536,6 +541,9 @@ const handleGenerateReceiptRequest = async (req, res) => {
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
+    }
+    if (browser) {
+      await closeBrowser(browser);
     }
   }
 };

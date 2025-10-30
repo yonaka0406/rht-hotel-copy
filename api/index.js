@@ -520,7 +520,7 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 */
 
-const { closeBrowser } = require('./services/puppeteerService');
+
 
 // Graceful shutdown
 const cleanup = () => {
@@ -561,13 +561,7 @@ const cleanup = () => {
       logger.error('Error closing listener PROD database pool:', err);
     }
 
-    // 4. Close Puppeteer
-    try {
-      await closeBrowser();
-      logger.info('Puppeteer browser closed.');
-    } catch (err) {
-      logger.error('Error closing Puppeteer browser:', err);
-    }
+
 
     logger.info('Graceful shutdown complete.');
     process.exit(0);

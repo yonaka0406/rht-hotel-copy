@@ -1,4 +1,4 @@
-const { getBrowser } = require('../services/puppeteerService');
+const { getBrowser, closeBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -147,9 +147,10 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
 }
 
 const generatePdf = async (htmlContent, reservationId, isGroup) => {
+    let browser;
     let page;
     try {
-        const browser = await getBrowser();
+        browser = await getBrowser();
         page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -169,6 +170,9 @@ const generatePdf = async (htmlContent, reservationId, isGroup) => {
     } finally {
         if (page) {
             await page.close();
+        }
+        if (browser) {
+            await closeBrowser(browser);
         }
     }
 }

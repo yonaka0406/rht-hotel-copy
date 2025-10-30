@@ -1,14 +1,9 @@
 const puppeteer = require('puppeteer');
 
-let browserInstance;
-
 const getBrowser = async () => {
-  if (browserInstance && browserInstance.isConnected()) {
-    return browserInstance;
-  }
-
-  browserInstance = await puppeteer.launch({
-    headless: true,
+  // Always launch a new browser instance.
+  const browser = await puppeteer.launch({
+    headless: "new", // Or "new" if the version supports it and is preferred.
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -17,21 +12,16 @@ const getBrowser = async () => {
       '--disable-extensions',
       '--disable-infobars',
       '--window-size=1920,1080',
-      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-features=IsolateOrigins,site-per-process'
     ],
   });
-
-  browserInstance.on('disconnected', () => {
-    browserInstance = null;
-  });
-
-  return browserInstance;
+  return browser;
 };
 
-const closeBrowser = async () => {
-  if (browserInstance) {
-    await browserInstance.close();
-    browserInstance = null;
+const closeBrowser = async (browser) => {
+  // Accepts a browser instance and closes it.
+  if (browser) {
+    await browser.close();
   }
 };
 
