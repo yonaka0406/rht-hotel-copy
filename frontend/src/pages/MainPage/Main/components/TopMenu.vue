@@ -1,5 +1,5 @@
 <template>
-    <Toolbar class="bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600 shadow-md">
+    <Toolbar v-if="showToolbar" class="bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600 shadow-md overflow-visible">
         <!-- Left Section -->
         <template #start>
             <div class="flex items-center gap-4">                
@@ -15,9 +15,9 @@
                     class="p-button p-button-text dark:text-white" 
                     aria-label="予約検索" 
                     @click="openGlobalSearch"
-                    v-tooltip.bottom="{ value: '予約検索 (Ctrl+K)', class: 'small-tooltip' }"
+                    v-tooltip.bottom="{ value: '予約検索 (Ctrl+K)' }"
                 >
-                    <i class="pi pi-search" style="font-size:larger" />
+                    <i class="pi pi-search" style="font-size: 20px" />
                 </Button>
 
                 <!-- Waitlist Icon (New) - Only show when 1 or more entries -->
@@ -39,7 +39,7 @@
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="notificationsBadgeCount" class="mr-2" :severity="notificationSeverity">
                     <Button class="p-button p-button-text dark:text-white" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
-                        <i class="pi pi-bell" :class="bellAnimationClass" style="font-size:larger" />
+                        <i class="pi pi-bell" :class="bellAnimationClass" style="font-size: 20px" />
                     </Button>
                 </OverlayBadge>
                 <!-- Hotel Dropdown -->
@@ -59,9 +59,9 @@
                     class="p-button p-button-text dark:text-white" 
                     aria-label="ヘルプ" 
                     @click="goToAboutPage"
-                    v-tooltip.bottom="{ value: 'システムヘルプ', class: 'small-tooltip' }"
+                    v-tooltip.bottom="{ value: 'システムヘルプ' }"
                 >
-                    <i class="pi pi-question-circle" style="font-size:1rem" />
+                    <i class="pi pi-question-circle" style="font-size: 20px" />
                 </Button>
             </div>
         </template>
@@ -99,7 +99,7 @@
 
 <script setup>
     // Vue
-    import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';    
+    import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';    
     import { useRouter } from 'vue-router';
     const router = useRouter();
 
@@ -130,6 +130,7 @@
     // const waitlistBadgeCount = ref(0); // Will be replaced by a computed property
     const isWaitlistModalVisible = ref(false); // Controls visibility of the waitlist modal
     const isGlobalSearchVisible = ref(false); // Controls visibility of the global search modal
+    const showToolbar = ref(true); // Controls rerendering of the toolbar
 
     // --- Computed Properties ---
     const waitlistBadgeCount = computed(() => {
@@ -277,6 +278,11 @@
         
         // Register global keyboard shortcut for search
         document.addEventListener('keydown', handleGlobalKeydown);
+
+        // Force rerender of toolbar to fix potential layout issues
+        showToolbar.value = false;
+        await nextTick(); // Wait for DOM update
+        showToolbar.value = true;
     });
     
     // Clean up event listener when component is unmounted
@@ -404,5 +410,48 @@
     .small-tooltip {
         font-size: 0.75rem !important;
         padding: 2px 6px !important;
+    }
+
+    /* FIX: Ensure toolbar end section has proper spacing and flex properties */
+    :deep(.p-toolbar-end) {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem; /* Add consistent spacing between items */
+        flex-shrink: 0; /* Prevent items from being squished */
+        min-width: 0; /* Allow proper flex behavior */
+        padding-right: 1.5rem; /* Add padding to prevent edge cropping */
+        overflow: visible; /* Allow content to overflow if necessary */
+    }
+    
+    /* FIX: Ensure buttons don't get cropped */
+    .p-toolbar-end .p-button {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Align icons to the left */
+        flex-shrink: 0; /* Prevent buttons from shrinking */
+        min-width: 2.5rem; /* Ensure minimum width for icon buttons */
+        min-height: 2.5rem; /* Ensure minimum height */
+
+        & i {
+            font-family: 'PrimeIcons'; /* Explicitly set font family */
+        }
+    }
+    
+    /* FIX: Ensure OverlayBadge containers don't get cropped */
+    :deep(.p-overlaybadge) {
+        display: inline-flex;
+        position: relative;
+        flex-shrink: 0; /* Prevent badge containers from shrinking */
+    }
+    
+    /* FIX: Ensure Select dropdown has proper flex properties */
+    :deep(.p-select) {
+        flex-shrink: 1; /* Allow dropdown to shrink if needed but not icons */
+        min-width: 0; /* Allow proper text truncation */
+    }
+
+    /* FIX: Ensure toolbar itself allows content to overflow */
+    :deep(.p-toolbar) {
+        overflow: visible;
     }
 </style>
