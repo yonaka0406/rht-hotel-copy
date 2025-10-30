@@ -1,9 +1,8 @@
 <template>
     <Dialog v-model:visible="showDialog" header="予約分割" modal :style="{ width: '50vw' }">
         <div class="p-fluid">
-            <div class="field">
-                <FloatLabel>
-                    <DatePicker id="dates" v-model="selectedDates" selectionMode="range" :manualInput="false" showIcon fluid :minDate="minDate" :maxDate="maxDate" dateFormat="yy-mm-dd" />
+                            <div class="field mt-6">
+                                <FloatLabel>                    <DatePicker id="dates" v-model="selectedDates" selectionMode="range" :manualInput="false" showIcon fluid :minDate="minDate" :maxDate="maxDate" dateFormat="yy-mm-dd" :numberOfMonths="2" :selectOtherMonths="true" />
                     <label for="dates">日付範囲</label>
                 </FloatLabel>
             </div>
