@@ -247,7 +247,7 @@ const parkingUsageByRoom = computed(() => {
         if (usage[roomId]?.dates[formattedDate] !== undefined) {
           usage[roomId].dates[formattedDate]++;
         } else {
-          console.warn(`Date ${formattedDate} not found in room ${roomId} dates`);
+          // console.warn(`Date ${formattedDate} not found in room ${roomId} dates`);
         }
       });
     } else {

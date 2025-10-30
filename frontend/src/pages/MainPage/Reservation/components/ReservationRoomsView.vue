@@ -546,28 +546,10 @@ const hasRoomChange = (group) => {
     // Calculate the total number of nights for the entire reservation
     const totalReservationNights = (reservationCheckOut.getTime() - reservationCheckIn.getTime()) / (1000 * 60 * 60 * 24);
 
-    // If the number of details (nights) for this room group is less than the total reservation nights,
-    // it implies a room change (i.e., this room is not present for the entire duration).
-    if (group.details.length < totalReservationNights) {
-        return true;
-    }
-
-    // Also check if the room's details span the *exact* period of the reservation.
-    const roomFirstDetailDate = new Date(group.details[0].date);
-    const roomLastDetailDate = new Date(group.details[group.details.length - 1].date);
-
-    // Check if the start date of this room's details matches the reservation check-in
-    if (formatDate(roomFirstDetailDate) !== formatDate(reservationCheckIn)) {
-        return true;
-    }
-
-    // Check if the end date of this room's details matches the reservation check-out last night
-    const reservationLastNightDate = new Date(reservationCheckOut.getTime() - (1000 * 60 * 60 * 24));
-    if (formatDate(roomLastDetailDate) !== formatDate(reservationLastNightDate)) {
-        return true;
-    }
-
-    return false;
+    // The message should only be displayed if the number of dates for this room group
+    // is less than the total reservation nights.
+    // If the room covers the entire period (even with cancellations within it), the message should not be shown.
+    return group.details.length < totalReservationNights;
 };
 
 const normalizePhone = (phone) => {
