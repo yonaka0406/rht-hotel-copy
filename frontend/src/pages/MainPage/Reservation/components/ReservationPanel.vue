@@ -187,17 +187,12 @@
         </div>
     </div>
 
-    <!-- Cancel Date Dialog -->
-    <Dialog v-model:visible="showDateDialog" header="日付を選択" modal>
-        <p>何日からキャンセル料が発生しますか？</p>
-        <DatePicker v-model="cancelStartDate" showIcon fluid iconDisplay="input" showOnFocus
-            :minDate="cancelMinDate || undefined" :maxDate="cancelMaxDate || undefined" dateFormat="yy-mm-dd" />
-        <template #footer>
-            <Button label="全日" severity="warn" icon="pi pi-calendar-times"
-                @click="updateReservationStatus('cancelled', 'full-fee')" :loading="isSubmitting" :disabled="isSubmitting" />
-            <Button label="キャンセル適用" icon="pi pi-check" @click="confirmPartialCancel" :loading="isSubmitting" :disabled="isSubmitting" />
-        </template>
-    </Dialog>
+    <ReservationCancelDialog
+        :reservation_id="props.reservation_id"
+        :reservation_details="props.reservation_details"
+        v-model:showDateDialog="showDateDialog"
+        v-model:isSubmitting="isSubmitting"
+    />
 
     <!-- Change Client Dialog -->
     <Dialog v-model:visible="visibleClientChangeDialog" :header="'顧客変更'" :closable="true" :modal="true"
@@ -492,6 +487,7 @@ import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialo
 import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
 import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAddRoomDialog.vue';
 import ReservationAnnounceDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAnnounceDialog.vue';
+import ReservationCancelDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCancelDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
 // Primevue
@@ -528,7 +524,7 @@ const props = defineProps({
 
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern,
+const { setReservationType, setReservationStatus, setRoomPlan, setRoomPattern,
     fetchAvailableRooms, getAvailableDatesForChange, setReservationRoomsPeriod,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
@@ -910,18 +906,7 @@ const updateReservationType = async (event) => {
 
 // Status Buttons
 const showDateDialog = ref(false);
-const cancelStartDate = ref(null);
-const cancelMinDate = ref(null);
-const cancelMaxDate = ref(null);
-const cancelledIds = computed(() => {
-    return props.reservation_details
-        .filter(detail => new Date(detail.date) >= cancelStartDate.value) // Filter by date >= cancelStartDate
-        .map(detail => ({
-            id: detail.id,
-            hotel_id: detail.hotel_id,
-            date: detail.date
-        }));
-});
+
 const updateReservationStatus = async (status, type = null) => {
     if (!allRoomsHavePlan.value) {
         toast.add({
@@ -1087,18 +1072,7 @@ const handleCancel = () => {
         rejectIcon: 'pi pi-calendar'
     });
 };
-const confirmPartialCancel = async () => {
-    if (cancelStartDate.value) {
 
-        await updateReservationStatus('cancelled');
-
-        for (const cancelledDetail of cancelledIds.value) {
-            await setReservationDetailStatus(cancelledDetail.id, cancelledDetail.hotel_id, 'cancelled');
-        }
-
-        showDateDialog.value = false;
-    }
-};
 
 const revertCheckout = () => {
     confirm.require({
@@ -1606,11 +1580,7 @@ onMounted(async () => {
     reservationTypeSelected.value = reservationInfo.value.type;
     paymentTimingSelected.value = reservationInfo.value.payment_timing;
     selectedClient.value = reservationInfo.value.client_id;
-    cancelStartDate.value = new Date(reservationInfo.value.check_in);
-    cancelMinDate.value = new Date(reservationInfo.value.check_in);
-    const checkOutDate = new Date(reservationInfo.value.check_out);
-    checkOutDate.setDate(checkOutDate.getDate() - 1);
-    cancelMaxDate.value = checkOutDate;
+
 
     checkInTime.value = formatTime(reservationInfo.value.check_in_time);
     checkOutTime.value = formatTime(reservationInfo.value.check_out_time);
