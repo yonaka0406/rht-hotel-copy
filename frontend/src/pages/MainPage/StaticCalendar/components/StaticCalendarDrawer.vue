@@ -18,6 +18,10 @@
           </div>
         </template>
         <template #content>
+          <div v-if="res.type === 'ota' || res.type === 'web'" class="text-sm mb-2">
+            <p><strong>OTA予約ID:</strong> {{ res.ota_reservation_id }}</p>
+            <p><strong>エージェント:</strong> {{ res.agent }}</p>
+          </div>
           <div class="grid grid-cols-2 gap-2 text-sm pt-2">
             <div class="col-span-2 flex items-center gap-4 text-sm">
               <div class="flex items-center gap-1">
@@ -32,6 +36,7 @@
                 <i class="pi pi-wallet"></i>
                 <Tag :value="paymentTimingInfo[res.payment_timing]?.label" :severity="paymentTimingInfo[res.payment_timing]?.severity"></Tag>
               </div>
+
             </div>
           </div>
         </template>
@@ -52,7 +57,7 @@ import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import { formatDateWithDay } from '@/utils/dateUtils';
 
-const props = defineProps({
+defineProps({
   visible: Boolean,
   reservations: Array,
   dateRange: Array,

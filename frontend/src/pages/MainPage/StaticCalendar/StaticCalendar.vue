@@ -97,7 +97,8 @@
                 <div v-else>
                   <div v-if="isRoomReserved(room.room_id, date)">
                     <div class="dark:text-gray-100" style="max-width: 100%; overflow: hidden; white-space: nowrap;">
-                      <span style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</span>
+                      <strong v-if="fillRoomInfo(room.room_id, date).type === 'ota' || fillRoomInfo(room.room_id, date).type === 'web'" style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</strong>
+                      <span v-else style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</span>
                     </div>
                   </div>
                 </div>
@@ -129,15 +130,10 @@
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-const router = useRouter();
 
 import Panel from 'primevue/panel';
-import Card from 'primevue/card';
 import Skeleton from 'primevue/skeleton';
-import Tag from 'primevue/tag';
 import DatePicker from 'primevue/datepicker';
-import Button from 'primevue/button';
 
 // Components
 import StaticCalendarDrawer from './components/StaticCalendarDrawer.vue';
@@ -232,13 +228,17 @@ const highlightRow = (index) => {
 const showTooltip = (event, room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);
   if (roomInfo && roomInfo.reservation_id) {
+    let otaLine = '';
+    if (roomInfo.type === 'ota' || roomInfo.type === 'web') {
+      otaLine = `<br><i class="pi pi-globe"></i> ${roomInfo.agent || ''}`;
+    }
     tooltipContent.value = `
       部屋番号: ${roomInfo.room_number || 'N/A'}<br>  
       顧客: ${roomInfo.client_name_original || roomInfo.client_name}<br>
       プラン: ${roomInfo.plan_name || 'N/A'}<br>        
       支払いタイミング: ${paymentTimingInfo[roomInfo.payment_timing]?.label || roomInfo.payment_timing || 'N/A'}<br>
       チェックイン日: ${formatDate(new Date(roomInfo.check_in))}<br>
-      チェックアウト日: ${formatDate(new Date(roomInfo.check_out))}
+      チェックアウト日: ${formatDate(new Date(roomInfo.check_out))}${otaLine}
     `;
     tooltipVisible.value = true;
     tooltipX.value = event.pageX + 10;
@@ -271,18 +271,6 @@ const handleCellDoubleClick = (room_id, date) => {
     selectedClientId.value = roomInfo.client_id;
     isDrawerVisible.value = true;
   }
-};
-
-
-const generateRoomTooltip = (reservation) => {
-  const parts = [];
-  if (reservation.smoking_rooms && reservation.smoking_rooms.length > 0) {
-    parts.push(`喫煙: ${reservation.smoking_rooms.join(', ')}`);
-  }
-  if (reservation.non_smoking_rooms && reservation.non_smoking_rooms.length > 0) {
-    parts.push(`禁煙: ${reservation.non_smoking_rooms.join(', ')}`);
-  }
-  return parts.join(' | ');
 };
 
 // Date range
@@ -461,6 +449,9 @@ const selectedClientReservations = computed(() => {
       check_out: formatDate(checkOut),
       number_of_people: first.total_number_of_people,
       payment_timing: first.payment_timing,
+      type: first.type,
+      agent: first.agent,
+      ota_reservation_id: first.ota_reservation_id,
       num_rooms: numRooms,
       smoking_count: smokingCount,
       non_smoking_count: nonSmokingCount,
