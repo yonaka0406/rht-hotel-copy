@@ -1,15 +1,13 @@
 const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
-  selectRoomsForIndicator,
-  selectFailedOtaReservations,
-  selectParkingSpotAvailability,
-  getHotelIdByReservationId, // Import the new function
-  addReservationHold, addReservationDetail, addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
-  updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
+  selectRoomsForIndicator, selectFailedOtaReservations, selectParkingSpotAvailability, getHotelIdByReservationId, addReservationHold, addReservationDetail,
+  addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
+  updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime,
+  updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest,
+  updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom,
+  updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
-  insertCopyReservation, selectReservationParking,
-  deleteParkingReservation, deleteBulkParkingReservations,
-  cancelReservationRooms: cancelReservationRoomsModel,
+  insertCopyReservation, selectReservationParking, deleteParkingReservation, deleteBulkParkingReservations, cancelReservationRooms: cancelReservationRoomsModel,
   updatePaymentTiming, updateReservationRoomsPeriod,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -327,7 +325,7 @@ const createReservationHold = async (req, res) => {
   const updated_by = req.user.id;
 
   const pool = getPool(req.requestId);
-  const client = await pool.connect();  
+  const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
@@ -339,7 +337,7 @@ const createReservationHold = async (req, res) => {
       const newClient = await addClientByName(req.requestId, clientData, client);
       finalClientId = newClient.id;
     }
-    
+
     // --- Step 2: Create reservation ---
     const reservationData = {
       hotel_id,
@@ -355,7 +353,7 @@ const createReservationHold = async (req, res) => {
 
     // --- Step 3: Get available rooms ---
     let availableRooms = await selectAvailableRooms(req.requestId, hotel_id, check_in, check_out, client);
-    
+
     // Filter rooms if needed
     if (room_type_id) {
       availableRooms = availableRooms.filter(r => r.room_type_id === Number(room_type_id));
@@ -377,7 +375,7 @@ const createReservationHold = async (req, res) => {
     }
     let remainingPeople = number_of_people;
     const reservationDetails = [];
-        
+
     while (remainingPeople > 0 && availableRooms.length > 0) {
       // Pick smallest room that can accommodate remaining people
       availableRooms.sort((a, b) => a.capacity - b.capacity);
@@ -410,7 +408,7 @@ const createReservationHold = async (req, res) => {
 
     await client.query('COMMIT');
     res.status(201).json({ reservation: newReservation });
-    
+
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: 'Failed to create reservation' });
@@ -552,7 +550,7 @@ const createHoldReservationCombo = async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      reservation: newReservation      
+      reservation: newReservation
     });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -873,7 +871,7 @@ const editReservationDetail = async (req, res) => {
       price: calcPrice.value,
       updated_by,
     });
-    if (planChange) {      
+    if (planChange) {
       const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by);
     }
 
@@ -1322,24 +1320,24 @@ const deleteHoldReservation = async (req, res) => {
 
   try {
     const result = await deleteHoldReservationById(req.requestId, id, hid, user_id);
-    
+
     // Handle case where result is undefined
     if (!result) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Error processing delete request: No result returned' 
+      return res.status(500).json({
+        success: false,
+        message: 'Error processing delete request: No result returned'
       });
     }
 
     const { success, count } = result;
-    
+
     if (success) {
       return res.json({ success: true, count });
     } else {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         count,
-        message: 'Reservation not found, already deleted, or not eligible for deletion' 
+        message: 'Reservation not found, already deleted, or not eligible for deletion'
       });
     }
   } catch (err) {
@@ -1350,7 +1348,7 @@ const deleteHoldReservation = async (req, res) => {
       hotel_id: hid,
       user_id
     });
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: err.message || 'Failed to delete reservation',
       details: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
@@ -1571,17 +1569,14 @@ const changeReservationRoomsPeriod = async (req, res) => {
 };
 
 module.exports = {
-  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, 
-  getRoomsForIndicator,
-  getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability,
-  getHotelIdForReservation, // Add this line
-  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, 
-  addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, 
-  editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, 
-  editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationCommentFlag, 
-  editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, 
-  deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, 
+  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getRoomsForIndicator,
+  getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability, getHotelIdForReservation,
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient,
+  addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail,
+  editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan,
+  editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationCommentFlag,
+  editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber,
+  deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations,
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
-  editPaymentTiming,
-  changeReservationRoomsPeriod,
+  editPaymentTiming, changeReservationRoomsPeriod,
 };
