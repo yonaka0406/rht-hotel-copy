@@ -22,7 +22,7 @@
       </Button>
     </div>
 
-    <nav class="flex-1 space-y-1 mt-4">
+    <nav class="flex-1 space-y-1 mt-4 overflow-y-auto max-h-[calc(100vh-250px)]">
       <template v-for="(item, index) in menuItems" :key="index">
         <div v-if="item.type === 'header'"
           :class="['px-6 py-2 text-xs text-emerald-300 dark:text-emerald-200 uppercase font-semibold', isCollapsed ? 'text-center' : '']">
@@ -112,7 +112,7 @@
       </Button>
     </div>
 
-    <div :class="['p-4 mt-auto border-t border-emerald-700 dark:border-emerald-600', isCollapsed ? 'text-center' : '']">
+    <div :class="['p-4 border-t border-emerald-700 dark:border-emerald-600', isCollapsed ? 'text-center' : '']">
       <p v-if="!isCollapsed" class="text-xs text-emerald-300 dark:text-emerald-200"> WeHub.work PMS</p>
       <p v-if="isCollapsed" class="text-xs text-emerald-300 dark:text-emerald-200"> WeHub.work</p>
     </div>
