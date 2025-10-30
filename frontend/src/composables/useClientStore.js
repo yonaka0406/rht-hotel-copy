@@ -581,7 +581,15 @@ export function useClientStore() {
     const fetchExportClientsCount = async (filters) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            console.log('Fetching export clients count with filters:', body); // Added console.log
+            const url = '/api/clients/export/count';
+            const body = {};
+            // Iterate over filters and add to body if not null
+            for (const key in filters) {
+                if (filters[key] !== null) {
+                    body[key] = filters[key];
+                }
+            }
+            console.log('Fetching export clients count with filters:', body); // Moved console.log
 
             const response = await fetch(url, {
                 method: 'POST',

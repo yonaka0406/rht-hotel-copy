@@ -1158,8 +1158,52 @@ const deleteImpediment = async (requestId, impedimentId) => {
   }
 };
 
+const buildClientFilterQuery = (filters) => {
+  let whereClauses = ["c.id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')"];
+  const values = [];
+  let paramIndex = 1;
+
+  logger.debug(`[buildClientFilterQuery] Initial filters: ${JSON.stringify(filters)}`); // Debug log
+
+  if (filters.created_after) {
+    whereClauses.push(`c.created_at >= $${paramIndex++}`);
+    values.push(filters.created_after);
+  }
+  if (filters.name) {
+    whereClauses.push(`(c.name ILIKE $${paramIndex} OR c.name_kanji ILIKE $${paramIndex} OR c.name_kana ILIKE $${paramIndex})`);
+    values.push(`%${filters.name}%`);
+    paramIndex++; // Increment only once for the group of OR conditions
+  }
+  if (filters.phone) {
+    whereClauses.push(`c.phone ILIKE $${paramIndex++}`);
+    values.push(`%${filters.phone}%`);
+  }
+  if (filters.email) {
+    whereClauses.push(`c.email ILIKE $${paramIndex++}`);
+    values.push(`%${filters.email}%`);
+  }
+  if (filters.loyalty_tier) {
+    whereClauses.push(`c.loyalty_tier = $${paramIndex++}`);
+    values.push(filters.loyalty_tier);
+  }
+  if (filters.legal_or_natural_person) {
+    whereClauses.push(`c.legal_or_natural_person = $${paramIndex++}`);
+    values.push(filters.legal_or_natural_person);
+  }
+
+  logger.debug(`[buildClientFilterQuery] Generated whereClauses: ${whereClauses.join(' AND ')}`); // Debug log
+  logger.debug(`[buildClientFilterQuery] Generated values: ${JSON.stringify(values)}`); // Debug log
+
+  return {
+    whereClause: whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '',
+    values: values,
+  };
+};
+
 const getAllClientsForExport = async (requestId, filters = {}) => {
   const pool = getPool(requestId);
+  const { whereClause, values } = buildClientFilterQuery(filters);
+
   let query = `
     SELECT
       c.name_kanji,
@@ -1198,39 +1242,8 @@ const getAllClientsForExport = async (requestId, filters = {}) => {
         FROM client_impediments
         WHERE restriction_level = 'warning' AND is_active = true
       ) ci ON c.id = ci.client_id
-    WHERE
-      c.id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
   `;
-  const values = [];
-  let paramIndex = 1;
-
-  if (filters.created_after) {
-    values.push(filters.created_after);
-    query += ` AND c.created_at >= $${paramIndex++}`;
-  }
-  if (filters.name) {
-    values.push(`%${filters.name}%`);
-    query += ` AND (c.name ILIKE $${paramIndex++} OR c.name_kanji ILIKE $${paramIndex++} OR c.name_kana ILIKE $${paramIndex++})`;
-    values.push(`%${filters.name}%`); // Add again for name_kanji
-    values.push(`%${filters.name}%`); // Add again for name_kana
-  }
-  if (filters.phone) {
-    values.push(`%${filters.phone}%`);
-    query += ` AND c.phone ILIKE $${paramIndex++}`;
-  }
-  if (filters.email) {
-    values.push(`%${filters.email}%`);
-    query += ` AND c.email ILIKE $${paramIndex++}`;
-  }
-  if (filters.loyalty_tier) {
-    values.push(filters.loyalty_tier);
-    query += ` AND c.loyalty_tier = $${paramIndex++}`;
-  }
-  if (filters.legal_or_natural_person) {
-    values.push(filters.legal_or_natural_person);
-    query += ` AND c.legal_or_natural_person = $${paramIndex++}`;
-  }
-
+  query += whereClause; // Explicitly concatenate
   query += ` ORDER BY customer_id, name_kana, name_kanji, created_at`;
 
   try {
@@ -1243,44 +1256,19 @@ const getAllClientsForExport = async (requestId, filters = {}) => {
 };
 
 const getClientsCountForExport = async (requestId, filters = {}) => {
-  const pool = getPool(requestId);
+  const pool = getPool(requestId);   
+  const { whereClause, values } = buildClientFilterQuery(filters);
+
   let query = `
     SELECT
       COUNT(c.id)
     FROM
       clients c
-    WHERE
-      c.id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
   `;
-  const values = [];
-  let paramIndex = 1;
+  query += whereClause; // Explicitly concatenate
 
-  if (filters.created_after) {
-    values.push(filters.created_after);
-    query += ` AND c.created_at >= $${paramIndex++}`;
-  }
-  if (filters.name) {
-    values.push(`%${filters.name}%`);
-    query += ` AND (c.name ILIKE $${paramIndex++} OR c.name_kanji ILIKE $${paramIndex++} OR c.name_kana ILIKE $${paramIndex++})`;
-    values.push(`%${filters.name}%`); // Add again for name_kanji
-    values.push(`%${filters.name}%`); // Add again for name_kana
-  }
-  if (filters.phone) {
-    values.push(`%${filters.phone}%`);
-    query += ` AND c.phone ILIKE $${paramIndex++}`;
-  }
-  if (filters.email) {
-    values.push(`%${filters.email}%`);
-    query += ` AND c.email ILIKE $${paramIndex++}`;
-  }
-  if (filters.loyalty_tier) {
-    values.push(filters.loyalty_tier);
-    query += ` AND c.loyalty_tier = $${paramIndex++}`;
-  }
-  if (filters.legal_or_natural_person) {
-    values.push(filters.legal_or_natural_person);
-    query += ` AND c.legal_or_natural_person = $${paramIndex++}`;
-  }
+  logger.debug(`[getClientsCountForExport] SQL Query: ${query}`); // Debug log
+  logger.debug(`[getClientsCountForExport] Query Values: ${JSON.stringify(values)}`); // Debug log
 
   try {
     const result = await pool.query(query, values);

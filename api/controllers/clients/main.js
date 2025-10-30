@@ -450,18 +450,20 @@ const handleDeleteImpediment = async (req, res) => {
 const { exportClientsToFile } = require('./services/exportService');
 
 const exportClients = async (req, res) => {
-  let { created_after } = req.body;
+  let { created_after, ...otherFilters } = req.body; // Destructure other filters
 
   if (created_after) {
     const parsedDate = Date.parse(created_after);
     if (isNaN(parsedDate)) {
       return res.status(400).json({ error: 'Invalid created_after: must be a valid ISO date string' });
     }
-    created_after = new Date(parsedDate).toISOString(); // Ensure it's a valid ISO string
+    created_after = new Date(parsedDate).toISOString();
   }
 
+  const filtersToPass = { created_after, ...otherFilters }; // Combine all filters
+
   try {
-    const clients = await clientsModel.getAllClientsForExport(req.requestId, { created_after });
+    const clients = await clientsModel.getAllClientsForExport(req.requestId, filtersToPass); // Pass all filters
 
     const workbook = await exportClientsToFile(clients);
 
@@ -483,18 +485,20 @@ const exportClients = async (req, res) => {
 };
 
 const getExportClientsCount = async (req, res) => {
-  let { created_after } = req.body;
+  let { created_after, ...otherFilters } = req.body; // Destructure other filters
 
   if (created_after) {
     const parsedDate = Date.parse(created_after);
     if (isNaN(parsedDate)) {
       return res.status(400).json({ error: 'Invalid created_after: must be a valid ISO date string' });
     }
-    created_after = new Date(parsedDate).toISOString(); // Ensure it's a valid ISO string
+    created_after = new Date(parsedDate).toISOString();
   }
 
+  const filtersToPass = { created_after, ...otherFilters }; // Combine all filters
+
   try {
-    const count = await clientsModel.getClientsCountForExport(req.requestId, { created_after });
+    const count = await clientsModel.getClientsCountForExport(req.requestId, filtersToPass); // Pass all filters
     res.status(200).json({ count });
   } catch (error) {
     console.error('Error getting export clients count:', error);
