@@ -60,37 +60,56 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
         `;
         await client.query(updateDetailsQuery, [newReservationId, userId, reservationDetailIdsToMove, hotelId, originalReservationId]);
 
-        // 4. Recalculate number_of_people for the new reservation
-        const newReservationPeopleQuery = `
-            SELECT COALESCE(SUM(number_of_people), 0) AS total_people
-            FROM reservation_details
-            WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL;
+        // 4. Recalculate and update check_in, check_out, and number_of_people for the NEW reservation
+        const newReservationMetricsQuery = `
+            SELECT
+                MIN(date) AS check_in,
+                MAX(date) + INTERVAL '1 day' AS check_out,
+                MAX(daily_people) AS total_people
+            FROM (
+                SELECT
+                    date,
+                    SUM(number_of_people) AS daily_people
+                FROM reservation_details
+                WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL
+                GROUP BY date
+            ) AS daily_counts;
         `;
-        const newPeopleResult = await client.query(newReservationPeopleQuery, [newReservationId, hotelId]);
-        const newReservationNumberOfPeople = newPeopleResult.rows[0].total_people;
+        const newMetricsResult = await client.query(newReservationMetricsQuery, [newReservationId, hotelId]);
+        const { check_in: newCheckIn, check_out: newCheckOut, total_people: newTotalPeople } = newMetricsResult.rows[0];
 
-        const updateNewReservationPeopleQuery = `
+        const updateNewReservationQuery = `
             UPDATE reservations
-            SET number_of_people = $1
-            WHERE id = $2 AND hotel_id = $3;
+            SET check_in = $1, check_out = $2, number_of_people = $3, updated_by = $4
+            WHERE id = $5 AND hotel_id = $6;
         `;
-        await client.query(updateNewReservationPeopleQuery, [newReservationNumberOfPeople, newReservationId, hotelId]);
+        await client.query(updateNewReservationQuery, [newCheckIn, newCheckOut, newTotalPeople, userId, newReservationId, hotelId]);
 
-        // 5. Recalculate number_of_people for the original reservation
-        const originalReservationPeopleQuery = `
-            SELECT COALESCE(SUM(number_of_people), 0) AS total_people
-            FROM reservation_details
-            WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL;
+
+        // 5. Recalculate and update check_in, check_out, and number_of_people for the ORIGINAL reservation
+        const originalReservationMetricsQuery = `
+            SELECT
+                MIN(date) AS check_in,
+                MAX(date) + INTERVAL '1 day' AS check_out,
+                MAX(daily_people) AS total_people
+            FROM (
+                SELECT
+                    date,
+                    SUM(number_of_people) AS daily_people
+                FROM reservation_details
+                WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL
+                GROUP BY date
+            ) AS daily_counts;
         `;
-        const originalPeopleResult = await client.query(originalReservationPeopleQuery, [originalReservationId, hotelId]);
-        const originalReservationNumberOfPeople = originalPeopleResult.rows[0].total_people;
+        const originalMetricsResult = await client.query(originalReservationMetricsQuery, [originalReservationId, hotelId]);
+        const { check_in: originalCheckIn, check_out: originalCheckOut, total_people: originalTotalPeople } = originalMetricsResult.rows[0];
 
-        const updateOriginalReservationPeopleQuery = `
+        const updateOriginalReservationQuery = `
             UPDATE reservations
-            SET number_of_people = $1
-            WHERE id = $2 AND hotel_id = $3;
+            SET check_in = $1, check_out = $2, number_of_people = $3, updated_by = $4
+            WHERE id = $5 AND hotel_id = $6;
         `;
-        await client.query(updateOriginalReservationPeopleQuery, [originalReservationNumberOfPeople, originalReservationId, hotelId]);
+        await client.query(updateOriginalReservationQuery, [originalCheckIn, originalCheckOut, originalTotalPeople, userId, originalReservationId, hotelId]);
 
         await client.query('COMMIT');
         return newReservationId;
