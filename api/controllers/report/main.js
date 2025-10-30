@@ -218,22 +218,29 @@ const getReservationsForGoogle = async (req, res) => {
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
 
+  logger.warn(`[getReservationsForGoogle] Received request for sheetId: ${sheetId}, hotelId: ${hotelId}, startDate: ${startDate}, endDate: ${endDate}`, { requestId: req.requestId });
+
   try {    
     const dataToAppend = await selectReservationsForGoogle(req.requestId, hotelId, startDate, endDate);    
     
+    logger.warn(`[getReservationsForGoogle] Data fetched from model. Rows: ${dataToAppend ? dataToAppend.length : 0}`, { requestId: req.requestId });
+
     if (!dataToAppend || dataToAppend.length === 0) {
+      logger.warn(`[getReservationsForGoogle] No data to append for sheetId: ${sheetId}, hotelId: ${hotelId}`, { requestId: req.requestId });
       return res.status(200).json([]);
     }
 
     const formattedData = formatDataForSheet(dataToAppend);
+    logger.warn(`[getReservationsForGoogle] Data formatted. Rows: ${formattedData.length}`, { requestId: req.requestId });
     
     const sheetName = `H_${hotelId}`;
 
     await appendDataToSheet(sheetId, sheetName, formattedData);
 
+    logger.warn(`[getReservationsForGoogle] Successfully appended data to sheetId: ${sheetId}, sheetName: ${sheetName}`, { requestId: req.requestId });
     res.json({success: 'Sheet update request made'});
   } catch (err) {
-    logger.error(`[getReservationsForGoogle] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
+    logger.error(`[getReservationsForGoogle] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack, sheetId, hotelId, startDate, endDate });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -263,7 +270,7 @@ const formatDataForSheet = (reservations) => {
       String(reservation.hotel_id || ''),
       String(reservation.hotel_name || ''),
       String(reservation.reservation_detail_id || ''),
-      new Date(reservation.date).toLocaleDateString('ja-JP'),
+      reservation.date ? new Date(reservation.date).toLocaleDateString('ja-JP') : '',
       String(reservation.room_type_name || ''),
       String(reservation.room_number || ''),
       String(reservation.client_name || ''),
