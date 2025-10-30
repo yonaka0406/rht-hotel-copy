@@ -577,6 +577,83 @@ export function useClientStore() {
             isLoadingCommonRelationshipPairs.value = false;
         }
     }
+
+    const fetchExportClientsCount = async (filters) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            console.log('Fetching export clients count with filters:', body); // Added console.log
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.count;
+        } catch (error) {
+            console.error('Failed to fetch export clients count.', error);
+            throw error;
+        }
+    };
+
+    const downloadClients = async (filters) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = '/api/clients/export';
+            const body = {};
+            for (const key in filters) {
+                if (filters[key] !== null) {
+                    body[key] = filters[key];
+                }
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = 'clients.xlsx';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            return filename; // Return filename on success
+        } catch (error) {
+            console.error('Failed to download clients:', error);
+            throw error; // Re-throw for component to handle
+        }
+    };
     
     return {
         groups,
@@ -614,6 +691,8 @@ export function useClientStore() {
         addClientRelationship,
         deleteClientRelationship,
         updateClientRelationship,
-        fetchCommonRelationshipPairs,        
+        fetchCommonRelationshipPairs,
+        fetchExportClientsCount,
+        downloadClients,
     };
 }

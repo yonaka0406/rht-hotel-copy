@@ -98,15 +98,16 @@ const createClientBasic = async (req, res) => {
   const created_by = req.user.id;
   const updated_by = req.user.id;
 
+  let finalGender = gender; // Initialize with the passed gender
   if (legal_or_natural_person === 'legal') {
-    gender.value = 'other';
+    finalGender = 'other'; // Assign plain value
   }
 
   const client = {
     name,
     name_kana,
     legal_or_natural_person,
-    gender,
+    gender: finalGender, // Use finalGender here
     email,
     phone,
     created_by,
@@ -449,7 +450,15 @@ const handleDeleteImpediment = async (req, res) => {
 const { exportClientsToFile } = require('./services/exportService');
 
 const exportClients = async (req, res) => {
-  const { created_after } = req.query;
+  let { created_after } = req.body;
+
+  if (created_after) {
+    const parsedDate = Date.parse(created_after);
+    if (isNaN(parsedDate)) {
+      return res.status(400).json({ error: 'Invalid created_after: must be a valid ISO date string' });
+    }
+    created_after = new Date(parsedDate).toISOString(); // Ensure it's a valid ISO string
+  }
 
   try {
     const clients = await clientsModel.getAllClientsForExport(req.requestId, { created_after });
@@ -469,6 +478,26 @@ const exportClients = async (req, res) => {
     res.end();
   } catch (error) {
     console.error('Error exporting clients:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getExportClientsCount = async (req, res) => {
+  let { created_after } = req.body;
+
+  if (created_after) {
+    const parsedDate = Date.parse(created_after);
+    if (isNaN(parsedDate)) {
+      return res.status(400).json({ error: 'Invalid created_after: must be a valid ISO date string' });
+    }
+    created_after = new Date(parsedDate).toISOString(); // Ensure it's a valid ISO string
+  }
+
+  try {
+    const count = await clientsModel.getClientsCountForExport(req.requestId, { created_after });
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error('Error getting export clients count:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -499,4 +528,5 @@ module.exports = {
   handleUpdateImpediment,
   handleDeleteImpediment,
   exportClients,
+  getExportClientsCount,
 };

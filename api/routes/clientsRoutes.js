@@ -11,7 +11,8 @@ router.get('/client/name/:name', authMiddleware, clientsController.getConvertedN
 router.get('/client/reservation/history/:id', authMiddleware, clientsController.getClientReservations);
 router.get('/client/customer-id/:clientId/:customerId', authMiddleware, clientsController.getCustomerID);
 router.get('/client/groups/all', authMiddleware, clientsController.getClientGroups);
-router.get('/clients/export', authMiddleware, clientsController.exportClients);
+router.post('/clients/export/count', authMiddleware, clientsController.getExportClientsCount);
+router.post('/clients/export', authMiddleware, clientsController.exportClients);
 router.post('/client/basic', authMiddlewareCRUDAccess, clientsController.createClientBasic);
 router.post('/client/new', authMiddlewareCRUDAccess, clientsController.createClient);
 router.post('/client/address/new', authMiddlewareCRUDAccess, clientsController.createAddress);

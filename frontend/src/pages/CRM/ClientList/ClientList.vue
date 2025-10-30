@@ -209,7 +209,10 @@
             <Button label="閉じる" icon="pi pi-times" @click="dialogOpenClose(false)" class="p-button-danger p-button-text p-button-sm" />
             <Button label="保存" icon="pi pi-check" @click="submitClient" class="p-button-success p-button-text p-button-sm" />
         </template>
-    <ExportClientDialog :visible="exportDialogVisible" @close="closeExportDialog" />
+    </Dialog>
+
+    <ExportClientDialog :visible="exportDialogVisible" @close="closeExportDialog" :initialFilters="filters" />
+    
 </template>
 
 <script setup>
@@ -264,7 +267,8 @@
     ]);
 
     const goToEditClientPage = (clientId) => {
-        router.push({ name: 'ClientEdit', params: { clientId: clientId } });
+        const route = router.resolve({ name: 'ClientEdit', params: { clientId: clientId } });
+        window.open(route.href, '_blank');
     };
 
     // Dialog
@@ -277,10 +281,7 @@
         { label: '女性', value: 'female' },
         { label: 'その他', value: 'other' },
     ];
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    const isValidEmail = ref(true);
-    const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
-    const isValidPhone = ref(true);
+    const emailPattern = /^[^\s@]+@[^\s@]+\\.[^\s@]+$/; // Stricter email regex\n    const isValidEmail = ref(true);\n    const phonePattern = /^\\+(?:[0-9] ?){6,14}[0-9]$/; // E.164 based phone regex\n    const isValidPhone = ref(true);
     const dialogVisible = ref(false);
     const dialogOpenClose = (bool) => {
         dialogVisible.value = bool;
@@ -303,10 +304,6 @@
         isValidPhone.value = phonePattern.test(phone);
     };
     const submitClient = async () => {
-        // Validate email and phone
-        validateEmail(newClient.value.email);
-        validatePhone(newClient.value.phone);
-
         // Check if either name or name_kana is filled
         if (!newClient.value.name && !newClient.value.name_kana) {
             toast.add({
@@ -348,9 +345,25 @@
             return;
         }
 
-        const newBasicClient = await createBasicClient(newClient.value.name, newClient.value.name_kana, newClient.value.legal_or_natural_person, newClient.value.gender, newClient.value.email, newClient.value.phone);
-
-        goToEditClientPage(newBasicClient.id);
+        try {
+            const newBasicClient = await createBasicClient(newClient.value.name, newClient.value.name_kana, newClient.value.legal_or_natural_person, newClient.value.gender, newClient.value.email, newClient.value.phone);
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '新しいクライアントが作成されました',
+                life: 3000,
+            });
+            goToEditClientPage(newBasicClient.id);
+        } catch (error) {
+            console.error('Failed to create basic client:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: `クライアントの作成に失敗しました: ${error.message || '不明なエラー'}`,
+                life: 3000,
+            });
+            // Optionally reset form or loading state here if applicable
+        }
     };
 
     onMounted( async () => {

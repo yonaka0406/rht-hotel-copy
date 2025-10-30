@@ -1202,10 +1202,33 @@ const getAllClientsForExport = async (requestId, filters = {}) => {
       c.id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
   `;
   const values = [];
+  let paramIndex = 1;
 
   if (filters.created_after) {
     values.push(filters.created_after);
-    query += ` AND c.created_at >= $${values.length}`;
+    query += ` AND c.created_at >= $${paramIndex++}`;
+  }
+  if (filters.name) {
+    values.push(`%${filters.name}%`);
+    query += ` AND (c.name ILIKE $${paramIndex++} OR c.name_kanji ILIKE $${paramIndex++} OR c.name_kana ILIKE $${paramIndex++})`;
+    values.push(`%${filters.name}%`); // Add again for name_kanji
+    values.push(`%${filters.name}%`); // Add again for name_kana
+  }
+  if (filters.phone) {
+    values.push(`%${filters.phone}%`);
+    query += ` AND c.phone ILIKE $${paramIndex++}`;
+  }
+  if (filters.email) {
+    values.push(`%${filters.email}%`);
+    query += ` AND c.email ILIKE $${paramIndex++}`;
+  }
+  if (filters.loyalty_tier) {
+    values.push(filters.loyalty_tier);
+    query += ` AND c.loyalty_tier = $${paramIndex++}`;
+  }
+  if (filters.legal_or_natural_person) {
+    values.push(filters.legal_or_natural_person);
+    query += ` AND c.legal_or_natural_person = $${paramIndex++}`;
   }
 
   query += ` ORDER BY customer_id, name_kana, name_kanji, created_at`;
@@ -1215,6 +1238,55 @@ const getAllClientsForExport = async (requestId, filters = {}) => {
     return result.rows;
   } catch (err) {
     console.error('Error retrieving all clients for export:', err);
+    throw new Error('Database error');
+  }
+};
+
+const getClientsCountForExport = async (requestId, filters = {}) => {
+  const pool = getPool(requestId);
+  let query = `
+    SELECT
+      COUNT(c.id)
+    FROM
+      clients c
+    WHERE
+      c.id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
+  `;
+  const values = [];
+  let paramIndex = 1;
+
+  if (filters.created_after) {
+    values.push(filters.created_after);
+    query += ` AND c.created_at >= $${paramIndex++}`;
+  }
+  if (filters.name) {
+    values.push(`%${filters.name}%`);
+    query += ` AND (c.name ILIKE $${paramIndex++} OR c.name_kanji ILIKE $${paramIndex++} OR c.name_kana ILIKE $${paramIndex++})`;
+    values.push(`%${filters.name}%`); // Add again for name_kanji
+    values.push(`%${filters.name}%`); // Add again for name_kana
+  }
+  if (filters.phone) {
+    values.push(`%${filters.phone}%`);
+    query += ` AND c.phone ILIKE $${paramIndex++}`;
+  }
+  if (filters.email) {
+    values.push(`%${filters.email}%`);
+    query += ` AND c.email ILIKE $${paramIndex++}`;
+  }
+  if (filters.loyalty_tier) {
+    values.push(filters.loyalty_tier);
+    query += ` AND c.loyalty_tier = $${paramIndex++}`;
+  }
+  if (filters.legal_or_natural_person) {
+    values.push(filters.legal_or_natural_person);
+    query += ` AND c.legal_or_natural_person = $${paramIndex++}`;
+  }
+
+  try {
+    const result = await pool.query(query, values);
+    return parseInt(result.rows[0].count);
+  } catch (err) {
+    console.error('Error retrieving clients count for export:', err);
     throw new Error('Database error');
   }
 };
@@ -1254,4 +1326,5 @@ module.exports = {
   updateImpediment,
   deleteImpediment,
   getAllClientsForExport,
+  getClientsCountForExport,
 };
