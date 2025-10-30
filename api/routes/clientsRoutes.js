@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const clientsController = require('../controllers/clientsController');
+const clientsController = require('../controllers/clients');
 const { handleGetClientProjects } = require('../controllers/projectsController');
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageClients } = require('../middleware/authMiddleware');
 
@@ -11,6 +11,8 @@ router.get('/client/name/:name', authMiddleware, clientsController.getConvertedN
 router.get('/client/reservation/history/:id', authMiddleware, clientsController.getClientReservations);
 router.get('/client/customer-id/:clientId/:customerId', authMiddleware, clientsController.getCustomerID);
 router.get('/client/groups/all', authMiddleware, clientsController.getClientGroups);
+router.post('/clients/export/count', authMiddleware, clientsController.getExportClientsCount);
+router.post('/clients/export', authMiddleware, clientsController.exportClients);
 router.post('/client/basic', authMiddlewareCRUDAccess, clientsController.createClientBasic);
 router.post('/client/new', authMiddlewareCRUDAccess, clientsController.createClient);
 router.post('/client/address/new', authMiddlewareCRUDAccess, clientsController.createAddress);

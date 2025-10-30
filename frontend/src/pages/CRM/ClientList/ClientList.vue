@@ -13,6 +13,13 @@
                             @click="dialogOpenClose(true)"
                             class="mr-6"
                         />
+                        <Button
+                            label="ダウンロード設定"
+                            icon="pi pi-download"
+                            @click="openExportDialog"
+                            class="mr-6"
+                            severity="help"
+                        />
                         <SelectButton v-model="tableSize" :options="tableSizeOptions"
                         optionLabel="label" dataKey="label" />
                     </div>
@@ -58,22 +65,7 @@
                                 <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称検索" />
                             </template>
                         </Column>
-                        <Column header="氏名・名称（漢字）" filterField="name_kanji" sortable>
-                            <template #body="{ data }">
-                                {{ data.name_kanji }}
-                            </template>
-                            <template #filter="{ filterModel, filterCallback }">
-                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（漢字）検索" />
-                            </template>
-                        </Column>
-                        <Column header="氏名・名称（カナ）" filterField="name_kana" sortable>
-                            <template #body="{ data }">
-                                {{ data.name_kana }}
-                            </template>
-                            <template #filter="{ filterModel, filterCallback }">
-                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（カナ）検索" />
-                            </template>
-                        </Column>
+
                         <!-- Loyalty Tier Column with Filter -->
                         <Column field="loyalty_tier" header="ロイヤルティ層" sortable :showFilterMenu="false">
                             <template #body="{ data }">
@@ -219,6 +211,9 @@
             <Button label="保存" icon="pi pi-check" @click="submitClient" class="p-button-success p-button-text p-button-sm" />
         </template>
     </Dialog>
+
+    <ExportClientDialog :visible="exportDialogVisible" @close="closeExportDialog" :initialFilters="filters" />
+    
 </template>
 
 <script setup>
@@ -228,10 +223,23 @@
     import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button, Tag, Select } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
     import { useToast } from 'primevue/usetoast'; // Import useToast
+    import ExportClientDialog from './components/ExportClientDialog.vue';
+
+    const exportDialogVisible = ref(false);
+
+    const openExportDialog = () => {
+      exportDialogVisible.value = true;
+    };
+
+    const closeExportDialog = () => {
+      exportDialogVisible.value = false;
+    };
 
     const router = useRouter();
     const { clients, clientsIsLoading, createBasicClient } = useClientStore();
     const toast = useToast(); // Initialize toast
+
+
 
     // Data table
     const tableSize = ref({ label: '中', value: 'null' });
@@ -260,7 +268,8 @@
     ]);
 
     const goToEditClientPage = (clientId) => {
-        router.push({ name: 'ClientEdit', params: { clientId: clientId } });
+        const route = router.resolve({ name: 'ClientEdit', params: { clientId: clientId } });
+        window.open(route.href, '_blank');
     };
 
     // Dialog
@@ -273,10 +282,6 @@
         { label: '女性', value: 'female' },
         { label: 'その他', value: 'other' },
     ];
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    const isValidEmail = ref(true);
-    const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
-    const isValidPhone = ref(true);
     const dialogVisible = ref(false);
     const dialogOpenClose = (bool) => {
         dialogVisible.value = bool;
@@ -292,6 +297,10 @@
             email: null,
         }
     };    
+    const emailPattern = /^[^\s@]+@[^\s@]+\\.[^\s@]+$/;
+    const isValidEmail = ref(true);    
+    const phonePattern = /^\\+(?:[0-9] ?){6,14}[0-9]$/;
+    const isValidPhone = ref(true);
     const validateEmail = (email) => {
         isValidEmail.value = emailPattern.test(email);
     };
@@ -299,10 +308,6 @@
         isValidPhone.value = phonePattern.test(phone);
     };
     const submitClient = async () => {
-        // Validate email and phone
-        validateEmail(newClient.value.email);
-        validatePhone(newClient.value.phone);
-
         // Check if either name or name_kana is filled
         if (!newClient.value.name && !newClient.value.name_kana) {
             toast.add({
@@ -344,9 +349,25 @@
             return;
         }
 
-        const newBasicClient = await createBasicClient(newClient.value.name, newClient.value.name_kana, newClient.value.legal_or_natural_person, newClient.value.gender, newClient.value.email, newClient.value.phone);
-
-        goToEditClientPage(newBasicClient.id);
+        try {
+            const newBasicClient = await createBasicClient(newClient.value.name, newClient.value.name_kana, newClient.value.legal_or_natural_person, newClient.value.gender, newClient.value.email, newClient.value.phone);
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '新しいクライアントが作成されました',
+                life: 3000,
+            });
+            goToEditClientPage(newBasicClient.id);
+        } catch (error) {
+            console.error('Failed to create basic client:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: `クライアントの作成に失敗しました: ${error.message || '不明なエラー'}`,
+                life: 3000,
+            });
+            // Optionally reset form or loading state here if applicable
+        }
     };
 
     onMounted( async () => {

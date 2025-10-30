@@ -97,7 +97,8 @@
                 <div v-else>
                   <div v-if="isRoomReserved(room.room_id, date)">
                     <div class="dark:text-gray-100" style="max-width: 100%; overflow: hidden; white-space: nowrap;">
-                      <span style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</span>
+                      <strong v-if="fillRoomInfo(room.room_id, date).type === 'ota' || fillRoomInfo(room.room_id, date).type === 'web'" style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</strong>
+                      <span v-else style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</span>
                     </div>
                   </div>
                 </div>
@@ -117,66 +118,25 @@
       v-html="tooltipContent">
     </div>
 
-    <Drawer v-if="isDrawerVisible" v-model:visible="isDrawerVisible" position="left" :modal="false" class="w-full md:w-1/2 lg:w-1/3">
-      <div v-if="selectedClientReservations.length > 0">
-        <h3 class="text-lg font-bold mb-2">
-          {{ selectedClientReservations[0].client_name }}
-        </h3>
-        <p class="text-sm text-gray-500 mb-4">
-          表示期間: {{ dateRange.length > 0 ? formatDateWithDay(dateRange[0]) : '' }} - {{ dateRange.length > 0 ? formatDateWithDay(dateRange[dateRange.length - 1]) : '' }}
-        </p>
-
-        <Card v-for="res in selectedClientReservations" :key="res.reservation_id" class="mb-4 cursor-pointer" @click="selectReservationCard(res.reservation_id)" :class="{ 'selected-card-border': cardSelectedReservationId === res.reservation_id }">
-          <template #title>
-            <div class="flex justify-between items-center">
-              <span class="text-base font-semibold">{{ res.check_in }} - {{ res.check_out }}</span>
-              <Button @click="goToReservation(res.reservation_id)" severity="info" size="small" text rounded v-tooltip.top="'編集ページへ'">
-                <i class="pi pi-arrow-up-right"></i>
-              </Button>
-            </div>
-          </template>
-          <template #content>
-            <div class="grid grid-cols-2 gap-2 text-sm pt-2">
-              <div class="col-span-2 flex items-center gap-4 text-sm">
-                <div class="flex items-center gap-1">
-                  <i class="pi pi-user"></i>
-                  <span>{{ res.number_of_people }} 名</span>
-                </div>
-                <div class="flex items-center gap-2" v-tooltip.top="generateRoomTooltip(res)">
-                  <Tag v-if="res.smoking_count > 0" severity="danger" :value="`喫煙: ${res.smoking_count}`"></Tag>
-                  <Tag v-if="res.non_smoking_count > 0" severity="secondary" :value="`禁煙: ${res.non_smoking_count}`"></Tag>
-                </div>
-                <div class="flex items-center gap-1">
-                  <i class="pi pi-wallet"></i>
-                  <Tag :value="paymentTimingInfo[res.payment_timing]?.label" :severity="paymentTimingInfo[res.payment_timing]?.severity"></Tag>
-                </div>
-              </div>
-            </div>
-          </template>
-        </Card>
-      </div>
-      <div v-else>
-        <p>選択されたクライアントの予約情報が見つかりません。</p>
-      </div>
-    </Drawer>
+    <StaticCalendarDrawer
+      :visible="isDrawerVisible" @update:visible="isDrawerVisible = $event"
+      :reservations="selectedClientReservations"
+      :date-range="dateRange"
+      @select-reservation="selectReservationCard"
+    />
   </div>
 </template>
 
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-const router = useRouter();
 
 import Panel from 'primevue/panel';
-import Card from 'primevue/card';
 import Skeleton from 'primevue/skeleton';
-import Tag from 'primevue/tag';
-import Drawer from 'primevue/drawer';
 import DatePicker from 'primevue/datepicker';
-import Button from 'primevue/button';
 
 // Components
+import StaticCalendarDrawer from './components/StaticCalendarDrawer.vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -256,6 +216,7 @@ const selectReservationCard = (reservationId) => {
   }
 };
 
+
 const highlightRow = (index) => {
   if (selectedRowIndex.value === index) {
     selectedRowIndex.value = null; // Unhighlight if the same row is clicked
@@ -267,13 +228,17 @@ const highlightRow = (index) => {
 const showTooltip = (event, room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);
   if (roomInfo && roomInfo.reservation_id) {
+    let otaLine = '';
+    if (roomInfo.type === 'ota' || roomInfo.type === 'web') {
+      otaLine = `<br><i class="pi pi-globe"></i> ${roomInfo.agent || ''}`;
+    }
     tooltipContent.value = `
       部屋番号: ${roomInfo.room_number || 'N/A'}<br>  
       顧客: ${roomInfo.client_name_original || roomInfo.client_name}<br>
       プラン: ${roomInfo.plan_name || 'N/A'}<br>        
       支払いタイミング: ${paymentTimingInfo[roomInfo.payment_timing]?.label || roomInfo.payment_timing || 'N/A'}<br>
       チェックイン日: ${formatDate(new Date(roomInfo.check_in))}<br>
-      チェックアウト日: ${formatDate(new Date(roomInfo.check_out))}
+      チェックアウト日: ${formatDate(new Date(roomInfo.check_out))}${otaLine}
     `;
     tooltipVisible.value = true;
     tooltipX.value = event.pageX + 10;
@@ -306,23 +271,6 @@ const handleCellDoubleClick = (room_id, date) => {
     selectedClientId.value = roomInfo.client_id;
     isDrawerVisible.value = true;
   }
-};
-
-const goToReservation = (reservationId) => {
-  if (!reservationId) return;
-  const routeData = router.resolve({ name: 'ReservationEdit', params: { reservation_id: reservationId } });
-  window.open(routeData.href, '_blank');
-};
-
-const generateRoomTooltip = (reservation) => {
-  const parts = [];
-  if (reservation.smoking_rooms && reservation.smoking_rooms.length > 0) {
-    parts.push(`喫煙: ${reservation.smoking_rooms.join(', ')}`);
-  }
-  if (reservation.non_smoking_rooms && reservation.non_smoking_rooms.length > 0) {
-    parts.push(`禁煙: ${reservation.non_smoking_rooms.join(', ')}`);
-  }
-  return parts.join(' | ');
 };
 
 // Date range
@@ -419,7 +367,6 @@ const uniqueLegendItems = computed(() => {
 
   legendItems.push({ plan_name: '仮予約', plan_color: '#ead59f' });
   legendItems.push({ plan_name: '社員', plan_color: '#f3e5f5' });
-  legendItems.push({ plan_name: 'OTA', plan_color: '#9fead5' });
   legendItems.push({ plan_name: '保留', plan_color: '#FFC107' });
 
   return legendItems;
@@ -502,6 +449,9 @@ const selectedClientReservations = computed(() => {
       check_out: formatDate(checkOut),
       number_of_people: first.total_number_of_people,
       payment_timing: first.payment_timing,
+      type: first.type,
+      agent: first.agent,
+      ota_reservation_id: first.ota_reservation_id,
       num_rooms: numRooms,
       smoking_count: smokingCount,
       non_smoking_count: nonSmokingCount,
@@ -607,7 +557,7 @@ const getCellStyle = (room_id, date) => {
     roomColor = '#fca5a5';
     style = { backgroundColor: `${roomColor}` };
   } else if (roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web')) {
-    roomColor = '#9fead5';
+    roomColor = roomInfo.plan_color || '#9fead5';
     style = { backgroundColor: `${roomColor}` };
   } else if (roomInfo && roomInfo.plan_color) {
     roomColor = roomInfo.plan_color;

@@ -38,6 +38,8 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       ,reservations.type
       ,reservations.payment_timing
       ,reservations.created_at
+      ,reservations.agent
+      ,reservations.ota_reservation_id
       ,reservation_details.date
       ,rooms.room_type_id
       ,room_types.name AS room_type_name

@@ -133,12 +133,13 @@ const getAllClients = async (requestId, limit, offset) => {
   const pool = getPool(requestId);
   const query = `
     SELECT
-      clients.*
-      ,CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key
-      ,CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
+      clients.*,
+      COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS name,
+      CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key,
+      CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
     FROM clients
     WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
-    ORDER BY name ASC
+    ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC
     LIMIT $1 OFFSET $2
   `;
   try {
@@ -907,12 +908,13 @@ const findLegalPersonClients = async (requestId, queryParams = {}) => {
     const offset = queryParams.offset || 0;
     const sql = `
         SELECT clients.*,
+                COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS name,
                 CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key,
                 TRUE AS is_legal_person
         FROM clients
         WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
           AND clients.legal_or_natural_person = 'legal'
-        ORDER BY name ASC
+        ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC
         LIMIT $1 OFFSET $2;
     `;
     try {
@@ -1156,6 +1158,119 @@ const deleteImpediment = async (requestId, impedimentId) => {
   }
 };
 
+const buildClientFilterQuery = (filters) => {
+  let whereClauses = ["c.id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')"];
+  const values = [];
+  let paramIndex = 1;
+
+  if (filters.created_after) {
+    whereClauses.push(`c.created_at >= $${paramIndex++}`);
+    values.push(filters.created_after);
+  }
+  if (filters.name) {
+    whereClauses.push(`(c.name ILIKE $${paramIndex} OR c.name_kanji ILIKE $${paramIndex} OR c.name_kana ILIKE $${paramIndex})`);
+    values.push(`%${filters.name}%`);
+    paramIndex++; // Increment only once for the group of OR conditions
+  }
+  if (filters.phone) {
+    whereClauses.push(`c.phone ILIKE $${paramIndex++}`);
+    values.push(`%${filters.phone}%`);
+  }
+  if (filters.email) {
+    whereClauses.push(`c.email ILIKE $${paramIndex++}`);
+    values.push(`%${filters.email}%`);
+  }
+  if (filters.loyalty_tier) {
+    whereClauses.push(`c.loyalty_tier = $${paramIndex++}`);
+    values.push(filters.loyalty_tier);
+  }
+  if (filters.legal_or_natural_person) {
+    whereClauses.push(`c.legal_or_natural_person = $${paramIndex++}`);
+    values.push(filters.legal_or_natural_person);
+  }
+
+  return {
+    whereClause: whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '',
+    values: values,
+  };
+};
+
+const getAllClientsForExport = async (requestId, filters = {}) => {
+  const pool = getPool(requestId);
+  const { whereClause, values } = buildClientFilterQuery(filters);
+
+  let query = `
+    SELECT
+      c.name_kanji,
+      c.name_kana,
+      c.name,
+      CASE
+        WHEN c.gender = 'male' THEN '男性'
+        WHEN c.gender = 'female' THEN '女性'
+        ELSE 'その他・未設定'
+      END AS gender,
+      c.email,
+      c.phone,
+      c.fax,
+      CASE
+        WHEN c.billing_preference = 'paper' THEN '紙請求'
+        ELSE '電子'
+      END AS billing_preference,
+      c.website,
+      c.customer_id,
+      CASE
+        WHEN ci.restriction_level = 'block' THEN '取引禁止'
+        WHEN ci.restriction_level = 'warning' THEN '取引注意'
+        ELSE ci.restriction_level::TEXT
+      END AS restriction_level,
+      c.id,
+      c.comment,
+      c.created_at
+    FROM
+      clients c
+      LEFT JOIN (
+        SELECT DISTINCT client_id, restriction_level
+        FROM client_impediments
+        WHERE restriction_level = 'block' AND is_active = true
+        UNION ALL
+        SELECT DISTINCT client_id, restriction_level
+        FROM client_impediments
+        WHERE restriction_level = 'warning' AND is_active = true
+      ) ci ON c.id = ci.client_id
+  `;
+  query += whereClause; // Explicitly concatenate
+  query += ` ORDER BY customer_id, name_kana, name_kanji, created_at`;
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving all clients for export:', err);
+    throw new Error('Database error');
+  }
+};
+
+const getClientsCountForExport = async (requestId, filters = {}) => {
+  const pool = getPool(requestId);   
+  const { whereClause, values } = buildClientFilterQuery(filters);
+
+  let query = `
+    SELECT
+      COUNT(c.id)
+    FROM
+      clients c
+  `;
+  query += whereClause; // Explicitly concatenate
+
+  try {
+    const result = await pool.query(query, values);
+    return parseInt(result.rows[0].count);
+  } catch (err) {
+    console.error('Error retrieving clients count for export:', err);
+    throw new Error('Database error');
+  }
+};
+
 
 module.exports = {
   toFullWidthKana,
@@ -1190,4 +1305,6 @@ module.exports = {
   getImpedimentsByClientId,
   updateImpediment,
   deleteImpediment,
+  getAllClientsForExport,
+  getClientsCountForExport,
 };

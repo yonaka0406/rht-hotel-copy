@@ -1,6 +1,6 @@
-const clientsModel = require('../models/clients');
-const reservationsModel = require('../models/reservations');
-const logger = require('../config/logger');
+const clientsModel = require('../../models/clients');
+const reservationsModel = require('../../models/reservations');
+const logger = require('../../config/logger');
 
 // GET
 const getClients = async (req, res) => {
@@ -98,15 +98,16 @@ const createClientBasic = async (req, res) => {
   const created_by = req.user.id;
   const updated_by = req.user.id;
 
+  let finalGender = gender; // Initialize with the passed gender
   if (legal_or_natural_person === 'legal') {
-    gender.value = 'other';
+    finalGender = 'other'; // Assign plain value
   }
 
   const client = {
     name,
     name_kana,
     legal_or_natural_person,
-    gender,
+    gender: finalGender, // Use finalGender here
     email,
     phone,
     created_by,
@@ -446,6 +447,65 @@ const handleDeleteImpediment = async (req, res) => {
   }
 };
 
+const { exportClientsToFile } = require('./services/exportService');
+
+const exportClients = async (req, res) => {
+  let { created_after, ...otherFilters } = req.body; // Destructure other filters
+
+  if (created_after) {
+    const parsedDate = Date.parse(created_after);
+    if (isNaN(parsedDate)) {
+      return res.status(400).json({ error: 'Invalid created_after: must be a valid ISO date string' });
+    }
+    created_after = new Date(parsedDate).toISOString();
+  }
+
+  const filtersToPass = { created_after, ...otherFilters }; // Combine all filters
+
+  try {
+    const clients = await clientsModel.getAllClientsForExport(req.requestId, filtersToPass); // Pass all filters
+
+    const workbook = await exportClientsToFile(clients);
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=clients.xlsx'
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exporting clients:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getExportClientsCount = async (req, res) => {
+  let { created_after, ...otherFilters } = req.body; // Destructure other filters
+
+  if (created_after) {
+    const parsedDate = Date.parse(created_after);
+    if (isNaN(parsedDate)) {
+      return res.status(400).json({ error: 'Invalid created_after: must be a valid ISO date string' });
+    }
+    created_after = new Date(parsedDate).toISOString();
+  }
+
+  const filtersToPass = { created_after, ...otherFilters }; // Combine all filters
+
+  try {
+    const count = await clientsModel.getClientsCountForExport(req.requestId, filtersToPass); // Pass all filters
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error('Error getting export clients count:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 module.exports = { 
   getClients, 
@@ -471,4 +531,6 @@ module.exports = {
   handleGetImpedimentsByClientId,
   handleUpdateImpediment,
   handleDeleteImpediment,
+  exportClients,
+  getExportClientsCount,
 };
