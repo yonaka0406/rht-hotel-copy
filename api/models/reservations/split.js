@@ -111,6 +111,55 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
         `;
         await client.query(updateOriginalReservationQuery, [originalCheckIn, originalCheckOut, originalTotalPeople, userId, originalReservationId, hotelId]);
 
+        // 6. Move associated payments
+        const getMovedRoomIdsQuery = `
+            SELECT DISTINCT room_id FROM reservation_details WHERE id = ANY($1::uuid[])
+        `;
+        const movedRoomIdsResult = await client.query(getMovedRoomIdsQuery, [reservationDetailIdsToMove]);
+        const movedRoomIds = movedRoomIdsResult.rows.map(row => row.room_id);
+
+        for (const roomId of movedRoomIds) {
+            // Check if all details for this room are being moved
+            const originalDetailsQuery = `SELECT id FROM reservation_details WHERE reservation_id = $1 AND room_id = $2`;
+            const originalDetailsResult = await client.query(originalDetailsQuery, [originalReservationId, roomId]);
+            const originalDetailIds = originalDetailsResult.rows.map(row => row.id);
+
+            const movedDetailsForRoomQuery = `SELECT id FROM reservation_details WHERE reservation_id = $1 AND room_id = $2`;
+            const movedDetailsForRoomResult = await client.query(movedDetailsForRoomQuery, [newReservationId, roomId]);
+            const movedDetailIdsForRoom = movedDetailsForRoomResult.rows.map(row => row.id);
+
+            if (movedDetailIdsForRoom.length > 0 && originalDetailIds.length === 0) {
+                // Full move for this room: move all payments for this room
+                const updatePaymentsQuery = `
+                    UPDATE reservation_payments
+                    SET reservation_id = $1, updated_by = $2
+                    WHERE reservation_id = $3 AND room_id = $4;
+                `;
+                await client.query(updatePaymentsQuery, [newReservationId, userId, originalReservationId, roomId]);
+            } else {
+                // Partial move for this room: move payments within the date range of moved details
+                const movedDateRangeQuery = `
+                    SELECT MIN(date) AS min_date, MAX(date) AS max_date
+                    FROM reservation_details
+                    WHERE reservation_id = $1 AND room_id = $2;
+                `;
+                const movedDateRangeResult = await client.query(movedDateRangeQuery, [newReservationId, roomId]);
+                const { min_date, max_date } = movedDateRangeResult.rows[0];
+
+                if (min_date && max_date) {
+                    const updatePaymentsQuery = `
+                        UPDATE reservation_payments
+                        SET reservation_id = $1, updated_by = $2
+                        WHERE reservation_id = $3
+                          AND room_id = $4
+                          AND date >= $5
+                          AND date <= $6;
+                    `;
+                    await client.query(updatePaymentsQuery, [newReservationId, userId, originalReservationId, roomId, min_date, max_date]);
+                }
+            }
+        }
+
         await client.query('COMMIT');
         return newReservationId;
 
