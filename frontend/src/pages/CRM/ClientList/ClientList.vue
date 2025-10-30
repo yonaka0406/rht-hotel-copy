@@ -14,10 +14,11 @@
                             class="mr-6"
                         />
                         <Button
-                            label="ダウンロード"
+                            label="ダウンロード設定"
                             icon="pi pi-download"
                             @click="openExportDialog"
                             class="mr-6"
+                            severity="help"
                         />
                         <SelectButton v-model="tableSize" :options="tableSizeOptions"
                         optionLabel="label" dataKey="label" />

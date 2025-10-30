@@ -589,8 +589,6 @@ export function useClientStore() {
                     body[key] = filters[key];
                 }
             }
-            console.log('Fetching export clients count with filters:', body); // Moved console.log
-
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {

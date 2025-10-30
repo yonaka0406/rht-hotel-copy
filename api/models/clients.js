@@ -1163,8 +1163,6 @@ const buildClientFilterQuery = (filters) => {
   const values = [];
   let paramIndex = 1;
 
-  logger.debug(`[buildClientFilterQuery] Initial filters: ${JSON.stringify(filters)}`); // Debug log
-
   if (filters.created_after) {
     whereClauses.push(`c.created_at >= $${paramIndex++}`);
     values.push(filters.created_after);
@@ -1190,9 +1188,6 @@ const buildClientFilterQuery = (filters) => {
     whereClauses.push(`c.legal_or_natural_person = $${paramIndex++}`);
     values.push(filters.legal_or_natural_person);
   }
-
-  logger.debug(`[buildClientFilterQuery] Generated whereClauses: ${whereClauses.join(' AND ')}`); // Debug log
-  logger.debug(`[buildClientFilterQuery] Generated values: ${JSON.stringify(values)}`); // Debug log
 
   return {
     whereClause: whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '',
@@ -1266,9 +1261,6 @@ const getClientsCountForExport = async (requestId, filters = {}) => {
       clients c
   `;
   query += whereClause; // Explicitly concatenate
-
-  logger.debug(`[getClientsCountForExport] SQL Query: ${query}`); // Debug log
-  logger.debug(`[getClientsCountForExport] Query Values: ${JSON.stringify(values)}`); // Debug log
 
   try {
     const result = await pool.query(query, values);
