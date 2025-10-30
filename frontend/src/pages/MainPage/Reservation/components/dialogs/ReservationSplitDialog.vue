@@ -1,5 +1,5 @@
 <template>
-    <Dialog v-model:visible="showDialog" header="予約分割" modal>
+    <Dialog v-model:visible="showDialog" header="予約分割" modal :style="{ width: '50vw' }">
         <div class="p-fluid">
             <div class="field">
                 <FloatLabel>
@@ -9,26 +9,31 @@
             </div>
             <div class="field">
                 <label>部屋</label>
-                <div v-for="room in rooms" :key="room.room_id" class="flex items-center">
-                    <Checkbox v-model="selectedRooms" :inputId="String(room.room_id)" name="room" :value="room.room_id" />
-                    <label :for="String(room.room_id)" class="ml-2">{{ room.room_type_name }} {{ room.room_number }}</label>
-                </div>
+                <Fieldset v-for="group in groupedRooms" :key="group.name" :legend="group.name" :toggleable="true">
+                    <div class="flex flex-wrap">
+                        <div v-for="room in group.rooms" :key="room.room_id" class="flex items-center mr-4 mb-2">
+                            <Checkbox v-model="selectedRooms" :inputId="String(room.room_id)" name="room" :value="room.room_id" />
+                            <label :for="String(room.room_id)" class="ml-2">{{ room.room_number }}</label>
+                        </div>
+                    </div>
+                </Fieldset>
             </div>
         </div>
         <template #footer>
-            <Button label="キャンセル" icon="pi pi-times" @click="showDialog = false" class="p-button-text" />
-            <Button label="分割" icon="pi pi-check" @click="handleSplit" :loading="isSubmitting" />
+            <Button label="キャンセル" icon="pi pi-times" @click="showDialog = false" class="p-button-text" severity="danger" />
+            <Button label="分割" icon="pi pi-check" @click="handleSplit" :loading="isSubmitting" :disabled="isSplitButtonDisabled" />
         </template>
     </Dialog>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import Dialog from 'primevue/dialog';
 import DatePicker from 'primevue/datepicker';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
 import FloatLabel from 'primevue/floatlabel';
+import Fieldset from 'primevue/fieldset';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { useToast } from 'primevue/usetoast';
 
@@ -67,6 +72,20 @@ const rooms = computed(() => {
     return Array.from(roomMap.values());
 });
 
+const groupedRooms = computed(() => {
+    const groups = {};
+    rooms.value.forEach(room => {
+        if (!groups[room.room_type_name]) {
+            groups[room.room_type_name] = {
+                name: room.room_type_name,
+                rooms: []
+            };
+        }
+        groups[room.room_type_name].rooms.push(room);
+    });
+    return Object.values(groups);
+});
+
 const minDate = computed(() => {
     if (!props.reservation_details || props.reservation_details.length === 0) {
         return null;
@@ -78,7 +97,33 @@ const maxDate = computed(() => {
     if (!props.reservation_details || props.reservation_details.length === 0) {
         return null;
     }
-    return new Date(props.reservation_details[0].check_out);
+    const checkOutDate = new Date(props.reservation_details[0].check_out);
+    checkOutDate.setDate(checkOutDate.getDate() - 1);
+    return checkOutDate;
+});
+
+const isSplitButtonDisabled = computed(() => {
+    if (!selectedDates.value || selectedDates.value.length !== 2 || !selectedRooms.value.length) {
+        return true;
+    }
+    const [startDate, endDate] = selectedDates.value;
+    if (!startDate || !endDate) {
+        return true;
+    }
+
+    const originalCheckIn = minDate.value;
+    const originalCheckOutMinusOne = maxDate.value;
+
+    // Normalize dates to avoid time comparison issues
+    const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const checkIn = new Date(originalCheckIn.getFullYear(), originalCheckIn.getMonth(), originalCheckIn.getDate());
+    const checkOut = new Date(originalCheckOutMinusOne.getFullYear(), originalCheckOutMinusOne.getMonth(), originalCheckOutMinusOne.getDate());
+
+    const includesCheckIn = start.getTime() === checkIn.getTime();
+    const includesCheckOut = end.getTime() === checkOut.getTime();
+
+    return !(includesCheckIn || includesCheckOut);
 });
 
 const reservationDetailIdsToMove = computed(() => {
@@ -126,10 +171,11 @@ const handleSplit = async () => {
     }
 };
 
-watch(() => props.visible, (newValue) => {
+watch(() => props.visible, async (newValue) => {
     if (newValue) {
         selectedDates.value = [];
-        selectedRooms.value = [];
+        await nextTick(); // Wait for the DOM and computed properties to update
+        selectedRooms.value = rooms.value.map(room => room.room_id);
     }
 });
 </script>
