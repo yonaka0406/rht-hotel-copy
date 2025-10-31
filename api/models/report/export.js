@@ -465,7 +465,7 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     rd.plans_global_id,
                     rd.plans_hotel_id,
                     COALESCE(ph.name, pg.name, '未設定') AS plan_name,
-                    COUNT(CASE WHEN r.status = 'confirmed' AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS confirmed_stays,
+                    COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS confirmed_stays,
                     COUNT(CASE WHEN r.status = 'provisory' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS pending_stays,
                     COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS in_talks_stays,
                     COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS cancelled_stays,
