@@ -142,7 +142,7 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
         SUM(
             CASE
                 WHEN rd.billable IS TRUE AND rd.cancelled IS NULL THEN rd.price
-                WHEN rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
+                WHEN rd.billable IS TRUE AND rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
                 ELSE 0
             END
         ) + COALESCE(SUM(ra_agg.total_addon_price), 0) AS total_price
