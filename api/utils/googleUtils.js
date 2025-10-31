@@ -124,6 +124,7 @@ async function authorize() {
     } catch (error) {
         credentialsPath = localCredentialsPath;
     }
+    logger.warn(`[authorize] Using credentials path: ${credentialsPath}`, context);
 
     try {
         await fs.access(prodRefreshTokenPath);
@@ -131,6 +132,7 @@ async function authorize() {
     } catch (error) {
         storedRefreshTokenPath = localRefreshTokenPath;
     }
+    logger.warn(`[authorize] Using refresh token path: ${storedRefreshTokenPath}`, context);
 
     try {
         const credentials = await fs.readFile(credentialsPath);
