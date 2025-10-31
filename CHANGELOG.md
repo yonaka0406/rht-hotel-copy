@@ -592,11 +592,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added client list download functionality in CRM module with CSV/Excel export options and filtering capabilities.
 - Feature: Enhanced OTA reservation display with plan-based coloring while maintaining visual distinction for OTA bookings.
 - Bugfix: Fixed an issue where multiple clients sharing the same reservation were incorrectly receiving identical invoice IDs in the payment section, ensuring each client now gets a unique invoice ID for proper financial tracking.
+- Bugfix: Fixed payment calculation for cancelled dates by ensuring non-billable cancelled days don't affect the total price in bulk operations.
 - Bugfix: Resolved authentication issues with Google Sheets API by implementing proper refresh token handling for web-based requests, ensuring reliable data synchronization.
 
 ---
 
 ## Version History
+- **1.1.29** (2025-10-31) - Enhanced reservation management with cancellation type controls and client list exports. Improved OTA booking visualization, fixed payment calculations for cancelled dates, and resolved invoice ID generation for shared reservations. Added reliable Google Sheets API authentication.
 - **1.1.28** (2025-10-30) - Added OTA notifications drawer for better alert management and fixed bulk cancellation pricing. Improved date cancellation handling in Room Indicator to properly manage room status during partial stay cancellations.
 - **1.1.27** (2025-10-27) - Enhanced room indicator with client change information and enabled partial period changes for multiple rooms. Improved reservation split functionality and fixed guest count display in Static Calendar. Updated invoice generation to include 5-digit customer code.
 - **1.1.26** (2025-10-23) - Added Daily Digest email routine with admin panel logs and prefilled template download for finance imports. Fixed addon quantity calculation per room.
