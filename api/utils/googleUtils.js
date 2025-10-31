@@ -148,7 +148,15 @@ async function authorize() {
             logger.debug('Reading refresh token', { ...context, path: storedRefreshTokenPath });
             const refreshTokenData = await fs.readFile(storedRefreshTokenPath);
             logger.warn(`[authorize] Refresh token data: ${refreshTokenData}`, context);
-            const refreshToken = JSON.parse(refreshTokenData).refresh_token;
+            const tokenData = JSON.parse(refreshTokenData);
+            const refreshToken = tokenData.refresh_token;
+
+            if (!refreshToken) {
+                const errorMsg = 'The token file does not contain a refresh_token property.';
+                logger.error(errorMsg, { ...context, tokenData });
+                throw new Error(errorMsg);
+            }
+
             client.setCredentials({ refresh_token: refreshToken });
             await client.getAccessToken();
 
@@ -539,6 +547,7 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
 }
 */
 async function appendDataToSheet(spreadsheetId, sheetName, values) {
+    logger.warn(`[appendDataToSheet] Called with sheetId: ${spreadsheetId}, sheetName: ${sheetName}`);
     await ensureSheetExists(spreadsheetId, sheetName);
     return _appendInBatches(spreadsheetId, sheetName, values);
 }
