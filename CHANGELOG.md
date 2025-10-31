@@ -588,9 +588,11 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ## [1.1.29] - 2025-10-31
 
-- Feature: Added ability to change cancellation type (with or without fee) directly from the date details dialog
-- Feature: Added client list download functionality in CRM module with CSV/Excel export options and filtering capabilities
-- Feature: Enhanced OTA reservation display with plan-based coloring while maintaining visual distinction for OTA bookings
+- Feature: Added ability to change cancellation type (with or without fee) directly from the date details dialog.
+- Feature: Added client list download functionality in CRM module with CSV/Excel export options and filtering capabilities.
+- Feature: Enhanced OTA reservation display with plan-based coloring while maintaining visual distinction for OTA bookings.
+- Bugfix: Fixed an issue where multiple clients sharing the same reservation were incorrectly receiving identical invoice IDs in the payment section, ensuring each client now gets a unique invoice ID for proper financial tracking.
+- Bugfix: Resolved authentication issues with Google Sheets API by implementing proper refresh token handling for web-based requests, ensuring reliable data synchronization.
 
 ---
 
