@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { google } = require('googleapis');
-const logger = require('../config/logger');
+//const logger = require('../config/logger');
 const redisClient = require('../config/redis');
 
 
@@ -108,7 +108,7 @@ const connectionManager = new SheetsConnectionManager();
  */
 async function authorize() {
     const context = { operation: 'authorize' };
-    logger.debug('Starting Google Sheets authorization', context);
+    // logger.debug('Starting Google Sheets authorization', context);
 
     // Production paths (for reference):
     // const prodCredentialsPath = '/etc/app_config/google/credentials.json';
@@ -125,24 +125,24 @@ async function authorize() {
             key.client_secret,
             redirectUri
         );
-        logger.warn(`[authorize] Google OAuth2 client created with client ID: ${key.client_id}`, context);
+        // logger.warn(`[authorize] Google OAuth2 client created with client ID: ${key.client_id}`, context);
 
         try {
-            logger.debug('Reading refresh token', { ...context, path: storedRefreshTokenPath });
+            // logger.debug('Reading refresh token', { ...context, path: storedRefreshTokenPath });
             const refreshTokenData = await fs.readFile(storedRefreshTokenPath);
             const refreshToken = JSON.parse(refreshTokenData).refresh_token;
             client.setCredentials({ refresh_token: refreshToken });
             await client.getAccessToken();
 
-            logger.info('Successfully authorized with Google API', context);
+            // logger.info('Successfully authorized with Google API', context);
             return client;
         } catch (error) {
             const errorMsg = 'No refresh token found or failed to set credentials.';
-            logger.error(errorMsg, { ...context, error: error.message });
+            // logger.error(errorMsg, { ...context, error: error.message });
             throw new Error(errorMsg);
         }
     } catch (err) {
-        logger.error('Authorization failed catastrophically', { ...context, error: err });
+        // logger.error('Authorization failed catastrophically', { ...context, error: err });
         throw err;
     }
 }
@@ -155,13 +155,13 @@ async function checkSheetExists(spreadsheetId, sheetName) {
     const cacheKey = `${spreadsheetId}_${sheetName}`;
 
     if (sheetExistsCache.has(cacheKey)) {
-        logger.warn(`Cache hit for sheet existence: "${sheetName}"`, context);
+        // logger.warn(`Cache hit for sheet existence: "${sheetName}"`, context);
         return sheetExistsCache.get(cacheKey);
     }
 
     return connectionManager.executeRequest(async (sheetsService) => {
         try {
-            logger.warn('Checking if sheet exists (API call)', context);
+            // logger.warn('Checking if sheet exists (API call)', context);
             const response = await sheetsService.spreadsheets.get({
                 spreadsheetId: spreadsheetId,
                 fields: 'sheets.properties.title'
@@ -171,10 +171,10 @@ async function checkSheetExists(spreadsheetId, sheetName) {
             sheetExistsCache.set(cacheKey, exists);
             setTimeout(() => sheetExistsCache.delete(cacheKey), 300000); // 5 minute cache
 
-            logger.debug(`Sheet existence check result for "${sheetName}"`, { ...context, exists });
+            // logger.debug(`Sheet existence check result for "${sheetName}"`, { ...context, exists });
             return exists;
         } catch (err) {
-            logger.error('Error checking if sheet exists', { ...context, error: err });
+            // logger.error('Error checking if sheet exists', { ...context, error: err });
             if (err.code === 404) {
                 sheetExistsCache.set(cacheKey, false);
                 setTimeout(() => sheetExistsCache.delete(cacheKey), 300000); // 5 minute cache
@@ -193,7 +193,7 @@ async function createSheetInSpreadsheet(spreadsheetId, sheetName) {
 
     return connectionManager.executeRequest(async (sheetsService) => {
         try {
-            logger.warn('Creating new sheet in spreadsheet', context);
+            // logger.warn('Creating new sheet in spreadsheet', context);
             const response = await sheetsService.spreadsheets.batchUpdate({
                 spreadsheetId: spreadsheetId,
                 resource: {
@@ -208,10 +208,10 @@ async function createSheetInSpreadsheet(spreadsheetId, sheetName) {
             sheetExistsCache.set(cacheKey, true);
             setTimeout(() => sheetExistsCache.delete(cacheKey), 300000); // 5 minute cache
 
-            logger.warn(`Sheet "${sheetName}" created successfully`, context);
+            // logger.warn(`Sheet "${sheetName}" created successfully`, context);
             return response.data;
         } catch (err) {
-            logger.error('Error creating sheet', { ...context, error: err });
+            // logger.error('Error creating sheet', { ...context, error: err });
             throw err;
         }
     }, { spreadsheetId, sheetName, function: 'createSheetInSpreadsheet' });
@@ -225,7 +225,7 @@ async function createSheet(title) {
 
     return connectionManager.executeRequest(async (sheetsService) => {
         try {
-            logger.warn('Creating new spreadsheet file', context);
+            // logger.warn('Creating new spreadsheet file', context);
             const spreadsheet = await sheetsService.spreadsheets.create({
                 resource: {
                     properties: {
@@ -234,10 +234,10 @@ async function createSheet(title) {
                 },
             });
             const spreadsheetId = spreadsheet.data.spreadsheetId;
-            logger.warn(`Spreadsheet created with ID: ${spreadsheetId}`, context);
+            // logger.warn(`Spreadsheet created with ID: ${spreadsheetId}`, context);
             return spreadsheetId;
         } catch (error) {
-            logger.error('Error creating spreadsheet file', { ...context, error });
+            // logger.error('Error creating spreadsheet file', { ...context, error });
             throw error;
         }
     }, { title, function: 'createSheet' });
@@ -250,11 +250,11 @@ async function clearSheetData(spreadsheetId, sheetName) {
     const context = { operation: 'clearSheetData', spreadsheetId, sheetName };
 
     try {
-        logger.warn(`Ensuring sheet "${sheetName}" exists before clearing.`, context);
+        // logger.warn(`Ensuring sheet "${sheetName}" exists before clearing.`, context);
         await ensureSheetExists(spreadsheetId, sheetName); // Use the helper
 
         await connectionManager.executeRequest(async (sheetsService) => {
-            logger.warn(`Clearing sheet: ${sheetName}`, context);
+            // logger.warn(`Clearing sheet: ${sheetName}`, context);
             return sheetsService.spreadsheets.values.clear({
                 spreadsheetId: spreadsheetId,
                 range: `${sheetName}!A1:Z`,
@@ -262,7 +262,7 @@ async function clearSheetData(spreadsheetId, sheetName) {
         }, { spreadsheetId, range: `${sheetName}!A1:Z`, function: 'clear' });
 
         await connectionManager.executeRequest(async (sheetsService) => {
-            logger.warn(`Adding headers to sheet: ${sheetName}`, context);
+            // logger.warn(`Adding headers to sheet: ${sheetName}`, context);
             return sheetsService.spreadsheets.values.update({
                 spreadsheetId: spreadsheetId,
                 range: `${sheetName}!A1`,
@@ -273,21 +273,21 @@ async function clearSheetData(spreadsheetId, sheetName) {
             });
         }, { spreadsheetId, range: `${sheetName}!A1`, function: 'updateHeaders' });
 
-        logger.warn(`Sheet "${sheetName}" cleared and headers added successfully`, context);
+        // logger.warn(`Sheet "${sheetName}" cleared and headers added successfully`, context);
 
     } catch (err) {
-        logger.error('Error clearing sheet data', { ...context, error: err });
+        // logger.error('Error clearing sheet data', { ...context, error: err });
         throw err;
     }
 }
 
 async function ensureSheetExists(spreadsheetId, sheetName) {
     const context = { operation: 'ensureSheetExists', spreadsheetId, sheetName };
-    logger.warn(`Ensuring sheet "${sheetName}" exists.`, context);
+    // logger.warn(`Ensuring sheet "${sheetName}" exists.`, context);
     const sheetExists = await checkSheetExists(spreadsheetId, sheetName);
 
     if (!sheetExists) {
-        logger.warn(`Sheet "${sheetName}" does not exist. Creating it and adding headers.`, context);
+        // logger.warn(`Sheet "${sheetName}" does not exist. Creating it and adding headers.`, context);
         await createSheetInSpreadsheet(spreadsheetId, sheetName);
         await connectionManager.executeRequest(async (sheetsService) => {
             return sheetsService.spreadsheets.values.update({
@@ -313,7 +313,7 @@ async function _appendInBatches(spreadsheetId, sheetName, values) {
     };
     
     if (!values || values.length === 0) {
-        logger.warn('No data to append.', context);
+        // logger.warn('No data to append.', context);
         return { status: 'success', message: 'No data to append.' };
     }
 
@@ -328,18 +328,18 @@ async function _appendInBatches(spreadsheetId, sheetName, values) {
         const MAX_RETRIES = 3;
         const totalBatches = Math.ceil(values.length / BATCH_SIZE);
         
-        logger.warn(`Processing ${totalBatches} batch(es) of data`, { ...context, batchSize: BATCH_SIZE });
+        // logger.warn(`Processing ${totalBatches} batch(es) of data`, { ...context, batchSize: BATCH_SIZE });
 
         for (let i = 0; i < totalBatches; i++) {
             if (circuitBreakerOpen) {
                 const timeSinceLastFailure = Date.now() - lastFailureTime;
                 if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN) {
-                    logger.error('Circuit breaker is open, aborting operation', { ...context, cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure });
+                    // logger.error('Circuit breaker is open, aborting operation', { ...context, cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure });
                     throw new Error('Circuit breaker is open due to consecutive failures');
                 } else {
                     circuitBreakerOpen = false;
                     consecutiveFailures = 0;
-                    logger.warn('Circuit breaker reset, resuming operations', context);
+                    // logger.warn('Circuit breaker reset, resuming operations', context);
                 }
             }
 
@@ -359,11 +359,11 @@ async function _appendInBatches(spreadsheetId, sheetName, values) {
                             insertDataOption: 'INSERT_ROWS',
                             resource: { values: batch },
                         });
-                        logger.warn(`[appendDataToSheet] Google Sheets API response for batch ${i + 1}/${totalBatches}: ${JSON.stringify(response.data)}`, batchContext);
+                        // logger.warn(`[appendDataToSheet] Google Sheets API response for batch ${i + 1}/${totalBatches}: ${JSON.stringify(response.data)}`, batchContext);
                         return response;
                     }, { spreadsheetId, range: `${sheetName}!A1`, function: 'append', batchSize: batch.length });
                     
-                    logger.warn(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
+                    // logger.warn(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
                     batchSuccess = true;
                     consecutiveFailures = 0;
                     break;
@@ -373,10 +373,10 @@ async function _appendInBatches(spreadsheetId, sheetName, values) {
                     
                     if (isRetryable && attempt < MAX_RETRIES) {
                         const delay = Math.min(Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 1000), 10000);
-                        logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { ...batchContext, attempt, error: err.message });
+                        // logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { ...context, attempt, error: err.message });
                         await new Promise(resolve => setTimeout(resolve, delay));
                     } else {
-                        logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { ...batchContext, error: err.message || err });
+                        // logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { ...context, error: err.message || err });
                         throw err;
                     }
                 }
@@ -388,7 +388,7 @@ async function _appendInBatches(spreadsheetId, sheetName, values) {
                 
                 if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
                     circuitBreakerOpen = true;
-                    logger.error('Opening circuit breaker due to consecutive failures', { ...context, consecutiveFailures });
+                    // logger.error('Opening circuit breaker due to consecutive failures', { ...context, consecutiveFailures });
                     throw new Error(`Circuit breaker opened after ${consecutiveFailures} consecutive failures`);
                 }
             }
@@ -402,11 +402,11 @@ async function _appendInBatches(spreadsheetId, sheetName, values) {
             }
         }
         
-        logger.warn('Successfully completed all batch operations', context);
+        // logger.warn('Successfully completed all batch operations', context);
         return { status: 'success', processedBatches: totalBatches };
 
     } catch (err) {
-        logger.error('Fatal error in appendDataToSheet', { ...context, error: err.message || err });
+        // logger.error('Fatal error in appendDataToSheet', { ...context, error: err.message || err });
         connectionManager.cleanup();
         throw err;
     }
@@ -420,10 +420,10 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
         rowsToAppend: values.length
     };
 
-    logger.info('Starting data append to sheet', context);
+    // logger.info('Starting data append to sheet', context);
 
     if (!values || values.length === 0) {
-        logger.info('No data to append. Operation finished.', context);
+        // logger.info('No data to append. Operation finished.', context);
         return { status: 'success', message: 'No data to append.' };
     }
     
@@ -438,18 +438,18 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
         const MAX_RETRIES = 3;
         const totalBatches = Math.ceil(values.length / BATCH_SIZE);
 
-        logger.info(`Processing ${totalBatches} batch(es) of data`, { ...context, batchSize: BATCH_SIZE });
+        // logger.info(`Processing ${totalBatches} batch(es) of data`, { ...context, batchSize: BATCH_SIZE });
 
         for (let i = 0; i < totalBatches; i++) {
             if (circuitBreakerOpen) {
                 const timeSinceLastFailure = Date.now() - lastFailureTime;
                 if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN) {
-                    logger.error('Circuit breaker is open, aborting operation', { ...context, cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure });
+                    // logger.error('Circuit breaker is open, aborting operation', { ...context, cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure });
                     throw new Error('Circuit breaker is open due to consecutive failures');
                 } else {
                     circuitBreakerOpen = false;
                     consecutiveFailures = 0;
-                    logger.info('Circuit breaker reset, resuming operations', context);
+                    // logger.info('Circuit breaker reset, resuming operations', context);
                 }
             }
 
@@ -471,7 +471,7 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
                         });
                     });
 
-                    logger.info(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
+                    // logger.info(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
                     batchSuccess = true;
                     consecutiveFailures = 0;
                     break;
@@ -481,10 +481,10 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
 
                     if (isRetryable && attempt < MAX_RETRIES) {
                         const delay = Math.min(Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 1000), 10000);
-                        logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { ...batchContext, attempt, error: err.message });
+                        // logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { ...context, attempt, error: err.message });
                         await new Promise(resolve => setTimeout(resolve, delay));
                     } else {
-                        logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { ...batchContext, error: err.message || err });
+                        // logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { ...context, error: err.message || err });
                         throw err;
                     }
                 }
@@ -496,7 +496,7 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
 
                 if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
                     circuitBreakerOpen = true;
-                    logger.error('Opening circuit breaker due to consecutive failures', { ...context, consecutiveFailures });
+                    // logger.error('Opening circuit breaker due to consecutive failures', { ...context, consecutiveFailures });
                     throw new Error(`Circuit breaker opened after ${consecutiveFailures} consecutive failures`);
                 }
             }
@@ -510,11 +510,11 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
             }
         }
 
-        logger.info('Successfully completed all batch operations', context);
+        // logger.info('Successfully completed all batch operations', context);
         return { status: 'success', processedBatches: totalBatches };
 
     } catch (err) {
-        logger.error('Fatal error in appendDataToSheet', { ...context, error: err.message || err });
+        // logger.error('Fatal error in appendDataToSheet', { ...context, error: err.message || err });
         connectionManager.cleanup();
         throw err;
     }
@@ -528,7 +528,7 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
 // Utility function to process large datasets in chunks to prevent memory issues
 async function processLargeDataset(spreadsheetId, sheetName, dataSource, chunkSize = 1000) {
     const context = { operation: 'processLargeDataset', spreadsheetId, sheetName };
-    logger.warn('Starting large dataset processing', context);
+    // logger.warn('Starting large dataset processing', context);
 
     let processedRows = 0;
     
@@ -542,7 +542,7 @@ async function processLargeDataset(spreadsheetId, sheetName, dataSource, chunkSi
                 // We call the internal function directly since the sheet is already guaranteed to exist.
                 await _appendInBatches(spreadsheetId, sheetName, chunk);
                 processedRows += chunk.length;
-                logger.warn(`Processed ${processedRows} rows so far`, { ...context, processedRows });
+                // logger.warn(`Processed ${processedRows} rows so far`, { ...context, processedRows });
                 if (global.gc) global.gc();
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
@@ -554,7 +554,7 @@ async function processLargeDataset(spreadsheetId, sheetName, dataSource, chunkSi
                 if (chunk.length >= chunkSize) {
                     await _appendInBatches(spreadsheetId, sheetName, chunk);
                     processedRows += chunk.length;
-                    logger.info(`Processed ${processedRows} rows so far`, { ...context, processedRows });
+                    // logger.info(`Processed ${processedRows} rows so far`, { ...context, processedRows });
                     chunk = [];
                     if (global.gc) global.gc();
                     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -567,11 +567,11 @@ async function processLargeDataset(spreadsheetId, sheetName, dataSource, chunkSi
             }
         }
         
-        logger.warn(`Large dataset processing completed. Total rows processed: ${processedRows}`, context);
+        // logger.warn(`Large dataset processing completed. Total rows processed: ${processedRows}`, context);
         return { status: 'success', processedRows };
         
     } catch (err) {
-        logger.error('Error in large dataset processing', { ...context, error: err, processedRows });
+        // logger.error('Error in large dataset processing', { ...context, error: err, processedRows });
         throw err;
     }
 }
