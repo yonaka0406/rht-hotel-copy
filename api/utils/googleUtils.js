@@ -110,27 +110,12 @@ async function authorize() {
     const context = { operation: 'authorize' };
     logger.debug('Starting Google Sheets authorization', context);
 
-    const prodCredentialsPath = '/etc/app_config/google/credentials.json';
-    const prodRefreshTokenPath = '/etc/app_config/google/refresh_token.json';
-    const localCredentialsPath = path.join(__dirname, '../config/google_sheets_credentials.json');
-    const localRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json');
+    // Production paths (for reference):
+    // const prodCredentialsPath = '/etc/app_config/google/credentials.json';
+    // const prodRefreshTokenPath = '/etc/app_config/google/refresh_token.json';
 
-    let credentialsPath;
-    let storedRefreshTokenPath;
-
-    try {
-        await fs.access(prodCredentialsPath);
-        credentialsPath = prodCredentialsPath;
-    } catch (error) {
-        credentialsPath = localCredentialsPath;
-    }
-
-    try {
-        await fs.access(prodRefreshTokenPath);
-        storedRefreshTokenPath = prodRefreshTokenPath;
-    } catch (error) {
-        storedRefreshTokenPath = localRefreshTokenPath;
-    }
+    const credentialsPath = path.join(__dirname, '../config/google_sheets_credentials.json');
+    const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json');
 
     try {
         const credentials = await fs.readFile(credentialsPath);
