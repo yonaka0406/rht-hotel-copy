@@ -147,6 +147,7 @@ async function authorize() {
         try {
             logger.debug('Reading refresh token', { ...context, path: storedRefreshTokenPath });
             const refreshTokenData = await fs.readFile(storedRefreshTokenPath);
+            logger.warn(`[authorize] Refresh token data: ${refreshTokenData}`, context);
             const refreshToken = JSON.parse(refreshTokenData).refresh_token;
             client.setCredentials({ refresh_token: refreshToken });
             await client.getAccessToken();
@@ -155,7 +156,7 @@ async function authorize() {
             return client;
         } catch (error) {
             const errorMsg = 'No refresh token found or failed to set credentials.';
-            logger.error(errorMsg, { ...context, error: error.message });
+            logger.error(errorMsg, { ...context, error: error.message, stack: error.stack });
             throw new Error(errorMsg);
         }
     } catch (err) {
