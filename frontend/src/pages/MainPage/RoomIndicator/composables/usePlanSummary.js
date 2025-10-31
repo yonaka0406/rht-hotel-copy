@@ -14,29 +14,32 @@ export function usePlanSummary() {
     reservations.forEach(roomDetail => {
       if (!roomDetail?.room_id) return;
       
+      const reservationId = roomDetail.reservation_id;
       const roomNumber = roomDetail.room_number;
-      if (!roomNumber) {
+      if (!reservationId || !roomNumber) {
         return;
       }
       
-      if (!roomPlans[roomNumber]) {
-        roomPlans[roomNumber] = {};
+      if (!roomPlans[reservationId]) {
+        roomPlans[reservationId] = {};
       }
       
-      // Iterate through all roomDetail entries for this room to get the full plan count
+      if (!roomPlans[reservationId][roomNumber]) {
+        roomPlans[reservationId][roomNumber] = {};
+      }
       roomDetail.details?.forEach(detail => {
         const planName = detail.plan_name || '未設定';
         const planColor = detail.plan_color || '#CCCCCC';
 
-        if (!roomPlans[roomNumber][planName]) {
-          roomPlans[roomNumber][planName] = {
+        if (!roomPlans[reservationId][roomNumber][planName]) {
+          roomPlans[reservationId][roomNumber][planName] = {
             count: 0,
             color: planColor,
             details: []
           };
         }
-        roomPlans[roomNumber][planName].count++;
-        roomPlans[roomNumber][planName].details.push(detail);
+        roomPlans[reservationId][roomNumber][planName].count++;
+        roomPlans[reservationId][roomNumber][planName].details.push(detail);
       });
     });
     
