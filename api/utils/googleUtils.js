@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { google } = require('googleapis');
-//const logger = require('../config/logger');
+const logger = require('../config/logger');
 const redisClient = require('../config/redis');
 
 
