@@ -63,8 +63,8 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
-    // Insert into invoices table and get the generated UUID
+    
+    // Always create a new single invoice ID for all reservations in the array
     const invoiceInsertResult = await client.query(
       `
         INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
@@ -73,38 +73,10 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
       `,
       [data[0].hotel_id, data[0].date, data[0].client_id, userId]
     );
-    const invoiceId = invoiceInsertResult.rows[0].id;
+    const bulkInvoiceId = invoiceInsertResult.rows[0].id;
 
     // Process each reservation in the data array
     for (const reservation of data) {
-      let invoiceId = null; // Initialize invoiceId for each payment
-
-      // 1. Check for an existing invoice_id for this client and reservation
-      const existingInvoicePaymentResult = await client.query(
-        `
-          SELECT invoice_id
-          FROM reservation_payments
-          WHERE hotel_id = $1 AND reservation_id = $2 AND client_id = $3 AND invoice_id IS NOT NULL
-          LIMIT 1;
-        `,
-        [reservation.hotel_id, reservation.reservation_id, reservation.client_id]
-      );
-
-      if (existingInvoicePaymentResult.rows.length > 0) {
-        invoiceId = existingInvoicePaymentResult.rows[0].invoice_id;
-      } else {
-        // 2. If no existing invoice_id found, create a new invoice
-        const newInvoiceResult = await client.query(
-          `
-          INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
-          VALUES (gen_random_uuid(), $1, $2, $3, NULL, $4)
-          RETURNING id;
-          `,
-          [reservation.hotel_id, reservation.date, reservation.client_id, userId]
-        );
-        invoiceId = newInvoiceResult.rows[0].id;
-      }
-
       const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id);
       let remainingPayment = reservation.period_payable;
       // Insert payment for each room, distributing the period_payable amount
@@ -131,7 +103,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
             5,
             roomPayment,
             reservation.details || null,
-            invoiceId,
+            bulkInvoiceId,
             userId
           ]);
 
