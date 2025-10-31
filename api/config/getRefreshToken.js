@@ -27,6 +27,7 @@ async function getAccessToken() {
       access_type: 'offline', // Request a refresh token
       scope: ['https://www.googleapis.com/auth/drive.file'],
       redirect_uri: redirectUri,
+      prompt: 'consent',
     });
 
     console.log('Authorize this app by visiting this url:', authUrl);
@@ -35,7 +36,7 @@ async function getAccessToken() {
     rl.close();
 
     const tokenResponse = await oAuth2Client.getToken(code);
-    await fs.writeFile(tokenPath, JSON.stringify(tokenResponse.tokens));
+    await fs.writeFile(tokenPath, JSON.stringify({ refresh_token: tokenResponse.tokens.refresh_token }));
     console.log('Token stored to', tokenPath);
   } catch (error) {
     console.error('Error getting token:', error);

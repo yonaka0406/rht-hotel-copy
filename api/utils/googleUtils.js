@@ -124,7 +124,6 @@ async function authorize() {
     } catch (error) {
         credentialsPath = localCredentialsPath;
     }
-    logger.warn(`[authorize] Using credentials path: ${credentialsPath}`, context);
 
     try {
         await fs.access(prodRefreshTokenPath);
@@ -132,7 +131,6 @@ async function authorize() {
     } catch (error) {
         storedRefreshTokenPath = localRefreshTokenPath;
     }
-    logger.warn(`[authorize] Using refresh token path: ${storedRefreshTokenPath}`, context);
 
     try {
         const credentials = await fs.readFile(credentialsPath);
@@ -147,16 +145,7 @@ async function authorize() {
         try {
             logger.debug('Reading refresh token', { ...context, path: storedRefreshTokenPath });
             const refreshTokenData = await fs.readFile(storedRefreshTokenPath);
-            logger.warn(`[authorize] Refresh token data: ${refreshTokenData}`, context);
-            const tokenData = JSON.parse(refreshTokenData);
-            const refreshToken = tokenData.refresh_token;
-
-            if (!refreshToken) {
-                const errorMsg = 'The token file does not contain a refresh_token property.';
-                logger.error(errorMsg, { ...context, tokenData });
-                throw new Error(errorMsg);
-            }
-
+            const refreshToken = JSON.parse(refreshTokenData).refresh_token;
             client.setCredentials({ refresh_token: refreshToken });
             await client.getAccessToken();
 
@@ -164,7 +153,7 @@ async function authorize() {
             return client;
         } catch (error) {
             const errorMsg = 'No refresh token found or failed to set credentials.';
-            logger.error(errorMsg, { ...context, error: error.message, stack: error.stack });
+            logger.error(errorMsg, { ...context, error: error.message });
             throw new Error(errorMsg);
         }
     } catch (err) {
@@ -547,7 +536,6 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
 }
 */
 async function appendDataToSheet(spreadsheetId, sheetName, values) {
-    logger.warn(`[appendDataToSheet] Called with sheetId: ${spreadsheetId}, sheetName: ${sheetName}`);
     await ensureSheetExists(spreadsheetId, sheetName);
     return _appendInBatches(spreadsheetId, sheetName, values);
 }
