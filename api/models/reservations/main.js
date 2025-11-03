@@ -726,7 +726,11 @@ const addReservationDetail = async (requestId, detail) => {
     const result = await pool.query(query, values);
     return result.rows[0]; // Return the inserted reservation detail
   } catch (err) {
-    console.error('Error adding reservation detail:', err);
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error adding reservation detail:', err);
+    }
     throw new Error('Database error');
   }
 };
@@ -793,7 +797,11 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
     if (shouldReleaseClient) {
       await dbClient.query('ROLLBACK');
     }
-    console.error('Error adding reservation hold details:', err);
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error adding reservation hold details:', err);
+    }
     throw err;
   } finally {
     if (shouldReleaseClient) {
@@ -973,7 +981,11 @@ const updateReservationDetail = async (requestId, reservationData) => {
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error updating reservation detail:', err);
+    }
     throw new Error('Database error');
   }
 };
@@ -1956,7 +1968,11 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error updating reservation detail plan:', err);
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error updating reservation detail plan:', err);
+    }
     throw err;
   } finally {
     client.release();
