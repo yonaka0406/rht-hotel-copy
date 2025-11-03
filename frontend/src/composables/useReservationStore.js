@@ -1514,7 +1514,7 @@ export function useReservationStore() {
         }
     };
 
-    const splitReservation = async (originalReservationId, hotelId, reservationDetailIdsToMove) => {
+    const splitReservation = async (originalReservationId, hotelId, reservationDetailIdsToMove, isFullPeriodSplit, isFullRoomSplit) => {
         // Early Input Validation
         if (!originalReservationId) {
             throw new Error('Original reservation ID is required.');
@@ -1524,6 +1524,12 @@ export function useReservationStore() {
         }
         if (!Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0) {
             throw new Error('Reservation detail IDs to move must be a non-empty array.');
+        }
+        if (typeof isFullPeriodSplit !== 'boolean') {
+            throw new Error('isFullPeriodSplit must be a boolean.');
+        }
+        if (typeof isFullRoomSplit !== 'boolean') {
+            throw new Error('isFullRoomSplit must be a boolean.');
         }
 
         setReservationIsUpdating(true);
@@ -1540,6 +1546,8 @@ export function useReservationStore() {
                     originalReservationId,
                     hotelId,
                     reservationDetailIdsToMove,
+                    isFullPeriodSplit,
+                    isFullRoomSplit,
                 }),
             });
 

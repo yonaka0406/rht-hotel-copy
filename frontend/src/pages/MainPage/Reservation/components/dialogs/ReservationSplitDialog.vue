@@ -166,9 +166,41 @@ const reservationDetailIdsToMove = computed(() => {
         .map(detail => detail.id);
 });
 
+const isFullPeriodSplit = computed(() => {
+    if (!selectedDates.value || selectedDates.value.length !== 2) return false;
+    const [startDate, endDate] = selectedDates.value;
+    if (!startDate || !endDate) return false;
+
+    // Get the min/max dates for the selected rooms in the original reservation
+    const selectedRoomDetails = props.reservation_details.filter(detail => selectedRooms.value.includes(detail.room_id));
+    if (selectedRoomDetails.length === 0) return false;
+
+    const minOriginalDate = new Date(Math.min(...selectedRoomDetails.map(d => new Date(d.date))));
+    const maxOriginalDate = new Date(Math.max(...selectedRoomDetails.map(d => new Date(d.date))));
+
+    // Normalize dates for comparison
+    const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const minOrig = new Date(minOriginalDate.getFullYear(), minOriginalDate.getMonth(), minOriginalDate.getDate());
+    const maxOrig = new Date(maxOriginalDate.getFullYear(), maxOriginalDate.getMonth(), maxOriginalDate.getDate());
+
+    return start.getTime() === minOrig.getTime() && end.getTime() === maxOrig.getTime();
+});
+
+const isFullRoomSplit = computed(() => {
+    if (selectedRooms.value.length === 0) return false;
+    const allOriginalRoomIds = [...new Set(props.reservation_details.map(detail => detail.room_id))];
+    return selectedRooms.value.length === allOriginalRoomIds.length && selectedRooms.value.every(roomId => allOriginalRoomIds.includes(roomId));
+});
+
 const handleSplit = async () => {
     if (reservationDetailIdsToMove.value.length === 0) {
         toast.add({ severity: 'warn', summary: '警告', detail: '分割する予約明細を選択してください。', life: 3000 });
+        return;
+    }
+
+    if (isFullPeriodSplit.value && isFullRoomSplit.value) {
+        toast.add({ severity: 'warn', summary: '警告', detail: '予約全体を選択しているため、分割はできません。', life: 3000 });
         return;
     }
 
@@ -182,13 +214,24 @@ const handleSplit = async () => {
             throw new Error('Hotel ID not found');
         }
 
-        const newReservationId = await splitReservation(props.reservation_id, hotelId, reservationDetailIdsToMove.value);
-        if (newReservationId) {
+        const newReservationIds = await splitReservation(
+            props.reservation_id,
+            hotelId,
+            reservationDetailIdsToMove.value,
+            isFullPeriodSplit.value,
+            isFullRoomSplit.value
+        );
+
+        if (newReservationIds && newReservationIds.length > 0) {
             toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に分割されました。', life: 3000 });
             showDialog.value = false;
-            router.push(`/reservations/edit/${newReservationId}`);
+            // Redirect to the first new reservation created
+            router.push(`/reservations/edit/${newReservationIds[0]}`);
         } else {
-            toast.add({ severity: 'error', summary: 'エラー', detail: '新しい予約IDが取得できませんでした。' , life: 3000 });
+            // This case now handles when isFullPeriodSplit and isFullRoomSplit are true,
+            // and the backend returns an empty array, meaning no split occurred.
+            toast.add({ severity: 'info', summary: '情報', detail: '選択された予約は分割されませんでした。' , life: 3000 });
+            showDialog.value = false; // Close the dialog even if no split
         }
     } catch (error) {
         console.error('Error splitting reservation:', error);

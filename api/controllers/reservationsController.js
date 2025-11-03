@@ -1594,15 +1594,15 @@ const changeReservationRoomsPeriod = async (req, res) => {
 };
 
 const actionSplitReservation = async (req, res) => {
-  const { originalReservationId, hotelId, reservationDetailIdsToMove } = req.body;
+  const { originalReservationId, hotelId, reservationDetailIdsToMove, isFullPeriodSplit, isFullRoomSplit } = req.body;
   const userId = req.user.id;
 
-  if (!originalReservationId || !hotelId || !reservationDetailIdsToMove || !Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0) {
+  if (!originalReservationId || !hotelId || !reservationDetailIdsToMove || !Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0 || typeof isFullPeriodSplit !== 'boolean' || typeof isFullRoomSplit !== 'boolean') {
     return res.status(400).json({ error: 'Missing or invalid parameters for splitting a reservation.' });
   }
 
   try {
-    const newReservationId = await splitReservation(req.requestId, originalReservationId, hotelId, reservationDetailIdsToMove, userId);
+    const newReservationId = await splitReservation(req.requestId, originalReservationId, hotelId, reservationDetailIdsToMove, userId, isFullPeriodSplit, isFullRoomSplit);
     res.status(201).json({ message: 'Reservation split successfully.', newReservationId });
   } catch (error) {
     logger.error(`[${req.requestId}] actionSplitReservation - Error splitting reservation: ${error.message}`, {
@@ -1610,7 +1610,9 @@ const actionSplitReservation = async (req, res) => {
       originalReservationId,
       hotelId,
       reservationDetailIdsToMove,
-      userId
+      userId,
+      isFullPeriodSplit,
+      isFullRoomSplit
     });
     res.status(500).json({ error: 'Failed to split reservation.' });
   }
