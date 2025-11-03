@@ -130,6 +130,11 @@ const isSplitButtonDisabled = computed(() => {
         return true;
     }
 
+    // New condition: Disable if both full period and full room are selected
+    if (isFullPeriodSplit.value && isFullRoomSplit.value) {
+        return true;
+    }
+
     const originalCheckIn = minDate.value;
     const originalCheckOutMinusOne = maxDate.value;
 
@@ -228,8 +233,9 @@ const handleSplit = async () => {
             // Redirect to the first new reservation created
             router.push(`/reservations/edit/${newReservationIds[0]}`);
         } else {
-            // This case now handles when isFullPeriodSplit and isFullRoomSplit are true,
-            // and the backend returns an empty array, meaning no split occurred.
+            // This case handles situations where the backend returns an empty array
+            // (e.g., no changes were made or the split could not be performed for other reasons).
+            // An informational toast is shown, and the dialog is closed.
             toast.add({ severity: 'info', summary: '情報', detail: '選択された予約は分割されませんでした。' , life: 3000 });
             showDialog.value = false; // Close the dialog even if no split
         }

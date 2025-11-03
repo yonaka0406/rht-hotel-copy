@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 // Helper functions
 async function createNewReservation(originalReservation, userId, dbClient) {
@@ -23,6 +24,9 @@ async function createNewReservation(originalReservation, userId, dbClient) {
         userId
     ];
     const newReservationResult = await dbClient.query(newReservationQuery, newReservationValues);
+    if (!newReservationResult || newReservationResult.rows.length === 0) {
+        throw new Error(`Failed to create new reservation for original reservation ID: ${originalReservation.id} and hotel ID: ${originalReservation.hotel_id}. No rows returned.`);
+    }
     return newReservationResult.rows[0].id;
 }
 
@@ -118,12 +122,20 @@ async function moveAssociatedPayments(targetReservationId, userId, originalReser
  * @param {number} userId - The ID of the user performing the action.
  * @param {boolean} isFullPeriodSplit - Indicator if the period split is full.
  * @param {boolean} isFullRoomSplit - Indicator if the room split is full.
- * @returns {Promise<string>} The ID of the newly created reservation.
+ * @returns {Promise<string[]>} The IDs of the newly created reservations.
  */
 const splitReservation = async (requestId, originalReservationId, hotelId, reservationDetailIdsToMove, userId, isFullPeriodSplit, isFullRoomSplit) => {
     if (!Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0) {
         throw new Error('reservationDetailIdsToMove must be a non-empty array.');
     }
+
+    // If both period and rooms are full, it means the entire reservation is selected.
+    // This is not a split operation, so no action is performed, and no new reservation is created.
+    if (isFullPeriodSplit && isFullRoomSplit) {
+        logger.debug('Full period and full room split detected. Returning empty array as no split is performed.');
+        return [];
+    }
+
     const client = await getPool(requestId).connect();
     try {
         await client.query('BEGIN');
