@@ -31,6 +31,7 @@ router.post('/reservation/move/room', authMiddlewareCRUDAccess, reservationsCont
 router.post('/reservation/payment/add', authMiddlewareCRUDAccess, reservationsController.createReservationPayment);
 router.post('/reservation/payment/bulk-add', authMiddlewareCRUDAccess, reservationsController.createBulkReservationPayment);
 router.post('/reservation/update/details', authMiddlewareCRUDAccess, reservationsController.createReservationDetails);
+router.post('/reservation/split', authMiddlewareCRUDAccess, reservationsController.actionSplitReservation);
 
 router.put('/reservation/update/details/:id', authMiddlewareCRUDAccess, reservationsController.editReservationDetail);
 router.put('/reservation/update/detail/status/:id', authMiddlewareCRUDAccess, reservationsController.editReservationDetailStatus);
