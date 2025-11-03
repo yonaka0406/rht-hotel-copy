@@ -98,19 +98,15 @@ const getReservation = async (req, res) => {
   const { id, hotel_id } = req.query;
   const { validate: uuidValidate } = require('uuid');
 
-  logger.debug(`[${req.requestId}] getReservation - Incoming request:`, { id, hotel_id });
-
   if (!id || id === 'null' || id === 'undefined' || !uuidValidate(id)) {
-    logger.warn(`[${req.requestId}] getReservation - Invalid reservation ID received: ${id}`);
+    logger.warn(`[getReservation] Invalid reservation ID received: ${id}`);
     return res.status(400).json({ error: 'A valid reservation ID must be provided.' });
   }
 
   try {
     const reservation = await selectReservation(req.requestId, id, hotel_id);
-    logger.debug(`[${req.requestId}] getReservation - Result from selectReservation:`, { reservation });
 
     if (reservation.length === 0) {
-      logger.warn(`[${req.requestId}] getReservation - No reservation found for ID: ${id}, Hotel ID: ${hotel_id}`);
       return res.status(404).json({ message: 'No reservation for the provided id.' });
     }
 
@@ -1601,25 +1597,12 @@ const actionSplitReservation = async (req, res) => {
   const { originalReservationId, hotelId, reservationDetailIdsToMove } = req.body;
   const userId = req.user.id;
 
-  logger.debug(`[${req.requestId}] actionSplitReservation - Incoming request:`, {
-    originalReservationId,
-    hotelId,
-    reservationDetailIdsToMove,
-    userId
-  });
-
   if (!originalReservationId || !hotelId || !reservationDetailIdsToMove || !Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0) {
-    logger.warn(`[${req.requestId}] actionSplitReservation - Validation failed: Missing or invalid parameters.`, {
-      originalReservationId,
-      hotelId,
-      reservationDetailIdsToMove
-    });
     return res.status(400).json({ error: 'Missing or invalid parameters for splitting a reservation.' });
   }
 
   try {
     const newReservationId = await splitReservation(req.requestId, originalReservationId, hotelId, reservationDetailIdsToMove, userId);
-    logger.debug(`[${req.requestId}] actionSplitReservation - Reservation split successfully. New Reservation ID: ${newReservationId}`);
     res.status(201).json({ message: 'Reservation split successfully.', newReservationId });
   } catch (error) {
     logger.error(`[${req.requestId}] actionSplitReservation - Error splitting reservation: ${error.message}`, {

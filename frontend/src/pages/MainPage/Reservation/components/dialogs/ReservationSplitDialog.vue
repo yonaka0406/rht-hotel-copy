@@ -54,7 +54,8 @@ const props = defineProps({
     },
     reservation_details: {
         type: Array,
-        required: true,
+        required: false,
+        default: () => [],
     },
 });
 
@@ -182,9 +183,13 @@ const handleSplit = async () => {
         }
 
         const newReservationId = await splitReservation(props.reservation_id, hotelId, reservationDetailIdsToMove.value);
-        toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に分割されました。', life: 3000 });
-        showDialog.value = false;
-        router.push(`/reservations/edit/${newReservationId}`);
+        if (newReservationId) {
+            toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に分割されました。', life: 3000 });
+            showDialog.value = false;
+            router.push(`/reservations/edit/${newReservationId}`);
+        } else {
+            toast.add({ severity: 'error', summary: 'エラー', detail: '新しい予約IDが取得できませんでした。' , life: 3000 });
+        }
     } catch (error) {
         console.error('Error splitting reservation:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約の分割に失敗しました。', life: 3000 });
