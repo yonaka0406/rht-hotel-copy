@@ -605,9 +605,20 @@ const createReservationDetails = async (req, res) => {
 
     // Add the reservation to the database
     const newReservationDetail = await addReservationDetail(req.requestId, reservationData, client);
+
+    if (!newReservationDetail || !newReservationDetail.id) {
+      logger.error('Failed to create reservation detail: Invalid response from addReservationDetail.', {
+        requestId: req.requestId,
+        reservationData: reservationData,
+        newReservationDetail: newReservationDetail // Include the actual response for debugging
+      });
+      await client.query('ROLLBACK');
+      return res.status(500).json({ error: 'Failed to create reservation detail: Invalid response from addReservationDetail.' });
+    }
+
     // console.log('newReservationDetail:', newReservationDetail);
     // console.log('ogm_id:', ogm_id);
-    const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id, hotel_id);
+    const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id, hotel_id, client);
     // console.log('ogmReservationAddons:', ogmReservationAddons);
 
     // Update reservation guests
@@ -647,7 +658,7 @@ const createReservationDetails = async (req, res) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error creating reservation detail:', err);
+    logger.error(`Error creating reservation detail`, { error: err, requestId: req.requestId });
     res.status(500).json({ error: 'Failed to create reservation detail' });
   } finally {
     client.release();
