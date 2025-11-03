@@ -488,8 +488,16 @@ const updatePlanExclusions = async (requestId, hotel_id, global_plan_ids) => {
   }
 };
 
-const getRoomTypeById = async (requestId, roomTypeId, hotelId = null) => {
+const getRoomTypeById = async (requestId, roomTypeId, hotelId = null, client = null) => {
   const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
   let query = 'SELECT * FROM room_types WHERE id = $1';
   let values = [roomTypeId];
   if (hotelId !== null) {
@@ -497,11 +505,28 @@ const getRoomTypeById = async (requestId, roomTypeId, hotelId = null) => {
     values.push(hotelId);
   }
   try {
-    const result = await pool.query(query, values);
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
+    const result = await dbClient.query(query, values);
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
     return result.rows[0] || null;
   } catch (err) {
+    if (shouldReleaseClient) {
+        try {
+            await dbClient.query('ROLLBACK');
+        } catch (rbErr) {
+            console.error('Error rolling back transaction:', rbErr);
+        }
+    }
     console.error('Error finding room type by id:', err);
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 

@@ -65,7 +65,7 @@ import axios from 'axios';
 // Tooltip directive is globally registered in main.js, so no need to import here.
 
 const confirm = useConfirm();
-const { entries, loading, fetchWaitlistEntries, sendManualNotification, cancelEntry } = useWaitlistStore();
+const { entries, loading, fetchWaitlistEntries, sendManualNotification, cancelEntry, markAsNotifiedByPhone } = useWaitlistStore();
 const { selectedHotelId } = useHotelStore(); // This is a ref
 
 const props = defineProps({
@@ -247,7 +247,7 @@ const showPhoneNumber = (entry) => {
         return;
       }
       // Use the same API as manual notification to set status to notified
-      const result = await sendManualNotification(entry.id);
+      const result = await markAsNotifiedByPhone(entry.id);
       if (result && selectedHotelId.value) {
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
       }

@@ -128,7 +128,7 @@
                       </span>
 
                       <div v-if="room.plan_name">
-                        <div v-for="(planData, planName) in planSummary[room.room_number]" :key="planName" class="mb-1">
+                        <div v-for="(planData, planName) in planSummary[room.reservation_id]?.[room.room_number]" :key="planName" class="mb-1">
                           <Button type="button" :label="`${planName}`" :badge="`${planData.count}`"
                             badgeSeverity="secondary" variant="outlined" :style="{
                               backgroundColor: `${planData.color}40`,
@@ -154,7 +154,7 @@
                   </div>
                   <div v-else>
                     <div v-if="room.plan_name">
-                      <div v-for="(planData, planName) in planSummary[room.room_number]" :key="planName" class="mb-1">
+                      <div v-for="(planData, planName) in planSummary[room.reservation_id]?.[room.room_number]" :key="planName" class="mb-1">
                         <Button type="button" :label="`${planName}`" :badge="`${planData.count}`"
                           badgeSeverity="secondary" variant="outlined" :style="{
                             backgroundColor: `${planData.color}40`,

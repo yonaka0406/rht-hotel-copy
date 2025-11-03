@@ -97,7 +97,7 @@
                 <div v-else>
                   <div v-if="isRoomReserved(room.room_id, date)">
                     <div class="dark:text-gray-100" style="max-width: 100%; overflow: hidden; white-space: nowrap;">
-                      <strong v-if="fillRoomInfo(room.room_id, date).type === 'ota' || fillRoomInfo(room.room_id, date).type === 'web'" style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</strong>
+                      <strong v-if="isOTA(room.room_id, date)" style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</strong>
                       <span v-else style="font-size: 10px;">{{ fillRoomInfo(room.room_id, date).client_name || '予約情報あり' }}</span>
                     </div>
                   </div>
@@ -229,7 +229,7 @@ const showTooltip = (event, room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);
   if (roomInfo && roomInfo.reservation_id) {
     let otaLine = '';
-    if (roomInfo.type === 'ota' || roomInfo.type === 'web') {
+    if (isOTA(room_id, date)) {
       otaLine = `<br><i class="pi pi-globe"></i> ${roomInfo.agent || ''}`;
     }
     tooltipContent.value = `
@@ -535,6 +535,11 @@ const isRoomReserved = (roomId, date) => {
 const fillRoomInfo = (room_id, date) => {
   const key = `${room_id}_${date}`;
   return reservedRoomsMap.value[key] || { status: 'available', client_name: '', reservation_id: null };
+};
+
+const isOTA = (room_id, date) => {
+  const roomInfo = fillRoomInfo(room_id, date);
+  return roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web');
 };
 const getCellStyle = (room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);

@@ -1,5 +1,6 @@
 const { getPool } = require('../config/database');
 const format = require('pg-format');
+const logger = require('../config/logger');
 
 const WaitlistEntry = {
     /**
@@ -21,8 +22,15 @@ const WaitlistEntry = {
      * @returns {Promise<object>} The created waitlist entry.
      * @throws {Error} If database operation fails or required fields are missing.
      */
-    async create(requestId, data, userId) {
+    async create(requestId, data, userId, client = null) {
         const pool = getPool(requestId);
+        let dbClient = client;
+        let shouldReleaseClient = false;
+
+        if (!dbClient) {
+            dbClient = await pool.connect();
+            shouldReleaseClient = true;
+        }
 
         // Validate required fields
         const requiredFields = [
@@ -91,24 +99,41 @@ const WaitlistEntry = {
         );
 
         try {
-            const result = await pool.query(query);
+            if (shouldReleaseClient) {
+                await dbClient.query('BEGIN');
+            }
+            const result = await dbClient.query(query);
+            if (shouldReleaseClient) {
+                await dbClient.query('COMMIT');
+            }
             if (result.rows.length > 0) {
                 return result.rows[0];
             } else {
                 throw new Error('Failed to create waitlist entry, no rows returned.');
             }
         } catch (err) {
+            if (shouldReleaseClient) {
+                try {
+                    await dbClient.query('ROLLBACK');
+                } catch (rbErr) {
+                    logger.error('Error rolling back transaction', { error: rbErr, file: 'waitlist.js', function: 'createWaitlistEntry' });
+                }
+            }
             if (err.constraint) {
-                 if (err.constraint === 'waitlist_entries_client_id_fkey') {
+                if (err.constraint === 'waitlist_entries_client_id_fkey') {
                     throw new Error('Invalid client_id provided.');
                 } else if (err.constraint === 'waitlist_entries_hotel_id_fkey') {
                     throw new Error('Invalid hotel_id provided.');
                 } else if (err.constraint === 'fk_waitlist_room_types') {
                     throw new Error('Invalid room_type_id or combination with hotel_id.');
                 }
-                 throw new Error(`Database constraint violation: ${err.constraint}`);
+                throw new Error(`Database constraint violation: ${err.constraint}`);
             }
             throw new Error('Database error occurred while creating waitlist entry.');
+        } finally {
+            if (shouldReleaseClient) {
+                dbClient.release();
+            }
         }
     },
 
@@ -328,8 +353,16 @@ const WaitlistEntry = {
      * @param {number} userId - ID of the user performing the update.
      * @returns {Promise<object|null>} The updated waitlist entry or null if not found/updated.
      */
-    async updateStatus(requestId, id, status, additionalData = {}, userId) {
+    async updateStatus(requestId, id, status, additionalData = {}, userId, client = null) {
         const pool = getPool(requestId);
+
+        let dbClient = client;
+        let shouldReleaseClient = false;
+
+        if (!dbClient) {
+            dbClient = await pool.connect();
+            shouldReleaseClient = true;
+        }
 
         const { confirmation_token, token_expires_at, notes } = additionalData;
 
@@ -343,13 +376,12 @@ const WaitlistEntry = {
         let valueCounter = 3;
 
         if (status === 'notified') {
-            if (!confirmation_token || !token_expires_at) {
-                throw new Error('Confirmation token and expiry are required when status is "notified".');
+            if (confirmation_token && token_expires_at) {
+                querySetters.push(`confirmation_token = $${valueCounter++}`);
+                queryValues.push(confirmation_token);
+                querySetters.push(`token_expires_at = $${valueCounter++}`);
+                queryValues.push(token_expires_at);
             }
-            querySetters.push(`confirmation_token = $${valueCounter++}`);
-            queryValues.push(confirmation_token);
-            querySetters.push(`token_expires_at = $${valueCounter++}`);
-            queryValues.push(token_expires_at);
         } else {
             querySetters.push(`confirmation_token = NULL`);
             querySetters.push(`token_expires_at = NULL`);
@@ -371,17 +403,34 @@ const WaitlistEntry = {
         queryValues.push(id);
 
         try {
-            const result = await pool.query(query, queryValues);
+            if (shouldReleaseClient) {
+                await dbClient.query('BEGIN');
+            }
+            const result = await dbClient.query(query, queryValues);
+            if (shouldReleaseClient) {
+                await dbClient.query('COMMIT');
+            }
             if (result.rows.length > 0) {
                 return result.rows[0];
             } else {
                 return null;
             }
         } catch (err) {
+            if (shouldReleaseClient) {
+                try {
+                    await dbClient.query('ROLLBACK');
+                } catch (rbErr) {
+                    console.error('Error rolling back transaction:', rbErr);
+                }
+            }
             if (err.constraint) {
                  throw new Error(`Database constraint violation: ${err.constraint} while updating status.`);
             }
             throw new Error('Database error occurred while updating waitlist entry status.');
+        } finally {
+            if (shouldReleaseClient) {
+                dbClient.release();
+            }
         }
     },
 

@@ -219,7 +219,7 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
   }
 };
 
-const selectReservationAddons = async (requestId, id, hotelId) => {
+const selectReservationAddons = async (requestId, id, hotelId, client = null) => {
   const pool = getPool(requestId);
   const query = `
     SELECT * FROM reservation_addons
@@ -229,7 +229,8 @@ const selectReservationAddons = async (requestId, id, hotelId) => {
   const values = [id, hotelId];
 
   try {
-    const result = await pool.query(query, values);
+    const executor = client || pool;
+    const result = await executor.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error fetching reservation addons:', err);

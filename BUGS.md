@@ -5,6 +5,22 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 3, 2025
+
+#### Feature Request: Calendar Month Navigation Enhancement
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Enhance the static calendar display to show more months
+  - Add a "Load More" button to append additional months to the current view
+  - Add "Next" and "Previous" navigation buttons for easier month-to-month navigation
+  - Consider implementing infinite scroll for a smoother user experience
+- **Requirements**:
+  - Maintain current calendar functionality while adding new navigation options
+  - Ensure responsive design works with the new navigation elements
+  - Add visual indicators when more months are available to load
+  - Consider adding a month/year selector for quick navigation to specific dates
+
 ### October 29, 2025
 
 #### Feature Request #B: Merge and Split Reservations
@@ -24,38 +40,31 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### October 24, 2025
 
-#### Feature #87: Parking Module Enhancements
+#### Feature #87: Parking Space Number Management
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: 
-  Enhance the parking module to support managing multiple parking spots with specific configurations and restrictions, similar to the room reservation system.
+  Simplify the parking module to focus on basic management of parking space numbers.
 - **Requirements**:
-  - **Multiple Spot Registration**:
-    - Allow adding/editing multiple parking spots in a single operation
-    - Add bulk selection and management features
-    - Support for selecting multiple consecutive spots at once
-  - **Spot Configuration**:
-    - Add "inline position" flag to mark spots that are in a row (縦列)
-    - Add "winter availability" flag to mark spots that are not available during winter
-    - Visual indicators in the UI for special spot attributes
-  - **Calendar View**:
-    - Implement a calendar view similar to room reservations
-    - Visual distinction for different spot types and restrictions
-    - Blocking functionality for maintenance or special events
-  - **Reservation Integration**:
-    - Allow assigning multiple parking spots to a single reservation
-    - Show parking spot assignments in the reservation details
-    - Validate spot availability based on restrictions
+  - **Basic Management**:
+    - Add/remove individual parking space numbers
+    - Support for bulk import/export of space numbers
+    - Simple list view of all parking spaces
+  - **Numbering System**:
+    - Support for alphanumeric space identifiers (e.g., A1, B2, 101, 102)
+    - Optional grouping by area/zone
+    - Basic availability status (available/occupied)
+  - **Assignment**:
+    - Simple assignment of spaces to reservations
+    - Basic availability checking
 - **User Story**:
   As a hotel staff member,
-  I want to manage parking spots with the same flexibility as room reservations
-  So that I can efficiently handle parking assignments and restrictions
+  I want to manage parking space numbers simply and efficiently
+  So that I can keep track of parking assignments without unnecessary complexity
 - **Technical Notes**:
-  - Will require database updates for new spot attributes
-  - Need to update the parking spot management UI
-  - Should integrate with existing reservation system
-  - Consider adding reporting for parking spot utilization
-  - Need to handle edge cases like partial winter availability
+  - Minimal database schema changes needed
+  - Simple UI for managing space numbers
+  - Basic integration with reservation system for assignments
 
 ### October 24, 2025
 

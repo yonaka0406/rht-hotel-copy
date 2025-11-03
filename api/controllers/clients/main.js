@@ -4,7 +4,7 @@ const logger = require('../../config/logger');
 
 // GET
 const getClients = async (req, res) => {
-  const { page } = req.params;
+    const page = parseInt(req.params.page, 10) || 1; // Default to page 1 if not provided or invalid
   const limit = 5000;
   const offset = (page - 1) * limit;
 
@@ -93,7 +93,7 @@ const getClientGroups = async (req, res) => {
 
 // POST
 const createClientBasic = async (req, res) => {
-  logger.warn('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
+  logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
   const { name, name_kana, legal_or_natural_person, gender, email, phone } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
@@ -124,7 +124,7 @@ const createClientBasic = async (req, res) => {
 };
 
 const createClient = async (req, res) => {
-  logger.warn('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
+  logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
   const clientFields = req.body;
   const user_id = req.user.id;
 

@@ -16,3 +16,4 @@ pgadmin/.pgpass
 
 /supabase/.temp
 /temp
+api/config/refresh_token.json

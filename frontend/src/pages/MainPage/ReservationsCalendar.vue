@@ -115,10 +115,9 @@
                         </template>
                       </div>
                       <div>
-                        <template
-                          v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').type === 'ota'">
+                        <template v-if="isGlobe(room, date)">
                           <i class="pi pi-globe bg-blue-200 p-1 rounded dark:bg-blue-800"></i>
-                        </template>
+                        </template>                        
                       </div>
                     </div>
                     <div class="ml-1 dark:text-gray-100 flex items-center">
@@ -292,6 +291,10 @@ const formatDateWithDay = (date) => {
 const goToReservation = () => {
   router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });
 }
+const isGlobe = (room, date) => {
+  const roomInfo = fillRoomInfo(room.room_id, date, dragMode.value === 'reorganizeRooms');
+  return roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web');
+};
 
 // State
 const headerState = ref({

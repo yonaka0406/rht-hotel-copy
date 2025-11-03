@@ -35,7 +35,7 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
     // Skip querying the view in local/test environments
     return [];
   }
-  const pool = (requestId && requestId.startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
+  const pool = (requestId && String(requestId).startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
   const query = `
       SELECT
           r.hotel_id,
@@ -86,7 +86,7 @@ const selectParkingReservationsForGoogle = async (requestId, hotelId, startDate,
     return [];
   }
 
-  const pool = (requestId && requestId.startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
+  const pool = (requestId && String(requestId).startsWith('job-')) ? db.getProdPool() : db.getPool(requestId);
 
   const query = `
       SELECT

@@ -240,7 +240,11 @@ const insertYadomasterDetails = async (requestId, details) => {
         return { success: true, count: details.length };
     } catch (err) {
         await client.query('ROLLBACK'); 
-        console.error('Error adding reservation details (transaction rolled back):', err);
+        if (err.code === '23514' && err.table === 'reservation_details') {
+            console.error(`Import Error: ${err.message}. ${err.detail}`);
+        } else {
+            console.error('Error adding reservation details (transaction rolled back):', err);
+        }
         throw new Error('Database error during reservation details insertion (transaction rolled back)');
     } finally {
         // Reenable trigger

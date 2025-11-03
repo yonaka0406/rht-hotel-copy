@@ -688,9 +688,13 @@ const addReservationHold = async (requestId, reservation, client = null, roomsTo
     await client.query('COMMIT');
     return newReservation;
   } catch (err) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rbErr) {
+      console.error('Error rolling back transaction:', rbErr);
+    }
     console.error('Error adding reservation hold:', err);
-    throw new Error('Database error: ' + err.message);
+    throw err; // Rethrow the original error
   } finally {
     if (shouldReleaseClient) {
       client.release();
@@ -698,8 +702,16 @@ const addReservationHold = async (requestId, reservation, client = null, roomsTo
   }
 };
 
-const addReservationDetail = async (requestId, detail) => {
+const addReservationDetail = async (requestId, detail, client = null) => {
   const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
   const query = `
     INSERT INTO reservation_details (
       hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by
@@ -723,11 +735,35 @@ const addReservationDetail = async (requestId, detail) => {
   //console.log('[addReservationDetail] Inserting with values:', values);
 
   try {
-    const result = await pool.query(query, values);
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
+
+    const result = await dbClient.query(query, values);
+
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
+
     return result.rows[0]; // Return the inserted reservation detail
   } catch (err) {
-    console.error('Error adding reservation detail:', err);
+    if (shouldReleaseClient) {
+        try {
+            await dbClient.query('ROLLBACK');
+        } catch (rbErr) {
+            console.error('Error rolling back transaction:', rbErr);
+        }
+    }
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error adding reservation detail:', err);
+    }
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 
@@ -793,7 +829,11 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
     if (shouldReleaseClient) {
       await dbClient.query('ROLLBACK');
     }
-    console.error('Error adding reservation hold details:', err);
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error adding reservation hold details:', err);
+    }
     throw err;
   } finally {
     if (shouldReleaseClient) {
@@ -802,9 +842,17 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
   }
 };
 
-const addReservationAddon = async (requestId, addon) => {
+const addReservationAddon = async (requestId, addon, client = null) => {
   // console.log('addReservationAddon:',addon)
   const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
   const query = `
     INSERT INTO reservation_addons (
       hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, quantity, price, tax_type_id, tax_rate, created_by, updated_by
@@ -828,11 +876,31 @@ const addReservationAddon = async (requestId, addon) => {
   //console.log('[addReservationAddon] Inserting with values:', values);
 
   try {
-    const result = await pool.query(query, values);
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
+
+    const result = await dbClient.query(query, values);
+
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
+
     return result.rows[0]; // Return the inserted reservation addon
   } catch (err) {
+    if (shouldReleaseClient) {
+        try {
+            await dbClient.query('ROLLBACK');
+        } catch (rbErr) {
+            console.error('Error rolling back transaction:', rbErr);
+        }
+    }
     console.error('Error adding reservation addon:', err);
-    throw new Error('Database error');
+    throw err;
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 
@@ -973,7 +1041,11 @@ const updateReservationDetail = async (requestId, reservationData) => {
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error updating reservation detail:', err);
+    }
     throw new Error('Database error');
   }
 };
@@ -1260,11 +1332,22 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
   }
 };
 
-const updateReservationComment = async (requestId, reservationData) => {
+const updateReservationComment = async (requestId, reservationData, client = null) => {
   const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
   const { id, hotelId, comment, updated_by } = reservationData;
 
   try {
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
     // Update status
     const query = `
         UPDATE reservations
@@ -1280,12 +1363,27 @@ const updateReservationComment = async (requestId, reservationData) => {
       id,
       hotelId,
     ];
-    const result = await pool.query(query, values);
+    const result = await dbClient.query(query, values);
+
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
     return result.rows[0];
 
   } catch (error) {
-    console.error('Error updating reservation detail:', err);
-    throw new Error('Database error');
+    if (shouldReleaseClient) {
+        try {
+            await dbClient.query('ROLLBACK');
+        } catch (rbErr) {
+            console.error('Error rolling back transaction:', rbErr);
+        }
+    }
+    console.error('Error updating reservation comment:', error);
+    throw error;
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 
@@ -1823,8 +1921,16 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
   }
 };
 
-const updateReservationGuest = async (requestId, oldValue, newValue) => {
+const updateReservationGuest = async (requestId, oldValue, newValue, client = null) => {
   const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
   const query = `
     UPDATE reservation_clients
     SET reservation_details_id = $1    
@@ -1838,10 +1944,30 @@ const updateReservationGuest = async (requestId, oldValue, newValue) => {
   `;
 
   try {
-    await pool.query(query, [newValue, oldValue]);
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
+
+    await dbClient.query(query, [newValue, oldValue]);
+
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
     // console.log('Reservation guest updated successfully');
   } catch (err) {
+    if (shouldReleaseClient) {
+        try {
+            await dbClient.query('ROLLBACK');
+        } catch (rbErr) {
+            console.error('Error rolling back transaction:', rbErr);
+        }
+    }
     console.error('Error updating reservation guest:', err);
+    throw err;
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 
@@ -1956,7 +2082,11 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error updating reservation detail plan:', err);
+    if (err.code === '23514' && err.table === 'reservation_details') {
+        console.error(`Import Error: ${err.message}. ${err.detail}`);
+    } else {
+        console.error('Error updating reservation detail plan:', err);
+    }
     throw err;
   } finally {
     client.release();

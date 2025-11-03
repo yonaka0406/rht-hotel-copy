@@ -10,26 +10,28 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
 
     if (paymentTypeId === 5) {
       // Check if an invoice already exists for the given criteria
-      const existingInvoiceResult = await client.query(
+      // 1. Check for an existing invoice_id for this client and reservation
+      const existingInvoicePaymentResult = await client.query(
         `
-          SELECT * 
-          FROM invoices
-          WHERE id = $1 AND hotel_id = $2;
+          SELECT invoice_id
+          FROM reservation_payments
+          WHERE hotel_id = $1 AND reservation_id = $2 AND client_id = $3 AND invoice_id IS NOT NULL
+          LIMIT 1;
         `,
-        [reservationId, hotelId]
+        [hotelId, reservationId, clientId]
       );
 
-      if (existingInvoiceResult.rows.length > 0) {
-        invoiceId = existingInvoiceResult.rows[0].id;
+      if (existingInvoicePaymentResult.rows.length > 0) {
+        invoiceId = existingInvoicePaymentResult.rows[0].invoice_id;
       } else {
-        // Create a new invoice if one doesn't exist
+        // 2. If no existing invoice_id found, create a new invoice
         const newInvoiceResult = await client.query(
           `
           INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
-          VALUES ($1, $2, $3, $4, NULL, $5)
+          VALUES (gen_random_uuid(), $1, $2, $3, NULL, $4)
           RETURNING id;
           `,
-          [reservationId, hotelId, date, clientId, userId]
+          [hotelId, date, clientId, userId]
         );
         invoiceId = newInvoiceResult.rows[0].id;
       }
@@ -61,8 +63,8 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
-    // Insert into invoices table and get the generated UUID
+    
+    // Always create a new single invoice ID for all reservations in the array
     const invoiceInsertResult = await client.query(
       `
         INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
@@ -71,11 +73,10 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
       `,
       [data[0].hotel_id, data[0].date, data[0].client_id, userId]
     );
-    const invoiceId = invoiceInsertResult.rows[0].id;
+    const bulkInvoiceId = invoiceInsertResult.rows[0].id;
 
     // Process each reservation in the data array
     for (const reservation of data) {
-
       const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id);
       let remainingPayment = reservation.period_payable;
       // Insert payment for each room, distributing the period_payable amount
@@ -102,7 +103,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
             5,
             roomPayment,
             reservation.details || null,
-            invoiceId,
+            bulkInvoiceId,
             userId
           ]);
 
@@ -141,7 +142,7 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
         SUM(
             CASE
                 WHEN rd.billable IS TRUE AND rd.cancelled IS NULL THEN rd.price
-                WHEN rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
+                WHEN rd.billable IS TRUE AND rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
                 ELSE 0
             END
         ) + COALESCE(SUM(ra_agg.total_addon_price), 0) AS total_price
