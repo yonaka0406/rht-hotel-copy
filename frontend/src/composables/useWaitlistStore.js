@@ -143,6 +143,58 @@ export function useWaitlistStore() {
         },
 
         /**
+         * Marks a waitlist entry as notified by phone.
+         * @param {string} entryId - The ID of the waitlist entry.
+         * @returns {Promise<object|null>} The updated entry object or null if an error occurred.
+         */
+        async markAsNotifiedByPhone(entryId) {
+            state.loading = true;
+            state.error = null;
+            try {
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    throw new Error('認証トークンが見つかりません。');
+                }
+
+                const response = await fetch(`/api/waitlist/${entryId}/mark-notified-by-phone`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    const errorMessage = responseData.error || `電話連絡済みステータスへの更新に失敗しました。ステータス: ${response.status}`;
+                    throw new Error(errorMessage);
+                }
+
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: '順番待ちエントリーが電話連絡済みとして更新されました。',
+                    life: 3000
+                });
+                return responseData;
+
+            } catch (err) {
+                console.error('Error marking waitlist entry as notified by phone:', err);
+                state.error = err.message;
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: err.message || '電話連絡済みステータスへの更新中にエラーが発生しました。',
+                    life: 5000
+                });
+                return null;
+            } finally {
+                state.loading = false;
+            }
+        },
+
+        /**
          * Cancels a waitlist entry by updating its status to 'cancelled'.
          * @param {string} entryId - The ID of the waitlist entry to cancel.
          * @param {string} [cancelReason] - Optional reason for cancellation to append to notes.
