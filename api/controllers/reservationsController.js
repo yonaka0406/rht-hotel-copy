@@ -581,7 +581,12 @@ const createReservationDetails = async (req, res) => {
   const created_by = req.user.id;
   const updated_by = req.user.id;
 
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
     // Add the reservation
     const reservationData = {
       hotel_id,
@@ -599,15 +604,15 @@ const createReservationDetails = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationAddon = await addReservationDetail(req.requestId, reservationData);
-    // console.log('newReservationAddon:', newReservationAddon);
+    const newReservationDetail = await addReservationDetail(req.requestId, reservationData, client);
+    // console.log('newReservationDetail:', newReservationDetail);
     // console.log('ogm_id:', ogm_id);
     const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id, hotel_id);
     // console.log('ogmReservationAddons:', ogmReservationAddons);
 
     // Update reservation guests
     for (let i = 0; i < number_of_people; i++) {
-      await updateReservationGuest(req.requestId, ogm_id, newReservationAddon.id);
+      await updateReservationGuest(req.requestId, ogm_id, newReservationDetail.id, client);
       // console.log('Updated ', i + 1,' of number of guests: ',number_of_people);
     }
 
@@ -615,7 +620,7 @@ const createReservationDetails = async (req, res) => {
       const addOnPromises = ogmReservationAddons.map(addon =>
         addReservationAddon(req.requestId, {
           hotel_id: addon.hotel_id,
-          reservation_detail_id: newReservationAddon.id,
+          reservation_detail_id: newReservationDetail.id,
           addons_global_id: addon.addons_global_id,
           addons_hotel_id: addon.addons_hotel_id,
           addon_name: addon.addon_name,
@@ -625,22 +630,27 @@ const createReservationDetails = async (req, res) => {
           tax_rate: addon.tax_rate,
           created_by: updated_by,
           updated_by,
-        })
+        }, client)
       );
 
       // Wait for all add-ons to be added
       await Promise.all(addOnPromises);
     }
 
+    await client.query('COMMIT');
+
     // Send success response
     res.status(201).json({
       message: 'Reservation details and addons created successfully',
-      reservation_detail: newReservationAddon,
+      reservation_detail: newReservationDetail,
     });
 
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error creating reservation detail:', err);
     res.status(500).json({ error: 'Failed to create reservation detail' });
+  } finally {
+    client.release();
   }
 };
 
