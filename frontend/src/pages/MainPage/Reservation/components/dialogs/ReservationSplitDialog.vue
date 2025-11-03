@@ -1,8 +1,11 @@
 <template>
     <Dialog v-model:visible="showDialog" header="予約分割" modal :style="{ width: '50vw' }">
         <div class="p-fluid">
-                            <div class="field mt-6">
-                                <FloatLabel>                    <DatePicker id="dates" v-model="selectedDates" selectionMode="range" :manualInput="false" showIcon fluid :minDate="minDate" :maxDate="maxDate" dateFormat="yy-mm-dd" :numberOfMonths="2" :selectOtherMonths="true" />
+            <div class="field mt-6">
+                <FloatLabel>
+                    <DatePicker id="dates" v-model="selectedDates" selectionMode="range" :manualInput="false" showIcon
+                        fluid :minDate="minDate" :maxDate="maxDate" dateFormat="yy-mm-dd" :numberOfMonths="2"
+                        :selectOtherMonths="true" />
                     <label for="dates">日付範囲</label>
                 </FloatLabel>
             </div>
@@ -11,7 +14,8 @@
                 <Fieldset v-for="group in groupedRooms" :key="group.name" :legend="group.name" :toggleable="true">
                     <div class="flex flex-wrap">
                         <div v-for="room in group.rooms" :key="room.room_id" class="flex items-center mr-4 mb-2">
-                            <Checkbox v-model="selectedRooms" :inputId="String(room.room_id)" name="room" :value="room.room_id" />
+                            <Checkbox v-model="selectedRooms" :inputId="String(room.room_id)" name="room"
+                                :value="room.room_id" />
                             <label :for="String(room.room_id)" class="ml-2">{{ room.room_number }}</label>
                         </div>
                     </div>
@@ -19,14 +23,17 @@
             </div>
         </div>
         <template #footer>
-            <Button label="キャンセル" icon="pi pi-times" @click="showDialog = false" class="p-button-text" severity="danger" />
-            <Button label="分割" icon="pi pi-check" @click="handleSplit" :loading="isSubmitting" :disabled="isSplitButtonDisabled" />
+            <Button label="キャンセル" icon="pi pi-times" @click="showDialog = false" class="p-button-text"
+                severity="danger" />
+            <Button label="分割" icon="pi pi-check" @click="handleSplit" :loading="isSubmitting"
+                :disabled="isSplitButtonDisabled" />
         </template>
     </Dialog>
 </template>
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
 import DatePicker from 'primevue/datepicker';
 import Checkbox from 'primevue/checkbox';
@@ -37,15 +44,25 @@ import { useReservationStore } from '@/composables/useReservationStore';
 import { useToast } from 'primevue/usetoast';
 
 const props = defineProps({
-    visible: Boolean,
-    reservation_id: String,
-    reservation_details: Array,
+    visible: {
+        type: Boolean,
+        required: true,
+    },
+    reservation_id: {
+        type: String,
+        required: true,
+    },
+    reservation_details: {
+        type: Array,
+        required: true,
+    },
 });
 
 const emit = defineEmits(['update:visible']);
 
 const { splitReservation } = useReservationStore();
 const toast = useToast();
+const router = useRouter();
 
 const isSubmitting = ref(false);
 const selectedDates = ref([]);
@@ -86,17 +103,19 @@ const groupedRooms = computed(() => {
 });
 
 const minDate = computed(() => {
-    if (!props.reservation_details || props.reservation_details.length === 0) {
+    if (!props.reservation_details?.[0]?.check_in) {
         return null;
     }
     return new Date(props.reservation_details[0].check_in);
 });
 
 const maxDate = computed(() => {
-    if (!props.reservation_details || props.reservation_details.length === 0) {
+    const checkOutString = props.reservation_details?.[0]?.check_out;
+    if (!checkOutString || isNaN(new Date(checkOutString).getTime())) {
         return null;
     }
-    const checkOutDate = new Date(props.reservation_details[0].check_out);
+    const checkOutDate = new Date(checkOutString);
+    // Subtract one day because the checkout day is exclusive for split logic
     checkOutDate.setDate(checkOutDate.getDate() - 1);
     return checkOutDate;
 });
@@ -154,14 +173,18 @@ const handleSplit = async () => {
 
     isSubmitting.value = true;
     try {
+        if (!Array.isArray(props.reservation_details) || props.reservation_details.length === 0) {
+            throw new Error('Reservation details not found or empty.');
+        }
         const hotelId = props.reservation_details[0]?.hotel_id;
         if (!hotelId) {
             throw new Error('Hotel ID not found');
         }
 
-        await splitReservation(props.reservation_id, hotelId, reservationDetailIdsToMove.value);
+        const newReservationId = await splitReservation(props.reservation_id, hotelId, reservationDetailIdsToMove.value);
         toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に分割されました。', life: 3000 });
         showDialog.value = false;
+        router.push(`/reservations/edit/${newReservationId}`);
     } catch (error) {
         console.error('Error splitting reservation:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '予約の分割に失敗しました。', life: 3000 });

@@ -1515,8 +1515,19 @@ export function useReservationStore() {
     };
 
     const splitReservation = async (originalReservationId, hotelId, reservationDetailIdsToMove) => {
+        // Early Input Validation
+        if (!originalReservationId) {
+            throw new Error('Original reservation ID is required.');
+        }
+        if (typeof hotelId !== 'number') {
+            throw new Error('Hotel ID must be a number.');
+        }
+        if (!Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0) {
+            throw new Error('Reservation detail IDs to move must be a non-empty array.');
+        }
+
+        setReservationIsUpdating(true);
         try {
-            setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/split`;
             const response = await fetch(url, {
@@ -1533,14 +1544,34 @@ export function useReservationStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to split reservation');
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                let errorData = {};
+                try {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } else {
+                        const textError = await response.text();
+                        if (textError) errorMessage = textError;
+                    }
+                } catch (parseError) {
+                    console.error('Error parsing error response:', parseError);
+                }
+                throw new Error(errorMessage);
             }
-            setReservationIsUpdating(false);
-            return await response.json();
+
+            const result = await response.json();
+            if (!result.newReservationId) {
+                throw new Error('API did not return new reservation ID.');
+            }
+            return result.newReservationId;
+
         } catch (error) {
-            setReservationIsUpdating(false);
             console.error('Error splitting reservation:', error);
             throw error;
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
 

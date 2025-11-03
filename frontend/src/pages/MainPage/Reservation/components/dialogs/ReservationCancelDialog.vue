@@ -104,13 +104,11 @@ const handleFullDayCancel = async () => {
         // Update all reservation details in parallel
         const detailUpdatePromises = props.reservation_details.map(detail =>
             setReservationDetailStatus(detail.id, detail.hotel_id, 'cancelled', true) // Set billable to true for all details
-                .then(() => ({ status: 'fulfilled', value: detail }))
-                .catch(reason => ({ status: 'rejected', reason, value: detail }))
         );
 
         const results = await Promise.allSettled(detailUpdatePromises);
 
-        const failedUpdates = results.filter(result => result.status === 'rejected');
+        const failedUpdates = results.filter(result => result.status === 'rejected' || (result.value && result.value.status === 'rejected'));
 
         if (failedUpdates.length > 0) {
             console.error('Failed to update some reservation details for full day cancel:', failedUpdates);
@@ -138,6 +136,7 @@ const confirmPartialCancel = async () => {
     try {
         if (!cancelEndDate.value) {
             toast.add({ severity: 'warn', summary: '警告', detail: 'キャンセル終了日を選択してください。', life: 3000 });
+            isSubmitting.value = false;
             return;
         }
 
@@ -147,13 +146,11 @@ const confirmPartialCancel = async () => {
         // Update individual reservation details in parallel
         const detailUpdatePromises = cancelledIds.value.map(detail =>
             setReservationDetailStatus(detail.id, detail.hotel_id, 'cancelled', true) // Set billable to true
-                .then(() => ({ status: 'fulfilled', value: detail }))
-                .catch(reason => ({ status: 'rejected', reason, value: detail }))
         );
 
         const results = await Promise.allSettled(detailUpdatePromises);
 
-        const failedUpdates = results.filter(result => result.status === 'rejected');
+        const failedUpdates = results.filter(result => result.status === 'rejected' || (result.value && result.value.status === 'rejected'));
 
         if (failedUpdates.length > 0) {
             console.error('Failed to update some reservation details:', failedUpdates);
@@ -220,47 +217,5 @@ watch(() => props.reservation_details, (newDetails) => {
     }
 }, { immediate: true });
 
-// Initialize min/max dates for cancellation
-// This should ideally be done when the dialog is opened or when reservation_details change
-// For now, we'll set it up to react to reservation_details changes
-watch(() => props.reservation_details, (newDetails) => {
-    if (newDetails && newDetails.length > 0 && newDetails[0]) {
-        const checkInString = newDetails[0].check_in;
-        const checkOutString = newDetails[0].check_out;
 
-        let validCheckInDate = null;
-        if (checkInString) {
-            const date = new Date(checkInString);
-            if (!isNaN(date.getTime())) {
-                validCheckInDate = date;
-            }
-        }
-
-        let validCheckOutDate = null;
-        if (checkOutString) {
-            const date = new Date(checkOutString);
-            if (!isNaN(date.getTime())) {
-                validCheckOutDate = date;
-            }
-        }
-
-        if (validCheckInDate) {
-            cancelEndDate.value = new Date(validCheckOutDate || validCheckInDate); // Default to checkOutDate, or checkInDate if no checkout
-            cancelMinDate.value = new Date(validCheckInDate);
-        } else {
-            cancelEndDate.value = null;
-            cancelMinDate.value = null;
-        }
-
-        if (validCheckOutDate) {
-            cancelMaxDate.value = validCheckOutDate;
-        } else {
-            cancelMaxDate.value = null;
-        }
-    } else {
-        cancelEndDate.value = null;
-        cancelMinDate.value = null;
-        cancelMaxDate.value = null;
-    }
-}, { immediate: true });
 </script>
