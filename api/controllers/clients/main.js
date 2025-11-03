@@ -4,7 +4,7 @@ const logger = require('../../config/logger');
 
 // GET
 const getClients = async (req, res) => {
-  const { page } = req.params;
+    const page = parseInt(req.params.page, 10) || 1; // Default to page 1 if not provided or invalid
   const limit = 5000;
   const offset = (page - 1) * limit;
 
