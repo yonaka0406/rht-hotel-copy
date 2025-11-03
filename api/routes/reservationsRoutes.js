@@ -15,6 +15,7 @@ router.get('/reservation/query/:hid/:rid/:ci/:co', authMiddleware, reservationsC
 router.get('/reservation/list/clients/:hid/:id', authMiddleware, reservationsController.getReservationClientIds);
 router.get('/reservation/payment/list/:hid/:id', authMiddleware, reservationsController.getReservationPayments);
 router.get('/reservation/hotel-id/:id', authMiddleware, reservationsController.getHotelIdForReservation); // New route
+router.get('/reservation/:reservationId/mergeable', authMiddleware, reservationsController.getMergeableReservations);
 
 // Parking reservation routes
 router.get('/reservation/parking/:hid/:id', authMiddlewareCRUDAccess, reservationsController.getReservationParking);
@@ -32,6 +33,7 @@ router.post('/reservation/payment/add', authMiddlewareCRUDAccess, reservationsCo
 router.post('/reservation/payment/bulk-add', authMiddlewareCRUDAccess, reservationsController.createBulkReservationPayment);
 router.post('/reservation/update/details', authMiddlewareCRUDAccess, reservationsController.createReservationDetails);
 router.post('/reservation/split', authMiddlewareCRUDAccess, reservationsController.actionSplitReservation);
+router.post('/reservation/:mainReservationId/merge', authMiddlewareCRUDAccess, reservationsController.mergeReservations);
 
 router.put('/reservation/update/details/:id', authMiddlewareCRUDAccess, reservationsController.editReservationDetail);
 router.put('/reservation/update/detail/status/:id', authMiddlewareCRUDAccess, reservationsController.editReservationDetailStatus);

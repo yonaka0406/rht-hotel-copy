@@ -10,6 +10,7 @@ const {
   insertCopyReservation, selectReservationParking, deleteParkingReservation, deleteBulkParkingReservations, cancelReservationRooms: cancelReservationRoomsModel,
   updatePaymentTiming, updateReservationRoomsPeriod, splitReservation,
 } = require('../models/reservations');
+const { getMergeableReservations, mergeReservations } = require('./reservationsMergeController');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
@@ -1617,4 +1618,6 @@ module.exports = {
   deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations,
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
   editPaymentTiming, changeReservationRoomsPeriod, actionSplitReservation,
+  getMergeableReservations,
+  mergeReservations,
 };

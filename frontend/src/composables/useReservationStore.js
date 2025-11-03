@@ -117,6 +117,31 @@ export function useReservationStore() {
         }
     };
 
+    const fetchMergeableReservations = async (reservationId, hotelId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/${reservationId}/mergeable?hotelId=${hotelId}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to fetch mergeable reservations');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Error fetching mergeable reservations:', error);
+            throw error;
+        }
+    };
+
     const convertBlockToReservation = async (reservationId, client) => {
         try {
             setReservationIsUpdating(true);
@@ -1544,6 +1569,35 @@ export function useReservationStore() {
         }
     };
 
+    const mergeReservations = async (mainReservationId, hotelId, reservationIdsToMerge) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/${mainReservationId}/merge`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    hotelId,
+                    reservationIdsToMerge,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to merge reservations');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();
+        } catch (error) {
+            setReservationIsUpdating(false);
+            console.error('Error merging reservations:', error);
+            throw error;
+        }
+    };
+
 
     return {
         reservationIsUpdating,
@@ -1606,5 +1660,7 @@ export function useReservationStore() {
         setReservationRoomsPeriod,
         blockMultipleRooms,
         splitReservation,
+        fetchMergeableReservations,
+        mergeReservations,
     };
 }

@@ -5,6 +5,7 @@ const updateModels = require('./update');
 const deleteModels = require('./delete');
 const roomsModels = require('./rooms');
 const splitModels = require('./split');
+const mergeModels = require('./merge');
 
 module.exports = {
   ...main,
@@ -14,4 +15,5 @@ module.exports = {
   ...deleteModels,
   ...roomsModels,
   ...splitModels,
+  ...mergeModels,
 };
