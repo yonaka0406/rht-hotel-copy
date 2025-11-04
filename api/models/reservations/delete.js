@@ -178,6 +178,11 @@ const deleteReservationPayment = async (requestId, id, userId) => {
     );
     const reservationPayment = reservationPaymentResult.rows[0];
 
+    if (!reservationPayment) {
+      await client.query('ROLLBACK');
+      return { success: false, message: 'Payment not found' };
+    }
+
     const existingInvoiceResult = await client.query(
       `
         SELECT * 
@@ -211,6 +216,10 @@ const deleteReservationPayment = async (requestId, id, userId) => {
     return { success: true };
   } catch (err) {
     await client.query('ROLLBACK');
+    console.error(`[${requestId}] Transaction failed during payment deletion. Rolling back. Error:`, {
+      error: err.message,
+      stack: err.stack
+    });
     throw err;
   } finally {
     client.release();

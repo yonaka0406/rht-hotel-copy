@@ -1403,10 +1403,15 @@ const delReservationPayment = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    await deleteReservationPayment(req.requestId, id, user_id);
+    const result = await deleteReservationPayment(req.requestId, id, user_id);
+
+    if (result && result.success === false) {
+      return res.status(404).json({ error: result.message || 'Payment not found' });
+    }
+
     res.status(200).json({ message: "Payment deleted successfully" });
   } catch (err) {
-    console.error("Error deleting room:", err);
+    console.error("Error deleting payment:", err);
     res.status(500).json({ error: "Failed to delete payment" });
   }
 
