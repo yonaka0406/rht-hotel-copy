@@ -597,6 +597,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.30] - 2025-11-05
+
+- Feature: Implemented split reservation functionality, allowing reservations to be divided into multiple parts while maintaining all associated data and history.
+
+---
+
 ## Version History
 - **1.1.29** (2025-10-31) - Enhanced reservation management with cancellation type controls and client list exports. Improved OTA booking visualization, fixed payment calculations for cancelled dates, and resolved invoice ID generation for shared reservations. Added reliable Google Sheets API authentication.
 - **1.1.28** (2025-10-30) - Added OTA notifications drawer for better alert management and fixed bulk cancellation pricing. Improved date cancellation handling in Room Indicator to properly manage room status during partial stay cancellations.

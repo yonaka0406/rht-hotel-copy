@@ -5,6 +5,27 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 5, 2025
+
+#### UI/UX Improvements for Wehub Interface
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Tomakomai Staff (Ms. Ikejiri)
+- **Description**: 
+  - **Cursor Tooltip Issue**: The black tooltip that follows the cursor during reservation lookups is distracting and often blocks content
+  - **Meal Count Display**: The spacing between dates and meal counts is too wide, causing display issues on smaller screens and mobile devices
+- **Requested Changes**:
+  1. **Tooltip Behavior**:
+     - Show company information only when clicking on the company field instead of on hover
+     - Remove or make the tooltip less intrusive during cursor movement
+  2. **Meal Count Display**:
+     - Reduce spacing between date and meal count information
+     - Make dividing lines between items more prominent for better readability on small screens
+- **Technical Notes**:
+  - Ensure changes maintain mobile responsiveness
+  - Consider adding a setting to toggle tooltip behavior if some users prefer the current implementation
+  - Test with various screen sizes to ensure readability
+
 ### November 3, 2025
 
 #### Feature Request: Calendar Month Navigation Enhancement
