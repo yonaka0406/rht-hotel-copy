@@ -288,22 +288,7 @@ const { reservationList, fetchReservationListView, exportReservationList, export
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
-// Helper function
-const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        console.error("Invalid Date object:", date);
-        throw new Error("The provided input is not a valid Date object:");
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
-const formatDateWithDay = (date) => {
-    const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
-    const parsedDate = new Date(date);
-    return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-};
+import { formatDate, formatDateWithDay } from '@/utils/dateUtils';
 const formatCurrency = (value) => {
     if (value == null) return '';
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
@@ -332,7 +317,7 @@ const loadTableData = async () => {
         );
         tableHeader.value = `予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`;
     } catch (error) {
-        console.error('Error loading table data:', error);
+
         toast.add({ severity: 'error', summary: 'エラー', detail: 'データの読み込み中にエラーが発生しました', life: 3000 });
     } finally {
         tableLoading.value = false;
@@ -349,7 +334,7 @@ const totalPrice = computed(() => {
         if (!isNaN(price)) {
             return sum + price;
         } else {
-            console.warn(`Invalid price encountered: ${reservation.price}`);
+
             return sum;
         }
     }, 0);
@@ -361,7 +346,7 @@ const totalPayments = computed(() => {
         if (!isNaN(payment)) {
             return sum + payment;
         } else {
-            console.warn(`Invalid payment encountered: ${reservation.payment}`);
+
             return sum;
         }
     }, 0);
@@ -456,8 +441,8 @@ const filteredReservations = computed(() => {
     let filteredList = reservationList.value;
     // Debug: log the first reservation's clients_json and payers_json
     if (filteredList && filteredList.length > 0) {
-        console.log('[ReservationList] first reservation clients_json:', filteredList[0].clients_json);
-        console.log('[ReservationList] first reservation payers_json:', filteredList[0].payers_json);
+
+
     }
     // merged_clients
     if (filteredList) {
@@ -511,13 +496,13 @@ const filteredReservations = computed(() => {
             ].filter(Boolean).map(x => x.toLowerCase()));
 
             // Debug logs
-            console.log('[ClientFilter] filter value:', filterClients);
-            console.log('[ClientFilter] bookerFields:', bookerFields);
-            console.log('[ClientFilter] clientFields:', clientFields);
+
+
+
 
             // Match if any field contains the filter string
             const match = [...bookerFields, ...clientFields].some(field => field.includes(filterClients));
-            console.log('[ClientFilter] reservation id', reservation.id, 'match:', match);
+
             return match;
         });
     }
@@ -588,7 +573,7 @@ const formatClientNames = (clients) => {
 };
 const openDrawer = (event) => {
     selectedReservation.value = event.data;
-    // console.log('selectedReservation:',selectedReservation.value)        ;
+
     drawerVisible.value = true;
 };
 
@@ -658,7 +643,7 @@ watch(clientsJsonFilterInput, debounce((newValue) => {
 watch(selectedReservations, (newValue) => {
     if (drawerVisible.value === false) {
         drawerSelectVisible.value = newValue.length > 0;
-        //console.log('watch selectedReservations:', newValue)
+
     }
 });
 
