@@ -343,6 +343,14 @@ const invoiceData = ref({});
 const invoiceDBData = ref({});
 const openInvoiceDialog = (data) => {
     const selectedDate = new Date(selectedMonth.value);
+    const invoiceDate = new Date(data.date);
+
+    // If the selected month is different from the invoice month, create a new invoice
+    if (selectedDate.getFullYear() !== invoiceDate.getFullYear() || selectedDate.getMonth() !== invoiceDate.getMonth()) {
+        data.id = null;
+        data.invoice_number = null;
+    }
+
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
