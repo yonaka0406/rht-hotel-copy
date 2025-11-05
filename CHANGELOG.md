@@ -601,6 +601,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 - Feature: Implemented split reservation functionality, allowing reservations to be divided into multiple parts while maintaining all associated data and history.
 - Bugfix: Fixed an issue where reservations with invoices spanning different months were not appearing for invoice creation, ensuring all eligible reservations are now properly included.
+- Bugfix: Fixed invoice payment distribution to correctly include the last day of the billing period by ensuring consistent date formatting and proper timezone handling between frontend and backend.
 
 ---
 
