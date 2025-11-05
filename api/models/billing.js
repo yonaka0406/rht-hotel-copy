@@ -227,6 +227,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
           AND rd.reservation_id = reservations.id
           AND rd.room_id = reservation_payments.room_id
           AND rd.billable = TRUE
+          AND rd.hotel_id = $1
           AND rd.date >= date_trunc('month', $2::date)
           AND rd.date < date_trunc('month', $2::date) + interval '1 month'
       ) AS reservation_details_json
@@ -248,7 +249,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
               AND rd.room_id = reservation_payments.room_id
-              AND rd.billable = TRUE              
+              AND rd.billable = TRUE
+              AND rd.hotel_id = $1           
               AND rd.date >= date_trunc('month', $2::date)
               AND rd.date < date_trunc('month', $2::date) + interval '1 month'
 
@@ -264,7 +266,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
               AND rd.room_id = reservation_payments.room_id
-              AND rd.billable = TRUE              
+              AND rd.billable = TRUE
+              AND rd.hotel_id = $1           
               AND rd.date >= date_trunc('month', $2::date)
               AND rd.date < date_trunc('month', $2::date) + interval '1 month'
           ) AS inside
@@ -282,7 +285,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
         LEFT JOIN
       (SELECT hotel_id, reservation_id, room_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
         FROM reservation_details
-        WHERE billable = TRUE
+        WHERE billable = TRUE AND hotel_id = $1
           -- Add the month filter to this subquery
           AND date >= date_trunc('month', $2::date)
           AND date < date_trunc('month', $2::date) + interval '1 month'
@@ -291,13 +294,13 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id AND details.room_id = reservation_payments.room_id
         JOIN
       invoices
-      ON invoices.id = reservation_payments.invoice_id
+      ON invoices.id = reservation_payments.invoice_id AND invoices.hotel_id = reservation_payments.hotel_id
         JOIN
       rooms
-      ON rooms.id = reservation_payments.room_id
+      ON rooms.id = reservation_payments.room_id AND rooms.hotel_id = reservation_payments.hotel_id
         JOIN
       room_types
-      ON room_types.id = rooms.room_type_id
+      ON room_types.id = rooms.room_type_id AND room_types.hotel_id = rooms.hotel_id
         JOIN
       clients
       ON clients.id = reservation_payments.client_id
