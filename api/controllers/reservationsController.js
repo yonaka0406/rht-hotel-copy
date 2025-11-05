@@ -1560,11 +1560,14 @@ const editPaymentTiming = async (req, res) => {
   const updated_by = req.user.id;
 
   try {
-    const updatedReservation = await updatePaymentTiming(req.requestId, id, hotel_id, payment_timing, updated_by);
+    // Ensure payment_timing has a default value if it's null or undefined
+    const paymentTimingValue = payment_timing || 'not_set';
+    const updatedReservation = await updatePaymentTiming(req.requestId, id, hotel_id, paymentTimingValue, updated_by);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating payment timing:', err);
-    res.status(500).json({ error: 'Failed to update payment timing' });
+    // Send a more informative error response
+    res.status(err.statusCode || 500).json({ error: err.message || 'Failed to update payment timing' });
   }
 };
 
