@@ -11,7 +11,7 @@ const {
   linkPaymentToReceipt
 } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-const { getBrowser, closeBrowser } = require('../services/puppeteerService');
+const { getBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -149,15 +149,9 @@ const generateInvoice = async (req, res) => {
     res.setHeader('X-Invoice-Number', invoiceData.invoice_number);
     res.contentType("application/pdf");
     res.send(Buffer.from(pdfBuffer));
-  } catch (error) {
-    console.error("Error generating PDF with Puppeteer:", error);
-    res.status(500).send('Error generating blank PDF');
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
-    }
-    if (browser) {
-      await closeBrowser(browser);
     }
   }
 };
@@ -367,7 +361,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
         let sequence = 1;
         if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-          sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
+          sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
         }
         receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
         receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
@@ -426,7 +420,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
         let sequence = 1;
         if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-          sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
+          sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
         }
         receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
         receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
@@ -541,9 +535,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
-    }
-    if (browser) {
-      await closeBrowser(browser);
     }
   }
 };

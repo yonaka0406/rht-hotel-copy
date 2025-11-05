@@ -38,9 +38,9 @@
                     <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
                     
                     <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
-                        <template #filter="{ filterModel, filterCallback }">                        
+                        <template #filter="{ filterModel: _filterModel, filterCallback }">                        
                             <Select 
-                                v-model="filterModel.value" 
+                                v-model="_filterModel.value" 
                                 :options="statusOptions" 
                                 optionLabel="label"
                                 optionValue="value" 
@@ -62,7 +62,7 @@
                         </template>                    
                     </Column>
                     <Column field="booker_name" filterField="booker_name" header="予約者" style="width:1%" :showFilterMenu="false">
-                        <template #filter="{ filterModel }">
+                        <template #filter="{}">
                             <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
                         </template>
                     </Column>                
