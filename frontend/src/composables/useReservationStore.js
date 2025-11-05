@@ -16,6 +16,7 @@ const parkingSpotAvailability = ref([]);
 
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId } = useHotelStore();    
+import { isValidDateString } from '@/utils/formatUtils';
 
 export function useReservationStore() {
     // Helper
@@ -29,6 +30,7 @@ export function useReservationStore() {
         const roomDateObj = new Date(roomDate);
         return roomDateObj >= new Date(startDate) && roomDateObj <= new Date(endDate);
     };
+
 
     // Set
     const setReservationIsUpdating = (bool) => {
@@ -733,6 +735,20 @@ export function useReservationStore() {
         }
     };
     const fetchReservedRooms = async (hotelId, startDate, endDate) => {
+        // Validate hotelId
+        if (!Number.isInteger(hotelId)) {
+            console.warn('Invalid hotelId provided to fetchReservedRooms. hotelId must be an integer. Skipping API call.');
+            reservedRooms.value = [];
+            return;
+        }
+
+        // Validate dates before making the API call
+        if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+            console.warn('Invalid date format provided to fetchReservedRooms. Skipping API call.');
+            reservedRooms.value = []; // Clear previous results if dates become invalid
+            return; // Do not proceed with the API call
+        }
+
         // console.log('From Reservation Store => fetchReservedRooms');
         try {
             const authToken = localStorage.getItem('authToken');            
