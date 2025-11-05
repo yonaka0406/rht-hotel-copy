@@ -486,7 +486,9 @@
                     period_payable: reservation.period_payable,
                     client_id: clientId,
                     date: billingDate,
-                    details: billingDetails
+                    details: billingDetails,
+                    period_start: reservation.period_start,
+                    period_end: formatDate(new Date(reservation.period_end))
                 };
             }).filter(payload => payload !== null);
 

@@ -81,7 +81,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
 
     // Process each reservation in the data array
     for (const reservation of data) {
-      const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id);
+      const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id, reservation.period_end);
       let remainingPayment = reservation.period_payable;
       // Insert payment for each room, distributing the period_payable amount
       for (const balanceRow of balanceRows) {
@@ -92,7 +92,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
 
         if (roomPayment > 0) {
           const query = `
-            INSERT INTO reservation_payments (
+            INSERT INTO reservation_payments ( 
               hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
             RETURNING *;
@@ -127,9 +127,17 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
     client.release();
   }
 };
-
-const selectReservationBalance = async (requestId, hotelId, reservationId) => {
+const selectReservationBalance = async (requestId, hotelId, reservationId, endDate = null) => {
   const pool = getPool(requestId);
+  
+  let dateFilterQuery = '';
+  const values = [hotelId, reservationId];
+
+  if (endDate) {
+    dateFilterQuery = 'AND rd.date <= $3';
+    values.push(endDate);
+  }
+
   const query = `
     SELECT
       details.hotel_id,
@@ -173,7 +181,7 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
               ra_sub.reservation_detail_id
       ) AS ra_agg ON rd.id = ra_agg.reservation_detail_id
       WHERE
-        rd.hotel_id = $1 AND rd.reservation_id = $2
+        rd.hotel_id = $1 AND rd.reservation_id = $2 ${dateFilterQuery}
       GROUP BY
         rd.hotel_id, rd.reservation_id, rd.room_id
     ) AS details
@@ -193,8 +201,6 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
     ORDER BY
       1, 2, 6 DESC;
   `;
-
-  const values = [hotelId, reservationId];
   try {
     const result = await pool.query(query, values);
     return result.rows;
