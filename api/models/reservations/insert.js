@@ -9,22 +9,26 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
     await client.query('BEGIN');
 
     if (paymentTypeId === 5) {
-      // Check if an invoice already exists for the given criteria
-      // 1. Check for an existing invoice_id for this client and reservation
+      // Check if an invoice already exists for the given criteria for the same month
       const existingInvoicePaymentResult = await client.query(
         `
-          SELECT invoice_id
-          FROM reservation_payments
-          WHERE hotel_id = $1 AND reservation_id = $2 AND client_id = $3 AND invoice_id IS NOT NULL
+          SELECT rp.invoice_id
+          FROM reservation_payments rp
+          JOIN invoices i ON rp.invoice_id = i.id
+          WHERE rp.hotel_id = $1
+            AND rp.reservation_id = $2
+            AND rp.client_id = $3
+            AND rp.invoice_id IS NOT NULL
+            AND date_trunc('month', i.date) = date_trunc('month', $4::date)
           LIMIT 1;
         `,
-        [hotelId, reservationId, clientId]
+        [hotelId, reservationId, clientId, date]
       );
 
       if (existingInvoicePaymentResult.rows.length > 0) {
         invoiceId = existingInvoicePaymentResult.rows[0].invoice_id;
       } else {
-        // 2. If no existing invoice_id found, create a new invoice
+        // If no existing invoice_id found for the same month, create a new invoice
         const newInvoiceResult = await client.query(
           `
           INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
