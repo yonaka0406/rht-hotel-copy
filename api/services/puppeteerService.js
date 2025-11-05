@@ -14,6 +14,7 @@ const getBrowser = async () => {
 
   browserLaunchPromise = puppeteer.launch({
     headless: "new",
+    protocolTimeout: 120000, // Increase timeout to 2 minutes
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -72,11 +73,9 @@ const shutdown = async (signal) => {
   console.log(`Received ${signal}. Closing Puppeteer browser...`);
   try {
     await closeSingletonBrowser();
-    console.log('Puppeteer browser closed. Exiting process.');
-    process.exit(0);
+    console.log('Puppeteer browser closed gracefully.');
   } catch (err) {
     console.error('Error during graceful shutdown:', err);
-    process.exit(1);
   }
 };
 

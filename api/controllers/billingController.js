@@ -238,10 +238,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const taxBreakdownData = req.body.taxBreakdownData;
   const forceRegenerate = req.body.forceRegenerate;
 
-  let browser;
-  let page;
-
   //console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
+  let page = null; // Initialize page to null
 
   try {
     const userInfo = await getUsersByID(req.requestId, userId);
@@ -472,7 +470,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
       generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf) :
       generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
 
-    browser = await getBrowser();
+    const browser = await getBrowser(); // Get browser instance once
     page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
