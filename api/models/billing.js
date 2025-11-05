@@ -217,8 +217,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.billing_preference
       -- The subquery for total people and stays count needed to be filtered by month.
       -- This now correctly counts only the dates within the specified month.
-      ,details.number_of_people as total_people
-      ,details.date as stays_count
+      ,COALESCE(details.number_of_people, 0) as total_people
+      ,COALESCE(details.date, 0) as stays_count
       -- The subquery for reservation details needed to be filtered by month.
       ,(
         SELECT json_agg(rd)
@@ -279,7 +279,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
         JOIN
       reservation_payments
       ON reservation_payments.hotel_id = reservations.hotel_id AND reservation_payments.reservation_id = reservations.id
-        JOIN
+        LEFT JOIN
       (SELECT hotel_id, reservation_id, room_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
         FROM reservation_details
         WHERE billable = TRUE
@@ -303,8 +303,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ON clients.id = reservation_payments.client_id
     WHERE
       invoices.hotel_id = $1
-      AND invoices.date >= date_trunc('month', $2::date)
-      AND invoices.date < date_trunc('month', $2::date) + interval '1 month'
+      AND reservation_payments.date >= date_trunc('month', $2::date)
+      AND reservation_payments.date < date_trunc('month', $2::date) + interval '1 month'
   ;`;
   const values = [hotelId, month];
 

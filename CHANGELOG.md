@@ -600,6 +600,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.1.30] - 2025-11-05
 
 - Feature: Implemented split reservation functionality, allowing reservations to be divided into multiple parts while maintaining all associated data and history.
+- Bugfix: Fixed an issue where reservations with invoices spanning different months were not appearing for invoice creation, ensuring all eligible reservations are now properly included.
 
 ---
 
