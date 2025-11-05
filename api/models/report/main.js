@@ -463,7 +463,7 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
           ORDER BY room_type_id, date DESC
       )
       SELECT 
-          3 AS hotel_id,
+          $1 AS hotel_id,
           d.date,
           rt.room_type_id,
           rt.netrmtypegroupcode,
