@@ -258,7 +258,8 @@ const router = useRouter();
 import ReservationEdit from './Reservation/ReservationEdit.vue';
 
 const goToReservation = () => {
-    router.push({ name: 'ReservationEdit', params: { reservation_id: selectedReservation.value.id } });
+    const routeData = router.resolve({ name: 'ReservationEdit', params: { reservation_id: selectedReservation.value.id } });
+    window.open(routeData.href, '_blank');
 };
 
 // Primevue
