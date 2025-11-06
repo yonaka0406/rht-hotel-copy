@@ -4,6 +4,7 @@
     <div class="field mt-2">
       <FloatLabel>
         <Select
+          fluid
           id="vehicleCategory"
           v-model="selectedVehicleCategoryId"
           :options="vehicleCategories"
@@ -11,7 +12,6 @@
           option-value="id"          
           :loading="loadingCategories"
           :disabled="disabled"
-          class="w-full"
           @change="onVehicleCategoryChange"
         >
           <template #option="slotProps">
@@ -38,67 +38,38 @@
       <small v-if="vehicleCategoryError" class="p-error">{{ vehicleCategoryError }}</small>
     </div>
 
-    <!-- Parking Spot Selection -->
+    <!-- Number of Spots Selection -->
     <div class="field mt-4" v-if="selectedVehicleCategoryId">
       <FloatLabel>
-        <Select
-          id="parkingSpot"
-          v-model="selectedSpotId"
-          :options="availableSpots"
-          option-label="displayName"
-          option-value="id"          
-          :loading="loadingSpots"
-          :disabled="disabled || !selectedVehicleCategoryId"
-          class="w-full"
-          @change="onSpotChange"
-        >
-          <template #option="slotProps">
-            <div class="parking-spot-option">
-              <div class="spot-color-indicator" :style="{ backgroundColor: getSpotColor(slotProps.option.spot_type) }"></div>
-              <div class="spot-info-container">
-                <div class="spot-header">
-                  <span class="spot-number">{{ slotProps.option.spotNumber }}</span>
-                  <span class="parking-lot-name">{{ slotProps.option.parkingLotName }}</span>
-                </div>
-                <div class="spot-details">
-                  <div class="capacity-match">
-                    <small :class="getCapacityMatchClass(slotProps.option)">
-                      容量: {{ slotProps.option.capacityUnits }} 単位
-                      <span v-if="slotProps.option.capacityMatch">
-                        ({{ slotProps.option.capacityMatch.isExactMatch ? '完全一致' : `+${slotProps.option.capacityMatch.excess}` }})
-                      </span>
-                    </small>
-                  </div>
-                  <div class="availability-info" v-if="slotProps.option.availabilityInfo">
-                    <small class="text-success">
-                      <i class="pi pi-check-circle"></i>
-                      利用可能
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-          <template #value="slotProps">
-            <div v-if="slotProps.value" class="selected-spot">
-              <span>{{ getSelectedSpotDisplay() }}</span>
-            </div>
-          </template>
-        </Select>
-        <label for="parkingSpot">駐車スポット *</label>
+        <InputNumber
+          fluid
+          id="numberOfSpots"
+          v-model="numberOfSpots"
+          :min="1"
+          :max="totalAvailableSpots"
+          :disabled="disabled || !selectedVehicleCategoryId || loadingSpots"
+          @input="onNumberOfSpotsChange"
+        />
+        <label for="numberOfSpots">必要台数 *</label>
       </FloatLabel>
       <small v-if="spotError" class="p-error">{{ spotError }}</small>
+      <small v-else-if="selectedVehicleCategoryId && dates.length > 0 && totalAvailableSpots > 0" class="p-help">
+        最大{{ totalAvailableSpots }}台まで選択できます
+      </small>
     </div>
 
 
-    <div v-if="filteredParkingSpotAvailability.length > 0" class="availability-details">
+    <div v-if="parkingSpotAvailability.length > 0" class="availability-details">
       <div class="proportional-stats-grid">
-        <div v-for="spot in filteredParkingSpotAvailability" :key="`${spot.width}-${spot.height}`" class="stat-container">
+        <div v-for="spot in parkingSpotAvailability" :key="spot.spot_type" class="stat-container">
           <div class="stat-item" :style="{ width: `${spot.width * 20}px`, height: `${spot.height * 20}px`, backgroundColor: getSpotColor(spot.spot_type) }">
             <div class="stat-value">{{ spot.available_spots }}</div>
           </div>
           <div class="stat-label">
             幅 {{ spot.width }} x 長さ {{ spot.height }}
+            <div v-if="selectedVehicleCategoryId" class="spots-needed-message">
+              (必要数: {{ (getSelectedCategoryCapacity() / spot.capacity_units).toFixed(1) }}台)
+            </div>
           </div>
         </div>
       </div>
@@ -117,11 +88,11 @@
     </div>
 
     <!-- Success Message -->
-    <div class="success-message" v-if="isValid && selectedSpotId">
+    <div class="success-message" v-if="isValid && numberOfSpots > 0">
       <Message severity="success" :closable="false">
         <div class="success-content">
           <i class="pi pi-check-circle"></i>
-          <span>選択完了: {{ getSelectedSpotDisplay() }}</span>
+          <span>選択完了: {{ numberOfSpots }} 台</span>
         </div>
       </Message>
     </div>
@@ -135,6 +106,7 @@ import { useReservationStore } from '@/composables/useReservationStore';
 import Select from 'primevue/select';
 import FloatLabel from 'primevue/floatlabel';
 import Message from 'primevue/message';
+import InputNumber from 'primevue/inputnumber';
 
 // Props
 const props = defineProps({
@@ -157,17 +129,13 @@ const props = defineProps({
   preselectedVehicleCategoryId: {
     type: [Number, String],
     default: null
-  },
-  preselectedSpotId: {
-    type: [Number, String],
-    default: null
   }
 });
 
 // Emits
 const emit = defineEmits([
   'update:vehicleCategoryId',
-  'update:spotId',
+  'update:numberOfSpots',
   'selection-change',
   'validation-change'
 ]);
@@ -179,7 +147,7 @@ const { parkingSpotAvailability, fetchParkingSpotAvailability } = reservationSto
 
 // Reactive state
 const selectedVehicleCategoryId = ref(props.preselectedVehicleCategoryId);
-const selectedSpotId = ref(props.preselectedSpotId);
+const numberOfSpots = ref(1);
 const vehicleCategories = computed(() => parkingStore.vehicleCategories.value || []);
 const compatibleSpots = ref([]);
 const availabilityData = ref(null);
@@ -195,49 +163,19 @@ const spotError = ref('');
 const validationErrors = ref([]);
 
 // Computed properties
-const availableSpots = computed(() => {
-  if (!availabilityData.value) return compatibleSpots.value || [];
-  
-  // Ensure fullyAvailableSpots exists and is an array
-  const fullyAvailableSpots = availabilityData.value?.fullyAvailableSpots || [];
-  const fullyAvailableSpotIds = new Set(
-    fullyAvailableSpots.map(spot => spot.spotId)
-  );
-  
-  // Ensure compatibleSpots is an array
-  const spots = Array.isArray(compatibleSpots.value) ? compatibleSpots.value : [];
-  
-  return spots
-    .filter(spot => fullyAvailableSpotIds.has(spot.id))
-    .map(spot => ({
-      ...spot,
-      displayName: `${spot.spotNumber || ''} - ${spot.parkingLotName || ''}`.trim(),
-      availabilityInfo: {
-        isAvailable: true,
-        fullyAvailable: true
-      }
-    }));
+const totalAvailableSpots = computed(() => {
+  if (!availabilityData.value) return 0;
+  return availabilityData.value?.fullyAvailableSpots?.length || 0;
 });
 
 const isValid = computed(() => {
   return selectedVehicleCategoryId.value && 
-         selectedSpotId.value && 
+         numberOfSpots.value > 0 &&
+         numberOfSpots.value <= totalAvailableSpots.value &&
          validationErrors.value.length === 0;
 });
 
-const filteredParkingSpotAvailability = computed(() => {
-  if (!selectedVehicleCategoryId.value) {
-    return parkingSpotAvailability.value;
-  }
 
-  const selectedCategory = vehicleCategories.value.find(cat => cat.id === selectedVehicleCategoryId.value);
-  if (!selectedCategory) {
-    return parkingSpotAvailability.value;
-  }
-
-  const requiredCapacity = selectedCategory.capacity_units_required;
-  return parkingSpotAvailability.value.filter(spot => spot.capacity_units >= requiredCapacity);
-});
 
 // Base spot types
 const baseSpotTypes = [
@@ -396,18 +334,10 @@ const validateSelection = () => {
     errors.push('車両カテゴリを選択してください');
   }
   
-  if (!selectedSpotId.value) {
-    errors.push('駐車スポットを選択してください');
-  }
-  
-  if (selectedSpotId.value && availabilityData.value) {
-    const selectedSpotAvailable = availabilityData.value.fullyAvailableSpots.some(
-      spot => spot.spotId === parseInt(selectedSpotId.value)
-    );
-    
-    if (!selectedSpotAvailable) {
-      errors.push('選択した駐車スポットは指定された日程で利用できません');
-    }
+  if (numberOfSpots.value <= 0) {
+    errors.push('必要台数を入力してください');
+  } else if (numberOfSpots.value > totalAvailableSpots.value) {
+    errors.push(`選択した日程では、最大${totalAvailableSpots.value}台まで駐車可能です`);
   }
   
   validationErrors.value = errors;
@@ -417,7 +347,7 @@ const validateSelection = () => {
 // Event handlers
 const onVehicleCategoryChange = async () => {
   vehicleCategoryError.value = '';
-  selectedSpotId.value = null;
+  numberOfSpots.value = 1;
   compatibleSpots.value = [];
   availabilityData.value = null;
   
@@ -434,9 +364,9 @@ const onVehicleCategoryChange = async () => {
   emitSelectionChange();
 };
 
-const onSpotChange = () => {
+const onNumberOfSpotsChange = () => {
   spotError.value = '';
-  emit('update:spotId', selectedSpotId.value);
+  emit('update:numberOfSpots', numberOfSpots.value);
   validateSelection();
   emitSelectionChange();
 };
@@ -447,30 +377,18 @@ const _refreshAvailability = async () => {
   }
 };
 
-const _selectRecommendedSpot = (recommendedSpot) => {
-  if (recommendedSpot) {
-    selectedSpotId.value = recommendedSpot.id;
-    emitSelectionChange();
-  }
-};
-
 const emitSelectionChange = () => {
   emit('selection-change', {
     vehicleCategoryId: selectedVehicleCategoryId.value,
-    spotId: selectedSpotId.value,
+    numberOfSpots: numberOfSpots.value,
     isValid: isValid.value,
     selectedCategory: getSelectedCategory(),
-    selectedSpot: getSelectedSpot()
   });
 };
 
 // Utility methods
 const getSelectedCategory = () => {
   return (vehicleCategories.value || []).find(cat => cat && cat.id === selectedVehicleCategoryId.value);
-};
-
-const getSelectedSpot = () => {
-  return (compatibleSpots.value || []).find(spot => spot && spot.id === selectedSpotId.value);
 };
 
 const getSelectedCategoryName = () => {
@@ -483,12 +401,7 @@ const getSelectedCategoryCapacity = () => {
   return category ? category.capacity_units_required : '';
 };
 
-const getSelectedSpotDisplay = () => {
-  const spot = getSelectedSpot();
-  return spot ? `${spot.spotNumber} - ${spot.parkingLotName}` : '';
-};
-
-const getCapacityMatchClass = (spot) => {
+const _getCapacityMatchClass = (spot) => {
   if (!spot.capacityMatch) return 'text-500';
   
   if (spot.capacityMatch.isExactMatch) {
@@ -499,6 +412,24 @@ const getCapacityMatchClass = (spot) => {
     return 'text-info';
   }
 };
+
+const stepValue = computed(() => {
+  const categoryCapacity = getSelectedCategoryCapacity();
+  if (!categoryCapacity || categoryCapacity === 0) return 1;
+  
+  const calculatedStep = Math.ceil(categoryCapacity / smallestAvailableSpotCapacity.value);
+  return calculatedStep > 0 ? calculatedStep : 1;
+});
+
+const smallestAvailableSpotCapacity = computed(() => {
+  if (!parkingSpotAvailability.value || parkingSpotAvailability.value.length === 0) return 1;
+  
+  const smallest = parkingSpotAvailability.value.reduce((min, spot) => {
+    return (spot.capacity_units > 0 && spot.capacity_units < min) ? spot.capacity_units : min;
+  }, Infinity);
+  
+  return smallest === Infinity ? 1 : smallest;
+});
 
 const _formatDate = (dateString) => {
   if (!dateString) return '';
@@ -525,13 +456,6 @@ watch(() => props.preselectedVehicleCategoryId, (newValue) => {
   if (newValue !== selectedVehicleCategoryId.value) {
     selectedVehicleCategoryId.value = newValue;
     onVehicleCategoryChange();
-  }
-});
-
-watch(() => props.preselectedSpotId, (newValue) => {
-  if (newValue !== selectedSpotId.value) {
-    selectedSpotId.value = newValue;
-    onSpotChange();
   }
 });
 
@@ -714,6 +638,11 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--text-color-secondary);
   text-align: center;
+}
+
+.spots-needed-message {
+  font-size: 0.7rem;
+  color: var(--primary-color);
 }
 
 .date-availability h6,

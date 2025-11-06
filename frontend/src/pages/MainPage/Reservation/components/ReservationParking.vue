@@ -6,40 +6,32 @@
         <h4 class="section-title">
           <i class="pi pi-car"></i>
           駐車場 ({{ parkingAssignments.length }})
-        </h4>        
+        </h4>
       </div>
       <div class="header-actions">
-        <Button
-          icon="pi pi-plus"
-          label="駐車場追加"
-          class="p-button-sm p-button-success"
-          @click="openAddParkingDialog"
-          :disabled="!canAddParking || isSubmitting"
-          :loading="isSubmitting"
-        />
+        <Button icon="pi pi-plus" label="駐車場追加" class="p-button-sm p-button-success" @click="openAddParkingDialog"
+          :disabled="!canAddParking || isSubmitting" :loading="isSubmitting" />
       </div>
     </div>
 
     <!-- Parking Usage Table -->
     <div class="parking-usage" v-if="Object.keys(parkingUsageByRoom).length > 0">
       <div class="card">
-        <DataTable :value="Object.entries(parkingUsageByRoom)" :scrollable="true" scrollDirection="both" class="parking-table">
+        <DataTable :value="Object.entries(parkingUsageByRoom)" :scrollable="true" scrollDirection="both"
+          class="parking-table">
           <Column field="room" header="部屋" :style="{ 'min-width': '200px' }" frozen>
             <template #body="{ data: [roomId, roomData] }">
               <div class="flex align-items-center gap-2">
                 <span>{{ roomData.roomName }}</span>
-                <Button 
-                  icon="pi pi-arrow-up-right" 
-                  class="p-button-sm p-button-outlined p-button-secondary"
-                  style="width: 2rem; height: 2rem"
-                  @click="openParkingSpotsDialog(roomId, roomData.roomName)"
-                  v-tooltip.top="'駐車場を管理'"
-                />
+                <Button icon="pi pi-arrow-up-right" class="p-button-sm p-button-outlined p-button-secondary"
+                  style="width: 2rem; height: 2rem" @click="openParkingSpotsDialog(roomId, roomData.roomName)"
+                  v-tooltip.top="'駐車場を管理'" />
               </div>
             </template>
           </Column>
-          <Column v-for="date in reservationDates" :key="date" :field="date" :header="formatDate(date)" :style="{ 'min-width': '100px' }">
-            <template #body="{ data: [roomId, roomData] }">
+          <Column v-for="date in reservationDates" :key="date" :field="date" :header="formatDate(date)"
+            :style="{ 'min-width': '100px' }">
+            <template #body="{ data: [_roomId, roomData] }">
               <div class="text-center">
                 <Tag v-if="roomData.dates[date] > 0" severity="info">
                   {{ roomData.dates[date] }}
@@ -53,27 +45,14 @@
     </div>
 
     <!-- Parking Addon Dialog -->
-    <ParkingAddonDialog
-      v-model="showParkingDialog"
-      :reservation-details="reservationDetails"
-      :parking-reservations="parkingReservations"
-      :initial-dates="reservationDates"
-      :is-edit-mode="isEditMode"
-      :addon-data="dialogAddonData"
-      @save="onParkingSave"
-      @cancel="onParkingCancel"
-    />
+    <ParkingAddonDialog v-model="showParkingDialog" :reservation-details="reservationDetails"
+      :parking-reservations="parkingReservations" :initial-dates="reservationDates" :is-edit-mode="isEditMode"
+      :addon-data="dialogAddonData" @save="onParkingSave" @cancel="onParkingCancel" />
 
     <!-- Active Parking Spots Dialog -->
-    <ParkingActiveSpotsDialog
-      v-if="selectedRoomId"
-      v-model="showParkingSpotsDialog"
-      :room-id="selectedRoomId"
-      :room-name="selectedRoomName"
-      :parking-spots="selectedRoomParkingSpots"
-      :processing="processing"
-      @hide="cleanupDialog"
-    />
+    <ParkingActiveSpotsDialog v-if="selectedRoomId" v-model="showParkingSpotsDialog" :room-id="selectedRoomId"
+      :room-name="selectedRoomName" :parking-spots="selectedRoomParkingSpots" :processing="processing"
+      @hide="cleanupDialog" />
 
     <!-- Confirmation Dialog -->
     <ConfirmDialog />
@@ -104,8 +83,6 @@ import { useParkingStore } from '@/composables/useParkingStore';
 const parkingStore = useParkingStore();
 
 // Primevue
-import { useConfirm } from 'primevue/useconfirm';
-const confirm = useConfirm();
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 
@@ -115,18 +92,7 @@ import ConfirmDialog from 'primevue/confirmdialog';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 
-// Helper
-const formatDate = (date) => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
-        return date; // Return original if it's not a valid date
-    }
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
-
+import { formatDate } from '@/utils/dateUtils';
 // Reactive state
 const parkingAssignments = ref([]);
 const showParkingDialog = ref(false);
@@ -173,7 +139,7 @@ watch(() => props.parkingReservations, (newVal) => {
       groups[addonId].totalPrice = groups[addonId].unitPrice * groups[addonId].dates.length;
       return groups;
     }, {});
-    
+
     parkingAssignments.value = Object.values(groupedByAddon);
     // console.log('[ReservationParking] parkingAssignments', parkingAssignments.value);
   } else {
@@ -188,7 +154,7 @@ const reservationDetailId = computed(() => {
 
 const reservationDates = computed(() => {
   if (!props.reservationDetails || props.reservationDetails.length === 0) return [];
-  
+
   // Find the earliest check-in and latest check-out across all reservation details
   let minCheckIn = new Date(props.reservationDetails[0].check_in);
   let maxCheckOut = new Date(props.reservationDetails[0].check_out);
@@ -211,15 +177,15 @@ const reservationDates = computed(() => {
     dates.push(current.toISOString().split('T')[0]);
     current.setDate(current.getDate() + 1);
   }
-  
+
   return dates;
 });
 
 // Group parking assignments by room and date
-const parkingUsageByRoom = computed(() => {  
-  
+const parkingUsageByRoom = computed(() => {
+
   const usage = {};
-  
+
   // Initialize with all rooms from reservation details
   props.reservationDetails.forEach(room => {
     if (!usage[room.room_id]) {
@@ -227,23 +193,23 @@ const parkingUsageByRoom = computed(() => {
         roomName: room.room_name || `部屋${room.room_number || room.room_id}`,
         dates: {}
       };
-      
+
       // Initialize all dates with 0 spots
       reservationDates.value.forEach(date => {
         usage[room.room_id].dates[date] = 0;
       });
     }
   });
-  
+
   // Count parking spots per room per date
   parkingAssignments.value.forEach(assignment => {
     const roomId = assignment.roomId;
-    
+
     if (roomId && assignment.dates && Array.isArray(assignment.dates)) {
       assignment.dates.forEach(date => {
         // Ensure the date is in the correct format (YYYY-MM-DD)
         const formattedDate = formatDate(date);
-        
+
         if (usage[roomId]?.dates[formattedDate] !== undefined) {
           usage[roomId].dates[formattedDate]++;
         } else {
@@ -256,7 +222,7 @@ const parkingUsageByRoom = computed(() => {
   });
 
   // console.log('parkingUsageByRoom computed:', JSON.parse(JSON.stringify(usage)));
-  
+
   return usage;
 });
 
@@ -266,11 +232,11 @@ const canAddParking = computed(() => {
 
 const selectedRoomParkingSpots = computed(() => {
   if (!selectedRoomId.value) return [];
-  
+
   const spots = [];
   const targetRoomId = String(selectedRoomId.value);
   //console.log(`[DEBUG] Filtering spots for room ID: ${targetRoomId} (type: ${typeof targetRoomId})`);  
-    
+
   parkingAssignments.value.forEach(assignment => {
     if (String(assignment.roomId) === targetRoomId && assignment.dates) {
       assignment.dates.forEach(date => {
@@ -280,13 +246,13 @@ const selectedRoomParkingSpots = computed(() => {
           parkingLotName: assignment.parkingLotName || '未設定',
           vehicleCategoryName: assignment.vehicleCategoryName || '未設定',
           date: date,
-          price: assignment.unitPrice || 0,          
+          price: assignment.unitPrice || 0,
           ...assignment
         });
       });
     }
   });
-  
+
   //console.log('[ReservationParking] Selected room parking spots:', spots);
   return spots;
 });
@@ -312,92 +278,92 @@ const openParkingSpotsDialog = (roomId, roomName) => {
 };
 
 const onParkingSave = async (saveData) => {
-    isSubmitting.value = true;
-    try {
-        if (!props.reservationDetails || props.reservationDetails.length === 0) {
-            throw new Error('Reservation details are not available.');
-        }
-        
-        const hotelId = props.reservationDetails[0].hotel_id;
-        if (!hotelId) {
-            throw new Error('Hotel ID is not available in reservation details.');
-        }
-        
-        const reservationId = props.reservationDetails[0].reservation_id;
-        if (!reservationId) {
-            throw new Error('Reservation ID is not available in reservation details.');
-        }
-
-        const reservationDetailIds = props.reservationDetails.map(d => d.id);
-        if (!reservationDetailIds.length) {
-            throw new Error('No reservation detail IDs available.');
-        }
-
-        let assignmentsToSave = [];
-        const unitPrice = Number(saveData.unitPrice) || 0;
-        const comment = saveData.comment || '';
-
-        if (isEditMode.value) {
-            // For updates, only include the assignment being edited
-            const existingAssignment = parkingAssignments.value.find(a => a.id === editingAssignmentId.value);
-            if (existingAssignment) {
-                assignmentsToSave = [{
-                    ...existingAssignment,
-                    ...saveData,
-                    hotel_id: hotelId,
-                    reservation_id: reservationId,
-                    check_in: saveData.startDate,
-                    check_out: saveData.endDate,
-                    spotId: saveData.spotId,
-                    vehicle_category_id: saveData.vehicleCategoryId,
-                    unit_price: unitPrice,
-                    comment: comment,
-                    totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)),
-                    updated_at: new Date().toISOString()
-                }];
-            }
-        } else {
-            // For new assignments, only create new ones without including existing ones
-            assignmentsToSave = [{
-                id: `temp-${Date.now()}`,
-                hotel_id: hotelId,
-                reservation_id: reservationId,
-                check_in: saveData.startDate,
-                check_out: saveData.endDate,
-                ...saveData,
-                spotId: saveData.spotId,
-                vehicle_category_id: saveData.vehicleCategoryId,
-                unit_price: unitPrice,
-                comment: comment,
-                totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }];
-        }
-
-        await parkingStore.saveParkingAssignments(assignmentsToSave);
-        
-        // Refresh data after saving
-        await parkingStore.fetchParkingReservations(props.reservationDetails[0].hotel_id, props.reservationDetails[0].reservation_id);
-
-        toast.add({
-            severity: 'success',
-            summary: '成功',
-            detail: '駐車場情報を保存しました',
-            life: 3000
-        });
-        showParkingDialog.value = false;
-        isSubmitting.value = false;
-    } catch (error) {
-        console.error('Error saving parking assignment:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: '駐車場予約の保存に失敗しました',
-            life: 3000
-        });
-        isSubmitting.value = false;
+  isSubmitting.value = true;
+  try {
+    if (!props.reservationDetails || props.reservationDetails.length === 0) {
+      throw new Error('Reservation details are not available.');
     }
+
+    const hotelId = props.reservationDetails[0].hotel_id;
+    if (!hotelId) {
+      throw new Error('Hotel ID is not available in reservation details.');
+    }
+
+    const reservationId = props.reservationDetails[0].reservation_id;
+    if (!reservationId) {
+      throw new Error('Reservation ID is not available in reservation details.');
+    }
+
+    const reservationDetailIds = props.reservationDetails.map(d => d.id);
+    if (!reservationDetailIds.length) {
+      throw new Error('No reservation detail IDs available.');
+    }
+
+    let assignmentsToSave = [];
+    const unitPrice = Number(saveData.unitPrice) || 0;
+    const comment = saveData.comment || '';
+
+    if (isEditMode.value) {
+      // For updates, only include the assignment being edited
+      const existingAssignment = parkingAssignments.value.find(a => a.id === editingAssignmentId.value);
+      if (existingAssignment) {
+        assignmentsToSave = [{
+          ...existingAssignment,
+          ...saveData,
+          hotel_id: hotelId,
+          reservation_id: reservationId,
+          check_in: saveData.startDate,
+          check_out: saveData.endDate,
+          numberOfSpots: saveData.numberOfSpots,
+          vehicle_category_id: saveData.vehicleCategoryId,
+          unit_price: unitPrice,
+          comment: comment,
+          totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)),
+          updated_at: new Date().toISOString()
+        }];
+      }
+    } else {
+      // For new assignments, only create new ones without including existing ones
+      assignmentsToSave = [{
+        id: `temp-${Date.now()}`,
+        hotel_id: hotelId,
+        reservation_id: reservationId,
+        check_in: saveData.startDate,
+        check_out: saveData.endDate,
+        ...saveData,
+        numberOfSpots: saveData.numberOfSpots,
+        vehicle_category_id: saveData.vehicleCategoryId,
+        unit_price: unitPrice,
+        comment: comment,
+        totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }];
+    }
+
+    await parkingStore.saveParkingAssignments(assignmentsToSave);
+
+    // Refresh data after saving
+    await parkingStore.fetchParkingReservations(props.reservationDetails[0].hotel_id, props.reservationDetails[0].reservation_id);
+
+    toast.add({
+      severity: 'success',
+      summary: '成功',
+      detail: '駐車場情報を保存しました',
+      life: 3000
+    });
+    showParkingDialog.value = false;
+    isSubmitting.value = false;
+  } catch (error) {
+    console.error('Error saving parking assignment:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: '駐車場予約の保存に失敗しました',
+      life: 3000
+    });
+    isSubmitting.value = false;
+  }
 };
 
 const onParkingCancel = () => {
@@ -444,6 +410,7 @@ const cleanupDialog = () => {
   display: flex;
   gap: 0.5rem;
 }
+
 .parking-usage {
   margin-bottom: 1.5rem;
 }
@@ -468,7 +435,8 @@ const cleanupDialog = () => {
 /* Style for the frozen column header (部屋) */
 .parking-table :deep(.p-datatable-thead > tr > th.p-datatable-frozen-column) {
   background: white !important;
-  z-index: 2; /* Higher than other headers */
+  z-index: 2;
+  /* Higher than other headers */
 }
 
 .parking-table :deep(.p-datatable-tbody > tr > td) {
@@ -679,30 +647,30 @@ const cleanupDialog = () => {
     align-items: stretch;
     gap: 1rem;
   }
-  
+
   .header-info {
     justify-content: center;
   }
-  
+
   .assignment-header {
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
   }
-  
+
   .assignment-status {
     justify-content: space-between;
   }
-  
+
   .details-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .availability-summary {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .assignment-actions {
     flex-direction: column;
   }
