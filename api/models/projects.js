@@ -76,9 +76,9 @@ async function getProjectsByClientId(requestId, clientId) {
     const values = [clientId];
 
     try {
-        console.log(`[${requestId}] Fetching projects for client ID: ${clientId}`);
+        //console.log(`[${requestId}] Fetching projects for client ID: ${clientId}`);
         const result = await pool.query(query, values);
-        console.log(`[${requestId}] Found ${result.rows.length} projects for client ID: ${clientId}`);
+        //console.log(`[${requestId}] Found ${result.rows.length} projects for client ID: ${clientId}`);
         return result.rows;
     } catch (error) {
         console.error(`[${requestId}] Error fetching projects for client ID: ${clientId}`, error);
