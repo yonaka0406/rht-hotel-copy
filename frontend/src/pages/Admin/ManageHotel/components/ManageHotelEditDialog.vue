@@ -176,7 +176,7 @@
 import { ref, reactive, watch } from 'vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useToast } from 'primevue/usetoast';
-import { Dialog, Card, DataTable, Column, FloatLabel, InputText, InputNumber, DatePicker, InputMask, Button } from 'primevue';
+import { Dialog, Card, DataTable, Column, FloatLabel, InputText, InputNumber, DatePicker, InputMask, Button, Divider } from 'primevue';
 import PlanVisibilitySettings from './PlanVisibilitySettings.vue';
 
 const props = defineProps({
