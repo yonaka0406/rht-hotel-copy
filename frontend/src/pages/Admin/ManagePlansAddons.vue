@@ -410,6 +410,15 @@
     };
     const updateAddon = async () => {
         // Validation
+        if (!editAddon.value.date_start) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '開始日を入力してください。',
+                life: 3000
+            });
+            return;
+        }
         if (editAddon.value.date_end && new Date(editAddon.value.date_end) < new Date(editAddon.value.date_start)) {
             toast.add({
                 severity: 'error',
