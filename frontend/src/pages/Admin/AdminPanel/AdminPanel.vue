@@ -167,29 +167,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Standardized scrollbar properties for Firefox */
 .custom-scrollbar {
-    scrollbar-width: thin; /* auto | thin | none */
-    scrollbar-color: rgba(250, 204, 21, 0.8) transparent; /* thumb color track color */
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-    width: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, rgba(250, 204, 21, 0.8), rgba(161, 98, 7, 0.8)); /* Gradient from yellow-400 to yellow-700 */
-    border-radius: 10px;
-    border: 2px solid rgba(161, 98, 7, 0.6); /* yellow-700 with 60% opacity */
-    background-clip: padding-box;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(to bottom, rgba(250, 204, 21, 0.9), rgba(161, 98, 7, 0.9)); /* Darker gradient on hover */
+    --scrollbar-thumb-bg: rgba(250, 204, 21, 0.8);
+    --scrollbar-thumb-bg-hover: rgba(250, 204, 21, 0.9);
+    --scrollbar-thumb-border-color: rgba(161, 98, 7, 0.6);
+    --scrollbar-thumb-gradient-start: rgba(250, 204, 21, 0.8);
+    --scrollbar-thumb-gradient-end: rgba(161, 98, 7, 0.8);
+    --scrollbar-thumb-gradient-start-hover: rgba(250, 204, 21, 0.9);
+    --scrollbar-thumb-gradient-end-hover: rgba(161, 98, 7, 0.9);
 }
 
 .pi {

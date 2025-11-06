@@ -366,23 +366,14 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.8)); /* Gradient from emerald-500 to emerald-600 */
-  border-radius: 10px;
-  border: 2px solid rgba(5, 150, 105, 0.6); /* emerald-600 with 60% opacity */
-  background-clip: padding-box;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, rgba(5, 150, 105, 0.9), rgba(4, 120, 87, 0.9)); /* Darker gradient on hover */
+.custom-scrollbar {
+    --scrollbar-thumb-bg: rgba(200, 200, 200, 0.8); /* Light gray */
+    --scrollbar-thumb-bg-hover: rgba(150, 150, 150, 0.9); /* Darker gray for hover */
+    --scrollbar-thumb-border-color: rgba(100, 100, 100, 0.6); /* Dark gray for border */
+    --scrollbar-thumb-gradient-start: rgba(200, 200, 200, 0.8);
+    --scrollbar-thumb-gradient-end: rgba(150, 150, 150, 0.8);
+    --scrollbar-thumb-gradient-start-hover: rgba(150, 150, 150, 0.9);
+    --scrollbar-thumb-gradient-end-hover: rgba(100, 100, 100, 0.9);
 }
 
 .pi {
