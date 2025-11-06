@@ -293,6 +293,7 @@ const prodListenClient = new Pool({
 
 // Function to listen for changes in a specific table
 const listenForTableChanges = async () => {
+  /*
   // --- Development database listener ---
   let devClient;
   try {
@@ -343,13 +344,16 @@ const listenForTableChanges = async () => {
           const inventory = await response.json();
 
           try {
-            await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(inventory),
-            });
+            if (process.env.NODE_ENV === 'production') {            
+              await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(inventory),
+              });
+            }
+            
             // logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
           } catch (siteControllerError) {
             // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
@@ -364,6 +368,7 @@ const listenForTableChanges = async () => {
   } catch (error) {
     // logger.error('Failed to connect to DEV database for LISTEN:', { errorMessage: error.message, stack: error.stack });
   }
+  */
 
   // --- Production database listener ---
   // Ensure this block only runs if NODE_ENV is production, or if prod pool config is valid
@@ -446,11 +451,14 @@ const listenForTableChanges = async () => {
             const inventory = await response.json();
 
             try {
-              await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(inventory),
-              });
+              if (process.env.NODE_ENV === 'production') {              
+                await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(inventory),
+                });
+              }
+              
               // logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
             } catch (siteControllerError) {
               // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
