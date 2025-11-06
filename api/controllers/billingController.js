@@ -156,7 +156,7 @@ const generateInvoice = async (req, res) => {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
     }
-    await resetBrowser();
+    await resetBrowser(false);
   }
 };
 
@@ -538,7 +538,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
     }
-    await resetBrowser();
+    await resetBrowser(false);
   }
 };
 function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) {

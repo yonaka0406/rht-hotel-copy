@@ -59,8 +59,12 @@ const closeSingletonBrowser = async () => {
   }
 };
 
-const resetBrowser = async () => {
-  logger.warn('Resetting Puppeteer browser instance due to error.');
+const resetBrowser = async (isError = true) => {
+  if (isError) {
+    logger.warn('Resetting Puppeteer browser instance due to error.');
+  } else {
+    logger.info('Resetting Puppeteer browser instance for cleanup.');
+  }
   await closeSingletonBrowser();
 };
 
