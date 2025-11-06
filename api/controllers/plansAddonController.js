@@ -64,6 +64,14 @@ const updateExistingPlanAddon = async (req, res) => {
             updated_by: req.user.id
         };
 
+        // Ensure date_start is not null if it is required by the DB
+        // Assuming it is required based on the error message.
+        if (!planAddon.date_start) {
+            // Provide a default or throw an error. For now, let's use a default.
+            // A reasonable default for date_start could be the current date.
+            planAddon.date_start = new Date().toISOString().split('T')[0]; 
+        }
+
         const updatedAddon = await updatePlanAddon(req.requestId, addonId, planAddon);
         res.json(updatedAddon);
     } catch (error) {
