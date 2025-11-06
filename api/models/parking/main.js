@@ -575,40 +575,57 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
 }
 
 const saveParkingAssignments = async (requestId, assignments, userId, client = null) => {
-    //console.log(`[saveParkingAssignments] Starting with ${assignments.length} assignments for user ${userId}`, assignments);
     const pool = getPool(requestId);
-    let localClient = client;
-    let releaseClient = false;
-
-    if (!localClient) {
-        localClient = await pool.connect();
-        //console.log('Starting database transaction...');
-        await localClient.query('BEGIN');
-        releaseClient = true; // Set to true only after successful connection and transaction start
-    }
+    const localClient = client || await pool.connect();
+    const releaseClient = !client;
+    const BATCH_SIZE = 100;
 
     try {
-
-        // Validate assignments
-        for (const assignment of assignments) {
-            if (!assignment.hotel_id || !assignment.reservation_id) {
-                const error = new Error('Missing required fields in assignment');
-                error.details = { assignment, missingFields: [] };
-                if (!assignment.hotel_id) error.details.missingFields.push('hotel_id');
-                if (!assignment.reservation_id) error.details.missingFields.push('reservation_id');
-                throw error;
-            }
+        if (releaseClient) {
+            await localClient.query('BEGIN');
         }
 
-        const BATCH_SIZE = 100;
-
         for (const [index, assignment] of assignments.entries()) {
-            //console.log(`\nProcessing assignment ${index + 1}/${assignments.length}:`, JSON.stringify(assignment, null, 2));
 
             const { 
                 hotel_id, reservation_id, vehicle_category_id, roomId,
-                check_in, check_out, unit_price, number_of_vehicles = 1, spotId: preferredSpotId 
+                check_in, check_out, unit_price, numberOfSpots = 1, spotId: preferredSpotId, addon 
             } = assignment;
+
+            if (!hotel_id || !reservation_id) {
+                const error = new Error('Missing required fields in assignment');
+                error.details = { assignment, missingFields: [] };
+                if (!hotel_id) error.details.missingFields.push('hotel_id');
+                if (!reservation_id) error.details.missingFields.push('reservation_id');
+                throw error;
+            }
+            const checkInDate = formatDate(new Date(check_in));
+            const checkOutDate = formatDate(new Date(check_out));
+
+            // Get addon IDs to delete for the specific date range
+            const addonIdsRes = await localClient.query(
+                `SELECT rp.reservation_addon_id 
+                 FROM reservation_parking rp
+                 JOIN reservation_details rd ON rp.reservation_details_id = rd.id
+                 WHERE rd.reservation_id = $1 
+                   AND rd.room_id = $2
+                   AND rd.date >= $3
+                   AND rd.date < $4`,
+                [reservation_id, roomId, checkInDate, checkOutDate]
+            );
+            const addonIdsToDelete = addonIdsRes.rows.map(r => r.reservation_addon_id).filter(id => id);
+
+            // Delete existing parking assignments for this room, reservation, and date range
+            if (addonIdsToDelete.length > 0) {
+                await localClient.query(
+                    `DELETE FROM reservation_parking WHERE reservation_addon_id = ANY($1::uuid[])`,
+                    [addonIdsToDelete]
+                );
+                await localClient.query(
+                    `DELETE FROM reservation_addons WHERE id = ANY($1::uuid[])`,
+                    [addonIdsToDelete]
+                );
+            }
 
             // 1. Fetch reservation_details for this reservation
             //console.log('Fetching reservation details with params:', {
@@ -622,9 +639,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 text: `SELECT id, room_id, date 
                     FROM reservation_details 
                     WHERE reservation_id = $1 AND hotel_id = $2
-                    AND date >= $3 AND date <= $4 AND room_id = $5
+                    AND date >= $3 AND date < $4 AND room_id = $5
                     ORDER BY room_id, date`,
-                values: [reservation_id, hotel_id, formatDate(new Date(check_in)), formatDate(new Date(check_out)), roomId]
+                values: [reservation_id, hotel_id, checkInDate, checkOutDate, roomId]
             };
 
             //console.log('Executing query:', {
@@ -672,100 +689,108 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             // 4. Group reservation_details by date
             const detailsByDate = {};
             for (const d of reservationDetails) {
-                if (!detailsByDate[d.date]) detailsByDate[d.date] = [];
-                detailsByDate[d.date].push(d);
+                const dateStr = formatDate(new Date(d.date));
+                if (!detailsByDate[dateStr]) detailsByDate[dateStr] = [];
+                detailsByDate[dateStr].push(d);
             }
 
             // Prepare batched inserts
-            const addonValues = [];
-            const parkingValues = [];
+            let addonValues = [];
+            let parkingValues = [];
 
-            for (const date of Object.keys(detailsByDate)) {
-                const detailsForDate = detailsByDate[date];
-                const detail = detailsForDate[0]; // use first room for the date
+            const addonDetails = await getAddonDetails(localClient, hotel_id, addon?.addons_hotel_id, addon?.addons_global_id);
 
-                //console.log(`Assigning for date: ${date}`);
+            const allReservationDates = Object.keys(detailsByDate).map(dateStr => new Date(dateStr));
+            let remainingDatesToAssign = new Set(allReservationDates.map(d => formatDate(d)));
+            const assignedSpotsPerDate = {}; // { 'YYYY-MM-DD': spotId }
 
-                const reservedRes = await localClient.query(
-                    `SELECT parking_spot_id
-                     FROM reservation_parking
-                     WHERE hotel_id = $1
-                       AND date = $2
-                       AND cancelled IS NULL
-                       AND status IN ('confirmed','reserved')`,
-                    [hotel_id, formatDate(new Date(date))]
-                );
-                const reserved = reservedRes.rows.map(r => r.parking_spot_id);
-                
-                let assignedSpot = null;
+            // Keep track of spots that have been assigned to prevent re-assigning the same physical spot multiple times for the same reservation
+            const assignedPhysicalSpots = new Set();
 
-                // Prioritize preferredSpotId if provided and available
-                if (preferredSpotId) {
-                    const isPreferredSpotCandidate = candidateSpots.includes(preferredSpotId);
-                    const isPreferredSpotReserved = reserved.includes(preferredSpotId);
+            while (remainingDatesToAssign.size > 0) {
+                let bestSpot = null;
+                let maxAvailableDates = 0;
+                let bestSpotAvailableDates = [];
 
-                    if (isPreferredSpotCandidate && !isPreferredSpotReserved) {
-                        assignedSpot = preferredSpotId;
-                    } else {
-                        console.warn(`Preferred spot ${preferredSpotId} is not available or not a candidate for date ${date}. Falling back to auto-assignment.`);
+                for (const spotId of candidateSpots) {
+                    // Skip if this physical spot has already been assigned to this reservation
+                    if (assignedPhysicalSpots.has(spotId)) {
+                        continue;
+                    }
+
+                    let currentSpotAvailableDates = [];
+                    for (const dateStr of remainingDatesToAssign) {
+                        const reservedRes = await localClient.query(
+                            `SELECT parking_spot_id
+                             FROM reservation_parking
+                             WHERE hotel_id = $1
+                               AND date = $2
+                               AND cancelled IS NULL
+                               AND status IN ('confirmed','reserved')`,
+                            [hotel_id, dateStr]
+                        );
+                        const isReserved = reservedRes.rows.some(r => r.parking_spot_id === spotId);
+
+                        if (!isReserved) {
+                            currentSpotAvailableDates.push(dateStr);
+                        }
+                    }
+
+                    if (currentSpotAvailableDates.length > maxAvailableDates) {
+                        maxAvailableDates = currentSpotAvailableDates.length;
+                        bestSpot = spotId;
+                        bestSpotAvailableDates = currentSpotAvailableDates;
                     }
                 }
 
-                // If no preferred spot or preferred spot not available, find an available spot
-                if (assignedSpot === null) {
-                    const available = candidateSpots.filter(id => !reserved.includes(id));
-                    if (available.length < number_of_vehicles) {
-                        throw new Error(`Not enough parking spots for ${date} (need ${number_of_vehicles}, available ${available.length})`);
-                    }
-                    assignedSpot = available[0]; // Pick the first available spot
+                if (bestSpot === null || maxAvailableDates === 0) {
+                    throw new Error(`Not enough parking spots available for all dates. Remaining dates: ${Array.from(remainingDatesToAssign).join(', ')}`);
                 }
 
-                if (assignedSpot === null) {
-                    throw new Error(`Could not assign a parking spot for date ${date}.`);
-                }
-
-                const spotsToAssign = [];
-                // If a preferred spot is provided and available
-                if (preferredSpotId && candidateSpots.includes(preferredSpotId) && !reserved.includes(preferredSpotId)) {
-                    spotsToAssign.push(preferredSpotId);
-                }
-
-                // Fill the rest with other available spots
-                const otherAvailableSpots = candidateSpots.filter(id => !reserved.includes(id) && id !== preferredSpotId);
-                spotsToAssign.push(...otherAvailableSpots);
-
-                if (spotsToAssign.length < number_of_vehicles) {
-                    throw new Error(`Not enough parking spots for ${date} (need ${number_of_vehicles}, available ${spotsToAssign.length})`);
-                }
-
-                for (let v = 0; v < number_of_vehicles; v++) {
-                    const currentAssignedSpot = spotsToAssign[v];
-
-                    addonValues.push([
-                        hotel_id,
-                        detail.id,
-                        3,
-                        'parking',
-                        '駐車場',
-                        unit_price,
-                        1,
-                        1,
-                        10,
-                        userId
-                    ]);
-
-                    parkingValues.push({
-                        hotel_id,
-                        reservation_details_id: detail.id,
-                        vehicle_category_id,
-                        parking_spot_id: currentAssignedSpot,
-                        date: formatDate(new Date(date)),
-                        created_by: userId
-                    });
+                // Assign the best spot for its available dates
+                assignedPhysicalSpots.add(bestSpot); // Mark this physical spot as used for this reservation
+                for (const dateStr of bestSpotAvailableDates) {
+                    assignedSpotsPerDate[dateStr] = bestSpot;
+                    remainingDatesToAssign.delete(dateStr);
                 }
             }
 
-            // 5. Insert addons in batch
+            // Now, generate addonValues and parkingValues based on assignedSpotsPerDate
+            for (const dateStr of Object.keys(assignedSpotsPerDate)) {
+                const assignedSpot = assignedSpotsPerDate[dateStr];
+                const detail = detailsByDate[dateStr][0]; // Assuming one detail per date for simplicity, adjust if needed
+
+                let global_addon_id = null;
+                let hotel_addon_id = null;
+
+                if (addon?.addons_hotel_id) {
+                    hotel_addon_id = addonDetails.id;
+                    global_addon_id = addonDetails.addons_global_id;
+                } else {
+                    global_addon_id = addonDetails.id;
+                }
+
+                addonValues.push([
+                    hotel_id,
+                    detail.id,
+                    global_addon_id,
+                    hotel_addon_id,
+                    addonDetails.name,
+                    unit_price,
+                    1,
+                    addonDetails.tax_type_id,
+                    addonDetails.tax_rate,
+                    userId
+                ]);
+                parkingValues.push({
+                    hotel_id,
+                    reservation_details_id: detail.id,
+                    vehicle_category_id,
+                    parking_spot_id: assignedSpot,
+                    date: dateStr,
+                    created_by: userId
+                });
+            }
             for (let i = 0; i < addonValues.length; i += BATCH_SIZE) {
                 const batch = addonValues.slice(i, i + BATCH_SIZE);
                 const placeholders = batch.map(
@@ -775,7 +800,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 const flatValues = batch.flat();
                 const res = await localClient.query(
                     `INSERT INTO reservation_addons 
-                        (hotel_id,reservation_detail_id,addons_global_id,addon_type,addon_name,price,quantity,tax_type_id,tax_rate,created_by)
+                        (hotel_id,reservation_detail_id,addons_global_id,addons_hotel_id,addon_name,price,quantity,tax_type_id,tax_rate,created_by)
                      VALUES ${placeholders} RETURNING id`
                     , flatValues
                 );
@@ -813,23 +838,29 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     , flatValues
                 );
             }
-
-
-            //console.log(`Successfully created all parking assignments for assignment ${index + 1}`);
         }
 
-        await localClient.query('COMMIT');
-        //console.log('Transaction committed successfully');
+        if (releaseClient) {
+            await localClient.query('COMMIT');
+        }
         return { success: true, message: 'Parking assignments saved successfully' };
     } catch (error) {
         console.error('Error in saveParkingAssignments:', error);
         if (releaseClient) {
-            try { await localClient.query('ROLLBACK'); } catch (rollbackError) { console.error('Error during rollback:', rollbackError); }
+            try {
+                await localClient.query('ROLLBACK');
+            } catch (rollbackError) {
+                console.error('Error during rollback:', rollbackError);
+            }
         }
         throw error;
     } finally {
         if (releaseClient) {
-            try { localClient.release(); } catch (releaseError) { console.error('Error during client release:', releaseError); }
+            try {
+                localClient.release();
+            } catch (releaseError) {
+                console.error('Error during client release:', releaseError);
+            }
         }
     }
 };
