@@ -24,6 +24,7 @@ const { scheduleDailyDigestEmailJob } = require('./jobs/dailyDigestEmailJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 
 const app = express();
+const { closeSingletonBrowser } = require('./services/puppeteerService');
 app.locals.logger = logger; // Make logger globally available
 app.set('trust proxy', 1);
 
@@ -72,45 +73,44 @@ const sessionSecret = appConfig.session.secret;
 
 // Log information about the session secret being used
 if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length < 16) { // Example minimum length
-    // logger.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
-    // Consider exiting if the secret is critically misconfigured for a production-like environment:
-    // if (process.env.NODE_ENV === 'production') { process.exit(1); }
+  // logger.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
+  // Consider exiting if the secret is critically misconfigured for a production-like environment:
+  // if (process.env.NODE_ENV === 'production') { process.exit(1); }
 }
 
 
 let sessionPool;
 try {
-    const poolConfig = {
-      user: process.env.PG_USER,
-      host: process.env.PG_HOST,
-      database: process.env.PG_DATABASE,
-      password: process.env.PG_PASSWORD,
-      port: parseInt(process.env.PG_PORT, 10), // Ensure port is an integer
-    };
-    
-    sessionPool = new Pool(poolConfig);
-    
-    sessionPool.on('error', (err) => {
-      // logger.error('[SESSION_POOL_ERROR] Idle client error', { message: err.message, stack: err.stack });
-    });
-} catch (error) {
-    // logger.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', { error: error.message, stack: error.stack });
-}
+  const poolConfig = {
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: parseInt(process.env.PG_PORT, 10), // Ensure port is an integer
+  };
 
+  sessionPool = new Pool(poolConfig);
+  
+  sessionPool.on('error', (err) => {
+    logger.error('[SESSION_POOL_ERROR] Idle client error', { message: err.message, stack: err.stack });
+  });
+} catch (error) {
+  logger.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', { error: error.message, stack: error.stack });
+}
 let sessionStore;
 try {
-    const storeOptions = {
-      pool: sessionPool,
-      tableName: 'user_sessions',
-      createTableIfMissing: true,
-      //ttl: 60 * 5 // 5 minutes for testing if needed
-    };    
-    sessionStore = new pgSession(storeOptions);
+  const storeOptions = {
+    pool: sessionPool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true,
+    //ttl: 60 * 5 // 5 minutes for testing if needed
+  };
+  sessionStore = new pgSession(storeOptions);
 } catch (error) {
-    // logger.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', { error: error.message, stack: error.stack });
+  logger.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', { error: error.message, stack: error.stack });
 }
 
-app.use((req, res, next) => { 
+app.use((req, res, next) => {
   // logger.debug(`[PRE-SESSION] Path: ${req.path}, User-Agent: ${req.headers['user-agent']}, Cookie Header: ${req.headers.cookie}`); next(); 
   next();
 });
@@ -189,7 +189,7 @@ app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(absoluteStampPat
 
 // Make config available to route handlers
 app.use((req, res, next) => {
-  req.envConfig = appConfig.getEnvironmentConfig(req);  
+  req.envConfig = appConfig.getEnvironmentConfig(req);
   next();
 });
 
@@ -238,7 +238,7 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
-app.use('/api', waitlistRoutes); 
+app.use('/api', waitlistRoutes);
 app.use('/api/search', searchRoutes); // Search functionality routes
 app.use('/api/booking-engine', bookingEngineRoutes);
 app.use('/api', parkingRoutes);
@@ -384,12 +384,12 @@ const listenForTableChanges = async () => {
           });
         }
         if (msg.channel === 'reservation_log_inserted') {
-          
+
           const logId = parseInt(msg.payload, 10);
           // logger.info('Notification received: reservation_log_inserted (prod)', { logId });
 
           let response = null;
-          
+
           /*
           // --- Old Logic ---
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
@@ -411,7 +411,7 @@ const listenForTableChanges = async () => {
               headers: { 'Content-Type': 'application/json' }
             });
           }
-          */ 
+          */
 
           // --- New Google Sheets Queue Logic ---
           try {
@@ -421,22 +421,22 @@ const listenForTableChanges = async () => {
               headers: { 'Content-Type': 'application/json' }
             });
             const googleData = await googleRes.json();
-      
+
             // 2. INSERT task into queue. DO NOT call Google API.
             if (googleData && googleData.length > 0) {
               const prodDb = db.getProdPool();
               await prodDb.query(
-                  `INSERT INTO google_sheets_queue (hotel_id, check_in, check_out, status) 
+                `INSERT INTO google_sheets_queue (hotel_id, check_in, check_out, status) 
                    VALUES ($1, $2, $3, 'pending')
                    ON CONFLICT (hotel_id, check_in, check_out) WHERE status = 'pending'
                    DO NOTHING`,
-                  [googleData[0].hotel_id, googleData[0].check_in, googleData[0].check_out]
+                [googleData[0].hotel_id, googleData[0].check_in, googleData[0].check_out]
               );
             }
           } catch (queueError) {
             logger.error('Failed to queue Google Sheets update for prod', { error: queueError.message, logId });
           }
-          
+
 
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
             method: 'GET',
@@ -451,14 +451,14 @@ const listenForTableChanges = async () => {
             const inventory = await response.json();
 
             try {
-              if (process.env.NODE_ENV === 'production') {              
+              if (process.env.NODE_ENV === 'production') {
                 await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(inventory),
                 });
               }
-              
+
               // logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
             } catch (siteControllerError) {
               // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
@@ -466,7 +466,7 @@ const listenForTableChanges = async () => {
           }
         }
       });
-      
+
       await prodClient.query('LISTEN logs_reservation_changed');
       await prodClient.query('LISTEN reservation_log_inserted');
       // logger.info('Listening for changes on logs_reservation_changed and reservation_log_inserted (prod)');
@@ -518,7 +518,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/*splat', (req, res) => {
   //res.sendFile(path.join(__dirname, 'public', 'index.html')); //DOCKER CHANGE
   res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
-});  
+});
 
 // Start the server
 /*
@@ -531,59 +531,95 @@ app.listen(PORT, '0.0.0.0', () => {
 
 
 // Graceful shutdown
-const cleanup = () => {
-  logger.info('Starting graceful shutdown...');
+const shutdown = async (signal) => {
+  logger.info(`Starting graceful shutdown due to ${signal}...`);
 
   // 1. Close Socket.IO server to disconnect clients
-  ioHttp.close(() => {
-    logger.info('Socket.IO server closed.');
+  await new Promise(resolve => {
+    ioHttp.close(err => {
+      if (err) {
+        logger.error('Error closing Socket.IO server:', err);
+      }
+      resolve();
+    });
   });
+  logger.info('Socket.IO server closed.');
 
   // 2. Close HTTP server
-  httpServer.close(async () => {
-    logger.info('HTTP server closed.');
-
-    // 3. Close all database pools
-    try {
-      await db.pool.end();
-      logger.info('Main DEV database pool closed.');
-    } catch (err) {
-      logger.error('Error closing main DEV database pool:', err);
-    }
-    try {
-      await db.prodPool.end();
-      logger.info('Main PROD database pool closed.');
-    } catch (err) {
-      logger.error('Error closing main PROD database pool:', err);
-    }
-    try {
-      await listenClient.end();
-      logger.info('Listener DEV database pool closed.');
-    } catch (err) {
-      logger.error('Error closing listener DEV database pool:', err);
-    }
-    try {
-      await prodListenClient.end();
-      logger.info('Listener PROD database pool closed.');
-    } catch (err) {
-      logger.error('Error closing listener PROD database pool:', err);
-    }
-
-
-
-    logger.info('Graceful shutdown complete.');
-    process.exit(0);
+  await new Promise(resolve => {
+    httpServer.close(err => {
+      if (err) {
+        logger.error('Error closing HTTP server:', err);
+      }
+      resolve();
+    });
   });
+  logger.info('HTTP server closed.');
 
-  // Force shutdown after a timeout
-  setTimeout(() => {
-    logger.error('Graceful shutdown timed out. Forcefully exiting.');
-    process.exit(1);
-  }, 10000); // 10 seconds
+  // 3. Close all database pools
+  try {
+    await db.pool.end();
+    logger.info('Main DEV database pool closed.');
+  } catch (err) {
+    logger.error('Error closing main DEV database pool:', err);
+  }
+  try {
+    await db.prodPool.end();
+    logger.info('Main PROD database pool closed.');
+  } catch (err) {
+    logger.error('Error closing main PROD database pool:', err);
+  }
+  try {
+    await listenClient.end();
+    logger.info('Listener DEV database pool closed.');
+  } catch (err) {
+    logger.error('Error closing listener DEV database pool:', err);
+  }
+  
+  try {
+    await prodListenClient.end();
+    logger.info('Listener PROD database pool closed.');
+  } catch (err) {
+    logger.error('Error closing listener PROD database pool:', err);
+  }
+
+  if (sessionPool) {
+    try {
+      await sessionPool.end();
+      logger.info('Session database pool closed.');
+    } catch (err) {
+      logger.error('Error closing session database pool:', err);
+    }
+  }  
+
+  try {
+    await closeSingletonBrowser();
+    logger.info('Puppeteer browser instance closed.');
+  } catch (err) {
+    logger.error('Error closing Puppeteer browser instance:', err);
+  }
+
+  logger.info('Graceful shutdown complete.');
+  process.exit(0);
 };
 
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
+process.removeAllListeners('SIGINT');
+process.on('SIGINT', () => {
+  shutdown('SIGINT')
+    .catch(err => {
+      logger.error('Shutdown error:', err);
+      process.exit(1);
+    });
+});
+
+process.removeAllListeners('SIGTERM');
+process.on('SIGTERM', () => {
+  shutdown('SIGTERM')
+    .catch(err => {
+      logger.error('Shutdown error:', err);
+      process.exit(1);
+    });
+});
 
 // Start the servers
 httpServer.listen(PORT, '0.0.0.0', () => {
@@ -602,13 +638,13 @@ if (httpsServer) {
 // Start scheduled jobs only in production environment
 // ... (inside the production block)
 if (process.env.NODE_ENV === 'production') {
-    startScheduling();
-    scheduleLoyaltyTierJob();
-    startWaitlistJob();
-    scheduleDailyMetricsJob();
-    startGoogleSheetsPoller();
-    scheduleDailyDigestEmailJob();
-    // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
+  startScheduling();
+  scheduleLoyaltyTierJob();
+  startWaitlistJob();
+  scheduleDailyMetricsJob();
+  startGoogleSheetsPoller();
+  scheduleDailyDigestEmailJob();
+  // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
-    // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
+  // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
 }
