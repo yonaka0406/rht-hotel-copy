@@ -151,15 +151,12 @@ const generateInvoice = async (req, res) => {
     res.send(Buffer.from(pdfBuffer));
   } catch (error) {
     console.error('Error generating invoice PDF:', error);
-    // Check if the error is Puppeteer-related and reset the browser
-    if (error.name === 'TargetCloseError' || (error.message && error.message.includes('socket hang up')) || (error.message && error.message.includes('Protocol error'))) {
-      await resetBrowser();
-    }
     res.status(500).send(`Error generating invoice PDF: ${error.message}`);
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
     }
+    await resetBrowser();
   }
 };
 
@@ -536,15 +533,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
   } catch (error) {
     console.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
-    // Check if the error is Puppeteer-related and reset the browser
-    if (error.name === 'TargetCloseError' || (error.message && error.message.includes('socket hang up')) || (error.message && error.message.includes('Protocol error'))) {
-      await resetBrowser();
-    }
     res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
     }
+    await resetBrowser();
   }
 };
 function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) {
