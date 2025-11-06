@@ -523,20 +523,7 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
                   });
                   reject(err);
                 } else {
-                    // Check for isSuccess tag
-                    const isSuccess = result?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse']?.['return']?.['commonResponse']?.['isSuccess'];
-                    if (isSuccess === 'false') {
-                        const errorDescription = result?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse']?.['return']?.['commonResponse']?.['errorDescription'];
-                        logger.error('API Call Failed (isSuccess=false):', {
-                            serviceName: name,
-                            hotelId: hotel_id,
-                            requestId: req.requestId,
-                            errorDescription: errorDescription || 'No error description provided.',
-                            xmlResponse: responseXml,
-                        });
-                        reject(new Error(`API call to ${name} failed: ${errorDescription || 'isSuccess is false'}`));
-                    }
-                    resolve(result);
+                  resolve(result);
                 }
             });
         });
@@ -937,20 +924,6 @@ const successOTAReservations = async (req, res, hotel_id, outputId) => {
 const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     const name = 'NetStockSearchService';
 
-    const sDate = new Date(startDate);
-    const eDate = new Date(endDate);
-
-    if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
-        const errorMsg = `Invalid date provided to checkOTAStock. startDate: ${startDate}, endDate: ${endDate}`;
-        console.error(errorMsg);
-        throw new Error(errorMsg);
-    }
-
-    if (sDate > eDate) {
-        console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
-        return [];
-    }
-
     const template = await selectXMLTemplate(req.requestId, hotel_id, name);
     if (!template) {
         throw new Error('XML template not found.');
@@ -959,62 +932,40 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     const formatYYYYMMDD = (dateString) => {
         const date = new Date(dateString);
         const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
         const day = date.getDate().toString().padStart(2, '0');
         return `${year}${month}${day}`;
     };
+    const formattedStartDate = formatYYYYMMDD(startDate);
+    const formattedEndDate = formatYYYYMMDD(endDate);
+    
+    let xmlBody = template
+        .replace('{{extractionProcedure}}', 2)
+        .replace('{{searchDurationFrom}}', formattedStartDate)
+        .replace('{{searchDurationTo}}', formattedEndDate);
 
-    const dateRanges = [];
-    let currentStartDate = new Date(sDate);
+    try {
+        const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
+        const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
 
-    while (currentStartDate <= eDate) {
-        let currentEndDate = new Date(currentStartDate);
-        currentEndDate.setDate(currentEndDate.getDate() + 29);
+        // Check if executeResponse is an array, if not, make it an array
+        const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : [executeResponse];
 
-        if (currentEndDate > eDate) {
-            currentEndDate = eDate;
-        }
+        // Transform the data into the desired array format
+        const transformedResponse = executeResponseArray.map(item => ({
+            netRmTypeGroupCode: item.netRmTypeGroupCode,
+            saleDate: item.saleDate,
+            salesCount: item.salesCount,
+            remainingCount: item.remainingCount
+        }));
 
-        dateRanges.push({
-            start: formatYYYYMMDD(currentStartDate),
-            end: formatYYYYMMDD(currentEndDate)
-        });
-
-        currentStartDate = new Date(currentEndDate);
-        currentStartDate.setDate(currentStartDate.getDate() + 1);
+        // Return the transformed data
+        return transformedResponse;
+    } catch (error) {        
+        console.error('Error submitting XML template:', error);        
+        throw error; // Re-throw to be handled by the caller
     }
 
-
-
-    let allResponses = [];
-
-    for (const range of dateRanges) {
-        let xmlBody = template
-            .replace('{{extractionProcedure}}', 2)
-            .replace('{{searchDurationFrom}}', range.start)
-            .replace('{{searchDurationTo}}', range.end);
-
-        try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-            const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
-
-            const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : (executeResponse ? [executeResponse] : []);
-            
-            const transformedResponse = executeResponseArray.map(item => ({
-                netRmTypeGroupCode: item.netRmTypeGroupCode,
-                saleDate: item.saleDate,
-                salesCount: item.salesCount,
-                remainingCount: item.remainingCount
-            }));
-
-            allResponses = allResponses.concat(transformedResponse);
-        } catch (error) {
-            console.error(`Error submitting XML template for date range ${range.start} - ${range.end}:`, error);
-            throw error;
-        }
-    }
-
-    return allResponses;
 };
 const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
