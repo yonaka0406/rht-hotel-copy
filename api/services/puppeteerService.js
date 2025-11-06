@@ -14,8 +14,7 @@ const getBrowser = async () => {
 
   browserLaunchPromise = puppeteer.launch({
     headless: "new",
-    protocolTimeout: 120000, // Increase timeout to 2 minutes
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable', // Use system-installed Chrome
+    protocolTimeout: 120000, // Increase timeout to 2 minutes    
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
