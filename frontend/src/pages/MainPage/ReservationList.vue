@@ -316,8 +316,8 @@ const loadTableData = async () => {
             searchType.value.value
         );
         tableHeader.value = `予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`;
-    } catch (error) {
 
+    } catch (_error) {
         toast.add({ severity: 'error', summary: 'エラー', detail: 'データの読み込み中にエラーが発生しました', life: 3000 });
     } finally {
         tableLoading.value = false;
@@ -439,10 +439,9 @@ const clearAllFilters = async () => {
 
 const filteredReservations = computed(() => {
     let filteredList = reservationList.value;
-    // Debug: log the first reservation's clients_json and payers_json
-    if (filteredList && filteredList.length > 0) {
 
-
+    if (!filteredList || filteredList.length === 0) {
+        return [];
     }
     // merged_clients
     if (filteredList) {

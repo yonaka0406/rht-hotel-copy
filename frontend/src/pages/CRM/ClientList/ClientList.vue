@@ -133,14 +133,22 @@
 </template>
 
 <script setup>
+    // Vue
     import { ref, onMounted } from "vue";
     import { useRouter } from 'vue-router';
-    import { useClientStore } from '@/composables/useClientStore';
-    import { Card, Skeleton, DataTable, Column, InputText, Button, Tag, Select, SelectButton } from 'primevue';
-    import { FilterMatchMode } from '@primevue/core/api';
-    import { useToast } from 'primevue/usetoast';
+    const router = useRouter();
+
     import ExportClientDialog from './components/ExportClientDialog.vue';
     import NewClientDialog from './components/NewClientDialog.vue';
+
+    //Store
+    import { useClientStore } from '@/composables/useClientStore';
+    const { clients, clientsIsLoading, fetchClients } = useClientStore();
+
+    //Primevue
+    import { Card, Skeleton, DataTable, Column, InputText, Button, Tag, Select, SelectButton } from 'primevue';
+    import { FilterMatchMode } from '@primevue/core/api';    
+    
 
     const exportDialogVisible = ref(false);
 
@@ -151,10 +159,6 @@
     const closeExportDialog = () => {
       exportDialogVisible.value = false;
     };
-
-    const router = useRouter();
-    const { clients, clientsIsLoading, fetchClients } = useClientStore();
-    const toast = useToast();
 
     // Data table
     const tableSize = ref({ label: '中', value: 'null' });

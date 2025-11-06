@@ -931,8 +931,7 @@
       reservationId.value = spotInfo.reservation_id;
       selectedSpot.value = spot;
       drawerVisible.value = true;
-    } else {
-    }
+    } 
   };
   </script>
   
