@@ -133,22 +133,22 @@
 </template>
 
 <script setup>
-    // Vue
+    //Vue
     import { ref, onMounted } from "vue";
     import { useRouter } from 'vue-router';
-    const router = useRouter();
-
     import ExportClientDialog from './components/ExportClientDialog.vue';
     import NewClientDialog from './components/NewClientDialog.vue';
 
     //Store
     import { useClientStore } from '@/composables/useClientStore';
-    const { clients, clientsIsLoading, fetchClients } = useClientStore();
-
+    
     //Primevue
     import { Card, Skeleton, DataTable, Column, InputText, Button, Tag, Select, SelectButton } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';    
     
+    //Setup
+    const router = useRouter();
+    const { clients, clientsIsLoading, fetchClients } = useClientStore();
 
     const exportDialogVisible = ref(false);
 
@@ -204,7 +204,7 @@
     };
 
     onMounted( async () => {
-        fetchClients();
+        await fetchClients();
     });
 
     const getTierDisplayName = (tier) => {
