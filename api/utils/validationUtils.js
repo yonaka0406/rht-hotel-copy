@@ -113,16 +113,6 @@ function validateIntegerParam(intString, paramName) {
   return numericInt;
 }
 
-module.exports = {
-  validateNumericParam,
-  validateUuidParam,
-  validateDateStringParam,
-  validateNonEmptyStringParam,
-  validateIntegerParam,
-  validateEmailFormat,
-  validatePhoneNumberFormat,
-};
-
 /**
  * Validates if the given string is a plausible email format.
  * Note: This is a basic check. True email validation requires sending a confirmation link.
@@ -182,3 +172,13 @@ function validatePhoneNumberFormat(phoneString, paramName) {
   // }
   return phone;
 }
+
+module.exports = {
+  validateNumericParam,
+  validateUuidParam,
+  validateDateStringParam,
+  validateNonEmptyStringParam,
+  validateIntegerParam,
+  validateEmailFormat,
+  validatePhoneNumberFormat,
+};

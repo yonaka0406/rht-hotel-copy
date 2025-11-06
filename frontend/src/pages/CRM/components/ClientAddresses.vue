@@ -101,21 +101,21 @@
                     </div>                
                     <div class="field mt-4 col-span-2">
                         <FloatLabel>
-                            <InputText id="email" v-model="editedAddress.email" @input="validateEmail(editedAddress.email)" fluid/>
+                            <InputText id="email" v-model="editedAddress.email" @input="validateEmailField(editedAddress.email)" fluid/>
                             <label for="email">メールアドレス</label>                        
                         </FloatLabel>
                         <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
                     </div>
                     <div class="field mt-4">
                         <FloatLabel>
-                            <InputText id="phone" v-model="editedAddress.phone" @input="validatePhone(editedAddress.phone)" fluid/>
+                            <InputText id="phone" v-model="editedAddress.phone" @input="validatePhoneField(editedAddress.phone)" fluid/>
                             <label for="phone">電話番号</label>                        
                         </FloatLabel>
                         <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
                     </div>
                     <div class="field mt-4">
                         <FloatLabel>
-                            <InputText id="phone" v-model="editedAddress.fax" @input="validateFAX(editedAddress.fax)" fluid/>
+                            <InputText id="phone" v-model="editedAddress.fax" @input="validateFAXField(editedAddress.fax)" fluid/>
                             <label for="phone">FAX</label>                        
                         </FloatLabel>
                         <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
@@ -178,19 +178,19 @@
     });  
 
     // Validation
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    import { validatePhone, validateEmail } from '@/utils/validationUtils';
+
     const isValidEmail = ref(true);
-    const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
     const isValidPhone = ref(true);
     const isValidFAX = ref(true);
-    const validateEmail = (email) => {
-        isValidEmail.value = emailPattern.test(email);
+    const validateEmailField = (email) => {
+        isValidEmail.value = validateEmail(email);
     };
-    const validatePhone = (phone) => {
-        isValidPhone.value = phonePattern.test(phone);
+    const validatePhoneField = (phone) => {
+        isValidPhone.value = validatePhone(phone);
     };
-    const validateFAX = (phone) => {
-        isValidFAX.value = phonePattern.test(phone);
+    const validateFAXField = (phone) => {
+        isValidFAX.value = validatePhone(phone);
     };
         
     // Dialog
