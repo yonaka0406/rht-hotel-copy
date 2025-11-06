@@ -357,16 +357,16 @@ const deleteSpots = async (spotsToDelete) => {
         const count = spotsToDelete.length;
         toast.add({
             severity: 'success',
-            summary: 'Success',
-            detail: `Deleted ${count} spot${count > 1 ? 's' : ''}`,
+            summary: '成功',
+            detail: `${count}件のスポットを削除しました`,
             life: 3000
         });
     } catch (error) {
         console.error('Error deleting spots:', error);
         toast.add({
             severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to delete parking spots',
+            summary: 'エラー',
+            detail: '駐車スポットの削除に失敗しました',
             life: 3000
         });
     }
