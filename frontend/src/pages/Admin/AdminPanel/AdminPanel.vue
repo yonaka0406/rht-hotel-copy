@@ -1,7 +1,7 @@
 <template>
     <div class="flex min-h-screen bg-gray-100 dark:bg-gray-900">
         <div
-            :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 dark:from-yellow-900 dark:to-gray-950 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto no-scroll']">
+            :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 dark:from-yellow-900 dark:to-gray-950 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto custom-scrollbar']">
             <div
                 :class="['p-4 border-b border-yellow-700', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
                 <div v-if="!isCollapsed" class="flex items-center">
@@ -167,16 +167,29 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.no-scroll {
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
+/* Standardized scrollbar properties for Firefox */
+.custom-scrollbar {
+    scrollbar-width: thin; /* auto | thin | none */
+    scrollbar-color: rgba(250, 204, 21, 0.8) transparent; /* thumb color track color */
 }
 
-.no-scroll::-webkit-scrollbar {
-    display: none;
-    /* Chrome, Safari, Opera */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, rgba(250, 204, 21, 0.8), rgba(161, 98, 7, 0.8)); /* Gradient from yellow-400 to yellow-700 */
+    border-radius: 10px;
+    border: 2px solid rgba(161, 98, 7, 0.6); /* yellow-700 with 60% opacity */
+    background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, rgba(250, 204, 21, 0.9), rgba(161, 98, 7, 0.9)); /* Darker gradient on hover */
 }
 
 .pi {
