@@ -444,31 +444,29 @@ const filteredReservations = computed(() => {
         return [];
     }
     // merged_clients
-    if (filteredList) {
-        filteredList = filteredList.map(reservation => {
-            const guests = Array.isArray(reservation.clients_json) ? reservation.clients_json.map(client => ({
-                ...client,
-                role: "guest"
-            })) : [];
-            const payers = Array.isArray(reservation.payers_json) ? reservation.payers_json.map(payer => ({
-                ...payer,
-                role: "payer"
-            })) : [];
+    filteredList = filteredList.map(reservation => {
+        const guests = Array.isArray(reservation.clients_json) ? reservation.clients_json.map(client => ({
+            ...client,
+            role: "guest"
+        })) : [];
+        const payers = Array.isArray(reservation.payers_json) ? reservation.payers_json.map(payer => ({
+            ...payer,
+            role: "payer"
+        })) : [];
 
-            // Merge guests and payers while keeping unique client_id
-            const uniqueClients = new Map();
-            [...guests, ...payers].forEach(client => {
-                if (!uniqueClients.has(client.client_id)) {
-                    uniqueClients.set(client.client_id, client);
-                }
-            });
-
-            return {
-                ...reservation,
-                merged_clients: Array.from(uniqueClients.values())
-            };
+        // Merge guests and payers while keeping unique client_id
+        const uniqueClients = new Map();
+        [...guests, ...payers].forEach(client => {
+            if (!uniqueClients.has(client.client_id)) {
+                uniqueClients.set(client.client_id, client);
+            }
         });
-    }
+
+        return {
+            ...reservation,
+            merged_clients: Array.from(uniqueClients.values())
+        };
+    });
 
     if (clientFilter.value !== null && clientFilter.value !== '') {
         const filterClients = clientFilter.value.toLowerCase();
@@ -509,7 +507,7 @@ const filteredReservations = computed(() => {
         filteredList = filteredList.filter(reservation => {
             const clients = reservation.clients_json;
             const filterClients = clientsJsonFilter.value.toLowerCase();
-            return clients.some(client =>
+            return Array.isArray(clients) && clients.some(client =>
                 (client.name && client.name.toLowerCase().includes(filterClients)) ||
                 (client.name_kana && client.name_kana.toLowerCase().includes(filterClients)) ||
                 (client.name_kanji && client.name_kanji.toLowerCase().includes(filterClients))
