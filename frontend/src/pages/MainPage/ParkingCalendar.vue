@@ -842,7 +842,7 @@
   // Needed Watchers
   watch(selectedHotelId, async (newVal, _oldVal) => {
     isLoading.value = true;
-    if (oldVal !== null && newVal !== null) {
+    if (_oldVal !== null && newVal !== null) {
       await fetchHotel();
       // Refresh parking spots for the new hotel
       allParkingSpots.value = await fetchAllParkingSpotsByHotel(newVal);
