@@ -11,7 +11,7 @@ const {
   linkPaymentToReceipt
 } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-const { getBrowser } = require('../services/puppeteerService');
+const { getBrowser, resetBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -149,6 +149,13 @@ const generateInvoice = async (req, res) => {
     res.setHeader('X-Invoice-Number', invoiceData.invoice_number);
     res.contentType("application/pdf");
     res.send(Buffer.from(pdfBuffer));
+  } catch (error) {
+    console.error('Error generating invoice PDF:', error);
+    // Check if the error is Puppeteer-related and reset the browser
+    if (error.name === 'TargetCloseError' || (error.message && error.message.includes('socket hang up')) || (error.message && error.message.includes('Protocol error'))) {
+      await resetBrowser();
+    }
+    res.status(500).send(`Error generating invoice PDF: ${error.message}`);
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
@@ -529,6 +536,10 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
   } catch (error) {
     console.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
+    // Check if the error is Puppeteer-related and reset the browser
+    if (error.name === 'TargetCloseError' || (error.message && error.message.includes('socket hang up')) || (error.message && error.message.includes('Protocol error'))) {
+      await resetBrowser();
+    }
     res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
   } finally {
     if (page) {

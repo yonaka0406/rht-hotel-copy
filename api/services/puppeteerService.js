@@ -15,6 +15,7 @@ const getBrowser = async () => {
   browserLaunchPromise = puppeteer.launch({
     headless: "new",
     protocolTimeout: 120000, // Increase timeout to 2 minutes
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable', // Use system-installed Chrome
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -51,8 +52,14 @@ const closeSingletonBrowser = async () => {
       console.error("Error closing Puppeteer browser instance:", err);
     } finally {
       browserInstance = null;
+      browserLaunchPromise = null;
     }
   }
+};
+
+const resetBrowser = async () => {
+  console.warn('Resetting Puppeteer browser instance due to error.');
+  await closeSingletonBrowser();
 };
 
 // The closeBrowser function is now deprecated, but we can keep it for a short time
@@ -66,6 +73,7 @@ module.exports = {
   getBrowser,
   closeBrowser, // Deprecated
   closeSingletonBrowser,
+  resetBrowser,
 };
 
 // Add graceful shutdown handlers
