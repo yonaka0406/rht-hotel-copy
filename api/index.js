@@ -293,7 +293,6 @@ const prodListenClient = new Pool({
 
 // Function to listen for changes in a specific table
 const listenForTableChanges = async () => {
-  if (process.env.NODE_ENV !== 'production') return;
   // --- Development database listener ---
   let devClient;
   try {
@@ -342,7 +341,7 @@ const listenForTableChanges = async () => {
             }
           });
           const inventory = await response.json();
-/*
+
           try {
             await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
               method: 'POST',
@@ -355,7 +354,6 @@ const listenForTableChanges = async () => {
           } catch (siteControllerError) {
             // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
           }
-*/
         }
       }
     });
