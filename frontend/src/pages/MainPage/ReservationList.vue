@@ -66,24 +66,9 @@
                     </template>
                     <template #body="slotProps">
                         <div class="flex justify-center items-center">
-                            <span v-if="slotProps.data.status === 'hold'"
-                                class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-pause"
-                                    v-tooltip="'保留中'"></i></span>
-                            <span v-if="slotProps.data.status === 'provisory'"
-                                class="px-2 py-1 rounded-md bg-cyan-200 text-cyan-700"><i class="pi pi-clock"
-                                    v-tooltip="'仮予約'"></i></span>
-                            <span v-if="slotProps.data.status === 'confirmed'"
-                                class="px-2 py-1 rounded-md bg-sky-200 text-sky-700"><i class="pi pi-check-circle"
-                                    v-tooltip="'確定'"></i></span>
-                            <span v-if="slotProps.data.status === 'checked_in'"
-                                class="px-2 py-1 rounded-md bg-green-200 text-green-700"><i class="pi pi-user"
-                                    v-tooltip="'滞在中'"></i></span>
-                            <span v-if="slotProps.data.status === 'checked_out'"
-                                class="px-2 py-1 rounded-md bg-purple-200 text-purple-700"><i class="pi pi-sign-out"
-                                    v-tooltip="'アウト'"></i></span>
-                            <span v-if="slotProps.data.status === 'cancelled'"
-                                class="px-2 py-1 rounded-md bg-gray-200 text-gray-700"><i class="pi pi-times"
-                                    v-tooltip="'キャンセル'"></i></span>
+                            <span :class="['px-2 py-1 rounded-md', getStatusInfo(slotProps.data.status).class]">
+                                <i :key="getStatusInfo(slotProps.data.status).icon" :class="['pi', getStatusInfo(slotProps.data.status).icon]" v-tooltip="getStatusInfo(slotProps.data.status).tooltip"></i>
+                            </span>
                         </div>
                     </template>
                 </Column>
@@ -292,6 +277,18 @@ import { formatDate, formatDateWithDay } from '@/utils/dateUtils';
 const formatCurrency = (value) => {
     if (value == null) return '';
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
+};
+
+const getStatusInfo = (status) => {
+    switch (status) {
+        case 'hold': return { icon: 'pi-pause', class: 'bg-yellow-200 text-yellow-700', tooltip: '保留中' };
+        case 'provisory': return { icon: 'pi-clock', class: 'bg-cyan-200 text-cyan-700', tooltip: '仮予約' };
+        case 'confirmed': return { icon: 'pi-check-circle', class: 'bg-sky-200 text-sky-700', tooltip: '確定' };
+        case 'checked_in': return { icon: 'pi-user', class: 'bg-green-200 text-green-700', tooltip: '滞在中' };
+        case 'checked_out': return { icon: 'pi-sign-out', class: 'bg-purple-200 text-purple-700', tooltip: 'アウト' };
+        case 'cancelled': return { icon: 'pi-times', class: 'bg-gray-200 text-gray-700', tooltip: 'キャンセル' };
+        default: return { icon: '', class: '', tooltip: '' };
+    }
 };
 
 // Helper function (can be placed near other helper functions like formatDate)
@@ -626,6 +623,30 @@ watch(() => [selectedHotelId.value], // Watch multiple values
     },
     { immediate: true }
 );
+
+watch(startDateFilter, (newStart) => {
+    if (newStart && endDateFilter.value && newStart > endDateFilter.value) {
+        endDateFilter.value = newStart;
+        toast.add({ 
+            severity: 'info', 
+            summary: '日付調整', 
+            detail: '終了日を開始日に合わせて調整しました。', 
+            life: 3000 
+        });
+    }
+});
+
+watch(endDateFilter, (newEnd) => {
+    if (newEnd && startDateFilter.value && newEnd < startDateFilter.value) {
+        startDateFilter.value = newEnd;
+        toast.add({ 
+            severity: 'info', 
+            summary: '日付調整', 
+            detail: '開始日を終了日に合わせて調整しました。', 
+            life: 3000 
+        });
+    }
+});
 
 // Watcher for Booker Name
 watch(clientFilterInput, debounce((newValue) => {

@@ -93,7 +93,7 @@
                                 <span v-if="slotProps.data.legal_or_natural_person === 'legal'">
                                     <Tag icon="pi pi-building" severity="secondary" value="法人"></Tag>
                                 </span>
-                                <span v-else>
+                                <span v-else-if="slotProps.data.legal_or_natural_person === 'natural'">
                                     <Tag icon="pi pi-user" severity="info" value="個人"></Tag>
                                 </span>
                             </template>
