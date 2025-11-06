@@ -6,7 +6,7 @@
                     <span>顧客データ割合</span>
                 </template>
                 <template #subtitle>                    
-                    登録数：{{ clientsCount.total }}
+                    登録数：{{ formatNumberWithCommas(clientsCount.total) }}
                 </template>
                 <template #content>  
                     <div ref="halfPie" class="w-full h-56"></div>
@@ -17,7 +17,7 @@
                     <span>顧客ロイヤリティ階層</span>
                 </template>
                 <template #subtitle>
-                    <span>総顧客数：{{ loyaltyClientsCount }}</span>
+                    <span>総顧客数：{{ formatNumberWithCommas(loyaltyClientsCount) }}</span>
                 </template>
                 <template #content>
                     <div ref="loyaltyTierChartRef" class="w-full h-56"></div>
@@ -269,6 +269,10 @@
             case 'brand_loyal': return 'danger';
             default: return 'secondary';
         }
+    };
+
+    const formatNumberWithCommas = (number) => {
+        return new Intl.NumberFormat('ja-JP').format(number);
     };
 
     onMounted(async () => {
