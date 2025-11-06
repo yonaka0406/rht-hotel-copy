@@ -1343,7 +1343,10 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         batch.forEach((item) => {
             const adjustmentDate = item.saleDate;
             const netRmTypeGroupCode = parseInt(item.netRmTypeGroupCode);
-            const remainingCount = parseInt(item.pmsRemainingCount);
+            let remainingCount = parseInt(item.pmsRemainingCount);
+            if (remainingCount < 0) {
+                remainingCount = 0;
+            }
             let salesStatus = parseInt(item.salesStatus);
             if (salesStatus === 0) {
                 salesStatus = 3; // No change
