@@ -143,12 +143,14 @@
     import { useClientStore } from '@/composables/useClientStore';
     
     //Primevue
+    import { useToast } from "primevue/usetoast";
     import { Card, Skeleton, DataTable, Column, InputText, Button, Tag, Select, SelectButton } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';    
     
     //Setup
     const router = useRouter();
     const { clients, clientsIsLoading, fetchClients } = useClientStore();
+    const toast = useToast();
 
     const exportDialogVisible = ref(false);
 
@@ -204,7 +206,12 @@
     };
 
     onMounted( async () => {
-        await fetchClients();
+        try {
+            await fetchClients();
+        } catch (error) {
+            console.error('Failed to fetch clients on mount:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: '顧客データの読み込みに失敗しました。', life: 3000 });
+        }
     });
 
     const getTierDisplayName = (tier) => {

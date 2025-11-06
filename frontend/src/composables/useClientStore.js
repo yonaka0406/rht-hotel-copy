@@ -32,7 +32,8 @@ export function useClientStore() {
     };
 
     // Fetch the list of clients
-    const fetchClients = async (page) => {
+    const fetchClients = async (pageInput) => {
+        const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
