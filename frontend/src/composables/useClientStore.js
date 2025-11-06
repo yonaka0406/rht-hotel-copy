@@ -52,7 +52,7 @@ export function useClientStore() {
             // console.log('From Client Store => fetchClients data:', data);
 
             if (data && data.clients) {                
-                if (page === 1) {
+                if (page === 1 || page === undefined) {
                     setClients(data.clients);                
                     return data.totalPages;
                 } else {
