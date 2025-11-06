@@ -354,7 +354,7 @@
                             <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
                             <button class="bg-blue-500 text-white hover:bg-blue-600"
                                 @click="changeGuestNumber(selectedGroup, 'add')"
-                                :disabled="selectedGroup.details[0].number_of_people >= selectedGroup.details[0].capacity || isChangingGuestNumber || isSubmitting"><i class="pi pi-plus"></i>
+                                :disabled="selectedGroup.details[0].number_of_people >= selectedGroup.details[0].capacity || isSubmitting"><i class="pi pi-plus"></i>
                                 人数増加</button>
                         </div>
                         <div v-if="selectedGroup.details[0].number_of_people > 1"
@@ -487,6 +487,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 
 const isSubmitting = ref(false);
+const duplicatedGuest = ref(null);
 
 import ReservationDayDetail from '@/pages/MainPage/Reservation/components/ReservationDayDetail.vue';
 import ReservationGuestListDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationGuestListDialog.vue';
@@ -1102,9 +1103,8 @@ const applyGuestChanges = async () => {
             return;
         }
 
-        const guestsWithId = guests.value.filter(guest => guest.client?.id !== null);
+        const guestsWithId = guests.value.filter(guest => guest.client?.id);
         const idSet = new Set();
-        const duplicatedGuest = [];
         let hasDuplicates = false;
         const number_of_people = selectedGroup.value.details[0]?.number_of_people;
         const guestCount = guests.value.filter(guest => guest.client?.name).length;
@@ -1137,7 +1137,7 @@ const applyGuestChanges = async () => {
         // console.log('No duplicates found, checking fields...');
         for (const guest of guests.value) {
 
-            if (guest.client?.name) {
+            if (guest.client?.email || guest.client?.phone) {
 
                 if (!guest.client.email && !guest.client.phone) {
 
@@ -1159,6 +1159,14 @@ const applyGuestChanges = async () => {
                     }
                 }
             }
+
+            // NEW: Check for gender if it's a new client with a name
+            if (!guest.client?.id && (guest.client?.name || guest.client?.display_name)) {
+                if (!guest.client.gender) {
+                    toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.client.display_name}に性別を選択してください。`, life: 3000 });
+                    return;
+                }
+            }
         }
         // console.log('No entry problem found, applying changes...');
 
@@ -1170,7 +1178,13 @@ const applyGuestChanges = async () => {
                 hotel_id: group.hotel_id,
                 room_id: group.room_id,
                 number_of_people: group.number_of_people,
-                guestsToAdd: guests.value.filter(guest => guest.client?.id).map(guest => guest.client)
+                guestsToAdd: guests.value.filter(guest => guest.client?.display_name).map(guest => {
+                    const clientData = { ...guest.client };
+                    if (!clientData.id && !clientData.name && clientData.display_name) {
+                        clientData.name = clientData.display_name;
+                    }
+                    return clientData;
+                })
             };
         });
 
