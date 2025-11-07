@@ -5,6 +5,29 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 7, 2025
+
+#### Comment Section Interrupted by WebSocket Updates in ReservationEdit
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Source**: Internal Testing
+- **Description**: 
+  - The comment section in the ReservationEdit page is constantly being updated by WebSocket events, which interrupts user input
+  - When a user is typing a comment, the input field gets reset if any WebSocket update is received
+- **Expected Behavior**:
+  - User input in the comment field should not be interrupted by WebSocket updates
+  - The comment input should be separate from the displayed database value
+- **Proposed Solution**:
+  1. Split the comment section into two distinct parts:
+     - Input field (local state)
+     - Display area (database value)
+  2. Only update the display area when explicitly saving changes or when no user is actively editing
+  3. Add a visual indicator when there are unsaved changes in the comment field
+- **Technical Notes**:
+  - Consider using a local state to track the input value separately from the database value
+  - Add debouncing for the save operation to prevent excessive API calls
+  - Ensure proper handling of concurrent edits by multiple users
+
 ### November 5, 2025
 
 #### UI/UX Improvements for Wehub Interface

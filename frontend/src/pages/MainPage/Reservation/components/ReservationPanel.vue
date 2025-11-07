@@ -98,8 +98,9 @@
         <div class="field">
             <div class="flex justify-between items-center">
                 <p class="font-bold flex items-center">
-                    備考：
+                    備考編集用：
                     <span class="text-xs text-gray-400 ml-2">(タブキーで編集確定)</span>
+                    <span v-if="isCommentDirty" class="text-xs text-orange-500 ml-2">（未保存）</span>
                 </p>
                 <Button 
                     v-tooltip.top="'重要コメントとしてマーク'"
@@ -112,11 +113,19 @@
                 />
             </div>
             <Textarea 
-                v-model="reservationInfo.comment" 
-                @keydown="handleKeydown" 
-                :class="{ 'border-yellow-500 border-2': reservationInfo.has_important_comment }"
+                v-model="localCommentInput" 
+                @blur="updateReservationCommentOnBlur"
+                :class="{ 
+                    'border-yellow-500 border-2': reservationInfo.has_important_comment,
+                    'border-orange-500': isCommentDirty 
+                }"
                 class="w-full"
             />
+            <Fieldset legend="備考" :toggleable="true">
+                <p class="m-0">
+                    {{ reservationInfo.comment }}
+                </p>
+            </Fieldset>
         </div>
 
         <div class="field flex flex-col col-span-2">
@@ -504,7 +513,7 @@ import { useConfirm } from "primevue/useconfirm";
 // Assign unique group names to each confirm instance
 const confirm = useConfirm();
 import {
-    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message
+    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message, Fieldset
 } from 'primevue';
 
 const reservationAddRoomDialogRef = ref(null);
@@ -556,6 +565,16 @@ const paymentTimingOptions = computed(() => {
 });
 
 const isSubmitting = ref(false);
+
+// Comment update related refs and computed
+const localCommentInput = ref('');
+const isCommentDirty = computed(() => localCommentInput.value !== reservationInfo.value.comment);
+
+const updateReservationCommentOnBlur = () => {
+    if (isCommentDirty.value) {
+        updateReservationComment(reservationInfo.value.reservation_id, reservationInfo.value.hotel_id, localCommentInput.value);
+    }
+};
 
 const updatePaymentTiming = async (event) => {
     try {
@@ -1129,10 +1148,10 @@ const handleKeydown = (event) => {
         updateReservationComment(reservationInfo.value);
     }
 };
-const updateReservationComment = async (data) => {
+const updateReservationComment = async (reservationId, hotelId, comment) => {
     isSubmitting.value = true;
     try {
-        await setReservationComment(data.reservation_id, data.hotel_id, data.comment);
+        await setReservationComment(reservationId, hotelId, comment);
         toast.add({
             severity: 'success',
             summary: '成功',
@@ -1600,6 +1619,9 @@ onMounted(async () => {
 
     numberOfNights.value = (new Date(reservationInfo.value.check_out) - new Date(reservationInfo.value.check_in)) / (1000 * 60 * 60 * 24);
     numberOfNightsTotal.value = reservationInfo.value.reservation_number_of_people * numberOfNights.value;
+
+    // Initialize localCommentInput with the current comment from reservationInfo
+    localCommentInput.value = reservationInfo.value.comment;
 });
 
 
