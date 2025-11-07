@@ -95,13 +95,8 @@
             </div>
 
         </div>
-        <div class="field">
-            <div class="flex justify-between items-center">
-                <p class="font-bold flex items-center">
-                    備考編集用：
-                    <span class="text-xs text-gray-400 ml-2">(タブキーで編集確定)</span>
-                    <span v-if="isCommentDirty" class="text-xs text-orange-500 ml-2">（未保存）</span>
-                </p>
+        <div class="field relative">
+            <div class="absolute top-0 right-0 z-10">
                 <Button 
                     v-tooltip.top="'重要コメントとしてマーク'"
                     :class="{ 'p-button-warning': reservationInfo.has_important_comment }"
@@ -112,21 +107,24 @@
                     aria-label="重要コメントとしてマーク"
                 />
             </div>
-            <Textarea 
-                v-model="localCommentInput" 
-                @blur="updateReservationCommentOnBlur"
-                :class="{ 
-                    'border-yellow-500 border-2': reservationInfo.has_important_comment,
-                    'border-orange-500': isCommentDirty 
-                }"
-                class="w-full"
-            />
             <Fieldset legend="備考" :toggleable="true">
-                <p class="m-0">
+                <p class="m-0 text-left" style="white-space: pre-wrap;">
                     {{ reservationInfo.comment }}
                 </p>
+                <div class="flex justify-end mt-2">
+                    <Button 
+                        v-tooltip.top="'備考を編集'"
+                        icon="pi pi-pencil"
+                        @click="openCommentDialog"
+                        text
+                        rounded
+                        aria-label="備考を編集"
+                    />
+                </div>
             </Fieldset>
         </div>
+
+
 
         <div class="field flex flex-col col-span-2">
             <Divider />
@@ -471,6 +469,13 @@
         v-model:visible="showSplitDialog"
     />
 
+    <ReservationCommentDialog
+        v-model:visible="commentDialogVisible"
+        :comment="reservationInfo.comment"
+        :has-important-comment="reservationInfo.has_important_comment"
+        @save="(newComment) => updateReservationComment(reservationInfo.reservation_id, reservationInfo.hotel_id, newComment)"
+    />
+
     <CancellationCalculatorDialog 
         v-model:visible="showCancellationCalculator" 
         :reservationDetails="reservation_details" 
@@ -506,6 +511,8 @@ import ReservationCancelDialog from '@/pages/MainPage/Reservation/components/dia
 import ReservationSplitDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationSplitDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
+import ReservationCommentDialog from './dialogs/ReservationCommentDialog.vue';
+
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
@@ -515,6 +522,11 @@ const confirm = useConfirm();
 import {
     Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message, Fieldset
 } from 'primevue';
+
+const commentDialogVisible = ref(false);
+const openCommentDialog = () => {
+    commentDialogVisible.value = true;
+};
 
 const reservationAddRoomDialogRef = ref(null);
 const reservationAnnounceDialogRef = ref(null);
