@@ -1166,7 +1166,7 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     const processInventoryBatch = async (batch, batch_no) => {
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(1000); // 1-second pause
+        await delay(2000); // 2-second pause
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -1337,7 +1337,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
 
     const processInventoryBatch = async (batch, batch_no) => {
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(1000); // 1-second pause
+        await delay(2000); // 2-second pause
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
