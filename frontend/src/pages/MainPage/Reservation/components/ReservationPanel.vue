@@ -499,6 +499,7 @@
 import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
+import { validate as uuidValidate } from 'uuid';
 
 import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
 import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
@@ -1149,11 +1150,27 @@ const handleKeydown = (event) => {
             });
             return;
         }
-        updateReservationComment(reservationInfo.value);
+        updateReservationComment(
+            reservationInfo.value.reservation_id,
+            reservationInfo.value.hotel_id,
+            reservationInfo.value.comment
+        );
     }
 };
 const updateReservationComment = async (reservationId, hotelId, comment) => {
     isSubmitting.value = true;
+
+    if (!uuidValidate(reservationId)) {
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '無効な予約IDです。',
+            life: 3000
+        });
+        isSubmitting.value = false;
+        return;
+    }
+
     try {
         await setReservationComment(reservationId, hotelId, comment);
         toast.add({
