@@ -968,11 +968,10 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     let currentStartDate = new Date(sDate);
 
     while (currentStartDate <= eDate) {
-        let currentEndDate = new Date(currentStartDate);
-        currentEndDate.setDate(currentEndDate.getDate() + 29);
+        let currentEndDate = new Date(currentStartDate.getFullYear(), currentStartDate.getMonth() + 1, 0); // Last day of current month
 
         if (currentEndDate > eDate) {
-            currentEndDate = eDate;
+            currentEndDate = new Date(eDate);
         }
 
         dateRanges.push({
