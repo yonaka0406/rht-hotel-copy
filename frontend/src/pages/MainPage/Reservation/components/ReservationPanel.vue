@@ -471,7 +471,7 @@
 
     <ReservationCommentDialog
         v-model:visible="commentDialogVisible"
-        :comment="reservationInfo.comment"
+        :comment="localCommentInput"
         :has-important-comment="reservationInfo.has_important_comment"
         @save="(newComment) => updateReservationComment(reservationInfo.reservation_id, reservationInfo.hotel_id, newComment)"
     />
@@ -524,7 +524,9 @@ import {
 } from 'primevue';
 
 const commentDialogVisible = ref(false);
+const localCommentInput = ref('');
 const openCommentDialog = () => {
+    localCommentInput.value = reservationInfo.value.comment;
     commentDialogVisible.value = true;
 };
 
@@ -577,16 +579,6 @@ const paymentTimingOptions = computed(() => {
 });
 
 const isSubmitting = ref(false);
-
-// Comment update related refs and computed
-const localCommentInput = ref('');
-const isCommentDirty = computed(() => localCommentInput.value !== reservationInfo.value.comment);
-
-const updateReservationCommentOnBlur = () => {
-    if (isCommentDirty.value) {
-        updateReservationComment(reservationInfo.value.reservation_id, reservationInfo.value.hotel_id, localCommentInput.value);
-    }
-};
 
 const updatePaymentTiming = async (event) => {
     try {

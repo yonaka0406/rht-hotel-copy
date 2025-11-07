@@ -10,14 +10,14 @@
             rows="10"
         />
         <template #footer>
-            <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text"/>
+            <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text" severity="secondary"/>
             <Button label="保存" icon="pi pi-check" @click="saveComment" class="p-button-text"/>
         </template>
     </Dialog>
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { Dialog, Textarea, Button } from 'primevue';
 
 const props = defineProps({
@@ -47,10 +47,14 @@ const dialogVisible = computed({
 const isDirty = computed(() => localComment.value !== props.comment);
 
 watch(() => props.comment, (newComment) => {
-    if (!isDirty.value) {
-        localComment.value = newComment;
-    }
+    console.log('[Dialog] Comment prop changed:', newComment);
+    localComment.value = newComment;
 }, { immediate: true });
+
+onMounted(() => {
+    console.log('[Dialog] Component mounted, comment prop:', props.comment);
+    localComment.value = props.comment;
+});
 
 const closeDialog = () => {
     dialogVisible.value = false;
