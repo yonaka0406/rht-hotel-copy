@@ -7,26 +7,26 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### November 7, 2025
 
-#### Comment Section Interrupted by WebSocket Updates in ReservationEdit
+#### Plan Addons with End Date Being Ignored and Added to Incorrect Dates
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Source**: Internal Testing
 - **Description**: 
-  - The comment section in the ReservationEdit page is constantly being updated by WebSocket events, which interrupts user input
-  - When a user is typing a comment, the input field gets reset if any WebSocket update is received
+  - Plan addons with a specified end date are being applied to all dates in the reservation period
+  - The end date validation for plan addons is not being enforced
 - **Expected Behavior**:
-  - User input in the comment field should not be interrupted by WebSocket updates
-  - The comment input should be separate from the displayed database value
+  - Addons should only be applied to dates within their specified date range
+  - The end date should be respected and addons should not be applied beyond it
 - **Proposed Solution**:
-  1. Split the comment section into two distinct parts:
-     - Input field (local state)
-     - Display area (database value)
-  2. Only update the display area when explicitly saving changes or when no user is actively editing
-  3. Add a visual indicator when there are unsaved changes in the comment field
+  1. Update the addon application logic to check both start and end dates
+  2. Add validation to ensure end date is not before start date
+  3. Update the UI to clearly show the effective date range for each addon
 - **Technical Notes**:
-  - Consider using a local state to track the input value separately from the database value
-  - Add debouncing for the save operation to prevent excessive API calls
-  - Ensure proper handling of concurrent edits by multiple users
+  - Review the `applyAddonsToReservation` function in the reservation service
+  - Add date range validation in the addon selection component
+  - Consider adding visual indicators in the UI for addon date ranges
+
+
 
 ### November 5, 2025
 
