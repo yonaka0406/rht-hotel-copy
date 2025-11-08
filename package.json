@@ -36,7 +36,10 @@
         "docs:validate": "node scripts/validate-docs.js",
         "docs:validate:links": "node scripts/validate-doc-links.js",
         "docs:validate:freshness": "node scripts/check-doc-freshness.js",
-        "docs:validate:format": "node scripts/validate-doc-format.js"
+        "docs:validate:format": "node scripts/validate-doc-format.js",
+        "docs:validate:comprehensive": "node scripts/comprehensive-validation.js",
+        "docs:test:navigation": "node scripts/test-doc-navigation.js",
+        "docs:test:all": "npm run docs:validate:comprehensive && npm run docs:test:navigation"
     },
     "devDependencies": {
         "concurrently": "^9.2.0",

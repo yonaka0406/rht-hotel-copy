@@ -19,6 +19,15 @@ npm run docs:validate
 
 ### Run Individual Checks
 ```bash
+# Run comprehensive validation (all checks + structure/migration)
+npm run docs:validate:comprehensive
+
+# Test navigation and user experience
+npm run docs:test:navigation
+
+# Run both comprehensive validation and navigation tests
+npm run docs:test:all
+
 # Validate all internal links
 npm run docs:validate:links
 
@@ -30,6 +39,70 @@ npm run docs:validate:format
 ```
 
 ## Tools
+
+### 0. Comprehensive Validator (`comprehensive-validation.js`)
+
+**Purpose**: Master validation script that runs all validation checks and performs additional content completeness and migration verification.
+
+**What it checks**:
+- Runs all individual validation scripts (links, format, freshness)
+- Validates documentation structure completeness
+- Checks content completeness (no empty files, missing images)
+- Validates cross-reference system (no isolated documents)
+- Verifies migration completeness (old files removed, new files present)
+
+**Usage**:
+```bash
+node scripts/comprehensive-validation.js
+# or
+npm run docs:validate:comprehensive
+```
+
+**Exit codes**:
+- `0` - All checks passed
+- `1` - One or more checks failed
+- `2` - All checks passed with warnings
+
+**Example output**:
+```
+╔════════════════════════════════════════════════════════════════╗
+║     Comprehensive Documentation Validation Suite              ║
+╚════════════════════════════════════════════════════════════════╝
+
+Running Link Validation...
+[... link validation output ...]
+
+Running Format Validation...
+[... format validation output ...]
+
+Running Freshness Check...
+[... freshness check output ...]
+
+Validating Documentation Structure...
+✅ Documentation structure is correct
+
+Checking Content Completeness...
+✅ All documentation content is complete
+
+Validating Cross-Reference System...
+⚠️  Cross-Reference Issues:
+  content-mapping-audit.md: Isolated document (no links in or out)
+
+Verifying Migration Completeness...
+⚠️  Migration Issues:
+  Old documentation file still exists: ARCHITECTURE.md
+
+COMPREHENSIVE VALIDATION REPORT
+✅ Link Validation
+✅ Format Validation
+⚠️  Freshness Check
+✅ Structure Validation
+✅ Content Completeness
+⚠️  Cross-References
+⚠️  Migration Verification
+
+⚠️  Validation completed with warnings
+```
 
 ### 1. Link Validator (`validate-doc-links.js`)
 
@@ -181,7 +254,92 @@ Files with issues: 3
 - Identifies formatting inconsistencies
 - Reports placeholder text that needs completion
 
-### 4. Master Validator (`validate-docs.js`)
+### 4. Navigation and UX Tester (`test-doc-navigation.js`)
+
+**Purpose**: Tests documentation navigation paths and user experience workflows to ensure efficient information discovery.
+
+**What it tests**:
+- **User Journey Tests**: Complete documentation paths for different personas (new developer, API integrator, system admin, frontend/backend developers)
+- **Task Workflow Tests**: Documentation support for common tasks (adding features, deploying, integrating systems, troubleshooting)
+- **Navigation Completeness**: Main README links, section README links, bidirectional linking
+- **Information Architecture**: Hierarchy depth, naming conventions, directory structure
+
+**Usage**:
+```bash
+node scripts/test-doc-navigation.js
+# or
+npm run docs:test:navigation
+```
+
+**Exit codes**:
+- `0` - All tests passed
+- `1` - One or more tests failed
+
+**Example output**:
+```
+╔════════════════════════════════════════════════════════════════╗
+║     Documentation Navigation & UX Testing Suite              ║
+╚════════════════════════════════════════════════════════════════╝
+
+Testing User Journeys...
+
+Testing: New Developer Onboarding
+Description: A new developer joining the project
+  ✅ Journey path is complete
+
+Testing: API Integration Developer
+Description: Developer integrating with the API
+  ✅ Journey path is complete
+
+Testing Task Workflows...
+
+Testing: Adding a New Feature
+  ✅ Workflow is complete
+
+Testing: Deploying to Production
+  ✅ Workflow is complete
+
+Testing Navigation Completeness...
+✅ Navigation is complete
+
+Testing Information Architecture...
+✅ Information architecture is well-organized
+
+NAVIGATION AND UX TEST REPORT
+
+User Journey Tests:
+  Passed: 5/5
+  ✅ New Developer Onboarding
+  ✅ API Integration Developer
+  ✅ System Administrator
+  ✅ Frontend Developer
+  ✅ Backend Developer
+
+Task Workflow Tests:
+  Passed: 4/4
+  ✅ Adding a New Feature
+  ✅ Deploying to Production
+  ✅ Integrating Payment System
+  ✅ Troubleshooting an Issue
+
+Navigation Tests:
+  ✅ Navigation Completeness
+
+Information Architecture:
+  ✅ Information Architecture
+
+🎉 All navigation and UX tests passed!
+```
+
+**Features**:
+- Tests predefined user journey paths
+- Validates task-oriented workflows
+- Checks navigation link completeness
+- Validates information architecture
+- Identifies isolated documents
+- Checks directory structure
+
+### 5. Master Validator (`validate-docs.js`)
 
 **Purpose**: Runs all validation checks in sequence and provides a comprehensive summary report.
 
