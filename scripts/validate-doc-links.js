@@ -28,25 +28,61 @@ const results = {
 };
 
 /**
- * Convert heading text to anchor format
+ * Convert heading text to anchor format (GitHub-style)
+ * Handles Unicode normalization and special characters
  */
-function headingToAnchor(heading) {
-  return heading
+function headingToAnchor(heading, seenAnchors = null) {
+  // Normalize Unicode (NFC normalization)
+  let normalized = heading.normalize('NFC');
+  
+  // Convert to lowercase and trim
+  let anchor = normalized
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-');
+    // Replace spaces with hyphens
+    .replace(/\s+/g, '-')
+    // Remove punctuation except hyphens and underscores
+    .replace(/[^\w\u0080-\uFFFF-]/g, '')
+    // Remove leading/trailing hyphens
+    .replace(/^-+|-+$/g, '');
+  
+  // Handle duplicates if seenAnchors map is provided
+  if (seenAnchors) {
+    const baseAnchor = anchor;
+    let counter = 0;
+    
+    while (seenAnchors.has(anchor)) {
+      counter++;
+      anchor = `${baseAnchor}-${counter}`;
+    }
+    
+    seenAnchors.set(anchor, true);
+  }
+  
+  return anchor;
 }
 
 /**
  * Extract all anchors from markdown content
+ * Handles duplicate headings by appending -1, -2, etc.
  */
 function extractAnchors(content) {
   const anchors = new Set();
-  let match;
+  const seenAnchors = new Map(); // Track duplicates
   
-  while ((match = ANCHOR_REGEX.exec(content)) !== null) {
-    const anchor = headingToAnchor(match[1]);
+  // Strip code blocks and inline code to avoid false positives
+  let cleanedContent = content;
+  
+  // Remove fenced code blocks using existing regex
+  cleanedContent = cleanedContent.replace(CODE_BLOCK_REGEX, '');
+  
+  // Remove inline code using existing regex
+  cleanedContent = cleanedContent.replace(INLINE_CODE_REGEX, '');
+  
+  // Extract anchors from cleaned content
+  let match;
+  while ((match = ANCHOR_REGEX.exec(cleanedContent)) !== null) {
+    const anchor = headingToAnchor(match[1], seenAnchors);
     anchors.add(anchor);
   }
   
@@ -78,15 +114,25 @@ function validateLink(link, sourceFile, linkText) {
     return { valid: true, type: 'protocol' };
   }
   
-  // Parse link and anchor
-  const [linkPath, anchor] = link.split('#');
+  // Parse link and anchor (preserve multiple '#' in anchor)
+  const hashIdx = link.indexOf('#');
+  const linkPath = hashIdx === -1 ? link : link.slice(0, hashIdx);
+  const anchor = hashIdx === -1 ? '' : link.slice(hashIdx + 1);
   
   // Handle anchor-only links (same file)
   if (!linkPath && anchor) {
     const content = fs.readFileSync(sourceFile, 'utf8');
     const anchors = extractAnchors(content);
     
-    if (!anchors.has(anchor)) {
+    // Decode URL-encoded anchor for comparison (e.g., %27 -> ')
+    let decodedAnchor = anchor;
+    try {
+      decodedAnchor = decodeURIComponent(anchor);
+    } catch (e) {
+      // If decoding fails, use original anchor
+    }
+    
+    if (!anchors.has(decodedAnchor)) {
       return {
         valid: false,
         type: 'anchor',
@@ -115,7 +161,15 @@ function validateLink(link, sourceFile, linkText) {
     const content = fs.readFileSync(targetPath, 'utf8');
     const anchors = extractAnchors(content);
     
-    if (!anchors.has(anchor)) {
+    // Decode URL-encoded anchor for comparison (e.g., %27 -> ')
+    let decodedAnchor = anchor;
+    try {
+      decodedAnchor = decodeURIComponent(anchor);
+    } catch (e) {
+      // If decoding fails, use original anchor
+    }
+    
+    if (!anchors.has(decodedAnchor)) {
       return {
         valid: false,
         type: 'anchor',

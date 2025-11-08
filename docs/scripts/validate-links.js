@@ -97,8 +97,9 @@ function validateLink(link, sourceFile) {
     return true;
   }
   
-  // Skip mailto and other protocols
-  if (link.url.includes(':')) {
+  // Skip mailto and other protocols (but not Windows paths like C:\...)
+  // Use proper scheme detection: scheme must start with letter, followed by alphanumeric/+/-/.
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(link.url)) {
     if (verbose) {
       console.log(`  ✓ Protocol: ${link.url}`);
     }

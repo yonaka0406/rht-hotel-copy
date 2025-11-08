@@ -764,7 +764,7 @@ For ongoing support and maintenance:
 - [PostgreSQL Administration](https://www.postgresql.org/docs/current/admin.html)
 - [PM2 Documentation](https://pm2.keymetrics.io/docs/)
 - [Nginx Configuration](https://nginx.org/en/docs/)
-- [Redis Configuration](https://redis.io/documentation)
+- [Redis Configuration](https://redis.io/docs/)
 
 ##
  See Also

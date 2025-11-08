@@ -169,21 +169,55 @@ function checkStaleIndicators(content) {
 }
 
 /**
+ * Recursively find files in directory (cross-platform)
+ */
+function findFilesRecursive(dir, extensions, results = []) {
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      // Skip dot-folders and node_modules
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') {
+        continue;
+      }
+      
+      const fullPath = path.join(dir, entry.name);
+      
+      try {
+        if (entry.isDirectory()) {
+          findFilesRecursive(fullPath, extensions, results);
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name);
+          if (extensions.includes(ext)) {
+            results.push(fullPath);
+          }
+        }
+      } catch (err) {
+        // Silently skip entries that can't be accessed
+        continue;
+      }
+    }
+  } catch (err) {
+    // Silently skip directories that can't be read
+  }
+  
+  return results;
+}
+
+/**
  * Find related code files
  */
 function findRelatedCodeFiles(docPath) {
   const relatedFiles = [];
   const docName = path.basename(docPath, path.extname(docPath));
+  const codeExtensions = ['.js', '.ts', '.jsx', '.tsx'];
   
   // Search for files with similar names in code directories
   CODE_DIRS.forEach(codeDir => {
     if (!fs.existsSync(codeDir)) return;
     
     try {
-      const files = execSync(
-        `find "${codeDir}" -type f \\( -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" \\) 2>/dev/null || true`,
-        { encoding: 'utf8', shell: '/bin/bash' }
-      ).trim().split('\n').filter(Boolean);
+      const files = findFilesRecursive(codeDir, codeExtensions);
       
       files.forEach(file => {
         const fileName = path.basename(file, path.extname(file));
@@ -193,7 +227,7 @@ function findRelatedCodeFiles(docPath) {
         }
       });
     } catch (error) {
-      // Silently continue if find command fails
+      // Silently continue if directory traversal fails
     }
   });
   

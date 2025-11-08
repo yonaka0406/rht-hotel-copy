@@ -1,6 +1,8 @@
 # Channel Management Integration
 
-This document provides guidance for integrating the WeHub.work Hotel Management System with channel management systems for multi-channel distribution.
+This document provides guidance for integrating the WeHub.work Hotel Management System (project name: rht-hotel) with channel management systems for multi-channel distribution.
+
+**Note**: Throughout this documentation, "WeHub.work" refers to the product/brand name, while "rht-hotel" is the internal project/repository name.
 
 ## Overview
 
@@ -41,8 +43,8 @@ Channel management systems act as intermediaries between the PMS and multiple OT
          └───────────────────┼───────────────────┘
                              │
                     ┌────────▼────────┐
-                    │   rht-hotel     │
-                    │   PMS           │
+                    │  WeHub.work     │
+                    │  PMS            │
                     └─────────────────┘
 ```
 

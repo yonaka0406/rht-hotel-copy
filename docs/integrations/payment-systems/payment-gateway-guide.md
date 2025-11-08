@@ -85,7 +85,13 @@ async function processPayment(paymentData) {
       throw new Error(`Payment failed: ${response.failure_message}`);
     }
   } catch (error) {
-    console.error('Payment processing error:', error);
+    // ⚠️ SECURITY: Log only safe, non-sensitive error context
+    console.error('Payment processing failed', {
+      error_code: error.code,
+      error_type: error.type,
+      http_status: error.statusCode
+      // DO NOT log: error.message (may contain PII), full error object, raw response
+    });
     throw error;
   }
 }
@@ -115,38 +121,83 @@ async function createHostedPaymentSession(paymentData) {
 
 ### Payment Tokenization
 
-#### Save Card for Future Use
+⚠️ **PCI DSS Compliance**: NEVER handle raw card data (card number, CVV, expiration) on your server. Always tokenize card data client-side using Stripe.js, Stripe Elements, or a hosted payment page.
+
+#### Client-Side Tokenization (Required)
+
+**Frontend - Tokenize card data using Stripe.js**:
 ```javascript
-async function tokenizePaymentMethod(cardData, customerId) {
-  const paymentMethod = await paymentGateway.createPaymentMethod({
+// Client-side code - tokenization happens in the browser
+async function tokenizeCard() {
+  const stripe = Stripe('pk_live_your_publishable_key');
+  
+  // Create payment method from card element (Stripe Elements)
+  const {paymentMethod, error} = await stripe.createPaymentMethod({
     type: 'card',
-    card: {
-      number: cardData.number,
-      exp_month: cardData.exp_month,
-      exp_year: cardData.exp_year,
-      cvc: cardData.cvc
+    card: cardElement, // Stripe Elements card input
+    billing_details: {
+      name: customerName,
+      email: customerEmail
     }
   });
 
-  // Attach to customer
+  if (error) {
+    // ⚠️ SECURITY: Log only safe error context, no payment details
+    console.error('Tokenization failed', {
+      error_code: error.code,
+      error_type: error.type
+      // DO NOT log: error object, card details, customer info
+    });
+    return null;
+  }
+
+  // Send ONLY the token to your server
+  return paymentMethod.id; // e.g., "pm_1234567890abcdef"
+}
+```
+
+#### Server-Side - Save Tokenized Payment Method
+
+**Backend - Accept pre-tokenized payment method**:
+```javascript
+// ✅ PCI-COMPLIANT: Server only receives and stores tokens
+async function savePaymentMethod(paymentMethodId, customerId) {
+  // Validate that paymentMethodId is a valid token format
+  if (!paymentMethodId || !paymentMethodId.startsWith('pm_')) {
+    throw new Error('Invalid payment method token');
+  }
+
+  // Attach the pre-tokenized payment method to customer
   await paymentGateway.attachPaymentMethod(
-    paymentMethod.id,
+    paymentMethodId,
     customerId
   );
 
-  // Store token in PMS
+  // Retrieve payment method details from gateway (non-sensitive data only)
+  const paymentMethod = await paymentGateway.retrievePaymentMethod(paymentMethodId);
+
+  // Store ONLY the token and non-sensitive metadata in your database
   await savePaymentToken({
     customer_id: customerId,
-    token: paymentMethod.id,
-    last_four: cardData.number.slice(-4),
-    brand: paymentMethod.card.brand,
-    exp_month: cardData.exp_month,
-    exp_year: cardData.exp_year
+    payment_method_id: paymentMethodId, // Token only
+    brand: paymentMethod.card.brand,    // e.g., "visa"
+    last_four: paymentMethod.card.last4, // From gateway, not raw card
+    exp_month: paymentMethod.card.exp_month,
+    exp_year: paymentMethod.card.exp_year,
+    fingerprint: paymentMethod.card.fingerprint // For duplicate detection
   });
 
-  return paymentMethod.id;
+  return paymentMethodId;
 }
 ```
+
+**Key Security Points**:
+- ✅ **Client-side tokenization**: Card data never touches your server
+- ✅ **Token validation**: Verify token format before processing
+- ✅ **Gateway metadata**: Retrieve card details from payment gateway, not client
+- ✅ **Store tokens only**: Never store raw card numbers, CVV, or full expiration dates
+- ❌ **Never log**: Don't log payment method tokens in application logs
+- ❌ **Never transmit**: Don't send raw card data in API requests
 
 ## Stripe Integration
 
@@ -188,7 +239,13 @@ async function createPaymentIntent(amount, currency, metadata) {
       payment_intent_id: paymentIntent.id
     };
   } catch (error) {
-    console.error('Stripe payment intent error:', error);
+    // ⚠️ SECURITY: Log only safe, non-sensitive error context
+    console.error('Stripe payment intent creation failed', {
+      error_code: error.code,
+      error_type: error.type,
+      http_status: error.statusCode
+      // DO NOT log: error.message (may contain PII), full error object, raw response
+    });
     throw error;
   }
 }
@@ -215,7 +272,13 @@ async function confirmPayment(paymentIntentId) {
     
     return { success: false, status: paymentIntent.status };
   } catch (error) {
-    console.error('Stripe confirm error:', error);
+    // ⚠️ SECURITY: Log only safe error context
+    console.error('Stripe payment confirmation failed', {
+      error_code: error.code,
+      error_type: error.type,
+      http_status: error.statusCode
+      // DO NOT log: payment intent details, customer data, decline reasons
+    });
     throw error;
   }
 }
@@ -234,8 +297,12 @@ async function handleStripeWebhook(req, res) {
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    console.error('Webhook signature verification failed:', err);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    // ⚠️ SECURITY: Log only safe error context, no webhook payload
+    console.error('Webhook signature verification failed', {
+      error_type: err.type
+      // DO NOT log: err.message, webhook payload, signatures
+    });
+    return res.status(400).send('Webhook signature verification failed');
   }
 
   // Handle the event
@@ -286,13 +353,16 @@ async function chargeCard(cardData, amount, reservationId) {
   merchantAuthenticationType.setName(process.env.AUTHORIZE_NET_API_LOGIN_ID);
   merchantAuthenticationType.setTransactionKey(process.env.AUTHORIZE_NET_TRANSACTION_KEY);
 
-  const creditCard = new ApiContracts.CreditCardType();
-  creditCard.setCardNumber(cardData.number);
-  creditCard.setExpirationDate(cardData.expiration);
-  creditCard.setCardCode(cardData.cvv);
+  // ⚠️ PCI COMPLIANCE: Use Accept.js for client-side tokenization
+  // This example shows using a pre-tokenized payment nonce from Accept.js
+  // Never send raw card data to your server
+  
+  const opaqueData = new ApiContracts.OpaqueDataType();
+  opaqueData.setDataDescriptor('COMMON.ACCEPT.INAPP.PAYMENT');
+  opaqueData.setDataValue(paymentNonce); // Token from Accept.js client-side
 
   const paymentType = new ApiContracts.PaymentType();
-  paymentType.setCreditCard(creditCard);
+  paymentType.setOpaqueData(opaqueData);
 
   const transactionRequestType = new ApiContracts.TransactionRequestType();
   transactionRequestType.setTransactionType(ApiContracts.TransactionTypeEnum.AUTHCAPTURETRANSACTION);
@@ -348,7 +418,13 @@ async function processFullRefund(transactionId, amount) {
 
     return { success: true, refund_id: refund.id };
   } catch (error) {
-    console.error('Refund processing error:', error);
+    // ⚠️ SECURITY: Log only safe error context
+    console.error('Refund processing failed', {
+      error_code: error.code,
+      error_type: error.type,
+      http_status: error.statusCode
+      // DO NOT log: refund details, payment method info, customer data
+    });
     throw error;
   }
 }
@@ -377,7 +453,13 @@ async function processPartialRefund(transactionId, refundAmount, reason) {
 
     return { success: true, refund_id: refund.id };
   } catch (error) {
-    console.error('Partial refund error:', error);
+    // ⚠️ SECURITY: Log only safe error context
+    console.error('Partial refund failed', {
+      error_code: error.code,
+      error_type: error.type,
+      http_status: error.statusCode
+      // DO NOT log: refund amounts, payment details, customer info
+    });
     throw error;
   }
 }

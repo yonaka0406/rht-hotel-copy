@@ -401,8 +401,7 @@ Report documentation issues:
 
 ---
 
-**Last Updated**: [Date will be set during migration]
-
+**Last Updated**: [YYYY-MM-DD]
 **Maintained By**: Documentation Team
 
 **Review Schedule**: Quarterly

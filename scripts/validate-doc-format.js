@@ -296,21 +296,22 @@ function determineTemplateType(filePath, content) {
   const fileName = path.basename(filePath).toLowerCase();
   const relativePath = path.relative(DOCS_DIR, filePath).toLowerCase();
   
-  // Check if file is in templates directory
-  if (relativePath.startsWith('templates')) {
+  // Check if file is in templates directory (normalize path separators for cross-platform)
+  const normalizedPath = relativePath.split(path.sep).join('/');
+  if (normalizedPath.startsWith('templates')) {
     return null; // Don't validate templates themselves
   }
   
-  // Determine type based on path or content
-  if (relativePath.includes('api') && relativePath.includes('endpoint')) {
+  // Determine type based on path or content (use normalized path for cross-platform)
+  if (normalizedPath.includes('api') && normalizedPath.includes('endpoint')) {
     return 'api-endpoint-template.md';
   }
   
-  if (relativePath.includes('integration')) {
+  if (normalizedPath.includes('integration')) {
     return 'integration-guide-template.md';
   }
   
-  if (relativePath.includes('feature')) {
+  if (normalizedPath.includes('feature')) {
     return 'feature-documentation-template.md';
   }
   

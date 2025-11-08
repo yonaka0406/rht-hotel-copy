@@ -70,7 +70,7 @@ function main() {
   console.log(`\n${colors.bright}${colors.blue}Summary Report${colors.reset}\n`);
   
   const passed = results.filter(r => r.success).length;
-  const failed = results.filter(r => !r.success).length;
+  const failed = results.filter(r => !r.success && r.exitCode !== 2).length;
   const warnings = results.filter(r => r.exitCode === 2).length;
   
   console.log(`Total checks: ${results.length}`);

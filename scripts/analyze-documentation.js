@@ -25,7 +25,7 @@ class DocumentationAnalyzer {
     /**
      * Analyze all documentation files in the project
      */
-    async analyze() {
+    analyze() {
         console.log('🔍 Starting documentation analysis...');
         
         // Analyze root-level documentation files
@@ -138,7 +138,9 @@ class DocumentationAnalyzer {
                     headings: this.extractHeadings(content)
                 };
 
-                if (relativePath.startsWith('docs')) {
+                // Normalize path separators for cross-platform compatibility
+                const normalizedPath = relativePath.split(path.sep).join('/');
+                if (normalizedPath.startsWith('docs')) {
                     this.inventory.existingDocsStructure.push(docInfo);
                 } else {
                     this.inventory.componentDocs.push(docInfo);
@@ -158,10 +160,15 @@ class DocumentationAnalyzer {
         let match;
 
         while ((match = linkRegex.exec(content)) !== null) {
+            const url = match[2];
+            // Consider URL external if it has a URI scheme or is protocol-relative
+            // Matches: http:, https:, mailto:, ftp:, etc., or protocol-relative //
+            const isExternal = /^[a-zA-Z][\w+.-]*:|^\/\//.test(url);
+            
             links.push({
                 text: match[1],
-                url: match[2],
-                isInternal: !match[2].startsWith('http')
+                url: url,
+                isInternal: !isExternal
             });
         }
 
@@ -209,7 +216,13 @@ class DocumentationAnalyzer {
      * Generate comprehensive analysis report
      */
     generateReport() {
-        const reportPath = path.join(this.rootPath, 'docs', 'migration-analysis-report.md');
+        // Ensure docs directory exists before writing report
+        const reportDir = path.join(this.rootPath, 'docs');
+        if (!fs.existsSync(reportDir)) {
+            fs.mkdirSync(reportDir, { recursive: true });
+        }
+        
+        const reportPath = path.join(reportDir, 'migration-analysis-report.md');
         
         const report = `# Documentation Migration Analysis Report
 
@@ -290,7 +303,12 @@ ${this.inventory.componentDocs.map(doc => `
 // Run the analysis if this script is executed directly
 if (require.main === module) {
     const analyzer = new DocumentationAnalyzer(process.cwd());
-    analyzer.analyze().catch(console.error);
+    try {
+        analyzer.analyze();
+    } catch (error) {
+        console.error(error);
+        process.exit(1);
+    }
 }
 
 module.exports = DocumentationAnalyzer;

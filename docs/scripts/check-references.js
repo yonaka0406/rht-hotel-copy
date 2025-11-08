@@ -20,11 +20,33 @@ const verbose = args.includes('--verbose');
  * Get all markdown files recursively
  */
 function getMarkdownFiles(dir, fileList = []) {
-  const files = fs.readdirSync(dir);
+  let files;
+  
+  // Wrap readdirSync in try/catch to handle permission errors
+  try {
+    files = fs.readdirSync(dir);
+  } catch (err) {
+    // If reading directory fails, return current fileList and continue
+    if (verbose) {
+      console.warn(`Warning: Could not read directory ${dir}: ${err.message}`);
+    }
+    return fileList;
+  }
   
   files.forEach(file => {
     const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
+    let stat;
+    
+    // Wrap statSync in try/catch to handle permission errors or bad paths
+    try {
+      stat = fs.statSync(filePath);
+    } catch (err) {
+      // Silently skip entries that can't be stat'd
+      if (verbose) {
+        console.warn(`Warning: Could not stat ${filePath}: ${err.message}`);
+      }
+      return; // Continue to next file
+    }
     
     if (stat.isDirectory()) {
       if (!file.startsWith('.') && file !== 'node_modules') {
@@ -49,8 +71,9 @@ function extractInternalLinks(content, sourceFile) {
   while ((match = linkRegex.exec(content)) !== null) {
     const url = match[2];
     
-    // Skip external links and protocols
-    if (url.startsWith('http://') || url.startsWith('https://') || url.includes(':')) {
+    // Skip external links and protocols (but not Windows paths like C:\...)
+    // Use proper scheme detection: scheme must start with letter, followed by alphanumeric/+/-/.
+    if (url.startsWith('http://') || url.startsWith('https://') || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(url)) {
       continue;
     }
     
@@ -70,6 +93,7 @@ function extractInternalLinks(content, sourceFile) {
  */
 function buildReferenceMap(files) {
   const referenceMap = new Map();
+  const brokenLinks = [];
   
   files.forEach(file => {
     const content = fs.readFileSync(file, 'utf8');
@@ -79,21 +103,31 @@ function buildReferenceMap(files) {
     referenceMap.set(relativePath, {
       path: file,
       linksTo: links,
-      linkedFrom: []
+      linkedFrom: [],
+      brokenLinks: []
     });
   });
   
-  // Build reverse references
+  // Build reverse references and detect broken links
   referenceMap.forEach((data, sourcePath) => {
     data.linksTo.forEach(targetPath => {
       const target = referenceMap.get(targetPath);
       if (target) {
         target.linkedFrom.push(sourcePath);
+      } else {
+        // Broken link detected - target file doesn't exist
+        const brokenLink = {
+          sourcePath: sourcePath,
+          targetPath: targetPath,
+          sourceFile: data.path
+        };
+        data.brokenLinks.push(brokenLink);
+        brokenLinks.push(brokenLink);
       }
     });
   });
   
-  return referenceMap;
+  return { referenceMap, brokenLinks };
 }
 
 /**
@@ -175,7 +209,20 @@ function main() {
   const markdownFiles = getMarkdownFiles(DOCS_DIR);
   console.log(`Found ${markdownFiles.length} markdown files\n`);
   
-  const referenceMap = buildReferenceMap(markdownFiles);
+  const { referenceMap, brokenLinks } = buildReferenceMap(markdownFiles);
+  
+  // Check for broken links first (most critical)
+  console.log('--- Broken Links ---');
+  if (brokenLinks.length > 0) {
+    console.log(`Found ${brokenLinks.length} broken links:\n`);
+    brokenLinks.forEach(link => {
+      console.log(`  ❌ ${link.sourcePath}`);
+      console.log(`     → ${link.targetPath} (file not found)`);
+    });
+    console.log('\nThese links point to non-existent files and must be fixed.\n');
+  } else {
+    console.log('✓ No broken links found\n');
+  }
   
   // Find orphaned documents
   console.log('--- Orphaned Documents ---');
@@ -228,11 +275,17 @@ function main() {
   // Summary
   console.log('=== Summary ===');
   console.log(`Total documents: ${markdownFiles.length}`);
+  console.log(`Broken links: ${brokenLinks.length}`);
   console.log(`Orphaned documents: ${orphaned.length}`);
   console.log(`Dead end documents: ${deadEnds.length}`);
   
-  if (orphaned.length > 0) {
-    console.log('\n⚠️  Action required: Link or remove orphaned documents');
+  if (brokenLinks.length > 0 || orphaned.length > 0) {
+    if (brokenLinks.length > 0) {
+      console.log('\n❌ Critical: Fix broken links');
+    }
+    if (orphaned.length > 0) {
+      console.log('⚠️  Action required: Link or remove orphaned documents');
+    }
     process.exit(1);
   } else {
     console.log('\n✓ Reference structure looks good!');

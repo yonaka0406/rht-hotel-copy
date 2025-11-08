@@ -383,7 +383,7 @@ describe('Email Templates', () => {
 
   test('should handle missing template data', () => {
     const incompleteData = {
-      guest_name: 'Test Guest'
+      guest_name: 'Test Guest',
       // Missing required fields
     };
 
@@ -440,8 +440,7 @@ describe('Booking Engine Bookings', () => {
       }
     };
 
-    const result = await createBookingEnginereservation(bookingData);
-    expect(result.reservation_id).toBeDefined();
+    const result = await createBookingEngineReservation(bookingData);    expect(result.reservation_id).toBeDefined();
     expect(result.confirmation_number).toBeDefined();
   });
 

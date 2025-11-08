@@ -23,7 +23,64 @@ This guide covers:
 ### Operating System
 - **Linux**: Ubuntu 20.04+ or equivalent
 - **macOS**: 10.15 (Catalina) or later
-- **Windows**: Windows 10/11 with WSL2 (recommended) or native
+- **Windows**: Windows 10/11 with WSL2 (recommended for best compatibility) or native PowerShell
+
+**Windows Users:** While native PowerShell is supported, we strongly recommend using WSL2 for the most consistent development experience, especially for database migrations and Redis. See the [WSL2 Setup Guide](#wsl2-setup-for-windows) below.
+
+## WSL2 Setup for Windows
+
+**Recommended for Windows users** to ensure compatibility with all development tools and scripts.
+
+### Installing WSL2
+
+1. **Enable WSL2** (PowerShell as Administrator):
+```powershell
+wsl --install
+```
+
+2. **Restart your computer** when prompted
+
+3. **Set up Ubuntu** (default distribution):
+   - Open "Ubuntu" from Start menu
+   - Create a username and password
+   - Update packages:
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+4. **Install Windows Terminal** (optional but recommended):
+   - Download from Microsoft Store
+   - Provides better terminal experience
+
+### Using WSL2 for Development
+
+Once WSL2 is set up:
+
+1. **Access your Windows files** from WSL2:
+```bash
+cd /mnt/c/Users/YourUsername/Projects
+```
+
+2. **Clone the repository** in WSL2:
+```bash
+git clone https://github.com/your-org/rht-hotel.git
+cd rht-hotel
+```
+
+3. **Follow Linux instructions** for all subsequent setup steps
+
+4. **Access from VS Code**:
+   - Install "Remote - WSL" extension
+   - Open folder in WSL: `code .` from WSL terminal
+   - Or use "Open Folder in WSL" from VS Code
+
+### Benefits of WSL2
+
+- ✅ Native Linux environment for development
+- ✅ All bash scripts work without modification
+- ✅ Better performance for file operations
+- ✅ Consistent with production Linux environment
+- ✅ Full PostgreSQL and Redis compatibility
 
 ## Prerequisites Installation
 
@@ -128,8 +185,10 @@ redis-cli ping  # Should return PONG
 ```
 
 #### Windows
+
+**Option 1: WSL2 (Recommended)**
+
 ```bash
-# Using WSL2 (recommended)
 # Install Redis in WSL2 Ubuntu
 sudo apt install redis-server
 
@@ -137,8 +196,19 @@ sudo apt install redis-server
 sudo service redis-server start
 
 # Verify
-redis-cli ping
+redis-cli ping  # Should return PONG
 ```
+
+**Option 2: Native Windows (Using Memurai or Redis for Windows)**
+
+1. Download Memurai (Redis-compatible) from [memurai.com](https://www.memurai.com/)
+2. Install and start the service
+3. Verify in PowerShell:
+```powershell
+redis-cli ping  # Should return PONG
+```
+
+**Note:** For consistency with the development workflow (especially for running migrations), we recommend using WSL2 on Windows. This provides a Linux environment that matches production more closely.
 
 ### 4. Git
 
@@ -250,6 +320,8 @@ ALTER DATABASE pms_test OWNER TO pms_test;
 
 #### Run Migrations
 
+**Linux/macOS:**
+
 ```bash
 # Navigate to api directory
 cd api
@@ -268,6 +340,31 @@ for file in migrations/*.sql; do
   psql -U pms_test -d pms_test -f "$file"
 done
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+# Navigate to api directory
+cd api
+
+# Run development migrations
+Get-ChildItem migrations\*.sql | ForEach-Object {
+  Write-Host "Running migration: $($_.Name)"
+  psql -U pms_dev -d pms_dev -f $_.FullName
+}
+
+# Verify migrations
+psql -U pms_dev -d pms_dev -c "\dt"
+
+# Run test migrations
+Get-ChildItem migrations\*.sql | ForEach-Object {
+  psql -U pms_test -d pms_test -f $_.FullName
+}
+```
+
+**Windows (WSL2):**
+
+If you're using WSL2 (recommended for Windows), use the Linux/macOS commands above within your WSL2 terminal.
 
 ### 4. Environment Configuration
 
@@ -556,15 +653,38 @@ COMMIT;
 
 #### Running Migrations
 
-```bash
-# Run specific migration
-psql -U pms_dev -d pms_dev -f api/migrations/20240115_add_feature.sql
+**Run Specific Migration:**
 
-# Run all pending migrations
+```bash
+# Linux/macOS/WSL2
+psql -U pms_dev -d pms_dev -f api/migrations/20240115_add_feature.sql
+```
+
+```powershell
+# Windows PowerShell
+psql -U pms_dev -d pms_dev -f api\migrations\20240115_add_feature.sql
+```
+
+**Run All Pending Migrations:**
+
+**Linux/macOS/WSL2:**
+
+```bash
 cd api
 for file in migrations/*.sql; do
+  echo "Running migration: $file"
   psql -U pms_dev -d pms_dev -f "$file"
 done
+```
+
+**Windows (PowerShell):**
+
+```powershell
+cd api
+Get-ChildItem migrations\*.sql | ForEach-Object {
+  Write-Host "Running migration: $($_.Name)"
+  psql -U pms_dev -d pms_dev -f $_.FullName
+}
 ```
 
 ### Redis Management

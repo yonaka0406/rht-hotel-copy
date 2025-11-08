@@ -18,6 +18,7 @@ class DocumentationMigrator {
     this.backupDir = path.join(this.projectRoot, '.doc-migration-backup');
     this.dryRun = options.dryRun || false;
     this.verbose = options.verbose || false;
+    this.skipBackup = options.skipBackup || false;
     
     // Migration mapping: source file -> target location
     this.migrationMap = {
@@ -139,15 +140,21 @@ class DocumentationMigrator {
           this.log(`⚠ Duplicate content detected: ${sourcePath} -> ${targetPath}`, 'warning');
           return false;
         } else {
-          // Different content, create versioned backup
-          const backupPath = targetPath + '.original';
-          fs.copyFileSync(targetPath, backupPath);
-          this.log(`⚠ Target exists with different content, created backup: ${backupPath}`, 'warning');
+          // Different content, create versioned backup (unless skipBackup is enabled)
+          if (!this.skipBackup) {
+            const backupPath = targetPath + '.original';
+            fs.copyFileSync(targetPath, backupPath);
+            this.log(`⚠ Target exists with different content, created backup: ${backupPath}`, 'warning');
+          } else {
+            this.log(`⚠ Target exists with different content (backup skipped)`, 'warning');
+          }
         }
       }
       
-      // Create backup of source
-      this.createBackup(sourcePath);
+      // Create backup of source (unless skipBackup is enabled)
+      if (!this.skipBackup) {
+        this.createBackup(sourcePath);
+      }
       
       if (!this.dryRun) {
         // Copy file to new location
@@ -221,6 +228,7 @@ class DocumentationMigrator {
     this.log(`Project Root: ${this.projectRoot}`, 'info');
     this.log(`Backup Directory: ${this.backupDir}`, 'info');
     this.log(`Dry Run: ${this.dryRun}`, 'info');
+    this.log(`Skip Backup: ${this.skipBackup}`, 'info');
     this.log('', 'info');
     
     // Scan for existing duplicates

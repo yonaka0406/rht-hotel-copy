@@ -252,6 +252,8 @@ const calculateCancellationFee = (reservation, cancellationDate) => {
 
 ### Pricing Rules
 
+**💴 Money Handling Best Practice**: All monetary calculations use integer arithmetic with Japanese Yen (¥) to avoid floating-point precision errors. Always use `Math.round()` when converting from database values and perform all arithmetic operations on integers.
+
 #### Rate Calculation
 
 ```javascript
@@ -279,7 +281,8 @@ const calculateReservationRate = async (requestId, hotelId, roomTypeId, checkIn,
     }
     
     // Calculate total for each night
-    let totalAmount = 0;
+    // Use integer arithmetic to avoid floating-point precision errors
+    let totalAmount = 0; // Amount in yen (integer)
     const currentDate = new Date(checkIn);
     const endDate = new Date(checkOut);
     
@@ -293,12 +296,15 @@ const calculateReservationRate = async (requestId, hotelId, roomTypeId, checkIn,
         });
         
         if (applicableRate) {
-            totalAmount += parseFloat(applicableRate.rate);
+            // Convert to integer yen to avoid floating-point precision errors
+            const rateYen = Math.round(parseFloat(applicableRate.rate));
+            totalAmount += rateYen;
         }
         
         currentDate.setDate(currentDate.getDate() + 1);
     }
     
+    // Return amount in yen (integer)
     return totalAmount;
 };
 ```
@@ -307,21 +313,23 @@ const calculateReservationRate = async (requestId, hotelId, roomTypeId, checkIn,
 
 ```javascript
 const calculateAddonCosts = (addons, nights) => {
-    let addonTotal = 0;
+    // Use integer arithmetic to avoid floating-point precision errors
+    let addonTotal = 0; // Amount in yen (integer)
     
     addons.forEach(addon => {
         const quantity = addon.quantity || 1;
-        const price = parseFloat(addon.price);
+        // Convert to integer yen
+        const priceYen = Math.round(parseFloat(addon.price));
         
         // Some addons are per-night, others are one-time
         if (addon.per_night) {
-            addonTotal += price * quantity * nights;
+            addonTotal += priceYen * quantity * nights;
         } else {
-            addonTotal += price * quantity;
+            addonTotal += priceYen * quantity;
         }
     });
     
-    return addonTotal;
+    return addonTotal; // Returns integer yen
 };
 ```
 
@@ -329,13 +337,15 @@ const calculateAddonCosts = (addons, nights) => {
 
 ```javascript
 const calculateTaxes = (subtotal, taxRate = 0.10) => {
+    // All amounts in yen (integer) to avoid floating-point precision errors
+    // subtotal is already an integer yen value
     const taxAmount = Math.round(subtotal * taxRate);
     const totalAmount = subtotal + taxAmount;
     
     return {
-        subtotal,
-        taxAmount,
-        totalAmount,
+        subtotal,      // Integer yen
+        taxAmount,     // Integer yen
+        totalAmount,   // Integer yen
         taxRate
     };
 };
@@ -499,9 +509,12 @@ const processPayment = async (requestId, paymentData) => {
             transactionId
         ]);
         
-        // Update invoice paid amount
-        const newPaidAmount = parseFloat(invoice.paid_amount) + parseFloat(amount);
-        const newStatus = newPaidAmount >= invoice.total_amount ? 'paid' : 'partial';
+        // Update invoice paid amount (use integer arithmetic for yen)
+        const currentPaidYen = Math.round(parseFloat(invoice.paid_amount));
+        const paymentYen = Math.round(parseFloat(amount));
+        const totalYen = Math.round(parseFloat(invoice.total_amount));
+        const newPaidAmount = currentPaidYen + paymentYen;
+        const newStatus = newPaidAmount >= totalYen ? 'paid' : 'partial';
         
         await client.query(
             'UPDATE invoices SET paid_amount = $1, status = $2 WHERE id = $3',

@@ -148,7 +148,8 @@ payload = {
     }
 }
 
-response = requests.[method](url, headers=headers, json=payload)
+# Replace 'post' with the appropriate HTTP method: get, post, put, patch, delete
+response = requests.post(url, headers=headers, json=payload)
 data = response.json()
 ```
 

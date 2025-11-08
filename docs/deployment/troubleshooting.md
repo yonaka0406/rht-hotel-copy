@@ -323,8 +323,7 @@ sudo systemctl reload postgresql
 psql -U pms_user -d pms_production
 
 # Reset password if needed
-sudo su - postgres
-psql -c "ALTER USER pms_user WITH PASSWORD 'new_password';"
+sudo -u postgres psql -c "ALTER USER pms_user WITH PASSWORD 'new_password';"
 ```
 
 **4. Database Doesn't Exist**

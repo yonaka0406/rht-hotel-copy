@@ -7,7 +7,7 @@
     "BOOKING_ENGINE_API_DOCUMENTATION.md": "docs/api/endpoints/booking-engine.md",
     "BOOKING_ENGINE_INTEGRATION_STRATEGY.md": "docs/integrations/booking-engine/overview.md",
     "STATE_MGMT.md": "docs/frontend/state-management.md",
-    "square_payment_integration.md": "docs/integrations/payment-systems/square-integration.md",
+    "SQUARE_PAYMENT_INTEGRATION.md": "docs/integrations/payment-systems/square-integration.md",
     "BUGS.md": "docs/reference/known-issues.md",
     "DEALT.md": "docs/archive/pre-migration/DEALT.md",
     "GEMINI.md": "docs/archive/pre-migration/GEMINI.md"

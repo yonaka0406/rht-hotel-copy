@@ -53,7 +53,8 @@ class MigrationOrchestrator {
       const migrator = new DocumentationMigrator({
         projectRoot: this.projectRoot,
         dryRun: this.dryRun,
-        verbose: this.verbose
+        verbose: this.verbose,
+        skipBackup: this.skipBackup
       });
       
       this.results.migration = migrator.migrate();
@@ -264,6 +265,33 @@ class MigrationOrchestrator {
 if (require.main === module) {
   const args = process.argv.slice(2);
   const command = args[0];
+  
+  // Show help
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Documentation Migration Orchestrator
+
+Usage:
+  node doc-migration-orchestrator.js [command] [options]
+
+Commands:
+  (default)  Execute complete migration workflow
+  rollback   Restore files from backup
+
+Options:
+  --dry-run       Preview changes without applying them
+  --verbose       Show detailed output
+  --skip-backup   Skip creating backup files (faster, but no rollback)
+  --help, -h      Show this help message
+
+Examples:
+  node doc-migration-orchestrator.js --dry-run
+  node doc-migration-orchestrator.js --verbose
+  node doc-migration-orchestrator.js --skip-backup
+  node doc-migration-orchestrator.js rollback
+`);
+    process.exit(0);
+  }
   
   const options = {
     dryRun: args.includes('--dry-run'),

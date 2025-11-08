@@ -9,7 +9,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### ARCHITECTURE.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\ARCHITECTURE.md`
+- **Current Path**: `./ARCHITECTURE.md`
 - **Suggested Location**: `docs/architecture/system-overview.md`
 - **Size**: 6852 bytes (130 lines)
 - **Last Modified**: 2025-07-16
@@ -17,7 +17,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### BOOKING_ENGINE_API_DOCUMENTATION.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\BOOKING_ENGINE_API_DOCUMENTATION.md`
+- **Current Path**: `./BOOKING_ENGINE_API_DOCUMENTATION.md`
 - **Suggested Location**: `docs/api/endpoints/booking-engine.md`
 - **Size**: 9566 bytes (362 lines)
 - **Last Modified**: 2025-07-15
@@ -25,7 +25,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### BOOKING_ENGINE_INTEGRATION_STRATEGY.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\BOOKING_ENGINE_INTEGRATION_STRATEGY.md`
+- **Current Path**: `./BOOKING_ENGINE_INTEGRATION_STRATEGY.md`
 - **Suggested Location**: `docs/integrations/booking-engine/overview.md`
 - **Size**: 20868 bytes (515 lines)
 - **Last Modified**: 2025-07-15
@@ -33,7 +33,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### BUGS.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\BUGS.md`
+- **Current Path**: `./BUGS.md`
 - **Suggested Location**: `docs/development/known-issues.md`
 - **Size**: 33797 bytes (645 lines)
 - **Last Modified**: 2025-11-08
@@ -41,7 +41,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### CHANGELOG.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\CHANGELOG.md`
+- **Current Path**: `./CHANGELOG.md`
 - **Suggested Location**: `docs/reference/changelog.md`
 - **Size**: 46699 bytes (690 lines)
 - **Last Modified**: 2025-11-08

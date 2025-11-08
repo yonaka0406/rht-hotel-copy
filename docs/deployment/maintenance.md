@@ -111,6 +111,48 @@ else
 fi
 ```
 
+### Backup Retention Policy
+
+**Retention Period**: 30 days
+
+**Rationale**:
+- **Restore Window**: Typical production issues are identified and resolved within 7-14 days
+- **Compliance**: Meets standard data retention requirements for operational backups
+- **Storage Constraints**: Balances safety with available disk space (daily backups = ~30 files)
+- **Risk Mitigation**: Provides sufficient time to identify and recover from data corruption or accidental deletions
+
+**Configuration Variables**:
+```bash
+# Recommended to set in environment or configuration file
+BACKUP_RETENTION_DAYS=30        # Adjust based on your requirements
+BACKUP_AUDIT_LOG_MAX_SIZE=10    # MB before rotation
+BACKUP_DIR="/home/pms/backups/database"
+```
+
+**Adjusting Retention Period**:
+- **Increase to 60-90 days** if:
+  - Compliance requires longer retention
+  - Storage capacity allows
+  - Historical data analysis is needed
+- **Decrease to 14-21 days** if:
+  - Storage is constrained
+  - Backups are very large
+  - Off-site backups provide longer-term retention
+
+**Best Practices**:
+1. **Always test restore** before deleting old backups
+2. **Maintain audit logs** of all deletions
+3. **Use interactive confirmation** for manual cleanup
+4. **Monitor disk space** regularly
+5. **Archive critical backups** off-site for long-term retention
+6. **Document any retention policy changes** in change log
+
+**Audit Log Management**:
+- Location: `/home/pms/logs/backup-deletion-audit.log`
+- Rotation: Automatic when exceeds 10MB
+- Retention: Rotated logs kept for 1 year
+- Review: Monthly audit of deletion patterns
+
 ### Performance Monitoring
 
 ```bash
@@ -450,8 +492,8 @@ pm2 logs pms-api --lines 100
 #### Backup Restoration Test
 ```bash
 # Create test database
-sudo su - postgres
-psql -c "CREATE DATABASE pms_test_restore;"
+# Using portable sudo syntax that works in restricted sudo configurations
+sudo -u postgres psql -c "CREATE DATABASE pms_test_restore;"
 
 # Restore latest backup to test database
 LATEST_BACKUP=$(ls -t /home/pms/backups/database/*.sql.gz | head -1)
@@ -462,8 +504,10 @@ psql -U pms_user -d pms_test_restore -c "\dt"
 psql -U pms_user -d pms_test_restore -c "SELECT count(*) FROM reservations;"
 
 # Cleanup test database
-psql -c "DROP DATABASE pms_test_restore;"
+sudo -u postgres psql -c "DROP DATABASE pms_test_restore;"
 ```
+
+**Note on sudo usage:** The commands above use `sudo -u postgres psql` which is more portable than `sudo su - postgres` and works in restricted sudo configurations. If you need an interactive shell as the postgres user, use `sudo -u postgres -i` instead.
 
 #### Application Recovery Test
 ```bash
@@ -598,9 +642,54 @@ psql -U pms_user -d pms_production -c "VACUUM ANALYZE;" >> $LOG_FILE 2>&1
 echo "Cleaning old logs..." | tee -a $LOG_FILE
 find /home/pms/logs -name "*.log" -mtime +30 -delete
 
-# Clear old backups
-echo "Cleaning old backups..." | tee -a $LOG_FILE
-find /home/pms/backups/database -name "*.sql.gz" -mtime +30 -delete
+# Clear old backups with audit logging
+# Retention Policy: 30 days chosen based on:
+# - Typical restore window for production issues (7-14 days)
+# - Compliance requirements for data retention
+# - Storage capacity constraints
+# - Balance between safety and disk space management
+echo "Managing backup retention..." | tee -a $LOG_FILE
+
+# Configuration variables
+BACKUP_DIR="/home/pms/backups/database"
+RETENTION_DAYS=30
+AUDIT_LOG="/home/pms/logs/backup-deletion-audit.log"
+
+# Step 1: List files that would be deleted (dry run)
+echo "Files older than $RETENTION_DAYS days:" | tee -a $LOG_FILE
+find $BACKUP_DIR -name "*.sql.gz" -mtime +$RETENTION_DAYS -ls | tee -a $LOG_FILE
+
+# Step 2: Append to audit log with metadata
+echo "=== Backup Deletion Audit - $(date) ===" >> $AUDIT_LOG
+find $BACKUP_DIR -name "*.sql.gz" -mtime +$RETENTION_DAYS -ls >> $AUDIT_LOG
+
+# Step 3: Count files to be deleted
+FILE_COUNT=$(find $BACKUP_DIR -name "*.sql.gz" -mtime +$RETENTION_DAYS | wc -l)
+echo "Found $FILE_COUNT backup(s) to delete" | tee -a $LOG_FILE
+
+# Step 4: Interactive confirmation (comment out for automated cron)
+# Uncomment the following lines for manual execution with confirmation:
+# read -p "Delete these $FILE_COUNT backup file(s)? (yes/no): " CONFIRM
+# if [ "$CONFIRM" != "yes" ]; then
+#   echo "Backup deletion cancelled" | tee -a $LOG_FILE
+#   exit 0
+# fi
+
+# Step 5: Perform deletion (only if FILE_COUNT > 0)
+if [ $FILE_COUNT -gt 0 ]; then
+  find $BACKUP_DIR -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete
+  echo "Deleted $FILE_COUNT old backup(s)" | tee -a $LOG_FILE
+  echo "Deleted $FILE_COUNT files on $(date)" >> $AUDIT_LOG
+else
+  echo "No old backups to delete" | tee -a $LOG_FILE
+fi
+
+# Step 6: Rotate audit log if it exceeds 10MB
+if [ -f "$AUDIT_LOG" ] && [ $(stat -f%z "$AUDIT_LOG" 2>/dev/null || stat -c%s "$AUDIT_LOG") -gt 10485760 ]; then
+  mv $AUDIT_LOG "${AUDIT_LOG}.$(date +%Y%m%d)"
+  gzip "${AUDIT_LOG}.$(date +%Y%m%d)"
+  echo "Audit log rotated" | tee -a $LOG_FILE
+fi
 
 # Check disk space
 echo "Checking disk space..." | tee -a $LOG_FILE

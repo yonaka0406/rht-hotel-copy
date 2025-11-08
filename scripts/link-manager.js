@@ -122,8 +122,9 @@ class LinkManager {
    * Resolve a link URL to an absolute file path
    */
   resolveLinkPath(linkUrl, sourceFile) {
-    // Remove anchor fragments
-    const urlWithoutAnchor = linkUrl.split('#')[0];
+    // Remove anchor fragments (only split at first '#')
+    const hashIdx = linkUrl.indexOf('#');
+    const urlWithoutAnchor = hashIdx === -1 ? linkUrl : linkUrl.slice(0, hashIdx);
     
     if (!urlWithoutAnchor) {
       return null; // Just an anchor link
@@ -190,8 +191,9 @@ class LinkManager {
         // Calculate new relative path
         const newRelativePath = this.resolveRelativePath(sourceFile, newTargetPath);
         
-        // Preserve anchor if present
-        const anchor = link.url.includes('#') ? '#' + link.url.split('#')[1] : '';
+        // Preserve anchor if present (including multiple '#' characters)
+        const hashIdx = link.url.indexOf('#');
+        const anchor = hashIdx === -1 ? '' : link.url.slice(hashIdx);
         const newUrl = newRelativePath + anchor;
         
         // Replace the link in content

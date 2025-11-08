@@ -123,21 +123,29 @@ sudo systemctl status postgresql
 ### 2.2 Configure PostgreSQL
 
 ```bash
-# Switch to postgres user
-sudo su - postgres
+# IMPORTANT: Generate a secure password first
+# NEVER use 'your_secure_password' or any example password in production
+# Generate a strong, random password:
+DB_PASSWORD=$(openssl rand -base64 32)
+echo "Generated password: $DB_PASSWORD"
+# Save this password securely - you'll need it for the .env file
 
-# Create database and user
-psql << EOF
+# Switch to postgres user
+sudo -u postgres psql << EOF
 CREATE DATABASE pms_production;
-CREATE USER pms_user WITH ENCRYPTED PASSWORD 'your_secure_password';
+CREATE USER pms_user WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
 GRANT ALL PRIVILEGES ON DATABASE pms_production TO pms_user;
 ALTER DATABASE pms_production OWNER TO pms_user;
 \q
 EOF
-
-# Exit postgres user
-exit
 ```
+
+**Security Best Practices**:
+- ✅ **Use generated passwords**: Always use `openssl rand -base64 32` or similar
+- ✅ **Store securely**: Save passwords in a password manager or secrets vault
+- ✅ **Use environment variables**: Never hardcode passwords in scripts or code
+- ✅ **Rotate regularly**: Change passwords periodically (quarterly recommended)
+- ❌ **Never use**: 'password', 'your_secure_password', or any example passwords
 
 ### 2.3 Configure PostgreSQL for Remote Access (if needed)
 
@@ -165,22 +173,75 @@ sudo systemctl restart postgresql
 # Install Redis
 sudo apt install -y redis-server
 
-# Configure Redis
+# Configure Redis for production security
 sudo nano /etc/redis/redis.conf
+```
 
-# Update configuration
+**Required Security Configuration**:
+
+```conf
+# Process management
 supervised systemd
+
+# Memory management
 maxmemory 256mb
 maxmemory-policy allkeys-lru
 
+# SECURITY: Enable authentication (REQUIRED for production)
+requirepass your_strong_redis_password_here
+
+# SECURITY: Bind to localhost only (prevents external access)
+bind 127.0.0.1 ::1
+
+# SECURITY: Disable dangerous commands
+rename-command FLUSHDB ""
+rename-command FLUSHALL ""
+rename-command CONFIG ""
+
+# Additional security settings
+protected-mode yes
+```
+
+**Security Best Practices**:
+
+1. **Enable Authentication**: Always set a strong password with `requirepass`
+   - Generate strong password: `openssl rand -base64 32`
+   - Update `REDIS_PASSWORD` in application `.env` file
+
+2. **Network Binding**: 
+   - For single-server deployments: `bind 127.0.0.1 ::1` (localhost only)
+   - For multi-server setups: `bind <private-ip>` (private network interface)
+   - Never bind to `0.0.0.0` in production
+
+3. **Firewall Protection**:
+   ```bash
+   # If Redis must be accessible from other servers, restrict by IP
+   sudo ufw allow from <app-server-ip> to any port 6379
+   ```
+
+4. **Disable Dangerous Commands**: Rename or disable commands that can cause data loss
+
+**Apply Configuration**:
+
+```bash
 # Restart Redis
 sudo systemctl restart redis-server
 sudo systemctl enable redis-server
 
 # Verify Redis is running
 redis-cli ping
+# Should return: (error) NOAUTH Authentication required
+
+# Test with authentication
+redis-cli -a your_strong_redis_password_here ping
 # Should return: PONG
 ```
+
+**Security Resources**:
+- [Redis Security Guide](https://redis.io/docs/management/security/)
+- [Redis ACL Documentation](https://redis.io/docs/management/security/acl/)
+
+⚠️ **Warning**: Running Redis without authentication in production is a critical security vulnerability. Always enable `requirepass` and restrict network access.
 
 ## Step 3: Application Deployment
 
@@ -213,6 +274,17 @@ nano .env.production
 
 #### Environment Configuration
 
+⚠️ **Security Warning**: All placeholder values (e.g., `<use_generated_password>`, `your_*`) MUST be replaced with actual secure values before deployment. Never use example passwords in production.
+
+**Password Generation Commands**:
+```bash
+# Generate secure passwords for all services
+openssl rand -base64 32  # Database password
+openssl rand -base64 32  # Redis password
+openssl rand -base64 48  # JWT secret (longer for added security)
+openssl rand -base64 32  # Session secret
+```
+
 ```bash
 # Application Configuration
 NODE_ENV=production
@@ -221,18 +293,22 @@ API_URL=https://api.yourdomain.com
 FRONTEND_URL=https://yourdomain.com
 
 # Database Configuration
+# IMPORTANT: Use the password generated during PostgreSQL setup (see section 2.2)
+# Generate with: openssl rand -base64 32
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=pms_production
 DATABASE_USER=pms_user
-DATABASE_PASSWORD=your_secure_password
-DATABASE_URL=postgresql://pms_user:your_secure_password@localhost:5432/pms_production
+DATABASE_PASSWORD=<use_generated_password_from_section_2.2>
+DATABASE_URL=postgresql://pms_user:<use_generated_password_from_section_2.2>@localhost:5432/pms_production
 
 # Redis Configuration
+# IMPORTANT: Must match the 'requirepass' value in /etc/redis/redis.conf
+# Generate with: openssl rand -base64 32
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=your_strong_redis_password_here
+REDIS_URL=redis://:your_strong_redis_password_here@localhost:6379
 
 # Authentication & Security
 JWT_SECRET=your_jwt_secret_key_min_32_chars
