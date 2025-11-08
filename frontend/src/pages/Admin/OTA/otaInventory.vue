@@ -253,13 +253,13 @@
         try {
             const response = await updateTLInventory(props.hotel_id, inventoryData);
             if (!response.success) {
-                toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });
+                toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。', life: 3000 });
             } else {
-                toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が正常に送信されました。' });
+                toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が正常に送信されました。', life: 3000 });
             }
         } catch (error) {
             console.error('在庫データ送信エラー:', error);
-            toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });
+            toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。', life: 3000 });
         }
     };
          
