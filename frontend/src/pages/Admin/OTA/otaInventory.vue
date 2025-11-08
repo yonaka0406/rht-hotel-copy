@@ -127,7 +127,7 @@
     };
 
     const importData = ref(null);
-    const inventoryData = ref(null);
+    const inventoryData = ref([]);
     const statusOptions = [
         { id: 0, value: '未設定' },
         { id: 1, value: '販売中' },
