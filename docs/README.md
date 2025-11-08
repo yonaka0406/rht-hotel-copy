@@ -1,115 +1,114 @@
-# Hotel Management System Documentation
+# WeHub.work Hotel Management System - Documentation
 
-Welcome to the comprehensive documentation for the hotel management system. This documentation is organized to support developers, architects, business stakeholders, and operations teams.
+Welcome to the comprehensive documentation for the WeHub.work Node.js Property Management System (PMS). This documentation provides everything you need to understand, deploy, develop, and maintain the system.
 
-## Documentation Structure
+## 🚀 Quick Start
 
-### 📋 [Requirements](./requirements/)
-System requirements organized by type:
-- **Business Requirements**: Business objectives and value statements
-- **Functional Requirements**: System functionality and behavior
-- **Non-Functional Requirements**: Performance, security, and quality attributes
-- **Requirements Traceability**: Mapping between requirements and implementation
+New to the system? Start here:
 
-### 🏗️ [Design](./design/)
-System architecture and design documentation:
-- **System Architecture**: High-level system design and components
-- **Data Models**: Database schema and data relationships
-- **API Design**: REST API specifications and integration patterns
-- **Integration Patterns**: External system integrations
-- **Security Design**: Security architecture and implementation
+- **[Getting Started Guide](getting-started/README.md)** - Quick setup and first steps
+- **[Development Environment Setup](getting-started/development-environment.md)** - Set up your local development environment
+- **[System Overview](architecture/system-overview.md)** - Understand the high-level architecture
 
-### 🎯 [Features](./features/)
-Feature-specific documentation organized by capability:
-- **[Reservation Management](./features/reservation-management/)**: Core booking and reservation system
-- **[Client Management](./features/client-management/)**: CRM and customer data management
-- **[Billing System](./features/billing-system/)**: Payment processing and financial management
-- **[Waitlist System](./features/waitlist-system/)**: Waitlist and notification management
-- **[Reporting & Analytics](./features/reporting-analytics/)**: Business intelligence and reporting
+## 📚 Documentation Sections
 
-### 🚀 [Operations](./operations/)
-Deployment and operational documentation:
-- **Deployment Guide**: Environment setup and deployment procedures
-- **Monitoring Guide**: System monitoring and alerting setup
-- **Troubleshooting**: Common issues and resolution procedures
-- **Maintenance Procedures**: Regular maintenance tasks and schedules
+### 🏗️ Architecture & Design
+- **[Architecture Overview](architecture/README.md)** - System architecture and design patterns
+- **[Technology Stack](architecture/technology-stack.md)** - Technologies and frameworks used
+- **[Component Architecture](architecture/component-architecture.md)** - System components and relationships
+- **[Data Architecture](architecture/data-architecture.md)** - Database design and data flow
 
-### 📝 [Templates](./templates/)
-Standardized templates for consistent documentation:
-- **[Requirement Template](./templates/requirement-template.md)**: For requirements documentation
-- **[Design Template](./templates/design-template.md)**: For system design documents
-- **[Feature Spec Template](./templates/feature-spec-template.md)**: For feature specifications
-- **[ADR Template](./templates/adr-template.md)**: For architecture decision records
+### 🔌 API Documentation
+- **[API Overview](api/README.md)** - API design and authentication
+- **[Booking Engine API](api/endpoints/booking-engine.md)** - Booking engine integration endpoints
+- **[Reservation API](api/endpoints/reservations.md)** - Reservation management endpoints
+- **[Client Management API](api/endpoints/clients.md)** - Client and CRM endpoints
 
-## Documentation Standards
+### 🎨 Frontend Development
+- **[Frontend Overview](frontend/README.md)** - Frontend architecture and patterns
+- **[Component Library](frontend/component-library.md)** - UI components and usage
+- **[State Management](frontend/state-management.md)** - Pinia state management patterns
+- **[Styling Guidelines](frontend/styling-guidelines.md)** - CSS and design system
 
-All documentation follows the established [Documentation Standards and Style Guide](./documentation-standards.md). Key principles include:
+### ⚙️ Backend Development
+- **[Backend Overview](backend/README.md)** - Backend architecture and services
+- **[Database Schema](backend/database-schema.md)** - Database design and relationships
+- **[Service Architecture](backend/service-architecture.md)** - Service layer patterns
+- **[Business Logic](backend/business-logic.md)** - Business rules and validation
 
-- **Clarity**: Clear, concise writing appropriate for the target audience
-- **Consistency**: Uniform formatting, terminology, and structure
-- **Completeness**: Comprehensive coverage with proper context
-- **Maintainability**: Easy to update and keep synchronized with implementation
+### 🚀 Deployment & Operations
+- **[Deployment Guide](deployment/README.md)** - Production deployment instructions
+- **[Environment Setup](deployment/environment-setup.md)** - Environment configuration
+- **[Monitoring & Logging](deployment/monitoring-logging.md)** - System monitoring setup
+- **[Troubleshooting](deployment/troubleshooting.md)** - Common issues and solutions
 
-## Getting Started
+### 🔗 Integrations
+- **[Integration Overview](integrations/README.md)** - External system integrations
+- **[Booking Engine Integration](integrations/booking-engine/overview.md)** - Booking engine connection
+- **[Payment Systems](integrations/payment-systems/square-integration.md)** - Payment gateway integrations
+- **[OTA Systems](integrations/ota-systems/xml-integration.md)** - Online Travel Agency integrations
+
+### ✨ Features
+- **[Features Overview](features/README.md)** - System features and capabilities
+- **[Reservation Management](features/reservation-management/README.md)** - Booking and reservation features
+- **[Client Management](features/client-management/README.md)** - CRM and client features
+- **[Billing System](features/billing-system/README.md)** - Billing and invoicing
+- **[Waitlist System](features/waitlist-system/README.md)** - Waitlist management
+
+### 🛠️ Development
+- **[Development Guidelines](development/README.md)** - Development standards and practices
+- **[Coding Standards](development/coding-standards.md)** - Code style and conventions
+- **[Testing Strategy](development/testing-strategy.md)** - Testing approaches and tools
+- **[Git Workflow](development/git-workflow.md)** - Version control practices
+
+### 📖 Reference
+- **[Configuration Reference](reference/configuration-reference.md)** - All configuration options
+- **[Error Codes](reference/error-codes.md)** - System error codes and meanings
+- **[Glossary](reference/glossary.md)** - Terms and definitions
+- **[Changelog](reference/changelog.md)** - Version history and changes
+
+## 🎯 Common Tasks
 
 ### For New Developers
-1. Start with [Business Requirements](./requirements/) to understand system objectives
-2. Review [System Architecture](./design/) for technical overview
-3. Explore [Feature Documentation](./features/) for specific capabilities
-4. Reference [Operations Guide](./operations/) for deployment and maintenance
+1. [Set up development environment](getting-started/development-environment.md)
+2. [Understand system architecture](architecture/system-overview.md)
+3. [Review coding standards](development/coding-standards.md)
+4. [Run your first tests](development/testing-strategy.md)
+
+### For System Administrators
+1. [Deploy the system](deployment/deployment-guide.md)
+2. [Configure monitoring](deployment/monitoring-logging.md)
+3. [Set up integrations](integrations/README.md)
+4. [Review troubleshooting guide](deployment/troubleshooting.md)
 
 ### For Business Stakeholders
-1. Review [Business Requirements](./requirements/) for system capabilities
-2. Explore [Feature Documentation](./features/) for detailed functionality
-3. Check [Requirements Traceability](./requirements/) for implementation status
+1. [Review system features](features/README.md)
+2. [Understand integration capabilities](integrations/README.md)
+3. [Check deployment status](deployment/README.md)
 
-### For Operations Teams
-1. Follow [Deployment Guide](./operations/) for system setup
-2. Use [Monitoring Guide](./operations/) for system health monitoring
-3. Reference [Troubleshooting](./operations/) for issue resolution
+## 🔍 Finding Information
 
-## Contributing to Documentation
+- **Search by topic**: Use the section navigation above
+- **Browse by audience**: Check the common tasks section
+- **Cross-references**: Look for "See also" sections in documents
+- **Templates**: Use documentation templates in the [templates/](templates/) directory
 
-### Creating New Documentation
-1. Use appropriate [templates](./templates/) for consistency
-2. Follow [Documentation Standards](./documentation-standards.md)
-3. Ensure proper linking and traceability
-4. Submit for review before publishing
+## 🤝 Contributing to Documentation
 
-### Updating Existing Documentation
-1. Maintain version history and change logs
-2. Update related documents and cross-references
-3. Verify accuracy against current implementation
-4. Follow established review process
+We welcome contributions to improve our documentation:
 
-## Quick Reference
+1. Follow our [documentation standards](templates/README.md)
+2. Use the appropriate [templates](templates/) for new documents
+3. Ensure all links are working and cross-references are accurate
+4. Review the [contribution guidelines](development/contribution-guide.md)
 
-### Document Types and When to Use Them
+## 📞 Support
 
-| Document Type | Purpose | Template | Location |
-|---------------|---------|----------|----------|
-| Requirements | Define what system should do | [requirement-template.md](./templates/requirement-template.md) | [requirements/](./requirements/) |
-| Design | Explain how system works | [design-template.md](./templates/design-template.md) | [design/](./design/) |
-| Feature Spec | Detail specific feature | [feature-spec-template.md](./templates/feature-spec-template.md) | [features/](./features/) |
-| ADR | Document technical decisions | [adr-template.md](./templates/adr-template.md) | [design/](./design/) |
-
-### Common Tasks
-
-- **Finding Requirements**: Check [requirements/](./requirements/) directory
-- **Understanding Architecture**: Start with [design/system-architecture.md](./design/)
-- **Feature Details**: Look in [features/[feature-name]/](./features/)
-- **Deployment Help**: Reference [operations/deployment-guide.md](./operations/)
-- **Creating Documentation**: Use templates from [templates/](./templates/)
-
-## Support and Feedback
-
-For questions about documentation or to report issues:
-- Create an issue in the project repository
-- Contact the documentation team
-- Refer to [Documentation Standards](./documentation-standards.md) for guidance
+- **Technical Issues**: Check [troubleshooting guide](deployment/troubleshooting.md)
+- **Development Questions**: Review [development guidelines](development/README.md)
+- **Integration Support**: See [integration documentation](integrations/README.md)
 
 ---
 
-**Last Updated**: [Current Date]  
-**Version**: 1.0  
-**Maintained By**: Development Team
+*Last updated: November 2024*
+*Documentation version: 1.0*
