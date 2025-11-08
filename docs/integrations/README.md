@@ -8,7 +8,7 @@ This section provides comprehensive documentation for integrating the WeHub.work
 - **[Payment Systems](payment-systems/)** - Payment gateway integrations
 - **[OTA Systems](ota-systems/)** - Online Travel Agency integrations
 - **[Email Services](email-services/)** - Email and notification integrations
-- **[Channel Managers](channel-managers/)** - Channel management system integrations
+- **[TL-Lincoln Channel Manager](ota-systems/channel-management.md)** - Multi-channel distribution via TL-Lincoln
 
 ## Integration Overview
 
@@ -34,14 +34,16 @@ Integrate payment gateways for secure transaction processing:
 
 **[Payment Systems Integration](payment-systems/)**
 
-#### OTA Connectivity
-Connect with Online Travel Agencies for broader distribution:
-- XML-based OTA integrations
-- Rate and inventory updates
-- Reservation synchronization
+#### OTA Connectivity via TL-Lincoln
+Connect with Online Travel Agencies through TL-Lincoln channel manager:
+- Centralized multi-channel distribution
+- Real-time rate and inventory updates
+- Automated reservation synchronization
 - Booking confirmation handling
+- Supported channels: Booking.com, Rakuten Travel, Jalan, Tripla
 
-**[OTA Integration Guide](ota-systems/)**
+**[TL-Lincoln Channel Manager Guide](ota-systems/channel-management.md)**
+**[OTA XML Integration Guide](ota-systems/xml-integration.md)**
 
 #### Email & Notifications
 Integrate email services for guest communication:
@@ -158,9 +160,10 @@ POST /api/payments/process
 ## OTA Integration
 
 ### 🌐 **Supported OTA Platforms**
-- **Booking.com**: XML API integration
-- **Expedia**: EQC (Expedia QuickConnect) integration
-- **Airbnb**: API integration for property management
+- **Booking.com**: XML API integration via TL-Lincoln
+- **Rakuten Travel**: Integration via TL-Lincoln channel manager
+- **Jalan**: Integration via TL-Lincoln channel manager
+- **Tripla**: Integration via TL-Lincoln channel manager
 - **Custom OTAs**: Flexible integration framework
 
 ### 📊 **OTA Integration Features**
