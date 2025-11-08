@@ -127,16 +127,48 @@ This documentation is organized into logical sections to help you find informati
 
 We welcome contributions to improve our documentation:
 
-1. Follow our [documentation standards](templates/README.md)
-2. Use the appropriate [templates](templates/) for new documents
-3. Ensure all links are working and cross-references are accurate
-4. Review the [contribution guidelines](development/contribution-guide.md)
+1. **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to documentation
+2. **[Maintenance Guide](MAINTENANCE.md)** - Documentation maintenance procedures
+3. **[Templates](templates/README.md)** - Use templates for consistency
+4. **[Standards](documentation-standards.md)** - Documentation style and formatting standards
+
+### Quick Contribution Steps
+
+1. Identify what needs updating
+2. Use the appropriate template from `templates/`
+3. Follow the style guide and standards
+4. Validate your changes: `npm run docs:validate-links`
+5. Submit a pull request with clear description
+
+See the [Contributing Guide](CONTRIBUTING.md) for detailed instructions.
 
 ## 📞 Support
 
 - **Technical Issues**: Check [troubleshooting guide](deployment/troubleshooting.md)
 - **Development Questions**: Review [development guidelines](development/README.md)
 - **Integration Support**: See [integration documentation](integrations/README.md)
+- **Documentation Issues**: See [known issues](reference/known-issues.md) or open an issue
+
+## 🔧 Documentation Maintenance
+
+For documentation maintainers:
+
+- **[Maintenance Procedures](MAINTENANCE.md)** - How to maintain and update documentation
+- **[Validation Tools](MAINTENANCE.md#tools-and-scripts)** - Scripts for validating documentation
+- **[Quality Standards](MAINTENANCE.md#quality-assurance)** - Documentation quality guidelines
+
+### Maintenance Commands
+
+```bash
+# Validate all documentation links
+npm run docs:validate-links
+
+# Check cross-references
+npm run docs:check-references
+
+# Run all maintenance checks
+npm run docs:maintenance
+```
 
 ---
 
