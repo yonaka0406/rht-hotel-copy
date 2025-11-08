@@ -10,6 +10,23 @@ New to the system? Start here:
 - **[Development Environment Setup](getting-started/development-environment.md)** - Set up your local development environment
 - **[System Overview](architecture/system-overview.md)** - Understand the high-level architecture
 
+## 📋 Documentation Map
+
+This documentation is organized into logical sections to help you find information quickly:
+
+| Section | Purpose | Key Audiences |
+|---------|---------|---------------|
+| **[Getting Started](getting-started/README.md)** | Quick setup and orientation | New developers, administrators |
+| **[Architecture](architecture/README.md)** | System design and technical decisions | Developers, architects |
+| **[API](api/README.md)** | API endpoints and integration | Developers, integrators |
+| **[Frontend](frontend/README.md)** | UI development and components | Frontend developers |
+| **[Backend](backend/README.md)** | Server-side architecture | Backend developers |
+| **[Deployment](deployment/README.md)** | Production deployment and operations | System administrators |
+| **[Integrations](integrations/README.md)** | External system connections | Integration developers |
+| **[Features](features/README.md)** | Business capabilities | All stakeholders |
+| **[Development](development/README.md)** | Development standards and practices | All developers |
+| **[Reference](reference/README.md)** | Technical reference materials | All users |
+
 ## 📚 Documentation Sections
 
 ### 🏗️ Architecture & Design
@@ -88,10 +105,23 @@ New to the system? Start here:
 
 ## 🔍 Finding Information
 
-- **Search by topic**: Use the section navigation above
-- **Browse by audience**: Check the common tasks section
-- **Cross-references**: Look for "See also" sections in documents
-- **Templates**: Use documentation templates in the [templates/](templates/) directory
+### Search Strategies
+- **By Topic**: Use the section navigation above to browse by subject area
+- **By Audience**: Check the common tasks section for role-specific guides
+- **By Feature**: Explore the [Features section](features/README.md) for capability documentation
+- **By Integration**: Review [Integrations](integrations/README.md) for external system connections
+
+### Navigation Aids
+- **Cross-References**: Look for "See also" and "Related Documentation" sections in documents
+- **Breadcrumbs**: Follow the logical hierarchy from overview to detailed documentation
+- **Index Pages**: Each major section has a README.md with navigation and overview
+- **Templates**: Use documentation templates in the [templates/](templates/) directory for consistency
+
+### Quick Reference
+- **[Glossary](reference/glossary.md)** - Technical terms and definitions
+- **[Configuration Reference](reference/configuration-reference.md)** - All configuration options
+- **[Error Codes](reference/error-codes.md)** - System error codes and meanings
+- **[API Endpoints](api/README.md)** - Complete API reference
 
 ## 🤝 Contributing to Documentation
 
