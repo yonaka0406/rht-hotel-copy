@@ -32,7 +32,11 @@
         "redis:status": "wsl -e bash -ic \"sudo service redis-server status\"",
         "validate:requirements": "node scripts/validate-requirements.js",
         "validate:links": "node scripts/validate-docs-links.js",
-        "validate:docs": "node scripts/validate-all-docs.js"
+        "validate:docs": "node scripts/validate-all-docs.js",
+        "docs:validate": "node scripts/validate-docs.js",
+        "docs:validate:links": "node scripts/validate-doc-links.js",
+        "docs:validate:freshness": "node scripts/check-doc-freshness.js",
+        "docs:validate:format": "node scripts/validate-doc-format.js"
     },
     "devDependencies": {
         "concurrently": "^9.2.0",
