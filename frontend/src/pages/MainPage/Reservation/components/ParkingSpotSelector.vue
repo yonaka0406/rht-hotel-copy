@@ -54,7 +54,13 @@
       </FloatLabel>
       <small v-if="spotError" class="p-error">{{ spotError }}</small>
       <small v-else-if="selectedVehicleCategoryId && dates.length > 0 && totalAvailableSpots > 0" class="p-help">
-        最大{{ totalAvailableSpots }}台まで選択できます
+        利用可能: {{ totalAvailableSpots }}台
+        <span v-if="totalBlockedSpots > 0" class="text-orange-500">
+          (ブロック: {{ totalBlockedSpots }}台)
+        </span>
+      </small>
+      <small v-else-if="selectedVehicleCategoryId && dates.length > 0 && totalAvailableSpots === 0 && totalBlockedSpots > 0" class="p-error">
+        選択した日程では駐車スペースが利用できません ({{ totalBlockedSpots }}台がブロックされています)
       </small>
     </div>
 
@@ -159,6 +165,22 @@ const totalAvailableSpots = computed(() => {
   );
   
   return minAvailableSpots;
+});
+
+const totalBlockedSpots = computed(() => {
+  if (!availabilityData.value) return 0;
+  
+  const dateAvailability = availabilityData.value?.dateAvailability || {};
+  
+  if (Object.keys(dateAvailability).length === 0) return 0;
+  
+  // Find the maximum blocked spots across all dates (worst case)
+  const maxBlockedSpots = Math.max(
+    ...Object.values(dateAvailability).map(day => day.blockedSpots || 0),
+    0
+  );
+  
+  return maxBlockedSpots;
 });
 
 const isValid = computed(() => {
@@ -330,9 +352,18 @@ const validateSelection = () => {
   if (numberOfSpots.value <= 0) {
     errors.push('必要台数を入力してください');
   } else if (totalAvailableSpots.value === 0) {
-    errors.push('選択した日程では駐車スペースが利用できません');
+    if (totalBlockedSpots.value > 0) {
+      errors.push(`選択した日程では駐車スペースが利用できません（${totalBlockedSpots.value}台がブロックされています）`);
+    } else {
+      errors.push('選択した日程では駐車スペースが利用できません');
+    }
   } else if (numberOfSpots.value > totalAvailableSpots.value) {
-    errors.push(`選択した日程では、最大${totalAvailableSpots.value}台まで駐車可能です（一部の日程で空きが少ない可能性があります）`);
+    const message = `選択した日程では、最大${totalAvailableSpots.value}台まで駐車可能です`;
+    if (totalBlockedSpots.value > 0) {
+      errors.push(`${message}（${totalBlockedSpots.value}台がブロックされています）`);
+    } else {
+      errors.push(`${message}（一部の日程で空きが少ない可能性があります）`);
+    }
   }
   
   validationErrors.value = errors;

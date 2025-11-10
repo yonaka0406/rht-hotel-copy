@@ -432,20 +432,25 @@
     - _Requirements: 2.1_
 
 - [ ] 10. Integrate blocked dates with reservation flow
-  - [ ] 10.1 Update ParkingSpotSelector to show blocked capacity
+  - [x] 10.1 Update ParkingSpotSelector to show blocked capacity
+
+
     - Modify capacity display to show "利用可能: X台 (ブロック: Y台)"
     - Show warning when blocked capacity reduces availability
     - Disable date selection when all capacity is blocked
     - Update real-time availability checks to include blocked capacity
     - _Requirements: 2.2, 5.1_
 
-  - [ ] 10.2 Update reservation validation to check blocked capacity
+  - [x] 10.2 Update reservation validation to check blocked capacity
+
     - Modify saveParkingAssignments to validate against blocked capacity
     - Return clear error message when capacity is blocked
     - Suggest alternative dates when capacity is insufficient due to blocks
     - _Requirements: 2.2, 5.2, 5.3_
 
-  - [ ] 10.3 Update capacity summary displays
+  - [x] 10.3 Update capacity summary displays
+
+
     - Show blocked capacity in capacity breakdown views
     - Add visual indicators (colors/icons) for blocked dates
     - Update tooltips to explain blocked capacity
