@@ -619,6 +619,7 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
       WHERE 
         pl.hotel_id = $1
         AND ps.is_active = TRUE
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
       GROUP BY 
         ps.spot_type, ps.capacity_units, width, height
     )

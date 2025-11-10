@@ -323,7 +323,7 @@ const onParkingSave = async (saveData) => {
         }];
       }
     } else {
-      // For new assignments, only create new ones without including existing ones
+      // For new assignments, only create new ones
       assignmentsToSave = [{
         id: `temp-${Date.now()}`,
         hotel_id: hotelId,

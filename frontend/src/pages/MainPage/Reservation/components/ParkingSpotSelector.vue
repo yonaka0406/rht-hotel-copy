@@ -58,23 +58,6 @@
       </small>
     </div>
 
-
-    <div v-if="parkingSpotAvailability.length > 0" class="availability-details">
-      <div class="proportional-stats-grid">
-        <div v-for="spot in parkingSpotAvailability" :key="spot.spot_type" class="stat-container">
-          <div class="stat-item" :style="{ width: `${spot.width * 20}px`, height: `${spot.height * 20}px`, backgroundColor: getSpotColor(spot.spot_type) }">
-            <div class="stat-value">{{ spot.available_spots }}</div>
-          </div>
-          <div class="stat-label">
-            幅 {{ spot.width }} x 長さ {{ spot.height }}
-            <div v-if="selectedVehicleCategoryId" class="spots-needed-message">
-              (必要数: {{ (getSelectedCategoryCapacity() / spot.capacity_units).toFixed(1) }}台)
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Validation Messages -->
     <div class="validation-messages" v-if="validationErrors.length > 0">
       <Message
@@ -142,8 +125,6 @@ const emit = defineEmits([
 
 // Composables
 const parkingStore = useParkingStore();
-const reservationStore = useReservationStore();
-const { parkingSpotAvailability, fetchParkingSpotAvailability } = reservationStore;
 
 // Reactive state
 const selectedVehicleCategoryId = ref(props.preselectedVehicleCategoryId);

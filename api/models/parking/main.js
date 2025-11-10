@@ -618,32 +618,8 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             const checkOutDate = formatDate(new Date(check_out));
             console.log(`[saveParkingAssignments] Formatted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
 
-            // Get addon IDs to delete for the specific date range
-            const addonIdsRes = await localClient.query(
-                `SELECT rp.reservation_addon_id 
-                 FROM reservation_parking rp
-                 JOIN reservation_details rd ON rp.reservation_details_id = rd.id
-                 WHERE rd.reservation_id = $1 
-                   AND rd.room_id = $2
-                   AND rd.date >= $3
-                   AND rd.date < $4`,
-                [reservation_id, roomId, checkInDate, checkOutDate]
-            );
-            const addonIdsToDelete = addonIdsRes.rows.map(r => r.reservation_addon_id).filter(id => id);
-            console.log(`[saveParkingAssignments] Addon IDs to delete for reservation ${reservation_id}, room ${roomId}, dates ${checkInDate}-${checkOutDate}:`, addonIdsToDelete);
-
-            // Delete existing parking assignments for this room, reservation, and date range
-            if (addonIdsToDelete.length > 0) {
-                console.log(`[saveParkingAssignments] Deleting ${addonIdsToDelete.length} existing parking assignments and addons.`);
-                await localClient.query(
-                    `DELETE FROM reservation_parking WHERE reservation_addon_id = ANY($1::uuid[])`,
-                    [addonIdsToDelete]
-                );
-                await localClient.query(
-                    `DELETE FROM reservation_addons WHERE id = ANY($1::uuid[])`,
-                    [addonIdsToDelete]
-                );
-            }
+            // Note: We no longer delete existing parking assignments
+            // This allows additive parking spot assignments without removing existing ones
 
             // 1. Fetch reservation_details for this reservation
             //console.log('Fetching reservation details with params:', {
@@ -693,14 +669,15 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             console.log(`[saveParkingAssignments] Vehicle category ${vehicle_category_id} requires ${requiredUnits} capacity units.`);
             if (!requiredUnits) throw new Error(`Vehicle category ${vehicle_category_id} not found`);
 
-            // 3. Get candidate spots
+            // 3. Get candidate spots (exclude virtual capacity pool spots)
             const spotsRes = await localClient.query(
                 `SELECT ps.id 
                  FROM parking_spots ps
                  JOIN parking_lots pl ON ps.parking_lot_id = pl.id
                  WHERE pl.hotel_id = $1
                    AND ps.is_active = true
-                   AND ps.capacity_units >= $2`,
+                   AND ps.capacity_units >= $2
+                   AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')`,
                 [hotel_id, requiredUnits]
             );
             const candidateSpots = spotsRes.rows.map(r => r.id);
