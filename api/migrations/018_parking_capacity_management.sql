@@ -11,7 +11,6 @@ CREATE TABLE parking_blocks (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     blocked_capacity INTEGER NOT NULL CHECK (blocked_capacity > 0),
-    reason VARCHAR(255),
     comment TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -286,6 +285,7 @@ GRANT USAGE, SELECT ON SEQUENCE parking_lots_id_seq TO rhtsys_user;
 
 -- Add comment to document the purpose
 COMMENT ON TABLE parking_blocks IS 'Stores capacity blocking records for parking spots during specific date ranges (e.g., winter closures, maintenance periods)';
+COMMENT ON COLUMN parking_blocks.comment IS 'Free-text comment explaining why capacity is blocked (e.g., maintenance, seasonal closure, event)';
 COMMENT ON FUNCTION create_virtual_capacity_pool_spots(INTEGER) IS 'Creates or ensures virtual capacity pool spots exist for each vehicle category in a hotel';
 COMMENT ON FUNCTION get_virtual_capacity_pool_spot(INTEGER, INTEGER) IS 'Returns the virtual capacity pool spot ID for a given hotel and vehicle category';
 COMMENT ON COLUMN parking_spots.spot_type IS 'Type of parking spot: standard (physical spot) or capacity_pool (virtual spot for capacity-based reservations)';
