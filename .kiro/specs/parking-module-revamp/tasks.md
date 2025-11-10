@@ -212,19 +212,26 @@
     - _Requirements: 1.2, 5.1, 6.5_
 
 - [ ] 5. Update ParkingAddonService for capacity integration
-  - [ ] 5.1 Modify checkParkingVacancies method
+  - [x] 5.1 Modify checkParkingVacancies method
+
+
     - Update method to use capacity-based availability logic
     - Call new capacity calculation functions
     - Update response format to include capacity details
     - _Requirements: 1.2, 4.1_
 
-  - [ ] 5.2 Modify getAvailableSpotsForDates method
+  - [x] 5.2 Modify getAvailableSpotsForDates method
+
+
     - Update method to work with capacity-based system
     - Return capacity availability instead of specific spots
     - Maintain compatibility with existing callers
     - _Requirements: 1.2, 4.1_
 
-  - [ ] 5.3 Modify checkRealTimeAvailability method
+  - [x] 5.3 Modify checkRealTimeAvailability method
+
+
+
     - Update method to calculate capacity-based availability
     - Include blocked capacity in calculations
     - Update response format with capacity details

@@ -1,4 +1,5 @@
 const parkingModel = require('../../../models/parking');
+const capacityModel = require('../../../models/parking/capacity');
 
 /**
  * ParkingAddonService - Manages the relationship between parking addons and spot assignments
@@ -79,6 +80,23 @@ class ParkingAddonService {
                 vehicleCategory.capacity_units_required
             );
 
+            // Get blocked capacity for the date range
+            const blockedCapacity = await capacityModel.getBlockedCapacity(
+                this.requestId,
+                hotelId,
+                startDate,
+                endDate.toISOString().split('T')[0]
+            );
+
+            // Calculate blocked spots count for this vehicle category
+            const blockedSpotsCount = blockedCapacity.reduce((count, block) => {
+                // If block specifies spot_size, only count if it matches this category's requirements
+                if (block.spot_size && block.spot_size !== vehicleCategory.capacity_units_required) {
+                    return count;
+                }
+                return count + (block.number_of_spots || 0);
+            }, 0);
+
             return {
                 hotelId,
                 vehicleCategoryId,
@@ -92,6 +110,19 @@ class ParkingAddonService {
                 hasVacancies: availableSpots > 0,
                 totalCompatibleSpots: compatibleSpots.length,
                 availableSpotsForDates: availableSpotsForDates.length,
+                blockedCapacity: {
+                    totalBlocks: blockedCapacity.length,
+                    blockedSpots: blockedSpotsCount,
+                    blocks: blockedCapacity.map(block => ({
+                        id: block.id,
+                        parkingLotId: block.parking_lot_id,
+                        spotSize: block.spot_size,
+                        numberOfSpots: block.number_of_spots,
+                        startDate: block.start_date,
+                        endDate: block.end_date,
+                        comment: block.comment
+                    }))
+                },
                 compatibleSpots: compatibleSpots.map(spot => ({
                     id: spot.id,
                     spotNumber: spot.spot_number,
@@ -242,10 +273,28 @@ class ParkingAddonService {
                 vehicleCategoryId
             );
 
+            // Get blocked capacity for the date range
+            const blockedCapacity = await capacityModel.getBlockedCapacity(
+                this.requestId,
+                hotelId,
+                startDate,
+                endDate
+            );
+
+            // Calculate blocked spots count for this vehicle category
+            const blockedSpotsCount = blockedCapacity.reduce((count, block) => {
+                // If block specifies spot_size, only count if it matches this category's requirements
+                if (block.spot_size && block.spot_size !== capacityUnits) {
+                    return count;
+                }
+                return count + (block.number_of_spots || 0);
+            }, 0);
+
             // Calculate availability statistics
             const totalCompatibleSpots = allCompatibleSpots.length;
             const availableCount = availableSpots.length;
-            const occupiedCount = totalCompatibleSpots - availableCount;
+            const occupiedCount = totalCompatibleSpots - availableCount - blockedSpotsCount;
+            const blockedCount = blockedSpotsCount;
 
             // Enhance available spots with detailed information
             const enhancedAvailableSpots = availableSpots.map(spot => ({
@@ -289,7 +338,21 @@ class ParkingAddonService {
                     totalCompatibleSpots,
                     availableSpots: availableCount,
                     occupiedSpots: occupiedCount,
+                    blockedSpots: blockedCount,
                     availabilityRate: totalCompatibleSpots > 0 ? (availableCount / totalCompatibleSpots * 100).toFixed(1) : 0
+                },
+                blockedCapacity: {
+                    totalBlocks: blockedCapacity.length,
+                    blockedSpots: blockedSpotsCount,
+                    blocks: blockedCapacity.map(block => ({
+                        id: block.id,
+                        parkingLotId: block.parking_lot_id,
+                        spotSize: block.spot_size,
+                        numberOfSpots: block.number_of_spots,
+                        startDate: block.start_date,
+                        endDate: block.end_date,
+                        comment: block.comment
+                    }))
                 },
                 availableSpots: enhancedAvailableSpots,
                 parkingLotBreakdown: this._groupSpotsByParkingLot(enhancedAvailableSpots)
@@ -464,6 +527,14 @@ class ParkingAddonService {
                 vehicleCategoryId
             );
 
+            // Get blocked capacity for all dates
+            const allBlockedCapacity = await capacityModel.getBlockedCapacity(
+                this.requestId,
+                hotelId,
+                dates[0],
+                dates[dates.length - 1]
+            );
+
             // Check availability for each date
             const dateAvailability = {};
             const spotAvailability = {};
@@ -481,15 +552,36 @@ class ParkingAddonService {
                     vehicleCategory.capacity_units_required
                 );
 
+                // Calculate blocked spots for this specific date
+                const blockedForDate = allBlockedCapacity.filter(block => {
+                    const blockStart = new Date(block.start_date);
+                    const blockEnd = new Date(block.end_date);
+                    const currentDate = new Date(date);
+                    return currentDate >= blockStart && currentDate <= blockEnd;
+                });
+
+                const blockedSpotsCount = blockedForDate.reduce((count, block) => {
+                    if (block.spot_size && block.spot_size !== vehicleCategory.capacity_units_required) {
+                        return count;
+                    }
+                    return count + (block.number_of_spots || 0);
+                }, 0);
+
                 dateAvailability[date] = {
                     date,
                     availableSpots: availableSpots.length,
                     totalCompatibleSpots: compatibleSpots.length,
-                    occupiedSpots: compatibleSpots.length - availableSpots.length,
+                    occupiedSpots: compatibleSpots.length - availableSpots.length - blockedSpotsCount,
+                    blockedSpots: blockedSpotsCount,
                     availabilityRate: compatibleSpots.length > 0 
                         ? ((availableSpots.length / compatibleSpots.length) * 100).toFixed(1)
                         : 0,
-                    availableSpotIds: availableSpots.map(spot => spot.id)
+                    availableSpotIds: availableSpots.map(spot => spot.id),
+                    blocks: blockedForDate.map(block => ({
+                        id: block.id,
+                        numberOfSpots: block.number_of_spots,
+                        comment: block.comment
+                    }))
                 };
 
                 // Track individual spot availability across dates
@@ -531,6 +623,10 @@ class ParkingAddonService {
                 spot => spot.availableDates.length === dates.length
             );
 
+            // Calculate overall blocked capacity statistics
+            const totalBlockedSpots = Object.values(dateAvailability).reduce((sum, day) => sum + (day.blockedSpots || 0), 0);
+            const averageBlockedSpots = dates.length > 0 ? (totalBlockedSpots / dates.length).toFixed(1) : 0;
+
             // Calculate overall availability statistics
             const overallStats = {
                 totalDatesRequested: dates.length,
@@ -542,6 +638,8 @@ class ParkingAddonService {
                 unavailableSpots: Object.values(spotAvailability).filter(
                     spot => spot.availableDates.length === 0
                 ).length,
+                averageBlockedSpots: parseFloat(averageBlockedSpots),
+                totalBlocksAcrossDates: allBlockedCapacity.length,
                 averageAvailabilityRate: dates.length > 0 
                     ? (Object.values(dateAvailability).reduce((sum, day) => sum + parseFloat(day.availabilityRate), 0) / dates.length).toFixed(1)
                     : 0
