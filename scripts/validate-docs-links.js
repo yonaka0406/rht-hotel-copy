@@ -123,8 +123,10 @@ class DocumentationLinkChecker {
      * Check if internal file exists
      */
     checkInternalLink(currentFile, url) {
-        // Remove fragment/anchor part
-        const [filePath, fragment] = url.split('#');
+        // Remove fragment/anchor part (preserve multiple '#' in fragment)
+        const hashIdx = url.indexOf('#');
+        const filePath = hashIdx === -1 ? url : url.slice(0, hashIdx);
+        const fragment = hashIdx === -1 ? '' : url.slice(hashIdx + 1);
         
         if (!filePath) {
             // Just a fragment link, check if it exists in current file

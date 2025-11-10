@@ -1,5 +1,7 @@
 # Booking Engine API Documentation - rht-hotel PMS
 
+**NOTE: This document describes API endpoints for the TEST environment only and is part of an archived pre-migration phase. Production and staging environments may have different base URLs and authentication configurations.**
+
 ## Overview
 
 This document describes the API endpoints provided by the rht-hotel Property Management System (PMS) for integration with the booking engine. These endpoints enable the booking engine to fetch hotel and room type data for caching purposes.
@@ -29,9 +31,7 @@ https://test.wehub.work/api/booking-engine
 **Description:** Retrieves information for a specific hotel.
 
 **Parameters:**
-- `hotel_id` (path): The ID of the hotel to retrieve
-
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "hotel_id": 1,
@@ -53,12 +53,10 @@ https://test.wehub.work/api/booking-engine
 
 **Endpoint:** `GET /room-types/{hotel_id}`
 
-**Description:** Retrieves all room types for a specific hotel.
-
 **Parameters:**
 - `hotel_id` (path): The ID of the hotel
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "hotel_id": 1,
@@ -84,7 +82,7 @@ https://test.wehub.work/api/booking-engine
 **Parameters:**
 - `hotel_id` (path): The ID of the hotel
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "hotel_id": 1,
@@ -115,11 +113,9 @@ https://test.wehub.work/api/booking-engine
 
 **Endpoint:** `POST /cache/update-hotels`
 
-**Description:** Retrieves all active hotels for cache update. This endpoint returns comprehensive hotel data that the booking engine can use to update its local cache.
-
 **Request Body:** Empty (no body required)
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "hotels": [
@@ -151,7 +147,7 @@ https://test.wehub.work/api/booking-engine
 
 **Request Body:** Empty (no body required)
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "room_types": [
@@ -175,7 +171,7 @@ https://test.wehub.work/api/booking-engine
 
 **Description:** Returns the current status of various cache types and their TTL settings.
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "hotels": {
@@ -345,7 +341,28 @@ The test script will:
 
 1. **API Key Security**: Keep the API key secure and rotate it regularly
 2. **HTTPS Only**: All API communication should use HTTPS
-3. **Rate Limiting**: Consider implementing rate limiting for production use
+3. **Rate Limiting**: To ensure fair usage and system stability, API requests are subject to rate limits.
+   - **Limit**: 100 requests per minute per API key.
+   - **Response Headers**:
+     - `X-RateLimit-Limit`: The maximum number of requests allowed in the current window.
+     - `X-RateLimit-Remaining`: The number of requests remaining in the current window.
+     - `X-RateLimit-Reset`: The time (in UTC epoch seconds) at which the current rate limit window resets.
+   - **Exceeded Limit**: If the rate limit is exceeded, the API will return a `429 Too Many Requests` HTTP status code.
+   - **Retry Behavior**: Clients should implement an exponential backoff strategy and respect the `Retry-After` header (if present) which indicates how long to wait before making a new request.
+   - **Example 429 Response**:
+     ```
+     HTTP/1.1 429 Too Many Requests
+     Content-Type: application/json
+     X-RateLimit-Limit: 100
+     X-RateLimit-Remaining: 0
+     X-RateLimit-Reset: 1678886400
+     Retry-After: 60
+
+     {
+       "error": "Too Many Requests",
+       "message": "Rate limit exceeded. Please try again after 60 seconds."
+     }
+     ```
 4. **IP Whitelisting**: Consider restricting API access to specific IP addresses
 5. **Audit Logging**: All API interactions are logged for security and debugging
 

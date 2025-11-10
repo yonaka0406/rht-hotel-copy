@@ -523,7 +523,20 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
                   });
                   reject(err);
                 } else {
-                  resolve(result);
+                    // Check for isSuccess tag
+                    const isSuccess = result?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse']?.['return']?.['commonResponse']?.['isSuccess'];
+                    if (isSuccess === 'false') {
+                        const errorDescription = result?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse']?.['return']?.['commonResponse']?.['errorDescription'];
+                        logger.error('API Call Failed (isSuccess=false):', {
+                            serviceName: name,
+                            hotelId: hotel_id,
+                            requestId: req.requestId,
+                            errorDescription: errorDescription || 'No error description provided.',
+                            xmlResponse: responseXml,
+                        });
+                        reject(new Error(`API call to ${name} failed: ${errorDescription || 'isSuccess is false'}`));
+                    }
+                    resolve(result);
                 }
             });
         });
@@ -924,6 +937,20 @@ const successOTAReservations = async (req, res, hotel_id, outputId) => {
 const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     const name = 'NetStockSearchService';
 
+    const sDate = new Date(startDate);
+    const eDate = new Date(endDate);
+
+    if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+        const errorMsg = `Invalid date provided to checkOTAStock. startDate: ${startDate}, endDate: ${endDate}`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    if (sDate > eDate) {
+        console.warn(`Start date ${startDate} is after end date ${endDate}. Returning empty result.`);
+        return [];
+    }
+
     const template = await selectXMLTemplate(req.requestId, hotel_id, name);
     if (!template) {
         throw new Error('XML template not found.');
@@ -932,40 +959,62 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     const formatYYYYMMDD = (dateString) => {
         const date = new Date(dateString);
         const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         return `${year}${month}${day}`;
     };
-    const formattedStartDate = formatYYYYMMDD(startDate);
-    const formattedEndDate = formatYYYYMMDD(endDate);
-    
-    let xmlBody = template
-        .replace('{{extractionProcedure}}', 2)
-        .replace('{{searchDurationFrom}}', formattedStartDate)
-        .replace('{{searchDurationTo}}', formattedEndDate);
 
-    try {
-        const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-        const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
+    const dateRanges = [];
+    let currentStartDate = new Date(sDate);
 
-        // Check if executeResponse is an array, if not, make it an array
-        const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : [executeResponse];
+    while (currentStartDate <= eDate) {
+        let currentEndDate = new Date(currentStartDate);
+        currentEndDate.setDate(currentEndDate.getDate() + 29); // 30 days inclusive
 
-        // Transform the data into the desired array format
-        const transformedResponse = executeResponseArray.map(item => ({
-            netRmTypeGroupCode: item.netRmTypeGroupCode,
-            saleDate: item.saleDate,
-            salesCount: item.salesCount,
-            remainingCount: item.remainingCount
-        }));
+        if (currentEndDate > eDate) {
+            currentEndDate = new Date(eDate);
+        }
 
-        // Return the transformed data
-        return transformedResponse;
-    } catch (error) {        
-        console.error('Error submitting XML template:', error);        
-        throw error; // Re-throw to be handled by the caller
+        dateRanges.push({
+            start: formatYYYYMMDD(currentStartDate),
+            end: formatYYYYMMDD(currentEndDate)
+        });
+
+        currentStartDate = new Date(currentEndDate);
+        currentStartDate.setDate(currentStartDate.getDate() + 1);
     }
 
+
+
+    let allResponses = [];
+
+    for (const range of dateRanges) {
+        let xmlBody = template
+            .replace('{{extractionProcedure}}', 2)
+            .replace('{{searchDurationFrom}}', range.start)
+            .replace('{{searchDurationTo}}', range.end);
+
+        try {
+            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
+            const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
+
+            const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : (executeResponse ? [executeResponse] : []);
+            
+            const transformedResponse = executeResponseArray.map(item => ({
+                netRmTypeGroupCode: item.netRmTypeGroupCode,
+                saleDate: item.saleDate,
+                salesCount: item.salesCount,
+                remainingCount: item.remainingCount
+            }));
+
+            allResponses = allResponses.concat(transformedResponse);
+        } catch (error) {
+            console.error(`Error submitting XML template for date range ${range.start} - ${range.end}:`, error);
+            throw error;
+        }
+    }
+
+    return allResponses;
 };
 const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
@@ -1117,7 +1166,7 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     const processInventoryBatch = async (batch, batch_no) => {
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(1000); // 1-second pause
+        await delay(2000); // 2-second pause
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -1288,13 +1337,16 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
 
     const processInventoryBatch = async (batch, batch_no) => {
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(1000); // 1-second pause
+        await delay(2000); // 2-second pause
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
             const adjustmentDate = item.saleDate;
             const netRmTypeGroupCode = parseInt(item.netRmTypeGroupCode);
-            const remainingCount = parseInt(item.pmsRemainingCount);
+            let remainingCount = parseInt(item.pmsRemainingCount);
+            if (remainingCount < 0) {
+                remainingCount = 0;
+            }
             let salesStatus = parseInt(item.salesStatus);
             if (salesStatus === 0) {
                 salesStatus = 3; // No change

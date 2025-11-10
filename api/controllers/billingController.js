@@ -11,7 +11,7 @@ const {
   linkPaymentToReceipt
 } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-const { getBrowser } = require('../services/puppeteerService');
+const { getBrowser, resetBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -149,10 +149,14 @@ const generateInvoice = async (req, res) => {
     res.setHeader('X-Invoice-Number', invoiceData.invoice_number);
     res.contentType("application/pdf");
     res.send(Buffer.from(pdfBuffer));
+  } catch (error) {
+    console.error('Error generating invoice PDF:', error);
+    res.status(500).send(`Error generating invoice PDF: ${error.message}`);
   } finally {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
     }
+    await resetBrowser(false);
   }
 };
 
@@ -238,10 +242,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const taxBreakdownData = req.body.taxBreakdownData;
   const forceRegenerate = req.body.forceRegenerate;
 
-  let browser;
-  let page;
-
   //console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
+  let page = null; // Initialize page to null
 
   try {
     const userInfo = await getUsersByID(req.requestId, userId);
@@ -472,7 +474,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
       generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf) :
       generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
 
-    browser = await getBrowser();
+    const browser = await getBrowser(); // Get browser instance once
     page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -536,6 +538,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
     if (page) {
       await page.close().catch(err => console.error("Error closing page:", err));
     }
+    await resetBrowser(false);
   }
 };
 function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) {

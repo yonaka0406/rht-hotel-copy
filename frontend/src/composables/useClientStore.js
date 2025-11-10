@@ -32,7 +32,8 @@ export function useClientStore() {
     };
 
     // Fetch the list of clients
-    const fetchClients = async (page) => {
+    const fetchClients = async (pageInput) => {
+        const page = Math.max(1, parseInt(pageInput) || 1);
         clientsIsLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
@@ -52,7 +53,7 @@ export function useClientStore() {
             // console.log('From Client Store => fetchClients data:', data);
 
             if (data && data.clients) {                
-                if (page === 1) {
+                if (page === 1 || page === undefined) {
                     setClients(data.clients);                
                     return data.totalPages;
                 } else {

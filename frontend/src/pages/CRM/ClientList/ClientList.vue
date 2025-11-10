@@ -93,7 +93,7 @@
                                 <span v-if="slotProps.data.legal_or_natural_person === 'legal'">
                                     <Tag icon="pi pi-building" severity="secondary" value="法人"></Tag>
                                 </span>
-                                <span v-else>
+                                <span v-else-if="slotProps.data.legal_or_natural_person === 'natural'">
                                     <Tag icon="pi pi-user" severity="info" value="個人"></Tag>
                                 </span>
                             </template>
@@ -133,14 +133,24 @@
 </template>
 
 <script setup>
+    //Vue
     import { ref, onMounted } from "vue";
     import { useRouter } from 'vue-router';
-    import { useClientStore } from '@/composables/useClientStore';
-    import { Card, Skeleton, DataTable, Column, InputText, Button, Tag, Select, SelectButton } from 'primevue';
-    import { FilterMatchMode } from '@primevue/core/api';
-    import { useToast } from 'primevue/usetoast';
     import ExportClientDialog from './components/ExportClientDialog.vue';
     import NewClientDialog from './components/NewClientDialog.vue';
+
+    //Store
+    import { useClientStore } from '@/composables/useClientStore';
+    
+    //Primevue
+    import { useToast } from "primevue/usetoast";
+    import { Card, Skeleton, DataTable, Column, InputText, Button, Tag, Select, SelectButton } from 'primevue';
+    import { FilterMatchMode } from '@primevue/core/api';    
+    
+    //Setup
+    const router = useRouter();
+    const { clients, clientsIsLoading, fetchClients } = useClientStore();
+    const toast = useToast();
 
     const exportDialogVisible = ref(false);
 
@@ -151,10 +161,6 @@
     const closeExportDialog = () => {
       exportDialogVisible.value = false;
     };
-
-    const router = useRouter();
-    const { clients, clientsIsLoading, fetchClients } = useClientStore();
-    const toast = useToast();
 
     // Data table
     const tableSize = ref({ label: '中', value: 'null' });
@@ -200,7 +206,12 @@
     };
 
     onMounted( async () => {
-        fetchClients();
+        try {
+            await fetchClients();
+        } catch (error) {
+            console.error('Failed to fetch clients on mount:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: '顧客データの読み込みに失敗しました。', life: 3000 });
+        }
     });
 
     const getTierDisplayName = (tier) => {

@@ -180,7 +180,7 @@ The integration implements a **hybrid caching strategy** with different update m
 - **Admin Control**: All hotel/room type cache updates must be triggered manually
 
 #### Availability Cache (Automatic + Manual)
-- **TTL-based**: 15-minute Time-To-Live for availability data
+- **TTL-based**: Cached availability data with up-to-15-minute refresh lag. For high-velocity booking flows, a TTL of <=30s is recommended.
 - **Automatic Refresh**: Background service refreshes expired availability entries
 - **Manual Override**: Admin can manually trigger availability cache refresh
 - **Real-time Updates**: Immediate availability updates for critical operations
@@ -293,7 +293,7 @@ PMS_API_KEY=your_pms_api_key_here
 
 #### 2.1 Availability Synchronization
 - **Hybrid Caching Strategy** - Manual hotel/room type cache + automatic availability cache
-- **Real-time Availability Queries** - Fast availability lookup with 15-minute TTL cache
+- **Cached Availability Queries** - Fast availability lookup with up-to-15-minute refresh lag. To mitigate stale-cache races, an immediate availability re-check and conflict detection step is performed prior to booking confirmation.
 - **Smart Cache Management** - Intelligent cleanup preserving linked data
 - **Batch Updates** - Efficient bulk availability updates
 - **Conflict Resolution** - Handle availability conflicts between systems

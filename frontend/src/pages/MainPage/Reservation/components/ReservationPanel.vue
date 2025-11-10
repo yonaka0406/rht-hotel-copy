@@ -95,12 +95,8 @@
             </div>
 
         </div>
-        <div class="field">
-            <div class="flex justify-between items-center">
-                <p class="font-bold flex items-center">
-                    備考：
-                    <span class="text-xs text-gray-400 ml-2">(タブキーで編集確定)</span>
-                </p>
+        <div class="field relative">
+            <div class="absolute top-0 right-0 z-10">
                 <Button 
                     v-tooltip.top="'重要コメントとしてマーク'"
                     :class="{ 'p-button-warning': reservationInfo.has_important_comment }"
@@ -111,13 +107,24 @@
                     aria-label="重要コメントとしてマーク"
                 />
             </div>
-            <Textarea 
-                v-model="reservationInfo.comment" 
-                @keydown="handleKeydown" 
-                :class="{ 'border-yellow-500 border-2': reservationInfo.has_important_comment }"
-                class="w-full"
-            />
+            <Fieldset legend="備考" :toggleable="true">
+                <p class="m-0 text-left" style="white-space: pre-wrap;">
+                    {{ reservationInfo.comment }}
+                </p>
+                <div class="flex justify-end mt-2">
+                    <Button 
+                        v-tooltip.top="'備考を編集'"
+                        icon="pi pi-pencil"
+                        @click="openCommentDialog"
+                        text
+                        rounded
+                        aria-label="備考を編集"
+                    />
+                </div>
+            </Fieldset>
         </div>
+
+
 
         <div class="field flex flex-col col-span-2">
             <Divider />
@@ -462,6 +469,13 @@
         v-model:visible="showSplitDialog"
     />
 
+    <ReservationCommentDialog
+        v-model:visible="commentDialogVisible"
+        :comment="localCommentInput"
+        :has-important-comment="reservationInfo.has_important_comment"
+        @save="(newComment) => updateReservationComment(reservationInfo.reservation_id, reservationInfo.hotel_id, newComment)"
+    />
+
     <CancellationCalculatorDialog 
         v-model:visible="showCancellationCalculator" 
         :reservationDetails="reservation_details" 
@@ -485,6 +499,7 @@
 import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
+import { validate as uuidValidate } from 'uuid';
 
 import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
 import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
@@ -497,6 +512,8 @@ import ReservationCancelDialog from '@/pages/MainPage/Reservation/components/dia
 import ReservationSplitDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationSplitDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 
+import ReservationCommentDialog from './dialogs/ReservationCommentDialog.vue';
+
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
@@ -504,8 +521,15 @@ import { useConfirm } from "primevue/useconfirm";
 // Assign unique group names to each confirm instance
 const confirm = useConfirm();
 import {
-    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message
+    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message, Fieldset
 } from 'primevue';
+
+const commentDialogVisible = ref(false);
+const localCommentInput = ref('');
+const openCommentDialog = () => {
+    localCommentInput.value = reservationInfo.value.comment;
+    commentDialogVisible.value = true;
+};
 
 const reservationAddRoomDialogRef = ref(null);
 const reservationAnnounceDialogRef = ref(null);
@@ -1126,13 +1150,29 @@ const handleKeydown = (event) => {
             });
             return;
         }
-        updateReservationComment(reservationInfo.value);
+        updateReservationComment(
+            reservationInfo.value.reservation_id,
+            reservationInfo.value.hotel_id,
+            reservationInfo.value.comment
+        );
     }
 };
-const updateReservationComment = async (data) => {
+const updateReservationComment = async (reservationId, hotelId, comment) => {
     isSubmitting.value = true;
+
+    if (!uuidValidate(reservationId)) {
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '無効な予約IDです。',
+            life: 3000
+        });
+        isSubmitting.value = false;
+        return;
+    }
+
     try {
-        await setReservationComment(data.reservation_id, data.hotel_id, data.comment);
+        await setReservationComment(reservationId, hotelId, comment);
         toast.add({
             severity: 'success',
             summary: '成功',
@@ -1600,6 +1640,9 @@ onMounted(async () => {
 
     numberOfNights.value = (new Date(reservationInfo.value.check_out) - new Date(reservationInfo.value.check_in)) / (1000 * 60 * 60 * 24);
     numberOfNightsTotal.value = reservationInfo.value.reservation_number_of_people * numberOfNights.value;
+
+    // Initialize localCommentInput with the current comment from reservationInfo
+    localCommentInput.value = reservationInfo.value.comment;
 });
 
 

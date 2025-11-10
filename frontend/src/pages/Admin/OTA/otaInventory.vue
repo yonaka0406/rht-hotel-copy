@@ -106,7 +106,7 @@
     const formatDateToYYYYMMDD = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
             // Handle invalid date if necessary. DatePicker should provide a valid Date object or null.
-            console.warn("formatDateToYYYYMMDDに無効な日付が渡されました:", date);
+            // console.warn("formatDateToYYYYMMDDに無効な日付が渡されました:", date);
             return ""; // Or throw an error, or return a default, depending on desired behavior
         }
         const year = date.getFullYear();
@@ -117,7 +117,7 @@
     const formatDateToYYYY_MM_DD = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
             // Handle invalid date if necessary. DatePicker should provide a valid Date object or null.
-            console.warn("formatDateToYYYY_MM_DDに無効な日付が渡されました:", date); // Corrected function name in log
+            // console.warn("formatDateToYYYY_MM_DDに無効な日付が渡されました:", date); // Corrected function name in log
             return ""; // Or throw an error, or return a default, depending on desired behavior
         }
         const year = date.getFullYear();
@@ -127,7 +127,7 @@
     };
 
     const importData = ref(null);
-    const inventoryData = ref(null);
+    const inventoryData = ref([]);
     const statusOptions = [
         { id: 0, value: '未設定' },
         { id: 1, value: '販売中' },
@@ -204,7 +204,7 @@
         const xmlResponse = await insertXMLResponse(props.hotel_id, templateName, modifiedTemplate.value);
                         
         importData.value = parseXmlResponse(xmlResponse.data);
-        console.log('インポートデータ', importData.value);
+        // console.log('インポートデータ', importData.value);
 
         const inventoryForTL = await fetchInventoryForTL(props.hotel_id, formatDateToYYYY_MM_DD(searchDurationFrom.value), formatDateToYYYY_MM_DD(searchDurationTo.value));
 
@@ -217,7 +217,7 @@
             remainingCount: (item.total_rooms * 1 || 0) - (item.room_count * 1 || 0),
         }));
 
-        console.log('在庫データ', inventoryData.value);
+        // console.log('在庫データ', inventoryData.value);
     };
     const parseXmlResponse = (data) => {
         const returnData = data['S:Envelope']['S:Body']['ns2:executeResponse']['return'];
@@ -249,17 +249,17 @@
             return;
         }
 
-        console.log('在庫データ送信中:', inventoryData);
+        // console.log('在庫データ送信中:', inventoryData);
         try {
             const response = await updateTLInventory(props.hotel_id, inventoryData);
             if (!response.success) {
-                toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });
+                toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。', life: 3000 });
             } else {
-                toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が正常に送信されました。' });
+                toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が正常に送信されました。', life: 3000 });
             }
         } catch (error) {
             console.error('在庫データ送信エラー:', error);
-            toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });
+            toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。', life: 3000 });
         }
     };
          

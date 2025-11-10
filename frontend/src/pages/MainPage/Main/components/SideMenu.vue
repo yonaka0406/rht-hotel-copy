@@ -4,7 +4,7 @@
     'flex flex-col h-full',
     'transition-all duration-300 ease-in-out',
     'w-full',
-    'hidden md:flex overflow-y-auto no-scroll'
+    'hidden md:flex'
   ]">
     <div
       :class="['p-4 border-b border-emerald-700 dark:border-emerald-600', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
@@ -22,7 +22,7 @@
       </Button>
     </div>
 
-    <nav class="flex-1 space-y-1 mt-4 overflow-y-auto max-h-[calc(100vh-250px)]">
+    <nav class="flex-1 space-y-1 mt-4 overflow-y-auto max-h-[calc(100vh-250px)] custom-scrollbar">
       <template v-for="(item, index) in menuItems" :key="index">
         <div v-if="item.type === 'header'"
           :class="['px-6 py-2 text-xs text-emerald-300 dark:text-emerald-200 uppercase font-semibold', isCollapsed ? 'text-center' : '']">
@@ -366,13 +366,14 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
-.no-scroll {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.no-scroll::-webkit-scrollbar {
-  display: none;
+.custom-scrollbar {
+    --scrollbar-thumb-bg: rgba(200, 200, 200, 0.8); /* Light gray */
+    --scrollbar-thumb-bg-hover: rgba(150, 150, 150, 0.9); /* Darker gray for hover */
+    --scrollbar-thumb-border-color: rgba(100, 100, 100, 0.6); /* Dark gray for border */
+    --scrollbar-thumb-gradient-start: rgba(200, 200, 200, 0.8);
+    --scrollbar-thumb-gradient-end: rgba(150, 150, 150, 0.8);
+    --scrollbar-thumb-gradient-start-hover: rgba(150, 150, 150, 0.9);
+    --scrollbar-thumb-gradient-end-hover: rgba(100, 100, 100, 0.9);
 }
 
 .pi {

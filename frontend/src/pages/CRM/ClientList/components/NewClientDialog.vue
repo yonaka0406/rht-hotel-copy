@@ -56,9 +56,8 @@
             <FloatLabel>
                 <InputText
                 v-model="newClient.email"
-                :pattern="emailPattern"
                 :class="{'p-invalid': !isValidEmail}"
-                @input="validateEmail(newClient.email)"
+                @input="validateEmailField(newClient.email)"
                 fluid
                 />
                 <label>メールアドレス</label>
@@ -70,9 +69,8 @@
             <FloatLabel>
                 <InputText
                 v-model="newClient.phone"
-                :pattern="phonePattern"
                 :class="{'p-invalid': !isValidPhone}"
-                @input="validatePhone(newClient.phone)"
+                @input="validatePhoneField(newClient.phone)"
                 fluid
                 />
                 <label>電話番号</label>
@@ -118,9 +116,9 @@ const genderOptions = [
     { label: 'その他', value: 'other' },
 ];
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { validatePhone, validateEmail } from '@/utils/validationUtils';
+
 const isValidEmail = ref(true);
-const phonePattern = /^\+?(?:[0-9] ?){6,14}[0-9]$/;
 const isValidPhone = ref(true);
 
 const newClientReset = () => {
@@ -146,12 +144,12 @@ const closeDialog = () => {
     emit('close');
 };
 
-const validateEmail = (email) => {
-    isValidEmail.value = email ? emailPattern.test(email) : true;
+const validateEmailField = (email) => {
+    isValidEmail.value = validateEmail(email);
 };
 
-const validatePhone = (phone) => {
-    isValidPhone.value = phone ? phonePattern.test(phone) : true;
+const validatePhoneField = (phone) => {
+    isValidPhone.value = validatePhone(phone);
 };
 
 const goToEditClientPage = (clientId) => {

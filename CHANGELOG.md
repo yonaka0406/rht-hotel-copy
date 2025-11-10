@@ -605,7 +605,27 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.31] - 2025-11-06
+
+- Bugfix: Fixed the vw_room_inventory view to exclude 'not for sale' rooms from the occupied rooms count, preventing incorrect room availability data being sent to the site controller.
+- Performance: Changed Puppeteer to create new browser instances per request instead of using a singleton browser, resolving memory leaks and heap errors caused by browser instances not being properly closed.
+- Bugfix: Fixed an issue where the rooms dialog was not opening in the ManageHotel.vue component, improving hotel management functionality.
+- Feature: Created reusable phone and email validation utilities for frontend forms, centralizing validation rules and ensuring consistent validation behavior across all components.
+- Feature: Enhanced the reservation list to open reservations in a new tab, improving workflow efficiency by allowing users to maintain their place in the list while viewing reservation details.
+- Feature: Added custom scrollbar styling for sidebars to improve usability on screens with limited height, ensuring better navigation and content visibility.
+
+---
+
+## [1.1.32] - 2025-11-07
+
+- Request: Updated PDF invoice template to change text from '顧客コード' to '取引先コード' for better clarity and consistency with business terminology.
+- Improvement: Separated reservation comment section into read-only and edit dialogs to prevent WebSocket update interruptions during editing.
+
+---
+
 ## Version History
+- **1.1.31** (2025-11-06) - Fixed room inventory view to exclude 'not for sale' rooms, resolved memory leaks in Puppeteer, improved form validation with reusable utilities, and enhanced UI with custom scrollbar styling for sidebars. Added new tab functionality for reservation details.
+- **1.1.30** (2025-11-05) - Implemented reservation splitting while maintaining related data and history. Fixed invoice display for reservations spanning multiple months and ensured consistent date formatting between frontend and backend for billing periods.
 - **1.1.29** (2025-10-31) - Enhanced reservation management with cancellation type controls and client list exports. Improved OTA booking visualization, fixed payment calculations for cancelled dates, and resolved invoice ID generation for shared reservations. Added reliable Google Sheets API authentication.
 - **1.1.28** (2025-10-30) - Added OTA notifications drawer for better alert management and fixed bulk cancellation pricing. Improved date cancellation handling in Room Indicator to properly manage room status during partial stay cancellations.
 - **1.1.27** (2025-10-27) - Enhanced room indicator with client change information and enabled partial period changes for multiple rooms. Improved reservation split functionality and fixed guest count display in Static Calendar. Updated invoice generation to include 5-digit customer code.

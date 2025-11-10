@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "created": "2025-11-08T04:28:23.457Z",
+  "description": "Redirect mappings for migrated documentation files",
+  "mappings": {
+    "ARCHITECTURE.md": "docs/architecture/README.md",
+    "BOOKING_ENGINE_API_DOCUMENTATION.md": "docs/api/endpoints/booking-engine.md",
+    "BOOKING_ENGINE_INTEGRATION_STRATEGY.md": "docs/integrations/booking-engine/overview.md",
+    "STATE_MGMT.md": "docs/frontend/state-management.md",
+    "SQUARE_PAYMENT_INTEGRATION.md": "docs/integrations/payment-systems/square-integration.md",
+    "BUGS.md": "docs/reference/known-issues.md",
+    "DEALT.md": "docs/archive/pre-migration/DEALT.md",
+    "GEMINI.md": "docs/archive/pre-migration/GEMINI.md"
+  },
+  "usage": {
+    "description": "Use these mappings to update external references",
+    "example": "If external link points to /ARCHITECTURE.md, update to /docs/architecture/README.md"
+  }
+}

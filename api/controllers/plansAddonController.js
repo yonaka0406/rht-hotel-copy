@@ -48,19 +48,30 @@ const createNewPlanAddon = async (req, res) => {
 // PUT update an existing plan addon
 const updateExistingPlanAddon = async (req, res) => {
     const addonId = parseInt(req.params.id);
-    const planAddon = {
-        hotel_id: req.body.hotel_id,
-        plans_global_id: req.body.plans_global_id,
-        plans_hotel_id: req.body.plans_hotel_id,
-        addons_global_id: req.body.addons_global_id,
-        addons_hotel_id: req.body.addons_hotel_id,
-        price: req.body.price,
-        date_start: req.body.date_start,
-        date_end: req.body.date_end,
-        updated_by: req.user.id
-    };
-
+    
     try {
+        const existingAddon = await getPlanAddonById(req.requestId, addonId);
+
+        const planAddon = {
+            hotel_id: req.body.hotel_id ?? existingAddon.hotel_id,
+            plans_global_id: req.body.plans_global_id ?? existingAddon.plans_global_id,
+            plans_hotel_id: req.body.plans_hotel_id ?? existingAddon.plans_hotel_id,
+            addons_global_id: req.body.addons_global_id ?? existingAddon.addons_global_id,
+            addons_hotel_id: req.body.addons_hotel_id ?? existingAddon.addons_hotel_id,
+            price: req.body.price ?? existingAddon.price,
+            date_start: req.body.date_start ?? existingAddon.date_start,
+            date_end: req.body.date_end ?? existingAddon.date_end,
+            updated_by: req.user.id
+        };
+
+        // Ensure date_start is not null if it is required by the DB
+        // Assuming it is required based on the error message.
+        if (!planAddon.date_start) {
+            // Provide a default or throw an error. For now, let's use a default.
+            // A reasonable default for date_start could be the current date.
+            planAddon.date_start = new Date().toISOString().split('T')[0]; 
+        }
+
         const updatedAddon = await updatePlanAddon(req.requestId, addonId, planAddon);
         res.json(updatedAddon);
     } catch (error) {

@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const logger = require('../config/logger');
 
 let browserInstance = null;
 let browserLaunchPromise = null;
@@ -14,6 +15,7 @@ const getBrowser = async () => {
 
   browserLaunchPromise = puppeteer.launch({
     headless: "new",
+    protocolTimeout: 120000, // Increase timeout to 2 minutes    
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -28,14 +30,15 @@ const getBrowser = async () => {
 
   try {
     browserInstance = await browserLaunchPromise;
+    logger.info('Puppeteer browser launched successfully.');
     browserInstance.on('disconnected', () => {
-      console.warn('Puppeteer browser disconnected. Resetting instance.');
+      logger.warn('Puppeteer browser disconnected. Resetting instance.');
       browserInstance = null;
       browserLaunchPromise = null;
     });
     return browserInstance;
   } catch (err) {
-    console.error('Failed to launch Puppeteer browser:', err);
+    logger.error('Failed to launch Puppeteer browser:', err);
     browserInstance = null;
     browserLaunchPromise = null;
     throw err;
@@ -44,41 +47,29 @@ const getBrowser = async () => {
 
 const closeSingletonBrowser = async () => {
   if (browserInstance) {
+    logger.info('Closing Puppeteer browser instance.');
     try {
       await browserInstance.close();
     } catch (err) {
-      console.error("Error closing Puppeteer browser instance:", err);
+      logger.error("Error closing Puppeteer browser instance:", err);
     } finally {
       browserInstance = null;
+      browserLaunchPromise = null;
     }
   }
 };
 
-// The closeBrowser function is now deprecated, but we can keep it for a short time
-// to avoid breaking changes, though it will now do nothing.
-const closeBrowser = async (browser) => {
-  // This function is deprecated. The singleton browser should not be closed by individual requests.
-  // Use page.close() instead of browser.close() in your controllers.
+const resetBrowser = async (isError = true) => {
+  if (isError) {
+    logger.warn('Resetting Puppeteer browser instance due to error.');
+  } else {
+    logger.info('Resetting Puppeteer browser instance for cleanup.');
+  }
+  await closeSingletonBrowser();
 };
 
 module.exports = {
   getBrowser,
-  closeBrowser, // Deprecated
   closeSingletonBrowser,
+  resetBrowser,
 };
-
-// Add graceful shutdown handlers
-const shutdown = async (signal) => {
-  console.log(`Received ${signal}. Closing Puppeteer browser...`);
-  try {
-    await closeSingletonBrowser();
-    console.log('Puppeteer browser closed. Exiting process.');
-    process.exit(0);
-  } catch (err) {
-    console.error('Error during graceful shutdown:', err);
-    process.exit(1);
-  }
-};
-
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);

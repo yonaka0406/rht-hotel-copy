@@ -12,8 +12,8 @@
       "version": "0.2.0",
       "date": "2025-03-07",
       "changes": [
-        { "type": "feature", "description": "予約カレンダー：ドラッグ＆ドロップ操作時の警告デザインを変更しました。" },
-        { "type": "feature", "description": "予約カレンダー：日付・部屋番号のフォントサイズを大きくしました。" },
+        { "type": "ui", "description": "予約カレンダー：ドラッグ＆ドロップ操作時の警告デザインを変更しました。" },
+        { "type": "ui", "description": "予約カレンダー：日付・部屋番号のフォントサイズを大きくしました。" },
         { "type": "feature", "description": "日付選択：Primevue日本語表示と日付範囲分離。" },
         { "type": "feature", "description": "予約：確定済み予約でも部屋数の追加・削減が可能になりました。" },
         { "type": "user-request", "description": "予約編集：日付変更方法の一部対応。" }
@@ -24,7 +24,7 @@
       "date": "2025-03-11",
       "changes": [
         { "type": "feature", "description": "予約カレンダー：満室時の部屋移動（交換）機能を追加。" },
-        { "type": "feature", "description": "予約カレンダー：グリッド線を追加。" },
+        { "type": "ui", "description": "予約カレンダー：グリッド線を追加。" },
         { "type": "feature", "description": "予約：滞在中の部屋変更をドラッグ＆ドロップで可能に。" },
         { "type": "feature", "description": "予約カレンダー：空室数表示を追加。" }
       ]
@@ -179,14 +179,14 @@
       "changes": [
         { "type": "feature", "description": "予約複製機能：別の予約者に予約を複製できるようになりました（内容はそのまま）。" },
         { "type": "bugfix", "description": "カレンダー：日付変更時にスクロール位置がトップにリセットされるよう修正。" },
-        { "type": "improvement", "description": "カレンダー：部屋セルに区切り線を追加し視認性を向上。" },
-        { "type": "improvement", "description": "ローマ字自動大文字化：全大文字入力（例：NTT）をそのまま保持。" },
+        { "type": "ui", "description": "カレンダー：部屋セルに区切り線を追加し視認性を向上。" },
+        { "type": "refactor", "description": "ローマ字自動大文字化：全大文字入力（例：NTT）をそのまま保持。" },
         { "type": "bugfix", "description": "保留予約作成後、クライアントが即編集可能に。" },
         { "type": "bugfix", "description": "プラン・機関編集から追加したアドオンが即時反映されるよう修正。" },
         { "type": "improvement", "description": "食事数レポート：該当アドオンがない場合に明確なトーストメッセージを表示。" },
         { "type": "bugfix", "description": "食事アドオン数が全予約エクスポート・レポートで正しく集計されるよう修正。" },
-        { "type": "improvement", "description": "チェックイン時に予約クライアントが不要に。" },
-        { "type": "improvement", "description": "カレンダー：全アイコンの意味を説明する凡例を追加。" },
+        { "type": "user-request", "description": "チェックイン時に予約クライアントが不要に。" },
+        { "type": "ui", "description": "カレンダー：全アイコンの意味を説明する凡例を追加。" },
         { "type": "bugfix", "description": "保留中予約削除後、確認プロンプトが自動で閉じるよう修正。" }
       ]
     },
@@ -194,8 +194,8 @@
       "version": "1.0.5",
       "date": "2025-07-23",
       "changes": [
-        { "type": "bugfix", "description": "OTA予約がトランザクションで処理されるようになり、同時リクエスト時の重複登録を防止しました。" },
-        { "type": "bugfix", "description": "アドオンの数量計算が予約全体人数ではなく部屋ごとの人数単位になり、複数部屋予約時の数量誤りを修正しました。" },
+        { "type": "performance", "description": "OTA予約がトランザクションで処理されるようになり、同時リクエスト時の重複登録を防止しました。" },
+        { "type": "performance", "description": "アドオンの数量計算が予約全体人数ではなく部屋ごとの人数単位になり、複数部屋予約時の数量誤りを修正しました。" },
         { "type": "bugfix", "description": "PrimeVueのConfirmDialogが追加・削除後に正しく閉じるようになりました（Bug #12）。" },
         { "type": "feature", "description": "グローバル予約検索機能をトップメニューに追加。" },
         { "type": "design", "description": "予約一覧のデザインを一部変更。" }
@@ -492,7 +492,7 @@
       "date": "2025-10-15",
       "changes": [
         { "type": "feature", "description": "部屋管理に水回りの有無を追跡するための真偽値フィールドを追加しました。" },
-        { "type": "enhancement", "description": "スタティックカレンダーの表示を改善し、部屋タイプごとのグループ化と部屋番号順の並び替えを実装しました。" },
+        { "type": "improvement", "description": "スタティックカレンダーの表示を改善し、部屋タイプごとのグループ化と部屋番号順の並び替えを実装しました。" },
         { "type": "bugfix", "description": "複数部屋予約で1部屋の期間を変更した際に新しい予約が作成されてしまう問題を修正しました。" },
         { "type": "feature", "description": "日次メトリクスに売上情報を追加し、レポート機能を強化しました。" }
       ]
@@ -562,6 +562,26 @@
         { "type": "feature", "description": "予約を複数の部分に分割する機能を実装し、関連するデータと履歴を維持しながら予約を管理できるようになりました。" },
         { "type": "bugfix", "description": "異なる月にまたがる請求書を持つ予約が請求書作成画面に表示されない問題を修正し、適格な予約がすべて正しく表示されるようになりました。" },
         { "type": "bugfix", "description": "請求期間の最終日が正しく請求に含まれるよう、フロントエンドとバックエンド間の日付フォーマットとタイムゾーン処理を統一しました。" }
+      ]
+    },
+    {
+      "version": "1.1.31",
+      "date": "2025-11-06",
+      "changes": [
+        { "type": "bugfix", "description": "'販売対象外'の部屋が占有部屋数にカウントされていた問題を修正し、サイトコントローラーに送信される部屋の空き状況データの正確性を向上させました。" },
+        { "type": "performance", "description": "Puppeteerをシングルトンからリクエストごとの新しいブラウザインスタンスに変更し、適切に閉じられないことによるメモリリークとヒープエラーを解消しました。" },
+        { "type": "bugfix", "description": "ManageHotel.vueコンポーネントで部屋ダイアログが開かない問題を修正し、ホテル管理機能を改善しました。" },
+        { "type": "feature", "description": "フロントエンドフォーム用の再利用可能な電話番号とメール検証ユーティリティを作成し、検証ルールを一元管理してすべてのコンポーネントで一貫した検証動作を実現しました。" },
+        { "type": "feature", "description": "予約リストで予約を新しいタブで開くように改善し、ユーザーがリスト内の位置を維持したまま予約詳細を確認できるようになりました。" },
+        { "type": "feature", "description": "画面の高さが限られた環境での使いやすさを向上させるため、サイドバーにカスタムスクロールバーのスタイリングを追加し、ナビゲーションとコンテンツの視認性を向上させました。" }
+      ]
+    },
+    {
+      "version": "1.1.32",
+      "date": "2025-11-07",
+      "changes": [
+        { "type": "user-request", "description": "PDF請求書テンプレートの'顧客コード'を'取引先コード'に変更し、ビジネス用語との一貫性を向上させました。" },
+        { "type": "improvement", "description": "WebSocket更新による編集の中断を防ぐため、予約コメントセクションを読み取り専用モードと編集ダイアログに分離しました。" }
       ]
     }
   ],

@@ -1452,7 +1452,7 @@ const updateReservationTime = async (requestId, reservationData) => {
     return result.rows[0];
 
   } catch (error) {
-    console.error('Error updating reservation detail:', err);
+    console.error('Error updating reservation detail:', error);
     throw new Error('Database error');
   }
 };

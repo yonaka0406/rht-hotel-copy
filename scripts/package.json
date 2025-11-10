@@ -5,7 +5,8 @@
   "main": "import_clients_csv.js",
   "scripts": {
     "import_clients": "node import_clients_csv.js",
-    "import_clients_dry_run": "node import_clients_csv.js --dry-run"
+    "import_clients_dry_run": "node import_clients_csv.js --dry-run",
+    "test": "node check-doc-freshness.test.js"
   },
   "dependencies": {
     "csv-parse": "^5.5.0",

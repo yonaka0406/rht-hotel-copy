@@ -233,6 +233,7 @@ const editRooms = async (hotel) => {
   try {
     selectedHotel.value = { ...hotel };
     await fetchRoomTypes(hotel.id);
+    roomsDialogVisible.value = true;
   } catch {
     toast.add({
       severity: 'error',

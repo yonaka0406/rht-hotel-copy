@@ -1,7 +1,7 @@
 <template>
     <div class="flex min-h-screen bg-gray-100 dark:bg-gray-900">
         <div
-            :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 dark:from-yellow-900 dark:to-gray-950 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto no-scroll']">
+            :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 dark:from-yellow-900 dark:to-gray-950 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto custom-scrollbar']">
             <div
                 :class="['p-4 border-b border-yellow-700', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
                 <div v-if="!isCollapsed" class="flex items-center">
@@ -167,16 +167,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.no-scroll {
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
-}
-
-.no-scroll::-webkit-scrollbar {
-    display: none;
-    /* Chrome, Safari, Opera */
+.custom-scrollbar {
+    --scrollbar-thumb-bg: rgba(250, 204, 21, 0.8);
+    --scrollbar-thumb-bg-hover: rgba(250, 204, 21, 0.9);
+    --scrollbar-thumb-border-color: rgba(161, 98, 7, 0.6);
+    --scrollbar-thumb-gradient-start: rgba(250, 204, 21, 0.8);
+    --scrollbar-thumb-gradient-end: rgba(161, 98, 7, 0.8);
+    --scrollbar-thumb-gradient-start-hover: rgba(250, 204, 21, 0.9);
+    --scrollbar-thumb-gradient-end-hover: rgba(161, 98, 7, 0.9);
 }
 
 .pi {
