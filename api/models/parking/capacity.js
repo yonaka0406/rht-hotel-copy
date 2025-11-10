@@ -111,7 +111,7 @@ const blockParkingCapacity = async (requestId, blockData, client = null) => {
  * @returns {Promise<Array>} Array of blocking records
  */
 const getBlockedCapacity = async (requestId, hotel_id, startDate, endDate) => {
-    console.log(`[getBlockedCapacity] Request ${requestId}: hotel=${hotel_id}, dates=${startDate} to ${endDate}`);
+    //console.log(`[getBlockedCapacity] Request ${requestId}: hotel=${hotel_id}, dates=${startDate} to ${endDate}`);
     
     const pool = getPool(requestId);
     
@@ -133,7 +133,7 @@ const getBlockedCapacity = async (requestId, hotel_id, startDate, endDate) => {
         
         const result = await pool.query(query, values);
         
-        console.log(`[getBlockedCapacity] Found ${result.rows.length} blocking records`);
+        //console.log(`[getBlockedCapacity] Found ${result.rows.length} blocking records`);
         
         return result.rows;
         

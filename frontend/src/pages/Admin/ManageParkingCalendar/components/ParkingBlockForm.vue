@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, watch, ref } from 'vue';
+import { defineProps, defineEmits, computed, watch, ref, nextTick } from 'vue';
 import Card from 'primevue/card';
 import Select from 'primevue/select';
 import FloatLabel from 'primevue/floatlabel';
@@ -167,23 +167,37 @@ const availableSizes = computed(() => {
 // Flag to prevent duplicate emissions during auto-adjustments
 const isAdjusting = ref(false);
 
+// Helper function to adjust date range
+const adjustDateRange = (newStart, newEnd) => {
+    if (newStart && newEnd) {
+        if (newStart > newEnd) {
+            return { startDate: newStart, endDate: new Date(newStart) };
+        }
+        if (newEnd < newStart) {
+            return { startDate: new Date(newEnd), endDate: newEnd };
+        }
+    }
+    return null;
+};
+
 // Watch for start date changes to validate against end date
 watch(() => props.formData.startDate, (newStartDate) => {
     if (isAdjusting.value) return;
-    
-    if (newStartDate && props.formData.endDate) {
-        // If start date is after end date, update end date to match start date
-        if (newStartDate > props.formData.endDate) {
-            isAdjusting.value = true;
-            const newEndDate = new Date(newStartDate);
-            emit('update:endDate', newEndDate);
-            emit('dates-changed', { startDate: newStartDate, endDate: newEndDate });
-            isAdjusting.value = false;
-            return;
+
+    const adjustment = adjustDateRange(newStartDate, props.formData.endDate);
+    if (adjustment) {
+        isAdjusting.value = true;
+        if (props.formData.endDate.getTime() !== adjustment.endDate.getTime()) {
+            emit('update:endDate', adjustment.endDate);
         }
+        emit('dates-changed', adjustment);
+        // Use nextTick to ensure the flag is reset after the update cycle
+        nextTick(() => {
+            isAdjusting.value = false;
+        });
+        return;
     }
-    
-    // Trigger recalculation if both dates are set
+
     if (newStartDate && props.formData.endDate && props.formData.selectedParkingLot) {
         emit('dates-changed', { startDate: newStartDate, endDate: props.formData.endDate });
     }
@@ -192,20 +206,21 @@ watch(() => props.formData.startDate, (newStartDate) => {
 // Watch for end date changes to validate against start date
 watch(() => props.formData.endDate, (newEndDate) => {
     if (isAdjusting.value) return;
-    
-    if (newEndDate < props.formData.startDate) {
-        // If end date is before start date, update start date to match end date
-        if (newEndDate && props.formData.startDate) {
-            isAdjusting.value = true;
-            const newStartDate = new Date(newEndDate);
-            emit('update:startDate', newStartDate);
-            emit('dates-changed', { startDate: newStartDate, endDate: newEndDate });
-            isAdjusting.value = false;
-            return;
+
+    const adjustment = adjustDateRange(props.formData.startDate, newEndDate);
+    if (adjustment) {
+        isAdjusting.value = true;
+        if (props.formData.startDate.getTime() !== adjustment.startDate.getTime()) {
+            emit('update:startDate', adjustment.startDate);
         }
+        emit('dates-changed', adjustment);
+        // Use nextTick to ensure the flag is reset after the update cycle
+        nextTick(() => {
+            isAdjusting.value = false;
+        });
+        return;
     }
-    
-    // Trigger recalculation if both dates are set
+
     if (props.formData.startDate && newEndDate && props.formData.selectedParkingLot) {
         emit('dates-changed', { startDate: props.formData.startDate, endDate: newEndDate });
     }

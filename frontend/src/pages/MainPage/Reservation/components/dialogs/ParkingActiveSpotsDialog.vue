@@ -213,7 +213,7 @@
 
 <script setup>
 // Vue
-import { ref, computed, watch, reactive } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 // Primvue
 import { useConfirm } from 'primevue/useconfirm';
@@ -295,19 +295,6 @@ const hasMixedVehicleTypes = ref(false);
 watch(() => props.parkingSpots, (newSpots) => {
     localSpots.value = [...newSpots];
 }, { deep: true });
-
-// Get unique parking spot numbers, sorted
-const uniqueParkingSpots = computed(() => {
-    const spots = [...new Set(localSpots.value.map(spot => spot.spotNumber))];
-    return spots.sort((a, b) => {
-        const aNum = parseInt(a.replace(/\D/g, ''));
-        const bNum = parseInt(b.replace(/\D/g, ''));
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-            return aNum - bNum;
-        }
-        return a.localeCompare(b);
-    });
-});
 
 // Date filter computed
 const filteredGroupedByDate = computed(() => {
@@ -829,45 +816,6 @@ const checkBulkAvailabilityForTypes = async () => {
         
         // Set overall max as sum of all type maxes
         maxAvailableSpots.value = vehicleTypeBreakdown.value.reduce((sum, type) => sum + type.maxAvailable, 0);
-    } catch (error) {
-        console.error('Error checking availability:', error);
-        maxAvailableSpots.value = 20;
-    } finally {
-        loadingAvailability.value = false;
-    }
-};
-
-const checkAvailability = async (dateGroup) => {
-    loadingAvailability.value = true;
-    try {
-        if (!props.reservationDetails?.[0]) {
-            maxAvailableSpots.value = 20;
-            return;
-        }
-
-        const hotelId = props.reservationDetails[0].hotel_id;
-        const vehicleCategoryId = dateGroup.reservations[0]?.vehicleCategoryId;
-        
-        if (!vehicleCategoryId) {
-            maxAvailableSpots.value = 20;
-            return;
-        }
-
-        // Check real-time availability for this date
-        const response = await parkingStore.checkRealTimeAvailability(
-            hotelId,
-            vehicleCategoryId,
-            [dateGroup.date],
-            null
-        );
-
-        const dateAvailability = response.dateAvailability?.[dateGroup.date];
-        if (dateAvailability) {
-            // Max = current spots + available spots
-            maxAvailableSpots.value = currentSpotCount.value + dateAvailability.availableSpots;
-        } else {
-            maxAvailableSpots.value = currentSpotCount.value;
-        }
     } catch (error) {
         console.error('Error checking availability:', error);
         maxAvailableSpots.value = 20;

@@ -98,11 +98,11 @@
                           <i class="pi pi-car bg-red-100 p-1 rounded dark:bg-red-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date).status === 'block' && fillSpotInfo(spot.id, date).client_id === '11111111-1111-1111-1111-111111111111'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'block' && fillSpotInfo(spot.id, date).client_id === BLOCK_CLIENT_ID">
                           <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date).status === 'block' && fillSpotInfo(spot.id, date).client_id === '22222222-2222-2222-2222-222222222222'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'block' && fillSpotInfo(spot.id, date).client_id === LOCK_CLIENT_ID">
                           <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>
                         </template>
                       </div>
@@ -178,16 +178,18 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
   import { useParkingStore } from '@/composables/useParkingStore';
-  const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel, fetchParkingBlocks, parkingBlocks } = useParkingStore();
+  const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel, fetchParkingBlocks } = useParkingStore();
   
   const allParkingSpots = ref([]);
+  
+  const BLOCK_CLIENT_ID = '11111111-1111-1111-1111-111111111111';
+  const LOCK_CLIENT_ID = '22222222-2222-2222-2222-222222222222';
   
   // Helper function
   const formatDate = (date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
       return "";
-    }
-    const year = date.getFullYear();
+    }    const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
@@ -306,19 +308,8 @@
       }
       
       // Update tempParkingReservations with the merged data
-      tempParkingReservations.value = mergedReservations;
+      tempParkingReservations.value = mergedReservations;     
       
-      // Log all reservations for 2025-11-10
-      const reservationsFor1110 = mergedReservations.filter(r => formatDate(new Date(r.date)) === '2025-11-10');
-      if (reservationsFor1110.length > 0) {
-        console.log('[ParkingCalendar] All reservations for 2025-11-10:', reservationsFor1110.length);
-        console.log('[ParkingCalendar] Reservations:', reservationsFor1110.map(r => ({
-          spot_id: r.parking_spot_id,
-          spot_number: r.spot_number,
-          status: r.status,
-          booker_name: r.booker_name
-        })));
-      }
   };
   
   // Hash map for faster lookups
@@ -351,46 +342,25 @@
   
   // Fill & Format the table 
   const isSpotReserved = (spotId, date) => {
-    if (!tempParkingReservations.value) {
+    if (!reservedSpotsMap.value) {
       return false;
     }
     
     const formattedDate = formatDate(new Date(date));
-    const isReserved = tempParkingReservations.value.some(res => {
-      const resDate = formatDate(new Date(res.date));
-      return res.parking_spot_id === spotId && resDate === formattedDate;
-    });
-    
-    // Log for spot 246 on 2025-11-10 (the blocked spot)
-    if (spotId === 246 && formattedDate === '2025-11-10') {
-      console.log('[ParkingCalendar] isSpotReserved check for spot 246 on 2025-11-10:', isReserved);
-    }
-    
+    const key = `${spotId}_${formattedDate}`;
+    const isReserved = !!reservedSpotsMap.value[key];
+        
     return isReserved;
   };
   const fillSpotInfo = (spotId, date) => {
-    if (!tempParkingReservations.value) {
+    if (!reservedSpotsMap.value) {
       return { status: 'available', client_name: '', reservation_id: null, booker_name: '' };
     }
     
     const formattedDate = formatDate(new Date(date));
-    
-    // Log for spots 246 and 247 on 2025-11-10
-    if ((spotId === 246 || spotId === 247) && formattedDate === '2025-11-10') {
-      console.log(`[ParkingCalendar] fillSpotInfo for spot ${spotId} on 2025-11-10`);
-      console.log('[ParkingCalendar] tempParkingReservations length:', tempParkingReservations.value?.length);
-      const matchingRes = tempParkingReservations.value.filter(res => {
-        const resDate = formatDate(new Date(res.date));
-        return res.parking_spot_id === spotId && resDate === formattedDate;
-      });
-      console.log('[ParkingCalendar] Matching reservations:', matchingRes);
-    }
-    
-    const reservation = tempParkingReservations.value.find(res => {
-      const resDate = formatDate(new Date(res.date));
-      return res.parking_spot_id === spotId && resDate === formattedDate;
-    });
-    
+    const key = `${spotId}_${formattedDate}`;
+    const reservation = reservedSpotsMap.value[key];
+        
     if (reservation) {
       return {
         status: reservation.status || 'reserved',  // Use the status from reservation, default to 'reserved'
@@ -682,18 +652,8 @@
     const from = dragFrom.value;
     const to = dragTo.value;
   
-    // isSpotFullyBooked
-    // Convert check-in and check-out to Date objects
-    const startDate = new Date(from.check_in);
-    const endDate = new Date(from.check_out);
-    endDate.setDate(endDate.getDate() - 1); // Adjust end date to be check_out - 1 day
-    // Generate all dates between check-in and check-out - 1
-    const allDates = [];
-    let currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      allDates.push(currentDate.toISOString().split('T')[0]); // Store as YYYY-MM-DD
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+    const allDates = generateDateRangeArray(from.check_in, from.check_out);
+    
     // Filter reservations that match the given reservation_id and spot_id
     const spotReservations = Array.isArray(reservedParkingSpots.value) 
       ? reservedParkingSpots.value.filter(
@@ -765,16 +725,19 @@
       }
     });
   };
+  const generateDateRangeArray = (checkIn, checkOut) => {
+    const dates = [];
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    // The loop should include the start date but exclude the end date
+    for (let dt = start; dt < end; dt.setDate(dt.getDate() + 1)) {
+        dates.push(formatDate(new Date(dt)));
+    }
+    return dates;
+  };
+
   const checkForConflicts = (from, to) => {
-    const fromDates = [];
-    for (let dt = new Date(from.check_in); dt < new Date(from.check_out); dt.setDate(dt.getDate() + 1)) {
-      fromDates.push(formatDate(dt));
-    }
-  
-    const toDates = [];
-    for (let dt = new Date(to.check_in); dt < new Date(to.check_out); dt.setDate(dt.getDate() + 1)) {
-      toDates.push(formatDate(dt));
-    }
+    const toDates = generateDateRangeArray(to.check_in, to.check_out);
   
     for (const date of toDates) {
       const key = `${to.spot_id}_${date}`;
@@ -793,7 +756,7 @@
   const debounce = (func, delay) => {
     return (...args) => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func.apply(this, args), delay);
+      timeoutId = setTimeout(() => func(...args), delay);
     };
   };
   const handleScroll = debounce(async (event) => {
