@@ -1,6 +1,7 @@
 const parkingModel = require('../../models/parking');
 const { validateNumericParam, validateDateStringParam } = require('../../utils/validationUtils');
 const ParkingCapacityService = require('./services/parkingCapacityService');
+const { getPool } = require('../../config/database');
 
 /**
  * GET /api/parking/capacity/available
@@ -88,43 +89,52 @@ const blockCapacity = async (req, res) => {
         
         const {
             hotel_id,
-            vehicle_category_id,
+            parking_lot_id,
+            spot_size,
             start_date,
             end_date,
-            blocked_capacity,
-            reason,
+            number_of_spots,
             comment
         } = req.body;
         const user_id = req.user.id;
         
         // Validate required parameters
-        if (!hotel_id || !vehicle_category_id || !start_date || !end_date || !blocked_capacity) {
+        if (!hotel_id || !start_date || !end_date || !number_of_spots) {
             return res.status(400).json({ 
-                message: 'Missing required parameters: hotel_id, vehicle_category_id, start_date, end_date, blocked_capacity' 
+                message: 'Missing required parameters: hotel_id, start_date, end_date, number_of_spots' 
             });
         }
         
-        if (!validateNumericParam(hotel_id) || !validateNumericParam(vehicle_category_id)) {
-            return res.status(400).json({ message: 'Invalid hotel ID or vehicle category ID' });
+        if (!validateNumericParam(hotel_id)) {
+            return res.status(400).json({ message: 'Invalid hotel ID' });
+        }
+        
+        // Validate optional parameters
+        if (parking_lot_id && !validateNumericParam(parking_lot_id)) {
+            return res.status(400).json({ message: 'Invalid parking lot ID' });
+        }
+        
+        if (spot_size && !validateNumericParam(spot_size)) {
+            return res.status(400).json({ message: 'Invalid spot size' });
         }
         
         if (!validateDateStringParam(start_date) || !validateDateStringParam(end_date)) {
             return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
         }
         
-        if (!validateNumericParam(String(blocked_capacity)) || blocked_capacity <= 0) {
-            return res.status(400).json({ message: 'Blocked capacity must be a positive number' });
+        if (!validateNumericParam(String(number_of_spots)) || number_of_spots <= 0) {
+            return res.status(400).json({ message: 'Number of spots must be a positive number' });
         }
         
         // Use ParkingCapacityService
         const service = new ParkingCapacityService(req.requestId);
         const result = await service.blockCapacity({
             hotel_id: parseInt(hotel_id),
-            vehicle_category_id: parseInt(vehicle_category_id),
+            parking_lot_id: parking_lot_id ? parseInt(parking_lot_id) : null,
+            spot_size: spot_size ? parseInt(spot_size) : null,
             start_date,
             end_date,
-            blocked_capacity: parseInt(blocked_capacity),
-            reason,
+            number_of_spots: parseInt(number_of_spots),
             comment,
             user_id
         });

@@ -395,7 +395,11 @@
     - Refresh blocked dates list after successful deletion
     - _Requirements: 3.2, 3.5_
 
-  - [ ] 9.7 Add parking store methods for blocked dates
+  - [x] 9.7 Add parking store methods for blocked dates
+
+
+
+
 
 
     - Add fetchParkingBlocks method to useParkingStore

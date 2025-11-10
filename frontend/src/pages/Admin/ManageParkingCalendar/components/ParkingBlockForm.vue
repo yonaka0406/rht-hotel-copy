@@ -1,19 +1,27 @@
 <template>
     <Card class="mb-4">
-        <template #header><span class="text-lg font-bold">駐車場利用不可日付登録</span></template>
+        <template #header>
+            <div>
+                <div class="text-lg font-bold">駐車場スポットブロック設定</div>
+                <div class="text-sm text-gray-600 mt-1">施設利用者以外の使用や季節的な理由により利用不可となるスポットを設定します</div>
+            </div>
+        </template>
         <template #content>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                <div>
-                    <label for="hotel" class="block text-sm font-medium text-gray-700">ホテル選択</label>
-                    <Select name="hotel" v-model="selectedHotelId" :options="hotels" optionLabel="name"
-                        optionValue="id" :virtualScrollerOptions="{ itemSize: 38 }" fluid
-                        placeholder="ホテル選択" filter />
+            <div class="grid grid-cols-12 gap-4 mb-2">
+                <div class="col-span-12 md:col-span-6 mt-6">
+                    <FloatLabel>
+                        <Select id="hotel" name="hotel" v-model="selectedHotelId" :options="hotels" optionLabel="name"
+                            optionValue="id" :virtualScrollerOptions="{ itemSize: 38 }" fluid filter />
+                        <label for="hotel">ホテル選択</label>
+                    </FloatLabel>
                 </div>
-                <div>
-                    <label for="parkingLot" class="block text-sm font-medium text-gray-700">駐車場選択</label>
-                    <Select name="parkingLot" v-model="selectedParkingLot" :options="filteredParkingLots"
-                        optionLabel="name" optionValue="id"
-                        :virtualScrollerOptions="{ itemSize: 38 }" fluid placeholder="駐車場選択" filter />
+                <div class="col-span-12 md:col-span-6 mt-6">
+                    <FloatLabel>
+                        <Select id="parkingLot" name="parkingLot" v-model="selectedParkingLot" :options="filteredParkingLots"
+                            optionLabel="name" optionValue="id"
+                            :virtualScrollerOptions="{ itemSize: 38 }" fluid filter />
+                        <label for="parkingLot">駐車場選択</label>
+                    </FloatLabel>
                 </div>
             </div>
 
@@ -45,34 +53,43 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div>
-                    <label for="spotSize" class="block text-sm font-medium text-gray-700">スポットサイズ (任意)</label>
-                    <Select id="spotSize" v-model="formData.spotSize" :options="availableSizes" 
-                        optionLabel="label" optionValue="value" fluid placeholder="全サイズ" showClear />
+                <div class="mt-6">
+                    <FloatLabel>
+                        <InputNumber id="blockedCapacity" v-model="formData.blockedCapacity" :min="1" fluid />
+                        <label for="blockedCapacity">ブロック台数</label>
+                    </FloatLabel>
+                </div>
+                <div class="mt-6">
+                    <FloatLabel>
+                        <DatePicker id="startDate" v-model="formData.startDate" dateFormat="yy-mm-dd" fluid />
+                        <label for="startDate">開始日</label>
+                    </FloatLabel>
+                </div>
+                <div class="mt-6">
+                    <FloatLabel>
+                        <DatePicker id="endDate" v-model="formData.endDate" dateFormat="yy-mm-dd" fluid />
+                        <label for="endDate">終了日</label>
+                    </FloatLabel>
+                </div>
+                <div class="mt-6">
+                    <FloatLabel>
+                        <Select id="spotSize" v-model="formData.spotSize" :options="availableSizes" 
+                            optionLabel="label" optionValue="value" fluid showClear />
+                        <label for="spotSize">スポットサイズ (任意)</label>
+                    </FloatLabel>
                     <small class="text-gray-500">未選択の場合、全サイズに適用されます</small>
                 </div>
-                <div>
-                    <label for="blockedCapacity" class="block text-sm font-medium text-gray-700">ブロック台数</label>
-                    <InputNumber id="blockedCapacity" v-model="formData.blockedCapacity" :min="1" fluid
-                        placeholder="ブロックする台数を入力" />
-                </div>
-                <div>
-                    <label for="startDate" class="block text-sm font-medium text-gray-700">開始日</label>
-                    <DatePicker id="startDate" v-model="formData.startDate" dateFormat="yy-mm-dd" fluid />
-                </div>
-                <div>
-                    <label for="endDate" class="block text-sm font-medium text-gray-700">終了日</label>
-                    <DatePicker id="endDate" v-model="formData.endDate" dateFormat="yy-mm-dd" fluid />
-                </div>
-                <div class="col-span-1 md:col-span-3">
-                    <label for="comment" class="block text-sm font-medium text-gray-700">備考</label>
-                    <InputText id="comment" v-model="formData.comment" type="text" fluid />
+                <div class="col-span-1 md:col-span-3 mt-6">
+                    <FloatLabel>
+                        <InputText id="comment" v-model="formData.comment" type="text" fluid />
+                        <label for="comment">備考</label>
+                    </FloatLabel>
                 </div>
             </div>
             
             <div class="mt-4 flex justify-center gap-2">
                 <Button label="ブロック設定を適用" @click="$emit('apply-block')" class="p-button-primary" 
-                    :disabled="!selectedHotelId" />
+                    :disabled="!selectedHotelId || !selectedParkingLot" />
             </div>
         </template>
     </Card>
@@ -82,6 +99,7 @@
 import { defineProps, defineEmits, computed, watch } from 'vue';
 import Card from 'primevue/card';
 import Select from 'primevue/select';
+import FloatLabel from 'primevue/floatlabel';
 import DatePicker from 'primevue/datepicker';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
@@ -126,7 +144,6 @@ const selectedHotelId = computed({
 const selectedParkingLot = computed({
     get: () => props.formData.selectedParkingLot,
     set: (value) => {
-        props.formData.selectedParkingLot = value;
         emit('parking-lot-changed', value);
     }
 });
@@ -147,10 +164,33 @@ const availableSizes = computed(() => {
     }));
 });
 
-// Watch for date changes to recalculate max blockable spots
-watch([() => props.formData.startDate, () => props.formData.endDate], ([newStartDate, newEndDate]) => {
-    if (newStartDate && newEndDate && props.formData.selectedParkingLot) {
-        emit('dates-changed', { startDate: newStartDate, endDate: newEndDate });
+// Watch for start date changes to validate against end date
+watch(() => props.formData.startDate, (newStartDate) => {
+    if (newStartDate && props.formData.endDate) {
+        // If start date is after end date, update end date to match start date
+        if (newStartDate > props.formData.endDate) {
+            props.formData.endDate = new Date(newStartDate);
+        }
+    }
+    
+    // Trigger recalculation if both dates are set
+    if (newStartDate && props.formData.endDate && props.formData.selectedParkingLot) {
+        emit('dates-changed', { startDate: newStartDate, endDate: props.formData.endDate });
+    }
+});
+
+// Watch for end date changes to validate against start date
+watch(() => props.formData.endDate, (newEndDate) => {
+    if (newEndDate && props.formData.startDate) {
+        // If end date is before start date, update start date to match end date
+        if (newEndDate < props.formData.startDate) {
+            props.formData.startDate = new Date(newEndDate);
+        }
+    }
+    
+    // Trigger recalculation if both dates are set
+    if (props.formData.startDate && newEndDate && props.formData.selectedParkingLot) {
+        emit('dates-changed', { startDate: props.formData.startDate, endDate: newEndDate });
     }
 });
 </script>

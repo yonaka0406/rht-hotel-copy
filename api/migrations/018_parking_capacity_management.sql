@@ -7,23 +7,24 @@
 CREATE TABLE parking_blocks (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INTEGER NOT NULL,
-    vehicle_category_id INTEGER NOT NULL REFERENCES vehicle_categories(id) ON DELETE CASCADE,
+    parking_lot_id INTEGER REFERENCES parking_lots(id) ON DELETE CASCADE,
+    spot_size INTEGER,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    blocked_capacity INTEGER NOT NULL CHECK (blocked_capacity > 0),
+    number_of_spots INTEGER NOT NULL CHECK (number_of_spots > 0),
     comment TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by INTEGER REFERENCES users(id),
     updated_by INTEGER REFERENCES users(id),
-    CONSTRAINT valid_date_range CHECK (end_date > start_date),
+    CONSTRAINT valid_date_range CHECK (end_date >= start_date),
     PRIMARY KEY (id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
 -- Indexes for parking_blocks
 CREATE INDEX idx_parking_blocks_hotel_id ON parking_blocks(hotel_id);
 CREATE INDEX idx_parking_blocks_dates ON parking_blocks(start_date, end_date);
-CREATE INDEX idx_parking_blocks_vehicle_category ON parking_blocks(vehicle_category_id);
+CREATE INDEX idx_parking_blocks_parking_lot ON parking_blocks(parking_lot_id);
 CREATE INDEX idx_parking_blocks_hotel_dates ON parking_blocks(hotel_id, start_date, end_date);
 
 -- Trigger to update 'updated_at' timestamp for parking_blocks
@@ -293,17 +294,10 @@ COMMENT ON COLUMN parking_spots.spot_type IS 'Type of parking spot: standard (ph
 
 -- Additional changes for parking blocks
 
--- Add reservation_parking_ids column to store references to created reservation_parking records
-ALTER TABLE parking_blocks 
-ADD COLUMN IF NOT EXISTS reservation_parking_ids UUID[] DEFAULT '{}';
-
--- Add index for querying by reservation_parking_ids
-CREATE INDEX IF NOT EXISTS idx_parking_blocks_reservation_parking_ids 
-ON parking_blocks USING GIN (reservation_parking_ids);
-
--- Update the date range constraint to allow same-day blocks
-ALTER TABLE parking_blocks DROP CONSTRAINT IF EXISTS valid_date_range;
-ALTER TABLE parking_blocks ADD CONSTRAINT valid_date_range CHECK (end_date >= start_date);
+-- Add comments for documentation
+COMMENT ON COLUMN parking_blocks.parking_lot_id IS 'Optional parking lot ID - if NULL, applies to all parking lots at the hotel';
+COMMENT ON COLUMN parking_blocks.spot_size IS 'Optional spot size filter - if NULL, applies to all spot sizes';
+COMMENT ON COLUMN parking_blocks.number_of_spots IS 'Number of parking spots to block';
 
 -- Create partitions for existing hotels
 DO $$
@@ -318,5 +312,4 @@ BEGIN
     END LOOP;
 END $$;
 
--- Add comments
-COMMENT ON COLUMN parking_blocks.reservation_parking_ids IS 'Array of reservation_parking IDs created for this block to mark spots as unavailable';
+

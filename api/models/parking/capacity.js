@@ -13,22 +13,22 @@ let getPool = require('../../config/database').getPool;
  * @param {string} blockData.start_date - Start date (YYYY-MM-DD)
  * @param {string} blockData.end_date - End date (YYYY-MM-DD, exclusive)
  * @param {number} blockData.blocked_capacity - Number of spots to block
- * @param {string} blockData.reason - Reason for blocking
  * @param {string} blockData.comment - Additional comments
  * @param {number} blockData.user_id - User ID creating the block
  * @param {Object} client - Optional database client for transaction support
  * @returns {Promise<Object>} Created block record
  */
 const blockParkingCapacity = async (requestId, blockData, client = null) => {
-    console.log(`[blockParkingCapacity] Request ${requestId}: hotel=${blockData.hotel_id}, category=${blockData.vehicle_category_id}, dates=${blockData.start_date} to ${blockData.end_date}, capacity=${blockData.blocked_capacity}`);
+    console.log(`[blockParkingCapacity] Request ${requestId}: hotel=${blockData.hotel_id}, category=${blockData.vehicle_category_id}, parking_lot=${blockData.parking_lot_id}, spot_size=${blockData.spot_size}, dates=${blockData.start_date} to ${blockData.end_date}, capacity=${blockData.blocked_capacity}`);
     
     const {
         hotel_id,
         vehicle_category_id,
+        parking_lot_id,
+        spot_size,
         start_date,
         end_date,
         blocked_capacity,
-        reason,
         comment,
         user_id
     } = blockData;
@@ -49,8 +49,8 @@ const blockParkingCapacity = async (requestId, blockData, client = null) => {
             throw new Error('Blocked capacity must be greater than 0');
         }
         
-        if (new Date(start_date) >= new Date(end_date)) {
-            throw new Error('End date must be after start date');
+        if (new Date(start_date) > new Date(end_date)) {
+            throw new Error('End date must be on or after start date');
         }
         
         console.log(`[blockParkingCapacity] Validation passed, creating block record`);
@@ -59,8 +59,8 @@ const blockParkingCapacity = async (requestId, blockData, client = null) => {
         const insertQuery = `
             INSERT INTO parking_blocks (
                 hotel_id, vehicle_category_id, start_date, end_date,
-                blocked_capacity, reason, comment, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                blocked_capacity, comment, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
         `;
         const values = [
@@ -69,7 +69,6 @@ const blockParkingCapacity = async (requestId, blockData, client = null) => {
             start_date,
             end_date,
             blocked_capacity,
-            reason,
             comment,
             user_id,
             user_id
@@ -120,17 +119,15 @@ const getBlockedCapacity = async (requestId, hotel_id, startDate, endDate) => {
         const query = `
             SELECT 
                 pb.*,
-                vc.name as vehicle_category_name,
-                vc.capacity_units_required
+                h.name as hotel_name,
+                pl.name as parking_lot_name
             FROM parking_blocks pb
-            JOIN vehicle_categories vc ON pb.vehicle_category_id = vc.id
+            JOIN hotels h ON pb.hotel_id = h.id
+            LEFT JOIN parking_lots pl ON pb.parking_lot_id = pl.id
             WHERE pb.hotel_id = $1
-              AND (
-                (pb.start_date <= $3 AND pb.end_date > $2) OR
-                (pb.start_date < $3 AND pb.end_date >= $2) OR
-                (pb.start_date >= $2 AND pb.start_date < $3)
-              )
-            ORDER BY pb.start_date, vc.name
+              AND pb.start_date <= $3
+              AND pb.end_date >= $2
+            ORDER BY pb.start_date, pl.name
         `;
         const values = [hotel_id, startDate, endDate];
         

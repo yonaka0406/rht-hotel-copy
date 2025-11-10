@@ -39,7 +39,16 @@ import { useHotelStore } from '@/composables/useHotelStore';
 import { useParkingStore } from '@/composables/useParkingStore';
 
 const { hotels, selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
-const { parkingLots: storeParkingLots, parkingSpots, fetchParkingLots, fetchParkingSpots } = useParkingStore();
+const { 
+    parkingLots: storeParkingLots, 
+    parkingSpots, 
+    parkingBlocks: storeParkingBlocks,
+    fetchParkingLots, 
+    fetchParkingSpots,
+    fetchParkingBlocks,
+    createParkingBlock,
+    deleteParkingBlock
+} = useParkingStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -82,33 +91,72 @@ const parkingBlocks = ref([]);
 const parkingLotCapacity = ref(null);
 const maxBlockableSpots = ref(null);
 
+// Race condition protection for async operations
+let currentFetchId = 0;
+
 // Fetch initial data on mount
 onMounted(async () => {
+    console.log('[ManageParkingCalendar] onMounted - Starting initialization');
     await fetchHotels();
     await fetchHotel();
     
-    // If a hotel is already selected (from cache), fetch parking lots
+    console.log('[ManageParkingCalendar] onMounted - selectedHotelId:', selectedHotelId.value);
+    console.log('[ManageParkingCalendar] onMounted - formData.startDate:', formData.startDate);
+    console.log('[ManageParkingCalendar] onMounted - formData.endDate:', formData.endDate);
+    
+    // If a hotel is already selected (from cache), fetch parking lots and blocks
     if (selectedHotelId.value) {
+        console.log('[ManageParkingCalendar] onMounted - Fetching parking lots for hotel:', selectedHotelId.value);
         await fetchParkingLots();
+        
+        // Fetch parking blocks for the initial date range
+        if (formData.startDate && formData.endDate) {
+            const startDateStr = formatDate(formData.startDate);
+            const endDateStr = formatDate(formData.endDate);
+            console.log('[ManageParkingCalendar] onMounted - Fetching parking blocks:', startDateStr, 'to', endDateStr);
+            await fetchParkingBlocks(selectedHotelId.value, startDateStr, endDateStr);
+            parkingBlocks.value = storeParkingBlocks.value;
+            console.log('[ManageParkingCalendar] onMounted - Parking blocks loaded:', parkingBlocks.value.length, 'blocks');
+        } else {
+            console.log('[ManageParkingCalendar] onMounted - Dates not set, skipping block fetch');
+        }
+    } else {
+        console.log('[ManageParkingCalendar] onMounted - No hotel selected, skipping block fetch');
     }
 });
 
 // Watch hotel selection to fetch parking lots and blocks
 watch(selectedHotelId, async (newHotelId) => {
+    console.log('[ManageParkingCalendar] watch selectedHotelId - New hotel ID:', newHotelId);
     if (newHotelId) {
         await fetchParkingLots();
         // Reset parking lot selection and capacity when hotel changes
         formData.selectedParkingLot = null;
         parkingLotCapacity.value = null;
+        formData.spotSize = null;
+        maxBlockableSpots.value = null;
         
-        // TODO: Implement fetchParkingBlocks in parkingStore
-        // await parkingStore.fetchParkingBlocks(newHotelId);
-        // parkingBlocks.value = parkingStore.parkingBlocks;
+        // Fetch parking blocks for the selected hotel
+        if (formData.startDate && formData.endDate) {
+            const startDateStr = formatDate(formData.startDate);
+            const endDateStr = formatDate(formData.endDate);
+            console.log('[ManageParkingCalendar] watch - Fetching parking blocks:', startDateStr, 'to', endDateStr);
+            await fetchParkingBlocks(newHotelId, startDateStr, endDateStr);
+            parkingBlocks.value = storeParkingBlocks.value;
+            console.log('[ManageParkingCalendar] watch - Parking blocks loaded:', parkingBlocks.value.length, 'blocks');
+        }
     }
 }, { deep: true });
 
 // Handle parking lot change to fetch capacity information
 const handleParkingLotChange = async (parkingLotId) => {
+    // Increment fetch ID to invalidate any in-flight requests
+    currentFetchId++;
+    const thisFetchId = currentFetchId;
+    
+    // Update formData with the new parking lot selection
+    formData.selectedParkingLot = parkingLotId;
+    
     if (!parkingLotId) {
         parkingLotCapacity.value = null;
         maxBlockableSpots.value = null;
@@ -118,6 +166,12 @@ const handleParkingLotChange = async (parkingLotId) => {
     
     try {
         await fetchParkingSpots(parkingLotId);
+        
+        // Check if this fetch is still current (not superseded by a newer request)
+        if (thisFetchId !== currentFetchId) {
+            console.log('Parking lot fetch cancelled - newer request in progress');
+            return;
+        }
         
         // Ensure parkingSpots.value is an array
         if (!Array.isArray(parkingSpots.value)) {
@@ -147,9 +201,12 @@ const handleParkingLotChange = async (parkingLotId) => {
             await calculateMaxBlockableSpots();
         }
     } catch (error) {
-        console.error('Failed to fetch parking lot capacity:', error);
-        parkingLotCapacity.value = null;
-        maxBlockableSpots.value = null;
+        // Only update state if this fetch is still current
+        if (thisFetchId === currentFetchId) {
+            console.error('Failed to fetch parking lot capacity:', error);
+            parkingLotCapacity.value = null;
+            maxBlockableSpots.value = null;
+        }
     }
 };
 
@@ -195,10 +252,7 @@ const calculateMaxBlockableSpots = async () => {
         
         const reservations = await response.json();
         
-        // Get total spots in the parking lot
-        await fetchParkingSpots(formData.selectedParkingLot);
-        
-        // Filter spots by size if specified
+        // Filter spots by size if specified (parkingSpots already fetched in handleParkingLotChange)
         let filteredSpots = Array.isArray(parkingSpots.value) ? parkingSpots.value : [];
         if (formData.spotSize !== null && formData.spotSize !== undefined) {
             filteredSpots = filteredSpots.filter(spot => spot.capacity_units === formData.spotSize);
@@ -236,14 +290,48 @@ const calculateMaxBlockableSpots = async () => {
         console.log('Date Range:', startDateStr, 'to', endDateStr);
         console.log('Total Reservations Found:', parkingLotReservations.length);
         
-        // TODO: Fetch and account for existing parking blocks
-        // Currently we only count reservations, but existing blocks should also reduce available spots
+        // Fetch existing parking blocks for the date range
+        await fetchParkingBlocks(selectedHotelId.value, startDateStr, endDateStr);
+        const existingBlocks = storeParkingBlocks.value || [];
+        
+        // Filter blocks for the selected parking lot and spot size
+        const relevantBlocks = existingBlocks.filter(block => {
+            // If parking lot is specified in the block, it must match
+            if (block.parking_lot_id && block.parking_lot_id !== formData.selectedParkingLot) {
+                return false;
+            }
+            // If spot size is specified in both the form and the block, they must match
+            if (formData.spotSize !== null && formData.spotSize !== undefined && 
+                block.spot_size !== null && block.spot_size !== undefined && 
+                block.spot_size !== formData.spotSize) {
+                return false;
+            }
+            return true;
+        });
+        
+        console.log('Relevant Blocks Found:', relevantBlocks.length);
         
         // Count reservations per date
         const dateMap = new Map();
         parkingLotReservations.forEach(res => {
             const dateKey = formatDate(new Date(res.date));
             dateMap.set(dateKey, (dateMap.get(dateKey) || 0) + 1);
+        });
+        
+        // Count blocked capacity per date
+        const blockedMap = new Map();
+        relevantBlocks.forEach(block => {
+            const blockStart = new Date(block.start_date);
+            const blockEnd = new Date(block.end_date);
+            blockStart.setHours(0, 0, 0, 0);
+            blockEnd.setHours(23, 59, 59, 999);
+            
+            const currentBlockDate = new Date(blockStart);
+            while (currentBlockDate <= blockEnd) {
+                const dateKey = formatDate(currentBlockDate);
+                blockedMap.set(dateKey, (blockedMap.get(dateKey) || 0) + (block.number_of_spots || 0));
+                currentBlockDate.setDate(currentBlockDate.getDate() + 1);
+            }
         });
         
         // Debug: Log occupied spots by date
@@ -258,22 +346,24 @@ const calculateMaxBlockableSpots = async () => {
         console.log('Start Date:', formatDate(currentDate));
         console.log('End Date:', formatDate(endDate));
         
-        let maxReservationsOnAnyDay = 0;
+        let maxOccupiedOnAnyDay = 0;
         while (currentDate <= endDate) {
             const dateKey = formatDate(currentDate);
-            const count = dateMap.get(dateKey) || 0;
-            const available = totalSpots - count;
-            console.log(`  ${dateKey}: ${count} spots occupied, ${available} available`);
-            maxReservationsOnAnyDay = Math.max(maxReservationsOnAnyDay, count);
+            const reservedCount = dateMap.get(dateKey) || 0;
+            const blockedCount = blockedMap.get(dateKey) || 0;
+            const totalOccupied = reservedCount + blockedCount;
+            const available = totalSpots - totalOccupied;
+            console.log(`  ${dateKey}: ${reservedCount} reserved + ${blockedCount} blocked = ${totalOccupied} occupied, ${available} available`);
+            maxOccupiedOnAnyDay = Math.max(maxOccupiedOnAnyDay, totalOccupied);
             currentDate.setDate(currentDate.getDate() + 1);
         }
         
-        console.log('\nMax Concurrent Reservations:', maxReservationsOnAnyDay);
-        console.log('Max Blockable Spots:', Math.max(0, totalSpots - maxReservationsOnAnyDay));
+        console.log('\nMax Occupied (Reserved + Blocked):', maxOccupiedOnAnyDay);
+        console.log('Max Blockable Spots:', Math.max(0, totalSpots - maxOccupiedOnAnyDay));
         console.log('=====================================\n');
         
-        // Max blockable = total spots - max concurrent reservations
-        maxBlockableSpots.value = Math.max(0, totalSpots - maxReservationsOnAnyDay);
+        // Max blockable = total spots - max concurrent (reservations + blocks)
+        maxBlockableSpots.value = Math.max(0, totalSpots - maxOccupiedOnAnyDay);
         
     } catch (error) {
         console.error('Failed to calculate max blockable spots:', error);
@@ -295,10 +385,12 @@ const confirmApplyBlock = () => {
     
     const parkingLotName = storeParkingLots.value.find(lot => lot.id === formData.selectedParkingLot)?.name || '駐車場';
     const sizeText = formData.spotSize ? `<b>サイズ ${formData.spotSize}</b>の` : '';
+    const startDateStr = formatDate(formData.startDate);
+    const endDateStr = formatDate(formData.endDate);
     
     const message = `
         <b>選択されたホテル</b>の<b>${parkingLotName}</b>の${sizeText}スポットに対して、<br/>
-        選択された日付範囲で<b>${formData.blockedCapacity}台</b>の駐車場利用不可設定を行います。<br/>
+        <b>${startDateStr}</b>～<b>${endDateStr}</b>の期間で<b>${formData.blockedCapacity}台</b>の駐車場利用不可設定を行います。<br/>
         よろしいですか？<br/>
     `;
     formattedMessage.value = message;
@@ -344,26 +436,34 @@ const applyBlock = async () => {
     }
     
     try {
-        // TODO: Implement createParkingBlock in parkingStore
-        // const response = await parkingStore.createParkingBlock({
-        //     hotelId: selectedHotelId.value,
-        //     parkingLotId: formData.selectedParkingLot,
-        //     startDate: formatDate(formData.startDate),
-        //     endDate: formatDate(formData.endDate),
-        //     blockedCapacity: formData.blockedCapacity,
-        //     comment: formData.comment
-        // });
+        const blockData = {
+            hotel_id: selectedHotelId.value,
+            parking_lot_id: formData.selectedParkingLot,
+            spot_size: formData.spotSize || null,
+            start_date: formatDate(formData.startDate),
+            end_date: formatDate(formData.endDate),
+            number_of_spots: formData.blockedCapacity,
+            comment: formData.comment || ''
+        };
         
-        // if (response.success) {
-        //     await parkingStore.fetchParkingBlocks(selectedHotelId.value);
-        //     parkingBlocks.value = parkingStore.parkingBlocks;
-        //     toast.add({ severity: 'success', summary: '成功', detail: 'ブロック設定を適用しました。', life: 3000 });
-        // } else {
-        //     toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + response.message, life: 3000 });
-        // }
+        const response = await createParkingBlock(blockData);
         
-        toast.add({ severity: 'info', summary: '開発中', detail: 'この機能は開発中です。', life: 3000 });
+        if (response) {
+            // Refresh the parking blocks list
+            await fetchParkingBlocks(selectedHotelId.value, formatDate(formData.startDate), formatDate(formData.endDate));
+            parkingBlocks.value = storeParkingBlocks.value;
+            
+            // Recalculate max blockable spots to reflect the new block
+            await calculateMaxBlockableSpots();
+            
+            toast.add({ severity: 'success', summary: '成功', detail: 'ブロック設定を適用しました。', life: 3000 });
+            
+            // Reset form
+            formData.blockedCapacity = 1;
+            formData.comment = '';
+        }
     } catch (error) {
+        console.error('Failed to create parking block:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + error.message, life: 3000 });
     }
 };
@@ -372,7 +472,7 @@ const confirmDelete = (data) => {
     const message = `
         <b>${data.parking_lot_name || '全駐車場'}</b>、<br/>
         <b>${formatDate(new Date(data.start_date))}</b>～<b>${formatDate(new Date(data.end_date))}</b>、<br/>
-        <b>${data.blocked_capacity}台</b>のブロック設定を削除してもよろしいですか？<br/>
+        <b>${data.number_of_spots}台</b>のブロック設定を削除してもよろしいですか？<br/>
     `;
 
     formattedMessage.value = message;
@@ -399,14 +499,19 @@ const confirmDelete = (data) => {
 
 const deleteBlockAction = async (blockId) => {
     try {
-        // TODO: Implement deleteParkingBlock in parkingStore
-        // await parkingStore.deleteParkingBlock(blockId);
-        // toast.add({ severity: 'success', summary: '成功', detail: 'ブロック設定を削除しました。', life: 3000 });
-        // await parkingStore.fetchParkingBlocks(selectedHotelId.value);
-        // parkingBlocks.value = parkingStore.parkingBlocks;
+        await deleteParkingBlock(blockId);
+        toast.add({ severity: 'success', summary: '成功', detail: 'ブロック設定を削除しました。', life: 3000 });
         
-        toast.add({ severity: 'info', summary: '開発中', detail: 'この機能は開発中です。', life: 3000 });
+        // Refresh the parking blocks list
+        if (formData.startDate && formData.endDate) {
+            await fetchParkingBlocks(selectedHotelId.value, formatDate(formData.startDate), formatDate(formData.endDate));
+            parkingBlocks.value = storeParkingBlocks.value;
+            
+            // Recalculate max blockable spots to reflect the deletion
+            await calculateMaxBlockableSpots();
+        }
     } catch (error) {
+        console.error('Failed to delete parking block:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: '削除に失敗しました: ' + error.message, life: 3000 });
     }
 };

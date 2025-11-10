@@ -10,9 +10,9 @@
                         {{ data.parking_lot_name || '全駐車場' }}
                     </template>
                 </Column>
-                <Column header="車両タイプ">
+                <Column header="スポットサイズ">
                     <template #body="{ data }">
-                        {{ data.vehicle_category_name || '全車両タイプ' }}
+                        {{ data.spot_size ? `サイズ ${data.spot_size}` : '全サイズ' }}
                     </template>
                 </Column>
                 <Column header="開始日">
@@ -25,7 +25,7 @@
                         {{ formatDate(new Date(data.end_date)) }}
                     </template>
                 </Column>
-                <Column field="blocked_capacity" header="ブロック台数"></Column>
+                <Column field="number_of_spots" header="ブロック台数"></Column>
                 <Column field="comment" header="備考"></Column>
                 <Column header="削除" body="deleteButton">
                     <template #body="{ data }">
