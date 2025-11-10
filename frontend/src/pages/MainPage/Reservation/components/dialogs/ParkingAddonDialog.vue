@@ -245,7 +245,7 @@ const emit = defineEmits([
   'close'
 ]);
 
-import ParkingSpotSelector from '@/pages/MainPage/components/ParkingSpotSelector.vue';
+import ParkingSpotSelector from '@/pages/MainPage/Reservation/components/ParkingSpotSelector.vue';
 
 // Primevue
 import { useToast } from 'primevue/usetoast';

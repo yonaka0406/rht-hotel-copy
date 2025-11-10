@@ -63,8 +63,8 @@
 // Vue
 import { ref, computed, watch } from 'vue';
 
-import ParkingAddonDialog from '@/pages/MainPage/components/Dialogs/ParkingAddonDialog.vue';
-import ParkingActiveSpotsDialog from '@/pages/MainPage/components/Dialogs/ParkingActiveSpotsDialog.vue';
+import ParkingAddonDialog from '@/pages/MainPage/Reservation/components/dialogs/ParkingAddonDialog.vue';
+import ParkingActiveSpotsDialog from '@/pages/MainPage/Reservation/components/dialogs/ParkingActiveSpotsDialog.vue';
 
 // Props
 const props = defineProps({

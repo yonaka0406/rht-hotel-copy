@@ -186,14 +186,14 @@ class ParkingAddonService {
      */
     async validateSpotCapacity(spotId, capacityUnitsRequired) {
         try {
-            const allSpots = await parkingModel.getAllParkingSpotsByHotel(this.requestId, null);
-            const spot = allSpots.find(s => s.id === spotId);
+            // Use the model's validateSpotCapacity function instead
+            const validation = await parkingModel.validateSpotCapacity(this.requestId, spotId, null);
             
-            if (!spot) {
+            if (!validation) {
                 throw new Error('Parking spot not found');
             }
             
-            return spot.capacity_units >= capacityUnitsRequired;
+            return validation.capacity_units >= capacityUnitsRequired;
         } catch (error) {
             throw new Error(`Failed to validate spot capacity: ${error.message}`);
         }

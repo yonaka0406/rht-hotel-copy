@@ -165,7 +165,19 @@ const validationErrors = ref([]);
 // Computed properties
 const totalAvailableSpots = computed(() => {
   if (!availabilityData.value) return 0;
-  return availabilityData.value?.fullyAvailableSpots?.length || 0;
+  
+  // For capacity-based system, find the minimum available spots across all dates
+  // This allows reservations even if different spots are used on different dates
+  const dateAvailability = availabilityData.value?.dateAvailability || {};
+  
+  if (Object.keys(dateAvailability).length === 0) return 0;
+  
+  // Find the date with the least availability (bottleneck)
+  const minAvailableSpots = Math.min(
+    ...Object.values(dateAvailability).map(day => day.availableSpots || 0)
+  );
+  
+  return minAvailableSpots;
 });
 
 const isValid = computed(() => {
@@ -336,8 +348,10 @@ const validateSelection = () => {
   
   if (numberOfSpots.value <= 0) {
     errors.push('必要台数を入力してください');
+  } else if (totalAvailableSpots.value === 0) {
+    errors.push('選択した日程では駐車スペースが利用できません');
   } else if (numberOfSpots.value > totalAvailableSpots.value) {
-    errors.push(`選択した日程では、最大${totalAvailableSpots.value}台まで駐車可能です`);
+    errors.push(`選択した日程では、最大${totalAvailableSpots.value}台まで駐車可能です（一部の日程で空きが少ない可能性があります）`);
   }
   
   validationErrors.value = errors;

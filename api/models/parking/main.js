@@ -11,7 +11,11 @@ const { formatDate } = require('../../utils/reportUtils');
 // Parking Spot
 const getParkingSpots = async (requestId, parking_lot_id) => {
     const pool = getPool(requestId);
-    const query = 'SELECT * FROM parking_spots WHERE parking_lot_id = $1 ORDER BY id';
+    // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
+    const query = `SELECT * FROM parking_spots 
+                   WHERE parking_lot_id = $1 
+                   AND (spot_type IS NULL OR spot_type != 'capacity_pool')
+                   ORDER BY id`;
     const values = [parking_lot_id];
     const result = await pool.query(query, values);
     return result.rows;
@@ -237,6 +241,7 @@ const getParkingReservations = async (requestId, hotel_id, startDate, endDate) =
 // Get all parking spots for a hotel across all parking lots
 const getAllParkingSpotsByHotel = async (requestId, hotel_id) => {
     const pool = getPool(requestId);
+    // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
     const query = `
         SELECT 
             ps.*,
@@ -249,6 +254,7 @@ const getAllParkingSpotsByHotel = async (requestId, hotel_id) => {
         JOIN hotels h ON pl.hotel_id = h.id
         WHERE pl.hotel_id = $1 
         AND ps.is_active = true
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
         ORDER BY pl.name, ps.spot_number::integer
     `;
     const values = [hotel_id];
@@ -271,6 +277,7 @@ const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, ve
     const capacityUnitsRequired = categoryResult.rows[0].capacity_units_required;
 
     // Find spots that can accommodate this vehicle category and check availability
+    // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
     const query = `
         SELECT COUNT(DISTINCT ps.id) as available_spots
         FROM parking_spots ps
@@ -283,6 +290,7 @@ const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, ve
         WHERE pl.hotel_id = $1
         AND ps.is_active = true
         AND ps.capacity_units >= $2
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
         AND rp.parking_spot_id IS NULL
     `;
     const values = [hotel_id, capacityUnitsRequired, startDate, endDate];
@@ -305,6 +313,7 @@ const getCompatibleSpots = async (requestId, hotel_id, vehicleCategoryId) => {
     const capacityUnitsRequired = categoryResult.rows[0].capacity_units_required;
 
     // Find spots that can accommodate this vehicle category
+    // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
     const query = `
         SELECT 
             ps.*,
@@ -315,6 +324,7 @@ const getCompatibleSpots = async (requestId, hotel_id, vehicleCategoryId) => {
         WHERE pl.hotel_id = $1 
         AND ps.is_active = true
         AND ps.capacity_units >= $2
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
         ORDER BY pl.name, ps.spot_number::integer
     `;
     const values = [hotel_id, capacityUnitsRequired];
@@ -325,6 +335,7 @@ const getCompatibleSpots = async (requestId, hotel_id, vehicleCategoryId) => {
 // Get available spots for specific dates with capacity validation
 const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate, capacityUnits) => {
     const pool = getPool(requestId);
+    // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
     const query = `
         SELECT 
             ps.*,
@@ -340,6 +351,7 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
         WHERE pl.hotel_id = $1
         AND ps.is_active = true
         AND ps.capacity_units >= $2
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
         AND rp.parking_spot_id IS NULL
         ORDER BY pl.name, ps.spot_number::integer
     `;
