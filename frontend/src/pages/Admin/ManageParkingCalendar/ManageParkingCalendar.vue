@@ -11,6 +11,8 @@
                 @apply-block="confirmApplyBlock"
                 @parking-lot-changed="handleParkingLotChange"
                 @dates-changed="handleDatesChange"
+                @update:start-date="formData.startDate = $event"
+                @update:end-date="formData.endDate = $event"
             />
             
             <ParkingBlocksTable 

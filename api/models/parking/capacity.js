@@ -162,9 +162,13 @@ const removeCapacityBlock = async (requestId, blockId, user_id) => {
     try {
         // Get block details before deletion
         const selectQuery = `
-            SELECT pb.*, vc.name as vehicle_category_name
+            SELECT 
+                pb.*,
+                h.name as hotel_name,
+                pl.name as parking_lot_name
             FROM parking_blocks pb
-            JOIN vehicle_categories vc ON pb.vehicle_category_id = vc.id
+            JOIN hotels h ON pb.hotel_id = h.id
+            LEFT JOIN parking_lots pl ON pb.parking_lot_id = pl.id
             WHERE pb.id = $1
         `;
         const selectResult = await pool.query(selectQuery, [blockId]);
@@ -174,7 +178,7 @@ const removeCapacityBlock = async (requestId, blockId, user_id) => {
         }
         
         const block = selectResult.rows[0];
-        console.log(`[removeCapacityBlock] Found block: hotel=${block.hotel_id}, category=${block.vehicle_category_name}, capacity=${block.blocked_capacity}`);
+        console.log(`[removeCapacityBlock] Found block: hotel=${block.hotel_id} (${block.hotel_name}), parking_lot=${block.parking_lot_name || 'All'}, spot_size=${block.spot_size || 'All'}, spots=${block.number_of_spots}`);
         
         // Delete the block
         const deleteQuery = `

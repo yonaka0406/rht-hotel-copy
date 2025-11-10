@@ -147,16 +147,17 @@ class ParkingCapacityService {
                 const reservedCapacity = parseInt(reservationsResult.rows[0].reserved_count, 10);
                 
                 // Count blocked capacity for this date
-                // Note: This query needs to be updated to match blocks by spot size compatibility
-                // For now, we'll sum all blocks for the hotel on this date
+                // Only count blocks that are compatible with this vehicle category
+                // A block is compatible if: spot_size IS NULL (applies to all) OR spot_size >= capacity_units_required
                 const blocksQuery = `
                     SELECT COALESCE(SUM(number_of_spots), 0) as blocked_count
                     FROM parking_blocks pb
                     WHERE pb.hotel_id = $1
                       AND pb.start_date <= $2
                       AND pb.end_date >= $2
+                      AND (pb.spot_size IS NULL OR pb.spot_size >= $3)
                 `;
-                const blocksResult = await pool.query(blocksQuery, [hotelId, date]);
+                const blocksResult = await pool.query(blocksQuery, [hotelId, date, category.capacity_units_required]);
                 const blockedCapacity = parseInt(blocksResult.rows[0].blocked_count, 10);
                 
                 // Calculate available capacity

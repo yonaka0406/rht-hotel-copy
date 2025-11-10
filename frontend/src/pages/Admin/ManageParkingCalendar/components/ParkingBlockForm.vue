@@ -132,7 +132,7 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['apply-block', 'update:selectedHotelId', 'parking-lot-changed', 'dates-changed']);
+const emit = defineEmits(['apply-block', 'update:selectedHotelId', 'parking-lot-changed', 'dates-changed', 'update:startDate', 'update:endDate']);
 
 // Computed property for two-way binding with parent
 const selectedHotelId = computed({
@@ -164,12 +164,22 @@ const availableSizes = computed(() => {
     }));
 });
 
+// Flag to prevent duplicate emissions during auto-adjustments
+let isAdjusting = false;
+
 // Watch for start date changes to validate against end date
 watch(() => props.formData.startDate, (newStartDate) => {
+    if (isAdjusting) return;
+    
     if (newStartDate && props.formData.endDate) {
         // If start date is after end date, update end date to match start date
         if (newStartDate > props.formData.endDate) {
-            props.formData.endDate = new Date(newStartDate);
+            isAdjusting = true;
+            const newEndDate = new Date(newStartDate);
+            emit('update:endDate', newEndDate);
+            emit('dates-changed', { startDate: newStartDate, endDate: newEndDate });
+            isAdjusting = false;
+            return;
         }
     }
     
@@ -181,10 +191,17 @@ watch(() => props.formData.startDate, (newStartDate) => {
 
 // Watch for end date changes to validate against start date
 watch(() => props.formData.endDate, (newEndDate) => {
+    if (isAdjusting) return;
+    
     if (newEndDate && props.formData.startDate) {
         // If end date is before start date, update start date to match end date
         if (newEndDate < props.formData.startDate) {
-            props.formData.startDate = new Date(newEndDate);
+            isAdjusting = true;
+            const newStartDate = new Date(newEndDate);
+            emit('update:startDate', newStartDate);
+            emit('dates-changed', { startDate: newStartDate, endDate: newEndDate });
+            isAdjusting = false;
+            return;
         }
     }
     
