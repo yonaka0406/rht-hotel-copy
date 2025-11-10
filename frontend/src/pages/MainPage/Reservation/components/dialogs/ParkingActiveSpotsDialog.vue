@@ -117,7 +117,7 @@
         </div>
 
         <template #footer>
-            <Button label="閉じる" icon="pi pi-times" @click="closeDialog" :disabled="processing" severity="danger" />
+            <Button label="閉じる" icon="pi pi-times" @click="closeDialog" :disabled="processing" severity="danger" text size="small" />
         </template>
     </Dialog>
 
