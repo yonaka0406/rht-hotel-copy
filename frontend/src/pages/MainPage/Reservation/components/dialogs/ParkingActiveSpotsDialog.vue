@@ -7,11 +7,11 @@
             <div class="overall-summary">
                 <div class="summary-stats">
                     <div class="stat-item">
-                        <span class="stat-label">総駐車スポット:</span>
-                        <span class="stat-value">{{ uniqueParkingSpots.length }}</span>
+                        <span class="stat-label">総日数:</span>
+                        <span class="stat-value">{{ groupedByDate.length }}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">総予約数:</span>
+                        <span class="stat-label">総駐車台数:</span>
                         <span class="stat-value">{{ localSpots.length }}</span>
                     </div>
                     <div class="stat-item">
@@ -28,93 +28,70 @@
                 </div>
             </div>
 
-            <!-- Tabs for each parking spot -->
+            <!-- Date-based view -->
             <div class="tabs-container">
-                <Tabs v-if="uniqueParkingSpots.length > 0" v-model:value="activeTab" class="parking-tabs">
-                    <TabList>
-                        <Tab v-for="spot in groupedSpots" :key="spot.spotNumber" :value="spot.spotNumber"
-                            class="tab-header">
-                            <div class="flex flex-column">
-                                <span>{{ spot.spotNumber }}</span>
-                                <small class="text-xs text-500">{{ spot.parkingLotName || '未設定' }}</small>
-                            </div>
-                            <Badge :value="spot.count" :severity="getSpotSeverity(spot.count)" class="ml-2" />
-                        </Tab>
-                    </TabList>
-                    <TabPanels>
-                        <TabPanel v-for="spot in groupedSpots" :key="spot.spotNumber" :value="spot.spotNumber">
-                            <div class="tab-content">
-                                <!-- Spot Summary -->
-                                <div class="spot-summary">
-                                    <div class="spot-info">
-                                        <Tag :value="spot.vehicleType" :severity="getSeverityByType(spot.vehicleType)"
-                                            class="mr-2" />
-                                        <span class="font-semibold">
-                                            {{ spot.count }}件の予約
-                                        </span>
-                                        <span class="ml-2">
-                                            売上: {{ formatCurrency(spot.revenue) }}
-                                        </span>
-                                    </div>
-                                    <div class="spot-actions">
-                                        <Button label="選択削除" icon="pi pi-trash" size="small"
-                                            :disabled="!getSpotSelection(spot.spotNumber).length"
-                                            @click="confirmDeleteSpotSelected(spot.spotNumber)" severity="danger" />
-                                        <Button label="スポット全削除" icon="pi pi-trash" size="small" outlined
-                                            :disabled="!spot.reservations.length"
-                                            @click="confirmDeleteSpot(spot.spotNumber)" severity="danger" />
+                <div v-if="groupedByDate.length > 0" class="date-based-view">
+                    <DataTable :value="groupedByDate" :scrollable="true" scrollHeight="500px"
+                        v-model:selection="selectedDateGroups" dataKey="date"
+                        selectionMode="multiple" :paginator="true" :rows="10"
+                        :rowsPerPageOptions="[10, 15, 30, 50]"
+                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                        currentPageReportTemplate="{first} から {last} 件目 / 全{totalRecords}件"
+                        emptyMessage="駐車場の予約はありません">
+                        <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+
+                        <Column field="date" header="日付" :sortable="true" :style="{ minWidth: '180px' }">
+                            <template #body="{ data }">
+                                <div class="flex align-items-center gap-2">
+                                    <i class="pi pi-calendar text-primary"></i>
+                                    <span class="font-semibold">{{ formatDate(data.date) }}</span>
+                                </div>
+                            </template>
+                        </Column>
+
+                        <Column field="spotCount" header="駐車台数" :sortable="true" :style="{ minWidth: '120px' }">
+                            <template #body="{ data }">
+                                <Badge :value="data.spotCount" :severity="getSpotSeverity(data.spotCount)" size="large" />
+                            </template>
+                        </Column>
+
+                        <Column field="vehicleType" header="車両タイプ" :sortable="true" :style="{ minWidth: '150px' }">
+                            <template #body="{ data }">
+                                <Tag :value="data.vehicleType" :severity="getSeverityByType(data.vehicleType)" />
+                            </template>
+                        </Column>
+
+                        <Column field="revenue" header="売上" :sortable="true" :style="{ minWidth: '120px' }">
+                            <template #body="{ data }">
+                                <span class="font-semibold">{{ formatCurrency(data.revenue) }}</span>
+                            </template>
+                        </Column>
+
+                        <Column field="spots" header="使用スポット" :style="{ minWidth: '300px' }">
+                            <template #body="{ data }">
+                                <div class="spot-by-lot">
+                                    <div v-for="lotGroup in data.spotsByLotFormatted" :key="lotGroup.lotName" class="lot-group mb-2">
+                                        <span class="lot-name">{{ lotGroup.lotName }}:</span>
+                                        <div class="spot-tags">
+                                            <Tag v-for="spot in lotGroup.spots" :key="`${lotGroup.lotName}-${spot}`" 
+                                                 :value="spot" severity="secondary" class="mr-1" />
+                                        </div>
                                     </div>
                                 </div>
+                            </template>
+                        </Column>
 
-                                <!-- DataTable for this spot -->
-                                <div class="spot-table">
-                                    <DataTable :value="spot.reservations" :scrollable="true" scrollHeight="300px"
-                                        v-model:selection="spotSelections[spot.spotNumber]" dataKey="id"
-                                        selectionMode="multiple" :paginator="true" :rows="10"
-                                        :rowsPerPageOptions="[10, 15, 30, 50]"
-                                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                                        currentPageReportTemplate="{first} から {last} 件目 / 全{totalRecords}件"
-                                        :emptyMessage="`${spot.spotNumber} の予約はありません`">
-                                        <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-
-                                        <Column field="date" header="日付" :sortable="true"
-                                            :style="{ minWidth: '150px' }">
-                                            <template #body="{ data }">
-                                                <div class="flex align-items-center gap-2">
-                                                    <i class="pi pi-calendar text-primary"></i>
-                                                    {{ formatDate(data.date) }}
-                                                </div>
-                                            </template>
-                                        </Column>
-
-                                        <Column field="price" header="料金" :sortable="true"
-                                            :style="{ minWidth: '120px' }">
-                                            <template #body="{ data }">
-                                                {{ formatCurrency(data.price) }}
-                                            </template>
-                                        </Column>
-
-                                        <Column field="vehicleCategoryName" header="車両タイプ" :sortable="true"
-                                            :style="{ minWidth: '120px' }">
-                                            <template #body="{ data }">
-                                                <Tag :value="data.vehicleCategoryName"
-                                                    :severity="getSeverityByType(data.vehicleCategoryName)" />
-                                            </template>
-                                        </Column>
-
-                                        <Column headerStyle="width: 4rem; text-align: center"
-                                            bodyStyle="text-align: center; overflow: visible">
-                                            <template #body="{ data }">
-                                                <Button icon="pi pi-trash" text rounded severity="danger" size="small"
-                                                    @click="confirmDeleteSingle(data)" v-tooltip.top="'この予約を削除'" />
-                                            </template>
-                                        </Column>
-                                    </DataTable>
+                        <Column headerStyle="width: 8rem; text-align: center"
+                            bodyStyle="text-align: center; overflow: visible">
+                            <template #body="{ data }">
+                                <div class="flex gap-1 justify-content-center">
+                                    <Button icon="pi pi-trash" text rounded severity="danger" size="small"
+                                        @click="confirmDeleteDate(data)" v-tooltip.top="'この日付の全予約を削除'" />
                                 </div>
-                            </div>
-                        </TabPanel>
-                    </TabPanels>
-                </Tabs>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
 
                 <!-- Empty state -->
                 <div v-else class="empty-state">
@@ -148,11 +125,6 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Badge from 'primevue/badge';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import Tab from 'primevue/tab';
-import TabPanels from 'primevue/tabpanels';
-import TabPanel from 'primevue/tabpanel';
 import ConfirmDialog from 'primevue/confirmdialog';
 
 // Store
@@ -191,13 +163,11 @@ const emit = defineEmits([
 ]);
 
 const localSpots = ref([...props.parkingSpots]);
-const spotSelections = reactive({});
-const activeTab = ref(null);
+const selectedDateGroups = ref([]);
 
 // Watch for external changes to parkingSpots
 watch(() => props.parkingSpots, (newSpots) => {
     localSpots.value = [...newSpots];
-    initializeSelections();
 }, { deep: true });
 
 // Get unique parking spot numbers, sorted
@@ -213,73 +183,73 @@ const uniqueParkingSpots = computed(() => {
     });
 });
 
-// Group reservations by spot number for efficient access
-const groupedSpots = computed(() => {
+// Group reservations by date
+const groupedByDate = computed(() => {
     const groups = {};
+    
     localSpots.value.forEach(spot => {
-        if (!groups[spot.spotNumber]) {
-            groups[spot.spotNumber] = {
-                spotNumber: spot.spotNumber,
-                parkingLotName: spot.parkingLotName || '未設定',
-                reservations: [],
+        const dateKey = spot.date;
+        if (!groups[dateKey]) {
+            groups[dateKey] = {
+                date: dateKey,
+                spotCount: 0,
                 revenue: 0,
-                count: 0,
-                vehicleType: ''
+                vehicleType: spot.vehicleCategoryName || '未設定',
+                spotsByLot: {},
+                reservations: []
             };
         }
-        groups[spot.spotNumber].reservations.push(spot);
-        groups[spot.spotNumber].revenue += parseFloat(spot.price) || 0;
-        groups[spot.spotNumber].count++;
+        groups[dateKey].spotCount++;
+        groups[dateKey].revenue += parseFloat(spot.price) || 0;
+        
+        // Group spots by parking lot
+        const lotName = spot.parkingLotName || '未設定';
+        if (!groups[dateKey].spotsByLot[lotName]) {
+            groups[dateKey].spotsByLot[lotName] = [];
+        }
+        groups[dateKey].spotsByLot[lotName].push(spot.spotNumber);
+        
+        groups[dateKey].reservations.push(spot);
     });
 
-    // Set vehicle type for each group (assuming it's consistent)
+    // Format spots by lot for display
     Object.values(groups).forEach(group => {
-        if (group.reservations.length > 0) {
-            group.vehicleType = group.reservations[0].vehicleCategoryName;
-        }
+        group.spotsByLotFormatted = Object.entries(group.spotsByLot)
+            .map(([lotName, spotNumbers]) => {
+                // Sort spot numbers
+                const sortedSpots = spotNumbers.sort((a, b) => {
+                    const aNum = parseInt(a.replace(/\D/g, ''));
+                    const bNum = parseInt(b.replace(/\D/g, ''));
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        return aNum - bNum;
+                    }
+                    return a.localeCompare(b);
+                });
+                return {
+                    lotName,
+                    spots: sortedSpots,
+                    displayText: `${lotName}: ${sortedSpots.join(', ')}`
+                };
+            })
+            .sort((a, b) => a.lotName.localeCompare(b.lotName));
     });
 
-    // Return a sorted array based on uniqueParkingSpots order
-    return uniqueParkingSpots.value.map(spotNumber => groups[spotNumber]);
+    // Return sorted array by date
+    return Object.values(groups).sort((a, b) => new Date(a.date) - new Date(b.date));
 });
-
-// Initialize selections for each spot
-const initializeSelections = () => {
-    uniqueParkingSpots.value.forEach(spotNumber => {
-        if (!spotSelections[spotNumber]) {
-            spotSelections[spotNumber] = [];
-        }
-    });
-    // Set the active tab to the first spot if not already set
-    if (uniqueParkingSpots.value.length > 0) {
-        activeTab.value = uniqueParkingSpots.value[0];
-    } else {
-        activeTab.value = null;
-    }
-};
-
-// Initialize selections when spots change
-watch(uniqueParkingSpots, () => {
-    initializeSelections();
-}, { immediate: true, deep: true });
 
 const totalRevenue = computed(() => {
     return localSpots.value.reduce((sum, spot) => sum + (parseFloat(spot.price) || 0), 0);
 });
 
 const hasAnySelection = computed(() => {
-    return Object.values(spotSelections).some(selection => selection && selection.length > 0);
+    return selectedDateGroups.value && selectedDateGroups.value.length > 0;
 });
 
-// Get data for a specific parking spot
-const getSpotData = (spotNumber) => {
-    const group = groupedSpots.value.find(g => g.spotNumber === spotNumber);
+// Get data for a specific date
+const getDateData = (date) => {
+    const group = groupedByDate.value.find(g => g.date === date);
     return group ? group.reservations : [];
-};
-
-// Get selection for a specific spot
-const getSpotSelection = (spotNumber) => {
-    return spotSelections[spotNumber] || [];
 };
 
 // Get severity for spot badge based on reservation count
@@ -321,9 +291,7 @@ const closeDialog = () => {
 
 const onDialogHide = () => {
     // Clear all selections
-    Object.keys(spotSelections).forEach(key => {
-        spotSelections[key] = [];
-    });
+    selectedDateGroups.value = [];
     emit('hide');
 };
 
@@ -346,8 +314,8 @@ const deleteSpots = async (spotsToDelete) => {
         localSpots.value = localSpots.value.filter(spot => !spotIds.has(spot.id));
 
         // Clear selections
-        Object.keys(spotSelections).forEach(key => {
-            spotSelections[key] = spotSelections[key].filter(spot => !spotIds.has(spot.id));
+        selectedDateGroups.value = selectedDateGroups.value.filter(group => {
+            return !group.reservations.some(spot => spotIds.has(spot.id));
         });
 
         // Emit the updated spots
@@ -372,10 +340,12 @@ const deleteSpots = async (spotsToDelete) => {
     }
 };
 
-const confirmDeleteSingle = (spot) => {
+const confirmDeleteDate = (dateGroup) => {
+    if (!dateGroup || !dateGroup.reservations || dateGroup.reservations.length === 0) return;
+
     confirm.require({
         group: 'parkingDialogConfirm',
-        message: 'この予約を削除しますか？',
+        message: `${formatDate(dateGroup.date)}の全駐車予約(${dateGroup.spotCount}台)を削除しますか？`,
         header: '確認',
         icon: 'pi pi-exclamation-triangle',
         rejectProps: {
@@ -386,59 +356,19 @@ const confirmDeleteSingle = (spot) => {
         acceptProps: {
             label: '削除'
         },
-        accept: () => deleteSpots([spot])
-    });
-};
-
-const confirmDeleteSpotSelected = (spotNumber) => {
-    const selected = getSpotSelection(spotNumber);
-    if (!selected || selected.length === 0) return;
-
-    confirm.require({
-        group: 'parkingDialogConfirm',
-        message: `${spotNumber}の選択された${selected.length}件の予約を削除しますか？`,
-        header: '確認',
-        icon: 'pi pi-exclamation-triangle',
-        rejectProps: {
-            label: 'キャンセル',
-            severity: 'secondary',
-            outlined: true
-        },
-        acceptProps: {
-            label: '削除'
-        },
-        accept: () => deleteSpots([...selected])
-    });
-};
-
-const confirmDeleteSpot = (spotNumber) => {
-    const spotData = getSpotData(spotNumber);
-    if (!spotData || spotData.length === 0) return;
-
-    confirm.require({
-        group: 'parkingDialogConfirm',
-        message: `${spotNumber}のすべての予約(${spotData.length}件)を削除しますか？`,
-        header: '確認',
-        icon: 'pi pi-exclamation-triangle',
-        rejectProps: {
-            label: 'キャンセル',
-            severity: 'secondary',
-            outlined: true
-        },
-        acceptProps: {
-            label: 'すべて削除'
-        },
-        accept: () => deleteSpots([...spotData])
+        accept: () => deleteSpots([...dateGroup.reservations])
     });
 };
 
 const confirmDeleteAllSelected = () => {
-    const allSelected = Object.values(spotSelections).flat().filter(Boolean);
-    if (allSelected.length === 0) return;
+    if (!selectedDateGroups.value || selectedDateGroups.value.length === 0) return;
+    
+    const allSelected = selectedDateGroups.value.flatMap(group => group.reservations);
+    const totalSpots = allSelected.length;
 
     confirm.require({
         group: 'parkingDialogConfirm',
-        message: `全スポットから選択された${allSelected.length}件の予約を削除しますか？`,
+        message: `選択された${selectedDateGroups.value.length}日分の駐車予約(${totalSpots}台)を削除しますか？`,
         header: '確認',
         icon: 'pi pi-exclamation-triangle',
         rejectProps: {
@@ -525,67 +455,34 @@ const confirmDeleteAll = () => {
     min-height: 0;
 }
 
-.tab-header {
+.date-based-view {
+    height: 100%;
+}
+
+.spot-by-lot {
     display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.lot-group {
+    display: flex;
+    gap: 0.5rem;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem;
-    min-width: 80px;
-    text-align: center;
+}
+
+.lot-name {
+    font-weight: 600;
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
     white-space: nowrap;
+    min-width: 80px;
 }
 
-.tab-header>div {
+.spot-tags {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-right: 0.5rem;
-}
-
-.tab-header small {
-    line-height: 1;
-    margin-top: 0.125rem;
-    white-space: normal;
-    text-align: left;
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-clamp: 2;  /* Standard property */
-    max-height: 2.5em; /* Fallback for non-webkit browsers */
-}
-
-.tab-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.spot-summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem;
-    background: var(--surface-50);
-    border-radius: 0.5rem;
-    border: 1px solid var(--surface-200);
-}
-
-.spot-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.spot-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.spot-table {
-    flex: 1;
+    flex-wrap: wrap;
+    gap: 0.25rem;
 }
 
 .empty-state {
@@ -604,32 +501,6 @@ const confirmDeleteAll = () => {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-}
-
-/* Tab view styling */
-:deep(.p-tabs) {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-:deep(.p-tabs-list) {
-    flex-shrink: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    flex-wrap: nowrap;
-}
-
-:deep(.p-tabs-panels) {
-    flex: 1;
-    min-height: 0;
-    padding: 1rem 0;
-}
-
-:deep(.p-tabpanel-content) {
-    height: 100%;
-    overflow: auto;
 }
 
 /* DataTable styling */
