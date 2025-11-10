@@ -1,4 +1,4 @@
-const parkingModel = require('../models/parking');
+const parkingModel = require('../../../models/parking');
 
 /**
  * ParkingAddonService - Manages the relationship between parking addons and spot assignments

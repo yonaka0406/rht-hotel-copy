@@ -98,7 +98,9 @@
     - Log any capacity conflicts or validation failures
     - _Requirements: 1.1, 1.3, 4.2, 6.3, 6.5_
 
-  - [ ] 3.2 Modify checkParkingVacancies function
+  - [x] 3.2 Modify checkParkingVacancies function
+
+
     - Update function to return capacity counts instead of spot counts
     - Count physical parking spots (exclude capacity_pool type spots)
     - Count reservations assigned to virtual capacity pool spots
@@ -190,6 +192,9 @@
     - _Requirements: 5.1, 5.2_
 
   - [ ] 4.6 Update POST /api/parking/assignments endpoint
+
+
+
     - Modify existing endpoint to support capacity-based assignments
     - Remove requirement for spotId in request body
     - Update validation to accept assignments without spotId
@@ -197,7 +202,9 @@
     - Maintain backward compatibility for spot-specific assignments
     - _Requirements: 1.1, 4.2, 6.5_
 
-  - [ ] 4.7 Update GET /api/parking/vacancies endpoint
+  - [x] 4.7 Update GET /api/parking/vacancies endpoint
+
+
     - Modify existing endpoint to return capacity counts
     - Update response format to include capacity breakdown
     - Call updated checkParkingVacancies function

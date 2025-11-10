@@ -278,6 +278,7 @@ const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, ve
 
     // Find spots that can accommodate this vehicle category and check availability
     // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
+    // Also exclude spots blocked by parking_blocks table
     const query = `
         SELECT COUNT(DISTINCT ps.id) as available_spots
         FROM parking_spots ps
@@ -287,11 +288,17 @@ const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, ve
             AND rp.date >= $3
             AND rp.date < $4
             AND rp.cancelled IS NULL
+        LEFT JOIN parking_blocks pb ON pl.hotel_id = $1
+            AND (pb.parking_lot_id IS NULL OR pb.parking_lot_id = pl.id)
+            AND (pb.spot_size IS NULL OR pb.spot_size = ps.capacity_units)
+            AND pb.start_date <= $4
+            AND pb.end_date >= $3
         WHERE pl.hotel_id = $1
         AND ps.is_active = true
         AND ps.capacity_units >= $2
         AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
         AND rp.parking_spot_id IS NULL
+        AND pb.id IS NULL
     `;
     const values = [hotel_id, capacityUnitsRequired, startDate, endDate];
     const result = await pool.query(query, values);
@@ -336,6 +343,7 @@ const getCompatibleSpots = async (requestId, hotel_id, vehicleCategoryId) => {
 const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate, capacityUnits) => {
     const pool = getPool(requestId);
     // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
+    // Also exclude spots blocked by parking_blocks table
     const query = `
         SELECT 
             ps.*,
@@ -348,11 +356,17 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
             AND rp.date >= $3
             AND rp.date < $4
             AND rp.cancelled IS NULL
+        LEFT JOIN parking_blocks pb ON pl.hotel_id = $1
+            AND (pb.parking_lot_id IS NULL OR pb.parking_lot_id = pl.id)
+            AND (pb.spot_size IS NULL OR pb.spot_size = ps.capacity_units)
+            AND pb.start_date <= $4
+            AND pb.end_date >= $3
         WHERE pl.hotel_id = $1
         AND ps.is_active = true
         AND ps.capacity_units >= $2
         AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
         AND rp.parking_spot_id IS NULL
+        AND pb.id IS NULL
         ORDER BY pl.name, ps.spot_number::integer
     `;
     const values = [hotel_id, capacityUnits, startDate, endDate];
