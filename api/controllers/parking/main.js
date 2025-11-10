@@ -1,5 +1,5 @@
-const parkingModel = require('../models/parking');
-const { validateNumericParam, validateNonEmptyStringParam, validateDateStringParam, validateIntegerParam } = require('../utils/validationUtils');
+const parkingModel = require('../../models/parking');
+const { validateNumericParam, validateDateStringParam } = require('../../utils/validationUtils');
 
 // Vehicle Category
 const getVehicleCategories = async (req, res) => {
@@ -201,7 +201,7 @@ const checkParkingVacancies = async (req, res) => {
         }
 
         // Use enhanced service method
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const vacancyInfo = await service.checkParkingVacancies(
@@ -231,7 +231,7 @@ const getCompatibleSpots = async (req, res) => {
         }
         
         // Use enhanced service method
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const compatibleSpotsInfo = await service.getCompatibleSpots(
@@ -265,7 +265,7 @@ const getAvailableSpotsForDates = async (req, res) => {
         }
 
         // Use enhanced service method
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const availableSpotsInfo = await service.getAvailableSpotsForDates(
@@ -308,7 +308,7 @@ const checkRealTimeAvailability = async (req, res) => {
         }
 
         // Use enhanced service method
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const realTimeAvailability = await service.checkRealTimeAvailability(
@@ -362,7 +362,7 @@ const createParkingAddonAssignment = async (req, res) => {
         }
 
         // Use ParkingAddonService to create assignment
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const assignment = await service.addParkingAddonWithSpot(
@@ -419,7 +419,7 @@ const updateParkingAddonAssignment = async (req, res) => {
         }
 
         // Use ParkingAddonService to update assignment
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const updatedAssignment = await service.updateParkingAddonSpot(
@@ -452,7 +452,7 @@ const deleteParkingAddonAssignment = async (req, res) => {
         }
 
         // Use ParkingAddonService to remove assignment
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const removedAssignments = await service.removeParkingAddonWithSpot(id);
@@ -492,7 +492,7 @@ const bulkDeleteParkingAddonAssignments = async (req, res) => {
         }
 
         // Use ParkingAddonService to remove assignments
-        const ParkingAddonService = require('../services/parkingAddonService');
+        const ParkingAddonService = require('../../services/parkingAddonService');
         const service = new ParkingAddonService(req.requestId);
         
         const result = await service.removeBulkParkingAddonAssignments(ids);

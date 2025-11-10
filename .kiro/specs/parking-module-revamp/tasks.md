@@ -12,14 +12,21 @@
   - Add debug logs during migration to track virtual spot creation
   - _Requirements: 1.1, 1.4, 2.1, 6.1, 6.2_
 
-- [ ] 2. Implement Parking Capacity Service
-  - [ ] 2.1 Create ParkingCapacityService class with constructor
+- [x] 2. Implement Parking Capacity Service
+
+
+
+  - [x] 2.1 Create ParkingCapacityService class with constructor
+
+
     - Create new file api/services/parkingCapacityService.js
     - Implement constructor that accepts requestId parameter
     - Add basic service structure and imports
     - _Requirements: 1.1, 1.2, 4.1_
 
-  - [ ] 2.2 Implement getAvailableCapacity method
+  - [x] 2.2 Implement getAvailableCapacity method
+
+
     - Write method to calculate available capacity for date range and vehicle category
     - Query total capacity from physical parking_spots (exclude capacity_pool spots) grouped by vehicle category compatibility
     - Count reservations assigned to virtual capacity pool spots for the vehicle category
@@ -31,7 +38,9 @@
     - Log which spots are being counted as physical vs virtual
     - _Requirements: 1.2, 1.4, 2.2, 5.1_
 
-  - [ ] 2.3 Implement reserveCapacity method
+  - [x] 2.3 Implement reserveCapacity method
+
+
     - Write method to create capacity-based parking reservations
     - Validate sufficient capacity is available for all dates
     - Look up or create virtual capacity pool spot for the vehicle category
@@ -45,20 +54,25 @@
     - Log transaction commit/rollback status
     - _Requirements: 1.1, 1.3, 4.2, 5.3_
 
-  - [ ] 2.4 Implement blockCapacity method
+  - [x] 2.4 Implement blockCapacity method
+
+
+
     - Write method to block parking capacity for date ranges
     - Create records in parking_blocks table
     - Validate block parameters (dates, capacity amount, vehicle category)
     - Return warning if blocked capacity exceeds total capacity
     - _Requirements: 2.1, 2.2, 3.3_
 
-  - [ ] 2.5 Implement releaseBlockedCapacity method
+  - [x] 2.5 Implement releaseBlockedCapacity method
+
     - Write method to remove capacity blocks by block ID
     - Delete records from parking_blocks table
     - Validate block exists before deletion
     - _Requirements: 2.2, 3.2_
 
-  - [ ] 2.6 Implement getCapacitySummary method
+  - [x] 2.6 Implement getCapacitySummary method
+
     - Write method to get comprehensive capacity overview for hotel
     - Aggregate total capacity across all parking lots
     - Calculate reserved, blocked, and available capacity

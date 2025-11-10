@@ -26,7 +26,7 @@ const {
     deleteParkingAddonAssignment,
     bulkDeleteParkingAddonAssignments,
     saveParkingAssignments
-} = require('../controllers/parkingController');
+} = require('../controllers/parking');
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 
