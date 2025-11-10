@@ -337,7 +337,7 @@
     - _Requirements: 2.1, 3.1_
 
   - [ ] 9.2 Implement parking lot and vehicle category selection
-    - Add hotel selection dropdown using useParkingStore
+    - Add hotel selection dropdown using useHotelStore
     - Add parking lot multi-select dropdown
     - Add vehicle category multi-select dropdown
     - Fetch parking lots and vehicle categories when hotel is selected

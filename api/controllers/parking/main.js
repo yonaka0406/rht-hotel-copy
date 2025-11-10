@@ -33,7 +33,7 @@ const updateVehicleCategory = async (req, res) => {
 
 const deleteVehicleCategory = async (req, res) => {
     try {
-        if (req.params.id == 1) {
+        if (req.params.id === '1') {            
             return res.status(400).json({ message: 'Cannot delete default vehicle category' });
         }
         await parkingModel.deleteVehicleCategory(req.requestId, req.params.id);

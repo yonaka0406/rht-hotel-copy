@@ -10,17 +10,50 @@ const getAvailableCapacity = async (req, res) => {
     try {
         const { hotelId, startDate, endDate, vehicleCategoryId } = req.query;
         
-        // Validate parameters
+        // Validate required parameters
+        if (!hotelId) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: hotelId',
+                example: '/api/parking/capacity/available?hotelId=1&startDate=2024-01-01&endDate=2024-01-31&vehicleCategoryId=1'
+            });
+        }
+        
+        if (!startDate) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: startDate (format: YYYY-MM-DD)',
+                example: '/api/parking/capacity/available?hotelId=1&startDate=2024-01-01&endDate=2024-01-31&vehicleCategoryId=1'
+            });
+        }
+        
+        if (!endDate) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: endDate (format: YYYY-MM-DD)',
+                example: '/api/parking/capacity/available?hotelId=1&startDate=2024-01-01&endDate=2024-01-31&vehicleCategoryId=1'
+            });
+        }
+        
+        if (!vehicleCategoryId) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: vehicleCategoryId',
+                example: '/api/parking/capacity/available?hotelId=1&startDate=2024-01-01&endDate=2024-01-31&vehicleCategoryId=1'
+            });
+        }
+        
+        // Validate parameter formats
         if (!validateNumericParam(hotelId)) {
-            return res.status(400).json({ message: 'Invalid hotel ID' });
+            return res.status(400).json({ message: 'Invalid hotel ID: must be a positive integer' });
         }
         
         if (!validateNumericParam(vehicleCategoryId)) {
-            return res.status(400).json({ message: 'Invalid vehicle category ID' });
+            return res.status(400).json({ message: 'Invalid vehicle category ID: must be a positive integer' });
         }
         
-        if (!validateDateStringParam(startDate) || !validateDateStringParam(endDate)) {
-            return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
+        if (!validateDateStringParam(startDate)) {
+            return res.status(400).json({ message: 'Invalid startDate format: must be YYYY-MM-DD (e.g., 2024-01-01)' });
+        }
+        
+        if (!validateDateStringParam(endDate)) {
+            return res.status(400).json({ message: 'Invalid endDate format: must be YYYY-MM-DD (e.g., 2024-01-31)' });
         }
         
         // Use ParkingCapacityService
@@ -48,6 +81,11 @@ const getAvailableCapacity = async (req, res) => {
  */
 const blockCapacity = async (req, res) => {
     try {
+        // Validate user authentication
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: 'User authentication required' });
+        }
+        
         const {
             hotel_id,
             vehicle_category_id,
@@ -109,13 +147,39 @@ const getBlockedCapacity = async (req, res) => {
     try {
         const { hotelId, startDate, endDate } = req.query;
         
-        // Validate parameters
-        if (!validateNumericParam(hotelId)) {
-            return res.status(400).json({ message: 'Invalid hotel ID' });
+        // Validate required parameters
+        if (!hotelId) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: hotelId',
+                example: '/api/parking/capacity/blocks?hotelId=1&startDate=2024-01-01&endDate=2024-01-31'
+            });
         }
         
-        if (!validateDateStringParam(startDate) || !validateDateStringParam(endDate)) {
-            return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
+        if (!startDate) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: startDate (format: YYYY-MM-DD)',
+                example: '/api/parking/capacity/blocks?hotelId=1&startDate=2024-01-01&endDate=2024-01-31'
+            });
+        }
+        
+        if (!endDate) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: endDate (format: YYYY-MM-DD)',
+                example: '/api/parking/capacity/blocks?hotelId=1&startDate=2024-01-01&endDate=2024-01-31'
+            });
+        }
+        
+        // Validate parameter formats
+        if (!validateNumericParam(hotelId)) {
+            return res.status(400).json({ message: 'Invalid hotel ID: must be a positive integer' });
+        }
+        
+        if (!validateDateStringParam(startDate)) {
+            return res.status(400).json({ message: 'Invalid startDate format: must be YYYY-MM-DD (e.g., 2024-01-01)' });
+        }
+        
+        if (!validateDateStringParam(endDate)) {
+            return res.status(400).json({ message: 'Invalid endDate format: must be YYYY-MM-DD (e.g., 2024-01-31)' });
         }
         
         // Use parking model
@@ -139,6 +203,11 @@ const getBlockedCapacity = async (req, res) => {
  */
 const removeCapacityBlock = async (req, res) => {
     try {
+        // Validate user authentication
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: 'User authentication required' });
+        }
+        
         const { blockId } = req.params;
         const user_id = req.user.id;
         
@@ -154,7 +223,7 @@ const removeCapacityBlock = async (req, res) => {
         
         // Use ParkingCapacityService
         const service = new ParkingCapacityService(req.requestId);
-        const result = await service.releaseBlockedCapacity(blockId);
+        const result = await service.releaseBlockedCapacity(blockId, user_id);
         
         res.json(result);
     } catch (error) {
@@ -174,13 +243,39 @@ const getCapacitySummary = async (req, res) => {
     try {
         const { hotelId, startDate, endDate } = req.query;
         
-        // Validate parameters
-        if (!validateNumericParam(hotelId)) {
-            return res.status(400).json({ message: 'Invalid hotel ID' });
+        // Validate required parameters
+        if (!hotelId) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: hotelId',
+                example: '/api/parking/capacity/summary?hotelId=1&startDate=2024-01-01&endDate=2024-01-31'
+            });
         }
         
-        if (!validateDateStringParam(startDate) || !validateDateStringParam(endDate)) {
-            return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
+        if (!startDate) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: startDate (format: YYYY-MM-DD)',
+                example: '/api/parking/capacity/summary?hotelId=1&startDate=2024-01-01&endDate=2024-01-31'
+            });
+        }
+        
+        if (!endDate) {
+            return res.status(400).json({ 
+                message: 'Missing required parameter: endDate (format: YYYY-MM-DD)',
+                example: '/api/parking/capacity/summary?hotelId=1&startDate=2024-01-01&endDate=2024-01-31'
+            });
+        }
+        
+        // Validate parameter formats
+        if (!validateNumericParam(hotelId)) {
+            return res.status(400).json({ message: 'Invalid hotel ID: must be a positive integer' });
+        }
+        
+        if (!validateDateStringParam(startDate)) {
+            return res.status(400).json({ message: 'Invalid startDate format: must be YYYY-MM-DD (e.g., 2024-01-01)' });
+        }
+        
+        if (!validateDateStringParam(endDate)) {
+            return res.status(400).json({ message: 'Invalid endDate format: must be YYYY-MM-DD (e.g., 2024-01-31)' });
         }
         
         // Use ParkingCapacityService

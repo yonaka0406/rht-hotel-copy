@@ -408,24 +408,6 @@ const _getCapacityMatchClass = (spot) => {
   }
 };
 
-const stepValue = computed(() => {
-  const categoryCapacity = getSelectedCategoryCapacity();
-  if (!categoryCapacity || categoryCapacity === 0) return 1;
-  
-  const calculatedStep = Math.ceil(categoryCapacity / smallestAvailableSpotCapacity.value);
-  return calculatedStep > 0 ? calculatedStep : 1;
-});
-
-const smallestAvailableSpotCapacity = computed(() => {
-  if (!parkingSpotAvailability.value || parkingSpotAvailability.value.length === 0) return 1;
-  
-  const smallest = parkingSpotAvailability.value.reduce((min, spot) => {
-    return (spot.capacity_units > 0 && spot.capacity_units < min) ? spot.capacity_units : min;
-  }, Infinity);
-  
-  return smallest === Infinity ? 1 : smallest;
-});
-
 const _formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);

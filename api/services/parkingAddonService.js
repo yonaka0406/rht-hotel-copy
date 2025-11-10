@@ -193,6 +193,13 @@ class ParkingAddonService {
                 throw new Error('Parking spot not found');
             }
             
+            // Defensively check that capacity_units exists and is a valid number
+            if (!validation || 
+                typeof validation.capacity_units !== 'number' || 
+                !Number.isFinite(validation.capacity_units)) {
+                throw new Error('Invalid or missing capacity_units for parking spot');
+            }
+            
             return validation.capacity_units >= capacityUnitsRequired;
         } catch (error) {
             throw new Error(`Failed to validate spot capacity: ${error.message}`);

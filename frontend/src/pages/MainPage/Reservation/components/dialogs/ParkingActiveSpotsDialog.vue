@@ -234,6 +234,16 @@ import ConfirmDialog from 'primevue/confirmdialog';
 import { useParkingStore } from '@/composables/useParkingStore';
 const parkingStore = useParkingStore();
 
+// Helper function to safely add days to a date and format as YYYY-MM-DD
+const addDaysAndFormat = (dateString, days) => {
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + days);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const props = defineProps({
     modelValue: {
         type: Boolean,
@@ -250,8 +260,7 @@ const props = defineProps({
     },
     parkingSpots: {
         type: Array,
-        required: true,
-        default: () => []
+        required: true
     },
     processing: {
         type: Boolean,
@@ -988,7 +997,7 @@ const saveSpotCountChange = async () => {
                                 reservation_id: reservationId,
                                 roomId: props.roomId,
                                 check_in: date,
-                                check_out: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0],
+                                check_out: addDaysAndFormat(date, 1),
                                 numberOfSpots: 1,
                                 vehicle_category_id: sampleForType.vehicleCategoryId,
                                 unit_price: sampleForType.price || 0,
@@ -1026,7 +1035,7 @@ const saveSpotCountChange = async () => {
                             reservation_id: reservationId,
                             roomId: props.roomId,
                             check_in: date,
-                            check_out: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0],
+                            check_out: addDaysAndFormat(date, 1),
                             numberOfSpots: 1,
                             vehicle_category_id: sampleReservation.vehicleCategoryId,
                             unit_price: sampleReservation.price || 0,
@@ -1249,7 +1258,6 @@ const saveSpotCountChange = async () => {
     border-radius: 0.5rem;
     border: 2px solid var(--primary-200);
 }
-</style>
 
 .mixed-types-warning {
     background: var(--orange-50);
@@ -1261,3 +1269,4 @@ const saveSpotCountChange = async () => {
 .mixed-types-warning i {
     flex-shrink: 0;
 }
+</style>

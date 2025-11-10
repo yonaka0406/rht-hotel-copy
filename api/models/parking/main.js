@@ -701,13 +701,49 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             console.log(`[saveParkingAssignments] Addon details:`, addonDetails);
 
             const allReservationDates = Object.keys(detailsByDate).map(dateStr => new Date(dateStr));
+            const allReservationDateStrings = allReservationDates.map(d => formatDate(d));
+            
+            // Load all existing reservations for the date range in one query to avoid N+1 problem
+            console.log(`[saveParkingAssignments] Loading existing reservations for dates:`, allReservationDateStrings);
+            const existingReservationsRes = await localClient.query(
+                `SELECT parking_spot_id, date
+                 FROM reservation_parking
+                 WHERE hotel_id = $1
+                   AND date = ANY($2::date[])
+                   AND cancelled IS NULL
+                   AND status IN ('confirmed','blocked')`,
+                [hotel_id, allReservationDateStrings]
+            );
+            
+            // Build in-memory maps for fast lookups
+            // dateToSpots: Map<dateString, Set<spotId>> - which spots are reserved on each date
+            // spotToDates: Map<spotId, Set<dateString>> - which dates each spot is reserved on
+            const dateToSpots = new Map();
+            const spotToDates = new Map();
+            
+            for (const row of existingReservationsRes.rows) {
+                const dateStr = formatDate(new Date(row.date));
+                const spotId = row.parking_spot_id;
+                
+                if (!dateToSpots.has(dateStr)) {
+                    dateToSpots.set(dateStr, new Set());
+                }
+                dateToSpots.get(dateStr).add(spotId);
+                
+                if (!spotToDates.has(spotId)) {
+                    spotToDates.set(spotId, new Set());
+                }
+                spotToDates.get(spotId).add(dateStr);
+            }
+            
+            console.log(`[saveParkingAssignments] Loaded ${existingReservationsRes.rows.length} existing reservations into memory maps`);
             
             // Keep track of spots that have been assigned to prevent re-assigning the same physical spot multiple times for the same reservation
             const assignedPhysicalSpotsForThisAssignment = new Set();
 
             for (let i = 0; i < numberOfSpots; i++) {
                 console.log(`[saveParkingAssignments] Attempting to assign spot ${i + 1}/${numberOfSpots} for current assignment.`);
-                let remainingDatesToAssign = new Set(allReservationDates.map(d => formatDate(d)));
+                let remainingDatesToAssign = new Set(allReservationDateStrings);
                 const assignedSpotsPerDate = {}; // { 'YYYY-MM-DD': spotId }
 
                 while (remainingDatesToAssign.size > 0) {
@@ -724,16 +760,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
                         let currentSpotAvailableDates = [];
                         for (const dateStr of remainingDatesToAssign) {
-                            const reservedRes = await localClient.query(
-                                `SELECT parking_spot_id
-                                 FROM reservation_parking
-                                 WHERE hotel_id = $1
-                                   AND date = $2
-                                   AND cancelled IS NULL
-                                   AND status IN ('confirmed','blocked')`, // Also consider 'blocked' spots
-                                [hotel_id, dateStr]
-                            );
-                            const isReserved = reservedRes.rows.some(r => r.parking_spot_id === spotId);
+                            // Check availability using in-memory map instead of DB query
+                            const reservedSpots = dateToSpots.get(dateStr);
+                            const isReserved = reservedSpots && reservedSpots.has(spotId);
 
                             if (!isReserved) {
                                 currentSpotAvailableDates.push(dateStr);
@@ -758,6 +787,18 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     for (const dateStr of bestSpotAvailableDates) {
                         assignedSpotsPerDate[dateStr] = bestSpot;
                         remainingDatesToAssign.delete(dateStr);
+                        
+                        // Update in-memory maps to reflect this assignment for subsequent iterations
+                        if (!dateToSpots.has(dateStr)) {
+                            dateToSpots.set(dateStr, new Set());
+                        }
+                        dateToSpots.get(dateStr).add(bestSpot);
+                        
+                        if (!spotToDates.has(bestSpot)) {
+                            spotToDates.set(bestSpot, new Set());
+                        }
+                        spotToDates.get(bestSpot).add(dateStr);
+                        
                         console.log(`[saveParkingAssignments] Assigned spot ${bestSpot} to date ${dateStr}.`);
                     }
                 }

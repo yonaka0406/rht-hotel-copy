@@ -87,11 +87,11 @@
                                                                 optionLabel="addon_name"
                                                                 optionValue="id"
                                                                 placeholder="アドオンを選択"
-                                                                :class="{ 'p-invalid': errors.selectedAddon }"
+                                                                :class="{ 'p-invalid': errors.addonId }"
                                                                 :disabled="processing"
                                                               />                          <label>アドオン *</label>
                         </FloatLabel>
-                        <small v-if="errors.selectedAddon" class="p-error">{{ errors.selectedAddon }}</small>
+                        <small v-if="errors.addonId" class="p-error">{{ errors.addonId }}</small>
                       </div>
           
                       <!-- Unit Price -->
@@ -282,6 +282,7 @@ const processing = ref(false);
 const spotValidationValid = ref(false);
 const selectedVehicleCategory = ref(null);
 const addonOptions = ref([]);
+const priceManuallyChanged = ref(false);
 
 // Computed properties
 const dialogTitle = computed(() => {
@@ -312,24 +313,7 @@ const dateRange = computed(() => {
   return dates;
 });
 
-const _selectedReservationDetails = computed(() => {
-  if (!localAddonData.value.roomId || dateRange.value.length === 0) {
-    return [];
-  }
 
-  const selectedRoomId = localAddonData.value.roomId;
-  const selectedDates = new Set(dateRange.value);
-
-  return props.reservationDetails
-    .filter(detail => {
-      const detailDate = detail.date ? detail.date.split('T')[0] : null;
-      return detail.room_id === selectedRoomId && selectedDates.has(detailDate);
-    })
-    .map(detail => ({
-        id: detail.id,
-        date: detail.date.split('T')[0]
-    }));
-});
 
 const rooms = computed(() => {
   const uniqueRooms = new Map();
@@ -553,7 +537,7 @@ watch(selectedAddon, (newAddonId) => {
     const selected = addonOptions.value.find(a => a.id === newAddonId);
     if (selected) {
       // Only update the price if it hasn't been manually changed
-      if (localAddonData.value.unitPrice === 1000) { // Default price
+      if (!priceManuallyChanged.value) {
         localAddonData.value.unitPrice = selected.price || 1000;
       }
       // Update the addon name if needed
@@ -619,19 +603,40 @@ watch(() => props.modelValue, async (newValue) => {
 }, { immediate: true });
 
 watch(hotelId, async (newHotelId) => {
-  if (newHotelId && !addonOptions.value.length) {
+  if (newHotelId) {
     const allAddons = await fetchAllAddons(newHotelId); 
     if (allAddons && Array.isArray(allAddons)) {
       const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
       addonOptions.value = parkingAddons;
       
-      // Auto-select first addon if available
+      // Reset selectedAddon if the current selection is no longer valid for the new hotel
+      if (!parkingAddons.some(addon => addon.id === selectedAddon.value)) {
+        selectedAddon.value = null;
+      }
+
+      // Auto-select first addon if available and nothing is selected
       if (parkingAddons.length > 0 && !selectedAddon.value) {
         selectedAddon.value = parkingAddons[0].id;
       }
+    } else {
+      // If no addons are fetched or not an array, clear options and selection
+      addonOptions.value = [];
+      selectedAddon.value = null;
     }
+  } else {
+    // If hotelId is null, clear options and selection
+    addonOptions.value = [];
+    selectedAddon.value = null;
   }
 }, { immediate: true });
+
+// Watch for manual changes to unitPrice
+watch(() => localAddonData.value.unitPrice, (newValue, oldValue) => {
+  // Only mark as manually changed if the value is different and not during initial setup
+  if (newValue !== oldValue && oldValue !== undefined) {
+    priceManuallyChanged.value = true;
+  }
+}, { flush: 'post' });
 </script>
 
 <style scoped>

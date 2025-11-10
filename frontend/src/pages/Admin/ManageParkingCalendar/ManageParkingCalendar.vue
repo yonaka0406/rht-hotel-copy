@@ -54,7 +54,7 @@ import ParkingBlocksTable from './components/ParkingBlocksTable.vue';
 const formatDate = (date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
         console.error("Invalid Date object:", date);
-        return '';
+        return ''; // Return empty string instead of throwing to prevent template crashes
     }
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");

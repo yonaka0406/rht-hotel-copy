@@ -488,7 +488,13 @@ export function useParkingStore() {
     const getAvailableCapacity = async (hotelId, startDate, endDate, vehicleCategoryId) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/parking/capacity/available?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}&vehicleCategoryId=${vehicleCategoryId}`, {
+            const params = new URLSearchParams({
+                hotelId: hotelId,
+                startDate: startDate,
+                endDate: endDate,
+                vehicleCategoryId: vehicleCategoryId
+            });
+            const response = await fetch(`/api/parking/capacity/available?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
             
@@ -530,7 +536,12 @@ export function useParkingStore() {
     const getBlockedCapacity = async (hotelId, startDate, endDate) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/parking/capacity/blocks?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`, {
+            const params = new URLSearchParams({
+                hotelId: hotelId,
+                startDate: startDate,
+                endDate: endDate
+            });
+            const response = await fetch(`/api/parking/capacity/blocks?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
             
@@ -568,7 +579,12 @@ export function useParkingStore() {
     const getCapacitySummary = async (hotelId, startDate, endDate) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/parking/capacity/summary?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`, {
+            const params = new URLSearchParams({
+                hotelId: hotelId,
+                startDate: startDate,
+                endDate: endDate
+            });
+            const response = await fetch(`/api/parking/capacity/summary?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
             

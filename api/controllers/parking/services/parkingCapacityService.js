@@ -45,12 +45,24 @@ class ParkingCapacityService {
      */
     _generateDateRange(startDate, endDate) {
         const dates = [];
-        const current = new Date(startDate);
-        const end = new Date(endDate);
         
-        while (current < end) {
-            dates.push(this._formatDate(current));
-            current.setDate(current.getDate() + 1);
+        // Parse date strings into components to avoid timezone issues
+        const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+        const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+        
+        // Create UTC dates to avoid timezone shifts
+        const current = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+        const end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+        
+        while (current.getTime() < end.getTime()) {
+            // Format using UTC getters to avoid timezone conversion
+            const year = current.getUTCFullYear();
+            const month = String(current.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(current.getUTCDate()).padStart(2, '0');
+            dates.push(`${year}-${month}-${day}`);
+            
+            // Increment using UTC methods
+            current.setUTCDate(current.getUTCDate() + 1);
         }
         
         return dates;
@@ -68,12 +80,13 @@ class ParkingCapacityService {
      * @param {string} startDate - Start date (YYYY-MM-DD)
      * @param {string} endDate - End date (YYYY-MM-DD, exclusive)
      * @param {number} vehicleCategoryId - Vehicle category ID
+     * @param {Object} client - Optional database client for transactional queries
      * @returns {Promise<Object>} Capacity availability by date
      */
-    async getAvailableCapacity(hotelId, startDate, endDate, vehicleCategoryId) {
-        console.log(`[ParkingCapacityService.getAvailableCapacity] Request: hotel=${hotelId}, dates=${startDate} to ${endDate}, category=${vehicleCategoryId}`);
+    async getAvailableCapacity(hotelId, startDate, endDate, vehicleCategoryId, client = null) {
+        console.log(`[ParkingCapacityService.getAvailableCapacity] Request: hotel=${hotelId}, dates=${startDate} to ${endDate}, category=${vehicleCategoryId}, transactional=${!!client}`);
         
-        const pool = this._getPool();
+        const pool = client || this._getPool();
         const dates = this._generateDateRange(startDate, endDate);
         
         try {
@@ -171,10 +184,16 @@ class ParkingCapacityService {
                 capacityByDate,
                 summary: {
                     totalPhysicalSpots,
-                    minAvailableCapacity: Math.min(...Object.values(capacityByDate).map(d => d.availableCapacity)),
-                    maxAvailableCapacity: Math.max(...Object.values(capacityByDate).map(d => d.availableCapacity))
+                    minAvailableCapacity: 0, // Default to 0 if no dates
+                    maxAvailableCapacity: 0  // Default to 0 if no dates
                 }
             };
+
+            const availableCapacities = Object.values(capacityByDate).map(d => d.availableCapacity);
+            if (availableCapacities.length > 0) {
+                result.summary.minAvailableCapacity = Math.min(...availableCapacities);
+                result.summary.maxAvailableCapacity = Math.max(...availableCapacities);
+            }
             
             console.log(`[ParkingCapacityService.getAvailableCapacity] Summary: min available=${result.summary.minAvailableCapacity}, max available=${result.summary.maxAvailableCapacity}`);
             
@@ -231,8 +250,8 @@ class ParkingCapacityService {
             await client.query('BEGIN');
             console.log(`[ParkingCapacityService.reserveCapacity] Transaction started`);
             
-            // Step 1: Validate capacity availability
-            const availability = await this.getAvailableCapacity(hotel_id, start_date, end_date, vehicle_category_id);
+            // Step 1: Validate capacity availability within the transaction to prevent race conditions
+            const availability = await this.getAvailableCapacity(hotel_id, start_date, end_date, vehicle_category_id, client);
             const dates = this._generateDateRange(start_date, end_date);
             
             for (const date of dates) {
@@ -488,14 +507,19 @@ class ParkingCapacityService {
      * Release (delete) a blocked capacity record
      * 
      * @param {string} blockId - Block ID (UUID)
+     * @param {number} userId - User ID performing the deletion (for audit)
      * @returns {Promise<Object>} Release result
      */
-    async releaseBlockedCapacity(blockId) {
-        console.log(`[ParkingCapacityService.releaseBlockedCapacity] Request: blockId=${blockId}`);
+    async releaseBlockedCapacity(blockId, userId) {
+        console.log(`[ParkingCapacityService.releaseBlockedCapacity] Request: blockId=${blockId}, userId=${userId}`);
         
         const pool = this._getPool();
+        const client = await pool.connect();
         
         try {
+            await client.query('BEGIN');
+            console.log(`[ParkingCapacityService.releaseBlockedCapacity] Transaction started`);
+            
             // Step 1: Get block details before deletion
             const selectQuery = `
                 SELECT pb.*, vc.name as vehicle_category_name
@@ -503,28 +527,52 @@ class ParkingCapacityService {
                 JOIN vehicle_categories vc ON pb.vehicle_category_id = vc.id
                 WHERE pb.id = $1
             `;
-            const selectResult = await pool.query(selectQuery, [blockId]);
+            const selectResult = await client.query(selectQuery, [blockId]);
             
             if (selectResult.rows.length === 0) {
                 throw new Error(`Block ${blockId} not found`);
             }
             
             const block = selectResult.rows[0];
-            console.log(`[ParkingCapacityService.releaseBlockedCapacity] Found block: hotel=${block.hotel_id}, category=${block.vehicle_category_name}, capacity=${block.blocked_capacity}`);
+            console.log(`[ParkingCapacityService.releaseBlockedCapacity] Found block: hotel=${block.hotel_id}, category=${block.vehicle_category_name}, capacity=${block.blocked_capacity}, created_by=${block.created_by}`);
             
-            // Step 2: Delete the block
+            // Step 2: Create audit log entry before deletion
+            const auditQuery = `
+                INSERT INTO parking_blocks_audit (
+                    block_id, hotel_id, vehicle_category_id, start_date, end_date,
+                    blocked_capacity, reason, comment, created_by, deleted_by, deleted_at, action
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), 'DELETE')
+            `;
+            await client.query(auditQuery, [
+                blockId,
+                block.hotel_id,
+                block.vehicle_category_id,
+                block.start_date,
+                block.end_date,
+                block.blocked_capacity,
+                block.reason,
+                block.comment,
+                block.created_by,
+                userId
+            ]);
+            
+            console.log(`[ParkingCapacityService.releaseBlockedCapacity] Created audit log entry for deletion by user ${userId}`);
+            
+            // Step 3: Delete the block
             const deleteQuery = `
                 DELETE FROM parking_blocks
                 WHERE id = $1
             `;
-            await pool.query(deleteQuery, [blockId]);
+            await client.query(deleteQuery, [blockId]);
             
-            console.log(`[ParkingCapacityService.releaseBlockedCapacity] Successfully deleted block: ${blockId}`);
+            await client.query('COMMIT');
+            console.log(`[ParkingCapacityService.releaseBlockedCapacity] Successfully deleted block: ${blockId}, transaction committed`);
             
             return {
                 success: true,
                 message: `Successfully released blocked capacity`,
                 blockId,
+                deletedBy: userId,
                 releasedBlock: {
                     hotelId: block.hotel_id,
                     vehicleCategoryId: block.vehicle_category_id,
@@ -532,13 +580,17 @@ class ParkingCapacityService {
                     startDate: block.start_date,
                     endDate: block.end_date,
                     blockedCapacity: block.blocked_capacity,
-                    reason: block.reason
+                    reason: block.reason,
+                    createdBy: block.created_by
                 }
             };
             
         } catch (error) {
-            console.error(`[ParkingCapacityService.releaseBlockedCapacity] Error:`, error);
+            await client.query('ROLLBACK');
+            console.error(`[ParkingCapacityService.releaseBlockedCapacity] Error, transaction rolled back:`, error);
             throw error;
+        } finally {
+            client.release();
         }
     }
 
