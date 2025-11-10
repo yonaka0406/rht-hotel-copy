@@ -289,3 +289,34 @@ COMMENT ON TABLE parking_blocks IS 'Stores capacity blocking records for parking
 COMMENT ON FUNCTION create_virtual_capacity_pool_spots(INTEGER) IS 'Creates or ensures virtual capacity pool spots exist for each vehicle category in a hotel';
 COMMENT ON FUNCTION get_virtual_capacity_pool_spot(INTEGER, INTEGER) IS 'Returns the virtual capacity pool spot ID for a given hotel and vehicle category';
 COMMENT ON COLUMN parking_spots.spot_type IS 'Type of parking spot: standard (physical spot) or capacity_pool (virtual spot for capacity-based reservations)';
+
+
+-- Additional changes for parking blocks
+
+-- Add reservation_parking_ids column to store references to created reservation_parking records
+ALTER TABLE parking_blocks 
+ADD COLUMN IF NOT EXISTS reservation_parking_ids UUID[] DEFAULT '{}';
+
+-- Add index for querying by reservation_parking_ids
+CREATE INDEX IF NOT EXISTS idx_parking_blocks_reservation_parking_ids 
+ON parking_blocks USING GIN (reservation_parking_ids);
+
+-- Update the date range constraint to allow same-day blocks
+ALTER TABLE parking_blocks DROP CONSTRAINT IF EXISTS valid_date_range;
+ALTER TABLE parking_blocks ADD CONSTRAINT valid_date_range CHECK (end_date >= start_date);
+
+-- Create partitions for existing hotels
+DO $$
+DECLARE
+    v_hotel RECORD;
+    v_partition_name TEXT;
+BEGIN
+    FOR v_hotel IN SELECT id FROM hotels ORDER BY id LOOP
+        v_partition_name := 'parking_blocks_hotel_' || v_hotel.id;
+        EXECUTE format('CREATE TABLE IF NOT EXISTS %I PARTITION OF parking_blocks FOR VALUES IN (%s)', v_partition_name, v_hotel.id);
+        RAISE NOTICE 'Created partition % for hotel_id %', v_partition_name, v_hotel.id;
+    END LOOP;
+END $$;
+
+-- Add comments
+COMMENT ON COLUMN parking_blocks.reservation_parking_ids IS 'Array of reservation_parking IDs created for this block to mark spots as unavailable';
