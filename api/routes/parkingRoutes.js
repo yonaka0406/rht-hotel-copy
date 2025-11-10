@@ -25,7 +25,13 @@ const {
     updateParkingAddonAssignment,
     deleteParkingAddonAssignment,
     bulkDeleteParkingAddonAssignments,
-    saveParkingAssignments
+    saveParkingAssignments,
+    // Capacity management endpoints
+    getAvailableCapacity,
+    blockCapacity,
+    getBlockedCapacity,
+    removeCapacityBlock,
+    getCapacitySummary
 } = require('../controllers/parking');
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
@@ -71,5 +77,12 @@ router.post('/parking/addon-assignment', authMiddlewareCRUDAccess, createParking
 router.put('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, updateParkingAddonAssignment);
 router.delete('/parking/addon-assignment/bulk', authMiddlewareCRUDAccess, bulkDeleteParkingAddonAssignments);
 router.delete('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, deleteParkingAddonAssignment);
+
+// Capacity Management Endpoints
+router.get('/parking/capacity/available', authMiddleware, getAvailableCapacity);
+router.post('/parking/capacity/block', authMiddleware_manageDB, blockCapacity);
+router.get('/parking/capacity/blocks', authMiddleware, getBlockedCapacity);
+router.delete('/parking/capacity/blocks/:blockId', authMiddleware_manageDB, removeCapacityBlock);
+router.get('/parking/capacity/summary', authMiddleware, getCapacitySummary);
 
 module.exports = router;

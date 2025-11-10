@@ -140,8 +140,11 @@
     - Maintain backward compatibility for spot-specific reservations
     - _Requirements: 1.1, 4.1, 6.5_
 
-- [ ] 4. Create API endpoints for capacity management
-  - [ ] 4.1 Create GET /api/parking/capacity/available endpoint
+- [-] 4. Create API endpoints for capacity management
+
+  - [x] 4.1 Create GET /api/parking/capacity/available endpoint
+
+
     - Add route in parking routes file
     - Implement controller method to get available capacity
     - Validate query parameters (hotelId, startDate, endDate, vehicleCategoryId)
@@ -149,7 +152,8 @@
     - Return capacity availability response
     - _Requirements: 1.2, 5.1_
 
-  - [ ] 4.2 Create POST /api/parking/capacity/block endpoint
+  - [x] 4.2 Create POST /api/parking/capacity/block endpoint
+
     - Add route in parking routes file
     - Implement controller method to block capacity
     - Validate request body parameters
@@ -157,7 +161,8 @@
     - Return block creation response with blockId
     - _Requirements: 2.1, 3.3_
 
-  - [ ] 4.3 Create GET /api/parking/capacity/blocks endpoint
+  - [x] 4.3 Create GET /api/parking/capacity/blocks endpoint
+
     - Add route in parking routes file
     - Implement controller method to get blocked capacity
     - Validate query parameters (hotelId, startDate, endDate)
@@ -165,7 +170,8 @@
     - Return list of blocking records
     - _Requirements: 3.1_
 
-  - [ ] 4.4 Create DELETE /api/parking/capacity/blocks/:blockId endpoint
+  - [x] 4.4 Create DELETE /api/parking/capacity/blocks/:blockId endpoint
+
     - Add route in parking routes file
     - Implement controller method to remove capacity block
     - Validate blockId parameter
@@ -173,7 +179,9 @@
     - Return success response
     - _Requirements: 3.2_
 
-  - [ ] 4.5 Create GET /api/parking/capacity/summary endpoint
+  - [x] 4.5 Create GET /api/parking/capacity/summary endpoint
+
+
     - Add route in parking routes file
     - Implement controller method to get capacity summary
     - Validate query parameters (hotelId, startDate, endDate)
