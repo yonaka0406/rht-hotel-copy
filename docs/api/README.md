@@ -32,6 +32,40 @@ The WeHub.work PMS provides RESTful APIs for:
 - Performance metrics
 - Custom reporting endpoints
 
+## API Overview
+
+The WeHub.work PMS provides RESTful APIs for:
+
+### 🏨 **Core Hotel Operations**
+- Room and rate management
+- Reservation processing
+- Guest and client management
+- Billing and payment processing
+
+### 🔗 **External Integrations**
+- Booking engine connectivity
+- OTA (Online Travel Agency) synchronization
+- Payment gateway integration
+- Channel manager connectivity
+
+### 📊 **Reporting and Analytics**
+- Occupancy and revenue reports
+- Guest analytics
+- Performance metrics
+- Custom reporting endpoints
+
+## Service Architecture
+
+The API is a key component of the backend's service architecture, providing the interface through which various services communicate and expose functionality. For a detailed understanding of the backend's service design, refer to the [Service Architecture](../backend/service-architecture.md) documentation.
+
+## Database
+
+The API interacts directly with the PostgreSQL database to retrieve and persist data. The database schema is designed to support the API's data requirements efficiently. For details on the database structure, refer to the [Database Schema](../backend/database-schema.md) documentation.
+
+## Business Logic
+
+The API layer often orchestrates calls to the underlying business logic services. While the API handles request/response formatting and routing, the core business rules and operations are implemented in the service layer. For an in-depth look at the business logic, consult the [Business Logic](../backend/business-logic.md) documentation.
+
 ## Authentication
 
 All API endpoints require authentication using JWT tokens. See the [Authentication Guide](#authentication) for detailed implementation.
@@ -85,18 +119,18 @@ const response = await fetch('/api/reservations', {
 ### For Booking Engine Developers
 1. [Authentication setup](#authentication)
 2. [Hotel data synchronization](endpoints/booking-engine.md)
-3. [Availability checking](../../integrations/booking-engine/overview.md#availability--inventory)
-4. [Reservation creation](../../integrations/booking-engine/overview.md#booking-operations)
+3. [Availability checking](../integrations/booking-engine/overview.md#availability--inventory)
+4. [Reservation creation](../integrations/booking-engine/overview.md#booking-operations)
 
 ### For OTA Integrations
-1. [XML API endpoints](integration-guides/ota-integration.md)
-2. [Rate and inventory updates](integration-guides/ota-integration.md)
-3. [Reservation synchronization](integration-guides/ota-integration.md)
+1. [XML API endpoints](../integrations/ota-systems/xml-integration.md#integration-architecture)
+2. [Rate and inventory updates](../integrations/ota-systems/xml-integration.md#rate-and-inventory-management)
+3. [Reservation synchronization](../integrations/ota-systems/xml-integration.md#reservation-management)
 
 ### For Payment Systems
-1. [Payment gateway setup](integration-guides/payment-integration.md)
-2. [Transaction processing](integration-guides/payment-integration.md)
-3. [Webhook handling](integration-guides/payment-integration.md)
+1. [Payment gateway setup](../integrations/payment-systems/payment-gateway-guide.md#configuration)
+2. [Transaction processing](../integrations/payment-systems/payment-gateway-guide.md#payment-processing-flow)
+3. [Webhook handling](../integrations/payment-systems/payment-gateway-guide.md#webhook-handling)
 
 ## API Standards and Conventions
 
@@ -171,9 +205,9 @@ console.log(newClient);
 - **Test Environment**: Sandbox API for development
 
 ### Development Resources
-- [API Testing Guide](../development/api-testing.md)
-- [Integration Examples](integration-guides/)
-- [Error Code Reference](../reference/error-codes.md)
+- [API Testing Guide](../development/README.md#testing-strategy)
+- [Integration Examples](../integrations/README.md)
+- [Error Code Reference](../reference/README.md#error-codes)
 
 ## Versioning and Updates
 
@@ -184,9 +218,9 @@ console.log(newClient);
 
 ## Support and Resources
 
-- **Integration Support**: See [integration guides](integration-guides/)
-- **Error Troubleshooting**: Check [error codes reference](../reference/error-codes.md)
-- **Performance Optimization**: Review [API best practices](../development/api-best-practices.md)
+- **Integration Support**: See [integration guides](../integrations/README.md)
+- **Error Troubleshooting**: Check [error codes reference](../reference/README.md#error-codes)
+- **Performance Optimization**: Review [API best practices](../development/README.md#security-best-practices)
 
 ---
 

@@ -8,7 +8,7 @@ This section provides comprehensive documentation for frontend development in th
 - **[State Management](state-management.md)** - Vue 3 Composition API store pattern
 - **[Routing & Navigation](routing-navigation.md)** - Vue Router configuration and patterns
 - **[Styling Guidelines](styling-guidelines.md)** - Tailwind CSS and design system
-- **[Testing Frontend](testing-frontend.md)** - Frontend testing strategies
+- **[Testing Frontend](#testing-strategy)** - Frontend testing strategies
 
 ## Frontend Architecture Overview
 
@@ -114,6 +114,17 @@ export function useHotelStore() {
 - **Theme Customization**: Custom theme integration with Tailwind
 - **Icon System**: PrimeIcons for consistent iconography
 - **Form Controls**: Advanced form components with validation
+
+## Routing
+
+The frontend application utilizes Vue Router for managing navigation and defining application routes.
+
+### Key Aspects of Routing:
+
+-   **Route Definitions**: Centralized route configuration in `src/router/index.js`.
+-   **Dynamic Routing**: Support for dynamic segments and nested routes.
+-   **Navigation Guards**: Implementing authentication and authorization checks before route access.
+-   **Lazy Loading**: Optimizing performance by loading route components only when needed.
 
 ## Key Frontend Features
 

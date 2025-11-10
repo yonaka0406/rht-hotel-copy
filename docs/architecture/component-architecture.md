@@ -451,6 +451,41 @@ const hotelContext = inject('hotelContext');
    - `onBeforeUnmount`: Before component is unmounted
    - `onUnmounted`: After component is unmounted
 
+## Component Lifecycle
+
+### Backend Component Lifecycle
+1. **Application Startup**: Initialize Express app, connect to database
+2. **Middleware Registration**: Register global middleware
+3. **Route Registration**: Register API routes
+4. **Service Initialization**: Initialize services and dependencies
+5. **Server Start**: Listen on configured port
+6. **Request Processing**: Handle incoming requests through middleware chain
+7. **Graceful Shutdown**: Close connections, cleanup resources
+
+### Frontend Component Lifecycle
+1. **Application Bootstrap**: Create Vue app, register plugins
+2. **Router Initialization**: Setup routes and guards
+3. **Store Initialization**: Initialize composable stores
+4. **Component Mounting**: Mount root component
+5. **Component Lifecycle Hooks**:
+   - `onBeforeMount`: Before component is mounted
+   - `onMounted`: After component is mounted to DOM
+   - `onBeforeUpdate`: Before reactive data changes
+   - `onUpdated`: After reactive data changes
+   - `onBeforeUnmount`: Before component is unmounted
+   - `onUnmounted`: After component is unmounted
+
+## Component Design
+
+When designing new components, consider the following principles:
+
+-   **Single Responsibility Principle**: Each component should do one thing well.
+-   **Reusability**: Design components to be reusable across different parts of the application.
+-   **Testability**: Ensure components are easy to test in isolation.
+-   **Maintainability**: Write clean, well-structured, and documented code.
+-   **Performance**: Optimize for efficient rendering and data handling.
+-   **Accessibility**: Design with accessibility in mind from the start.
+
 ## Component Testing Strategy
 
 ### Backend Component Testing

@@ -434,6 +434,35 @@ pm2 status
 pm2 logs pms-api
 ```
 
+### 3.7 Start Application with PM2
+
+```bash
+# Start application
+pm2 start ecosystem.config.js
+
+# Save PM2 configuration
+pm2 save
+
+# Setup PM2 to start on system boot
+pm2 startup systemd
+# Follow the instructions provided by the command
+
+# Verify application is running
+pm2 status
+pm2 logs pms-api
+```
+
+## Production Deployment
+
+This section outlines the final steps to deploy the application to a live production environment, ensuring it is accessible, secure, and performant.
+
+### Key Considerations:
+
+-   **Zero-Downtime Deployment**: Strategies to minimize service interruption during updates.
+-   **Scalability**: Configuring the environment to handle increased load.
+-   **Security Hardening**: Implementing robust security measures.
+-   **Monitoring and Alerting**: Setting up comprehensive observability.
+
 ## Step 4: Nginx Configuration
 
 ### 4.1 Install Nginx

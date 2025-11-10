@@ -593,6 +593,24 @@ Create `.vscode/launch.json` for debugging:
 4. Enable Prettier: Settings → Languages & Frameworks → JavaScript → Prettier
 5. Configure Vue.js: Settings → Languages & Frameworks → JavaScript → Frameworks → Vue.js
 
+## Frontend Development Specifics
+
+### Components
+
+Understand how to develop and utilize UI components within the project. Refer to the [Component Library](../frontend/component-library.md) for detailed guidelines and available components.
+
+### State Management
+
+Learn about the state management patterns and tools used in the frontend application. - **[State Management](../frontend/state-management.md)** - Vue 3 Composition API store pattern
+
+### Routing
+
+Familiarize yourself with the frontend routing configuration and navigation principles. The [Frontend Overview](../../frontend/README.md) covers routing in detail.
+
+### Styling
+
+Explore the styling approach, including the use of Tailwind CSS and adherence to design system guidelines. Refer to the [Styling Guidelines](../frontend/styling-guidelines.md) for more information.
+
 ## Development Workflow
 
 ### Starting Development Servers

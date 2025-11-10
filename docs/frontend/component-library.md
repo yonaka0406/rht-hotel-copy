@@ -506,6 +506,98 @@ import WorkInProgress from '@/components/WorkInProgress.vue';
 </template>
 ```
 
+## Custom Components
+
+### ClientAutoComplete
+
+**Purpose**: Specialized autocomplete for client search with phonetic support
+
+**Usage:**
+```vue
+<script setup>
+import ClientAutoComplete from '@/components/ClientAutoComplete.vue';
+
+const selectedClient = ref(null);
+
+const handleClientSelect = (client) => {
+    console.log('Selected client:', client);
+};
+</script>
+
+<template>
+    <ClientAutoComplete 
+        v-model="selectedClient"
+        @select="handleClientSelect"
+        placeholder="顧客名を入力..."
+    />
+</template>
+```
+
+**Features**:
+- Phonetic search (Hiragana, Katakana, Romaji)
+- Kanji name support
+- Recent client suggestions
+- Keyboard navigation
+
+### ReservationSearchBar
+
+**Purpose**: Advanced search for reservations
+
+**Usage:**
+```vue
+<script setup>
+import ReservationSearchBar from '@/components/ReservationSearchBar.vue';
+
+const handleSearch = (searchParams) => {
+    console.log('Search params:', searchParams);
+    // Perform search with params
+};
+</script>
+
+<template>
+    <ReservationSearchBar 
+        @search="handleSearch"
+        :showAdvancedFilters="true"
+    />
+</template>
+```
+
+**Features**:
+- Quick search by guest name, room, or confirmation number
+- Advanced filters (date range, status, room type)
+- Saved search functionality
+- Search history
+
+### WorkInProgress
+
+**Purpose**: Placeholder for features under development
+
+**Usage:**
+```vue
+<script setup>
+import WorkInProgress from '@/components/WorkInProgress.vue';
+</script>
+
+<template>
+    <WorkInProgress 
+        feature="レポート機能"
+        estimatedCompletion="2024年3月"
+    />
+</template>
+```
+
+## Creating Components
+
+When creating new components, follow these guidelines to ensure consistency, reusability, and maintainability:
+
+1.  **Component Structure**: Organize components into logical directories (e.g., `src/components` for global components, `src/pages/[PageName]/components` for page-specific components).
+2.  **Naming Conventions**: Use PascalCase for component file names and component names within templates.
+3.  **Props and Events**: Clearly define props for input and emit events for output, following a "props down, events up" pattern.
+4.  **Slots**: Utilize slots for flexible content distribution.
+5.  **Styling**: Apply styling using Tailwind CSS classes, and encapsulate component-specific styles within the component's `<style scoped>` block.
+6.  **Accessibility**: Ensure new components are accessible by following ARIA guidelines and providing keyboard navigation.
+7.  **Testing**: Write unit and integration tests for new components to verify their functionality and prevent regressions.
+
 ## Form Layout Patterns
 
 ### Grid-Based Forms
@@ -943,6 +1035,173 @@ const deleteItem = () => { /* ... */ };
 ```
 
 
+## Component Best Practices
+
+### 1. Always Use Japanese UI Text
+
+```vue
+<!-- ✅ Correct -->
+<Button label="保存" />
+<Dialog header="予約詳細" />
+<Column header="ゲスト名" />
+
+<!-- ❌ Incorrect -->
+<Button label="Save" />
+<Dialog header="Reservation Details" />
+<Column header="Guest Name" />
+```
+
+### 2. Use FloatLabel for Form Inputs
+
+```vue
+<!-- ✅ Correct -->
+<FloatLabel class="mt-6">
+    <label for="guestName">ゲスト名</label>
+    <InputText id="guestName" v-model="guestName" fluid />
+</FloatLabel>
+
+<!-- ❌ Avoid -->
+<label for="guestName">ゲスト名</label>
+<InputText id="guestName" v-model="guestName" placeholder="ゲスト名" />
+```
+
+### 3. Use Tailwind Grid for Layouts
+
+```vue
+<!-- ✅ Correct -->
+<div class="grid grid-cols-12 gap-4">
+    <div class="col-span-6">...</div>
+    <div class="col-span-6">...</div>
+</div>
+
+<!-- ❌ Avoid PrimeFlex -->
+<div class="p-grid">
+    <div class="p-col-6">...</div>
+    <div class="p-col-6">...</div>
+</div>
+```
+
+### 4. Use ConfirmDialog for Destructive Actions
+
+```vue
+<!-- ✅ Correct -->
+<script setup>
+const confirm = useConfirm();
+
+const deleteItem = () => {
+    confirm.require({
+        message: '削除してもよろしいですか？',
+        header: '削除確認',
+        icon: 'pi pi-exclamation-triangle',
+        acceptProps: { label: '削除', severity: 'danger' },
+        rejectProps: { label: 'キャンセル', severity: 'secondary', outlined: true },
+        accept: () => performDelete()
+    });
+};
+</script>
+
+<!-- ❌ Avoid native confirm -->
+<script setup>
+const deleteItem = () => {
+    if (confirm('削除してもよろしいですか？')) {
+        performDelete();
+    }
+};
+</script>
+```
+
+### 5. Proper Button Styling
+
+```vue
+<!-- Primary action -->
+<Button label="保存" severity="success" />
+
+<!-- Secondary action -->
+<Button label="キャンセル" severity="secondary" outlined />
+
+<!-- Destructive action -->
+<Button label="削除" severity="danger" />
+
+<!-- Info action -->
+<Button label="詳細" severity="info" />
+```
+
+### 6. Consistent Tag Usage
+
+```vue
+<script setup>
+const getSeverity = (status) => {
+    const map = {
+        'active': 'success',
+        'pending': 'warn',
+        'inactive': 'danger',
+        'draft': 'info'
+    };
+    return map[status] || 'secondary';
+};
+</script>
+
+<template>
+    <Tag :value="statusLabel" :severity="getSeverity(status)" />
+</template>
+```
+
+### 7. Read-Only "Viewer" Tag
+
+When a user has read-only permissions (`crud_ok` is false), it's important to clearly indicate their status and disable destructive actions.
+
+**Detecting Read-Only Users:**
+
+A computed property should be used to determine if the user is a viewer.
+
+```javascript
+import { computed } from 'vue';
+import { useUserStore } from '@/stores/user'; // Adjust path as needed
+
+const userStore = useUserStore();
+const isViewer = computed(() => !userStore.currentUser?.permissions?.crud_ok);
+```
+
+**Displaying the Viewer Tag:**
+
+When `isViewer` is true, display a prominent red "閲覧者" tag.
+
+```vue
+<template>
+    <div v-if="isViewer" class="viewer-tag-container">
+        <Tag severity="danger" value="閲覧者" icon="pi pi-eye"></Tag>
+        <span class="ml-2 text-sm text-gray-600">読み取り専用モードです。</span>
+    </div>
+</template>
+
+<script setup>
+import { computed } from 'vue';
+import { useUserStore } from '@/stores/user';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+
+// Assume userStore is initialized and has user data
+const userStore = useUserStore();
+const isViewer = computed(() => userStore.currentUser && !userStore.currentUser.permissions.crud_ok);
+
+const createNew = () => { /* ... */ };
+const editItem = () => { /* ... */ };
+const deleteItem = () => { /* ... */ };
+</script>
+```
+
+## State Management
+
+Components often interact with the application's global state. For state management, refer to the [State Management documentation](state-management.md).
+
+## Routing
+
+Components can utilize Vue Router for navigation. For details on routing within the application, see the [Routing & Navigation documentation](routing-navigation.md).
+
+## Testing
+
+When developing new components, ensure they are adequately tested. Refer to the [Frontend Testing documentation](README.md#testing-strategy) for guidelines on unit and integration testing.
+
 ## Accessibility Considerations
 
 ### 1. Always Provide Labels
@@ -1044,7 +1303,7 @@ const performSearch = useDebounceFn((query) => {
 - **[Frontend Development](README.md)** - Frontend overview
 - **[State Management](state-management.md)** - Store patterns
 - **[Styling Guidelines](styling-guidelines.md)** - CSS and design system
-- **[Testing Frontend](testing-frontend.md)** - Component testing
+- [Frontend Testing documentation](README.md#testing-strategy)
 
 ---
 

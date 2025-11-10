@@ -101,8 +101,8 @@ For a more detailed breakdown of the technology stack, refer to the [Technology 
 
 ## Related Documentation
 
-- **[Component Diagrams](component-diagrams.md)** - Visual system representations
-- **[Data Flow Architecture](data-flow-architecture.md)** - Data movement patterns
+- **[Component Architecture](component-architecture.md)** - System components and relationships
+- **[Data Architecture](data-architecture.md)** - Database design and data flow
 
 ## Architecture Evolution
 
@@ -113,7 +113,7 @@ Our architecture continues to evolve based on:
 - **Feature development** - Adding new capabilities
 - **Technology updates** - Adopting new tools and frameworks
 
-For the latest architectural decisions and changes, see the [Architecture Decision Records](../development/architecture-decisions.md).
+- **[Architecture Decision Records](../development/README.md#architecture-principles)** - Architecture Decision Records
 
 ---
 

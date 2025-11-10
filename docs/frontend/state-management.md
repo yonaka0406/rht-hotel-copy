@@ -569,6 +569,98 @@ const updateReservation = async (id, updates) => {
 };
 ```
 
+## Best Practices
+
+### State Organization
+
+```javascript
+// Group related state together
+const state = reactive({
+    data: [],
+    ui: {
+        loading: false,
+        error: null,
+        selectedId: null
+    },
+    filters: {
+        search: '',
+        status: 'all',
+        dateRange: null
+    }
+});
+```
+
+### Action Naming Conventions
+
+- **fetch**: Retrieve data from API (`fetchHotels`)
+- **create**: Create new resource (`createReservation`)
+- **update**: Update existing resource (`updateClient`)
+- **delete**: Remove resource (`deleteInvoice`)
+- **set**: Set state value (`setSelectedHotel`)
+- **toggle**: Toggle boolean state (`toggleSidebar`)
+- **reset**: Reset state to initial values (`resetFilters`)
+
+### Error Handling
+
+```javascript
+const fetchData = async () => {
+    try {
+        loading.value = true;
+        error.value = null;
+        
+        const response = await axios.get('/api/data');
+        data.value = response.data;
+    } catch (err) {
+        error.value = {
+            message: err.message,
+            code: err.response?.status,
+            timestamp: new Date()
+        };
+        
+        // Show user-friendly notification
+        notificationStore.addNotification({
+            type: 'error',
+            message: 'Failed to load data. Please try again.'
+        });
+    } finally {
+        loading.value = false;
+    }
+};
+```
+
+### State Validation
+
+```javascript
+const updateReservation = async (id, updates) => {
+    // Validate before API call
+    if (!id || !updates) {
+        throw new Error('Invalid parameters');
+    }
+    
+    // Optimistic update
+    const index = reservations.value.findIndex(r => r.id === id);
+    const original = { ...reservations.value[index] };
+    reservations.value[index] = { ...original, ...updates };
+    
+    try {
+        const response = await axios.put(`/api/reservations/${id}`, updates);
+        reservations.value[index] = response.data;
+    } catch (error) {
+        // Rollback on error
+        reservations.value[index] = original;
+        throw error;
+    }
+};
+```
+
+## Routing
+
+While state management primarily deals with data, it often interacts with routing. For example, a store might update its state based on route parameters, or trigger navigation after a successful action. For detailed routing information, refer to the [Routing & Navigation documentation](routing-navigation.md).
+
+## Styling
+
+State management itself does not directly involve styling, but the state of UI components (e.g., loading states, active selections) is often reflected through styling. For information on how styling is applied in the frontend, refer to the [Styling Guidelines](styling-guidelines.md).
+
 ## Testing State Management
 
 ### Unit Testing Stores
@@ -619,7 +711,8 @@ describe('HotelSelector', () => {
 - **[Frontend Development](README.md)** - Frontend overview
 - **[Component Library](component-library.md)** - UI components
 - **[API Integration](../api/README.md)** - Backend communication
-- **[Testing Frontend](testing-frontend.md)** - Testing strategies
+- **[Testing Frontend](README.md#testing-strategy)** - Frontend testing strategies
+- **[Development Environment Setup](../getting-started/development-environment.md)** - Set up your local development environment
 
 ---
 

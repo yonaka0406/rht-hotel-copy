@@ -28,6 +28,44 @@ This document outlines the regular maintenance procedures required to keep the W
 - Performance benchmarking
 - Documentation review
 
+## Maintenance Schedule Overview
+
+### Daily Maintenance
+- Log review and monitoring
+- Backup verification
+- Performance monitoring
+- Security alert review
+
+### Weekly Maintenance
+- Performance analysis
+- Security updates
+- Cache optimization
+- Log rotation verification
+
+### Monthly Maintenance
+- Database optimization
+- Capacity planning
+- Security audit
+- Dependency updates
+
+### Quarterly Maintenance
+- Disaster recovery testing
+- Comprehensive security audit
+- Performance benchmarking
+- Documentation review
+
+## Post-Deployment
+
+After a successful deployment, it's crucial to perform a series of checks and configurations to ensure the system is operating as expected and to establish ongoing operational readiness.
+
+### Key Activities:
+
+-   **Verification**: Confirm all services are running and accessible.
+-   **Monitoring Setup**: Activate and validate monitoring and alerting systems.
+-   **Integration Testing**: Verify connectivity with all external services.
+-   **Documentation**: Update operational runbooks and configuration details.
+-   **Handover**: Ensure the operations team is fully aware of the new deployment.
+
 ## Daily Maintenance Tasks
 
 ### Log Review and Monitoring

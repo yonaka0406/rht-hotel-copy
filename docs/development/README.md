@@ -192,6 +192,49 @@ Closes #123
 5. **Performance Check**: Verify no performance regression
 6. **Submit PR**: Explain refactoring rationale
 
+## Development Workflows
+
+### 🆕 **Adding a New Feature**
+1. **Create Feature Branch**: `git checkout -b feature/feature-name`
+2. **Implement Backend**:
+   - Add API endpoints
+   - Implement business logic
+   - Write unit tests
+3. **Implement Frontend**:
+   - Create components
+   - Add composable stores
+   - Implement UI
+4. **Integration Testing**: Test end-to-end workflow
+5. **Documentation**: Update relevant docs
+6. **Submit PR**: Create pull request for review
+
+### 🐛 **Fixing a Bug**
+1. **Reproduce Bug**: Create failing test case
+2. **Create Bugfix Branch**: `git checkout -b bugfix/bug-description`
+3. **Implement Fix**: Fix the issue
+4. **Verify Fix**: Ensure test passes
+5. **Regression Testing**: Run full test suite
+6. **Submit PR**: Create pull request with bug details
+
+### 🔄 **Refactoring Code**
+1. **Ensure Test Coverage**: Write tests if missing
+2. **Create Refactor Branch**: `git checkout -b refactor/description`
+3. **Refactor Incrementally**: Small, focused changes
+4. **Run Tests**: Ensure all tests still pass
+5. **Performance Check**: Verify no performance regression
+6. **Submit PR**: Explain refactoring rationale
+
+## Development Process
+
+The development process for any new feature or significant change typically involves the following stages:
+
+1.  **Planning and Design**: Define requirements, design the solution (architecture, API, UI/UX), and create a technical specification.
+2.  **Implementation**: Write code, adhering to coding standards and best practices.
+3.  **Testing**: Develop and execute unit, integration, and end-to-end tests to ensure quality and functionality.
+4.  **Documentation**: Update all relevant documentation, including API docs, architecture diagrams, and user guides.
+5.  **Code Review**: Submit a pull request for peer review to ensure code quality, adherence to standards, and correctness.
+6.  **Deployment**: Once approved and merged, the changes are deployed to staging and then production environments.
+
 ## Performance Optimization
 
 ### ⚡ **Backend Optimization**

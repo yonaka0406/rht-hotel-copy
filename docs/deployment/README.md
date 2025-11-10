@@ -52,6 +52,69 @@ The WeHub.work PMS supports multiple deployment strategies to meet different ope
 4. **Document Configuration**: Record deployment-specific settings
 5. **Train Operations Team**: Provide operational documentation
 
+## Deployment Overview
+
+The WeHub.work PMS supports multiple deployment strategies to meet different operational requirements:
+
+### 🚀 **Deployment Options**
+- **VPS Deployment**: Traditional server deployment with PM2 process management
+- **Docker Deployment**: Containerized deployment with Docker Compose
+- **Cloud Deployment**: Scalable cloud infrastructure deployment
+- **Hybrid Deployment**: Mixed on-premise and cloud deployment
+
+### 🏗️ **System Components**
+- **Frontend**: Vue.js application served via Nginx
+- **Backend**: Node.js API server managed by PM2
+- **Database**: PostgreSQL with automated backups
+- **Cache**: Redis for session and data caching
+- **Reverse Proxy**: Nginx for load balancing and SSL termination
+
+## Deployment Workflow
+
+### Pre-Deployment Checklist
+1. ✅ Review system requirements and dependencies
+2. ✅ Prepare environment configuration files
+3. ✅ Set up database and run migrations
+4. ✅ Configure SSL certificates
+5. ✅ Set up monitoring and logging
+6. ✅ Prepare backup and recovery procedures
+
+### Deployment Steps
+1. **[Environment Setup](environment-setup.md)** - Configure production environment
+2. **[Database Setup](deployment-guide.md#database-setup)** - Initialize PostgreSQL and Redis
+3. **[Application Deployment](deployment-guide.md#application-deployment)** - Deploy frontend and backend
+4. **[Nginx Configuration](deployment-guide.md#nginx-configuration)** - Configure reverse proxy
+5. **[SSL Setup](deployment-guide.md#ssl-setup)** - Enable HTTPS with Let's Encrypt
+6. **[Monitoring Setup](monitoring-logging.md)** - Configure monitoring and alerts
+
+### Post-Deployment Tasks
+1. **Verify Deployment**: Run health checks and smoke tests
+2. **Configure Monitoring**: Set up alerts and dashboards
+3. **Test Integrations**: Verify external system connections
+4. **Document Configuration**: Record deployment-specific settings
+5. **Train Operations Team**: Provide operational documentation
+
+## Deployment Process
+
+The deployment process involves a series of automated and manual steps to move the application from development to production. This typically includes:
+
+1.  **Build**: Compiling and packaging the application code.
+2.  **Testing**: Running automated tests (unit, integration, E2E) to ensure quality.
+3.  **Staging Deployment**: Deploying to a staging environment for final verification.
+4.  **Production Deployment**: Deploying the verified build to the production environment.
+5.  **Post-Deployment Verification**: Performing health checks and smoke tests on the live system.
+
+## Rollback Strategy
+
+In case of a critical issue after deployment, a clear rollback strategy is essential to quickly restore the system to a stable state.
+
+1.  **Identify the Issue**: Quickly detect and confirm the problem.
+2.  **Halt New Deployments**: Prevent further changes from being deployed.
+3.  **Rollback Application**: Deploy the previous stable version of the application.
+4.  **Rollback Database (if necessary)**: If database schema changes were part of the deployment and are incompatible with the previous application version, execute rollback migration scripts or restore from a pre-deployment backup.
+5.  **Verify Rollback**: Confirm that the system is stable and functioning correctly.
+6.  **Post-Mortem Analysis**: Investigate the root cause of the issue to prevent recurrence.
+
 ## Environment Configuration
 
 ### Required Environment Variables

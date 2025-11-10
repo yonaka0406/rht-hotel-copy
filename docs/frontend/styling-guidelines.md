@@ -716,7 +716,7 @@ export default {
 - **[Frontend Development](README.md)** - Frontend overview
 - **[Component Library](component-library.md)** - UI components
 - **[Routing & Navigation](routing-navigation.md)** - Navigation patterns
-- **[Testing Frontend](testing-frontend.md)** - Testing strategies
+- **[Testing Frontend](README.md#testing-strategy)** - Frontend testing strategies
 
 ---
 

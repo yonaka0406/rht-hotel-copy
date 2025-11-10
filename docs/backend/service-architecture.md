@@ -149,7 +149,108 @@ module.exports = {
 };
 ```
 
-### 3. Service Layer
+## Layer Responsibilities
+
+### 1. API Layer (Routes)
+
+**Purpose**: Define API endpoints and route requests to appropriate controllers
+
+**Location**: `api/routes/`
+
+**Responsibilities**:
+- Define RESTful endpoints
+- Apply route-level middleware
+- Group related endpoints
+- Version API endpoints
+
+**Example**:
+```javascript
+// routes/reservationsRoutes.js
+const express = require('express');
+const router = express.Router();
+const reservationsController = require('../controllers/reservationsController');
+const { authenticateToken } = require('../middleware/authMiddleware');
+
+// Apply authentication middleware to all routes
+router.use(authenticateToken);
+
+// Define routes
+router.get('/', reservationsController.getAllReservations);
+router.get('/:id', reservationsController.getReservationById);
+router.post('/', reservationsController.createReservation);
+router.put('/:id', reservationsController.updateReservation);
+router.delete('/:id', reservationsController.cancelReservation);
+
+module.exports = router;
+```
+
+### 2. Controller Layer
+
+**Purpose**: Handle HTTP requests and responses
+
+**Location**: `api/controllers/`
+
+**Responsibilities**:
+- Validate request parameters
+- Extract request data
+- Call appropriate service methods
+- Format responses
+- Handle errors
+- Return HTTP status codes
+
+**Example**:
+```javascript
+// controllers/reservationsController.js
+const { validateNumericParam, validateUuidParam } = require('../utils/validationUtils');
+const reservationModel = require('../models/reservations/reservation');
+const logger = require('../config/logger');
+
+const getReservationById = async (req, res) => {
+    try {
+        // Validate parameters
+        const reservationId = validateUuidParam(req.params.id, 'Reservation ID');
+        
+        // Call model/service
+        const reservation = await reservationModel.getReservationById(
+            req.requestId,
+            reservationId
+        );
+        
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'NOT_FOUND',
+                    message: 'Reservation not found'
+                }
+            });
+        }
+        
+        // Return success response
+        res.status(200).json({
+            success: true,
+            data: reservation,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        logger.error('Error fetching reservation:', error);
+        res.status(500).json({
+            success: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: error.message
+            }
+        });
+    }
+};
+
+module.exports = {
+    getReservationById
+};
+```
+
+## Service Layer
 
 **Purpose**: Implement business logic and orchestrate operations
 
@@ -701,6 +802,89 @@ const updateHotel = async (requestId, hotelId, updates) => {
     return hotel;
 };
 ```
+
+## Caching Strategy
+
+### Redis Integration
+
+```javascript
+// config/redis.js
+const Redis = require('ioredis');
+
+const redis = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379,
+    password: process.env.REDIS_PASSWORD,
+    db: process.env.REDIS_DB || 0,
+    retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+    }
+});
+
+redis.on('error', (err) => {
+    logger.error('Redis error:', err);
+});
+
+redis.on('connect', () => {
+    logger.info('Redis connected');
+});
+
+module.exports = redis;
+```
+
+### Cache Patterns
+
+```javascript
+// Example caching pattern
+const getHotelWithCache = async (requestId, hotelId) => {
+    const cacheKey = `hotel:${hotelId}`;
+    
+    // Try to get from cache
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+        return JSON.parse(cached);
+    }
+    
+    // Get from database
+    const hotel = await hotelModel.getHotelById(requestId, hotelId);
+    
+    // Store in cache (expire after 1 hour)
+    await redis.setex(cacheKey, 3600, JSON.stringify(hotel));
+    
+    return hotel;
+};
+
+// Invalidate cache on update
+const updateHotel = async (requestId, hotelId, updates) => {
+    const hotel = await hotelModel.updateHotel(requestId, hotelId, updates);
+    
+    // Invalidate cache
+    await redis.del(`hotel:${hotelId}`);
+    
+    return hotel;
+};
+```
+
+## Business Logic
+
+The service layer is where the core business logic of the application resides. This includes implementing business rules, coordinating operations across multiple data models, and integrating with external services.
+
+### Key Aspects:
+
+-   **Domain-Specific Rules**: Enforcement of rules unique to hotel management.
+-   **Transaction Management**: Ensuring data consistency across complex operations.
+-   **Data Transformation**: Processing and shaping data for various use cases.
+
+## Testing
+
+Thorough testing is crucial for maintaining the quality and reliability of the service architecture. This involves unit tests for individual service methods and integration tests to verify interactions between services and other layers.
+
+### Key Testing Practices:
+
+-   **Unit Testing**: Isolating and testing individual functions and methods.
+-   **Integration Testing**: Verifying the flow of data and logic across multiple components.
+-   **Mocking External Services**: Simulating external dependencies to ensure consistent test results.
 
 ## Best Practices
 

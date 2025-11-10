@@ -37,6 +37,53 @@ api/
 └── jobs/               # Background job definitions
 ```
 
+## Backend Architecture Overview
+
+The backend follows a layered architecture pattern with clear separation of concerns:
+
+### 🏗️ **Technology Stack**
+- **Node.js** with Express.js framework
+- **PostgreSQL** for primary data storage
+- **Redis** for caching and session management
+- **JWT** for authentication and authorization
+- **Winston** for comprehensive logging
+- **PM2** for process management in production
+
+### 📦 **Project Structure**
+```
+api/
+├── controllers/         # Request handlers and route logic
+├── models/             # Database models and schemas
+├── services/           # Business logic layer
+├── middleware/         # Express middleware functions
+├── routes/             # API route definitions
+├── utils/              # Utility functions and helpers
+├── config/             # Configuration files
+├── migrations/         # Database migration scripts
+├── tests/              # Backend test suites
+└── jobs/               # Background job definitions
+```
+
+## Service Architecture
+
+The backend is structured around a service-oriented architecture, where each service encapsulates specific business logic and interacts with its own data models. This promotes modularity, reusability, and easier maintenance.
+
+### Key Principles:
+
+-   **Separation of Concerns**: Each service has a single responsibility.
+-   **Loose Coupling**: Services interact via well-defined interfaces.
+-   **Scalability**: Services can be scaled independently.
+
+## Business Logic
+
+The business logic layer is responsible for implementing the core rules and processes of the application. It resides within the `services/` directory and is designed to be independent of the underlying data storage or presentation layers.
+
+### Key Aspects:
+
+-   **Validation**: Ensures data integrity and adherence to business rules.
+-   **Transactions**: Manages complex operations that require atomicity.
+-   **Domain-Specific Operations**: Encapsulates the unique logic of the hotel management system.
+
 ## Configuration
 
 ### Environment Variables and Configuration Management

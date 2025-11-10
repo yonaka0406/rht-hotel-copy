@@ -100,6 +100,60 @@ See the [Monitoring & Logging](deployment/README.md#monitoring--observability) d
 Guidance on diagnosing and resolving common issues and errors.
 Refer to the [Troubleshooting Guide](deployment/troubleshooting.md) for solutions.
 
+## Frontend Development Reference
+
+### Components
+
+Details on the UI component library, usage, and development guidelines.
+Refer to the [Component Library](frontend/component-library.md) for more information.
+
+### State Management
+
+Information on how state is managed in the frontend application using Pinia.
+See the [State Management](frontend/state-management.md) documentation for details.
+
+### Routing
+
+Guidance on frontend routing, navigation, and route guards.
+Refer to the [Frontend Overview](frontend/README.md) for routing principles.
+
+### Styling
+
+Details on the styling approach, including Tailwind CSS and design system usage.
+See the [Styling Guidelines](frontend/styling-guidelines.md) for more information.
+
+### Testing
+
+Information on frontend testing strategies, tools, and best practices.
+Refer to the [Testing Strategy](development/README.md#testing-strategy) for details.
+
+### Testing
+
+Information on frontend testing strategies, tools, and best practices.
+Refer to the [Testing Strategy](development/README.md#testing-strategy) for details.
+
+## Backend Development Reference
+
+### Service Architecture
+
+Details on the backend service architecture, including design patterns and organization.
+Refer to the [Service Architecture](backend/service-architecture.md) documentation for more information.
+
+### Database
+
+Information on the database schema, design principles, and data access patterns.
+See the [Database Schema](backend/database-schema.md) documentation for details.
+
+### Business Logic
+
+Guidance on implementing business rules, validation, and domain-specific logic.
+Refer to the [Business Logic](backend/business-logic.md) documentation for principles.
+
+### Testing
+
+Information on backend testing strategies, tools, and best practices.
+Refer to the [Testing Strategy](development/README.md#testing-strategy) for details.
+
 ### 🎨 Frontend Development
 - **[Frontend Overview](frontend/README.md)** - Frontend architecture and patterns
 - **[Component Library](frontend/component-library.md)** - UI components and usage

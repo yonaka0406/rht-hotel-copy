@@ -560,6 +560,68 @@ pg_restore -U pms_user -d pms_production -t reservations -t clients backup_20240
 psql -U pms_user -d pms_production -f backup.sql
 ```
 
+## Backup and Recovery
+
+### Backup Strategy
+
+```bash
+# Full database backup
+pg_dump -U pms_user -d pms_production -F c -f backup_$(date +%Y%m%d).dump
+
+# Schema-only backup
+pg_dump -U pms_user -d pms_production --schema-only -f schema_backup.sql
+
+# Data-only backup
+pg_dump -U pms_user -d pms_production --data-only -f data_backup.sql
+
+# Specific table backup
+pg_dump -U pms_user -d pms_production -t reservations -f reservations_backup.sql
+```
+
+### Restore Procedures
+
+When restoring a PostgreSQL database, it's crucial to understand the implications of different `pg_restore` options. Always exercise caution, especially in production environments.
+
+```bash
+# 1. Destructive Restore (for fresh environments or full resets)
+#    Use this when you want to drop existing database objects before recreating them.
+#    WARNING: This will delete existing data and schema in the target database.
+pg_restore -U pms_user -d pms_production -c backup_20240101.dump
+
+# 2. Non-Destructive Restore (for verification or adding missing objects)
+#    Use this to restore data and schema without dropping existing objects.
+#    Useful for verifying backups or adding objects to an existing schema.
+#    Note: May fail if objects already exist and are not identical.
+pg_restore -U pms_user -d pms_production backup_20240101.dump
+
+# 3. Restore to a Different Database (for safe testing/verification)
+#    Always restore to a separate, non-production database for testing and verification.
+#    First, create the new database: CREATE DATABASE pms_test;
+pg_restore -U pms_user -d pms_test backup_20240101.dump
+
+# 4. Restore Specific Tables (for targeted data recovery or migration)
+#    Use the -t option to restore only specified tables.
+#    Useful for recovering specific data or migrating subsets of data.
+pg_restore -U pms_user -d pms_production -t reservations -t clients backup_20240101.dump
+
+# 5. Restore from a Plain SQL File
+#    Use psql for backups created with pg_dump (plain format).
+#    This is generally less flexible than custom format backups.
+psql -U pms_user -d pms_production -f backup.sql
+```
+
+## Service Architecture
+
+The database schema is a foundational component of the overall service architecture. It defines the data structures that backend services interact with. For a detailed understanding of how services are organized and interact, refer to the [Service Architecture](service-architecture.md) documentation.
+
+## API
+
+The database schema directly supports the API by providing the underlying data for various endpoints. API requests and responses are often mapped directly to database tables and views. For API specifications and endpoint details, consult the [API Documentation](../api/README.md).
+
+## Business Logic
+
+The database schema is designed to support the application's business logic by ensuring data integrity and providing efficient data retrieval for business operations. Business rules often dictate the relationships and constraints defined within the schema. For details on how business logic is implemented, refer to the [Business Logic](business-logic.md) documentation.
+
 ## Related Documentation
 
 - **[Backend Development](README.md)** - Backend overview
