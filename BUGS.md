@@ -5,6 +5,50 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 10, 2025
+
+#### Parking Module - Block Spots with External Hotel Integration
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Planning
+- **Description**: 
+  - Need to implement functionality to block parking spots in the parking module
+  - Some blocks are required due to reservations from nearby hotels
+  - Current system doesn't account for external hotel reservations
+- **Proposed Solution**:
+  1. Add ability to mark spots as blocked with reason codes
+  2. Create integration with external hotel reservation systems (if applicable)
+  3. Add manual override for staff to block spots for external reservations
+  4. Include visual indicators for blocked spots in the parking module
+- **Technical Notes**:
+  - Consider creating a new table for parking blocks with fields for:
+    - Spot ID
+    - Block start/end dates
+    - Reason (maintenance, external reservation, etc.)
+    - Reference to external reservation (if applicable)
+  - Add permission controls for staff to manage blocks
+  - Consider adding notifications for upcoming block expirations
+  - Ensure blocks are respected in parking availability calculations
+
+#### Sales Performance Reporting in CRM
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Request
+- **Description**: 
+  - Need to add a sales performance reporting feature to the CRM/Report page
+  - Currently missing consolidated view of sales performance by salesperson
+- **Requested Features**:
+  - Display list of clients grouped by salesperson
+  - Show number of reservations per salesperson
+  - Include monthly and yearly performance metrics
+  - Filter by individual hotel or show consolidated view
+  - Export functionality for reports (Excel/PDF)
+- **Technical Notes**:
+  - Will require new API endpoints for data aggregation
+  - Consider caching for better performance with large datasets
+  - Ensure proper access controls for sensitive sales data
+  - Include loading states for better UX with large datasets
+
 ### November 7, 2025
 
 #### Plan Addons with End Date Being Ignored and Added to Incorrect Dates
@@ -25,8 +69,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Review the `applyAddonsToReservation` function in the reservation service
   - Add date range validation in the addon selection component
   - Consider adding visual indicators in the UI for addon date ranges
-
-
 
 ### November 5, 2025
 
