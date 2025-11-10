@@ -20,6 +20,8 @@
                     </div>
                 </div>
                 <div class="summary-actions">
+                    <Button label="選択編集" icon="pi pi-pencil" size="small" :disabled="!hasAnySelection"
+                        @click="openBulkEditDialog" severity="info" />
                     <Button label="全選択削除" icon="pi pi-trash" size="small" :disabled="!hasAnySelection"
                         @click="confirmDeleteAllSelected" severity="danger" />
                     <Button label="全データ削除" icon="pi pi-trash" size="small" outlined
@@ -81,10 +83,12 @@
                             </template>
                         </Column>
 
-                        <Column headerStyle="width: 8rem; text-align: center"
+                        <Column headerStyle="width: 10rem; text-align: center"
                             bodyStyle="text-align: center; overflow: visible">
                             <template #body="{ data }">
                                 <div class="flex gap-1 justify-content-center">
+                                    <Button icon="pi pi-pencil" text rounded severity="info" size="small"
+                                        @click="openEditDialog(data)" v-tooltip.top="'台数を変更'" />
                                     <Button icon="pi pi-trash" text rounded severity="danger" size="small"
                                         @click="confirmDeleteDate(data)" v-tooltip.top="'この日付の全予約を削除'" />
                                 </div>
@@ -108,6 +112,52 @@
     </Dialog>
 
     <ConfirmDialog group="parkingDialogConfirm" />
+
+    <!-- Edit Spots Dialog -->
+    <Dialog v-model:visible="showEditDialog" :header="editDialogTitle" :modal="true" 
+            :style="{ width: '500px' }" @hide="onEditDialogHide">
+        <div class="edit-dialog-content">
+            <div class="field">
+                <label for="newSpotCount" class="font-semibold">新しい台数</label>
+                <InputNumber id="newSpotCount" v-model="newSpotCount" :min="0" :max="maxAvailableSpots" 
+                             showButtons buttonLayout="horizontal" class="w-full mt-2"
+                             :disabled="editProcessing || loadingAvailability">
+                    <template #incrementbuttonicon>
+                        <span class="pi pi-plus" />
+                    </template>
+                    <template #decrementbuttonicon>
+                        <span class="pi pi-minus" />
+                    </template>
+                </InputNumber>
+                <small class="text-500 mt-2 block">
+                    現在: {{ currentSpotCount }}台 → 新規: {{ newSpotCount }}台
+                    ({{ spotCountDifference > 0 ? '+' : '' }}{{ spotCountDifference }}台)
+                </small>
+                <small v-if="!loadingAvailability" class="text-primary mt-1 block">
+                    最大: {{ maxAvailableSpots }}台まで予約可能
+                </small>
+                <small v-else class="text-500 mt-1 block">
+                    <i class="pi pi-spin pi-spinner"></i> 空き状況を確認中...
+                </small>
+            </div>
+
+            <div v-if="editingDates.length > 1" class="affected-dates mt-3">
+                <label class="font-semibold">対象日付 ({{ editingDates.length }}日)</label>
+                <div class="date-chips mt-2">
+                    <Tag v-for="date in editingDates" :key="date" :value="formatDate(date)" 
+                         severity="info" class="mr-1 mb-1" />
+                </div>
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="キャンセル" icon="pi pi-times" text @click="showEditDialog = false" 
+                    :disabled="editProcessing" />
+            <Button label="更新" icon="pi pi-check" @click="saveSpotCountChange" 
+                    :disabled="editProcessing || newSpotCount === currentSpotCount" 
+                    :loading="editProcessing" />
+        </template>
+    </Dialog>
 </template>
 
 <script setup>
@@ -125,6 +175,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Badge from 'primevue/badge';
+import InputNumber from 'primevue/inputnumber';
 import ConfirmDialog from 'primevue/confirmdialog';
 
 // Store
@@ -153,6 +204,10 @@ const props = defineProps({
     processing: {
         type: Boolean,
         default: false
+    },
+    reservationDetails: {
+        type: Array,
+        default: () => []
     }
 });
 
@@ -164,6 +219,13 @@ const emit = defineEmits([
 
 const localSpots = ref([...props.parkingSpots]);
 const selectedDateGroups = ref([]);
+const showEditDialog = ref(false);
+const editingDates = ref([]);
+const currentSpotCount = ref(0);
+const newSpotCount = ref(0);
+const editProcessing = ref(false);
+const maxAvailableSpots = ref(20);
+const loadingAvailability = ref(false);
 
 // Watch for external changes to parkingSpots
 watch(() => props.parkingSpots, (newSpots) => {
@@ -251,6 +313,18 @@ const getDateData = (date) => {
     const group = groupedByDate.value.find(g => g.date === date);
     return group ? group.reservations : [];
 };
+
+// Edit dialog computed properties
+const editDialogTitle = computed(() => {
+    if (editingDates.value.length === 1) {
+        return `駐車台数変更 - ${formatDate(editingDates.value[0])}`;
+    }
+    return `駐車台数変更 - ${editingDates.value.length}日分`;
+});
+
+const spotCountDifference = computed(() => {
+    return newSpotCount.value - currentSpotCount.value;
+});
 
 // Get severity for spot badge based on reservation count
 const getSpotSeverity = (count) => {
@@ -402,6 +476,241 @@ const confirmDeleteAll = () => {
         accept: () => deleteSpots([...localSpots.value])
     });
 };
+
+// Edit dialog methods
+const openEditDialog = async (dateGroup) => {
+    editingDates.value = [dateGroup.date];
+    currentSpotCount.value = dateGroup.spotCount;
+    newSpotCount.value = dateGroup.spotCount;
+    showEditDialog.value = true;
+    
+    // Check availability for this date
+    await checkAvailability(dateGroup);
+};
+
+const openBulkEditDialog = async () => {
+    if (!selectedDateGroups.value || selectedDateGroups.value.length === 0) return;
+    
+    editingDates.value = selectedDateGroups.value.map(g => g.date);
+    // Use the spot count from the first selected date as the starting point
+    currentSpotCount.value = selectedDateGroups.value[0].spotCount;
+    newSpotCount.value = selectedDateGroups.value[0].spotCount;
+    showEditDialog.value = true;
+    
+    // Check availability for all selected dates (use the most restrictive)
+    await checkBulkAvailability();
+};
+
+const checkAvailability = async (dateGroup) => {
+    loadingAvailability.value = true;
+    try {
+        if (!props.reservationDetails?.[0]) {
+            maxAvailableSpots.value = 20;
+            return;
+        }
+
+        const hotelId = props.reservationDetails[0].hotel_id;
+        const vehicleCategoryId = dateGroup.reservations[0]?.vehicleCategoryId;
+        
+        if (!vehicleCategoryId) {
+            maxAvailableSpots.value = 20;
+            return;
+        }
+
+        // Check real-time availability for this date
+        const response = await parkingStore.checkRealTimeAvailability(
+            hotelId,
+            vehicleCategoryId,
+            [dateGroup.date],
+            null
+        );
+
+        const dateAvailability = response.dateAvailability?.[dateGroup.date];
+        if (dateAvailability) {
+            // Max = current spots + available spots
+            maxAvailableSpots.value = currentSpotCount.value + dateAvailability.availableSpots;
+        } else {
+            maxAvailableSpots.value = currentSpotCount.value;
+        }
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        maxAvailableSpots.value = 20;
+    } finally {
+        loadingAvailability.value = false;
+    }
+};
+
+const checkBulkAvailability = async () => {
+    loadingAvailability.value = true;
+    try {
+        if (!props.reservationDetails?.[0] || !selectedDateGroups.value.length) {
+            maxAvailableSpots.value = 20;
+            return;
+        }
+
+        const hotelId = props.reservationDetails[0].hotel_id;
+        const vehicleCategoryId = selectedDateGroups.value[0].reservations[0]?.vehicleCategoryId;
+        
+        if (!vehicleCategoryId) {
+            maxAvailableSpots.value = 20;
+            return;
+        }
+
+        // Check real-time availability for all dates
+        // Note: We don't exclude the current reservation because we want to know
+        // the total capacity including what's currently reserved
+        const response = await parkingStore.checkRealTimeAvailability(
+            hotelId,
+            vehicleCategoryId,
+            editingDates.value,
+            null
+        );
+
+        // Find the minimum available spots across all dates (bottleneck)
+        // Each date can have different current counts, so we need to check each individually
+        let minAvailable = Infinity;
+        const dateDetails = [];
+        
+        editingDates.value.forEach(date => {
+            const dateAvailability = response.dateAvailability?.[date];
+            const dateGroup = selectedDateGroups.value.find(g => g.date === date);
+            const currentForDate = dateGroup?.spotCount || 0;
+            
+            if (dateAvailability) {
+                const maxForDate = currentForDate + dateAvailability.availableSpots;
+                minAvailable = Math.min(minAvailable, maxForDate);
+                dateDetails.push({
+                    date,
+                    current: currentForDate,
+                    available: dateAvailability.availableSpots,
+                    max: maxForDate
+                });
+            } else {
+                // If no availability data, assume no additional spots available
+                minAvailable = Math.min(minAvailable, currentForDate);
+                dateDetails.push({
+                    date,
+                    current: currentForDate,
+                    available: 0,
+                    max: currentForDate
+                });
+            }
+        });
+
+        console.log('Bulk availability check:', dateDetails);
+        maxAvailableSpots.value = minAvailable === Infinity ? currentSpotCount.value : minAvailable;
+    } catch (error) {
+        console.error('Error checking bulk availability:', error);
+        maxAvailableSpots.value = 20;
+    } finally {
+        loadingAvailability.value = false;
+    }
+};
+
+const onEditDialogHide = () => {
+    editingDates.value = [];
+    currentSpotCount.value = 0;
+    newSpotCount.value = 0;
+    maxAvailableSpots.value = 20;
+    loadingAvailability.value = false;
+};
+
+const saveSpotCountChange = async () => {
+    editProcessing.value = true;
+    
+    try {
+        const targetCount = newSpotCount.value;
+        
+        // Get hotel_id and reservation_id from props.reservationDetails
+        const hotelId = props.reservationDetails?.[0]?.hotel_id;
+        const reservationId = props.reservationDetails?.[0]?.reservation_id;
+        
+        if (!hotelId || !reservationId) {
+            throw new Error('Hotel ID or Reservation ID not found');
+        }
+
+        // Get sample reservation data for vehicle category and price
+        const firstDate = editingDates.value[0];
+        const firstDateData = getDateData(firstDate);
+        if (!firstDateData || firstDateData.length === 0) {
+            throw new Error('No reservation data found for the selected date');
+        }
+        const sampleReservation = firstDateData[0];
+        
+        // Process each date individually to handle different current counts
+        const assignmentsToAdd = [];
+        const spotsToDelete = [];
+        
+        for (const date of editingDates.value) {
+            const dateData = getDateData(date);
+            const currentCountForDate = dateData.length;
+            const differenceForDate = targetCount - currentCountForDate;
+            
+            if (differenceForDate > 0) {
+                // Add spots for this date
+                for (let i = 0; i < differenceForDate; i++) {
+                    assignmentsToAdd.push({
+                        id: `temp-${Date.now()}-${date}-${i}`,
+                        hotel_id: hotelId,
+                        reservation_id: reservationId,
+                        roomId: props.roomId,
+                        check_in: date,
+                        check_out: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0],
+                        numberOfSpots: 1,
+                        vehicle_category_id: sampleReservation.vehicleCategoryId,
+                        unit_price: sampleReservation.price || 0,
+                        comment: '',
+                        addon: {
+                            addons_hotel_id: null,
+                            addons_global_id: null
+                        }
+                    });
+                }
+            } else if (differenceForDate < 0) {
+                // Remove spots for this date
+                const spotsToRemoveForDate = Math.abs(differenceForDate);
+                spotsToDelete.push(...dateData.slice(-spotsToRemoveForDate));
+            }
+            // If differenceForDate === 0, no change needed for this date
+        }
+        
+        // Execute additions and deletions
+        if (assignmentsToAdd.length > 0) {
+            await parkingStore.saveParkingAssignments(assignmentsToAdd);
+        }
+        
+        if (spotsToDelete.length > 0) {
+            await deleteSpots(spotsToDelete);
+        }
+
+        // Refresh the parking data
+        if (props.reservationDetails?.[0]) {
+            await parkingStore.fetchParkingReservations(
+                props.reservationDetails[0].hotel_id,
+                props.reservationDetails[0].reservation_id
+            );
+        }
+
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: `${editingDates.value.length}日分の駐車台数を更新しました`,
+            life: 3000
+        });
+
+        showEditDialog.value = false;
+    } catch (error) {
+        console.error('Error updating spot count:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車台数の更新に失敗しました',
+            life: 3000
+        });
+    } finally {
+        editProcessing.value = false;
+    }
+};
 </script>
 
 <style scoped>
@@ -506,5 +815,23 @@ const confirmDeleteAll = () => {
 /* DataTable styling */
 :deep(.p-datatable .p-paginator) {
     padding: 0.5rem 1rem;
+}
+
+/* Edit dialog styling */
+.edit-dialog-content {
+    padding: 1rem 0;
+}
+
+.affected-dates {
+    padding: 1rem;
+    background: var(--surface-50);
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-200);
+}
+
+.date-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
 }
 </style>

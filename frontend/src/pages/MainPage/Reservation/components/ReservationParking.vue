@@ -52,6 +52,7 @@
     <!-- Active Parking Spots Dialog -->
     <ParkingActiveSpotsDialog v-if="selectedRoomId" v-model="showParkingSpotsDialog" :room-id="selectedRoomId"
       :room-name="selectedRoomName" :parking-spots="selectedRoomParkingSpots" :processing="processing"
+      :reservation-details="reservationDetails"
       @hide="cleanupDialog" />
 
     <!-- Confirmation Dialog -->
