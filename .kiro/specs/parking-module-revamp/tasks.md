@@ -80,7 +80,8 @@
     - Include parking lot breakdown
     - _Requirements: 1.2, 5.1, 5.2_
 
-- [ ] 3. Update Parking Model functions
+- [-] 3. Update Parking Model functions
+
   - [ ] 3.1 Modify saveParkingAssignments function
     - Update function to support capacity-based reservations
     - When spotId is not provided in assignment, use capacity-based mode
@@ -107,21 +108,26 @@
     - Add debug logs for physical spot count, virtual spot reservation count, and blocks
     - _Requirements: 1.2, 1.4, 2.2, 5.1_
 
-  - [ ] 3.3 Create blockParkingCapacity function
+  - [x] 3.3 Create blockParkingCapacity function
+
+
     - Write new function to create capacity blocking records
     - Insert records into parking_blocks table
     - Validate date ranges and capacity amounts
     - Support transaction-aware operations with optional client parameter
     - _Requirements: 2.1, 2.2, 3.3_
 
-  - [ ] 3.4 Create getBlockedCapacity function
+  - [x] 3.4 Create getBlockedCapacity function
+
     - Write new function to retrieve blocking records for date range
     - Query parking_blocks table with date range filters
     - Join with vehicle_categories for category details
     - Return formatted blocking records
     - _Requirements: 2.2, 3.1_
 
-  - [ ] 3.5 Create removeCapacityBlock function
+  - [x] 3.5 Create removeCapacityBlock function
+
+
     - Write new function to delete blocking records
     - Remove records from parking_blocks table by block ID
     - Validate block exists and user has permission
