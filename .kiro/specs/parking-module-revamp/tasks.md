@@ -336,7 +336,10 @@
     - Set up basic page layout with header "駐車場カレンダー設定"
     - _Requirements: 2.1, 3.1_
 
-  - [ ] 9.2 Implement parking lot and vehicle category selection
+  - [x] 9.2 Implement parking lot and vehicle category selection
+
+
+
     - Add hotel selection dropdown using useHotelStore
     - Add parking lot multi-select dropdown
     - Add vehicle category multi-select dropdown
@@ -344,7 +347,8 @@
     - Update form state when selections change
     - _Requirements: 2.1, 3.3_
 
-  - [ ] 9.3 Implement date range and capacity input form
+  - [x] 9.3 Implement date range and capacity input form
+
     - Add start date picker
     - Add end date picker
     - Add capacity amount input field (number of spots to block)
@@ -353,7 +357,8 @@
     - Validate capacity amount (must be positive integer)
     - _Requirements: 2.1, 3.3_
 
-  - [ ] 9.4 Implement block creation actions
+  - [x] 9.4 Implement block creation actions
+
     - Add "全ホテルに適用" button to apply blocks to all hotels
     - Add "選択ホテルに適用" button to apply blocks to selected hotel
     - Implement confirmation dialogs with formatted messages showing:
@@ -367,7 +372,8 @@
     - Refresh blocked dates list after successful creation
     - _Requirements: 2.1, 3.3_
 
-  - [ ] 9.5 Implement blocked dates DataTable display
+  - [x] 9.5 Implement blocked dates DataTable display
+
     - Create DataTable to display existing parking blocks
     - Add columns for: Hotel, Parking Lot, Vehicle Category, Start Date, End Date, Blocked Capacity, Comment
     - Format dates using formatDate helper function
@@ -376,7 +382,8 @@
     - Fetch blocked dates when hotel is selected
     - _Requirements: 3.1_
 
-  - [ ] 9.6 Implement block deletion functionality
+  - [x] 9.6 Implement block deletion functionality
+
     - Add delete button (trash icon) in each DataTable row
     - Implement confirmation dialog before deletion showing:
       - Parking lot name
@@ -389,6 +396,8 @@
     - _Requirements: 3.2, 3.5_
 
   - [ ] 9.7 Add parking store methods for blocked dates
+
+
     - Add fetchParkingBlocks method to useParkingStore
     - Add createParkingBlock method to useParkingStore
     - Add deleteParkingBlock method to useParkingStore

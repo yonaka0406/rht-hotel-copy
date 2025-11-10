@@ -10,6 +10,7 @@ const parkingLots = ref([]);
 const parkingSpots = ref([]);
 const reservedParkingSpots = ref([]);
 const parkingReservations = ref({});
+const parkingBlocks = ref([]);
 
 export function useParkingStore() {
 
@@ -598,6 +599,75 @@ export function useParkingStore() {
             throw error;
         }
     };
+
+    // Parking Blocks Management
+    const fetchParkingBlocks = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const params = new URLSearchParams({
+                hotelId: hotelId,
+                startDate: startDate,
+                endDate: endDate
+            });
+            const response = await fetch(`/api/parking/capacity/blocks?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            parkingBlocks.value = await response.json();
+            return parkingBlocks.value;
+        } catch (error) {
+            console.error('Failed to fetch parking blocks', error);
+            throw error;
+        }
+    };
+
+    const createParkingBlock = async (blockData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/parking/capacity/block', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(blockData),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to create parking block', error);
+            throw error;
+        }
+    };
+
+    const deleteParkingBlock = async (blockId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/capacity/blocks/${blockId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to delete parking block', error);
+            throw error;
+        }
+    };
     
     return {
         vehicleCategories,
@@ -605,6 +675,7 @@ export function useParkingStore() {
         parkingSpots,
         reservedParkingSpots,
         parkingReservations,
+        parkingBlocks,
         fetchVehicleCategories,
         createVehicleCategory,
         updateVehicleCategory,
@@ -635,5 +706,9 @@ export function useParkingStore() {
         getBlockedCapacity,
         removeCapacityBlock,
         getCapacitySummary,
+        // Parking blocks management
+        fetchParkingBlocks,
+        createParkingBlock,
+        deleteParkingBlock,
     };
 }
