@@ -712,102 +712,105 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             console.log(`[saveParkingAssignments] Addon details:`, addonDetails);
 
             const allReservationDates = Object.keys(detailsByDate).map(dateStr => new Date(dateStr));
-            let remainingDatesToAssign = new Set(allReservationDates.map(d => formatDate(d)));
-            console.log(`[saveParkingAssignments] All reservation dates:`, Array.from(allReservationDates.map(d => formatDate(d))));
-            console.log(`[saveParkingAssignments] Remaining dates to assign (initial):`, Array.from(remainingDatesToAssign));
-            const assignedSpotsPerDate = {}; // { 'YYYY-MM-DD': spotId }
-
+            
             // Keep track of spots that have been assigned to prevent re-assigning the same physical spot multiple times for the same reservation
-            const assignedPhysicalSpots = new Set();
+            const assignedPhysicalSpotsForThisAssignment = new Set();
 
-            while (remainingDatesToAssign.size > 0) {
-                console.log(`[saveParkingAssignments] Starting new iteration of spot assignment loop. Remaining dates: ${Array.from(remainingDatesToAssign).join(', ')}`);
-                let bestSpot = null;
-                let maxAvailableDates = 0;
-                let bestSpotAvailableDates = [];
+            for (let i = 0; i < numberOfSpots; i++) {
+                console.log(`[saveParkingAssignments] Attempting to assign spot ${i + 1}/${numberOfSpots} for current assignment.`);
+                let remainingDatesToAssign = new Set(allReservationDates.map(d => formatDate(d)));
+                const assignedSpotsPerDate = {}; // { 'YYYY-MM-DD': spotId }
 
-                for (const spotId of candidateSpots) {
-                    // Skip if this physical spot has already been assigned to this reservation
-                    if (assignedPhysicalSpots.has(spotId)) {
-                        continue;
-                    }
+                while (remainingDatesToAssign.size > 0) {
+                    console.log(`[saveParkingAssignments] Starting new iteration of spot assignment loop. Remaining dates: ${Array.from(remainingDatesToAssign).join(', ')}`);
+                    let bestSpot = null;
+                    let maxAvailableDates = 0;
+                    let bestSpotAvailableDates = [];
 
-                    let currentSpotAvailableDates = [];
-                    for (const dateStr of remainingDatesToAssign) {
-                        const reservedRes = await localClient.query(
-                            `SELECT parking_spot_id
-                             FROM reservation_parking
-                             WHERE hotel_id = $1
-                               AND date = $2
-                               AND cancelled IS NULL
-                               AND status IN ('confirmed','reserved')`,
-                            [hotel_id, dateStr]
-                        );
-                        const isReserved = reservedRes.rows.some(r => r.parking_spot_id === spotId);
+                    for (const spotId of candidateSpots) {
+                        // Skip if this physical spot has already been assigned to this reservation (across all numberOfSpots iterations)
+                        if (assignedPhysicalSpotsForThisAssignment.has(spotId)) {
+                            continue;
+                        }
 
-                        if (!isReserved) {
-                            currentSpotAvailableDates.push(dateStr);
+                        let currentSpotAvailableDates = [];
+                        for (const dateStr of remainingDatesToAssign) {
+                            const reservedRes = await localClient.query(
+                                `SELECT parking_spot_id
+                                 FROM reservation_parking
+                                 WHERE hotel_id = $1
+                                   AND date = $2
+                                   AND cancelled IS NULL
+                                   AND status IN ('confirmed','blocked')`, // Also consider 'blocked' spots
+                                [hotel_id, dateStr]
+                            );
+                            const isReserved = reservedRes.rows.some(r => r.parking_spot_id === spotId);
+
+                            if (!isReserved) {
+                                currentSpotAvailableDates.push(dateStr);
+                            }
+                        }
+
+                        if (currentSpotAvailableDates.length > maxAvailableDates) {
+                            maxAvailableDates = currentSpotAvailableDates.length;
+                            bestSpot = spotId;
+                            bestSpotAvailableDates = currentSpotAvailableDates;
                         }
                     }
 
-                    if (currentSpotAvailableDates.length > maxAvailableDates) {
-                        maxAvailableDates = currentSpotAvailableDates.length;
-                        bestSpot = spotId;
-                        bestSpotAvailableDates = currentSpotAvailableDates;
+                    console.log(`[saveParkingAssignments] Best spot for current iteration: ${bestSpot}, max available dates: ${maxAvailableDates}`);
+
+                    if (bestSpot === null || maxAvailableDates === 0) {
+                        throw new Error(`Not enough parking spots available for all dates for assignment ${i + 1}. Remaining dates: ${Array.from(remainingDatesToAssign).join(', ')}`);
+                    }
+
+                    // Assign the best spot for its available dates
+                    assignedPhysicalSpotsForThisAssignment.add(bestSpot); // Mark this physical spot as used for this assignment
+                    for (const dateStr of bestSpotAvailableDates) {
+                        assignedSpotsPerDate[dateStr] = bestSpot;
+                        remainingDatesToAssign.delete(dateStr);
+                        console.log(`[saveParkingAssignments] Assigned spot ${bestSpot} to date ${dateStr}.`);
                     }
                 }
 
-                console.log(`[saveParkingAssignments] Best spot for current iteration: ${bestSpot}, max available dates: ${maxAvailableDates}`);
+                // Now, generate addonValues and parkingValues based on assignedSpotsPerDate
+                for (const dateStr of Object.keys(assignedSpotsPerDate)) {
+                    const assignedSpot = assignedSpotsPerDate[dateStr];
+                    const detail = detailsByDate[dateStr][0]; // Assuming one detail per date for simplicity, adjust if needed
 
-                if (bestSpot === null || maxAvailableDates === 0) {
-                    throw new Error(`Not enough parking spots available for all dates. Remaining dates: ${Array.from(remainingDatesToAssign).join(', ')}`);
+                    let global_addon_id = null;
+                    let hotel_addon_id = null;
+
+                    if (addon?.addons_hotel_id) {
+                        hotel_addon_id = addonDetails.id;
+                        global_addon_id = addonDetails.addons_global_id;
+                    } else {
+                        global_addon_id = addonDetails.id;
+                    }
+
+                    addonValues.push([
+                        hotel_id,
+                        detail.id,
+                        global_addon_id,
+                        hotel_addon_id,
+                        addonDetails.name,
+                        unit_price,
+                        1,
+                        addonDetails.tax_type_id,
+                        addonDetails.tax_rate,
+                        userId
+                    ]);
+                    parkingValues.push({
+                        hotel_id,
+                        reservation_details_id: detail.id,
+                        vehicle_category_id,
+                        parking_spot_id: assignedSpot,
+                        date: dateStr,
+                        created_by: userId
+                    });
                 }
+            } // End of numberOfSpots loop
 
-                // Assign the best spot for its available dates
-                assignedPhysicalSpots.add(bestSpot); // Mark this physical spot as used for this reservation
-                for (const dateStr of bestSpotAvailableDates) {
-                    assignedSpotsPerDate[dateStr] = bestSpot;
-                    remainingDatesToAssign.delete(dateStr);
-                    console.log(`[saveParkingAssignments] Assigned spot ${bestSpot} to date ${dateStr}.`);
-                }
-            }
-
-            // Now, generate addonValues and parkingValues based on assignedSpotsPerDate
-            for (const dateStr of Object.keys(assignedSpotsPerDate)) {
-                const assignedSpot = assignedSpotsPerDate[dateStr];
-                const detail = detailsByDate[dateStr][0]; // Assuming one detail per date for simplicity, adjust if needed
-
-                let global_addon_id = null;
-                let hotel_addon_id = null;
-
-                if (addon?.addons_hotel_id) {
-                    hotel_addon_id = addonDetails.id;
-                    global_addon_id = addonDetails.addons_global_id;
-                } else {
-                    global_addon_id = addonDetails.id;
-                }
-
-                addonValues.push([
-                    hotel_id,
-                    detail.id,
-                    global_addon_id,
-                    hotel_addon_id,
-                    addonDetails.name,
-                    unit_price,
-                    1,
-                    addonDetails.tax_type_id,
-                    addonDetails.tax_rate,
-                    userId
-                ]);
-                parkingValues.push({
-                    hotel_id,
-                    reservation_details_id: detail.id,
-                    vehicle_category_id,
-                    parking_spot_id: assignedSpot,
-                    date: dateStr,
-                    created_by: userId
-                });
-            }
             console.log(`[saveParkingAssignments] Preparing to insert ${addonValues.length} addon records in batches.`);
             for (let i = 0; i < addonValues.length; i += BATCH_SIZE) {
                 const batch = addonValues.slice(i, i + BATCH_SIZE);
