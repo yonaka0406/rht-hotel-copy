@@ -8,7 +8,6 @@ const { formatDate } = require('../../../utils/reportUtils');
 class ParkingReservationsService {
     constructor(requestId) {
         this.requestId = requestId;
-        console.log(`[ParkingReservationsService] Initialized for request: ${requestId}`);
     }
 
     /**
@@ -20,28 +19,21 @@ class ParkingReservationsService {
      * @returns {Promise<Array>} Array of reservations including blocked spots
      */
     async getParkingReservationsWithBlocks(hotelId, startDate, endDate) {
-        console.log(`[ParkingReservationsService] Fetching reservations with blocks: hotel=${hotelId}, dates=${startDate} to ${endDate}`);
-        
         try {
             // Fetch regular reservations
             const reservations = await parkingModel.getParkingReservations(this.requestId, hotelId, startDate, endDate);
-            console.log(`[ParkingReservationsService] Found ${reservations.length} regular reservations`);
             
             // Fetch parking blocks
             const blocks = await capacityModel.getBlockedCapacity(this.requestId, hotelId, startDate, endDate);
-            console.log(`[ParkingReservationsService] Found ${blocks.length} parking blocks`);
             
             // Fetch all parking spots for this hotel
             const allSpots = await parkingModel.getAllParkingSpotsByHotel(this.requestId, hotelId);
-            console.log(`[ParkingReservationsService] Found ${allSpots.length} parking spots`);
             
             // Convert blocks to virtual reservations
             const blockReservations = this._convertBlocksToReservations(blocks, allSpots, reservations);
-            console.log(`[ParkingReservationsService] Created ${blockReservations.length} block reservations`);
             
             // Merge reservations and block reservations
             const allReservations = [...reservations, ...blockReservations];
-            console.log(`[ParkingReservationsService] Returning ${allReservations.length} total reservations`);
             
             return allReservations;
         } catch (error) {
@@ -66,28 +58,17 @@ class ParkingReservationsService {
             return blockReservations;
         }
         
-        console.log(`[ParkingReservationsService] Converting ${blocks.length} blocks with ${allSpots.length} spots`);
-
         // Precompute a set of existing reservation keys for O(1) lookup
         const existingReservationKeys = new Set();
         existingReservations.forEach(r => {
             const date = formatDate(new Date(r.date));
             existingReservationKeys.add(`${r.parking_spot_id}|${date}`);
         });
-        console.log(`[ParkingReservationsService] Precomputed ${existingReservationKeys.size} existing reservation keys.`);
 
         // Use a Set for O(1) lookup of currently blocked spots within this conversion process
         const currentBlockReservationKeys = new Set();
         
         blocks.forEach((block, blockIndex) => {
-            console.log(`[ParkingReservationsService] Processing block ${blockIndex + 1}:`, {
-                id: block.id,
-                parking_lot_id: block.parking_lot_id,
-                spot_size: block.spot_size,
-                number_of_spots: block.number_of_spots,
-                start_date: block.start_date,
-                end_date: block.end_date
-            });
             // Parse dates using formatDate to handle timezone correctly
             const blockStart = new Date(block.start_date);
             const blockEnd = new Date(block.end_date);
@@ -122,10 +103,6 @@ class ParkingReservationsService {
                     return !existingReservationKeys.has(spotDateKey) && !currentBlockReservationKeys.has(spotDateKey);
                 });
                 
-                if (dateStr === '2025-11-10') {
-                    console.log(`[ParkingReservationsService] Date 2025-11-10: Found ${matchingSpots.length} matching spots, ${availableSpots.length} available for block ${block.id}`);
-                }
-                
                 // Block the first N available spots (where N = number_of_spots)
                 const requestedSpots = block.number_of_spots || 0;
                 const spotsToBlock = availableSpots.slice(0, requestedSpots);
@@ -144,15 +121,7 @@ class ParkingReservationsService {
                         parking_lot_name: spot.parking_lot_name
                     });
                     currentBlockReservationKeys.add(spotDateKey);
-                    
-                    if (dateStr === '2025-11-10') {
-                        console.log(`[ParkingReservationsService] Date 2025-11-10: Blocked spot ${spot.spot_number} (ID: ${spot.id})`);
-                    }
                 });
-                
-                if (dateStr === '2025-11-10') {
-                    console.log(`[ParkingReservationsService] Date 2025-11-10: Successfully blocked ${spotsToBlock.length} of ${requestedSpots} requested spots`);
-                }
                 
                 currentDate.setDate(currentDate.getDate() + 1);
             }
