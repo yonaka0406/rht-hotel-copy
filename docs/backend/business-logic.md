@@ -119,7 +119,11 @@ const validateReservationData = (data) => {
         errors.push('Check-out date must be after check-in date');
     }
     
-    if (checkIn < new Date().setHours(0, 0, 0, 0)) {
+    // Create a Date object for the start of today for accurate comparison
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    if (checkIn < todayStart) {
         errors.push('Check-in date cannot be in the past');
     }
     
@@ -240,7 +244,9 @@ const calculateCancellationFee = (reservation, cancellationDate) => {
         feePercentage = 0; // 7+ days: No fee
     }
     
-    const cancellationFee = (reservation.total_amount * feePercentage) / 100;
+    // Ensure integer arithmetic for Yen (no cents)
+    // Calculate fee in integer Yen, using Math.floor for explicit rounding down.
+    const cancellationFee = Math.floor((reservation.total_amount * feePercentage) / 100);
     
     return {
         feePercentage,

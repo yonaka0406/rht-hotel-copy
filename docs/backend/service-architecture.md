@@ -172,7 +172,7 @@ const emailUtils = require('../utils/emailUtils');
 const logger = require('../config/logger');
 
 const createReservationWithBilling = async (requestId, reservationData) => {
-    const pool = require('../config/database').getPool(requestId);
+    const pool = require('../config/database').getPool();
     const client = await pool.connect();
     
     try {
@@ -220,6 +220,35 @@ const createReservationWithBilling = async (requestId, reservationData) => {
     }
 };
 
+/**
+ * Calculates the number of nights between two dates.
+ * Expects ISO date strings (e.g., 'YYYY-MM-DD').
+ * Rounds down to the nearest whole number of nights.
+ * Returns 0 if check-in and check-out are the same day or check-out is before check-in.
+ * @param {string} checkInDate - The check-in date in ISO string format.
+ * @param {string} checkOutDate - The check-out date in ISO string format.
+ * @returns {number} The number of nights.
+ */
+const calculateNights = (checkInDate, checkOutDate) => {
+  const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+  const firstDate = new Date(checkInDate);
+  const secondDate = new Date(checkOutDate);
+
+  // Validate dates
+  if (isNaN(firstDate.getTime()) || isNaN(secondDate.getTime())) {
+    throw new Error('Invalid date format provided to calculateNights. Expected ISO date strings.');
+  }
+
+  const diffDays = Math.round(Math.abs((firstDate - secondDate) / oneDay));
+
+  // Ensure check-out is not before check-in for positive nights
+  if (firstDate >= secondDate) {
+    return 0;
+  }
+
+  return diffDays;
+};
+
 const calculateReservationCost = (reservationData) => {
     // Business logic for cost calculation
     const nights = calculateNights(reservationData.checkInDate, reservationData.checkOutDate);
@@ -265,7 +294,7 @@ module.exports = {
 const { getPool } = require('../config/database');
 
 const getReservationById = async (requestId, reservationId) => {
-    const pool = getPool(requestId);
+    const pool = getPool();
     
     const query = `
         SELECT 
@@ -286,7 +315,7 @@ const getReservationById = async (requestId, reservationId) => {
 };
 
 const createReservation = async (requestId, data, client = null) => {
-    const pool = client || getPool(requestId);
+    const pool = client || getPool();
     
     const query = `
         INSERT INTO reservations (
@@ -566,11 +595,7 @@ const devPool = new Pool({
     idleTimeoutMillis: 30000,
 });
 
-const getPool = (requestId) => {
-    if (!requestId) {
-        throw new Error('RequestId is required to select the correct database pool');
-    }
-    
+const getPool = () => {
     // Determine which pool to use based on environment
     return process.env.NODE_ENV === 'production' ? prodPool : devPool;
 };
@@ -590,7 +615,7 @@ module.exports = {
 ```javascript
 // Example transaction pattern
 const performComplexOperation = async (requestId, data) => {
-    const pool = getPool(requestId);
+    const pool = getPool();
     const client = await pool.connect();
     
     try {

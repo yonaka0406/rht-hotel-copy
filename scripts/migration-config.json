@@ -12,7 +12,9 @@
       "updateLinks": true,
       "consolidateWith": [
         "docs/design/system-architecture.md"
-      ]
+      ],
+      "mergeStrategy": "manual",
+      "sourcePrecedence": "ARCHITECTURE.md"
     },
     "BOOKING_ENGINE_API_DOCUMENTATION.md": {
       "targetPath": "docs/api/endpoints/booking-engine.md",
@@ -84,7 +86,11 @@
       "targetPath": "docs/architecture/",
       "action": "reorganize",
       "files": {
-        "system-architecture.md": "docs/architecture/system-overview.md",
+        "system-architecture.md": {
+          "targetPath": "docs/architecture/system-overview.md",
+          "mergeStrategy": "manual",
+          "sourcePrecedence": "docs/design/system-architecture.md"
+        },
         "api-design.md": "docs/architecture/api-design.md",
         "data-models.md": "docs/architecture/data-architecture.md",
         "component-diagrams.md": "docs/architecture/component-architecture.md",

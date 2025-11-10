@@ -12,6 +12,10 @@ Authorization: Bearer YOUR_API_KEY
 
 The API key should be set in the `BOOKING_ENGINE_API_KEY` environment variable on the PMS server.
 
+## Request
+
+All requests to the Booking Engine API should be made over HTTPS. Request bodies, where applicable, should be JSON formatted with the `Content-Type: application/json` header.
+
 ## Base URL
 
 ```

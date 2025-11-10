@@ -142,9 +142,10 @@ class DocumentationMigrator {
         } else {
           // Different content, create versioned backup (unless skipBackup is enabled)
           if (!this.skipBackup) {
-            const backupPath = targetPath + '.original';
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const backupPath = `${targetPath}.${timestamp}.original`;
             fs.copyFileSync(targetPath, backupPath);
-            this.log(`⚠ Target exists with different content, created backup: ${backupPath}`, 'warning');
+            this.log(`⚠ Target exists with different content, created timestamped backup: ${backupPath}`, 'warning');
           } else {
             this.log(`⚠ Target exists with different content (backup skipped)`, 'warning');
           }
@@ -352,6 +353,7 @@ if (require.main === module) {
   const results = migrator.migrate();
   
   // Generate report
+  fs.mkdirSync(migrator.backupDir, { recursive: true });
   const reportPath = path.join(migrator.backupDir, 'migration-report.json');
   migrator.generateReport(reportPath);
   

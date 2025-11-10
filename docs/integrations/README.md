@@ -7,6 +7,8 @@ This section provides comprehensive documentation for integrating the WeHub.work
 - **[Booking Engine Integration](booking-engine/)** - Booking engine connectivity and API
 - **[Payment Systems](payment-systems/)** - Payment gateway integrations
 - **[OTA Systems](ota-systems/)** - Online Travel Agency integrations
+- **[Integration Testing](integration-testing.md)** - Strategies for testing integrations
+- **[Testing and Maintenance](testing-and-maintenance.md)** - Ongoing testing and maintenance practices
 - **[Email Services](email-services/)** - Email and notification integrations
 - **[TL-Lincoln Channel Manager](ota-systems/channel-management.md)** - Multi-channel distribution via TL-Lincoln
 
@@ -99,6 +101,24 @@ headers: {
 // OAuth flow for third-party integrations
 // Authorization code grant type
 ```
+
+## Integration API Details
+
+### Request
+
+When making requests to integrated systems, ensure the following:
+
+-   **Method**: Use appropriate HTTP methods (GET, POST, PUT, DELETE).
+-   **Headers**: Include necessary headers such as `Content-Type` and `Authorization`.
+-   **Body**: Format request bodies as JSON unless otherwise specified.
+
+### Response
+
+Responses from integrated systems will typically include:
+
+-   **Status Codes**: Standard HTTP status codes (e.g., 200 OK, 400 Bad Request).
+-   **Body**: JSON-formatted data or error messages.
+-   **Error Handling**: Implement robust error handling based on status codes and response body content.
 
 ## Booking Engine Integration
 

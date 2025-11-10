@@ -8,6 +8,7 @@ This section provides technical reference materials, configuration options, erro
 - **[Error Codes](error-codes.md)** - System error codes and meanings
 - **[Glossary](glossary.md)** - Technical terms and definitions
 - **[Changelog](changelog.md)** - Version history and changes
+- **[Known Issues](known-issues.md)** - Documented known issues and workarounds
 - **[API Reference](../api/README.md)** - Complete API endpoint reference
 
 ## Configuration Reference

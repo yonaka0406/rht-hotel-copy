@@ -70,16 +70,32 @@ function extractHeaders(content) {
   const headerRegex = /^#{1,6}\s+(.+)$/gm;
   const headers = [];
   let match;
-  
+
   while ((match = headerRegex.exec(content)) !== null) {
-    const headerText = match[1].trim();
+    let headerText = match[1].trim();
+
+    // Strip markdown formatting (links, emphasis, code)
+    headerText = headerText.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // [text](url) -> text
+    headerText = headerText.replace(/(\*\*|__|\*|_)(.*?)\1/g, '$2'); // **text** -> text
+    headerText = headerText.replace(/`([^`]+)`/g, '$1');           // `text` -> text
+
+    // Generate anchor according to GitHub's algorithm
     const anchor = headerText
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-');
-    headers.push(anchor);
+      // Remove all punctuation (including hyphens) except for whitespace
+      .replace(/[^a-z0-9\s]/g, '')
+      // Collapse consecutive whitespace to a single space
+      .replace(/\s+/g, ' ')
+      // Replace spaces with hyphens
+      .replace(/ /g, '-')
+      // Trim any leading or trailing hyphens that might have been created
+      .replace(/^-+|-+$/g, '');
+      
+    if (anchor) {
+      headers.push(anchor);
+    }
   }
-  
+
   return headers;
 }
 
@@ -99,15 +115,29 @@ function validateLink(link, sourceFile) {
   
   // Skip mailto and other protocols (but not Windows paths like C:\...)
   // Use proper scheme detection: scheme must start with letter, followed by alphanumeric/+/-/.
-  if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(link.url)) {
-    if (verbose) {
-      console.log(`  ✓ Protocol: ${link.url}`);
+  const protocolMatch = link.url.match(/^[A-Za-z][A-Za-z0-9+.-]*:/);
+
+  if (protocolMatch) {
+    const scheme = protocolMatch[0]; // e.g., "C:"
+
+    // If the scheme is a single letter followed by a colon,
+    // and it's immediately followed by a slash or backslash,
+    // it's likely a Windows absolute path, not a URL protocol.
+    if (scheme.length === 2 && /^[A-Za-z]:[/\\]/.test(link.url)) {
+      // This is a Windows path, not a protocol to be skipped.
+      // Continue to process it as a local file path.
+    } else {
+      if (verbose) {
+        console.log(`  ✓ Protocol: ${link.url}`);
+      }
+      return true; // It's a valid protocol to be skipped.
     }
-    return true;
   }
   
   // Parse link (may include anchor)
-  const [linkPath, anchor] = link.url.split('#');
+  const hashIndex = link.url.indexOf('#');
+  const linkPath = hashIndex === -1 ? link.url : link.url.slice(0, hashIndex);
+  const anchor = hashIndex === -1 ? '' : link.url.slice(hashIndex + 1);
   
   // Resolve relative path
   const sourceDir = path.dirname(sourceFile);

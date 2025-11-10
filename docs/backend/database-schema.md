@@ -325,19 +325,42 @@ CREATE OR REPLACE FUNCTION generate_confirmation_number()
 RETURNS VARCHAR AS $$
 DECLARE
     new_number VARCHAR;
-    exists BOOLEAN;
+    is_duplicate BOOLEAN;
+    lock_id INTEGER := hashtext('generate_confirmation_number');
+    lock_acquired BOOLEAN;
+    retry_count INTEGER := 0;
+    max_retries INTEGER := 5;
+    retry_delay_ms INTEGER := 100;
 BEGIN
+    -- Try to acquire a transaction-level advisory lock with retries to prevent race conditions.
+    LOOP
+        SELECT pg_try_advisory_xact_lock(lock_id) INTO lock_acquired;
+        IF lock_acquired THEN
+            EXIT; -- Lock acquired, proceed.
+        END IF;
+
+        retry_count := retry_count + 1;
+        IF retry_count >= max_retries THEN
+            RAISE EXCEPTION 'Could not acquire lock to generate confirmation number after % retries.', max_retries;
+        END IF;
+
+        -- Wait before retrying (e.g., 100ms with slight jitter).
+        PERFORM pg_sleep(retry_delay_ms / 1000.0 * (1 + random() * 0.1));
+    END LOOP;
+
+    -- Once lock is acquired, generate a unique number.
     LOOP
         new_number := 'RES' || LPAD(FLOOR(RANDOM() * 1000000)::TEXT, 6, '0');
         
         SELECT EXISTS(
             SELECT 1 FROM reservations WHERE confirmation_number = new_number
-        ) INTO exists;
+        ) INTO is_duplicate;
         
-        EXIT WHEN NOT exists;
+        IF NOT is_duplicate THEN
+            -- The transaction-level lock is released automatically on COMMIT or ROLLBACK.
+            RETURN new_number;
+        END IF;
     END LOOP;
-    
-    RETURN new_number;
 END;
 $$ LANGUAGE plpgsql;
 ```
@@ -428,16 +451,28 @@ api/migrations/
 
 ### Running Migrations
 
+The following script can be used to run all migrations in numerical order. It is designed to stop immediately if any migration file fails.
+
+For more robust and stateful migration management, consider using a dedicated database migration tool like [Flyway](https://flywaydb.org/), [Liquibase](https://www.liquibase.org/), or the migration tools built into frameworks like Ruby on Rails or Django.
+
 ```bash
-# Run all migrations in order
+#!/bin/bash
+# This script runs all .sql files in the migrations directory in order.
+# It will exit immediately if any command fails.
+set -e
+
 cd api
+
 for file in migrations/*.sql; do
   echo "Running migration: $file"
-  psql -U pms_user -d pms_production -f "$file"
+  # The -v ON_ERROR_STOP=1 flag tells psql to exit if it encounters an error.
+  psql -U pms_user -d pms_production -v ON_ERROR_STOP=1 -f "$file"
 done
 
-# Run specific migration
-psql -U pms_user -d pms_production -f migrations/001_initial_schema.sql
+echo "✅ All migrations completed successfully."
+
+# To run a specific migration:
+# psql -U pms_user -d pms_production -v ON_ERROR_STOP=1 -f migrations/001_initial_schema.sql
 ```
 
 ## Performance Optimization
@@ -495,11 +530,33 @@ pg_dump -U pms_user -d pms_production -t reservations -f reservations_backup.sql
 
 ### Restore Procedures
 
+When restoring a PostgreSQL database, it's crucial to understand the implications of different `pg_restore` options. Always exercise caution, especially in production environments.
+
 ```bash
-# Restore from custom format
+# 1. Destructive Restore (for fresh environments or full resets)
+#    Use this when you want to drop existing database objects before recreating them.
+#    WARNING: This will delete existing data and schema in the target database.
 pg_restore -U pms_user -d pms_production -c backup_20240101.dump
 
-# Restore from SQL file
+# 2. Non-Destructive Restore (for verification or adding missing objects)
+#    Use this to restore data and schema without dropping existing objects.
+#    Useful for verifying backups or adding objects to an existing schema.
+#    Note: May fail if objects already exist and are not identical.
+pg_restore -U pms_user -d pms_production backup_20240101.dump
+
+# 3. Restore to a Different Database (for safe testing/verification)
+#    Always restore to a separate, non-production database for testing and verification.
+#    First, create the new database: CREATE DATABASE pms_test;
+pg_restore -U pms_user -d pms_test backup_20240101.dump
+
+# 4. Restore Specific Tables (for targeted data recovery or migration)
+#    Use the -t option to restore only specified tables.
+#    Useful for recovering specific data or migrating subsets of data.
+pg_restore -U pms_user -d pms_production -t reservations -t clients backup_20240101.dump
+
+# 5. Restore from a Plain SQL File
+#    Use psql for backups created with pg_dump (plain format).
+#    This is generally less flexible than custom format backups.
 psql -U pms_user -d pms_production -f backup.sql
 ```
 

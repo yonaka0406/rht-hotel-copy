@@ -24,17 +24,7 @@ class LinkManager {
       external: []
     };
     
-    // Link patterns to match
-    this.linkPatterns = [
-      // Markdown links: [text](url)
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      // Reference-style links: [text][ref]
-      /\[([^\]]+)\]\[([^\]]+)\]/g,
-      // Reference definitions: [ref]: url
-      /^\[([^\]]+)\]:\s*(.+)$/gm,
-      // HTML links: <a href="url">
-      /<a\s+href=["']([^"']+)["']/gi
-    ];
+
   }
 
   /**
@@ -326,7 +316,15 @@ class LinkManager {
     };
     
     updateDirectory(this.docsRoot);
-    updateDirectory(this.projectRoot); // Also check root level files
+    
+    // Also check root level files, but non-recursively to avoid node_modules etc.
+    const rootEntries = fs.readdirSync(this.projectRoot, { withFileTypes: true });
+    for (const entry of rootEntries) {
+        if (entry.isFile() && entry.name.endsWith('.md')) {
+            const fullPath = path.join(this.projectRoot, entry.name);
+            this.updateFileLinks(fullPath, relocationMap);
+        }
+    }
   }
 
   /**
@@ -483,7 +481,14 @@ if (require.main === module) {
     }
     
     const mapPath = mapFile.split('=')[1];
-    const relocationMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+    let relocationMap;
+    try {
+      relocationMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+    } catch (error) {
+      console.error(`Error: Failed to read or parse relocation map file at '${mapPath}'.`);
+      console.error(`Reason: ${error.message}`);
+      process.exit(1);
+    }
     
     linkManager.updateAllLinks(relocationMap);
     const reportPath = path.join(linkManager.projectRoot, 'link-update-report.json');

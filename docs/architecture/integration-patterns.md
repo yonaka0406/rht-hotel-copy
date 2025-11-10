@@ -351,23 +351,75 @@ await paymentService.processPayment(reservationId, {
 ### Webhook Handling
 
 #### Payment Status Updates
+
+Webhooks from payment gateways must be handled securely and idempotently to prevent duplicate processing and ensure data integrity.
+
+**Flow**:
+1.  Receive webhook and immediately validate its signature.
+2.  If the signature is invalid, reject the request with a `400` or `401` status.
+3.  Extract a unique event ID from the webhook payload.
+4.  Check a persistent store (e.g., Redis or a database table) to see if this event ID has already been processed.
+5.  If already processed, acknowledge with a `200` status to prevent the provider from resending.
+6.  If not processed, atomically mark the event ID as processed *before* executing business logic.
+7.  Execute the relevant business logic (e.g., update payment status).
+8.  Acknowledge with a `200` status.
+
+**Implementation**:
 ```javascript
-app.post('/webhooks/payment/:provider', async (req, res) => {
-    const event = req.body;
+// Example using Express.js
+// Note: bodyParser.raw() is needed to have the raw request body for signature validation.
+app.post('/webhooks/payment', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
+    // 1. Validate webhook signature (reusing pattern from OTA handler)
+    const signature = req.headers['stripe-signature']; // Example for Stripe
+    const secret = process.env.PAYMENT_WEBHOOK_SECRET;
     
-    switch (event.type) {
-        case 'payment.succeeded':
-            await handlePaymentSuccess(event.data);
-            break;
-        case 'payment.failed':
-            await handlePaymentFailure(event.data);
-            break;
-        case 'refund.processed':
-            await handleRefund(event.data);
-            break;
+    if (!validateWebhookSignature(req.body, signature, secret)) {
+        console.error('Webhook signature validation failed.');
+        return res.status(400).send('Invalid signature.');
     }
-    
-    res.status(200).json({ received: true });
+
+    // 2. Parse event and check for idempotency
+    const event = JSON.parse(req.body.toString());
+    const eventId = event.id;
+
+    if (!eventId) {
+        return res.status(400).send('Event ID missing.');
+    }
+
+    try {
+        if (await isEventProcessed(eventId)) {
+            console.log(`Event ${eventId} already processed. Skipping.`);
+            return res.status(200).send({ status: 'already processed' });
+        }
+
+        // 3. Mark as processed BEFORE handling to prevent race conditions
+        await markEventAsProcessed(eventId);
+
+        // 4. Handle the event
+        switch (event.type) {
+            case 'payment_intent.succeeded':
+                await handlePaymentSuccess(event.data.object);
+                break;
+            case 'payment_intent.payment_failed':
+                await handlePaymentFailure(event.data.object);
+                break;
+            case 'charge.refunded':
+                await handlePaymentRefund(event.data.object);
+                break;
+            default:
+                console.warn(`Unhandled event type: ${event.type}`);
+        }
+
+        // 5. Acknowledge receipt
+        res.status(200).json({ received: true });
+
+    } catch (error) {
+        console.error(`Error processing event ${eventId}:`, error);
+        // If a system error occurs, the event is not acknowledged with a 200,
+        // allowing the provider to retry. The idempotency check will prevent reprocessing
+        // if the error happened after the event was marked as processed.
+        res.status(500).send('Internal Server Error.');
+    }
 });
 ```
 

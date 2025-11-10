@@ -4,11 +4,11 @@ This section provides comprehensive documentation for all APIs provided by the W
 
 ## Quick Navigation
 
-- **[Authentication](authentication.md)** - API authentication and security
+- **[Authentication](#authentication)** - API authentication and security
 - **[Booking Engine API](endpoints/booking-engine.md)** - Booking engine integration endpoints
-- **[Reservation API](endpoints/reservations.md)** - Reservation management endpoints
-- **[Client Management API](endpoints/clients.md)** - Client and CRM endpoints
-- **[Billing API](endpoints/billing.md)** - Billing and payment endpoints
+- **[Reservation API](#reservation-management)** - Reservation management endpoints
+- **[Client Management API](#client-management)** - Client and CRM endpoints
+- **[Billing API](#billing-and-payments)** - Billing and payment endpoints
 
 ## API Overview
 
@@ -34,7 +34,7 @@ The WeHub.work PMS provides RESTful APIs for:
 
 ## Authentication
 
-All API endpoints require authentication using JWT tokens. See the [Authentication Guide](authentication.md) for detailed implementation.
+All API endpoints require authentication using JWT tokens. See the [Authentication Guide](#authentication) for detailed implementation.
 
 ```javascript
 // Example API request with authentication
@@ -62,7 +62,7 @@ const response = await fetch('/api/reservations', {
 - `PUT /api/reservations/:id` - Update reservation
 - `DELETE /api/reservations/:id` - Cancel reservation
 
-**[Full Reservation API Documentation](endpoints/reservations.md)**
+**[Full Reservation API Documentation](#reservation-management)**
 
 ### Client Management
 - `GET /api/clients` - List clients
@@ -70,7 +70,7 @@ const response = await fetch('/api/reservations', {
 - `PUT /api/clients/:id` - Update client information
 - `GET /api/clients/:id/history` - Client booking history
 
-**[Full Client API Documentation](endpoints/clients.md)**
+**[Full Client API Documentation](#client-management)**
 
 ### Billing and Payments
 - `GET /api/billing/invoices` - List invoices
@@ -78,15 +78,15 @@ const response = await fetch('/api/reservations', {
 - `POST /api/payments/process` - Process payment
 - `GET /api/payments/status/:id` - Payment status
 
-**[Full Billing API Documentation](endpoints/billing.md)**
+**[Full Billing API Documentation](#billing-and-payments)**
 
 ## Integration Guides
 
 ### For Booking Engine Developers
-1. [Authentication setup](authentication.md)
+1. [Authentication setup](#authentication)
 2. [Hotel data synchronization](endpoints/booking-engine.md)
-3. [Availability checking](integration-guides/booking-engine-integration.md)
-4. [Reservation creation](integration-guides/booking-engine-integration.md)
+3. [Availability checking](../../integrations/booking-engine/overview.md#availability--inventory)
+4. [Reservation creation](../../integrations/booking-engine/overview.md#booking-operations)
 
 ### For OTA Integrations
 1. [XML API endpoints](integration-guides/ota-integration.md)
@@ -124,6 +124,44 @@ const response = await fetch('/api/reservations', {
 - **Default**: 1000 requests per hour per API key
 - **Burst**: Up to 100 requests per minute
 - **Headers**: Rate limit information in response headers
+
+## Examples
+
+Here are some practical examples demonstrating how to interact with the API.
+
+### Example 1: Fetching Reservations
+
+```javascript
+// Fetch all reservations
+const response = await fetch('/api/reservations', {
+  headers: {
+    'Authorization': `Bearer YOUR_JWT_TOKEN`,
+    'Content-Type': 'application/json'
+  }
+});
+const reservations = await response.json();
+console.log(reservations);
+```
+
+### Example 2: Creating a New Client
+
+```javascript
+// Create a new client
+const response = await fetch('/api/clients', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer YOUR_JWT_TOKEN`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    phone: '+15551234567'
+  })
+});
+const newClient = await response.json();
+console.log(newClient);
+```
 
 ## Testing and Development
 

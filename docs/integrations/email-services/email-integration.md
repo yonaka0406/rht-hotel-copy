@@ -16,7 +16,6 @@ Email integration enables automated guest communications, transactional emails, 
 ### Supported Email Providers
 - **SendGrid** - Scalable email delivery platform
 - **Amazon SES** - AWS Simple Email Service
-- **Mailgun** - Email API service
 - **SMTP** - Standard SMTP server support
 - **Custom Providers** - Flexible API integration framework
 
@@ -264,17 +263,19 @@ SES_CONFIGURATION_SET=hotel-emails
 
 ### Sending Emails
 
+First, ensure you have the AWS SDK v3 client for SES installed:
+```bash
+npm install @aws-sdk/client-ses
+```
+
+The SDK will automatically use credentials from your environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) or an IAM role.
+
 #### Basic SES Email Send
 ```javascript
-const AWS = require('aws-sdk');
+const { SESClient, SendEmailCommand, SendTemplatedEmailCommand } = require("@aws-sdk/client-ses");
 
-AWS.config.update({
-  region: process.env.AWS_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-});
-
-const ses = new AWS.SES({ apiVersion: '2010-12-01' });
+// Configure the client with the region from environment variables.
+const sesClient = new SESClient({ region: process.env.AWS_REGION });
 
 async function sendEmailSES(to, subject, html) {
   const params = {
@@ -297,8 +298,10 @@ async function sendEmailSES(to, subject, html) {
     ConfigurationSetName: process.env.SES_CONFIGURATION_SET
   };
 
+  const command = new SendEmailCommand(params);
+
   try {
-    const result = await ses.sendEmail(params).promise();
+    const result = await sesClient.send(command);
     console.log('Email sent:', result.MessageId);
     return { success: true, messageId: result.MessageId };
   } catch (error) {
@@ -321,8 +324,10 @@ async function sendTemplateSES(to, templateName, templateData) {
     ConfigurationSetName: process.env.SES_CONFIGURATION_SET
   };
 
+  const command = new SendTemplatedEmailCommand(params);
+
   try {
-    const result = await ses.sendTemplatedEmail(params).promise();
+    const result = await sesClient.send(command);
     return { success: true, messageId: result.MessageId };
   } catch (error) {
     console.error('SES template error:', error);
@@ -552,19 +557,19 @@ async function sendEmailGoogleWorkspace(to, subject, html) {
 const emailTemplates = {
   booking_confirmation: {
     subject: 'Booking Confirmation - {{confirmation_number}}',
-    template: 'booking_confirmation.html'
+    template: 'booking_confirmation'
   },
   payment_receipt: {
     subject: 'Payment Receipt - {{confirmation_number}}',
-    template: 'payment_receipt.html'
+    template: 'payment_receipt'
   },
   check_in_reminder: {
     subject: 'Check-in Reminder - {{hotel_name}}',
-    template: 'check_in_reminder.html'
+    template: 'check_in_reminder'
   },
   cancellation_confirmation: {
     subject: 'Cancellation Confirmation - {{confirmation_number}}',
-    template: 'cancellation_confirmation.html'
+    template: 'cancellation_confirmation'
   }
 };
 ```
@@ -575,7 +580,7 @@ const Handlebars = require('handlebars');
 const fs = require('fs').promises;
 
 async function renderTemplate(templateName, data) {
-  const templatePath = `./templates/${templateName}`;
+  const templatePath = `./templates/${templateName}.html`;
   const templateSource = await fs.readFile(templatePath, 'utf-8');
   const template = Handlebars.compile(templateSource);
   return template(data);

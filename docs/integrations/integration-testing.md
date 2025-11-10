@@ -440,9 +440,9 @@ describe('Booking Engine Bookings', () => {
       }
     };
 
-    const result = await createBookingEngineReservation(bookingData);    expect(result.reservation_id).toBeDefined();
-    expect(result.confirmation_number).toBeDefined();
-  });
+    const result = await createBookingEngineReservation(bookingData);
+    expect(result.reservation_id).toBeDefined();
+    expect(result.confirmation_number).toBeDefined();  });
 
   test('should prevent duplicate bookings', async () => {
     const bookingData = {

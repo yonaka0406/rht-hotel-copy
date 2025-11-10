@@ -2,9 +2,25 @@
 
 This document provides a comprehensive overview of the Hotel Management System architecture, including high-level design principles, architectural patterns, and system organization.
 
+## Architecture Overview
+
+This section details the overall structure and design philosophy of the WeHub.work Hotel Management System.
+
 ## High-Level Architecture
 
 The Hotel Management System is a comprehensive property management solution built with modern web technologies. The system follows a three-tier architecture pattern with clear separation of concerns:
+
+### Quick Start
+
+For a rapid introduction to the system and its setup, please refer to the [Getting Started Guide](../getting-started/README.md).
+
+### Prerequisites
+
+To understand this document, a basic familiarity with software architecture concepts, web technologies (Node.js, Vue.js), and database systems (PostgreSQL) is recommended.
+
+### Installation
+
+Details regarding the installation and deployment of the system can be found in the [Installation Guide](../getting-started/installation.md) and the [Deployment Guide](../deployment/README.md). This document focuses on the conceptual architecture.
 
 ### Architecture Layers
 
@@ -30,6 +46,10 @@ The Hotel Management System is a comprehensive property management solution buil
 - **Data Access**: Repository pattern for database operations
 - **Migrations**: Versioned SQL scripts for schema evolution
 - **Backup & Recovery**: Automated backup procedures
+
+## Technology Stack
+
+The WeHub.work Hotel Management System is built upon a robust and modern technology stack, carefully selected to ensure performance, scalability, and maintainability.
 
 ## Key Architectural Principles
 

@@ -49,7 +49,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### DEALT.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\DEALT.md`
+- **Current Path**: `rht-hotel/DEALT.md`
 - **Suggested Location**: `docs/development/dealt-issues.md`
 - **Size**: 128836 bytes (2269 lines)
 - **Last Modified**: 2025-11-08
@@ -57,7 +57,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### GEMINI.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\GEMINI.md`
+- **Current Path**: `rht-hotel/GEMINI.md`
 - **Suggested Location**: `docs/development/ai-assistance.md`
 - **Size**: 13367 bytes (239 lines)
 - **Last Modified**: 2025-10-24
@@ -65,7 +65,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### instructions.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\instructions.md`
+- **Current Path**: `rht-hotel/instructions.md`
 - **Suggested Location**: `docs/reference/instructions.md`
 - **Size**: 29179 bytes (453 lines)
 - **Last Modified**: 2025-07-16
@@ -73,7 +73,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### square_payment_integration.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\square_payment_integration.md`
+- **Current Path**: `rht-hotel/square_payment_integration.md`
 - **Suggested Location**: `docs/integrations/payment-systems/square-integration.md`
 - **Size**: 42363 bytes (354 lines)
 - **Last Modified**: 2025-07-15
@@ -81,7 +81,7 @@ These files need to be migrated to the new documentation structure:
 
 
 ### STATE_MGMT.md
-- **Current Path**: `C:\Users\red horse\Documents\GitHub\rht-hotel\STATE_MGMT.md`
+- **Current Path**: `rht-hotel/STATE_MGMT.md`
 - **Suggested Location**: `docs/frontend/state-management.md`
 - **Size**: 10062 bytes (197 lines)
 - **Last Modified**: 2025-07-15

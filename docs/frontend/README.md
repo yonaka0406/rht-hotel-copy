@@ -92,6 +92,15 @@ export function useHotelStore() {
 - **Provide/Inject**: Dependency injection for deep component trees
 - **Event Bus**: Cross-component communication when needed
 
+#### Component File Size and Organization
+- **Conciseness**: Strive to keep Vue single-file components (SFCs) under ~300 lines.
+- **Refactoring Threshold**: Components exceeding ~400-500 lines are strong candidates for refactoring.
+- **Refactoring Options**:
+    - **Extract Subcomponents**: Break down large templates into smaller, logical child components.
+    - **Move Logic to Composables/Stores**: Extract complex business logic from `<script setup>` into reusable composable functions (`src/composables/`) or Pinia stores.
+    - **Relocate Styles**: Move shared or complex styles to dedicated CSS/SCSS files or Tailwind utility classes.
+    - **Isolate Complex Logic**: Extract utility functions or hooks for complex computations or side effects.
+
 ### 🎨 **Styling Architecture**
 
 #### Tailwind CSS 4 Integration

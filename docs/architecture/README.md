@@ -10,6 +10,23 @@ This section provides comprehensive documentation of the WeHub.work Hotel Manage
 - **[Data Architecture](data-architecture.md)** - Database design, schema, and data flow
 - **[Integration Patterns](integration-patterns.md)** - External system integration approaches
 
+## Quick Start
+
+For a rapid introduction to the system, please refer to the [Getting Started Guide](../getting-started/README.md).
+
+## Prerequisites
+
+Before diving into the architecture, ensure you have a basic understanding of:
+
+-   **Node.js**: As the backend runtime.
+-   **Vue.js**: For frontend development.
+-   **PostgreSQL**: For database concepts.
+-   **RESTful APIs**: Principles of API design.
+
+## Installation
+
+The system's installation process is detailed in the [Installation Guide](../getting-started/installation.md). This document focuses on the architectural aspects rather than setup instructions.
+
 ## Architecture Principles
 
 Our system is built on these core architectural principles:
@@ -54,6 +71,17 @@ Our system is built on these core architectural principles:
 - **Webhook** support for real-time updates
 - **Queue system** for async processing
 
+## Technology Stack
+
+The WeHub.work Hotel Management System leverages a modern and robust technology stack to deliver a high-performance and scalable solution. Key technologies include:
+
+-   **Frontend**: Vue.js 3, PrimeVue, Tailwind CSS, Vite.
+-   **Backend**: Node.js, Express.js, PostgreSQL, Redis, JWT.
+-   **Integrations**: Socket.io, XML/SOAP, various third-party APIs.
+-   **Development Tools**: Git, npm, Docker, PM2.
+
+For a more detailed breakdown of the technology stack, refer to the [Technology Stack](technology-stack.md) document.
+
 ## Key Architectural Decisions
 
 ### State Management Migration
@@ -73,10 +101,8 @@ Our system is built on these core architectural principles:
 
 ## Related Documentation
 
-- **[System Overview](system-overview.md)** - Detailed system architecture
 - **[Component Diagrams](component-diagrams.md)** - Visual system representations
 - **[Data Flow Architecture](data-flow-architecture.md)** - Data movement patterns
-- **[Integration Patterns](integration-patterns.md)** - External system connections
 
 ## Architecture Evolution
 

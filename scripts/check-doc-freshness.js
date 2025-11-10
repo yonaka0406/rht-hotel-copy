@@ -15,6 +15,13 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 // Configuration
+let REPO_ROOT;
+try {
+  REPO_ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+} catch (e) {
+  console.warn('Could not determine git repository root. Git-related checks will be less reliable.');
+  REPO_ROOT = path.join(__dirname, '..'); // Fallback to project root
+}
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
 const CODE_DIRS = [
   path.join(__dirname, '..', 'api'),
@@ -24,6 +31,7 @@ const CODE_DIRS = [
 const MARKDOWN_EXTENSIONS = ['.md', '.markdown'];
 const STALE_THRESHOLD_DAYS = 180; // 6 months
 const WARNING_THRESHOLD_DAYS = 90; // 3 months
+const SIGNIFICANT_CODE_DELTA_DAYS = 30; // 1 month
 
 // Results tracking
 const results = {
@@ -41,7 +49,7 @@ function getGitLastModified(filePath) {
   try {
     const result = execSync(
       `git log -1 --format=%ct "${filePath}"`,
-      { encoding: 'utf8', cwd: path.dirname(filePath) }
+      { encoding: 'utf8', cwd: REPO_ROOT }
     ).trim();
     
     if (result) {
@@ -77,6 +85,9 @@ function getLastModified(filePath) {
  * Calculate days since last modification
  */
 function daysSinceModified(date) {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return Number.POSITIVE_INFINITY; // Indicate infinitely old/stale
+  }
   const now = new Date();
   const diffTime = Math.abs(now - date);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -93,7 +104,7 @@ function extractMetadata(content) {
   };
   
   // Check for YAML frontmatter
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (frontmatterMatch) {
     const frontmatter = frontmatterMatch[1];
     
@@ -143,11 +154,14 @@ function checkStaleIndicators(content) {
   }
   
   // Check for placeholder text
-  if (content.match(/\[.*?\]|\{.*?\}|TBD|To be determined/gi)) {
-    const placeholderCount = (content.match(/\[.*?\]/g) || []).length;
-    if (placeholderCount > 5) {
-      indicators.push(`Contains ${placeholderCount} placeholder sections`);
-    }
+  // Exclude markdown links/images `[...](...)` and numeric refs `[1]`
+  const placeholderRegex = /(?<!\!)\[(?!\d+\])[^\]]+\](?!\()/g;
+  const bracketPlaceholders = content.match(placeholderRegex) || [];
+  const otherPlaceholders = content.match(/\{.*?\}|TBD|To be determined/gi) || [];
+  const placeholderCount = bracketPlaceholders.length + (otherPlaceholders ? otherPlaceholders.length : 0);
+
+  if (placeholderCount > 5) {
+    indicators.push(`Contains ${placeholderCount} placeholder sections`);
   }
   
   // Check for deprecated status
@@ -240,19 +254,25 @@ function findRelatedCodeFiles(docPath) {
 function checkCodeChanges(docPath, docModified) {
   const relatedFiles = findRelatedCodeFiles(docPath);
   const newerFiles = [];
-  
+  let latestCodeMod = null;
+
   relatedFiles.forEach(codeFile => {
     const codeModified = getLastModified(codeFile);
     if (codeModified && codeModified > docModified) {
-      const daysDiff = daysSinceModified(codeModified);
+      if (!latestCodeMod || codeModified > latestCodeMod) {
+        latestCodeMod = codeModified;
+      }
       newerFiles.push({
         file: path.relative(path.join(__dirname, '..'), codeFile),
-        daysSince: daysDiff
+        daysSince: daysSinceModified(codeModified),
+        modifiedAt: codeModified,
       });
     }
   });
-  
-  return newerFiles;
+
+  newerFiles.sort((a, b) => b.modifiedAt - a.modifiedAt);
+
+  return { newerFiles, latestCodeMod };
 }
 
 /**
@@ -270,23 +290,41 @@ function processFile(filePath) {
   }
   
   const daysSince = daysSinceModified(lastModified);
-  const content = fs.readFileSync(filePath, 'utf8');
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch (error) {
+    results.errors.push(`Error reading file ${relativePath}: ${error.message}`);
+    return;
+  }
   const metadata = extractMetadata(content);
   const staleIndicators = checkStaleIndicators(content);
-  const newerCodeFiles = checkCodeChanges(filePath, lastModified);
-  
+  const { newerCodeFiles, latestCodeMod } = checkCodeChanges(filePath, lastModified);
+
+  let isSignificantCodeChange = false;
+  let codeDeltaDays = 0;
+  if (latestCodeMod) {
+    const deltaMillis = latestCodeMod.getTime() - lastModified.getTime();
+    codeDeltaDays = Math.floor(deltaMillis / (1000 * 60 * 60 * 24));
+    if (codeDeltaDays > SIGNIFICANT_CODE_DELTA_DAYS) {
+      isSignificantCodeChange = true;
+    }
+  }
+
   const fileInfo = {
     path: relativePath,
     lastModified: lastModified.toISOString().split('T')[0],
     daysSince,
     metadata,
     staleIndicators,
-    newerCodeFiles
+    newerCodeFiles,
+    isSignificantCodeChange,
+    codeDeltaDays,
   };
-  
-  if (daysSince > STALE_THRESHOLD_DAYS || staleIndicators.length > 0 || newerCodeFiles.length > 0) {
+
+  if (daysSince > STALE_THRESHOLD_DAYS || staleIndicators.length > 0) {
     results.staleFiles.push(fileInfo);
-  } else if (daysSince > WARNING_THRESHOLD_DAYS) {
+  } else if (daysSince > WARNING_THRESHOLD_DAYS || isSignificantCodeChange) {
     results.warningFiles.push(fileInfo);
   } else {
     results.recentFiles.push(fileInfo);
@@ -381,6 +419,14 @@ function generateReport() {
       .forEach(file => {
         console.log(`📄 ${file.path}`);
         console.log(`   Last modified: ${file.lastModified} (${file.daysSince} days ago)`);
+
+        if (file.isSignificantCodeChange) {
+          console.log(`   -> Flagged due to significant code change > ${SIGNIFICANT_CODE_DELTA_DAYS} days`);
+          file.newerCodeFiles.slice(0, 3).forEach(codeFile => {
+            console.log(`     - ${codeFile.file} (modified ${codeFile.daysSince} days ago)`);
+          });
+        }
+        
         console.log('');
       });
   }

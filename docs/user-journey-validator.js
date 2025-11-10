@@ -89,8 +89,9 @@ function testJourney(name, description, steps) {
     }
   });
   
-  const successRate = ((results.successfulSteps / results.totalSteps) * 100).toFixed(1);
-  log(`\nJourney Success Rate: ${successRate}%`, successRate >= 75 ? 'green' : 'yellow');
+  const successRateNum = results.totalSteps ? (results.successfulSteps / results.totalSteps) * 100 : 0;
+  const successRate = successRateNum.toFixed(1);
+  log(`\nJourney Success Rate: ${successRate}%`, successRateNum >= 75 ? 'green' : 'yellow');
   
   journeys.push(results);
   return results;
@@ -500,8 +501,8 @@ journeys.forEach(journey => {
   totalFailed += journey.failedSteps;
   totalWarnings += journey.warningSteps;
   
-  const successRate = ((journey.successfulSteps / journey.totalSteps) * 100).toFixed(1);
-  const color = successRate >= 75 ? 'green' : successRate >= 50 ? 'yellow' : 'red';
+  const successRate = journey.totalSteps ? ((journey.successfulSteps / journey.totalSteps) * 100).toFixed(1) : '0.0';
+  const color = parseFloat(successRate) >= 75 ? 'green' : parseFloat(successRate) >= 50 ? 'yellow' : 'red';
   
   log(`${journey.name}: ${successRate}% (${journey.successfulSteps}/${journey.totalSteps})`, color);
 });
@@ -512,7 +513,7 @@ log(`Successful: ${totalSuccessful}`, 'green');
 log(`Warnings: ${totalWarnings}`, 'yellow');
 log(`Failed: ${totalFailed}`, 'red');
 
-const overallSuccessRate = ((totalSuccessful / totalSteps) * 100).toFixed(1);
+const overallSuccessRate = totalSteps ? ((totalSuccessful / totalSteps) * 100).toFixed(1) : '0.0';
 log(`\nOverall Success Rate: ${overallSuccessRate}%`, overallSuccessRate >= 75 ? 'green' : 'yellow');
 
 log('');

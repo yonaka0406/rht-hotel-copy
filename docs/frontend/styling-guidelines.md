@@ -21,8 +21,7 @@ The project uses Tailwind CSS v4 with a different configuration approach than v3
 /* src/assets/css/main.css */
 @import 'tailwindcss';
 
-/* Configure dark mode for Tailwind CSS v4 */
-@custom-variant dark:media(prefers-color-scheme: dark);
+@custom-variant dark ( @media (prefers-color-scheme: dark) { & });
 ```
 
 #### Config File

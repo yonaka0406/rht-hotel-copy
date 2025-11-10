@@ -199,6 +199,7 @@ function testUserJourney(journeyKey, journey) {
     }
     if (missingSections.length > 0) {
       console.log(`     Missing sections: ${missingSections.length}`);
+      missingSections.forEach(item => console.log(`       - Doc: ${item.doc}, Section: "${item.section}"`));
     }
     if (navigationIssues.length > 0) {
       console.log(`     Navigation issues: ${navigationIssues.length}`);

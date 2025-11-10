@@ -12,6 +12,30 @@ This guide covers:
 - Debugging configuration
 - Best practices for local development
 
+## Quick Start
+
+For a rapid setup, refer to the [Quick Setup Guide](quick-setup.md). This document provides a streamlined approach to get the system operational with minimal configuration.
+
+## Architecture Overview
+
+The WeHub.work Hotel Management System is built upon a robust three-tier architecture:
+
+-   **Frontend**: A dynamic user interface developed with Vue.js.
+-   **Backend**: A powerful Node.js/Express.js API handling business logic and data access.
+-   **Database**: PostgreSQL, serving as the primary data store.
+
+This modular design facilitates independent development, scaling, and maintenance of each component. For a deeper dive, consult the [System Overview](../architecture/system-overview.md).
+
+## Technology Stack
+
+Our development environment leverages a modern and efficient technology stack:
+
+-   **Backend**: Node.js, Express.js, PostgreSQL, Redis, and various Node.js libraries for authentication, logging, and utilities.
+-   **Frontend**: Vue.js 3 (Composition API), PrimeVue (UI components), Tailwind CSS (for styling), and Vite (for fast development builds).
+-   **Development Tools**: Git, npm, Docker (for containerization), and recommended IDE extensions for VS Code.
+
+A comprehensive list of technologies can be found in the [Technology Stack](../architecture/technology-stack.md) documentation.
+
 ## System Requirements
 
 ### Hardware Requirements
@@ -88,13 +112,13 @@ cd rht-hotel
 
 #### Linux (Ubuntu/Debian)
 ```bash
-# Install Node.js 18 LTS using NodeSource repository
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Install Node.js 24 LTS using NodeSource repository
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Verify installation
-node --version  # Should show v18.x.x
-npm --version   # Should show 9.x.x or higher
+node --version  # Should show v24.x.x
+npm --version   # Should show 11.x.x or higher
 ```
 
 #### macOS
@@ -767,10 +791,9 @@ const logger = require('./utils/logger');
 logger.debug('Debug message', { data: someData });
 logger.info('Info message');
 logger.error('Error message', error);
-
-// Or console (for quick debugging)
-console.log('Debug:', variable);
 ```
+**Important:** While `console.log` can be used for transient local debugging, **it must never be committed to the repository.** All logging intended for the codebase should use the Winston logger. Any `console.log` statements found in committed code will be flagged during code review.
+
 
 #### Frontend Debugging
 

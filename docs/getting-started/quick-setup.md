@@ -18,7 +18,7 @@ Before starting, ensure you have:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/rht-hotel.git
+git clone https://github.com/almeida-rht/rht-hotel.git
 cd rht-hotel
 
 # Install root dependencies
@@ -49,7 +49,6 @@ CREATE DATABASE pms_dev;
 CREATE USER pms_dev WITH PASSWORD 'dev_password';
 GRANT ALL PRIVILEGES ON DATABASE pms_dev TO pms_dev;
 ALTER DATABASE pms_dev OWNER TO pms_dev;
-\q
 EOF
 ```
 
@@ -130,6 +129,24 @@ npm run dev:frontend
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3000
 - **API Health Check**: http://localhost:3000/api/health
+
+## Architecture Overview
+
+The WeHub.work Hotel Management System follows a modern three-tier architecture:
+
+-   **Frontend**: Built with Vue.js 3, providing a dynamic and responsive user interface.
+-   **Backend**: A robust Node.js/Express.js API serving as the application's core logic and data provider.
+-   **Database**: PostgreSQL, a powerful open-source relational database, for persistent data storage.
+
+This separation ensures scalability, maintainability, and clear responsibilities for each layer.
+
+## Technology Stack
+
+The project leverages a comprehensive technology stack to deliver a high-performance and feature-rich application:
+
+-   **Backend**: Node.js, Express.js, PostgreSQL, Redis (for caching and sessions), `jsonwebtoken` (JWT) for authentication.
+-   **Frontend**: Vue.js 3 (with Composition API), PrimeVue (UI library), Tailwind CSS (for styling), Vite (build tool), Axios (HTTP client).
+-   **DevOps**: Docker, Docker Compose (for containerization), PM2 (process management in production), Nodemon (for development).
 
 ## Default Login Credentials
 

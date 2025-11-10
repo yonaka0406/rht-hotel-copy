@@ -222,6 +222,10 @@ Closes #123
 - **XSS Prevention**: Sanitize output and use CSP headers
 - **CSRF Protection**: Implement CSRF tokens
 - **Dependency Security**: Regularly update dependencies
+- **CORS Configuration**: Restrict allowed origins and methods to prevent unauthorized cross-origin requests.
+- **HSTS Headers**: Enable Strict-Transport-Security (HSTS) in production to enforce secure connections.
+- **Rate Limiting**: Apply request throttling and brute-force protections to prevent abuse and DoS attacks.
+- **Secret Rotation**: Document and implement periodic credential/API key rotation and revocation procedures.
 
 ### 🛡️ **Security Review**
 - **Code Review**: Security-focused code reviews

@@ -292,19 +292,10 @@ class ContentStandardizer {
   }
 
   /**
-   * Ensure file ends with newline
+   * Escapes special characters in a string for use in a regular expression.
    */
-  ensureEndingNewline(content) {
-    if (!content.endsWith('\n')) {
-      return {
-        content: content + '\n',
-        modified: true
-      };
-    }
-    return {
-      content,
-      modified: false
-    };
+  escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\\]/g, '\\{new_string}'); // {new_string} means the whole matched string
   }
 
   /**
@@ -376,8 +367,9 @@ class ContentStandardizer {
       for (const [sectionName, sectionContent] of Object.entries(contentSections)) {
         if (templateSections[sectionName]) {
           // Replace template section with actual content
+          const escapedSectionName = this.escapeRegex(sectionName);
           const sectionRegex = new RegExp(
-            `(#{1,6}\\s+${sectionName}[\\s\\S]*?)(?=#{1,6}\\s+|$)`,
+            `(#{1,6}\\s+${escapedSectionName}[\\s\\S]*?)(?=#{1,6}\\s+|$)`,
             'i'
           );
           result = result.replace(sectionRegex, `$1\n\n${sectionContent}\n`);
@@ -457,13 +449,13 @@ class ContentStandardizer {
       allViolations.push(...linkViolations);
       
       // General formatting
-      if (this.rules.general.trailingWhitespace) {
+      if (!this.rules.general.trailingWhitespace) { // Inverted check
         const wsResult = this.removeTrailingWhitespace(content);
         content = wsResult.content;
         wasModified = wasModified || wsResult.modified;
       }
       
-      if (this.rules.general.multipleBlankLines) {
+      if (!this.rules.general.multipleBlankLines) { // Inverted check
         const blankResult = this.removeMultipleBlankLines(content);
         content = blankResult.content;
         wasModified = wasModified || blankResult.modified;

@@ -287,6 +287,16 @@ const hasData = computed(() => data.value.length > 0);
 ### State Persistence
 
 ```javascript
+import { ref, watch } from 'vue';
+
+// Initialize state with default values for demonstration
+const state = ref({
+    data: [],
+    loading: false,
+    error: null,
+    lastUpdated: null
+});
+
 // Save to localStorage
 const saveToStorage = () => {
     localStorage.setItem('app-state', JSON.stringify(state.value));
@@ -302,6 +312,10 @@ const loadFromStorage = () => {
 
 // Watch for changes and persist
 watch(state, saveToStorage, { deep: true });
+
+// Example usage:
+// loadFromStorage(); // Load state on app start
+// state.value.data.push('new item'); // This change will be persisted
 ```
 
 ## Benefits of Current Approach
@@ -374,6 +388,7 @@ Migrate stores one at a time using Pinia's Setup Store syntax (similar to curren
 // stores/hotelStore.js
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
+import axios from 'axios';
 
 export const useHotelStore = defineStore('hotel', () => {
     // State

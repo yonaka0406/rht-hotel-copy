@@ -380,15 +380,20 @@ function generateReport() {
   
   console.log('\nValidation Results:\n');
   checks.forEach(check => {
-    const status = check.result.passed ? '✅' : '❌';
-    console.log(`  ${status} ${check.name}`);
-    
-    if (!check.result.passed) {
-      allPassed = false;
+    let status;
+    if (check.result) {
+      status = check.result.passed ? '✅' : '❌';
+      if (!check.result.passed) {
+        allPassed = false;
+      }
       if (check.result.exitCode === 2) {
         hasWarnings = true;
       }
+    } else {
+      status = '❌ (no result)';
+      allPassed = false; // If there's no result, it's a failure
     }
+    console.log(`  ${status} ${check.name}`);
   });
   
   console.log('\n' + '='.repeat(70));

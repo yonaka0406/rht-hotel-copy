@@ -445,7 +445,7 @@ sudo fail2ban-client status
 sudo certbot certificates
 
 # Check certificate validity
-openssl s_client -connect yourdomain.com:443 -servername yourdomain.com < /dev/null 2>/dev/null | openssl x509 -noout -dates
+openssl s_client -connect example.com:443 -servername example.com < /dev/null 2>/dev/null | openssl x509 -noout -dates
 ```
 
 #### Application Security
@@ -455,7 +455,7 @@ cd /home/pms/apps/rht-hotel
 npm audit
 
 # Review environment variables for exposed secrets
-grep -E "PASSWORD|SECRET|KEY" .env.production | wc -l
+grep -E "PASSWORD|SECRET|KEY" /home/pms/apps/rht-hotel/.env.production | wc -l
 
 # Check file permissions
 ls -la /home/pms/apps/rht-hotel/.env.production

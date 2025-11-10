@@ -2,9 +2,15 @@
 
 Welcome to the WeHub.work Hotel Management System! This section will help you get up and running quickly, whether you're a new developer, system administrator, or business stakeholder.
 
+## Quick Start
+
+This guide provides a rapid introduction to the system. For detailed setup, refer to the [Quick Setup Guide](quick-setup.md).
+
 ## Quick Navigation
 
 - **[Quick Setup Guide](quick-setup.md)** - Get the system running in minutes
+- **[Prerequisites](prerequisites.md)** - Essential software and configurations
+- **[Installation Guide](installation.md)** - Step-by-step installation instructions
 - **[Development Environment Setup](development-environment.md)** - Set up your local development environment
 - **[First-Time User Guide](first-time-user-guide.md)** - Orientation for new users
 
@@ -36,6 +42,35 @@ Before getting started, ensure you have:
 - **PostgreSQL** (v13 or higher)
 - **Git** for version control
 - **Docker** (optional, for containerized deployment)
+
+## Installation
+
+Follow these steps to install and set up the system:
+
+1.  **Clone the repository**: `git clone [repository-url]`
+2.  **Install dependencies**: `npm install` in both `api/` and `frontend/` directories
+3.  **Database setup**: Run migration scripts
+4.  **Environment variables**: Configure `.env` files
+
+## Architecture Overview
+
+The system follows a three-tier architecture:
+
+-   **Frontend**: Vue.js application
+-   **Backend**: Node.js/Express.js API
+-   **Database**: PostgreSQL
+
+For a detailed overview, see the [Architecture Overview](../architecture/README.md).
+
+## Technology Stack
+
+Key technologies used in the project:
+
+-   **Backend**: Node.js, Express.js, PostgreSQL, Redis
+-   **Frontend**: Vue.js 3, PrimeVue, Tailwind CSS
+-   **DevOps**: Docker, PM2
+
+For a complete list, see the [Technology Stack](../architecture/technology-stack.md).
 
 ## Next Steps
 

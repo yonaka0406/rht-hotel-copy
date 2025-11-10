@@ -615,8 +615,9 @@ if (testResults.warnings > 0) {
   console.log('');
 }
 
-const successRate = ((testResults.passed / (testResults.passed + testResults.failed)) * 100).toFixed(1);
-console.log(`Success Rate: ${successRate}%`);
+const total = testResults.passed + testResults.failed;
+const successRate = total > 0 ? ((testResults.passed / total) * 100).toFixed(1) : '0.0';
+console.log(`Success Rate: ${successRate}%`);console.log(`Success Rate: ${successRate}%`);
 console.log('');
 
 // Exit with appropriate code

@@ -37,25 +37,16 @@ api/
 └── jobs/               # Background job definitions
 ```
 
-### 🔄 **Service Layer Architecture**
+## Configuration
 
-#### Controller Layer
-- **Request Handling**: HTTP request/response processing
-- **Input Validation**: Request parameter and body validation
-- **Authentication**: JWT token verification
-- **Response Formatting**: Consistent API response structure
+### Environment Variables and Configuration Management
+The application relies heavily on environment variables for sensitive information and environment-specific settings. These are managed using `dotenv` for local development (see `api/.env` example) and typically injected via the deployment environment in production. Configuration files in `api/config/` (e.g., `appConfig.js`, `database.js`) load these variables, providing a structured way to access settings. Key variables include `DB_USER`, `JWT_SECRET`, `REDIS_HOST`, and `EMAIL_HOST`.
 
-#### Service Layer
-- **Business Logic**: Core application logic and rules
-- **Data Processing**: Complex data transformations
-- **External Integrations**: Third-party API interactions
-- **Transaction Management**: Database transaction coordination
+### Database Connection Pooling Configuration
+Database connections are managed via a connection pool to optimize performance and resource usage. The `api/config/database.js` file configures the `pg` pool, with settings like `max` (defaulting to 20 connections) and `idleTimeoutMillis` (30000ms). These values are crucial for balancing database load and application responsiveness, and should be tuned based on expected traffic and database capacity.
 
-#### Data Access Layer
-- **Models**: Database entity definitions
-- **Repositories**: Data access patterns
-- **Query Optimization**: Efficient database queries
-- **Migration Management**: Schema version control
+### Rate Limiting Configuration Details
+Rate limiting is implemented to protect API endpoints from abuse and ensure fair usage. While specific middleware details are in `api/middleware/`, the general policy is `100 requests per minute per API key`. This can be overridden per route as needed. When limits are exceeded, a `429 Too Many Requests` status is returned, often with `X-RateLimit-*` headers and a `Retry-After` header to guide client retry behavior.
 
 ## Core Backend Features
 
@@ -194,6 +185,14 @@ Clients → Preferences → History
 - **Audit Logging**: Security event tracking
 - **Access Control**: Principle of least privilege
 - **Compliance**: Data protection regulations
+
+## Operational Best Practices
+
+### Error Handling Patterns and Conventions
+All API errors adhere to a standard JSON error response format, including a `success: false` flag, an `error` object with `code`, `message`, and optional `details`. A centralized error handling middleware (e.g., `api/middleware/errorHandler.js`) catches and formats errors consistently. Each error is logged with a unique correlation ID for easier tracing across logs.
+
+### Logging Best Practices and Log Level Guidance
+Structured logging is implemented using Winston (configured in `api/config/logger.js`) to ensure logs are machine-readable and easily searchable. Log levels (e.g., `debug`, `info`, `warn`, `error`) are used to categorize messages, allowing for granular control over log verbosity. Log rotation is handled by the deployment environment (e.g., PM2 or Docker logging drivers) to prevent disk exhaustion.
 
 ## Development Workflow
 

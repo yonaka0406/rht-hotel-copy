@@ -577,6 +577,165 @@ import WorkInProgress from '@/components/WorkInProgress.vue';
 </template>
 ```
 
+### Form Validation and Error Handling
+
+Robust form validation is crucial for a good user experience and data integrity. The following example demonstrates a comprehensive pattern for handling client-side and server-side validation, loading states, and accessibility.
+
+**Key Patterns**:
+- **Inline Field Errors**: Provide immediate feedback under each field. Validate `onBlur` for a good balance between responsiveness and user experience.
+- **Form-Level Error Summary**: At the top of the form, list all errors with links to the invalid fields. This is important for accessibility and for long forms.
+- **Submission State**: Disable the submit button and show a loading indicator to prevent duplicate submissions and provide feedback.
+- **Server-Side Validation**: Gracefully handle errors returned from the server, mapping them back to the relevant fields or showing a global error message.
+- **Accessibility**: Use `aria-invalid` and `aria-describedby` to link inputs to their error messages for screen readers.
+
+**Complete Example**:
+```vue
+<template>
+  <form @submit.prevent="handleSubmit">
+    <!-- 1. Form-Level Error Summary -->
+    <div v-if="formErrors.length" class="error-summary" role="alert">
+      <p>Please correct the following errors:</p>
+      <ul>
+        <li v-for="error in formErrors" :key="error.field">
+          <a :href="'#' + error.field">{{ error.message }}</a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Name Field -->
+    <div class="form-group">
+      <label for="name">Name</label>
+      <InputText
+        id="name"
+        v-model="formData.name"
+        @blur="validateField('name')"
+        :aria-invalid="!!fieldErrors.name"
+        :aria-describedby="fieldErrors.name ? 'name-error' : null"
+        fluid
+      />
+      <p v-if="fieldErrors.name" id="name-error" class="error-message">
+        {{ fieldErrors.name }}
+      </p>
+    </div>
+
+    <!-- Email Field -->
+    <div class="form-group mt-4">
+      <label for="email">Email</label>
+      <InputText
+        id="email"
+        type="email"
+        v-model="formData.email"
+        @blur="validateField('email')"
+        :aria-invalid="!!fieldErrors.email"
+        :aria-describedby="fieldErrors.email ? 'email-error' : null"
+        fluid
+      />
+      <p v-if="fieldErrors.email" id="email-error" class="error-message">
+        {{ fieldErrors.email }}
+      </p>
+    </div>
+
+    <!-- 3. Submission State -->
+    <div class="flex justify-end mt-6">
+        <Button type="submit" :disabled="isSubmitting">
+          <span v-if="isSubmitting">
+            <i class="pi pi-spin pi-spinner mr-2"></i> Submitting...
+          </span>
+          <span v-else>Submit</span>
+        </Button>
+    </div>
+  </form>
+</template>
+
+<script setup>
+import { ref, reactive } from 'vue';
+import InputText from 'primevue/inputtext';
+import Button from 'primevue/button';
+
+const formData = reactive({ name: '', email: '' });
+const fieldErrors = reactive({});
+const formErrors = ref([]);
+const isSubmitting = ref(false);
+
+function validateField(field) {
+  // Simple validation logic
+  if (field === 'name' && !formData.name) {
+    fieldErrors.name = 'Name is required.';
+  } else {
+    fieldErrors.name = null;
+  }
+
+  if (field === 'email' && !formData.email) {
+    fieldErrors.email = 'Email is required.';
+  } else if (field === 'email' && formData.email && !/^\S+@\S+\.\S+$/.test(formData.email)) {
+    fieldErrors.email = 'Please enter a valid email address.';
+  } else {
+    fieldErrors.email = null;
+  }
+}
+
+function validateForm() {
+  validateField('name');
+  validateField('email');
+  
+  formErrors.value = Object.entries(fieldErrors)
+    .filter(([, message]) => message)
+    .map(([field, message]) => ({ field, message }));
+    
+  return formErrors.value.length === 0;
+}
+
+async function handleSubmit() {
+  if (!validateForm()) {
+    return;
+  }
+
+  isSubmitting.value = true;
+  formErrors.value = [];
+
+  try {
+    // Replace with your actual API call
+    // await api.submitForm(formData);
+    console.log('Form submitted successfully');
+    // Handle success (e.g., show success message, redirect)
+  } catch (error) {
+    // 4. Server-Side Error Handling
+    if (error.response && error.response.status === 422) {
+      // Map server field errors
+      for (const key in error.response.data.errors) {
+        fieldErrors[key] = error.response.data.errors[key][0];
+      }
+      validateForm(); // Re-populate formErrors summary
+    } else {
+      // Global error
+      formErrors.value.push({
+        field: 'form',
+        message: 'An unexpected error occurred. Please try again.'
+      });
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+</script>
+
+<style scoped>
+.error-summary {
+  border: 1px solid var(--p-red-500);
+  background-color: var(--p-red-50);
+  color: var(--p-red-700);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+}
+.error-message {
+  color: var(--p-red-600);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+</style>
+```
+
 ## Component Best Practices
 
 ### 1. Always Use Japanese UI Text
@@ -687,6 +846,102 @@ const getSeverity = (status) => {
     <Tag :value="statusLabel" :severity="getSeverity(status)" />
 </template>
 ```
+
+### 7. Read-Only "Viewer" Tag
+
+When a user has read-only permissions (`crud_ok` is false), it's important to clearly indicate their status and disable destructive actions.
+
+**Detecting Read-Only Users:**
+
+A computed property should be used to determine if the user is a viewer.
+
+```javascript
+import { computed } from 'vue';
+import { useUserStore } from '@/stores/user'; // Adjust path as needed
+
+const userStore = useUserStore();
+const isViewer = computed(() => !userStore.currentUser?.permissions?.crud_ok);
+```
+
+**Displaying the Viewer Tag:**
+
+When `isViewer` is true, display a prominent red "閲覧者" tag.
+
+```vue
+<template>
+    <div v-if="isViewer" class="viewer-tag-container">
+        <Tag severity="danger" value="閲覧者"></Tag>
+    </div>
+</template>
+```
+
+**Disabling UI Elements:**
+
+Action buttons for creating, editing, or deleting should be disabled or hidden.
+
+-   **Accessibility**: When disabling a button, use `aria-label` to provide context for screen readers.
+-   **Clarity**: Prefer disabling buttons over hiding them to maintain a consistent UI layout.
+
+**Code Example:**
+
+```vue
+<template>
+    <div>
+        <!-- Viewer Tag Display -->
+        <div v-if="isViewer" class="mb-4">
+            <Tag severity="danger" value="閲覧者" icon="pi pi-eye"></Tag>
+            <span class="ml-2 text-sm text-gray-600">読み取り専用モードです。</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-2">
+            <!-- Create Button: Hidden for viewers -->
+            <Button 
+                v-if="!isViewer" 
+                label="新規作成" 
+                icon="pi pi-plus" 
+                severity="success"
+                @click="createNew" 
+            />
+
+            <!-- Edit Button: Disabled for viewers -->
+            <Button 
+                label="編集" 
+                icon="pi pi-pencil"
+                :disabled="isViewer"
+                aria-label="編集 (閲覧者には無効)"
+                @click="editItem" 
+            />
+
+            <!-- Delete Button: Disabled for viewers -->
+            <Button 
+                label="削除" 
+                icon="pi pi-trash"
+                severity="danger"
+                :disabled="isViewer"
+                aria-label="削除 (閲覧者には無効)"
+                @click="deleteItem"
+            />
+        </div>
+    </div>
+</template>
+
+<script setup>
+import { computed } from 'vue';
+import { useUserStore } from '@/stores/user';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+
+// Assume userStore is initialized and has user data
+const userStore = useUserStore();
+const isViewer = computed(() => userStore.currentUser && !userStore.currentUser.permissions.crud_ok);
+
+const createNew = () => { /* ... */ };
+const editItem = () => { /* ... */ };
+const deleteItem = () => { /* ... */ };
+</script>
+```
+
 
 ## Accessibility Considerations
 

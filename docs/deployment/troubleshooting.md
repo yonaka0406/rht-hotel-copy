@@ -100,6 +100,13 @@ pm2 restart pms-api
 sudo lsof -i :3000
 
 # Kill the process if needed
+# Attempt graceful shutdown first (sends SIGTERM)
+sudo kill <PID>
+# Wait a few seconds (e.g., 5 seconds) to allow the process to terminate gracefully
+sleep 5
+# Verify if the process has exited
+pgrep -P <PID> || echo "Process <PID> terminated."
+# If the process is still running, force kill (SIGKILL) as a last resort
 sudo kill -9 <PID>
 ```
 
@@ -271,6 +278,16 @@ time curl http://localhost:3000/api/health
 
 **Solution**: Optimize network configuration or consider co-locating services.
 
+## Deployment and Monitoring Troubleshooting
+
+### Deployment
+
+This section covers common issues encountered during the deployment process, from server preparation to application startup.
+
+### Monitoring
+
+This section addresses problems related to system monitoring, logging, and health checks.
+
 ## Database Issues
 
 ### Cannot Connect to Database
@@ -293,7 +310,18 @@ sudo netstat -tulpn | grep 5432
 psql -U pms_user -d pms_production -h localhost
 
 # Check PostgreSQL logs
-sudo tail -f /var/log/postgresql/postgresql-14-main.log
+# Check PostgreSQL logs
+# Note: The exact log filename may vary depending on your PostgreSQL version and distribution.
+# You can often use a wildcard or check the actual file in the directory.
+# Option 1: Use a wildcard (common for Debian/Ubuntu based systems)
+sudo tail -f /var/log/postgresql/postgresql-*-main.log
+# Option 2: Find the exact log file (more robust)
+# First, find the PostgreSQL version and cluster name:
+#   sudo pg_lsclusters
+# Then, construct the path. For example, if version is 14 and cluster is main:
+#   sudo tail -f /var/log/postgresql/14/main/postgresql.log
+# Or, if you know the version, you can list files in the directory:
+#   ls -l /var/log/postgresql/14/main/
 ```
 
 #### Common Causes and Solutions
@@ -323,7 +351,7 @@ sudo systemctl reload postgresql
 psql -U pms_user -d pms_production
 
 # Reset password if needed
-sudo -u postgres psql -c "ALTER USER pms_user WITH PASSWORD 'new_password';"
+sudo -u postgres psql -c "ALTER USER pms_user WITH PASSWORD '<your_password>';"
 ```
 
 **4. Database Doesn't Exist**
@@ -396,6 +424,13 @@ WHERE state != 'idle'
 ORDER BY query_start;
 
 -- Check slow queries
+-- Note: pg_stat_statements must be enabled for this query to work.
+-- To enable:
+-- 1. Add 'pg_stat_statements' to shared_preload_libraries in postgresql.conf.
+--    Example: shared_preload_libraries = 'pg_stat_statements'
+-- 2. Restart the PostgreSQL server.
+-- 3. Connect to your target database (e.g., pms_production) and run:
+--    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 SELECT query, calls, total_time, mean_time, max_time
 FROM pg_stat_statements
 ORDER BY mean_time DESC
@@ -806,6 +841,18 @@ pm2 monit
 
 ## Getting Help
 
+### **🚨 IMPORTANT SECURITY WARNING: NEVER SHARE SENSITIVE INFORMATION 🚨**
+
+When collecting diagnostic information, it is CRITICAL that you **NEVER** share sensitive values. This includes, but is not limited to:
+- API keys (e.g., Google API Key, payment gateway keys)
+- Access tokens and refresh tokens
+- Private keys (e.g., SSL private keys, SSH keys)
+- Webhook secrets and signing secrets
+- Passwords and database credentials
+- Any other confidential information that could compromise your system or data.
+
+Always ensure that any diagnostic output is thoroughly sanitized before sharing.
+
 ### Collecting Diagnostic Information
 
 When reporting issues, collect the following information:
@@ -825,11 +872,52 @@ sudo tail -n 100 /var/log/nginx/error.log > nginx-error.txt
 sudo tail -n 100 /var/log/postgresql/postgresql-14-main.log > postgres.txt
 
 # Configuration (sanitized)
-cat .env.production | grep -v PASSWORD | grep -v SECRET > config.txt
+
+# When collecting configuration, NEVER share raw .env files.
+
+# Instead, either:
+
+# 1. Whitelist safe environment variables (e.g., `APP_ENV`, `PORT`, `FRONTEND_URL`).
+
+#    Example: `grep -E '^(APP_ENV|PORT|FRONTEND_URL)=' .env.production > config.txt`
+
+# 2. Filter out sensitive patterns using a comprehensive list.
+
+#    Example: `cat .env.production | grep -v -E 'APIKEY|API_KEY|ACCESS_TOKEN|TOKEN|PRIVATE_KEY|WEBHOOK_SECRET|SIGNING_SECRET|SECRET|PASSWORD|KEY|SECRET_KEY|CLIENT_SECRET' > config.txt`
+
+# 3. Use a small helper script that outputs only allowlisted variables.
+
+#    (e.g., a script that reads .env, filters, and prints to stdout)
+
+
 
 # Resource usage
+
 free -h > resources.txt
+
 df -h >> resources.txt
+
+
+
+---
+
+
+
+**Before submitting diagnostic information, please perform the following steps:**
+
+
+
+1.  **Review all generated files:** Open `app-logs.txt`, `nginx-error.txt`, `postgres.txt`, `config.txt`, and `resources.txt` in a text editor.
+
+2.  **Redact any remaining sensitive values:** Manually search for and replace any API keys, passwords, tokens, or other secrets with `[REDACTED]`.
+
+3.  **Confirm no secrets included:** Double-check that no sensitive data, even partial, is present.
+
+4.  **Sanitize filenames:** Ensure filenames themselves do not contain sensitive information.
+
+
+
+Only submit diagnostic information after you have thoroughly sanitized it.
 ```
 
 ### Support Resources

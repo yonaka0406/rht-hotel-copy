@@ -188,7 +188,7 @@ maxmemory 256mb
 maxmemory-policy allkeys-lru
 
 # SECURITY: Enable authentication (REQUIRED for production)
-requirepass your_strong_redis_password_here
+requirepass [REPLACE_WITH_GENERATED_PASSWORD]
 
 # SECURITY: Bind to localhost only (prevents external access)
 bind 127.0.0.1 ::1
@@ -205,7 +205,8 @@ protected-mode yes
 **Security Best Practices**:
 
 1. **Enable Authentication**: Always set a strong password with `requirepass`
-   - Generate strong password: `openssl rand -base64 32`
+   - Generate strong password: `REDIS_PASSWORD=$(openssl rand -base64 32)`
+   - **IMPORTANT**: Save the output of the above command. You will use this value for `requirepass` in `/etc/redis/redis.conf` and for `REDIS_PASSWORD` in your application's `.env.production` file (see section 3.2).
    - Update `REDIS_PASSWORD` in application `.env` file
 
 2. **Network Binding**: 
@@ -233,7 +234,7 @@ redis-cli ping
 # Should return: (error) NOAUTH Authentication required
 
 # Test with authentication
-redis-cli -a your_strong_redis_password_here ping
+redis-cli -a [REPLACE_WITH_GENERATED_PASSWORD] ping
 # Should return: PONG
 ```
 
@@ -307,8 +308,8 @@ DATABASE_URL=postgresql://pms_user:<use_generated_password_from_section_2.2>@loc
 # Generate with: openssl rand -base64 32
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=your_strong_redis_password_here
-REDIS_URL=redis://:your_strong_redis_password_here@localhost:6379
+REDIS_PASSWORD=[REPLACE_WITH_GENERATED_PASSWORD]
+REDIS_URL=redis://:[REPLACE_WITH_GENERATED_PASSWORD]@localhost:6379
 
 # Authentication & Security
 JWT_SECRET=your_jwt_secret_key_min_32_chars
@@ -648,7 +649,48 @@ sudo nano /etc/logrotate.d/pms
 }
 ```
 
-### 6.3 Setup Database Backups
+### 6.3 Handling Database Passwords in Scripts
+
+When running `pg_dump` or other database commands from an automated script (like a cron job), you cannot manually enter a password. The recommended and most secure way to handle this is by using a `.pgpass` file.
+
+#### Using a `.pgpass` File (Recommended for Cron)
+
+The `.pgpass` file in a user's home directory allows `psql`, `pg_dump`, and other libpq clients to connect to a database without a password prompt.
+
+1.  **Create the file**: In the home directory of the user that will run the cron job (e.g., `/home/pms/`), create a file named `.pgpass`.
+
+    ```bash
+    touch /home/pms/.pgpass
+    ```
+
+2.  **Set Permissions**: The file **must** have strict permissions (read/write for the user only) or it will be ignored by PostgreSQL for security reasons.
+
+    ```bash
+    chmod 0600 /home/pms/.pgpass
+    ```
+
+3.  **Add Connection Details**: Add a line to the file with your database connection details in the following format. Use `*` as a wildcard if needed.
+
+    `hostname:port:database:username:password`
+
+    **Example**:
+    `localhost:5432:pms_production:pms_user:your_secure_password_here`
+
+#### Alternative: `PGPASSWORD` Environment Variable
+
+You can also use the `PGPASSWORD` environment variable. This is less secure as the password may be visible in the system's process list or shell history.
+
+```bash
+export PGPASSWORD='your_secure_password_here'
+pg_dump -U pms_user -h localhost -d pms_production > backup.sql
+unset PGPASSWORD
+```
+
+> **Security Note**: Never hardcode passwords directly in scripts. The password in `.pgpass` or `PGPASSWORD` should be sourced from a secure secrets management system (like HashiCorp Vault, AWS Secrets Manager, or environment-specific secrets) during deployment.
+
+### 6.4 Setup Database Backups
+
+The following script performs a daily backup of the production database. It should be run as a cron job by a dedicated system user (e.g., `pms_user`). This script assumes passwordless authentication has been configured using `.pgpass`.
 
 ```bash
 # Create backup script
@@ -657,24 +699,26 @@ nano /home/pms/scripts/backup-database.sh
 
 ```bash
 #!/bin/bash
+set -euo pipefail # Fail on error, unset var, or pipe failure
 
 # Configuration
 BACKUP_DIR="/home/pms/backups/database"
 DB_NAME="pms_production"
 DB_USER="pms_user"
+DB_HOST="localhost"
 RETENTION_DAYS=30
 
 # Create backup directory if it doesn't exist
-mkdir -p $BACKUP_DIR
+mkdir -p "$BACKUP_DIR"
 
 # Generate backup filename with timestamp
 BACKUP_FILE="$BACKUP_DIR/pms_backup_$(date +%Y%m%d_%H%M%S).sql.gz"
 
-# Create backup
-pg_dump -U $DB_USER $DB_NAME | gzip > $BACKUP_FILE
+# Create backup (assumes .pgpass is configured for the user)
+pg_dump -U "$DB_USER" -h "$DB_HOST" -d "$DB_NAME" | gzip > "$BACKUP_FILE"
 
 # Remove old backups
-find $BACKUP_DIR -name "pms_backup_*.sql.gz" -mtime +$RETENTION_DAYS -delete
+find "$BACKUP_DIR" -name "pms_backup_*.sql.gz" -mtime +"$RETENTION_DAYS" -delete
 
 # Log backup completion
 echo "$(date): Database backup completed: $BACKUP_FILE" >> /home/pms/logs/backup.log
@@ -802,6 +846,17 @@ Refer to the [Monitoring & Logging Guide](monitoring-logging.md) for detailed mo
 - [ ] Monitoring setup completed
 - [ ] Health checks passing
 - [ ] Documentation updated with deployment-specific details
+
+## Maintenance
+
+Regular maintenance is crucial for the long-term health and performance of the system. This includes:
+
+-   **Regular Backups**: Ensure database and application backups are performed consistently.
+-   **Log Review**: Periodically review application and system logs for anomalies.
+-   **Security Updates**: Keep all software dependencies and operating system up to date.
+-   **Performance Tuning**: Monitor and optimize system performance as needed.
+
+For detailed maintenance procedures, refer to the [Maintenance Guide](maintenance.md).
 
 ## Related Documentation
 
