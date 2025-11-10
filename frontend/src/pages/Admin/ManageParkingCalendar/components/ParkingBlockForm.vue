@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, watch } from 'vue';
+import { defineProps, defineEmits, computed, watch, ref } from 'vue';
 import Card from 'primevue/card';
 import Select from 'primevue/select';
 import FloatLabel from 'primevue/floatlabel';
@@ -165,20 +165,20 @@ const availableSizes = computed(() => {
 });
 
 // Flag to prevent duplicate emissions during auto-adjustments
-let isAdjusting = false;
+const isAdjusting = ref(false);
 
 // Watch for start date changes to validate against end date
 watch(() => props.formData.startDate, (newStartDate) => {
-    if (isAdjusting) return;
+    if (isAdjusting.value) return;
     
     if (newStartDate && props.formData.endDate) {
         // If start date is after end date, update end date to match start date
         if (newStartDate > props.formData.endDate) {
-            isAdjusting = true;
+            isAdjusting.value = true;
             const newEndDate = new Date(newStartDate);
             emit('update:endDate', newEndDate);
             emit('dates-changed', { startDate: newStartDate, endDate: newEndDate });
-            isAdjusting = false;
+            isAdjusting.value = false;
             return;
         }
     }
@@ -191,16 +191,16 @@ watch(() => props.formData.startDate, (newStartDate) => {
 
 // Watch for end date changes to validate against start date
 watch(() => props.formData.endDate, (newEndDate) => {
-    if (isAdjusting) return;
+    if (isAdjusting.value) return;
     
-    if (newEndDate && props.formData.startDate) {
+    if (newEndDate < props.formData.startDate) {
         // If end date is before start date, update start date to match end date
-        if (newEndDate < props.formData.startDate) {
-            isAdjusting = true;
+        if (newEndDate && props.formData.startDate) {
+            isAdjusting.value = true;
             const newStartDate = new Date(newEndDate);
             emit('update:startDate', newStartDate);
             emit('dates-changed', { startDate: newStartDate, endDate: newEndDate });
-            isAdjusting = false;
+            isAdjusting.value = false;
             return;
         }
     }

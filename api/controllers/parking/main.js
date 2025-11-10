@@ -156,8 +156,13 @@ const updateParkingSpotsForLot = async (req, res) => {
 const getParkingReservations = async (req, res) => {
     try {
         const { hotel_id, startDate, endDate } = req.query;
-        const reservations = await parkingModel.getParkingReservations(req.requestId, hotel_id, startDate, endDate);
-        res.json(reservations);
+        
+        // Use ParkingReservationsService to get reservations including blocks
+        const ParkingReservationsService = require('./services/parkingReservationsService');
+        const service = new ParkingReservationsService(req.requestId);
+        const allReservations = await service.getParkingReservationsWithBlocks(hotel_id, startDate, endDate);
+        
+        res.json(allReservations);
     } catch (error) {
         console.error('Error fetching parking reservations:', error);
         res.status(500).json({ message: error.message });

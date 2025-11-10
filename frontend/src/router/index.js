@@ -34,7 +34,7 @@ const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew/Reservati
 const ReservationEdit = () => import('@/pages/MainPage/Reservation/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
 const StaticCalendar = () => import('@/pages/MainPage/StaticCalendar/StaticCalendar.vue');
-const ParkingCalendar = () => import('@/pages/MainPage/ParkingCalendar.vue');
+const ParkingCalendar = () => import('@/pages/MainPage/ParkingCalendar/ParkingCalendar.vue');
 const ReservationList = () => import('@/pages/MainPage/ReservationList.vue');
 const BillingInvoices = () => import('@/pages/MainPage/BillingInvoices.vue');
 const ReceiptsPage = () => import('@/pages/MainPage/ReceiptsPage.vue'); // Added import

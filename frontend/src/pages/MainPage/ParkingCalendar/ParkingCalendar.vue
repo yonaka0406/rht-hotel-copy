@@ -167,14 +167,14 @@
   import { Panel, Skeleton, SelectButton, InputText, ConfirmDialog, Button, Drawer } from 'primevue';
   
   // Components
-  import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
-  import ReservationEdit from './Reservation/ReservationEdit.vue';
+  import ReservationsCalendarLegend from '../components/ReservationsCalendarLegend.vue';
+  import ReservationEdit from '../Reservation/ReservationEdit.vue';
   
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
   import { useParkingStore } from '@/composables/useParkingStore';
-  const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
+  const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel, fetchParkingBlocks, parkingBlocks } = useParkingStore();
   
   const allParkingSpots = ref([]);
   
@@ -272,6 +272,16 @@
         endDate
       );
       
+      // Fetch parking blocks for the same date range
+      await fetchParkingBlocks(
+        selectedHotelId.value,
+        startDate,
+        endDate
+      );
+      
+      // Start with existing reservations
+      const mergedReservations = [...(tempParkingReservations.value || [])];
+      
       // Create a map of existing reservations for faster lookup
       const existingReservationsMap = new Map();
       if (tempParkingReservations.value) {
@@ -280,9 +290,6 @@
           existingReservationsMap.set(key, res);
         });
       }
-      
-      // Start with existing reservations
-      const mergedReservations = [...(tempParkingReservations.value || [])];
       
       // Add new reservations from reservedParkingSpots (from store) if they don't already exist
       if (Array.isArray(reservedParkingSpots.value)) {
@@ -296,13 +303,26 @@
       
       // Update tempParkingReservations with the merged data
       tempParkingReservations.value = mergedReservations;
+      
+      // Log all reservations for 2025-11-10
+      const reservationsFor1110 = mergedReservations.filter(r => formatDate(new Date(r.date)) === '2025-11-10');
+      if (reservationsFor1110.length > 0) {
+        console.log('[ParkingCalendar] All reservations for 2025-11-10:', reservationsFor1110.length);
+        console.log('[ParkingCalendar] Reservations:', reservationsFor1110.map(r => ({
+          spot_id: r.parking_spot_id,
+          spot_number: r.spot_number,
+          status: r.status,
+          booker_name: r.booker_name
+        })));
+      }
   };
   
   // Hash map for faster lookups
   const reservedSpotsMap = computed(() => {
     const map = {};
-    if (Array.isArray(reservedParkingSpots.value)) {
-      reservedParkingSpots.value.forEach(reservation => {
+    // Use tempParkingReservations which includes both real reservations and blocked spots
+    if (Array.isArray(tempParkingReservations.value)) {
+      tempParkingReservations.value.forEach(reservation => {
         const key = `${reservation.parking_spot_id}_${formatDate(new Date(reservation.date))}`;
         map[key] = reservation;
       });
@@ -332,10 +352,17 @@
     }
     
     const formattedDate = formatDate(new Date(date));
-    return tempParkingReservations.value.some(res => {
+    const isReserved = tempParkingReservations.value.some(res => {
       const resDate = formatDate(new Date(res.date));
       return res.parking_spot_id === spotId && resDate === formattedDate;
     });
+    
+    // Log for spot 246 on 2025-11-10 (the blocked spot)
+    if (spotId === 246 && formattedDate === '2025-11-10') {
+      console.log('[ParkingCalendar] isSpotReserved check for spot 246 on 2025-11-10:', isReserved);
+    }
+    
+    return isReserved;
   };
   const fillSpotInfo = (spotId, date) => {
     if (!tempParkingReservations.value) {
@@ -343,6 +370,18 @@
     }
     
     const formattedDate = formatDate(new Date(date));
+    
+    // Log for spots 246 and 247 on 2025-11-10
+    if ((spotId === 246 || spotId === 247) && formattedDate === '2025-11-10') {
+      console.log(`[ParkingCalendar] fillSpotInfo for spot ${spotId} on 2025-11-10`);
+      console.log('[ParkingCalendar] tempParkingReservations length:', tempParkingReservations.value?.length);
+      const matchingRes = tempParkingReservations.value.filter(res => {
+        const resDate = formatDate(new Date(res.date));
+        return res.parking_spot_id === spotId && resDate === formattedDate;
+      });
+      console.log('[ParkingCalendar] Matching reservations:', matchingRes);
+    }
+    
     const reservation = tempParkingReservations.value.find(res => {
       const resDate = formatDate(new Date(res.date));
       return res.parking_spot_id === spotId && resDate === formattedDate;

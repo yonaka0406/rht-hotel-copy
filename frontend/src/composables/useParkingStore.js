@@ -163,6 +163,8 @@ export function useParkingStore() {
     const fetchReservedParkingSpots = async (hotelId, startDate, endDate) => {
         try {
             const authToken = localStorage.getItem('authToken');
+            
+            // Fetch reservations (now includes blocked spots as virtual reservations)
             const response = await fetch(`/api/parking/reservations?hotel_id=${hotelId}&startDate=${startDate}&endDate=${endDate}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
@@ -182,7 +184,7 @@ export function useParkingStore() {
             }
         } catch (error) {
             console.error('Failed to fetch reserved parking spots', error);
-            reservedParkingSpots.value = []; // Ensure it's always an array
+            reservedParkingSpots.value = [];
         }
     };
 
