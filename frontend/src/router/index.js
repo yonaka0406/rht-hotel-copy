@@ -13,6 +13,7 @@ const AdminPanel = () => import('@/pages/Admin/AdminPanel/AdminPanel.vue');
 const ManageUsers = () => import('@/pages/Admin/ManageUsers.vue');
 const ManageRoles = () => import('@/pages/Admin/ManageRoles/ManageRolesPage.vue');
 const ManageParking = () => import('@/pages/Admin/ManageParking.vue');
+const ManageParkingCalendar = () => import('@/pages/Admin/ManageParkingCalendar/ManageParkingCalendar.vue');
 const ManageHotels = () => import('@/pages/Admin/ManageHotels.vue');
 const ManageHotel = () => import('@/pages/Admin/ManageHotel/ManageHotel.vue');
 const ManagePlans = () => import('@/pages/Admin/ManagePlans.vue');
@@ -102,6 +103,7 @@ const routes = [
       { path: 'hotel-addons', component: ManageAddons },
       { path: 'hotel-calendar', component: ManageCalendar },
       { path: 'manage-parking', component: ManageParking },
+      { path: 'parking-calendar', component: ManageParkingCalendar },
       { path: 'settings', component: ManageSettings },
       { path: 'ota', component: ManageOTA },
       { path: 'pms-import', component: ManagePMSImport },

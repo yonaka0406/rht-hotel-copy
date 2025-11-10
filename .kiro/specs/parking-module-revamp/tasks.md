@@ -325,22 +325,121 @@
     - Test response formats match specifications
     - _Requirements: 1.2, 2.1, 3.1, 3.2, 5.1_
 
-- [ ] 9. Documentation and deployment preparation
-  - [ ] 9.1 Update API documentation
+- [-] 9. Implement Parking Blocked Dates UI (Admin)
+
+  - [x] 9.1 Create ManageParkingCalendar.vue page
+
+
+    - Create new page at frontend/src/pages/Admin/ManageParkingCalendar.vue
+    - Follow the structure and pattern of ManageCalendar.vue
+    - Import necessary PrimeVue components (Panel, Card, Select, MultiSelect, DatePicker, InputText, Button, DataTable, Column, ConfirmDialog)
+    - Set up basic page layout with header "駐車場カレンダー設定"
+    - _Requirements: 2.1, 3.1_
+
+  - [ ] 9.2 Implement parking lot and vehicle category selection
+    - Add hotel selection dropdown using useParkingStore
+    - Add parking lot multi-select dropdown
+    - Add vehicle category multi-select dropdown
+    - Fetch parking lots and vehicle categories when hotel is selected
+    - Update form state when selections change
+    - _Requirements: 2.1, 3.3_
+
+  - [ ] 9.3 Implement date range and capacity input form
+    - Add start date picker
+    - Add end date picker
+    - Add capacity amount input field (number of spots to block)
+    - Add comment/reason text input field
+    - Validate date range (end date must be after start date)
+    - Validate capacity amount (must be positive integer)
+    - _Requirements: 2.1, 3.3_
+
+  - [ ] 9.4 Implement block creation actions
+    - Add "全ホテルに適用" button to apply blocks to all hotels
+    - Add "選択ホテルに適用" button to apply blocks to selected hotel
+    - Implement confirmation dialogs with formatted messages showing:
+      - Selected hotel(s)
+      - Selected parking lot(s) or "全駐車場"
+      - Selected vehicle category(ies) or "全車両タイプ"
+      - Date range
+      - Capacity amount
+    - Call POST /api/parking/capacity/block endpoint
+    - Show success/error toast messages
+    - Refresh blocked dates list after successful creation
+    - _Requirements: 2.1, 3.3_
+
+  - [ ] 9.5 Implement blocked dates DataTable display
+    - Create DataTable to display existing parking blocks
+    - Add columns for: Hotel, Parking Lot, Vehicle Category, Start Date, End Date, Blocked Capacity, Comment
+    - Format dates using formatDate helper function
+    - Add pagination with rows per page options [10, 30, 50, 100]
+    - Enable scrolling and striped rows
+    - Fetch blocked dates when hotel is selected
+    - _Requirements: 3.1_
+
+  - [ ] 9.6 Implement block deletion functionality
+    - Add delete button (trash icon) in each DataTable row
+    - Implement confirmation dialog before deletion showing:
+      - Parking lot name
+      - Vehicle category
+      - Date range
+      - Blocked capacity amount
+    - Call DELETE /api/parking/capacity/blocks/:blockId endpoint
+    - Show success/error toast messages
+    - Refresh blocked dates list after successful deletion
+    - _Requirements: 3.2, 3.5_
+
+  - [ ] 9.7 Add parking store methods for blocked dates
+    - Add fetchParkingBlocks method to useParkingStore
+    - Add createParkingBlock method to useParkingStore
+    - Add deleteParkingBlock method to useParkingStore
+    - Add reactive state for parkingBlocks list
+    - Handle API calls and error responses
+    - _Requirements: 2.1, 3.1, 3.2_
+
+  - [x] 9.8 Add route and navigation for parking calendar page
+
+
+    - Add route in router configuration for /admin/parking-calendar
+    - Add navigation menu item in admin section
+    - Set appropriate permissions/guards for admin access
+    - _Requirements: 2.1_
+
+- [ ] 10. Integrate blocked dates with reservation flow
+  - [ ] 10.1 Update ParkingSpotSelector to show blocked capacity
+    - Modify capacity display to show "利用可能: X台 (ブロック: Y台)"
+    - Show warning when blocked capacity reduces availability
+    - Disable date selection when all capacity is blocked
+    - Update real-time availability checks to include blocked capacity
+    - _Requirements: 2.2, 5.1_
+
+  - [ ] 10.2 Update reservation validation to check blocked capacity
+    - Modify saveParkingAssignments to validate against blocked capacity
+    - Return clear error message when capacity is blocked
+    - Suggest alternative dates when capacity is insufficient due to blocks
+    - _Requirements: 2.2, 5.2, 5.3_
+
+  - [ ] 10.3 Update capacity summary displays
+    - Show blocked capacity in capacity breakdown views
+    - Add visual indicators (colors/icons) for blocked dates
+    - Update tooltips to explain blocked capacity
+    - _Requirements: 2.2, 5.1_
+
+- [ ] 11. Documentation and deployment preparation
+  - [ ] 11.1 Update API documentation
     - Document all new capacity endpoints
     - Update existing endpoint documentation
     - Add request/response examples
     - Document error codes and messages
     - _Requirements: 6.5_
 
-  - [ ] 9.2 Create deployment runbook
+  - [ ] 11.2 Create deployment runbook
     - Document database migration steps
     - Document feature flag configuration
     - Document rollback procedures
     - Create deployment checklist
     - _Requirements: 6.5_
 
-  - [ ] 9.3 Add monitoring and logging
+  - [ ] 11.3 Add monitoring and logging
     - Add capacity utilization metrics
     - Add reservation success/failure rate tracking
     - Add error logging for capacity operations
