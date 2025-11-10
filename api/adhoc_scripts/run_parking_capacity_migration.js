@@ -13,20 +13,28 @@ const { Pool } = require('pg');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 async function runMigration() {
+    // Validate environment variables
+    const requiredEnvVars = ['PG_HOST', 'PG_PORT', 'PG_DATABASE', 'PG_USER', 'PG_PASSWORD'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+        throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    }
+
     const pool = new Pool({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
+        host: process.env.PG_HOST,
+        port: parseInt(process.env.PG_PORT, 10),
+        database: process.env.PG_DATABASE,
+        user: process.env.PG_USER,
+        password: String(process.env.PG_PASSWORD),
     });
 
     const client = await pool.connect();
 
     try {
         console.log('[Migration] Starting parking capacity management migration...');
-        console.log('[Migration] Database:', process.env.DB_NAME);
-        console.log('[Migration] Host:', process.env.DB_HOST);
+        console.log('[Migration] Database:', process.env.PG_DATABASE);
+        console.log('[Migration] Host:', process.env.PG_HOST);
         console.log('');
 
         // Read the migration file
@@ -107,13 +115,20 @@ async function runMigration() {
         });
         console.log('');
 
-        // Test the helper function
+        // Test the helper function with the first hotel in the database
         console.log('[Test] Testing get_virtual_capacity_pool_spot function...');
         try {
+            // Get the first hotel ID
+            const firstHotelResult = await client.query('SELECT id FROM hotels ORDER BY id LIMIT 1');
+            if (firstHotelResult.rows.length > 0) {
+                const testHotelId = firstHotelResult.rows[0].id;
             const testResult = await client.query(`
-                SELECT get_virtual_capacity_pool_spot(1, 1) AS virtual_spot_id
+                SELECT get_virtual_capacity_pool_spot(10, 1) AS virtual_spot_id
             `);
-            console.log('[Test] ✓ Function returned spot ID:', testResult.rows[0].virtual_spot_id);
+                console.log(`[Test] ✓ Function returned spot ID for hotel ${testHotelId}:`, testResult.rows[0].virtual_spot_id);
+            } else {
+                console.log('[Test] ⚠ No hotels found in database, skipping function test');
+            }
         } catch (error) {
             console.log('[Test] ✗ Function test failed:', error.message);
         }

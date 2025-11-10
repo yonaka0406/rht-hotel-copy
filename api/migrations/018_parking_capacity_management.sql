@@ -2,6 +2,7 @@
 -- This migration adds support for capacity-based parking reservations
 
 -- 1. Parking Blocks Table
+-- DROP TABLE IF EXISTS parking_blocks CASCADE;
 -- Used to block parking capacity for specific date ranges (e.g., winter closures, maintenance)
 CREATE TABLE parking_blocks (
     id UUID DEFAULT gen_random_uuid(),
@@ -246,6 +247,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger on vehicle_categories table
+DROP TRIGGER IF EXISTS trigger_create_virtual_spots_for_new_vehicle_category ON vehicle_categories;
 CREATE TRIGGER trigger_create_virtual_spots_for_new_vehicle_category
 AFTER INSERT ON vehicle_categories
 FOR EACH ROW
@@ -272,6 +274,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger on hotels table
+DROP TRIGGER IF EXISTS trigger_create_virtual_spots_for_new_hotel ON hotels;
 CREATE TRIGGER trigger_create_virtual_spots_for_new_hotel
 AFTER INSERT ON hotels
 FOR EACH ROW
