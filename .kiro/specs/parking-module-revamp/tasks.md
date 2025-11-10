@@ -1,6 +1,8 @@
 # Implementation Plan
 
-- [-] 1. Database schema updates for capacity-based parking
+- [x] 1. Database schema updates for capacity-based parking
+
+
 
   - Create migration file for parking_blocks table with partitioning by hotel_id
   - Create virtual "capacity pool" parking spots for each hotel and vehicle category combination
