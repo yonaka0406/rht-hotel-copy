@@ -483,6 +483,105 @@ export function useParkingStore() {
             setReservationIsUpdating(false);
         }
     };
+
+    // Capacity Management Methods
+    const getAvailableCapacity = async (hotelId, startDate, endDate, vehicleCategoryId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/capacity/available?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}&vehicleCategoryId=${vehicleCategoryId}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to get available capacity', error);
+            throw error;
+        }
+    };
+
+    const blockParkingCapacity = async (blockData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/parking/capacity/block', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(blockData),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to block parking capacity', error);
+            throw error;
+        }
+    };
+
+    const getBlockedCapacity = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/capacity/blocks?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to get blocked capacity', error);
+            throw error;
+        }
+    };
+
+    const removeCapacityBlock = async (blockId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/capacity/blocks/${blockId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to remove capacity block', error);
+            throw error;
+        }
+    };
+
+    const getCapacitySummary = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/capacity/summary?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to get capacity summary', error);
+            throw error;
+        }
+    };
     
     return {
         vehicleCategories,
@@ -514,5 +613,11 @@ export function useParkingStore() {
         removeBulkParkingAddonWithSpot,
         saveParkingAssignments,
         deleteParkingReservation,
+        // Capacity management methods
+        getAvailableCapacity,
+        blockParkingCapacity,
+        getBlockedCapacity,
+        removeCapacityBlock,
+        getCapacitySummary,
     };
 }
