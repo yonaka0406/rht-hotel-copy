@@ -442,9 +442,6 @@ watch(() => props.dates, async (newDates) => {
     await checkRealTimeAvailability();
     validateSelection();
   }
-  if (newDates.length > 0 && props.hotelId) {
-    await fetchParkingSpotAvailability(props.hotelId, newDates[0], newDates[newDates.length - 1]);
-  }
 }, { deep: true, immediate: true });
 
 watch(() => props.preselectedVehicleCategoryId, (newValue) => {

@@ -8,7 +8,7 @@
                 <div class="summary-stats">
                     <div class="stat-item">
                         <span class="stat-label">総日数:</span>
-                        <span class="stat-value">{{ groupedByDate.length }}</span>
+                        <span class="stat-value">{{ filteredGroupedByDate.length }} / {{ groupedByDate.length }}</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">総駐車台数:</span>
@@ -30,10 +30,22 @@
                 </div>
             </div>
 
+            <!-- Date Filter -->
+            <div class="date-filter">
+                <div class="filter-field">
+                    <label for="dateRangeFilter" class="font-semibold">日付フィルター</label>
+                    <DatePicker id="dateRangeFilter" v-model="dateRangeFilter" selectionMode="range" 
+                                :manualInput="false" showIcon dateFormat="yy/mm/dd" 
+                                placeholder="日付範囲を選択" class="w-full" />
+                </div>
+                <Button v-if="dateRangeFilter" label="クリア" icon="pi pi-times" 
+                        size="small" text @click="clearDateFilter" />
+            </div>
+
             <!-- Date-based view -->
             <div class="tabs-container">
-                <div v-if="groupedByDate.length > 0" class="date-based-view">
-                    <DataTable :value="groupedByDate" :scrollable="true" scrollHeight="500px"
+                <div v-if="filteredGroupedByDate.length > 0" class="date-based-view">
+                    <DataTable :value="filteredGroupedByDate" :scrollable="true" scrollHeight="500px"
                         v-model:selection="selectedDateGroups" dataKey="date"
                         selectionMode="multiple" :paginator="true" :rows="10"
                         :rowsPerPageOptions="[10, 15, 30, 50]"
@@ -57,15 +69,13 @@
                             </template>
                         </Column>
 
-                        <Column field="vehicleType" header="車両タイプ" :sortable="true" :style="{ minWidth: '150px' }">
+                        <Column field="vehicleType" header="車両タイプ" :sortable="false" :style="{ minWidth: '180px' }">
                             <template #body="{ data }">
-                                <Tag :value="data.vehicleType" :severity="getSeverityByType(data.vehicleType)" />
-                            </template>
-                        </Column>
-
-                        <Column field="revenue" header="売上" :sortable="true" :style="{ minWidth: '120px' }">
-                            <template #body="{ data }">
-                                <span class="font-semibold">{{ formatCurrency(data.revenue) }}</span>
+                                <div class="vehicle-types">
+                                    <Tag v-for="vType in data.vehicleTypesArray" :key="vType" 
+                                         :value="vType" :severity="getSeverityByType(vType)" 
+                                         class="mr-1 mb-1" />
+                                </div>
                             </template>
                         </Column>
 
@@ -107,7 +117,7 @@
         </div>
 
         <template #footer>
-            <Button label="閉じる" icon="pi pi-times" text @click="closeDialog" :disabled="processing" />
+            <Button label="閉じる" icon="pi pi-times" @click="closeDialog" :disabled="processing" severity="danger" />
         </template>
     </Dialog>
 
@@ -117,7 +127,47 @@
     <Dialog v-model:visible="showEditDialog" :header="editDialogTitle" :modal="true" 
             :style="{ width: '500px' }" @hide="onEditDialogHide">
         <div class="edit-dialog-content">
-            <div class="field">
+            <!-- Warning for mixed vehicle types in bulk edit -->
+            <div v-if="hasMixedVehicleTypes" class="mixed-types-warning mb-3 p-3">
+                <div class="flex align-items-start gap-2">
+                    <i class="pi pi-exclamation-triangle text-orange-500 mt-1"></i>
+                    <span class="text-sm">選択された日付には異なる車両タイプが含まれています。正確な制御のため、個別に編集してください。</span>
+                </div>
+            </div>
+
+            <!-- Show breakdown by vehicle type if multiple types exist -->
+            <div v-if="vehicleTypeBreakdown.length > 1" class="vehicle-type-breakdown">
+                <label class="font-semibold mb-2 block">車両タイプ別台数</label>
+                <div v-for="typeInfo in vehicleTypeBreakdown" :key="typeInfo.vehicleType" 
+                     class="type-field mb-3">
+                    <div class="flex align-items-center gap-2 mb-2">
+                        <Tag :value="typeInfo.vehicleType" :severity="getSeverityByType(typeInfo.vehicleType)" />
+                        <span class="text-500">(現在: {{ typeInfo.currentCount }}台 / 最大: {{ getDynamicMaxForType(typeInfo) }}台)</span>
+                    </div>
+                    <InputNumber v-model="typeInfo.newCount" :min="0" :max="getDynamicMaxForType(typeInfo)" 
+                                 showButtons buttonLayout="horizontal" class="w-full"
+                                 :disabled="editProcessing || loadingAvailability">
+                        <template #incrementbuttonicon>
+                            <span class="pi pi-plus" />
+                        </template>
+                        <template #decrementbuttonicon>
+                            <span class="pi pi-minus" />
+                        </template>
+                    </InputNumber>
+                </div>
+                <div class="total-summary mt-3 p-3">
+                    <div class="flex justify-content-between align-items-center">
+                        <span class="font-semibold">合計:</span>
+                        <span class="text-xl font-bold text-primary">
+                            {{ currentSpotCount }}台 → {{ totalNewCount }}台 
+                            ({{ totalDifference > 0 ? '+' : '' }}{{ totalDifference }}台)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simple count editor for single vehicle type -->
+            <div v-else class="field">
                 <label for="newSpotCount" class="font-semibold">新しい台数</label>
                 <InputNumber id="newSpotCount" v-model="newSpotCount" :min="0" :max="maxAvailableSpots" 
                              showButtons buttonLayout="horizontal" class="w-full mt-2"
@@ -133,13 +183,14 @@
                     現在: {{ currentSpotCount }}台 → 新規: {{ newSpotCount }}台
                     ({{ spotCountDifference > 0 ? '+' : '' }}{{ spotCountDifference }}台)
                 </small>
-                <small v-if="!loadingAvailability" class="text-primary mt-1 block">
-                    最大: {{ maxAvailableSpots }}台まで予約可能
-                </small>
-                <small v-else class="text-500 mt-1 block">
-                    <i class="pi pi-spin pi-spinner"></i> 空き状況を確認中...
-                </small>
             </div>
+
+            <small v-if="!loadingAvailability" class="text-primary mt-2 block">
+                最大: {{ maxAvailableSpots }}台まで予約可能
+            </small>
+            <small v-else class="text-500 mt-2 block">
+                <i class="pi pi-spin pi-spinner"></i> 空き状況を確認中...
+            </small>
 
             <div v-if="editingDates.length > 1" class="affected-dates mt-3">
                 <label class="font-semibold">対象日付 ({{ editingDates.length }}日)</label>
@@ -152,9 +203,9 @@
 
         <template #footer>
             <Button label="キャンセル" icon="pi pi-times" text @click="showEditDialog = false" 
-                    :disabled="editProcessing" />
+                    :disabled="editProcessing" severity="secondary" />
             <Button label="更新" icon="pi pi-check" @click="saveSpotCountChange" 
-                    :disabled="editProcessing || newSpotCount === currentSpotCount" 
+                    :disabled="editProcessing || !hasChanges" 
                     :loading="editProcessing" />
         </template>
     </Dialog>
@@ -176,6 +227,7 @@ import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Badge from 'primevue/badge';
 import InputNumber from 'primevue/inputnumber';
+import DatePicker from 'primevue/datepicker';
 import ConfirmDialog from 'primevue/confirmdialog';
 
 // Store
@@ -226,6 +278,9 @@ const newSpotCount = ref(0);
 const editProcessing = ref(false);
 const maxAvailableSpots = ref(20);
 const loadingAvailability = ref(false);
+const dateRangeFilter = ref(null);
+const vehicleTypeBreakdown = ref([]);
+const hasMixedVehicleTypes = ref(false);
 
 // Watch for external changes to parkingSpots
 watch(() => props.parkingSpots, (newSpots) => {
@@ -245,6 +300,30 @@ const uniqueParkingSpots = computed(() => {
     });
 });
 
+// Date filter computed
+const filteredGroupedByDate = computed(() => {
+    if (!dateRangeFilter.value || !Array.isArray(dateRangeFilter.value) || dateRangeFilter.value.length === 0) {
+        return groupedByDate.value;
+    }
+
+    const [startDate, endDate] = dateRangeFilter.value;
+    if (!startDate) {
+        return groupedByDate.value;
+    }
+
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    
+    const end = endDate ? new Date(endDate) : new Date(startDate);
+    end.setHours(23, 59, 59, 999);
+
+    return groupedByDate.value.filter(group => {
+        const groupDate = new Date(group.date);
+        groupDate.setHours(0, 0, 0, 0);
+        return groupDate >= start && groupDate <= end;
+    });
+});
+
 // Group reservations by date
 const groupedByDate = computed(() => {
     const groups = {};
@@ -256,13 +335,14 @@ const groupedByDate = computed(() => {
                 date: dateKey,
                 spotCount: 0,
                 revenue: 0,
-                vehicleType: spot.vehicleCategoryName || '未設定',
+                vehicleTypes: new Set(),
                 spotsByLot: {},
                 reservations: []
             };
         }
         groups[dateKey].spotCount++;
         groups[dateKey].revenue += parseFloat(spot.price) || 0;
+        groups[dateKey].vehicleTypes.add(spot.vehicleCategoryName || '未設定');
         
         // Group spots by parking lot
         const lotName = spot.parkingLotName || '未設定';
@@ -274,8 +354,11 @@ const groupedByDate = computed(() => {
         groups[dateKey].reservations.push(spot);
     });
 
-    // Format spots by lot for display
+    // Format spots by lot and vehicle types for display
     Object.values(groups).forEach(group => {
+        // Convert vehicle types Set to Array
+        group.vehicleTypesArray = Array.from(group.vehicleTypes);
+        
         group.spotsByLotFormatted = Object.entries(group.spotsByLot)
             .map(([lotName, spotNumbers]) => {
                 // Sort spot numbers
@@ -326,6 +409,46 @@ const spotCountDifference = computed(() => {
     return newSpotCount.value - currentSpotCount.value;
 });
 
+const totalNewCount = computed(() => {
+    return vehicleTypeBreakdown.value.reduce((sum, type) => sum + (type.newCount || 0), 0);
+});
+
+const totalDifference = computed(() => {
+    return totalNewCount.value - currentSpotCount.value;
+});
+
+const hasChanges = computed(() => {
+    if (vehicleTypeBreakdown.value.length > 1) {
+        // For vehicle type breakdown, check if any type count changed
+        return vehicleTypeBreakdown.value.some(type => type.newCount !== type.currentCount);
+    } else {
+        // For simple edit, check if total count changed
+        return newSpotCount.value !== currentSpotCount.value;
+    }
+});
+
+// Calculate dynamic max available for each vehicle type
+// This accounts for spots freed up or consumed by other vehicle types
+const getDynamicMaxForType = (targetType) => {
+    if (vehicleTypeBreakdown.value.length <= 1) {
+        return targetType.maxAvailable;
+    }
+    
+    // Calculate net change in spots from other types
+    // Positive = freed up (other types reduced), Negative = consumed (other types increased)
+    const netChangeFromOthers = vehicleTypeBreakdown.value
+        .filter(type => type.vehicleType !== targetType.vehicleType)
+        .reduce((sum, type) => {
+            const change = type.currentCount - (type.newCount || 0);
+            return sum + change;
+        }, 0);
+    
+    // Base max + net change from other types
+    // If others freed spots (positive), this type can use more
+    // If others consumed spots (negative), this type has less available
+    return targetType.maxAvailable + netChangeFromOthers;
+};
+
 // Get severity for spot badge based on reservation count
 const getSpotSeverity = (count) => {
     if (count === 0) return 'secondary';
@@ -361,6 +484,10 @@ const getSeverityByType = (vehicleType) => {
 
 const closeDialog = () => {
     emit('update:modelValue', false);
+};
+
+const clearDateFilter = () => {
+    dateRangeFilter.value = null;
 };
 
 const onDialogHide = () => {
@@ -482,23 +609,223 @@ const openEditDialog = async (dateGroup) => {
     editingDates.value = [dateGroup.date];
     currentSpotCount.value = dateGroup.spotCount;
     newSpotCount.value = dateGroup.spotCount;
+    
+    // Build vehicle type breakdown
+    const typeMap = {};
+    dateGroup.reservations.forEach(spot => {
+        const vType = spot.vehicleCategoryName || '未設定';
+        if (!typeMap[vType]) {
+            typeMap[vType] = {
+                vehicleType: vType,
+                vehicleCategoryId: spot.vehicleCategoryId,
+                currentCount: 0,
+                newCount: 0,
+                maxAvailable: 20,
+                reservations: []
+            };
+        }
+        typeMap[vType].currentCount++;
+        typeMap[vType].reservations.push(spot);
+    });
+    
+    vehicleTypeBreakdown.value = Object.values(typeMap).map(type => ({
+        ...type,
+        newCount: type.currentCount
+    }));
+    
     showEditDialog.value = true;
     
-    // Check availability for this date
-    await checkAvailability(dateGroup);
+    // Check availability for each vehicle type
+    await checkAvailabilityForTypes(dateGroup);
 };
 
 const openBulkEditDialog = async () => {
     if (!selectedDateGroups.value || selectedDateGroups.value.length === 0) return;
     
+    // Check if selected dates have different vehicle type compositions or multiple types
+    const allVehicleTypes = new Set();
+    const vehicleTypesByDate = {};
+    
+    selectedDateGroups.value.forEach(group => {
+        const typesForDate = new Set(group.vehicleTypesArray);
+        vehicleTypesByDate[group.date] = typesForDate;
+        typesForDate.forEach(type => allVehicleTypes.add(type));
+    });
+    
+    // Check if dates have different vehicle type compositions
+    const hasDifferentTypes = selectedDateGroups.value.some(group => {
+        const typesForDate = vehicleTypesByDate[group.date];
+        return typesForDate.size !== allVehicleTypes.size || 
+               ![...allVehicleTypes].every(type => typesForDate.has(type));
+    });
+    
+    // Show warning only if dates have different types
+    hasMixedVehicleTypes.value = hasDifferentTypes;
+    
     editingDates.value = selectedDateGroups.value.map(g => g.date);
-    // Use the spot count from the first selected date as the starting point
     currentSpotCount.value = selectedDateGroups.value[0].spotCount;
     newSpotCount.value = selectedDateGroups.value[0].spotCount;
-    showEditDialog.value = true;
     
-    // Check availability for all selected dates (use the most restrictive)
-    await checkBulkAvailability();
+    // If all dates have the same vehicle types and there are multiple types,
+    // build vehicle type breakdown for bulk editing
+    if (!hasDifferentTypes && allVehicleTypes.size > 1) {
+        // Build breakdown from first date as template
+        const typeMap = {};
+        selectedDateGroups.value[0].reservations.forEach(spot => {
+            const vType = spot.vehicleCategoryName || '未設定';
+            if (!typeMap[vType]) {
+                typeMap[vType] = {
+                    vehicleType: vType,
+                    vehicleCategoryId: spot.vehicleCategoryId,
+                    currentCount: 0,
+                    newCount: 0,
+                    maxAvailable: 20,
+                    reservations: []
+                };
+            }
+        });
+        
+        // Aggregate counts and reservations from all selected dates
+        selectedDateGroups.value.forEach(group => {
+            group.reservations.forEach(spot => {
+                const vType = spot.vehicleCategoryName || '未設定';
+                if (typeMap[vType]) {
+                    typeMap[vType].currentCount++;
+                    typeMap[vType].reservations.push(spot);
+                }
+            });
+        });
+        
+        vehicleTypeBreakdown.value = Object.values(typeMap).map(type => ({
+            ...type,
+            newCount: type.currentCount
+        }));
+        
+        // Check availability for each vehicle type across all dates
+        await checkBulkAvailabilityForTypes();
+    } else {
+        vehicleTypeBreakdown.value = [];
+        // Check availability for all selected dates (use the most restrictive)
+        await checkBulkAvailability();
+    }
+    
+    showEditDialog.value = true;
+};
+
+const checkAvailabilityForTypes = async (dateGroup) => {
+    loadingAvailability.value = true;
+    try {
+        if (!props.reservationDetails?.[0]) {
+            vehicleTypeBreakdown.value.forEach(type => {
+                type.maxAvailable = 20;
+            });
+            maxAvailableSpots.value = 20;
+            return;
+        }
+
+        const hotelId = props.reservationDetails[0].hotel_id;
+        
+        // Check availability for each vehicle type
+        for (const typeInfo of vehicleTypeBreakdown.value) {
+            if (!typeInfo.vehicleCategoryId) {
+                typeInfo.maxAvailable = 20;
+                continue;
+            }
+
+            try {
+                const response = await parkingStore.checkRealTimeAvailability(
+                    hotelId,
+                    typeInfo.vehicleCategoryId,
+                    [dateGroup.date],
+                    null
+                );
+
+                const dateAvailability = response.dateAvailability?.[dateGroup.date];
+                if (dateAvailability) {
+                    // Max = current spots for this type + available spots
+                    typeInfo.maxAvailable = typeInfo.currentCount + dateAvailability.availableSpots;
+                } else {
+                    typeInfo.maxAvailable = typeInfo.currentCount;
+                }
+            } catch (error) {
+                console.error(`Error checking availability for ${typeInfo.vehicleType}:`, error);
+                typeInfo.maxAvailable = typeInfo.currentCount;
+            }
+        }
+        
+        // Set overall max as sum of all type maxes
+        maxAvailableSpots.value = vehicleTypeBreakdown.value.reduce((sum, type) => sum + type.maxAvailable, 0);
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        maxAvailableSpots.value = 20;
+    } finally {
+        loadingAvailability.value = false;
+    }
+};
+
+const checkBulkAvailabilityForTypes = async () => {
+    loadingAvailability.value = true;
+    try {
+        if (!props.reservationDetails?.[0]) {
+            vehicleTypeBreakdown.value.forEach(type => {
+                type.maxAvailable = 20;
+            });
+            maxAvailableSpots.value = 20;
+            return;
+        }
+
+        const hotelId = props.reservationDetails[0].hotel_id;
+        
+        // Check availability for each vehicle type across all dates
+        for (const typeInfo of vehicleTypeBreakdown.value) {
+            if (!typeInfo.vehicleCategoryId) {
+                typeInfo.maxAvailable = 20;
+                continue;
+            }
+
+            try {
+                const response = await parkingStore.checkRealTimeAvailability(
+                    hotelId,
+                    typeInfo.vehicleCategoryId,
+                    editingDates.value,
+                    null
+                );
+
+                // Find the minimum available spots across all dates for this type (bottleneck)
+                let minAvailableForType = Infinity;
+                
+                editingDates.value.forEach(date => {
+                    const dateAvailability = response.dateAvailability?.[date];
+                    const dateGroup = selectedDateGroups.value.find(g => g.date === date);
+                    
+                    // Count current spots for this type on this date
+                    const currentForTypeOnDate = dateGroup?.reservations.filter(
+                        spot => (spot.vehicleCategoryName || '未設定') === typeInfo.vehicleType
+                    ).length || 0;
+                    
+                    if (dateAvailability) {
+                        const maxForTypeOnDate = currentForTypeOnDate + dateAvailability.availableSpots;
+                        minAvailableForType = Math.min(minAvailableForType, maxForTypeOnDate);
+                    } else {
+                        minAvailableForType = Math.min(minAvailableForType, currentForTypeOnDate);
+                    }
+                });
+                
+                typeInfo.maxAvailable = minAvailableForType === Infinity ? typeInfo.currentCount : minAvailableForType;
+            } catch (error) {
+                console.error(`Error checking availability for ${typeInfo.vehicleType}:`, error);
+                typeInfo.maxAvailable = typeInfo.currentCount;
+            }
+        }
+        
+        // Set overall max as sum of all type maxes
+        maxAvailableSpots.value = vehicleTypeBreakdown.value.reduce((sum, type) => sum + type.maxAvailable, 0);
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        maxAvailableSpots.value = 20;
+    } finally {
+        loadingAvailability.value = false;
+    }
 };
 
 const checkAvailability = async (dateGroup) => {
@@ -613,14 +940,14 @@ const onEditDialogHide = () => {
     newSpotCount.value = 0;
     maxAvailableSpots.value = 20;
     loadingAvailability.value = false;
+    vehicleTypeBreakdown.value = [];
+    hasMixedVehicleTypes.value = false;
 };
 
 const saveSpotCountChange = async () => {
     editProcessing.value = true;
     
     try {
-        const targetCount = newSpotCount.value;
-        
         // Get hotel_id and reservation_id from props.reservationDetails
         const hotelId = props.reservationDetails?.[0]?.hotel_id;
         const reservationId = props.reservationDetails?.[0]?.reservation_id;
@@ -635,52 +962,98 @@ const saveSpotCountChange = async () => {
         if (!firstDateData || firstDateData.length === 0) {
             throw new Error('No reservation data found for the selected date');
         }
-        const sampleReservation = firstDateData[0];
         
-        // Process each date individually to handle different current counts
         const assignmentsToAdd = [];
         const spotsToDelete = [];
         
-        for (const date of editingDates.value) {
-            const dateData = getDateData(date);
-            const currentCountForDate = dateData.length;
-            const differenceForDate = targetCount - currentCountForDate;
-            
-            if (differenceForDate > 0) {
-                // Add spots for this date
-                for (let i = 0; i < differenceForDate; i++) {
-                    assignmentsToAdd.push({
-                        id: `temp-${Date.now()}-${date}-${i}`,
-                        hotel_id: hotelId,
-                        reservation_id: reservationId,
-                        roomId: props.roomId,
-                        check_in: date,
-                        check_out: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0],
-                        numberOfSpots: 1,
-                        vehicle_category_id: sampleReservation.vehicleCategoryId,
-                        unit_price: sampleReservation.price || 0,
-                        comment: '',
-                        addon: {
-                            addons_hotel_id: null,
-                            addons_global_id: null
+        // Check if we're using vehicle type breakdown
+        if (vehicleTypeBreakdown.value.length > 1) {
+            // Handle vehicle type breakdown mode
+            for (const date of editingDates.value) {
+                const dateData = getDateData(date);
+                
+                // Process each vehicle type
+                for (const typeInfo of vehicleTypeBreakdown.value) {
+                    const currentSpotsForType = typeInfo.reservations.filter(spot => spot.date === date);
+                    const currentCountForType = currentSpotsForType.length;
+                    const differenceForType = typeInfo.newCount - currentCountForType;
+                    
+                    if (differenceForType > 0) {
+                        // Add spots for this vehicle type
+                        const sampleForType = currentSpotsForType[0];
+                        for (let i = 0; i < differenceForType; i++) {
+                            assignmentsToAdd.push({
+                                id: `temp-${Date.now()}-${date}-${typeInfo.vehicleType}-${i}`,
+                                hotel_id: hotelId,
+                                reservation_id: reservationId,
+                                roomId: props.roomId,
+                                check_in: date,
+                                check_out: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0],
+                                numberOfSpots: 1,
+                                vehicle_category_id: sampleForType.vehicleCategoryId,
+                                unit_price: sampleForType.price || 0,
+                                comment: '',
+                                addon: {
+                                    addons_hotel_id: null,
+                                    addons_global_id: null
+                                }
+                            });
                         }
-                    });
+                    } else if (differenceForType < 0) {
+                        // Remove spots for this vehicle type
+                        const spotsToRemoveForType = Math.abs(differenceForType);
+                        spotsToDelete.push(...currentSpotsForType.slice(-spotsToRemoveForType));
+                    }
                 }
-            } else if (differenceForDate < 0) {
-                // Remove spots for this date
-                const spotsToRemoveForDate = Math.abs(differenceForDate);
-                spotsToDelete.push(...dateData.slice(-spotsToRemoveForDate));
             }
-            // If differenceForDate === 0, no change needed for this date
+        } else {
+            // Handle simple count mode
+            const targetCount = newSpotCount.value;
+            const sampleReservation = firstDateData[0];
+            
+            // Process each date individually to handle different current counts
+            for (const date of editingDates.value) {
+                const dateData = getDateData(date);
+                const currentCountForDate = dateData.length;
+                const differenceForDate = targetCount - currentCountForDate;
+                
+                if (differenceForDate > 0) {
+                    // Add spots for this date
+                    for (let i = 0; i < differenceForDate; i++) {
+                        assignmentsToAdd.push({
+                            id: `temp-${Date.now()}-${date}-${i}`,
+                            hotel_id: hotelId,
+                            reservation_id: reservationId,
+                            roomId: props.roomId,
+                            check_in: date,
+                            check_out: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0],
+                            numberOfSpots: 1,
+                            vehicle_category_id: sampleReservation.vehicleCategoryId,
+                            unit_price: sampleReservation.price || 0,
+                            comment: '',
+                            addon: {
+                                addons_hotel_id: null,
+                                addons_global_id: null
+                            }
+                        });
+                    }
+                } else if (differenceForDate < 0) {
+                    // Remove spots for this date
+                    const spotsToRemoveForDate = Math.abs(differenceForDate);
+                    spotsToDelete.push(...dateData.slice(-spotsToRemoveForDate));
+                }
+                // If differenceForDate === 0, no change needed for this date
+            }
         }
         
-        // Execute additions and deletions
-        if (assignmentsToAdd.length > 0) {
-            await parkingStore.saveParkingAssignments(assignmentsToAdd);
-        }
-        
+        // Execute deletions first, then additions
+        // This ensures spots are freed up before trying to add new ones
         if (spotsToDelete.length > 0) {
             await deleteSpots(spotsToDelete);
+        }
+        
+        if (assignmentsToAdd.length > 0) {
+            await parkingStore.saveParkingAssignments(assignmentsToAdd);
         }
 
         // Refresh the parking data
@@ -759,6 +1132,23 @@ const saveSpotCountChange = async () => {
     gap: 0.5rem;
 }
 
+.date-filter {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--surface-50);
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-200);
+}
+
+.filter-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 .tabs-container {
     flex: 1;
     min-height: 0;
@@ -789,6 +1179,12 @@ const saveSpotCountChange = async () => {
 }
 
 .spot-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.vehicle-types {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
@@ -834,4 +1230,34 @@ const saveSpotCountChange = async () => {
     flex-wrap: wrap;
     gap: 0.25rem;
 }
+
+.vehicle-type-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.type-field {
+    padding: 1rem;
+    background: var(--surface-50);
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-200);
+}
+
+.total-summary {
+    background: var(--primary-50);
+    border-radius: 0.5rem;
+    border: 2px solid var(--primary-200);
+}
 </style>
+
+.mixed-types-warning {
+    background: var(--orange-50);
+    border: 1px solid var(--orange-200);
+    border-radius: 0.5rem;
+    color: var(--orange-900);
+}
+
+.mixed-types-warning i {
+    flex-shrink: 0;
+}
