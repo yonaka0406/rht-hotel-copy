@@ -94,6 +94,10 @@
                           <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>
                         </template>
                         <template
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'other'">
+                          <i class="pi pi-car bg-red-100 p-1 rounded dark:bg-red-800"></i>
+                        </template>
+                        <template
                           v-else-if="fillSpotInfo(spot.id, date).status === 'block' && fillSpotInfo(spot.id, date).client_id === '11111111-1111-1111-1111-111111111111'">
                           <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
                         </template>
@@ -119,7 +123,7 @@
           <Button v-if="hasChanges" @click="applyChanges"
             class="dark:bg-gray-800 dark:text-gray-100">変更適用</Button>
           <!-- Legend Component -->
-          <ReservationsCalendarLegend />
+          <ParkingCalendarLegend />
         </template>
       </Panel>  
   
@@ -167,7 +171,7 @@
   import { Panel, Skeleton, SelectButton, InputText, ConfirmDialog, Button, Drawer } from 'primevue';
   
   // Components
-  import ReservationsCalendarLegend from '../components/ReservationsCalendarLegend.vue';
+  import ParkingCalendarLegend from './components/ParkingCalendarLegend.vue';
   import ReservationEdit from '../Reservation/ReservationEdit.vue';
   
   // Stores  
@@ -410,27 +414,36 @@
 
     // Apply styles based on reservation type
     if (spotInfo) {
-      switch(spotInfo.type) {
-        case 'employee':
-          style = { backgroundColor: '#f3e5f5' }; // Light purple for employee
-          break;
-        case 'ota':
-          style = { backgroundColor: '#dbeafe' }; // Light blue for OTA
-          break;
-        case 'web':
-          style = { backgroundColor: '#bfdbfe' }; // Slightly darker blue for web
-          break;
-        case 'default':
-        default:
-          // Default style for normal reservations
-          if (spotInfo.status !== 'available') {
-            style = { 
-              backgroundColor: '#f0fdf4', // Light green for normal reservations
-              color: 'inherit', 
-              fontWeight: 'normal' 
-            };
-          }
-          break;
+      // Check for other/block status first
+      if (spotInfo.status === 'other') {
+        style = { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
+      } else if (spotInfo.status === 'block' && spotInfo.client_id === '11111111-1111-1111-1111-111111111111') {
+        style = { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
+      } else if (spotInfo.status === 'block' && spotInfo.client_id === '22222222-2222-2222-2222-222222222222') {
+        style = { backgroundColor: '#fed7aa' }; // Light orange for provisional blocks
+      } else {
+        switch(spotInfo.type) {
+          case 'employee':
+            style = { backgroundColor: '#f3e5f5' }; // Light purple for employee
+            break;
+          case 'ota':
+            style = { backgroundColor: '#dbeafe' }; // Light blue for OTA
+            break;
+          case 'web':
+            style = { backgroundColor: '#bfdbfe' }; // Slightly darker blue for web
+            break;
+          case 'default':
+          default:
+            // Default style for normal reservations
+            if (spotInfo.status !== 'available') {
+              style = { 
+                backgroundColor: '#f0fdf4', // Light green for normal reservations
+                color: 'inherit', 
+                fontWeight: 'normal' 
+              };
+            }
+            break;
+        }
       }
     }
     

@@ -136,8 +136,8 @@ class ParkingReservationsService {
                     blockReservations.push({
                         parking_spot_id: spot.id,
                         date: dateStr,
-                        status: 'block',
-                        client_id: '22222222-2222-2222-2222-222222222222', // Special ID for administrative blocks
+                        status: 'other',
+                        client_id: '11111111-1111-1111-1111-111111111111', // Special ID for administrative blocks (ブロック)
                         booker_name: block.comment || '管理ブロック',
                         reservation_id: block.id,
                         spot_number: spot.spot_number,
