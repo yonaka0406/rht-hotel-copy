@@ -27,7 +27,7 @@
                 </Column>
                 <Column field="number_of_spots" header="ブロック台数"></Column>
                 <Column field="comment" header="備考"></Column>
-                <Column header="削除" body="deleteButton">
+                <Column header="削除">
                     <template #body="{ data }">
                         <Button icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
                             @click="$emit('delete-block', data)" />

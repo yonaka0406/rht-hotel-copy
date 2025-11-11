@@ -1267,8 +1267,8 @@ const updateParkingSpots = async () => {
         //});
 
         // Ensure the current value doesn't exceed the new max
-        if (comboRow.value.number_of_rooms > maxParkingSpots.value) {
-            comboRow.value.number_of_rooms = Math.max(0, maxParkingSpots.value);
+        if (numberOfVehicles.value > maxParkingSpots.value) {
+            numberOfVehicles.value = Math.max(0, maxParkingSpots.value);
         }
     } catch (error) {
         console.error('[ReservationsNewCombo] Failed to fetch parking spot availability:', error);

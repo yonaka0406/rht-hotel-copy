@@ -123,10 +123,9 @@ async function runMigration() {
             if (firstHotelResult.rows.length > 0) {
                 const testHotelId = firstHotelResult.rows[0].id;
             const testResult = await client.query(`
-                SELECT get_virtual_capacity_pool_spot(10, 1) AS virtual_spot_id
-            `);
-                console.log(`[Test] ✓ Function returned spot ID for hotel ${testHotelId}:`, testResult.rows[0].virtual_spot_id);
-            } else {
+                SELECT get_virtual_capacity_pool_spot($1, 1) AS virtual_spot_id
+            `, [testHotelId]);
+                console.log(`[Test] ✓ Function returned spot ID for hotel ${testHotelId}:`, testResult.rows[0].virtual_spot_id);            } else {
                 console.log('[Test] ⚠ No hotels found in database, skipping function test');
             }
         } catch (error) {

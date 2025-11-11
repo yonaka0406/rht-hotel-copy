@@ -98,38 +98,38 @@ let currentFetchId = 0;
 
 // Fetch initial data on mount
 onMounted(async () => {
-    console.log('[ManageParkingCalendar] onMounted - Starting initialization');
+    //console.log('[ManageParkingCalendar] onMounted - Starting initialization');
     await fetchHotels();
     await fetchHotel();
     
-    console.log('[ManageParkingCalendar] onMounted - selectedHotelId:', selectedHotelId.value);
-    console.log('[ManageParkingCalendar] onMounted - formData.startDate:', formData.startDate);
-    console.log('[ManageParkingCalendar] onMounted - formData.endDate:', formData.endDate);
+    //console.log('[ManageParkingCalendar] onMounted - selectedHotelId:', selectedHotelId.value);
+    //console.log('[ManageParkingCalendar] onMounted - formData.startDate:', formData.startDate);
+    //console.log('[ManageParkingCalendar] onMounted - formData.endDate:', formData.endDate);
     
     // If a hotel is already selected (from cache), fetch parking lots and blocks
     if (selectedHotelId.value) {
-        console.log('[ManageParkingCalendar] onMounted - Fetching parking lots for hotel:', selectedHotelId.value);
+        //console.log('[ManageParkingCalendar] onMounted - Fetching parking lots for hotel:', selectedHotelId.value);
         await fetchParkingLots();
         
         // Fetch parking blocks for the initial date range
         if (formData.startDate && formData.endDate) {
             const startDateStr = formatDate(formData.startDate);
             const endDateStr = formatDate(formData.endDate);
-            console.log('[ManageParkingCalendar] onMounted - Fetching parking blocks:', startDateStr, 'to', endDateStr);
+            //console.log('[ManageParkingCalendar] onMounted - Fetching parking blocks:', startDateStr, 'to', endDateStr);
             await fetchParkingBlocks(selectedHotelId.value, startDateStr, endDateStr);
             parkingBlocks.value = storeParkingBlocks.value;
-            console.log('[ManageParkingCalendar] onMounted - Parking blocks loaded:', parkingBlocks.value.length, 'blocks');
+            //console.log('[ManageParkingCalendar] onMounted - Parking blocks loaded:', parkingBlocks.value.length, 'blocks');
         } else {
-            console.log('[ManageParkingCalendar] onMounted - Dates not set, skipping block fetch');
+            //console.log('[ManageParkingCalendar] onMounted - Dates not set, skipping block fetch');
         }
     } else {
-        console.log('[ManageParkingCalendar] onMounted - No hotel selected, skipping block fetch');
+        //console.log('[ManageParkingCalendar] onMounted - No hotel selected, skipping block fetch');
     }
 });
 
 // Watch hotel selection to fetch parking lots and blocks
 watch(selectedHotelId, async (newHotelId) => {
-    console.log('[ManageParkingCalendar] watch selectedHotelId - New hotel ID:', newHotelId);
+    //console.log('[ManageParkingCalendar] watch selectedHotelId - New hotel ID:', newHotelId);
     if (newHotelId) {
         await fetchParkingLots();
         // Reset parking lot selection and capacity when hotel changes
@@ -142,10 +142,10 @@ watch(selectedHotelId, async (newHotelId) => {
         if (formData.startDate && formData.endDate) {
             const startDateStr = formatDate(formData.startDate);
             const endDateStr = formatDate(formData.endDate);
-            console.log('[ManageParkingCalendar] watch - Fetching parking blocks:', startDateStr, 'to', endDateStr);
+            //console.log('[ManageParkingCalendar] watch - Fetching parking blocks:', startDateStr, 'to', endDateStr);
             await fetchParkingBlocks(newHotelId, startDateStr, endDateStr);
             parkingBlocks.value = storeParkingBlocks.value;
-            console.log('[ManageParkingCalendar] watch - Parking blocks loaded:', parkingBlocks.value.length, 'blocks');
+            //console.log('[ManageParkingCalendar] watch - Parking blocks loaded:', parkingBlocks.value.length, 'blocks');
         }
     }
 }, { deep: true });
@@ -171,7 +171,7 @@ const handleParkingLotChange = async (parkingLotId) => {
         
         // Check if this fetch is still current (not superseded by a newer request)
         if (thisFetchId !== currentFetchId) {
-            console.log('Parking lot fetch cancelled - newer request in progress');
+            //console.log('Parking lot fetch cancelled - newer request in progress');
             return;
         }
         
@@ -285,12 +285,12 @@ const calculateMaxBlockableSpots = async () => {
         });
         
         // Debug: Log basic info
-        console.log('=== Max Blockable Spots Calculation ===');
-        console.log('Parking Lot:', parkingLotName);
-        console.log('Spot Size Filter:', formData.spotSize || 'All sizes');
-        console.log('Total Spots (filtered):', totalSpots);
-        console.log('Date Range:', startDateStr, 'to', endDateStr);
-        console.log('Total Reservations Found:', parkingLotReservations.length);
+        //console.log('=== Max Blockable Spots Calculation ===');
+        //console.log('Parking Lot:', parkingLotName);
+        //console.log('Spot Size Filter:', formData.spotSize || 'All sizes');
+        //console.log('Total Spots (filtered):', totalSpots);
+        //console.log('Date Range:', startDateStr, 'to', endDateStr);
+        //console.log('Total Reservations Found:', parkingLotReservations.length);
         
         // Fetch existing parking blocks for the date range
         await fetchParkingBlocks(selectedHotelId.value, startDateStr, endDateStr);
@@ -311,7 +311,7 @@ const calculateMaxBlockableSpots = async () => {
             return true;
         });
         
-        console.log('Relevant Blocks Found:', relevantBlocks.length);
+        //console.log('Relevant Blocks Found:', relevantBlocks.length);
         
         // Count reservations per date
         const dateMap = new Map();
@@ -337,7 +337,7 @@ const calculateMaxBlockableSpots = async () => {
         });
         
         // Debug: Log occupied spots by date
-        console.log('\nOccupied Spots by Date:');
+        //console.log('\nOccupied Spots by Date:');
         const currentDate = new Date(formData.startDate);
         const endDate = new Date(formData.endDate);
         
@@ -345,8 +345,8 @@ const calculateMaxBlockableSpots = async () => {
         currentDate.setHours(0, 0, 0, 0);
         endDate.setHours(23, 59, 59, 999);
         
-        console.log('Start Date:', formatDate(currentDate));
-        console.log('End Date:', formatDate(endDate));
+        //console.log('Start Date:', formatDate(currentDate));
+        //console.log('End Date:', formatDate(endDate));
         
         let maxOccupiedOnAnyDay = 0;
         while (currentDate <= endDate) {
@@ -355,14 +355,14 @@ const calculateMaxBlockableSpots = async () => {
             const blockedCount = blockedMap.get(dateKey) || 0;
             const totalOccupied = reservedCount + blockedCount;
             const available = totalSpots - totalOccupied;
-            console.log(`  ${dateKey}: ${reservedCount} reserved + ${blockedCount} blocked = ${totalOccupied} occupied, ${available} available`);
+            //console.log(`  ${dateKey}: ${reservedCount} reserved + ${blockedCount} blocked = ${totalOccupied} occupied, ${available} available`);
             maxOccupiedOnAnyDay = Math.max(maxOccupiedOnAnyDay, totalOccupied);
             currentDate.setDate(currentDate.getDate() + 1);
         }
         
-        console.log('\nMax Occupied (Reserved + Blocked):', maxOccupiedOnAnyDay);
-        console.log('Max Blockable Spots:', Math.max(0, totalSpots - maxOccupiedOnAnyDay));
-        console.log('=====================================\n');
+        //console.log('\nMax Occupied (Reserved + Blocked):', maxOccupiedOnAnyDay);
+        //console.log('Max Blockable Spots:', Math.max(0, totalSpots - maxOccupiedOnAnyDay));
+        //console.log('=====================================\n');
         
         // Max blockable = total spots - max concurrent (reservations + blocks)
         maxBlockableSpots.value = Math.max(0, totalSpots - maxOccupiedOnAnyDay);
