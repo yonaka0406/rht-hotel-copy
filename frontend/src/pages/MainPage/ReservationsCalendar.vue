@@ -774,18 +774,81 @@ const handleCellClick = async (room, date) => {
     openDrawer(room.room_id, date);
   }
   else if (dragMode.value === 'roomByDay') {
-    if (reservedRoomsMap.value[key]) {
+    if (reservedRoomsMap.value[key]) { // An occupied cell was clicked
+      const clickedReservation = reservedRoomsMap.value[key];
       const index = selectedRoomByDay.value.findIndex(item => item.key === key);
-      // console.log('selectedRoomByDay.value.length', selectedRoomByDay.value.length)
-      if (index === -1) {
-        if (selectedRoomByDay.value.length === 0 || isContiguous(selectedRoomByDay.value, key)) {
-          selectedRoomByDay.value.push({ key: key, reservation: reservedRoomsMap.value[key] });
-        } else {
-          selectedRoomByDay.value = [{ key: key, reservation: reservedRoomsMap.value[key] }];
-        }
-      } else if (index !== -1) {
-        // console.log('splice');
+
+      if (index !== -1) {
+        // Already selected, so deselect
         selectedRoomByDay.value.splice(index, 1);
+      } else {
+        // Not selected.
+        if (selectedRoomByDay.value.length === 0) {
+          // Start a new selection
+          selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
+        } else {
+          // A selection already exists.
+          const sourceReservation = selectedRoomByDay.value[0].reservation;
+
+          if (clickedReservation.reservation_id === sourceReservation.reservation_id) {
+            // Same reservation. Try to add to selection.
+            if (isContiguous(selectedRoomByDay.value, key)) {
+              selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
+            } else {
+              // Not contiguous. Reset selection.
+              selectedRoomByDay.value = [{ key: key, reservation: clickedReservation }];
+            }
+          } else {
+            // DIFFERENT reservation. This is a SWAP.
+            const targetRoomId = clickedReservation.room_id;
+            const sourceRoomId = sourceReservation.room_id;
+
+            const datesToSwap = selectedRoomByDay.value.map(day => day.key.split('_')[1]);
+
+            const targetDaysToSwap = datesToSwap.map(date => {
+              const targetKey = `${targetRoomId}_${date}`;
+              return reservedRoomsMap.value[targetKey];
+            }).filter(Boolean);
+
+            if (targetDaysToSwap.length !== selectedRoomByDay.value.length) {
+              toast.add({ severity: 'warn', summary: 'スワップ不可', detail: '選択された期間、相手の部屋に空きがありません。', life: 3000 });
+              return;
+            }
+
+            // All good, let's confirm.
+            formattedMessage.value = `
+                <b>${sourceReservation.room_number}号室</b>の選択期間と<br/>
+                <b>${clickedReservation.room_number}号室</b>の同期間を交換しますか？
+            `;
+            confirmRoomMode.require({
+              group: 'templating',
+              header: '日ごと交換確認',
+              icon: 'pi pi-sync',
+              accept: async () => {
+                isUpdating.value = true;
+                try {
+                  for (let i = 0; i < selectedRoomByDay.value.length; i++) {
+                    const sourceDay = selectedRoomByDay.value[i];
+                    const targetDay = targetDaysToSwap[i];
+                    await setReservationRoom(sourceDay.reservation.id, targetRoomId);
+                    await setReservationRoom(targetDay.id, sourceRoomId);
+                  }
+                  toast.add({ severity: 'success', summary: '成功', detail: '部屋を交換しました。', life: 3000 });
+                } catch (error) {
+                  toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の交換に失敗しました。', life: 3000 });
+                } finally {
+                  selectedRoomByDay.value = [];
+                  isUpdating.value = false;
+                  await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+                  confirmRoomMode.close('templating');
+                }
+              },
+              reject: () => {
+                confirmRoomMode.close('templating');
+              }
+            });
+          }
+        }
       }
     } else {
       if (selectedRoomByDay.value.length > 0) {
