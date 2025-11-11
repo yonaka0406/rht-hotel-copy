@@ -510,12 +510,12 @@ class ParkingAddonService {
      */
     async checkRealTimeAvailability(hotelId, dates, vehicleCategoryId, excludeReservationId = null) {
         try {
-            console.log('[checkRealTimeAvailability] Starting availability check:', {
-                hotelId,
-                dates,
-                vehicleCategoryId,
-                excludeReservationId
-            });
+            //console.log('[checkRealTimeAvailability] Starting availability check:', {
+            //    hotelId,
+            //    dates,
+            //    vehicleCategoryId,
+            //    excludeReservationId
+            //});
 
             if (!dates || dates.length === 0) {
                 throw new Error('Dates array is required');
@@ -529,11 +529,11 @@ class ParkingAddonService {
                 throw new Error('Vehicle category not found');
             }
 
-            console.log('[checkRealTimeAvailability] Vehicle category:', {
-                id: vehicleCategory.id,
-                name: vehicleCategory.name,
-                capacity_units_required: vehicleCategory.capacity_units_required
-            });
+            //console.log('[checkRealTimeAvailability] Vehicle category:', {
+            //    id: vehicleCategory.id,
+            //    name: vehicleCategory.name,
+            //    capacity_units_required: vehicleCategory.capacity_units_required
+            //});
 
             // Get all compatible spots
             const compatibleSpots = await parkingModel.getCompatibleSpots(
@@ -559,13 +559,13 @@ class ParkingAddonService {
                 const endDate = new Date(date);
                 endDate.setDate(endDate.getDate() + 1);
                 
-                console.log('[checkRealTimeAvailability] Checking availability for date:', {
-                    date,
-                    startDate,
-                    endDate: endDate.toISOString().split('T')[0],
-                    capacityUnitsRequired: vehicleCategory.capacity_units_required,
-                    excludeReservationId
-                });
+                //console.log('[checkRealTimeAvailability] Checking availability for date:', {
+                //    date,
+                //    startDate,
+                //    endDate: endDate.toISOString().split('T')[0],
+                //    capacityUnitsRequired: vehicleCategory.capacity_units_required,
+                //    excludeReservationId
+                //});
                 
                 const availableSpots = await parkingModel.getAvailableSpotsForDates(
                     this.requestId,
@@ -576,13 +576,13 @@ class ParkingAddonService {
                     excludeReservationId
                 );
 
-                console.log('[checkRealTimeAvailability] Available spots for date', date, ':', {
-                    count: availableSpots.length,
-                    spotIds: availableSpots.map(s => s.id)
-                });
+                //console.log('[checkRealTimeAvailability] Available spots for date', date, ':', {
+                //    count: availableSpots.length,
+                //    spotIds: availableSpots.map(s => s.id)
+                //});
 
                 // Calculate blocked spots for this specific date
-                console.log('[checkRealTimeAvailability] All blocked capacity:', allBlockedCapacity);
+                //console.log('[checkRealTimeAvailability] All blocked capacity:', allBlockedCapacity);
                 
                 const blockedForDate = allBlockedCapacity.filter(block => {
                     // PostgreSQL DATE type is stored without timezone, but pg driver converts to JS Date at UTC midnight
@@ -592,39 +592,39 @@ class ParkingAddonService {
                     const blockEndDate = formatDate(block.end_date);
                     const isInRange = date >= blockStartDate && date <= blockEndDate;
                     
-                    console.log('[checkRealTimeAvailability] Checking block for date', date, ':', {
-                        blockId: block.id,
-                        blockStart: block.start_date,
-                        blockStartDate,
-                        blockEnd: block.end_date,
-                        blockEndDate,
-                        currentDate: date,
-                        isInRange
-                    });
+                    //console.log('[checkRealTimeAvailability] Checking block for date', date, ':', {
+                    //    blockId: block.id,
+                    //    blockStart: block.start_date,
+                    //    blockStartDate,
+                    //   blockEnd: block.end_date,
+                    //    blockEndDate,
+                    //    currentDate: date,
+                    //    isInRange
+                    //});
                     
                     return isInRange;
                 });
 
-                console.log('[checkRealTimeAvailability] Blocks for date', date, ':', blockedForDate);
+                //console.log('[checkRealTimeAvailability] Blocks for date', date, ':', blockedForDate);
 
                 const blockedSpotsCount = blockedForDate.reduce((count, block) => {
                     const spotSizeMatch = !block.spot_size || block.spot_size === vehicleCategory.capacity_units_required;
                     const spotsToAdd = spotSizeMatch ? (block.number_of_spots || 0) : 0;
                     
-                    console.log('[checkRealTimeAvailability] Processing block:', {
-                        blockId: block.id,
-                        spotSize: block.spot_size,
-                        requiredCapacity: vehicleCategory.capacity_units_required,
-                        spotSizeMatch,
-                        numberOfSpots: block.number_of_spots,
-                        spotsToAdd,
-                        runningTotal: count + spotsToAdd
-                    });
+                    //console.log('[checkRealTimeAvailability] Processing block:', {
+                    //    blockId: block.id,
+                    //    spotSize: block.spot_size,
+                    //    requiredCapacity: vehicleCategory.capacity_units_required,
+                    //    spotSizeMatch,
+                    //    numberOfSpots: block.number_of_spots,
+                    //    spotsToAdd,
+                    //    runningTotal: count + spotsToAdd
+                    //});
                     
                     return count + spotsToAdd;
                 }, 0);
 
-                console.log('[checkRealTimeAvailability] Total blocked spots for date', date, ':', blockedSpotsCount);
+                //console.log('[checkRealTimeAvailability] Total blocked spots for date', date, ':', blockedSpotsCount);
 
                 // Calculate net available spots (gross available minus blocked)
                 const netAvailableSpots = Math.max(0, availableSpots.length - blockedSpotsCount);

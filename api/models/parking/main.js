@@ -343,13 +343,15 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     // Also exclude spots blocked by parking_blocks table
     // Optionally exclude parking records from a specific reservation (for editing)
     
-    console.log('[getAvailableSpotsForDates] Query parameters:', {
-        hotel_id,
-        capacityUnits,
-        startDate,
-        endDate,
-        excludeReservationId
-    });
+    
+    //console.log('[getAvailableSpotsForDates] Query parameters:', {
+    //    hotel_id,
+    //    capacityUnits,
+    //    startDate,
+    //    endDate,
+    //    excludeReservationId
+    //});
+    
     
     // Debug: Check what parking records exist for this date range
     const debugQuery = `
@@ -366,8 +368,8 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
         ORDER BY rp.parking_spot_id
     `;
     const debugResult = await pool.query(debugQuery, [hotel_id, startDate, endDate]);
-    console.log('[getAvailableSpotsForDates] Existing parking records in date range:', debugResult.rows);
-    console.log('[getAvailableSpotsForDates] Records to exclude (reservation_details_id):', excludeReservationId);
+    //console.log('[getAvailableSpotsForDates] Existing parking records in date range:', debugResult.rows);
+    //console.log('[getAvailableSpotsForDates] Records to exclude (reservation_details_id):', excludeReservationId);
     
     const query = `
         SELECT 
@@ -418,18 +420,18 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
         ORDER BY ps.id
     `;
     const debugBlockResult = await pool.query(debugBlockQuery, [hotel_id, capacityUnits, startDate, endDate]);
-    console.log('[getAvailableSpotsForDates] Debug block results (spots with blocks):', 
-        debugBlockResult.rows.filter(r => r.block_id).map(r => ({
-            spot_id: r.spot_id,
-            spot_number: r.spot_number,
-            parking_lot_name: r.parking_lot_name,
-            block_id: r.block_id,
-            start_date: r.start_date,
-            end_date: r.end_date,
-            spot_size: r.spot_size,
-            comment: r.comment
-        }))
-    );
+    //console.log('[getAvailableSpotsForDates] Debug block results (spots with blocks):', 
+    //    debugBlockResult.rows.filter(r => r.block_id).map(r => ({
+    //        spot_id: r.spot_id,
+    //        spot_number: r.spot_number,
+    //        parking_lot_name: r.parking_lot_name,
+    //        block_id: r.block_id,
+    //        start_date: r.start_date,
+    //        end_date: r.end_date,
+    //        spot_size: r.spot_size,
+    //        comment: r.comment
+    //    }))
+    //);
     
     // Debug: Check what the query is actually matching
     const debugJoinQuery = `
@@ -462,17 +464,17 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
         ORDER BY ps.id
     `;
     const debugJoinResult = await pool.query(debugJoinQuery, values);
-    console.log('[getAvailableSpotsForDates] Debug join results (all spots with their parking status):', 
-        debugJoinResult.rows.map(r => ({
-            spot_id: r.spot_id,
-            spot_number: r.spot_number,
-            status: r.status,
-            parking_spot_id: r.parking_spot_id,
-            date: r.date,
-            reservation_details_id: r.reservation_details_id,
-            exclusion_status: r.exclusion_status
-        }))
-    );
+    //console.log('[getAvailableSpotsForDates] Debug join results (all spots with their parking status):', 
+    //    debugJoinResult.rows.map(r => ({
+    //        spot_id: r.spot_id,
+    //        spot_number: r.spot_number,
+    //        status: r.status,
+    //        parking_spot_id: r.parking_spot_id,
+    //        date: r.date,
+    //        reservation_details_id: r.reservation_details_id,
+    //        exclusion_status: r.exclusion_status
+    //    }))
+    //);
     
     const result = await pool.query(query, values);
     
@@ -739,14 +741,30 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             const checkOutDate = formatDate(new Date(check_out));
             logger.debug(`[saveParkingAssignments] Formatted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
 
-            const query = {
-                text: `SELECT id, room_id, date 
-                    FROM reservation_details 
-                    WHERE reservation_id = $1 AND hotel_id = $2
-                    AND date >= $3 AND date < $4 AND room_id = $5
-                    ORDER BY room_id, date`,
-                values: [reservation_id, hotel_id, checkInDate, checkOutDate, roomId]
-            };
+            // Build query based on whether roomId is provided
+            let query;
+            if (roomId) {
+                query = {
+                    text: `SELECT id, room_id, date 
+                        FROM reservation_details 
+                        WHERE reservation_id = $1 AND hotel_id = $2
+                        AND date >= $3 AND date < $4 AND room_id = $5
+                        ORDER BY room_id, date`,
+                    values: [reservation_id, hotel_id, checkInDate, checkOutDate, roomId]
+                };
+            } else {
+                // If no roomId provided, get all reservation_details for this reservation
+                // This allows parking to be added to any room in the reservation
+                query = {
+                    text: `SELECT id, room_id, date 
+                        FROM reservation_details 
+                        WHERE reservation_id = $1 AND hotel_id = $2
+                        AND date >= $3 AND date < $4
+                        ORDER BY room_id, date`,
+                    values: [reservation_id, hotel_id, checkInDate, checkOutDate]
+                };
+                logger.debug(`[saveParkingAssignments] No roomId provided, fetching all reservation_details for reservation`);
+            }
 
             const detailsRes = await localClient.query(query);
             const reservationDetails = detailsRes.rows;

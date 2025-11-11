@@ -95,7 +95,7 @@
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
-                            <InputNumber v-model="comboRow.number_of_rooms" :min="1" :max="maxParkingSpots" fluid />
+                            <InputNumber v-model="numberOfVehicles" :min="1" :max="maxParkingSpots" fluid />
                             <label>台数</label>
                         </FloatLabel>
                         <p class="text-xs text-gray-500" v-if="maxParkingSpots > 0">
@@ -457,6 +457,7 @@ const availableParkingSpots = ref([]);
 
 const numberOfRooms = ref(1);
 const numberOfPeople = ref(1);
+const numberOfVehicles = ref(1);
 const comboRow = ref({
     check_in: inDate.value,
     check_out: outDate.value,
@@ -587,6 +588,7 @@ const addParkingCombo = () => {
     // Create a new object with the updated values
     const updatedCombo = {
         ...comboRow.value,
+        number_of_rooms: numberOfVehicles.value, // Use numberOfVehicles for parking
         addon_id: selectedAddonData.id,
         addon_name: selectedAddonData.addon_name,
         addon_price: selectedAddonData.price,
@@ -598,9 +600,8 @@ const addParkingCombo = () => {
     // Push the new object to the array
     reservationCombos.value.push(updatedCombo);
 
-    // Reset comboRow for the next addition
-    comboRow.value.number_of_rooms = 1;
-    comboRow.value.number_of_people = 1;
+    // Reset for the next addition
+    numberOfVehicles.value = 1;
     comboRow.value.addon_id = null;
     comboRow.value.addon_name = '';
     comboRow.value.addon_price = 0;
@@ -1026,18 +1027,19 @@ const submitReservation = async () => {
         
         // 1. Create the main reservation with stay combos
         const response = await createHoldReservationCombo(reservationDetails.value, stayCombos);
-        //console.log('Reservation response:', response); // Debug log to check the response structure
+        console.log('[ReservationsNewCombo] Reservation response:', response);
 
         if (!response) {
             throw new Error('No response received from server');
         }
 
         // The backend returns { reservation, reservationDetails } directly
-        const { reservation } = response;
+        const { reservation, reservationDetails: createdReservationDetails } = response;
 
          // Make sure we're getting the reservation ID correctly
         const reservationId = reservation?.id || (Array.isArray(reservation) ? reservation[0]?.id : null);
-        //console.log('Extracted reservation ID:', reservationId);
+        console.log('[ReservationsNewCombo] Extracted reservation ID:', reservationId);
+        console.log('[ReservationsNewCombo] Created reservation details:', createdReservationDetails);
 
         if (!reservationId) {
             console.error('Could not determine reservation ID from response:', response);
@@ -1048,22 +1050,29 @@ const submitReservation = async () => {
 
         // 2. Handle parking reservations if any
         const parkingCombos = reservationCombos.value.filter(c => c.reservation_type === 'parking');
-        //console.log('Found parking combos:', parkingCombos);
+        console.log('[ReservationsNewCombo] Found parking combos:', parkingCombos);
 
         if (parkingCombos.length > 0) {
-            //console.log('Processing parking assignments for reservation ID:', reservationId);
+            console.log('[ReservationsNewCombo] Processing parking assignments for reservation ID:', reservationId);
+
+            // Get the first reservation_details_id to link parking to
+            // Parking needs to be linked to a reservation_details record
+            const firstReservationDetailId = createdReservationDetails && createdReservationDetails.length > 0
+                ? createdReservationDetails[0].id
+                : null;
+            
+            console.log('[ReservationsNewCombo] Using reservation_details_id for parking:', firstReservationDetailId);
 
             // One assignment per parking combo, backend will expand it further
             const assignments = parkingCombos.map((parkingCombo, _index) => {
-
-
                 return {
                     hotel_id: hotelId,
                     reservation_id: reservationId,
                     vehicle_category_id: parkingCombo.vehicle_category_id,
-                    check_in: parkingCombo.check_in,
-                    check_out: parkingCombo.check_out,
-                    number_of_vehicles: parkingCombo.number_of_rooms || 1,
+                    roomId: firstReservationDetailId, // Link parking to the first reservation_details
+                    check_in: formatDate(new Date(parkingCombo.check_in)), // Format dates to avoid timezone issues
+                    check_out: formatDate(new Date(parkingCombo.check_out)),
+                    numberOfSpots: parkingCombo.number_of_rooms || 1, // Backend expects numberOfSpots
                     unit_price: parkingCombo.addon_price || 0,
                     created_by: reservation.created_by,
                     updated_by: reservation.updated_by,
@@ -1071,7 +1080,7 @@ const submitReservation = async () => {
                 };
             });
 
-            //console.log('Final assignments to be saved:', assignments);
+            console.log('[ReservationsNewCombo] Final assignments to be saved:', assignments);
 
             // Save all parking assignments
             if (assignments.length > 0) {
