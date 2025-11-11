@@ -1,7 +1,7 @@
 const parkingModel = require('../../models/parking');
 const { validateNumericParam, validateDateStringParam } = require('../../utils/validationUtils');
+const { validateDateRange, validateCapacityAmount } = require('./utils/capacityValidation');
 const ParkingCapacityService = require('./services/parkingCapacityService');
-const { getPool } = require('../../config/database');
 
 /**
  * GET /api/parking/capacity/available
@@ -122,8 +122,16 @@ const blockCapacity = async (req, res) => {
             return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
         }
         
-        if (!validateNumericParam(String(number_of_spots)) || number_of_spots <= 0) {
-            return res.status(400).json({ message: 'Number of spots must be a positive number' });
+        // Validate date range
+        const dateRangeValidation = validateDateRange(start_date, end_date);
+        if (!dateRangeValidation.isValid) {
+            return res.status(400).json({ message: dateRangeValidation.error });
+        }
+        
+        // Validate capacity amount
+        const capacityValidation = validateCapacityAmount(parseInt(number_of_spots));
+        if (!capacityValidation.isValid) {
+            return res.status(400).json({ message: capacityValidation.error });
         }
         
         // Use ParkingCapacityService
