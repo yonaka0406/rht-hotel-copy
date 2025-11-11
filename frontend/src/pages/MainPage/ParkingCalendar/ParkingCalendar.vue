@@ -51,10 +51,7 @@
                 </td>
                 <td v-for="(spot, spotIndex) in allParkingSpots" :key="spotIndex"
                   @dblclick="handleCellDoubleClick(spot, date)"
-                  @dragstart="handleDragStart($event, spot.id, date)"
-                  @dragend="endDrag()" @dragover.prevent @dragenter="highlightDropZone($event, spot.id, date)"
-                  @dragleave="removeHighlight($event, spot.id, date)" @drop="handleDrop($event, spot.id, date)"
-                  draggable="true" :style="getCellStyle(spot.id, date)" :class="[
+                  :style="getCellStyle(spot.id, date)" :class="[
                     'px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4 cell-with-hover',
                     isCellFirst(spot.id, date) ? 'cell-first' : '',
                     isCellLast(spot.id, date) ? 'cell-last' : '',
