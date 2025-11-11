@@ -18,7 +18,7 @@
   
         <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': isCompactView }"
           ref="tableContainer" @scroll="onScroll">
-          <table class="table-auto w-full mb-2" @dragover.prevent>
+          <table class="table-auto w-full mb-2">
             <thead>
               <tr>
                 <th
@@ -32,7 +32,7 @@
                 </th>
               </tr>
             </thead>
-            <tbody @dragover.prevent>
+            <tbody>
               <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex" :class="{ 'row-is-pinned': dateIndex === pinnedRowIndex }">
 
                 <td
@@ -116,9 +116,7 @@
             </tbody>
           </table>
         </div>
-        <template #footer>
-          <Button v-if="hasChanges" @click="applyChanges"
-            class="dark:bg-gray-800 dark:text-gray-100">変更適用</Button>
+        <template #footer>          
           <!-- Legend Component -->
           <ParkingCalendarLegend />
         </template>
@@ -163,8 +161,6 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import { useConfirm } from "primevue/useconfirm";
-  const confirm = useConfirm();
   import { Panel, Skeleton, SelectButton, InputText, ConfirmDialog, Button, Drawer } from 'primevue';
   
   // Components
@@ -473,271 +469,11 @@
   };
   
   
-  // Drag & Drop
-  const draggingReservation = ref(false);
-  const draggingStyle = ref({});
-  const draggingDates = ref([]);
-  const draggingSpotId = ref(null);
-  const draggingDate = ref(null);
-  const draggingCheckIn = ref(null);
-  const draggingCheckOut = ref(null);
-  const draggingSpotNumber = ref(null);
-  const tempParkingData = ref([]);
-  const hasChanges = ref(false);
-  
-  const handleDragStart = (event, spotId, date) => {
-    onDragStart(event, spotId, date);
-    startDrag(event, spotId, date);
-  };
-  const handleDrop = (event, spotId, date) => {
-    onDrop(event, spotId, date);
-    removeHighlight();
-  };
-  const applyChanges = async () => {
-  
-    // TODO: Implement setParkingCalendarFreeChange in useParkingStore
-    // await setParkingCalendarFreeChange(tempParkingData.value);
-  
-    // Reset
-    await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-    tempParkingData.value = {};
-    hasChanges.value = false;
-  };
-  const startDrag = (event, spotId, date) => {
-    const reservation = fillSpotInfo(spotId, date);
-    if (reservation.reservation_id) {
-      draggingReservation.value = true;
-      draggingSpotId.value = spotId;
-      draggingDate.value = date;
-      draggingCheckIn.value = new Date(reservation.check_in);
-      draggingCheckOut.value = new Date(reservation.check_out);
-      draggingSpotNumber.value = reservation.spot_number;
-  
-      const rect = event.target.getBoundingClientRect();
-      draggingStyle.value = {
-        position: 'absolute',
-        left: `${rect.left}px`,
-        top: `${rect.top}px`,
-        width: `${rect.width}px`,
-        zIndex: 100,
-        display: 'flex',
-        flexDirection: 'row',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-        pointerEvents: 'none',
-      };
-  
-      const dates = [];
-      let currentDate = new Date(draggingCheckIn.value);
-      while (currentDate < draggingCheckOut.value) {
-        dates.push(formatDate(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      draggingDates.value = dates;
-    } else {
-      draggingReservation.value = false;
-    }
-  };
-  const endDrag = () => {
-    draggingReservation.value = false;
-    draggingDates.value = [];
-    draggingSpotId.value = null;
-    draggingDate.value = null;
-    draggingCheckIn.value = null;
-    draggingCheckOut.value = null;
-    draggingSpotNumber.value = null;
-  };
-  const highlightDropZone = (event, _roomId, _date) => {
-    const cell = event.target.closest('td');
-    if (cell) {
-      cell.classList.add('drop-zone');
-  
-      // Highlight the corresponding first column cell
-      const rowIndex = cell.parentElement.rowIndex;
-      const firstColCell = document.querySelector(`tbody tr:nth-child(${rowIndex}) td:first-child`);
-      if (firstColCell) {
-        firstColCell.classList.add('drop-zone-first-col');
-      }
-  
-      // Highlight the corresponding th
-      const cellIndex = cell.cellIndex;
-      const th = document.querySelector(`thead th:nth-child(${cellIndex + 1})`);
-      if (th) {
-        th.classList.add('drop-zone-th');
-      }
-    }
-  };
-  const removeHighlight = (event) => {
-    if (event) {
-      setTimeout(() => {
-        const cell = event.target.closest('td');
-        if (cell) {
-          cell.classList.remove('drop-zone');
-  
-          // Remove highlight from the corresponding first column cell
-          const rowIndex = cell.parentElement.rowIndex;
-          const firstColCell = document.querySelector(`tbody tr:nth-child(${rowIndex}) td:first-child`);
-          if (firstColCell) {
-            firstColCell.classList.remove('drop-zone-first-col');
-          }
-  
-          // Remove highlight from the corresponding th
-          const cellIndex = cell.cellIndex;
-          const th = document.querySelector(`thead th:nth-child(${cellIndex + 1})`);
-          if (th) {
-            th.classList.remove('drop-zone-th');
-          }
-        }
-      }, 300);
-    } else {
-      const dropZones = document.querySelectorAll('.drop-zone');
-      dropZones.forEach(zone => zone.classList.remove('drop-zone'));
-  
-      const firstColDropZones = document.querySelectorAll('.drop-zone-first-col');
-      firstColDropZones.forEach(zone => zone.classList.remove('drop-zone-first-col'));
-  
-      const thDropZones = document.querySelectorAll('.drop-zone-th');
-      thDropZones.forEach(zone => zone.classList.remove('drop-zone-th'));
-    }
-  };
+
+
   
   // Reservation Mode
-  const dragFrom = ref({ reservation_id: null, spot_id: null, spot_number: null, parking_lot_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
-  const dragTo = ref({ spot_id: null, spot_number: null, parking_lot_name: null, capacity: null, check_in: null, check_out: null });
-  const onDragStart = async (event, spotId, date) => {
-    dragFrom.value = null;
-  
-    const reservation_id = fillSpotInfo(spotId, date).reservation_id;
-  
-    if (reservation_id) {
-      const check_in = formatDate(new Date(fillSpotInfo(spotId, date).check_in));
-      const check_out = formatDate(new Date(fillSpotInfo(spotId, date).check_out));
-      const spot_id = fillSpotInfo(spotId, date).parking_spot_id;
-      const spot_number = fillSpotInfo(spotId, date).spot_number;
-      const parking_lot_name = allParkingSpots.value.find(s => s.id === spotId)?.parking_lot_name || '';
-      const number_of_people = fillSpotInfo(spotId, date).number_of_people;
-      const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
-      dragFrom.value = { reservation_id, spot_id, spot_number, parking_lot_name, number_of_people, check_in, check_out, days };
-    } else {
-      return;
-    }
-  
-  };
-  const onDrop = (event, spotId, date) => {
-    if (!dragFrom.value) {
-      return;
-    }
-    const selectedSpot = allParkingSpots.value.find(spot => spot.id === spotId);
-    const check_in = formatDate(new Date(date));
-    const check_out = formatDate(new Date(new Date(date).setDate(new Date(date).getDate() + dragFrom.value.days)));
-    const spot_id = selectedSpot.id;
-    const spot_number = selectedSpot.spot_number;
-    const parking_lot_name = selectedSpot.parking_lot_name;
-    const capacity = selectedSpot.capacity_units; // Assuming capacity_units is the capacity
-    dragTo.value = { spot_id, spot_number, parking_lot_name, capacity, check_in, check_out };
-  
-    const from = dragFrom.value;
-    const to = dragTo.value;
-  
-    const allDates = generateDateRangeArray(from.check_in, from.check_out);
-    
-    // Filter reservations that match the given reservation_id and spot_id
-    const spotReservations = Array.isArray(reservedParkingSpots.value) 
-      ? reservedParkingSpots.value.filter(
-          spot => spot.reservation_id === from.reservation_id && spot.parking_spot_id === from.spot_id
-        )
-      : [];
-    // Extract booked dates from filtered reservations
-    const bookedDates = spotReservations.map(spot => formatDate(new Date(spot.date)));
-    const isSpotFullyBooked = allDates.every(date => bookedDates.includes(date));
-  
-    if (!isSpotFullyBooked) {
-      toast.add({ severity: 'warn', summary: '注意', detail: '駐車場が分割されています。', life: 3000 });
-    } else if (!checkForConflicts(from, to)) {
-      showConfirmationPrompt();
-    } else {
-      toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 3000 });
-    }
-  };
-  const formattedMessage = ref('');
-  const showConfirmationPrompt = async () => {
-    const from = dragFrom.value;
-    const to = dragTo.value;
-    let message = '';
-    if (from.spot_number === to.spot_number) {
-      message = `
-          <b>${from.spot_number}番</b>の駐車期間を<br/>
-          「IN：${from.check_in} OUT：${from.check_out}」から<br/>
-          「IN：${to.check_in} OUT：${to.check_out}」にしますか?<br/>`;
-    } else if (from.check_in === to.check_in && from.check_out === to.check_out) {
-      message = `
-          <b>${from.spot_number}番</b>の予約を<br/>
-          <b>${to.spot_number}番</b>に移動しますか?<br/>`;
-    } else {
-      message = `
-          <b>${from.spot_number}番</b>の駐車期間を<br/>
-          「IN：${from.check_in} OUT：${from.check_out}」から<br/>
-          「IN：${to.check_in} OUT：${to.check_out}」に変更し、<br/>
-          <b>${to.spot_number}番</b>に移動しますか?<br/>`;
-    }
-  
-    formattedMessage.value = message;
-  
-    confirm.require({
-      group: 'templating',
-      header: '確認',
-      icon: 'pi pi-exclamation-triangle',
-      acceptProps: {
-        label: 'はい'
-      },
-      accept: async () => {
-        if (!checkForConflicts(from, to)) {
-          isUpdating.value = true; // Disable WebSocket updates
-          // TODO: Implement setParkingCalendarChange in useParkingStore
-          // await setParkingCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.spot_id, to.spot_id);
-          isUpdating.value = false; // Re-enable WebSocket updates
-          await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-        } else {
-          toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 3000 });
-        }
-        confirm.close('templating');
-      },
-      rejectProps: {
-        label: 'キャンセル',
-        severity: 'secondary',
-        outlined: true
-      },
-      reject: () => {
-        confirm.close('templating');
-      }
-    });
-  };
-  const generateDateRangeArray = (checkIn, checkOut) => {
-    const dates = [];
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-    // The loop should include the start date but exclude the end date
-    for (let dt = start; dt < end; dt.setDate(dt.getDate() + 1)) {
-        dates.push(formatDate(new Date(dt)));
-    }
-    return dates;
-  };
 
-  const checkForConflicts = (from, to) => {
-    const toDates = generateDateRangeArray(to.check_in, to.check_out);
-  
-    for (const date of toDates) {
-      const key = `${to.spot_id}_${date}`;
-      if (reservedSpotsMap.value[key] && reservedSpotsMap.value[key].reservation_id !== from.reservation_id) {
-        return true; // Conflict found
-      }
-    }
-  
-    return false; // No conflicts
-  };
-  
-  const onScroll = () => {
-    // Handle table scrolling if needed
-  };
   let timeoutId = null;
   const debounce = (func, delay) => {
     return (...args) => {
@@ -1136,33 +872,7 @@
     color: #fef3c7 !important;
   }
   
-  .dragging-reservation {
-    background-color: rgba(255, 255, 255, 0.8);
-  }
-  
-  .dragging-reservation-cell {
-    padding: 8px;
-    border: 1px solid #ccc;
-  }
-  
-  .dragging-reservation-header {
-    padding: 8px;
-    font-weight: bold;
-    border-bottom: 1px solid #ccc;
-    text-align: center;
-  }
-  
-  .drop-zone {
-    background-color: lightgreen;
-  }
-  
-  .drop-zone-first-col {
-    background-color: lightgreen;
-  }
-  
-  .drop-zone-th {
-    background-color: lightgreen;
-  }
+
   
   /* Enhanced room row styling */
   tbody tr:nth-child(even) {
