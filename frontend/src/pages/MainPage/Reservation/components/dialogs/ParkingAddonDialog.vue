@@ -282,7 +282,6 @@ const processing = ref(false);
 const spotValidationValid = ref(false);
 const selectedVehicleCategory = ref(null);
 const addonOptions = ref([]);
-const priceManuallyChanged = ref(false);
 
 // Computed properties
 const dialogTitle = computed(() => {
@@ -454,6 +453,10 @@ const onSpotValidationChange = (isValid) => {
 
 
 const resetForm = () => {
+  console.log('[ParkingAddonDialog] resetForm called');
+  console.log('[ParkingAddonDialog] Before reset - selectedAddon:', selectedAddon.value);
+  console.log('[ParkingAddonDialog] Before reset - addonOptions:', addonOptions.value.map(a => ({ id: a.id, name: a.name })));
+  
   localAddonData.value = {
     roomId: null,
     startDate: null,
@@ -475,6 +478,9 @@ const resetForm = () => {
   }
   errors.value = {};
   spotValidationValid.value = false;
+  
+  console.log('[ParkingAddonDialog] After reset - selectedAddon:', selectedAddon.value);
+  console.log('[ParkingAddonDialog] After reset - addonOptions:', addonOptions.value.map(a => ({ id: a.id, name: a.name })));
 };
 
 const onSave = async () => {
@@ -531,22 +537,17 @@ const onDialogHide = () => {
   emit('close');
 };
 
-// Watchers
 watch(selectedAddon, (newAddonId) => {
   if (newAddonId) {
     const selected = addonOptions.value.find(a => a.id === newAddonId);
     if (selected) {
-      // Only update the price if it hasn't been manually changed
-      if (!priceManuallyChanged.value) {
-        localAddonData.value.unitPrice = selected.price || 1000;
-      }
-      // Update the addon name if needed
+      localAddonData.value.unitPrice = selected.price || 1000;
       if (selected.addon_name) {
         localAddonData.value.name = selected.addon_name;
       }
     }
   }
-}, { immediate: true });
+});
 
 // Auto-select first room when rooms are available
 watch(() => rooms.value, (newRooms) => {
@@ -588,38 +589,34 @@ watch(() => props.modelValue, async (newValue) => {
   if (newValue) {
     // Dialog is opening
     try {
+      localAddonData.value = { ...props.addonData, ...localAddonData.value };
+      selectedAddon.value = props.addonData?.id || null;
       // Auto-select first room if available
       if (rooms.value.length > 0 && !selectedRoom.value) {
         selectedRoom.value = rooms.value[0];
-        // console.log('[ParkingAddonDialog] Auto-selected first room on dialog open:', selectedRoom.value);
       }
+      if (!selectedAddon.value && addonOptions.value.length > 0) {
+        selectedAddon.value = addonOptions.value[0].id;
+      }
+      console.log('[ParkingAddonDialog] Dialog opened. Selected Addon:', selectedAddon.value, 'Unit Price:', localAddonData.value.unitPrice);
     } catch (error) {
       console.error('Error on dialog open:', error);
     }
-  } else {
-    // Dialog is closing
-    resetForm();
   }
 }, { immediate: true });
 
 watch(hotelId, async (newHotelId) => {
+  console.log('[ParkingAddonDialog] hotelId changed:', newHotelId);
   if (newHotelId) {
-    const allAddons = await fetchAllAddons(newHotelId); 
+    const allAddons = await fetchAllAddons(newHotelId);    
+    
     if (allAddons && Array.isArray(allAddons)) {
-      const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
+      const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');      
+      console.log('[ParkingAddonDialog] Raw parking addons:', JSON.stringify(parkingAddons, null, 2));      
       addonOptions.value = parkingAddons;
-      
-      // Reset selectedAddon if the current selection is no longer valid for the new hotel
-      if (!parkingAddons.some(addon => addon.id === selectedAddon.value)) {
-        selectedAddon.value = null;
-      }
-
-      // Auto-select first addon if available and nothing is selected
-      if (parkingAddons.length > 0 && !selectedAddon.value) {
-        selectedAddon.value = parkingAddons[0].id;
-      }
     } else {
       // If no addons are fetched or not an array, clear options and selection
+      console.log('[ParkingAddonDialog] No addons fetched or invalid response');
       addonOptions.value = [];
       selectedAddon.value = null;
     }
@@ -630,13 +627,12 @@ watch(hotelId, async (newHotelId) => {
   }
 }, { immediate: true });
 
-// Watch for manual changes to unitPrice
-watch(() => localAddonData.value.unitPrice, (newValue, oldValue) => {
-  // Only mark as manually changed if the value is different and not during initial setup
-  if (newValue !== oldValue && oldValue !== undefined) {
-    priceManuallyChanged.value = true;
-  }
-}, { flush: 'post' });
+// Watch selectedAddon changes
+watch(selectedAddon, (newValue, oldValue) => {
+  console.log('[ParkingAddonDialog] selectedAddon changed from', oldValue, 'to', newValue);
+  const selectedAddonObj = addonOptions.value.find(a => a.id === newValue);
+  console.log('[ParkingAddonDialog] Selected addon object:', selectedAddonObj);
+});
 </script>
 
 <style scoped>

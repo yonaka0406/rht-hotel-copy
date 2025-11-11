@@ -151,18 +151,30 @@ const validationErrors = ref([]);
 
 // Computed properties
 const totalAvailableSpots = computed(() => {
-  if (!availabilityData.value) return 0;
+  console.log('[ParkingSpotSelector] Computing totalAvailableSpots');
+  console.log('[ParkingSpotSelector] availabilityData:', availabilityData.value);
+  
+  if (!availabilityData.value) {
+    console.log('[ParkingSpotSelector] No availability data - returning 0');
+    return 0;
+  }
   
   // For capacity-based system, find the minimum available spots across all dates
   // This allows reservations even if different spots are used on different dates
   const dateAvailability = availabilityData.value?.dateAvailability || {};
+  console.log('[ParkingSpotSelector] dateAvailability:', dateAvailability);
   
-  if (Object.keys(dateAvailability).length === 0) return 0;
+  if (Object.keys(dateAvailability).length === 0) {
+    console.log('[ParkingSpotSelector] No dates in availability - returning 0');
+    return 0;
+  }
   
   // Find the date with the least availability (bottleneck)
-  const minAvailableSpots = Math.min(
-    ...Object.values(dateAvailability).map(day => day.availableSpots || 0)
-  );
+  const availabilityByDate = Object.values(dateAvailability).map(day => day.availableSpots || 0);
+  console.log('[ParkingSpotSelector] Available spots by date:', availabilityByDate);
+  
+  const minAvailableSpots = Math.min(...availabilityByDate);
+  console.log('[ParkingSpotSelector] Minimum available spots (bottleneck):', minAvailableSpots);
   
   return minAvailableSpots;
 });
@@ -322,7 +334,16 @@ const loadCompatibleSpots = async () => {
 };
 
 const checkRealTimeAvailability = async () => {
-  if (!selectedVehicleCategoryId.value || props.dates.length === 0) return;
+  console.log('[ParkingSpotSelector] checkRealTimeAvailability called');
+  console.log('[ParkingSpotSelector] hotelId:', props.hotelId);
+  console.log('[ParkingSpotSelector] selectedVehicleCategoryId:', selectedVehicleCategoryId.value);
+  console.log('[ParkingSpotSelector] dates:', props.dates);
+  console.log('[ParkingSpotSelector] excludeReservationId:', props.excludeReservationId);
+  
+  if (!selectedVehicleCategoryId.value || props.dates.length === 0) {
+    console.log('[ParkingSpotSelector] Skipping availability check - missing category or dates');
+    return;
+  }
   
   checkingAvailability.value = true;
   
@@ -334,9 +355,12 @@ const checkRealTimeAvailability = async () => {
       props.excludeReservationId
     );
     
+    console.log('[ParkingSpotSelector] Availability response:', response);
+    console.log('[ParkingSpotSelector] dateAvailability:', response?.dateAvailability);
+    
     availabilityData.value = response;
   } catch (error) {
-    console.error('Failed to check real-time availability:', error);
+    console.error('[ParkingSpotSelector] Failed to check real-time availability:', error);
   } finally {
     checkingAvailability.value = false;
   }
