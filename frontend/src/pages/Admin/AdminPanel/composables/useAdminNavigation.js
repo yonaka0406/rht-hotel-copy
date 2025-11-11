@@ -17,6 +17,7 @@ export function useAdminNavigation() {
         { type: 'separator' },
         { key: 'manage-parking-header', type: 'header', label: '駐車場管理', icon: 'pi pi-fw pi-car' },
         { key: 'mp-manage', type: 'link', label: '管理', icon: 'pi pi-fw pi-car', route: '/admin/manage-parking' },
+        { key: 'mp-calendar', type: 'link', label: 'カレンダー', icon: 'pi pi-fw pi-calendar', route: '/admin/parking-calendar' },
         { type: 'separator' },
         { key: 'customer-management-header', type: 'header', label: '顧客管理', icon: 'pi pi-fw pi-address-book' },
         { key: 'loyalty-tiers', type: 'link', label: 'ロイヤルティ層設定', icon: 'pi pi-fw pi-star', route: '/admin/loyalty-tiers' },
