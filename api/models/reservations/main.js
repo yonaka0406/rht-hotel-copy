@@ -845,14 +845,14 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
 };
 
 const addReservationAddon = async (requestId, addon, client = null) => {
-  // console.log('addReservationAddon:',addon)
   const pool = getPool(requestId);
   let dbClient = client;
   let shouldReleaseClient = false;
+  let shouldManageTransaction = (client === null);
 
   if (!dbClient) {
     dbClient = await pool.connect();
-    shouldReleaseClient = true;
+    shouldReleaseClient = true;    
   }
 
   const query = `
@@ -878,19 +878,19 @@ const addReservationAddon = async (requestId, addon, client = null) => {
   //console.log('[addReservationAddon] Inserting with values:', values);
 
   try {
-    if (shouldReleaseClient) {
+    if (shouldManageTransaction) {
       await dbClient.query('BEGIN');
     }
 
     const result = await dbClient.query(query, values);
 
-    if (shouldReleaseClient) {
+    if (shouldManageTransaction) {
       await dbClient.query('COMMIT');
     }
 
     return result.rows[0]; // Return the inserted reservation addon
   } catch (err) {
-    if (shouldReleaseClient) {
+    if (shouldManageTransaction) {
         try {
             await dbClient.query('ROLLBACK');
         } catch (rbErr) {
@@ -2011,13 +2011,27 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
 
 };
 
-const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding, client = null) => {
   //console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
   if (!plan) {
     console.warn('[updateReservationDetailPlan] plan is null or undefined');
   }
   const pool = getPool(requestId);
-  const client = await pool.connect();
+  let dbClient;
+  if (client) {
+    dbClient = client;
+  } else {
+    try {
+      dbClient = await pool.connect();
+    } catch (connectError) {
+      logger.error(`[${requestId}] Failed to acquire database client for updateReservationDetailPlan: ${connectError.message}`, { stack: connectError.stack });
+      throw new Error('Failed to acquire database client.');
+    }
+  }
+  if (!dbClient) {
+    throw new Error('Failed to acquire database client for updateReservationDetailPlan (dbClient is null after connect attempt).');
+  }
+  const shouldReleaseClient = !client;
 
   const plans_global_id = plan?.plans_global_id === 0 ? null : plan?.plans_global_id ?? null;
   const plans_hotel_id = plan?.plans_hotel_id === 0 ? null : plan?.plans_hotel_id ?? null;
@@ -2051,15 +2065,15 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   `;
 
   try {
-    await client.query('BEGIN');
+    await dbClient.query('BEGIN');
 
     // Set session user_id
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
-    await client.query(setSessionQuery);
+    await dbClient.query(setSessionQuery);
 
     // Update reservation_details with the recalculated price
     //console.log('[updateReservationDetailPlan] Executing update with recalculated price:', {plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id});
-    await client.query(updateReservationDetailsQuery, [
+    await dbClient.query(updateReservationDetailsQuery, [
       plans_global_id,
       plans_hotel_id,
       plan_name,
@@ -2075,15 +2089,15 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       const deleteRatesQuery = `
         DELETE FROM reservation_rates WHERE reservation_details_id = $1;
       `;
-      await client.query(deleteRatesQuery, [id]);
+      await dbClient.query(deleteRatesQuery, [id]);
 
       // Insert rates using the shared utility function
-      await insertAggregatedRates(client, rates, hotel_id, id, user_id);
+      await insertAggregatedRates(dbClient, rates, hotel_id, id, user_id);
     }
 
-    await client.query('COMMIT');
+    await dbClient.query('COMMIT');
   } catch (err) {
-    await client.query('ROLLBACK');
+    await dbClient.query('ROLLBACK');
     if (err.code === '23514' && err.table === 'reservation_details') {
         console.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
@@ -2091,32 +2105,56 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     }
     throw err;
   } finally {
-    client.release();
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 
-const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id) => {
+const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id, client = null) => {
   if (!Array.isArray(addons)) {
     addons = [];
   }
-  await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id);
-  
-  const addOnPromises = addons.map(addon =>
-    addReservationAddon(requestId, {
-      hotel_id: hotel_id,
-      reservation_detail_id: id,
-      addons_global_id: addon.addons_global_id,
-      addons_hotel_id: addon.addons_hotel_id,
-      addon_name: addon.addon_name,
-      quantity: addon.quantity,
-      price: addon.price,
-      tax_type_id: addon.tax_type_id,
-      tax_rate: addon.tax_rate,
-      created_by: user_id,
-      updated_by: user_id,
-    })
-  );
-  await Promise.all(addOnPromises);
+  const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
+  try {
+    // Set session user_id for logging
+    await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, user_id));
+
+    // Assuming deleteReservationAddonsByDetailId also accepts a client
+    await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id, dbClient);
+    
+    const addOnPromises = addons.map(addon =>
+      addReservationAddon(requestId, {
+        hotel_id: hotel_id,
+        reservation_detail_id: id,
+        addons_global_id: addon.addons_global_id,
+        addons_hotel_id: addon.addons_hotel_id,
+        addon_name: addon.addon_name,
+        quantity: addon.quantity,
+        price: addon.price,
+        tax_type_id: addon.tax_type_id,
+        tax_rate: addon.tax_rate,
+        created_by: user_id,
+        updated_by: user_id,
+      }, dbClient) // Pass the client here
+    );
+    await Promise.all(addOnPromises);
+  } catch (err) {
+    console.error('Error updating reservation detail addon:', err);
+    throw err;
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
+  }
 };
 
 const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {
@@ -2307,20 +2345,20 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
 
       // 1. Update Plan
       if (plan) {
-        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, overrideRounding);
+        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, overrideRounding, client);
       } else {
         //console.log('[updateReservationDetailPlan] Skipped because plan is null');
       }
 
       // 2. Update Addons
-      await updateReservationDetailAddon(requestId, id, hotelId, addons, user_id);
+      await updateReservationDetailAddon(requestId, id, hotelId, addons, user_id, client);
 
     });
 
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id, overrideRounding);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id, overrideRounding, client);
 
     await client.query('COMMIT');
 

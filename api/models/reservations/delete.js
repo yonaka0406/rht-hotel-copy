@@ -68,25 +68,38 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
   }
 };
 
-const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by) => {
+  
+const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by, client = null) => {
   const pool = getPool(requestId);
-  const query = format(`
-    -- Set the updated_by value in a session variable
-    SET SESSION "my_app.user_id" = %L;
+  let dbClient = client;
+  let shouldReleaseClient = false;
 
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+    // If this function acquired the client, it's responsible for setting the session
+    await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, updated_by));
+  }
+
+  const query = format(`
     DELETE FROM reservation_addons
     WHERE reservation_detail_id = %L AND hotel_id = %L AND addon_type <> 'parking'
     RETURNING *;
-  `, updated_by, reservation_detail_id, hotel_id);
+  `, reservation_detail_id, hotel_id);
 
   try {
-    const result = await pool.query(query);
+    const result = await dbClient.query(query);
     return result.rowCount;
   } catch (err) {
     console.error('Error deleting reservation addon:', err);
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
+
 
 const deleteReservationClientsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
   const pool = getPool(requestId);
