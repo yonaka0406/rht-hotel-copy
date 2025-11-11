@@ -478,6 +478,8 @@ const checkDates = async () => {
 };
 
 const onDateChange = async () => {
+    console.log('[ReservationsNewCombo] onDateChange called');
+    
     // Update minimum checkout date
     minCheckOutDate.value = new Date(comboRow.value.check_in);
     minCheckOutDate.value.setDate(comboRow.value.check_in.getDate() + 1);
@@ -486,6 +488,9 @@ const onDateChange = async () => {
     if (new Date(comboRow.value.check_out) < minCheckOutDate.value) {
         comboRow.value.check_out = new Date(minCheckOutDate.value);
     }
+
+    // Store current vehicle category before reset
+    const currentVehicleCategoryId = comboRow.value.vehicle_category_id;
 
     // Reset vehicle category and addon selection when dates change
     if (comboRow.value.check_in && comboRow.value.check_out) {
@@ -501,6 +506,14 @@ const onDateChange = async () => {
 
     // Fetch available rooms and validate combos
     await checkDates();
+    
+    // If vehicle category was previously selected, restore it and update parking spots
+    if (currentVehicleCategoryId) {
+        console.log('[ReservationsNewCombo] Restoring vehicle category and updating parking spots');
+        comboRow.value.vehicle_category_id = currentVehicleCategoryId;
+        await updateParkingSpots();
+    }
+    
     validateCombos();
 };
 
@@ -1253,11 +1266,22 @@ const updateParkingSpots = async () => {
     }
 };
 
-watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async () => {
+watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async (newValues, oldValues) => {
+    console.log('[ReservationsNewCombo] Watch triggered:', {
+        newValues,
+        oldValues,
+        vehicleCategoryId: comboRow.value.vehicle_category_id,
+        checkIn: comboRow.value.check_in,
+        checkOut: comboRow.value.check_out
+    });
+    
     if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
+        console.log('[ReservationsNewCombo] Calling updateParkingSpots from watch');
         await updateParkingSpots();
+    } else {
+        console.log('[ReservationsNewCombo] Watch triggered but conditions not met');
     }
-});
+}, { deep: true });
 
 const selectedAddon = ref(null);
 const addonOptions = ref([]);
