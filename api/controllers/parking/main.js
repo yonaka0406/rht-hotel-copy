@@ -317,7 +317,7 @@ const checkRealTimeAvailability = async (req, res) => {
             parseInt(hotelId),
             dates,
             parseInt(vehicleCategoryId),
-            excludeReservationId ? parseInt(excludeReservationId) : null
+            excludeReservationId || null
         );
         
         res.json(realTimeAvailability);

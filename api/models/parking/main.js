@@ -337,10 +337,38 @@ const getCompatibleSpots = async (requestId, hotel_id, vehicleCategoryId) => {
 };
 
 // Get available spots for specific dates with capacity validation
-const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate, capacityUnits) => {
+const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate, capacityUnits, excludeReservationId = null) => {
     const pool = getPool(requestId);
     // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
     // Also exclude spots blocked by parking_blocks table
+    // Optionally exclude parking records from a specific reservation (for editing)
+    
+    console.log('[getAvailableSpotsForDates] Query parameters:', {
+        hotel_id,
+        capacityUnits,
+        startDate,
+        endDate,
+        excludeReservationId
+    });
+    
+    // Debug: Check what parking records exist for this date range
+    const debugQuery = `
+        SELECT 
+            rp.parking_spot_id,
+            rp.date,
+            rp.reservation_details_id,
+            rp.cancelled
+        FROM reservation_parking rp
+        WHERE rp.hotel_id = $1
+        AND rp.date >= $2
+        AND rp.date < $3
+        AND rp.cancelled IS NULL
+        ORDER BY rp.parking_spot_id
+    `;
+    const debugResult = await pool.query(debugQuery, [hotel_id, startDate, endDate]);
+    console.log('[getAvailableSpotsForDates] Existing parking records in date range:', debugResult.rows);
+    console.log('[getAvailableSpotsForDates] Records to exclude (reservation_details_id):', excludeReservationId);
+    
     const query = `
         SELECT 
             ps.*,
@@ -350,24 +378,106 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
         JOIN parking_lots pl ON ps.parking_lot_id = pl.id
         LEFT JOIN reservation_parking rp ON ps.id = rp.parking_spot_id
             AND rp.hotel_id = $1
-            AND rp.date >= $3
-            AND rp.date < $4
+            AND rp.date >= $3::date
+            AND rp.date < $4::date
             AND rp.cancelled IS NULL
-        LEFT JOIN parking_blocks pb ON pl.hotel_id = $1
-            AND (pb.parking_lot_id IS NULL OR pb.parking_lot_id = pl.id)
-            AND (pb.spot_size IS NULL OR pb.spot_size = ps.capacity_units)
-            AND pb.start_date <= $4
-            AND pb.end_date >= $3
+            AND ($5::uuid IS NULL OR rp.reservation_details_id != $5)
         WHERE pl.hotel_id = $1
         AND ps.is_active = true
         AND ps.capacity_units >= $2
         AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
         AND rp.parking_spot_id IS NULL
-        AND pb.id IS NULL
         ORDER BY pl.name, ps.spot_number::integer
     `;
-    const values = [hotel_id, capacityUnits, startDate, endDate];
+    const values = [hotel_id, capacityUnits, startDate, endDate, excludeReservationId];
+    
+    // Debug: Check which spots are being blocked
+    const debugBlockQuery = `
+        SELECT 
+            ps.id as spot_id,
+            ps.spot_number,
+            pl.id as parking_lot_id,
+            pl.name as parking_lot_name,
+            pb.id as block_id,
+            pb.start_date,
+            pb.end_date,
+            pb.spot_size,
+            pb.number_of_spots,
+            pb.comment
+        FROM parking_spots ps
+        JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        LEFT JOIN parking_blocks pb ON pl.hotel_id = $1
+            AND (pb.parking_lot_id IS NULL OR pb.parking_lot_id = pl.id)
+            AND (pb.spot_size IS NULL OR pb.spot_size = ps.capacity_units)
+            AND pb.start_date <= $4::date
+            AND pb.end_date >= $3::date
+        WHERE pl.hotel_id = $1
+        AND ps.is_active = true
+        AND ps.capacity_units >= $2
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
+        ORDER BY ps.id
+    `;
+    const debugBlockResult = await pool.query(debugBlockQuery, [hotel_id, capacityUnits, startDate, endDate]);
+    console.log('[getAvailableSpotsForDates] Debug block results (spots with blocks):', 
+        debugBlockResult.rows.filter(r => r.block_id).map(r => ({
+            spot_id: r.spot_id,
+            spot_number: r.spot_number,
+            parking_lot_name: r.parking_lot_name,
+            block_id: r.block_id,
+            start_date: r.start_date,
+            end_date: r.end_date,
+            spot_size: r.spot_size,
+            comment: r.comment
+        }))
+    );
+    
+    // Debug: Check what the query is actually matching
+    const debugJoinQuery = `
+        SELECT 
+            ps.id as spot_id,
+            ps.spot_number,
+            rp.parking_spot_id,
+            rp.date,
+            rp.reservation_details_id,
+            rp.cancelled,
+            CASE 
+                WHEN rp.parking_spot_id IS NOT NULL THEN 'occupied'
+                ELSE 'available'
+            END as status,
+            CASE
+                WHEN $5::uuid IS NOT NULL AND rp.reservation_details_id = $5 THEN 'excluded'
+                ELSE 'included'
+            END as exclusion_status
+        FROM parking_spots ps
+        JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        LEFT JOIN reservation_parking rp ON ps.id = rp.parking_spot_id
+            AND rp.hotel_id = $1
+            AND rp.date >= $3::date
+            AND rp.date < $4::date
+            AND rp.cancelled IS NULL
+        WHERE pl.hotel_id = $1
+        AND ps.is_active = true
+        AND ps.capacity_units >= $2
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
+        ORDER BY ps.id
+    `;
+    const debugJoinResult = await pool.query(debugJoinQuery, values);
+    console.log('[getAvailableSpotsForDates] Debug join results (all spots with their parking status):', 
+        debugJoinResult.rows.map(r => ({
+            spot_id: r.spot_id,
+            spot_number: r.spot_number,
+            status: r.status,
+            parking_spot_id: r.parking_spot_id,
+            date: r.date,
+            reservation_details_id: r.reservation_details_id,
+            exclusion_status: r.exclusion_status
+        }))
+    );
+    
     const result = await pool.query(query, values);
+    
+    console.log('[getAvailableSpotsForDates] Query returned', result.rows.length, 'spots');
+    
     return result.rows;
 };
 

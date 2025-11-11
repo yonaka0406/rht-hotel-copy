@@ -139,6 +139,7 @@
                       :dates="dateRange"
                       :disabled="processing || dateRange.length === 0"
                       :preselected-vehicle-category-id="localAddonData.vehicleCategoryId"
+                      :exclude-reservation-id="reservationId"
                       @update:vehicle-category-id="onVehicleCategoryChange"
                       @update:number-of-spots="onNumberOfSpotsChange"
                       @selection-change="onParkingSelectionChange"
@@ -291,6 +292,11 @@ const dialogTitle = computed(() => {
 const hotelId = computed(() => {
   // Get hotelId from the first reservation detail if available
   return props.reservationDetails?.[0]?.hotel_id;
+});
+
+const reservationId = computed(() => {
+  // Get reservation ID from the first reservation detail if available
+  return props.reservationDetails?.[0]?.id;
 });
 
 const dateRange = computed(() => {
@@ -450,39 +456,6 @@ const onSpotValidationChange = (isValid) => {
   validateForm();
 };
 
-
-
-const resetForm = () => {
-  console.log('[ParkingAddonDialog] resetForm called');
-  console.log('[ParkingAddonDialog] Before reset - selectedAddon:', selectedAddon.value);
-  console.log('[ParkingAddonDialog] Before reset - addonOptions:', addonOptions.value.map(a => ({ id: a.id, name: a.name })));
-  
-  localAddonData.value = {
-    roomId: null,
-    startDate: null,
-    endDate: null,
-    unitPrice: 1000,
-    vehicleCategoryId: null,
-    numberOfSpots: 1,
-    name: ''
-  };
-  selectedAddon.value = null;
-  selectedRoom.value = null;
-  selectedVehicleCategory.value = null;
-  if (props.initialDates.length >= 2) {
-    startDate.value = new Date(props.initialDates[0]);
-    endDate.value = new Date(props.initialDates[props.initialDates.length - 1]);
-  } else {
-    startDate.value = null;
-    endDate.value = null;
-  }
-  errors.value = {};
-  spotValidationValid.value = false;
-  
-  console.log('[ParkingAddonDialog] After reset - selectedAddon:', selectedAddon.value);
-  console.log('[ParkingAddonDialog] After reset - addonOptions:', addonOptions.value.map(a => ({ id: a.id, name: a.name })));
-};
-
 const onSave = async () => {
   //console.log('[ParkingAddonDialog] onSave, saveDataForEmit:', saveDataForEmit.value);
   if (!validateForm() || !spotValidationValid.value) {
@@ -598,7 +571,7 @@ watch(() => props.modelValue, async (newValue) => {
       if (!selectedAddon.value && addonOptions.value.length > 0) {
         selectedAddon.value = addonOptions.value[0].id;
       }
-      console.log('[ParkingAddonDialog] Dialog opened. Selected Addon:', selectedAddon.value, 'Unit Price:', localAddonData.value.unitPrice);
+      //console.log('[ParkingAddonDialog] Dialog opened. Selected Addon:', selectedAddon.value, 'Unit Price:', localAddonData.value.unitPrice);
     } catch (error) {
       console.error('Error on dialog open:', error);
     }
@@ -606,17 +579,17 @@ watch(() => props.modelValue, async (newValue) => {
 }, { immediate: true });
 
 watch(hotelId, async (newHotelId) => {
-  console.log('[ParkingAddonDialog] hotelId changed:', newHotelId);
+  //console.log('[ParkingAddonDialog] hotelId changed:', newHotelId);
   if (newHotelId) {
     const allAddons = await fetchAllAddons(newHotelId);    
     
     if (allAddons && Array.isArray(allAddons)) {
       const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');      
-      console.log('[ParkingAddonDialog] Raw parking addons:', JSON.stringify(parkingAddons, null, 2));      
+      //console.log('[ParkingAddonDialog] Raw parking addons:', JSON.stringify(parkingAddons, null, 2));      
       addonOptions.value = parkingAddons;
     } else {
       // If no addons are fetched or not an array, clear options and selection
-      console.log('[ParkingAddonDialog] No addons fetched or invalid response');
+      //console.log('[ParkingAddonDialog] No addons fetched or invalid response');
       addonOptions.value = [];
       selectedAddon.value = null;
     }
@@ -629,9 +602,9 @@ watch(hotelId, async (newHotelId) => {
 
 // Watch selectedAddon changes
 watch(selectedAddon, (newValue, oldValue) => {
-  console.log('[ParkingAddonDialog] selectedAddon changed from', oldValue, 'to', newValue);
+  //console.log('[ParkingAddonDialog] selectedAddon changed from', oldValue, 'to', newValue);
   const selectedAddonObj = addonOptions.value.find(a => a.id === newValue);
-  console.log('[ParkingAddonDialog] Selected addon object:', selectedAddonObj);
+  //console.log('[ParkingAddonDialog] Selected addon object:', selectedAddonObj);
 });
 </script>
 
