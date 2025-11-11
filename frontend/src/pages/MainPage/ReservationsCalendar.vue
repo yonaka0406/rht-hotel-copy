@@ -778,54 +778,54 @@ const handleCellClick = async (room, date) => {
       const clickedReservation = reservedRoomsMap.value[key];
       const index = selectedRoomByDay.value.findIndex(item => item.key === key);
 
-              if (index !== -1) {
-                  // Already selected, so deselect
-                  const originalSelection = [...selectedRoomByDay.value]; // Copy for comparison
-                  originalSelection.splice(index, 1); // Simulate deselection
-      
-                  if (originalSelection.length === 0) {
-                      selectedRoomByDay.value = []; // If nothing left, clear
-                  } else {
-                      // Check if the remaining selection is still contiguous
-                      const sortedSelection = originalSelection.sort((a, b) => {
-                          const dateA = new Date(a.key.split('_')[1]);
-                          const dateB = new Date(b.key.split('_')[1]);
-                          return dateA - dateB;
-                      });
-      
-                      let isStillContiguous = true;
-                      for (let i = 0; i < sortedSelection.length - 1; i++) {
-                          const currentDay = new Date(sortedSelection[i].key.split('_')[1]);
-                          const nextDay = new Date(sortedSelection[i + 1].key.split('_')[1]);
-                          const diff = Math.abs(nextDay.getTime() - currentDay.getTime());
-                          if (diff !== 86400000) { // 1 day in milliseconds
-                              isStillContiguous = false;
-                              break;
-                          }
-                      }
-      
-                                      if (isStillContiguous) {
-                                          selectedRoomByDay.value = originalSelection; // Keep the contiguous block
-                                      } else {
-                                          // Contiguity is broken. Find the first contiguous block.
-                                          const firstBlock = [];
-                                          if (sortedSelection.length > 0) {
-                                              firstBlock.push(sortedSelection[0]);
-                                              for (let i = 0; i < sortedSelection.length - 1; i++) {
-                                                  const currentDay = new Date(sortedSelection[i].key.split('_')[1]);
-                                                  const nextDay = new Date(sortedSelection[i + 1].key.split('_')[1]);
-                                                  const diff = Math.abs(nextDay.getTime() - currentDay.getTime());
-                                                  if (diff === 86400000) {
-                                                      firstBlock.push(sortedSelection[i + 1]);
-                                                  } else {
-                                                      // The first block ends here.
-                                                      break;
-                                                  }
-                                              }
+      if (index !== -1) {
+          // Already selected, so deselect
+          const originalSelection = [...selectedRoomByDay.value]; // Copy for comparison
+          originalSelection.splice(index, 1); // Simulate deselection
+
+          if (originalSelection.length === 0) {
+              selectedRoomByDay.value = []; // If nothing left, clear
+          } else {
+              // Check if the remaining selection is still contiguous
+              const sortedSelection = originalSelection.sort((a, b) => {
+                  const dateA = new Date(a.key.split('_')[1]);
+                  const dateB = new Date(b.key.split('_')[1]);
+                  return dateA - dateB;
+              });
+
+              let isStillContiguous = true;
+              for (let i = 0; i < sortedSelection.length - 1; i++) {
+                  const currentDay = new Date(sortedSelection[i].key.split('_')[1]);
+                  const nextDay = new Date(sortedSelection[i + 1].key.split('_')[1]);
+                  const diff = Math.abs(nextDay.getTime() - currentDay.getTime());
+                  if (diff !== 86400000) { // 1 day in milliseconds
+                      isStillContiguous = false;
+                      break;
+                  }
+              }
+
+                              if (isStillContiguous) {
+                                  selectedRoomByDay.value = originalSelection; // Keep the contiguous block
+                              } else {
+                                  // Contiguity is broken. Find the first contiguous block.
+                                  const firstBlock = [];
+                                  if (sortedSelection.length > 0) {
+                                      firstBlock.push(sortedSelection[0]);
+                                      for (let i = 0; i < sortedSelection.length - 1; i++) {
+                                          const currentDay = new Date(sortedSelection[i].key.split('_')[1]);
+                                          const nextDay = new Date(sortedSelection[i + 1].key.split('_')[1]);
+                                          const diff = Math.abs(nextDay.getTime() - currentDay.getTime());
+                                          if (diff === 86400000) {
+                                              firstBlock.push(sortedSelection[i + 1]);
+                                          } else {
+                                              // The first block ends here.
+                                              break;
                                           }
-                                          selectedRoomByDay.value = firstBlock;
-                                      }                  }
-              } else {        // Not selected.
+                                      }
+                                  }
+                                  selectedRoomByDay.value = firstBlock;
+                              }                  }
+      } else {        // Not selected.
         if (selectedRoomByDay.value.length === 0) {
           // Start a new selection
           selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
@@ -863,49 +863,89 @@ const handleCellClick = async (room, date) => {
             // DIFFERENT reservation. This is a SWAP.
             const targetRoomId = clickedReservation.room_id;
             const sourceRoomId = sourceReservation.room_id;
-
             const datesToSwap = selectedRoomByDay.value.map(day => day.key.split('_')[1]);
 
-            const targetDaysToSwap = datesToSwap.map(date => {
-              const targetKey = `${targetRoomId}_${date}`;
-              return reservedRoomsMap.value[targetKey];
-            }).filter(Boolean);
+            const executionPlan = {
+                swaps: [], // pairs of {source, target}
+                moves: []  // source days to move
+            };
+            let isConflict = false;
 
-            if (targetDaysToSwap.length !== selectedRoomByDay.value.length) {
-              toast.add({ severity: 'warn', summary: 'スワップ不可', detail: '選択された期間、相手の部屋に空きがありません。', life: 3000 });
-              return;
+            for (const date of datesToSwap) {
+                const sourceKey = `${sourceReservation.room_id}_${date}`;
+                const sourceDay = reservedRoomsMap.value[sourceKey];
+
+                const targetKey = `${targetRoomId}_${date}`;
+                const targetDay = reservedRoomsMap.value[targetKey];
+
+                if (targetDay) {
+                    if (targetDay.reservation_id === sourceReservation.reservation_id) {
+                        isConflict = true;
+                        toast.add({ severity: 'error', summary: '操作不可', detail: '同じ予約の別の部屋パートと直接スワップすることはできません。', life: 4000 });
+                        break;
+                    }
+                    executionPlan.swaps.push({ source: sourceDay, target: targetDay });
+                } else {
+                    executionPlan.moves.push(sourceDay);
+                }
             }
 
-            // All good, let's confirm.
-            formattedMessage.value = `
-                <b>${sourceReservation.room_number}号室</b>の選択期間と<br/>
-                <b>${clickedReservation.room_number}号室</b>の同期間を交換しますか？
-            `;
+            if (isConflict) {
+                return; 
+            }
+            
+            const swapCount = executionPlan.swaps.length;
+            const moveCount = executionPlan.moves.length;
+
+            if (swapCount === 0 && moveCount === 0) {
+                return;
+            }
+            
+            let message = `<b>${sourceReservation.room_number}号室</b>から<b>${clickedReservation.room_number}号室</b>へ移動します。<br/><br/>`;
+            if (swapCount > 0) {
+                message += `・${swapCount}泊分を交換します。<br/>`;
+            }
+            if (moveCount > 0) {
+                message += `・${moveCount}泊分を空室へ移動します。<br/>`;
+            }
+            message += '<br/>よろしいですか？';
+            
+            formattedMessage.value = message;
+            
             confirmRoomMode.require({
               group: 'templating',
-              header: '日ごと交換確認',
-              icon: 'pi pi-sync',
+              header: '移動・交換の確認',
+              icon: 'pi pi-question-circle',
+              acceptProps: {
+                  label: 'はい'
+              },
               accept: async () => {
-                isUpdating.value = true;
-                try {
-                  for (let i = 0; i < selectedRoomByDay.value.length; i++) {
-                    const sourceDay = selectedRoomByDay.value[i];
-                    const targetDay = targetDaysToSwap[i];
-                    await setReservationRoom(sourceDay.reservation.id, targetRoomId);
-                    await setReservationRoom(targetDay.id, sourceRoomId);
+                  isUpdating.value = true;
+                  try {
+                      for (const pair of executionPlan.swaps) {
+                          await setReservationRoom(pair.source.id, targetRoomId);
+                          await setReservationRoom(pair.target.id, sourceReservation.room_id);
+                      }
+                      for (const day of executionPlan.moves) {
+                          await setReservationRoom(day.id, targetRoomId);
+                      }
+                      toast.add({ severity: 'success', summary: '成功', detail: '部屋を移動・交換しました。', life: 3000 });
+                  } catch (error) {
+                      toast.add({ severity: 'error', summary: 'エラー', detail: '操作に失敗しました。', life: 3000 });
+                  } finally {
+                      selectedRoomByDay.value = [];
+                      isUpdating.value = false;
+                      await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+                      confirmRoomMode.close('templating');
                   }
-                  toast.add({ severity: 'success', summary: '成功', detail: '部屋を交換しました。', life: 3000 });
-                } catch (error) {
-                  toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の交換に失敗しました。', life: 3000 });
-                } finally {
-                  selectedRoomByDay.value = [];
-                  isUpdating.value = false;
-                  await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-                  confirmRoomMode.close('templating');
-                }
+              },
+              rejectProps: {
+                  label: 'キャンセル',
+                  severity: 'secondary',
+                  outlined: true
               },
               reject: () => {
-                confirmRoomMode.close('templating');
+                    confirmRoomMode.close('templating');
               }
             });
           }
