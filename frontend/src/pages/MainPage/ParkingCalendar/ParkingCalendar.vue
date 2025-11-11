@@ -928,12 +928,31 @@
   const handleCellDoubleClick = (spot, date) => {
     const spotInfo = fillSpotInfo(spot.id, date);
     
-    // Don't open drawer for blocked spots (status = 'other')
-    if (spotInfo && spotInfo.reservation_id && spotInfo.status !== 'other') {
+    // Check if spot is blocked (status = 'other')
+    if (spotInfo && spotInfo.status === 'other') {
+      toast.add({ 
+        severity: 'info', 
+        summary: '管理ブロック', 
+        detail: 'このスペースは管理パネルで管理されています。変更は管理パネルから行ってください。', 
+        life: 4000 
+      });
+      return;
+    }
+    
+    // Check if spot has a reservation
+    if (spotInfo && spotInfo.reservation_id) {
       reservationId.value = spotInfo.reservation_id;
       selectedSpot.value = spot;
       drawerVisible.value = true;
-    } 
+    } else {
+      // Empty spot - show info message
+      toast.add({ 
+        severity: 'info', 
+        summary: '空きスペース', 
+        detail: '予約は既存の予約から追加するか、管理パネルからブロックを設定してください。', 
+        life: 4000 
+      });
+    }
   };
   </script>
   
