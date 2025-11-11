@@ -623,6 +623,14 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.2.0] - 2025-11-11
+
+- Feature: Introduced comprehensive Parking Module with spot blocking for external hotel integration and basic parking space number management.
+- Feature: Enhanced reservation calendar with room swapping capability, allowing users to switch rooms even when the target room is occupied, improving room management flexibility.
+- Bugfix: Fixed memory leak in plan pattern bulk edit that was causing JavaScript heap out of memory errors for large reservations. The system now uses a single database client connection for all operations during bulk edits, preventing connection pool exhaustion.
+
+---
+
 ## Version History
 - **1.1.31** (2025-11-06) - Fixed room inventory view to exclude 'not for sale' rooms, resolved memory leaks in Puppeteer, improved form validation with reusable utilities, and enhanced UI with custom scrollbar styling for sidebars. Added new tab functionality for reservation details.
 - **1.1.30** (2025-11-05) - Implemented reservation splitting while maintaining related data and history. Fixed invoice display for reservations spanning multiple months and ensured consistent date formatting between frontend and backend for billing periods.

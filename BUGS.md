@@ -7,29 +7,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### November 10, 2025
 
-#### Parking Module - Block Spots with External Hotel Integration
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: Internal Planning
-- **Description**: 
-  - Need to implement functionality to block parking spots in the parking module
-  - Some blocks are required due to reservations from nearby hotels
-  - Current system doesn't account for external hotel reservations
-- **Proposed Solution**:
-  1. Add ability to mark spots as blocked with reason codes
-  2. Create integration with external hotel reservation systems (if applicable)
-  3. Add manual override for staff to block spots for external reservations
-  4. Include visual indicators for blocked spots in the parking module
-- **Technical Notes**:
-  - Consider creating a new table for parking blocks with fields for:
-    - Spot ID
-    - Block start/end dates
-    - Reason (maintenance, external reservation, etc.)
-    - Reference to external reservation (if applicable)
-  - Add permission controls for staff to manage blocks
-  - Consider adding notifications for upcoming block expirations
-  - Ensure blocks are respected in parking availability calculations
-
 #### Sales Performance Reporting in CRM
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
@@ -123,34 +100,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should maintain a history of merged/split operations for auditing
   - Consider impact on reporting and invoicing for merged reservations
   - Ensure proper handling of special requests and add-ons during merge/split operations
-
-### October 24, 2025
-
-#### Feature #87: Parking Space Number Management
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  Simplify the parking module to focus on basic management of parking space numbers.
-- **Requirements**:
-  - **Basic Management**:
-    - Add/remove individual parking space numbers
-    - Support for bulk import/export of space numbers
-    - Simple list view of all parking spaces
-  - **Numbering System**:
-    - Support for alphanumeric space identifiers (e.g., A1, B2, 101, 102)
-    - Optional grouping by area/zone
-    - Basic availability status (available/occupied)
-  - **Assignment**:
-    - Simple assignment of spaces to reservations
-    - Basic availability checking
-- **User Story**:
-  As a hotel staff member,
-  I want to manage parking space numbers simply and efficiently
-  So that I can keep track of parking assignments without unnecessary complexity
-- **Technical Notes**:
-  - Minimal database schema changes needed
-  - Simple UI for managing space numbers
-  - Basic integration with reservation system for assignments
 
 ### October 24, 2025
 
