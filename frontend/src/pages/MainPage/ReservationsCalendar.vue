@@ -778,11 +778,54 @@ const handleCellClick = async (room, date) => {
       const clickedReservation = reservedRoomsMap.value[key];
       const index = selectedRoomByDay.value.findIndex(item => item.key === key);
 
-      if (index !== -1) {
-        // Already selected, so deselect
-        selectedRoomByDay.value.splice(index, 1);
-      } else {
-        // Not selected.
+              if (index !== -1) {
+                  // Already selected, so deselect
+                  const originalSelection = [...selectedRoomByDay.value]; // Copy for comparison
+                  originalSelection.splice(index, 1); // Simulate deselection
+      
+                  if (originalSelection.length === 0) {
+                      selectedRoomByDay.value = []; // If nothing left, clear
+                  } else {
+                      // Check if the remaining selection is still contiguous
+                      const sortedSelection = originalSelection.sort((a, b) => {
+                          const dateA = new Date(a.key.split('_')[1]);
+                          const dateB = new Date(b.key.split('_')[1]);
+                          return dateA - dateB;
+                      });
+      
+                      let isStillContiguous = true;
+                      for (let i = 0; i < sortedSelection.length - 1; i++) {
+                          const currentDay = new Date(sortedSelection[i].key.split('_')[1]);
+                          const nextDay = new Date(sortedSelection[i + 1].key.split('_')[1]);
+                          const diff = Math.abs(nextDay.getTime() - currentDay.getTime());
+                          if (diff !== 86400000) { // 1 day in milliseconds
+                              isStillContiguous = false;
+                              break;
+                          }
+                      }
+      
+                                      if (isStillContiguous) {
+                                          selectedRoomByDay.value = originalSelection; // Keep the contiguous block
+                                      } else {
+                                          // Contiguity is broken. Find the first contiguous block.
+                                          const firstBlock = [];
+                                          if (sortedSelection.length > 0) {
+                                              firstBlock.push(sortedSelection[0]);
+                                              for (let i = 0; i < sortedSelection.length - 1; i++) {
+                                                  const currentDay = new Date(sortedSelection[i].key.split('_')[1]);
+                                                  const nextDay = new Date(sortedSelection[i + 1].key.split('_')[1]);
+                                                  const diff = Math.abs(nextDay.getTime() - currentDay.getTime());
+                                                  if (diff === 86400000) {
+                                                      firstBlock.push(sortedSelection[i + 1]);
+                                                  } else {
+                                                      // The first block ends here.
+                                                      break;
+                                                  }
+                                              }
+                                          }
+                                          selectedRoomByDay.value = firstBlock;
+                                      }                  }
+              } else {        // Not selected.
         if (selectedRoomByDay.value.length === 0) {
           // Start a new selection
           selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
@@ -791,13 +834,31 @@ const handleCellClick = async (room, date) => {
           const sourceReservation = selectedRoomByDay.value[0].reservation;
 
           if (clickedReservation.reservation_id === sourceReservation.reservation_id) {
-            // Same reservation. Try to add to selection.
-            if (isContiguous(selectedRoomByDay.value, key)) {
-              selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
-            } else {
-              // Not contiguous. Reset selection.
-              selectedRoomByDay.value = [{ key: key, reservation: clickedReservation }];
+            // Same reservation. Expand selection to include the range.
+            selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
+
+            const selectedDates = selectedRoomByDay.value.map(item => new Date(item.key.split('_')[1]));
+            const minDate = new Date(Math.min.apply(null, selectedDates));
+            const maxDate = new Date(Math.max.apply(null, selectedDates));
+
+            const dateRange = [];
+            for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+              dateRange.push(formatDate(new Date(d)));
             }
+
+            const reservationId = sourceReservation.reservation_id;
+            const roomId = sourceReservation.room_id;
+
+            const newSelection = dateRange.map(dateInRange => {
+              const rangeKey = `${roomId}_${dateInRange}`;
+              const reservationData = reservedRoomsMap.value[rangeKey];
+              if (reservationData && reservationData.reservation_id === reservationId) {
+                return { key: rangeKey, reservation: reservationData };
+              }
+              return null;
+            }).filter(Boolean);
+
+            selectedRoomByDay.value = newSelection;
           } else {
             // DIFFERENT reservation. This is a SWAP.
             const targetRoomId = clickedReservation.room_id;
