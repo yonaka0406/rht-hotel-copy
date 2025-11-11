@@ -484,3 +484,66 @@
     - Add error logging for capacity operations
     - Create alerts for capacity overbooking
     - _Requirements: 5.2, 5.3_
+
+
+## Phase 3: ReservationsNewCombo Integration
+
+- [ ] 12. Update ReservationsNewCombo.vue to use new parking capacity calculation
+  - [ ] 12.1 Replace maxParkingSpots calculation with checkRealTimeAvailability API
+    - Remove old parking availability logic that doesn't account for blocks
+    - Call checkRealTimeAvailability API with proper parameters (hotelId, dates, vehicleCategoryId)
+    - Use excludeReservationId when editing existing reservations
+    - Update reactive state to store net available capacity per date
+    - _Requirements: 1.2, 2.2, 5.1_
+
+  - [ ] 12.2 Update parking capacity validation logic
+    - Replace old capacity checks with net available capacity (gross - blocked)
+    - Validate requested parking spots against net available capacity for each date
+    - Show clear error messages when capacity is insufficient due to blocks
+    - Prevent form submission when parking capacity is exceeded
+    - _Requirements: 2.2, 5.2, 5.3_
+
+  - [ ] 12.3 Update parking capacity display in UI
+    - Show net available capacity with block information (e.g., "利用可能: 5台 (ブロック: 2台)")
+    - Add visual indicators when capacity is limited by blocks
+    - Update tooltips to explain blocked capacity impact
+    - Disable parking selection when all capacity is blocked for selected dates
+    - _Requirements: 2.2, 5.1_
+
+  - [ ] 12.4 Ensure timezone-corrected date comparisons
+    - Use formatDate utility for all date comparisons
+    - Ensure consistency with backend date handling
+    - Fix any timezone-related bugs in date range selection
+    - _Requirements: 1.2, 5.1_
+
+  - [ ] 12.5 Handle multi-date reservations with parking lot capacity limits
+    - Validate capacity per parking lot for each date in the reservation
+    - Show which dates have insufficient capacity
+    - Allow partial date selection when some dates lack capacity
+    - Update assignment algorithm to respect parking lot capacity limits
+    - _Requirements: 1.2, 1.4, 5.2_
+
+  - [ ] 12.6 Add debug logging for troubleshooting
+    - Log API calls to checkRealTimeAvailability with parameters
+    - Log capacity validation results for each date
+    - Log parking block information affecting availability
+    - Log any capacity conflicts or validation failures
+    - _Requirements: 5.1, 5.2_
+
+  - [ ] 12.7 Test integration with existing reservation flow
+    - Test creating new reservations with parking capacity limits
+    - Test editing existing reservations with excludeReservationId
+    - Test multi-date reservations across different parking lots
+    - Test error handling when capacity is exceeded
+    - Verify blocked capacity is properly respected
+    - _Requirements: 1.1, 1.3, 2.2, 4.2_
+
+## Next Steps
+
+The ReservationsNewCombo.vue component currently uses older parking availability logic that doesn't account for:
+- Parking blocks reducing available capacity
+- Timezone-corrected date comparisons
+- Parking lot specific capacity limits
+- The new checkRealTimeAvailability API with excludeReservationId support
+
+This phase will integrate all the improvements from Phase 1 and Phase 2 into the main reservation creation flow.
