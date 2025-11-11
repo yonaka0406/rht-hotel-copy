@@ -47,12 +47,12 @@ const dialogVisible = computed({
 const isDirty = computed(() => localComment.value !== props.comment);
 
 watch(() => props.comment, (newComment) => {
-    console.log('[Dialog] Comment prop changed:', newComment);
+    //console.log('[Dialog] Comment prop changed:', newComment);
     localComment.value = newComment;
 }, { immediate: true });
 
 onMounted(() => {
-    console.log('[Dialog] Component mounted, comment prop:', props.comment);
+    //console.log('[Dialog] Component mounted, comment prop:', props.comment);
     localComment.value = props.comment;
 });
 

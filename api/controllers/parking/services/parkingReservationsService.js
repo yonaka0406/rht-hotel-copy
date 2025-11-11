@@ -6,6 +6,7 @@ const { formatDate } = require('../../../utils/reportUtils');
  * ParkingReservationsService - Manages parking reservations including blocked spots
  */
 class ParkingReservationsService {
+    static ADMIN_BLOCK_CLIENT_ID = '11111111-1111-1111-1111-111111111111';
     constructor(requestId) {
         this.requestId = requestId;
     }
@@ -114,7 +115,7 @@ class ParkingReservationsService {
                         parking_spot_id: spot.id,
                         date: dateStr,
                         status: 'other',
-                        client_id: '11111111-1111-1111-1111-111111111111', // Special ID for administrative blocks (ブロック)
+                        client_id: ParkingReservationsService.ADMIN_BLOCK_CLIENT_ID, // Special ID for administrative blocks (ブロック)
                         booker_name: block.comment || '管理ブロック',
                         reservation_id: block.id,
                         spot_number: spot.spot_number,

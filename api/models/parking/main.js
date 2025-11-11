@@ -3,10 +3,7 @@ const format = require('pg-format');
 const vehicle = require('./vehicle');
 const parkingLot = require('./parkingLot');
 const { formatDate } = require('../../utils/reportUtils');
-
-
-
-
+const logger = require('../../config/logger');
 
 // Parking Spot
 const getParkingSpots = async (requestId, parking_lot_id) => {
@@ -601,7 +598,7 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
 }
 
 const saveParkingAssignments = async (requestId, assignments, userId, client = null) => {
-    console.log(`[saveParkingAssignments] Entering with requestId: ${requestId}, assignments count: ${assignments.length}, userId: ${userId}`);
+    logger.info(`[saveParkingAssignments] Entering with requestId: ${requestId}, assignments count: ${assignments.length}, userId: ${userId}`);
     const pool = getPool(requestId);
     const localClient = client || await pool.connect();
     const releaseClient = !client;
@@ -614,12 +611,12 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
         for (const [index, assignment] of assignments.entries()) {
 
-            console.log(`[saveParkingAssignments] Processing assignment ${index + 1}/${assignments.length}:`, assignment);
+            logger.debug(`[saveParkingAssignments] Processing assignment ${index + 1}/${assignments.length}:`, { assignment });
             const { 
                 hotel_id, reservation_id, vehicle_category_id, roomId,
                 check_in, check_out, unit_price, numberOfSpots = 1, spotId: preferredSpotId, addon 
             } = assignment;
-            console.log(`[saveParkingAssignments] Extracted assignment details: hotel_id=${hotel_id}, reservation_id=${reservation_id}, vehicle_category_id=${vehicle_category_id}, roomId=${roomId}, check_in=${check_in}, check_out=${check_out}, unit_price=${unit_price}, numberOfSpots=${numberOfSpots}, preferredSpotId=${preferredSpotId}, addon=`, addon);
+            logger.debug(`[saveParkingAssignments] Extracted assignment details`, { hotel_id, reservation_id, vehicle_category_id, roomId, check_in, check_out, unit_price, numberOfSpots, preferredSpotId, hasAddon: !!addon });
 
             if (!hotel_id || !reservation_id) {
                 const error = new Error('Missing required fields in assignment');
@@ -630,18 +627,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             }
             const checkInDate = formatDate(new Date(check_in));
             const checkOutDate = formatDate(new Date(check_out));
-            console.log(`[saveParkingAssignments] Formatted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
-
-            // Note: We no longer delete existing parking assignments
-            // This allows additive parking spot assignments without removing existing ones
-
-            // 1. Fetch reservation_details for this reservation
-            //console.log('Fetching reservation details with params:', {
-            //    reservation_id,
-            //    hotel_id,
-            //    check_in: formatDate(new Date(check_in)),
-            //    check_out: formatDate(new Date(check_out))
-            //});
+            logger.debug(`[saveParkingAssignments] Formatted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
 
             const query = {
                 text: `SELECT id, room_id, date 
@@ -652,27 +638,19 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 values: [reservation_id, hotel_id, checkInDate, checkOutDate, roomId]
             };
 
-            //console.log('Executing query:', {
-            //    text: query.text,
-            //    values: query.values
-            //});
-
             const detailsRes = await localClient.query(query);
             const reservationDetails = detailsRes.rows;
-            console.log(`[saveParkingAssignments] Fetched reservation details (${reservationDetails.length} rows):`, reservationDetails);
+            logger.debug(`[saveParkingAssignments] Fetched reservation details (${reservationDetails.length} rows)`);
             if (!reservationDetails.length) {
-                console.warn(`No reservation details found for reservation ${reservation_id} with params:`, {
+                logger.warn(`No reservation details found for reservation ${reservation_id} with params:`, {
                     reservation_id,
                     hotel_id,
                     check_in: formatDate(new Date(check_in)),
                     check_out: formatDate(new Date(check_out)),
-                    formatted_check_in: formatDate(new Date(check_in)),
-                    formatted_check_out: formatDate(new Date(check_out))
                 });
                 continue;
             }
 
-            // 2. Load vehicle category requirement
             const catRes = await localClient.query(
                 `SELECT capacity_units_required 
                  FROM vehicle_categories 
@@ -680,10 +658,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 [vehicle_category_id]
             );
             const requiredUnits = catRes.rows[0]?.capacity_units_required;
-            console.log(`[saveParkingAssignments] Vehicle category ${vehicle_category_id} requires ${requiredUnits} capacity units.`);
+            logger.debug(`[saveParkingAssignments] Vehicle category ${vehicle_category_id} requires ${requiredUnits} capacity units.`);
             if (!requiredUnits) throw new Error(`Vehicle category ${vehicle_category_id} not found`);
 
-            // 3. Get candidate spots (exclude virtual capacity pool spots)
             const spotsRes = await localClient.query(
                 `SELECT ps.id 
                  FROM parking_spots ps
@@ -695,30 +672,27 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 [hotel_id, requiredUnits]
             );
             const candidateSpots = spotsRes.rows.map(r => r.id);
-            console.log(`[saveParkingAssignments] Found ${candidateSpots.length} candidate parking spots:`, candidateSpots);
+            logger.debug(`[saveParkingAssignments] Found ${candidateSpots.length} candidate parking spots.`);
             if (!candidateSpots.length) throw new Error(`No available parking spots for category ${vehicle_category_id}`);
 
-            // 4. Group reservation_details by date
             const detailsByDate = {};
             for (const d of reservationDetails) {
                 const dateStr = formatDate(new Date(d.date));
                 if (!detailsByDate[dateStr]) detailsByDate[dateStr] = [];
                 detailsByDate[dateStr].push(d);
             }
-            console.log(`[saveParkingAssignments] Grouped reservation details by date:`, detailsByDate);
+            logger.debug(`[saveParkingAssignments] Grouped reservation details by date.`);
 
-            // Prepare batched inserts
             let addonValues = [];
             let parkingValues = [];
 
             const addonDetails = await getAddonDetails(localClient, hotel_id, addon?.addons_hotel_id, addon?.addons_global_id);
-            console.log(`[saveParkingAssignments] Addon details:`, addonDetails);
+            logger.debug(`[saveParkingAssignments] Addon details fetched.`);
 
             const allReservationDates = Object.keys(detailsByDate).map(dateStr => new Date(dateStr));
             const allReservationDateStrings = allReservationDates.map(d => formatDate(d));
             
-            // Load all existing reservations for the date range in one query to avoid N+1 problem
-            console.log(`[saveParkingAssignments] Loading existing reservations for dates:`, allReservationDateStrings);
+            logger.debug(`[saveParkingAssignments] Loading existing reservations for dates:`, { dates: allReservationDateStrings });
             const existingReservationsRes = await localClient.query(
                 `SELECT parking_spot_id, date
                  FROM reservation_parking
@@ -729,9 +703,6 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 [hotel_id, allReservationDateStrings]
             );
             
-            // Build in-memory maps for fast lookups
-            // dateToSpots: Map<dateString, Set<spotId>> - which spots are reserved on each date
-            // spotToDates: Map<spotId, Set<dateString>> - which dates each spot is reserved on
             const dateToSpots = new Map();
             const spotToDates = new Map();
             
@@ -750,31 +721,28 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 spotToDates.get(spotId).add(dateStr);
             }
             
-            console.log(`[saveParkingAssignments] Loaded ${existingReservationsRes.rows.length} existing reservations into memory maps`);
+            logger.debug(`[saveParkingAssignments] Loaded ${existingReservationsRes.rows.length} existing reservations into memory maps`);
             
-            // Keep track of spots that have been assigned to prevent re-assigning the same physical spot multiple times for the same reservation
             const assignedPhysicalSpotsForThisAssignment = new Set();
 
             for (let i = 0; i < numberOfSpots; i++) {
-                console.log(`[saveParkingAssignments] Attempting to assign spot ${i + 1}/${numberOfSpots} for current assignment.`);
+                logger.debug(`[saveParkingAssignments] Attempting to assign spot ${i + 1}/${numberOfSpots} for current assignment.`);
                 let remainingDatesToAssign = new Set(allReservationDateStrings);
-                const assignedSpotsPerDate = {}; // { 'YYYY-MM-DD': spotId }
+                const assignedSpotsPerDate = {};
 
                 while (remainingDatesToAssign.size > 0) {
-                    console.log(`[saveParkingAssignments] Starting new iteration of spot assignment loop. Remaining dates: ${Array.from(remainingDatesToAssign).join(', ')}`);
+                    logger.debug(`[saveParkingAssignments] Starting new iteration of spot assignment loop. Remaining dates: ${remainingDatesToAssign.size}`);
                     let bestSpot = null;
                     let maxAvailableDates = 0;
                     let bestSpotAvailableDates = [];
 
                     for (const spotId of candidateSpots) {
-                        // Skip if this physical spot has already been assigned to this reservation (across all numberOfSpots iterations)
                         if (assignedPhysicalSpotsForThisAssignment.has(spotId)) {
                             continue;
                         }
 
                         let currentSpotAvailableDates = [];
                         for (const dateStr of remainingDatesToAssign) {
-                            // Check availability using in-memory map instead of DB query
                             const reservedSpots = dateToSpots.get(dateStr);
                             const isReserved = reservedSpots && reservedSpots.has(spotId);
 
@@ -790,19 +758,17 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                         }
                     }
 
-                    console.log(`[saveParkingAssignments] Best spot for current iteration: ${bestSpot}, max available dates: ${maxAvailableDates}`);
+                    logger.debug(`[saveParkingAssignments] Best spot for current iteration: ${bestSpot}, max available dates: ${maxAvailableDates}`);
 
                     if (bestSpot === null || maxAvailableDates === 0) {
                         throw new Error(`Not enough parking spots available for all dates for assignment ${i + 1}. Remaining dates: ${Array.from(remainingDatesToAssign).join(', ')}`);
                     }
 
-                    // Assign the best spot for its available dates
-                    assignedPhysicalSpotsForThisAssignment.add(bestSpot); // Mark this physical spot as used for this assignment
+                    assignedPhysicalSpotsForThisAssignment.add(bestSpot);
                     for (const dateStr of bestSpotAvailableDates) {
                         assignedSpotsPerDate[dateStr] = bestSpot;
                         remainingDatesToAssign.delete(dateStr);
                         
-                        // Update in-memory maps to reflect this assignment for subsequent iterations
                         if (!dateToSpots.has(dateStr)) {
                             dateToSpots.set(dateStr, new Set());
                         }
@@ -813,14 +779,25 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                         }
                         spotToDates.get(bestSpot).add(dateStr);
                         
-                        console.log(`[saveParkingAssignments] Assigned spot ${bestSpot} to date ${dateStr}.`);
+                        logger.debug(`[saveParkingAssignments] Assigned spot ${bestSpot} to date ${dateStr}.`);
                     }
                 }
 
-                // Now, generate addonValues and parkingValues based on assignedSpotsPerDate
                 for (const dateStr of Object.keys(assignedSpotsPerDate)) {
                     const assignedSpot = assignedSpotsPerDate[dateStr];
-                    const detail = detailsByDate[dateStr][0]; // Assuming one detail per date for simplicity, adjust if needed
+                    
+                    if (!detailsByDate[dateStr] || detailsByDate[dateStr].length === 0) {
+                        logger.warn(`[saveParkingAssignments] No reservation details found for date ${dateStr} while generating addon values. Skipping.`);
+                        continue;
+                    }
+            
+                    if (detailsByDate[dateStr].length > 1) {
+                        logger.warn(`[saveParkingAssignments] Multiple reservation details found for date ${dateStr} and room ID ${roomId}. Using the first one as per current logic.`, {
+                            detailsCount: detailsByDate[dateStr].length
+                        });
+                    }
+
+                    const detail = detailsByDate[dateStr][0];
 
                     let global_addon_id = null;
                     let hotel_addon_id = null;
@@ -853,9 +830,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                         created_by: userId
                     });
                 }
-            } // End of numberOfSpots loop
+            }
 
-            console.log(`[saveParkingAssignments] Preparing to insert ${addonValues.length} addon records in batches.`);
+            logger.debug(`[saveParkingAssignments] Preparing to insert ${addonValues.length} addon records in batches.`);
             for (let i = 0; i < addonValues.length; i += BATCH_SIZE) {
                 const batch = addonValues.slice(i, i + BATCH_SIZE);
                 const placeholders = batch.map(
@@ -870,19 +847,16 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     , flatValues
                 );
 
-                console.log(`[saveParkingAssignments] Inserted batch of ${res.rows.length} addon records.`);
-                // assign returned addon IDs to parkingValues
+                logger.debug(`[saveParkingAssignments] Inserted batch of ${res.rows.length} addon records.`);
                 for (let j = 0; j < res.rows.length; j++) {
                     parkingValues[i + j].reservation_addon_id = res.rows[j].id;
                 }
             }
 
-            // 6. Insert reservation_parking in batch
-            console.log(`[saveParkingAssignments] Preparing to insert ${parkingValues.length} parking records in batches.`);
+            logger.debug(`[saveParkingAssignments] Preparing to insert ${parkingValues.length} parking records in batches.`);
             for (let i = 0; i < parkingValues.length; i += BATCH_SIZE) {
                 const batch = parkingValues.slice(i, i + BATCH_SIZE);
                 
-                // 8 placeholders per row: hotel_id, reservation_details_id, reservation_addon_id, vehicle_category_id, parking_spot_id, date, status, created_by
                 const placeholders = batch.map((_, idx) => 
                     `($${idx*8+1},$${idx*8+2},$${idx*8+3},$${idx*8+4},$${idx*8+5},$${idx*8+6},$${idx*8+7},$${idx*8+8})`
                 ).join(',');
@@ -894,7 +868,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     p.vehicle_category_id,
                     p.parking_spot_id,
                     p.date,
-                    'confirmed',   // status
+                    'confirmed',
                     p.created_by
                 ]);
 
@@ -904,23 +878,23 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     VALUES ${placeholders}`
                     , flatValues
                 );
-                console.log(`[saveParkingAssignments] Inserted batch of parking records.`);
+                logger.debug(`[saveParkingAssignments] Inserted batch of parking records.`);
             }
         }
 
         if (releaseClient) {
             await localClient.query('COMMIT');
-            console.log(`[saveParkingAssignments] Transaction committed.`);
+            logger.info(`[saveParkingAssignments] Transaction committed for requestId: ${requestId}.`);
         }
         return { success: true, message: 'Parking assignments saved successfully' };
     } catch (error) {
-        console.error('[saveParkingAssignments] Error caught:', error);
+        logger.error('[saveParkingAssignments] Error caught:', { requestId, error: error.message, stack: error.stack });
         if (releaseClient) {
             try {
                 await localClient.query('ROLLBACK');
-                console.log(`[saveParkingAssignments] Transaction rolled back.`);
+                logger.warn(`[saveParkingAssignments] Transaction rolled back for requestId: ${requestId}.`);
             } catch (rollbackError) {
-                console.error('[saveParkingAssignments] Error during rollback:', rollbackError);
+                logger.error('[saveParkingAssignments] Error during rollback:', { requestId, error: rollbackError.message, stack: rollbackError.stack });
             }
         }
         throw error;
@@ -928,9 +902,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
         if (releaseClient) {
             try {
                 localClient.release();
-                console.log(`[saveParkingAssignments] Client released.`);
+                logger.info(`[saveParkingAssignments] Client released for requestId: ${requestId}.`);
             } catch (releaseError) {
-                console.error('[saveParkingAssignments] Error during client release in finally block:', releaseError);
+                logger.error('[saveParkingAssignments] Error during client release in finally block:', { requestId, error: releaseError.message, stack: releaseError.stack });
             }
         }
     }

@@ -169,13 +169,8 @@ const isAdjusting = ref(false);
 
 // Helper function to adjust date range
 const adjustDateRange = (newStart, newEnd) => {
-    if (newStart && newEnd) {
-        if (newStart > newEnd) {
-            return { startDate: newStart, endDate: new Date(newStart) };
-        }
-        if (newEnd < newStart) {
-            return { startDate: new Date(newEnd), endDate: newEnd };
-        }
+    if (newStart && newEnd && newStart > newEnd) {
+        return { startDate: newStart, endDate: new Date(newStart) };
     }
     return null;
 };
@@ -189,8 +184,8 @@ watch(() => props.formData.startDate, (newStartDate) => {
         isAdjusting.value = true;
         if (props.formData.endDate.getTime() !== adjustment.endDate.getTime()) {
             emit('update:endDate', adjustment.endDate);
+            emit('dates-changed', adjustment);
         }
-        emit('dates-changed', adjustment);
         // Use nextTick to ensure the flag is reset after the update cycle
         nextTick(() => {
             isAdjusting.value = false;

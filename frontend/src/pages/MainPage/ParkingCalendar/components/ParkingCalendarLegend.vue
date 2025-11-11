@@ -36,5 +36,5 @@
 </template>
 
 <script setup>
-import { Fieldset } from 'primevue';
+import Fieldset from 'primevue/fieldset';
 </script>

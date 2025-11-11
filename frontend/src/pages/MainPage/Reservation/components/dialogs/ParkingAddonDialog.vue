@@ -478,7 +478,7 @@ const resetForm = () => {
 };
 
 const onSave = async () => {
-  console.log('[ParkingAddonDialog] onSave, saveDataForEmit:', saveDataForEmit.value);
+  //console.log('[ParkingAddonDialog] onSave, saveDataForEmit:', saveDataForEmit.value);
   if (!validateForm() || !spotValidationValid.value) {
     toast.add({
       severity: 'warn',
@@ -554,7 +554,7 @@ watch(() => rooms.value, (newRooms) => {
     selectedRoom.value = newRooms[0];
     // Also update the roomId in localAddonData
     localAddonData.value.roomId = newRooms[0].id;
-    // console.log('[ParkingAddonDialog] Auto-selected first room:', selectedRoom.value);
+    //console.log('[ParkingAddonDialog] Auto-selected first room:', selectedRoom.value);
   }
 }, { immediate: true });
 
@@ -570,14 +570,14 @@ watch(selectedRoom, (newRoom) => {
 
 // Watchers for date changes
 watch(startDate, (newStartDate) => {
-  console.log('[ParkingAddonDialog] startDate changed:', newStartDate);
+  //console.log('[ParkingAddonDialog] startDate changed:', newStartDate);
   if (!newStartDate || !endDate.value) return;
   
   onDateChange();
 });
 
 watch(endDate, (newEndDate) => {
-  console.log('[ParkingAddonDialog] endDate changed:', newEndDate);
+  //console.log('[ParkingAddonDialog] endDate changed:', newEndDate);
   if (!newEndDate || !startDate.value) return;
   
   onDateChange();

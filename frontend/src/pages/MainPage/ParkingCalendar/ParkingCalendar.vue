@@ -186,19 +186,8 @@
   const LOCK_CLIENT_ID = '22222222-2222-2222-2222-222222222222';
   
   // Helper function
-  const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-      return "";
-    }    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  const formatDateWithDay = (date) => {
-    const options = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' };
-    const parsedDate = new Date(date);
-    return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-  };  
+  import { formatDate, formatDateWithDay } from '../../../utils/dateUtils';
+    
   
   const isUpdating = ref(false);
   const isLoading = ref(true);
@@ -387,9 +376,9 @@
       // Check for other/block status first
       if (spotInfo.status === 'other') {
         style = { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
-      } else if (spotInfo.status === 'block' && spotInfo.client_id === '11111111-1111-1111-1111-111111111111') {
+      } else if (spotInfo.status === 'block' && spotInfo.client_id === BLOCK_CLIENT_ID) {
         style = { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
-      } else if (spotInfo.status === 'block' && spotInfo.client_id === '22222222-2222-2222-2222-222222222222') {
+      } else if (spotInfo.status === 'block' && spotInfo.client_id === LOCK_CLIENT_ID) {
         style = { backgroundColor: '#fed7aa' }; // Light orange for provisional blocks
       } else {
         switch(spotInfo.type) {
