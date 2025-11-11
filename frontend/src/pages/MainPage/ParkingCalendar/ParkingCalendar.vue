@@ -931,7 +931,8 @@
   const handleCellDoubleClick = (spot, date) => {
     const spotInfo = fillSpotInfo(spot.id, date);
     
-    if (spotInfo && spotInfo.reservation_id) {
+    // Don't open drawer for blocked spots (status = 'other')
+    if (spotInfo && spotInfo.reservation_id && spotInfo.status !== 'other') {
       reservationId.value = spotInfo.reservation_id;
       selectedSpot.value = spot;
       drawerVisible.value = true;
