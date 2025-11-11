@@ -43,6 +43,7 @@ Our comprehensive documentation is organized into the following sections:
 - [Reservation Management](docs/features/reservation-management/feature-specification.md) - Core booking and reservation functionality
 - [Client Management & CRM](docs/features/client-management-crm/feature-specification.md) - Customer relationship management features
 - [Waitlist System](docs/features/waitlist-system/feature-specification.md) - Guest waitlist and notification system
+- **Parking Capacity Management** - Real-time parking availability tracking, capacity blocking, and automated spot assignments
 
 ### 🔧 Operations & Maintenance
 - [Deployment Guide](docs/operations/deployment-guide.md) - Complete setup and deployment instructions
@@ -56,6 +57,7 @@ This is a comprehensive Hotel Management System designed to streamline hotel ope
 
 ### Core Capabilities
 - **Reservation Management** - Complete booking lifecycle with calendar interface
+- **Parking Capacity Management** - Real-time parking availability, capacity blocking, and spot assignments with block awareness
 - **Client Management & CRM** - Customer profiles, communication tracking, and relationship management
 - **Waitlist System** - Guest waitlist management with automated notifications
 - **Billing & Invoicing** - Flexible pricing, plans, addons, and automated invoice generation

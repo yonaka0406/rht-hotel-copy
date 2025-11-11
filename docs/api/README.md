@@ -114,6 +114,19 @@ const response = await fetch('/api/reservations', {
 
 **[Full Billing API Documentation](#billing-and-payments)**
 
+### Parking Capacity Management
+- `POST /api/parking/real-time-availability/:hotelId/:vehicleCategoryId` - Check real-time parking availability
+- `POST /api/parking/capacity/block` - Block parking capacity for date range
+- `GET /api/parking/capacity/blocks` - Get blocked capacity records
+- `DELETE /api/parking/capacity/blocks/:blockId` - Remove capacity block
+- `POST /api/parking/reservations` - Create parking assignments
+
+**Features:**
+- Real-time availability with block awareness
+- Net capacity calculation (total - reserved - blocked)
+- Multi-date parking reservations
+- Timezone-corrected date handling
+
 ## Integration Guides
 
 ### For Booking Engine Developers
