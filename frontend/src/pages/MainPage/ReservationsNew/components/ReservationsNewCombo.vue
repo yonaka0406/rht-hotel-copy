@@ -450,7 +450,7 @@ const minNumberOfPeople = computed(() => {
     return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
 });
 const isParkingAddButtonDisabled = computed(() => {
-    //console.log('Vehicle category ID:', comboRow.value.vehicle_category_id);
+    ////console.log('Vehicle category ID:', comboRow.value.vehicle_category_id);
     return !comboRow.value.vehicle_category_id || maxParkingSpots.value <= 0;
 });
 const availableParkingSpots = ref([]);
@@ -479,7 +479,7 @@ const checkDates = async () => {
 };
 
 const onDateChange = async () => {
-    console.log('[ReservationsNewCombo] onDateChange called');
+    //console.log('[ReservationsNewCombo] onDateChange called');
     
     // Update minimum checkout date
     minCheckOutDate.value = new Date(comboRow.value.check_in);
@@ -510,7 +510,7 @@ const onDateChange = async () => {
     
     // If vehicle category was previously selected, restore it and update parking spots
     if (currentVehicleCategoryId) {
-        console.log('[ReservationsNewCombo] Restoring vehicle category and updating parking spots');
+        //console.log('[ReservationsNewCombo] Restoring vehicle category and updating parking spots');
         comboRow.value.vehicle_category_id = currentVehicleCategoryId;
         await updateParkingSpots();
     }
@@ -536,13 +536,13 @@ defineExpose({
 
 const handleWaitlistSubmitted = () => {
     // Optional: any action needed in parent after waitlist is submitted
-    //console.log("Waitlist entry submitted (event received in parent)");
+    ////console.log("Waitlist entry submitted (event received in parent)");
 };
 
 const addReservationCombo = () => {
     comboRow.value.reservation_type = 'stay';
 
-    //console.log('addReservationCombo:', comboRow.value);
+    ////console.log('addReservationCombo:', comboRow.value);
     const roomType = roomTypes.value.find(rt => rt.room_type_id === comboRow.value.room_type_id);
     reservationCombos.value.push({
         ...comboRow.value,
@@ -559,9 +559,9 @@ const addParkingCombo = () => {
     comboRow.value.reservation_type = 'parking';
     comboRow.value.number_of_people = null;
 
-    //console.log('addParkingCombo - initial comboRow:', JSON.parse(JSON.stringify(comboRow.value)));
-    //console.log('addParkingCombo - selectedAddon:', selectedAddon.value);
-    //console.log('addParkingCombo - addonOptions:', JSON.parse(JSON.stringify(addonOptions.value)));
+    ////console.log('addParkingCombo - initial comboRow:', JSON.parse(JSON.stringify(comboRow.value)));
+    ////console.log('addParkingCombo - selectedAddon:', selectedAddon.value);
+    ////console.log('addParkingCombo - addonOptions:', JSON.parse(JSON.stringify(addonOptions.value)));
 
     // Find the selected vehicle category
     const selectedVehicle = vehicleCategories.value.find(vc => vc.id === comboRow.value.vehicle_category_id);
@@ -595,7 +595,7 @@ const addParkingCombo = () => {
         room_type_name: `駐車場 (${vehicleName})`
     };
 
-    //console.log('addParkingCombo - updated combo:', JSON.parse(JSON.stringify(updatedCombo)));
+    ////console.log('addParkingCombo - updated combo:', JSON.parse(JSON.stringify(updatedCombo)));
 
     // Push the new object to the array
     reservationCombos.value.push(updatedCombo);
@@ -883,7 +883,7 @@ const filterClients = (event) => {
         // Email filtering (case-insensitive)
         const matchesEmail = client.email && client.email.toLowerCase().includes(query);
 
-        // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
+        // //console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
 
         return matchesName || matchesPhoneFax || matchesEmail;
     });
@@ -1027,7 +1027,7 @@ const submitReservation = async () => {
         
         // 1. Create the main reservation with stay combos
         const response = await createHoldReservationCombo(reservationDetails.value, stayCombos);
-        console.log('[ReservationsNewCombo] Reservation response:', response);
+        //console.log('[ReservationsNewCombo] Reservation response:', response);
 
         if (!response) {
             throw new Error('No response received from server');
@@ -1038,8 +1038,8 @@ const submitReservation = async () => {
 
          // Make sure we're getting the reservation ID correctly
         const reservationId = reservation?.id || (Array.isArray(reservation) ? reservation[0]?.id : null);
-        console.log('[ReservationsNewCombo] Extracted reservation ID:', reservationId);
-        console.log('[ReservationsNewCombo] Created reservation details:', createdReservationDetails);
+        //console.log('[ReservationsNewCombo] Extracted reservation ID:', reservationId);
+        //console.log('[ReservationsNewCombo] Created reservation details:', createdReservationDetails);
 
         if (!reservationId) {
             console.error('Could not determine reservation ID from response:', response);
@@ -1050,10 +1050,10 @@ const submitReservation = async () => {
 
         // 2. Handle parking reservations if any
         const parkingCombos = reservationCombos.value.filter(c => c.reservation_type === 'parking');
-        console.log('[ReservationsNewCombo] Found parking combos:', parkingCombos);
+        //console.log('[ReservationsNewCombo] Found parking combos:', parkingCombos);
 
         if (parkingCombos.length > 0) {
-            console.log('[ReservationsNewCombo] Processing parking assignments for reservation ID:', reservationId);
+            //console.log('[ReservationsNewCombo] Processing parking assignments for reservation ID:', reservationId);
 
             // Get the first reservation_details_id to link parking to
             // Parking needs to be linked to a reservation_details record
@@ -1061,7 +1061,7 @@ const submitReservation = async () => {
                 ? createdReservationDetails[0].id
                 : null;
             
-            console.log('[ReservationsNewCombo] Using reservation_details_id for parking:', firstReservationDetailId);
+            //console.log('[ReservationsNewCombo] Using reservation_details_id for parking:', firstReservationDetailId);
 
             // One assignment per parking combo, backend will expand it further
             const assignments = parkingCombos.map((parkingCombo, _index) => {
@@ -1080,20 +1080,20 @@ const submitReservation = async () => {
                 };
             });
 
-            console.log('[ReservationsNewCombo] Final assignments to be saved:', assignments);
+            //console.log('[ReservationsNewCombo] Final assignments to be saved:', assignments);
 
             // Save all parking assignments
             if (assignments.length > 0) {
                 try {
                     await saveParkingAssignments(assignments);
-                    //console.log('Successfully saved parking assignments');
+                    ////console.log('Successfully saved parking assignments');
                 } catch (error) {
                     console.error('Error saving parking assignments:', error);
                     throw error;
                 }
             }
         } else {
-            //console.log('No parking combos to process');
+            ////console.log('No parking combos to process');
         }
 
         // Show success message and reset form
@@ -1192,13 +1192,13 @@ const updateParkingSpots = async () => {
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        console.log('[ReservationsNewCombo] Calling checkRealTimeAvailability with:', {
-            hotelId: selectedHotelId.value,
-            vehicleCategoryId: comboRow.value.vehicle_category_id,
-            checkIn: formatDate(new Date(comboRow.value.check_in)),
-            checkOut: formatDate(new Date(comboRow.value.check_out)),
-            datesToCheck
-        });
+        //console.log('[ReservationsNewCombo] Calling checkRealTimeAvailability with:', {
+        //    hotelId: selectedHotelId.value,
+        //   vehicleCategoryId: comboRow.value.vehicle_category_id,
+        //    checkIn: formatDate(new Date(comboRow.value.check_in)),
+        //    checkOut: formatDate(new Date(comboRow.value.check_out)),
+        //    datesToCheck
+        //});
 
         const response = await checkRealTimeAvailability(
             selectedHotelId.value,
@@ -1207,9 +1207,9 @@ const updateParkingSpots = async () => {
             null // excludeReservationId - null for new reservations
         );
 
-        console.log('[ReservationsNewCombo] checkRealTimeAvailability response:', response);
-        console.log('[ReservationsNewCombo] dateAvailability:', response.dateAvailability);
-        console.log('[ReservationsNewCombo] fullyAvailableSpots:', response.fullyAvailableSpots);
+        //console.log('[ReservationsNewCombo] checkRealTimeAvailability response:', response);
+        //console.log('[ReservationsNewCombo] dateAvailability:', response.dateAvailability);
+        //console.log('[ReservationsNewCombo] fullyAvailableSpots:', response.fullyAvailableSpots);
 
         // Store the available spots (fully available across all dates)
         availableParkingSpots.value = response.fullyAvailableSpots || [];
@@ -1223,13 +1223,13 @@ const updateParkingSpots = async () => {
         let minAvailable = 0;
         if (response.dateAvailability && Object.keys(response.dateAvailability).length > 0) {
             const availableValues = Object.values(response.dateAvailability).map(d => {
-                console.log('[ReservationsNewCombo] Date capacity:', d);
+                //console.log('[ReservationsNewCombo] Date capacity:', d);
                 // Calculate net available: availableSpots - blockedSpots
                 const netAvailable = (d.availableSpots || 0) - (d.blockedSpots || 0);
                 return Math.max(0, netAvailable);
             });
             minAvailable = Math.min(...availableValues);
-            console.log('[ReservationsNewCombo] Available values per date:', availableValues, 'Min:', minAvailable);
+            //console.log('[ReservationsNewCombo] Available values per date:', availableValues, 'Min:', minAvailable);
         }
         
         maxParkingSpots.value = minAvailable;
@@ -1253,10 +1253,10 @@ const updateParkingSpots = async () => {
             };
         }
 
-        console.log('[ReservationsNewCombo] Parking capacity:', {
-            maxParkingSpots: maxParkingSpots.value,
-            capacityInfo: parkingCapacityInfo.value
-        });
+        //console.log('[ReservationsNewCombo] Parking capacity:', {
+        //    maxParkingSpots: maxParkingSpots.value,
+        //    capacityInfo: parkingCapacityInfo.value
+        //});
 
         // Ensure the current value doesn't exceed the new max
         if (comboRow.value.number_of_rooms > maxParkingSpots.value) {
@@ -1276,19 +1276,19 @@ const updateParkingSpots = async () => {
 };
 
 watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async (newValues, oldValues) => {
-    console.log('[ReservationsNewCombo] Watch triggered:', {
-        newValues,
-        oldValues,
-        vehicleCategoryId: comboRow.value.vehicle_category_id,
-        checkIn: comboRow.value.check_in,
-        checkOut: comboRow.value.check_out
-    });
+    //console.log('[ReservationsNewCombo] Watch triggered:', {
+    //    newValues,
+    //    oldValues,
+    //    vehicleCategoryId: comboRow.value.vehicle_category_id,
+    //    checkIn: comboRow.value.check_in,
+    //    checkOut: comboRow.value.check_out
+    //});
     
     if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
-        console.log('[ReservationsNewCombo] Calling updateParkingSpots from watch');
+        //console.log('[ReservationsNewCombo] Calling updateParkingSpots from watch');
         await updateParkingSpots();
     } else {
-        console.log('[ReservationsNewCombo] Watch triggered but conditions not met');
+        //console.log('[ReservationsNewCombo] Watch triggered but conditions not met');
     }
 }, { deep: true });
 
@@ -1404,7 +1404,7 @@ const submitMultiBlock = async () => {
 
             // If we have reservation IDs, we could store them for future reference
             if (response.room_ids?.length > 0) {
-                //console.log('Created temporary block reservations:', response.room_ids);
+                ////console.log('Created temporary block reservations:', response.room_ids);
             }
         } else {
             throw new Error(response.message || '部屋のブロックに失敗しました');
