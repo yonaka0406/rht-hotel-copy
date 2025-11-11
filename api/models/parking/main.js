@@ -772,16 +772,18 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             if (!requiredUnits) throw new Error(`Vehicle category ${vehicle_category_id} not found`);
 
             const spotsRes = await localClient.query(
-                `SELECT ps.id 
+                `SELECT ps.id, ps.parking_lot_id
                  FROM parking_spots ps
                  JOIN parking_lots pl ON ps.parking_lot_id = pl.id
                  WHERE pl.hotel_id = $1
                    AND ps.is_active = true
                    AND ps.capacity_units >= $2
-                   AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')`,
+                   AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
+                 ORDER BY pl.id, ps.spot_number::integer`,
                 [hotel_id, requiredUnits]
             );
             const candidateSpots = spotsRes.rows.map(r => r.id);
+            const spotToParkingLot = new Map(spotsRes.rows.map(r => [r.id, r.parking_lot_id]));
             logger.debug(`[saveParkingAssignments] Found ${candidateSpots.length} candidate parking spots.`);
             if (!candidateSpots.length) throw new Error(`No available parking spots for category ${vehicle_category_id}`);
 
@@ -802,9 +804,63 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             const allReservationDates = Object.keys(detailsByDate).map(dateStr => new Date(dateStr));
             const allReservationDateStrings = allReservationDates.map(d => formatDate(d));
             
+            // Check for parking blocks that would reduce available capacity
+            const blocksRes = await localClient.query(
+                `SELECT pb.*, pl.name as parking_lot_name
+                 FROM parking_blocks pb
+                 JOIN parking_lots pl ON pb.parking_lot_id = pl.id
+                 WHERE pl.hotel_id = $1
+                   AND pb.start_date <= $3::date
+                   AND pb.end_date >= $2::date
+                   AND (pb.spot_size IS NULL OR pb.spot_size = $4)`,
+                [hotel_id, allReservationDateStrings[0], allReservationDateStrings[allReservationDateStrings.length - 1], requiredUnits]
+            );
+            
+            // Calculate blocked capacity for each date and parking lot
+            const blockedCapacityByDateAndLot = {}; // { date: { parking_lot_id: count } }
+            const blockedCapacityByDate = {};
+            
+            for (const dateStr of allReservationDateStrings) {
+                let totalBlockedCount = 0;
+                blockedCapacityByDateAndLot[dateStr] = {};
+                
+                for (const block of blocksRes.rows) {
+                    // Use formatDate to handle timezone correctly
+                    const blockStartDate = formatDate(block.start_date);
+                    const blockEndDate = formatDate(block.end_date);
+                    
+                    // Check if this date falls within the block period
+                    if (dateStr >= blockStartDate && dateStr <= blockEndDate) {
+                        const parkingLotId = block.parking_lot_id;
+                        const blockCount = block.number_of_spots || 0;
+                        
+                        if (!blockedCapacityByDateAndLot[dateStr][parkingLotId]) {
+                            blockedCapacityByDateAndLot[dateStr][parkingLotId] = 0;
+                        }
+                        blockedCapacityByDateAndLot[dateStr][parkingLotId] += blockCount;
+                        totalBlockedCount += blockCount;
+                        
+                        logger.debug(`[saveParkingAssignments] Block ${block.id} applies to date ${dateStr}, lot ${parkingLotId}: ${blockCount} spots`);
+                    }
+                }
+                
+                blockedCapacityByDate[dateStr] = totalBlockedCount;
+                logger.debug(`[saveParkingAssignments] Date ${dateStr} has ${totalBlockedCount} blocked spots total across all lots`);
+            }
+            
+            // Validate that requested spots don't exceed available capacity (considering blocks)
+            for (const dateStr of allReservationDateStrings) {
+                const blockedCount = blockedCapacityByDate[dateStr] || 0;
+                const maxAvailable = candidateSpots.length - blockedCount;
+                
+                if (numberOfSpots > maxAvailable) {
+                    throw new Error(`Insufficient capacity for ${dateStr}: ${numberOfSpots} spots requested, but only ${maxAvailable} available (${blockedCount} blocked)`);
+                }
+            }
+            
             logger.debug(`[saveParkingAssignments] Loading existing reservations for dates:`, { dates: allReservationDateStrings });
             const existingReservationsRes = await localClient.query(
-                `SELECT parking_spot_id, date
+                `SELECT parking_spot_id, date, status
                  FROM reservation_parking
                  WHERE hotel_id = $1
                    AND date = ANY($2::date[])
@@ -812,6 +868,12 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                    AND status IN ('confirmed','blocked')`,
                 [hotel_id, allReservationDateStrings]
             );
+            
+            logger.debug(`[saveParkingAssignments] Existing reservations:`, existingReservationsRes.rows.map(r => ({
+                spot: r.parking_spot_id,
+                date: formatDate(new Date(r.date)),
+                status: r.status
+            })));
             
             const dateToSpots = new Map();
             const spotToDates = new Map();
@@ -834,9 +896,15 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             logger.debug(`[saveParkingAssignments] Loaded ${existingReservationsRes.rows.length} existing reservations into memory maps`);
             
             const assignedPhysicalSpotsForThisAssignment = new Set();
+            const assignmentCountByDate = {}; // Track how many spots we've assigned for each date in this request
+            
+            for (const dateStr of allReservationDateStrings) {
+                assignmentCountByDate[dateStr] = 0;
+            }
 
             for (let i = 0; i < numberOfSpots; i++) {
                 logger.debug(`[saveParkingAssignments] Attempting to assign spot ${i + 1}/${numberOfSpots} for current assignment.`);
+                
                 let remainingDatesToAssign = new Set(allReservationDateStrings);
                 const assignedSpotsPerDate = {};
 
@@ -849,6 +917,27 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     for (const spotId of candidateSpots) {
                         if (assignedPhysicalSpotsForThisAssignment.has(spotId)) {
                             continue;
+                        }
+
+                        // Check if this spot's parking lot has reached capacity for any remaining date
+                        const parkingLotId = spotToParkingLot.get(spotId);
+                        let parkingLotFull = false;
+                        
+                        for (const dateStr of remainingDatesToAssign) {
+                            // Count how many spots in this parking lot are already assigned for this date
+                            const spotsInLot = candidateSpots.filter(id => spotToParkingLot.get(id) === parkingLotId);
+                            const occupiedInLot = spotsInLot.filter(id => dateToSpots.get(dateStr)?.has(id)).length;
+                            const blockedInLot = blockedCapacityByDateAndLot[dateStr]?.[parkingLotId] || 0;
+                            const availableInLot = spotsInLot.length - occupiedInLot - blockedInLot;
+                            
+                            if (availableInLot <= 0) {
+                                parkingLotFull = true;
+                                break;
+                            }
+                        }
+                        
+                        if (parkingLotFull) {
+                            continue; // Skip this spot, its parking lot is full
                         }
 
                         let currentSpotAvailableDates = [];
@@ -878,6 +967,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     for (const dateStr of bestSpotAvailableDates) {
                         assignedSpotsPerDate[dateStr] = bestSpot;
                         remainingDatesToAssign.delete(dateStr);
+                        
+                        // Increment the assignment count for this date
+                        assignmentCountByDate[dateStr]++;
                         
                         if (!dateToSpots.has(dateStr)) {
                             dateToSpots.set(dateStr, new Set());
