@@ -919,33 +919,21 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                             continue;
                         }
 
-                        // Check if this spot's parking lot has reached capacity for any remaining date
-                        const parkingLotId = spotToParkingLot.get(spotId);
-                        let parkingLotFull = false;
-                        
+                        let currentSpotAvailableDates = [];
                         for (const dateStr of remainingDatesToAssign) {
-                            // Count how many spots in this parking lot are already assigned for this date
+                            const reservedSpots = dateToSpots.get(dateStr);
+                            const isReserved = reservedSpots && reservedSpots.has(spotId);
+                            
+                            // Check if this spot's parking lot has reached capacity for this specific date
+                            const parkingLotId = spotToParkingLot.get(spotId);
                             const spotsInLot = candidateSpots.filter(id => spotToParkingLot.get(id) === parkingLotId);
                             const occupiedInLot = spotsInLot.filter(id => dateToSpots.get(dateStr)?.has(id)).length;
                             const blockedInLot = blockedCapacityByDateAndLot[dateStr]?.[parkingLotId] || 0;
                             const availableInLot = spotsInLot.length - occupiedInLot - blockedInLot;
                             
-                            if (availableInLot <= 0) {
-                                parkingLotFull = true;
-                                break;
-                            }
-                        }
-                        
-                        if (parkingLotFull) {
-                            continue; // Skip this spot, its parking lot is full
-                        }
+                            const parkingLotFull = availableInLot <= 0;
 
-                        let currentSpotAvailableDates = [];
-                        for (const dateStr of remainingDatesToAssign) {
-                            const reservedSpots = dateToSpots.get(dateStr);
-                            const isReserved = reservedSpots && reservedSpots.has(spotId);
-
-                            if (!isReserved) {
+                            if (!isReserved && !parkingLotFull) {
                                 currentSpotAvailableDates.push(dateStr);
                             }
                         }
