@@ -646,7 +646,7 @@ class ParkingAddonService {
                     }))
                 };
 
-                console.log('[checkRealTimeAvailability] Date availability calculated for', date, ':', dateAvailability[date]);
+                //console.log('[checkRealTimeAvailability] Date availability calculated for', date, ':', dateAvailability[date]);
 
                 // Track individual spot availability across dates
                 availableSpots.forEach(spot => {

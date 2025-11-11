@@ -52,7 +52,7 @@
                         <p class="text-xs text-gray-500">最大: {{ maxCapacity }}</p>
                     </div>
                     <div class="col-span-1 mt-6">
-                        <Button label="追加" severity="success" type="submit" />
+                        <Button label="追加" severity="success" type="submit" :disabled="isRoomAddButtonDisabled" />
                     </div>
                 </div>
             </form>
@@ -448,6 +448,14 @@ const maxCapacity = computed(() => {
 });
 const minNumberOfPeople = computed(() => {
     return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
+});
+const isRoomAddButtonDisabled = computed(() => {
+    return !comboRow.value.number_of_rooms || comboRow.value.number_of_rooms <= 0 
+        || !comboRow.value.number_of_people || comboRow.value.number_of_people <= 0
+        || !maxRoomNumber.value || maxRoomNumber.value <= 0
+        || !maxCapacity.value || maxCapacity.value <= 0
+        || comboRow.value.number_of_rooms > maxRoomNumber.value
+        || comboRow.value.number_of_people > maxCapacity.value;
 });
 const isParkingAddButtonDisabled = computed(() => {
     ////console.log('Vehicle category ID:', comboRow.value.vehicle_category_id);

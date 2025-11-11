@@ -478,7 +478,7 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     
     const result = await pool.query(query, values);
     
-    console.log('[getAvailableSpotsForDates] Query returned', result.rows.length, 'spots');
+    //console.log('[getAvailableSpotsForDates] Query returned', result.rows.length, 'spots');
     
     return result.rows;
 };
