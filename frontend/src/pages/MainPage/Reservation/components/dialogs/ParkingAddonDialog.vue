@@ -139,7 +139,6 @@
                       :dates="dateRange"
                       :disabled="processing || dateRange.length === 0"
                       :preselected-vehicle-category-id="localAddonData.vehicleCategoryId"
-                      :exclude-reservation-id="reservationId"
                       @update:vehicle-category-id="onVehicleCategoryChange"
                       @update:number-of-spots="onNumberOfSpotsChange"
                       @selection-change="onParkingSelectionChange"
