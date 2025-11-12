@@ -5,6 +5,28 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 12, 2025
+
+#### Missing Guest and Gender Information in Room Indicator
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Testing
+- **Description**: 
+  - After the recent room indicator revamp, the guest name and gender information are no longer displayed in the room indicator
+  - This information was previously visible and is important for staff to quickly identify guests
+- **Expected Behavior**:
+  - Room indicator should display guest name and gender as it did before the revamp
+  - The information should update in real-time when guest details are modified
+- **Proposed Solution**:
+  1. Review the room indicator component changes to identify what caused the regression
+  2. Ensure guest and gender data is properly passed to the room indicator component
+  3. Add proper styling to ensure the information is clearly visible
+  4. Add tests to prevent this regression in the future
+- **Affected Components**:
+  - Room indicator component
+  - Reservation display logic
+  - Guest information handling
+
 ### November 10, 2025
 
 #### Sales Performance Reporting in CRM
