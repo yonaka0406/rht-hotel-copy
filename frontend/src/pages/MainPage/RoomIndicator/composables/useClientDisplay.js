@@ -14,28 +14,28 @@ export function useClientDisplay() {
     //console.log('getClientName - parsed clientsFromJSON:', clientsFromJSON);
           
     const processedClients = [];
-    const addedClientNames = new Set(); // To prevent duplicates
+    const addedClientIds = new Set(); // To prevent duplicates by client ID
 
     // Always add the booker from room.client_name first
-    if (room?.client_name) {
+    if (room?.client_name && room?.booker_client_id) {
       processedClients.push({
         name: room.client_name,
         isBooker: true,
-        gender: null // Gender not available from client_name
+        gender: room.booker_gender || null
       });
-      addedClientNames.add(room.client_name);
+      addedClientIds.add(room.booker_client_id);
     }
 
     // Add other clients from clients_json, avoiding duplicates with the booker
     clientsFromJSON.forEach(client => {
       const clientName = client.name_kanji || client.name_kana || client.name;
-      if (clientName && !addedClientNames.has(clientName)) {
+      if (clientName && client.client_id && !addedClientIds.has(client.client_id)) {
         processedClients.push({
           name: clientName,
           isBooker: false,
           gender: client.gender || null
         });
-        addedClientNames.add(clientName);
+        addedClientIds.add(client.client_id);
       }
     });
 
