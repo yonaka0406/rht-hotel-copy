@@ -378,12 +378,18 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
             pl.description as parking_lot_description
         FROM parking_spots ps
         JOIN parking_lots pl ON ps.parking_lot_id = pl.id
-        LEFT JOIN reservation_parking rp ON ps.id = rp.parking_spot_id
-            AND rp.hotel_id = $1
-            AND rp.date >= $3::date
-            AND rp.date < $4::date
-            AND rp.cancelled IS NULL
-            AND ($5::uuid IS NULL OR rp.reservation_details_id != $5)
+        LEFT JOIN (
+            SELECT rp.*
+            FROM reservation_parking rp
+            INNER JOIN reservation_details rd ON rp.reservation_details_id = rd.id
+                AND rp.hotel_id = rd.hotel_id
+                AND rd.cancelled IS NULL
+            WHERE rp.hotel_id = $1
+                AND rp.date >= $3::date
+                AND rp.date < $4::date
+                AND rp.cancelled IS NULL
+                AND ($5::uuid IS NULL OR rp.reservation_details_id != $5)
+        ) rp ON ps.id = rp.parking_spot_id
         WHERE pl.hotel_id = $1
         AND ps.is_active = true
         AND ps.capacity_units >= $2
@@ -441,9 +447,11 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
             rp.parking_spot_id,
             rp.date,
             rp.reservation_details_id,
-            rp.cancelled,
+            rp.cancelled as rp_cancelled,
+            rd.cancelled as rd_cancelled,
             CASE 
-                WHEN rp.parking_spot_id IS NOT NULL THEN 'occupied'
+                WHEN rp.parking_spot_id IS NOT NULL AND (rd.id IS NULL OR rd.cancelled IS NULL) THEN 'occupied'
+                WHEN rp.parking_spot_id IS NOT NULL AND rd.cancelled IS NOT NULL THEN 'cancelled_reservation'
                 ELSE 'available'
             END as status,
             CASE
@@ -457,6 +465,8 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
             AND rp.date >= $3::date
             AND rp.date < $4::date
             AND rp.cancelled IS NULL
+        LEFT JOIN reservation_details rd ON rp.reservation_details_id = rd.id
+            AND rp.hotel_id = rd.hotel_id
         WHERE pl.hotel_id = $1
         AND ps.is_active = true
         AND ps.capacity_units >= $2
@@ -472,6 +482,8 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     //        parking_spot_id: r.parking_spot_id,
     //        date: r.date,
     //        reservation_details_id: r.reservation_details_id,
+    //        rp_cancelled: r.rp_cancelled,
+    //        rd_cancelled: r.rd_cancelled,
     //        exclusion_status: r.exclusion_status
     //    }))
     //);
@@ -769,6 +781,32 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             const detailsRes = await localClient.query(query);
             const reservationDetails = detailsRes.rows;
             //logger.debug(`[saveParkingAssignments] Fetched reservation details (${reservationDetails.length} rows)`);
+            
+            if (reservationDetails.length > 0) {
+                logger.debug(`[saveParkingAssignments] Found reservation_details:`, reservationDetails.map(rd => ({
+                    id: rd.id,
+                    room_id: rd.room_id,
+                    date: rd.date
+                })));
+            } else {
+                // Query to check what reservation_details actually exist for this reservation
+                const debugQuery = await localClient.query(
+                    `SELECT id, room_id, date, hotel_id 
+                     FROM reservation_details 
+                     WHERE reservation_id = $1 
+                     ORDER BY date`,
+                    [reservation_id]
+                );
+                logger.debug(`[saveParkingAssignments] All reservation_details for reservation ${reservation_id}:`, 
+                    debugQuery.rows.map(rd => ({
+                        id: rd.id,
+                        room_id: rd.room_id,
+                        date: formatDate(new Date(rd.date)),
+                        hotel_id: rd.hotel_id
+                    }))
+                );
+            }
+            
             if (!reservationDetails.length) {
                 logger.warn(`No reservation details found for reservation ${reservation_id} with params:`, {
                     reservation_id,
@@ -1091,8 +1129,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
         }
 
         if (releaseClient) {
-            await localClient.query('COMMIT');
-            logger.info(`[saveParkingAssignments] Transaction committed for requestId: ${requestId}.`);
+            await localClient.query('COMMIT');            
         }
         return { success: true, message: 'Parking assignments saved successfully' };
     } catch (error) {
@@ -1109,8 +1146,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
     } finally {
         if (releaseClient) {
             try {
-                localClient.release();
-                logger.info(`[saveParkingAssignments] Client released for requestId: ${requestId}.`);
+                localClient.release();                
             } catch (releaseError) {
                 logger.error('[saveParkingAssignments] Error during client release in finally block:', { requestId, error: releaseError.message, stack: releaseError.stack });
             }
