@@ -5,6 +5,28 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 13, 2025
+
+#### Temporary Extra Parking Spots
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Source**: Internal Request
+- **Description**: 
+  - Need the ability to add temporary extra parking spots to the system
+  - This is particularly useful for seasonal needs, such as renting additional parking space during winter
+- **Requested Features**:
+  - Add functionality to temporarily increase the total number of available parking spots
+  - Set start and end dates for the temporary spots
+  - Add notes/reason for the temporary increase
+  - Visual indication in the parking management interface when temporary spots are active
+  - Reporting on temporary spot usage
+- **Technical Notes**:
+  - Will require updates to the parking availability calculation logic
+  - Need to ensure proper handling of existing reservations when temporary spots are added/removed
+  - Consider impact on reporting and analytics
+  - Should integrate with existing parking management system
+  - Add permission controls to restrict who can manage temporary spots
+
 ### November 12, 2025
 
 #### Missing Guest and Gender Information in Room Indicator
