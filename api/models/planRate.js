@@ -111,8 +111,15 @@ const getPlansRateById = async (requestId, id) => {
     }
 };
 
-const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false) => {
-    const pool = actualGetPool(requestId);
+const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false, dbClient = null) => {
+    const client = dbClient || actualGetPool(requestId);
+    let releaseClient = false;
+
+    if (!dbClient) {
+        releaseClient = true;
+        await client.connect();
+    }
+
     const query = `        
         SELECT 
             adjustment_type,
@@ -138,7 +145,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     ];
 
     try {
-        const result = await pool.query(query, values);        
+        const result = await client.query(query, values);        
 
         // console.log('Query:', query);
         // console.log('Values:', values);
@@ -216,6 +223,10 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
+    } finally {
+        if (releaseClient) {
+            client.release();
+        }
     }
 };
 const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {

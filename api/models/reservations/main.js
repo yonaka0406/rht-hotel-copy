@@ -1859,7 +1859,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     // Update the reservation details with promise    
     const dtlUpdatePromises = detailsArray.map(async ({ id, operation_mode, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       let newPrice = 0;
-      newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
+      newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)), false, client);
       // console.log('newPrice calculated:',newPrice);
 
       const dtlUpdateQuery = `
@@ -2403,7 +2403,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       const formattedDate = formatDate(new Date(date));
       // Fetch new price
-      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, overrideRounding);
+      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, overrideRounding, dbClient);
 
       // Update reservation_details
       const dtlUpdateQuery = `
