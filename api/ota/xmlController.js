@@ -19,6 +19,26 @@ const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require(
 const { getPool } = require('../config/database');
 const logger = require('../config/logger'); // Winston logger
 
+const computeBatchDateRange = (batch, dateExtractor) => {
+    if (!batch || batch.length === 0) {
+        return { from: 'N/A', to: 'N/A' };
+    }
+
+    const dates = batch.map(dateExtractor).filter(d => d instanceof Date && !isNaN(d.getTime()));
+
+    if (dates.length === 0) {
+        return { from: 'N/A', to: 'N/A' };
+    }
+
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+
+    return {
+        from: minDate.toISOString().split('T')[0],
+        to: maxDate.toISOString().split('T')[0],
+    };
+};
+
 /**
  * Process reservation data and add to OTA queue
  * @param {string} requestId - The request ID for logging
@@ -1165,6 +1185,11 @@ const updateInventoryMultipleDays = async (req, res) => {
     // --- Proceed with batch processing if an update is needed ---
 
     const processInventoryBatch = async (batch, batch_no) => {
+        logger.warn(`Processing batch ${batch_no} for hotel ${hotel_id}`, {
+            hotel_id: hotel_id,
+            batch_no: batch_no,
+            batch_size: batch.length
+        });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
         await delay(2000); // 2-second pause
 
@@ -1222,7 +1247,16 @@ const updateInventoryMultipleDays = async (req, res) => {
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
             return apiResponse;
         } catch (error) {
-            console.error(`Error in processInventoryBatch for batch ${batch_no}:`, error);
+            const dateExtractor = item => new Date(item.date);
+            const dateRange = computeBatchDateRange(batch, dateExtractor);
+
+            logger.error(`Error in processInventoryBatch for batch ${batch_no}`, {
+                hotel_id: hotel_id,
+                dateRange: dateRange,
+                batch_no: batch_no,
+                error: error.message,
+                stack: error.stack
+            });
             throw error; // Let the main function handle the response
         }
     };
@@ -1250,11 +1284,20 @@ const updateInventoryMultipleDays = async (req, res) => {
             // Process all filtered inventory as a single batch
             await processInventoryBatch(filteredInventory, 0);
         }
-        res.status(200).send({ message: 'Inventory update processed.' });
+        res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
-        console.error('Error in updateInventoryMultipleDays:', error);
+        const dateRange = {
+            from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
+            to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
+        };
+        logger.error('Error in updateInventoryMultipleDays', {
+            hotel_id: hotel_id,
+            dateRange: dateRange,
+            error: error.message,
+            stack: error.stack
+        });
         if (!res.headersSent) {
-            res.status(500).send({ error: 'Failed to process inventory update.' });
+            res.status(500).send({ success: false, message: error.message });
         }
     }                
 
@@ -1336,6 +1379,11 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     // --- Proceed with batch ---
 
     const processInventoryBatch = async (batch, batch_no) => {
+        logger.warn(`Processing manual batch ${batch_no} for hotel ${hotel_id}`, {
+            hotel_id: hotel_id,
+            batch_no: batch_no,
+            batch_size: batch.length
+        });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
         await delay(2000); // 2-second pause
 
@@ -1399,7 +1447,23 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
             return apiResponse;
         } catch (error) {
-            console.error(`Error in processInventoryBatch for batch ${batch_no}:`, error);
+            const dateExtractor = item => {
+                const str = item.saleDate?.toString();
+                if (!/^\d{8}$/.test(str)) return null;
+                const year = parseInt(str.slice(0, 4), 10);
+                const month = parseInt(str.slice(4, 6), 10) - 1;
+                const day = parseInt(str.slice(6, 8), 10);
+                return new Date(year, month, day);
+            };
+            const dateRange = computeBatchDateRange(batch, dateExtractor);
+
+            logger.error(`Error in processInventoryBatch for batch ${batch_no}`, {
+                hotel_id: hotel_id,
+                dateRange: dateRange,
+                batch_no: batch_no,
+                error: error.message,
+                stack: error.stack
+            });
             throw error; // Re-throw to be handled by the main function
         }
         
@@ -1431,9 +1495,18 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         }
         res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
-        console.error('Error in manualUpdateInventoryMultipleDays:', error);
+        const dateRange = {
+            from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
+            to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
+        };
+        logger.error('Error in manualUpdateInventoryMultipleDays', {
+            hotel_id: hotel_id,
+            dateRange: dateRange,
+            error: error.message,
+            stack: error.stack
+        });
         if (!res.headersSent) {
-            res.status(500).send({ error: 'Failed to process inventory update.' });
+            res.status(500).send({ success: false, message: error.message });
         }
     }
 
