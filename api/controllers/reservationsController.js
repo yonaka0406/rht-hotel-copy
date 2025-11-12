@@ -936,7 +936,7 @@ const editReservationDetail = async (req, res) => {
     res.json(updatedReservation);
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error updating reservation detail:', err);
+    logger.error(`[${req.requestId}] Error updating reservation detail: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Failed to update reservation detail' });
   } finally {
     client.release();
