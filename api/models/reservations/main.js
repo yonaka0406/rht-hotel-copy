@@ -1006,9 +1006,12 @@ const updateBlockToReservation = async (requestId, reservationId, clientId, user
 };
 
 // Update entry
-const updateReservationDetail = async (requestId, reservationData) => {
+const updateReservationDetail = async (requestId, reservationData, dbClient = null) => {
   const pool = getPool(requestId);
   const { id, hotel_id, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, updated_by } = reservationData;
+
+  const client = dbClient || await pool.connect();
+  const shouldReleaseClient = !dbClient;
 
   const query = `
       UPDATE reservation_details
@@ -1040,7 +1043,7 @@ const updateReservationDetail = async (requestId, reservationData) => {
   //console.log('Values:', values);
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows[0];
   } catch (err) {
     if (err.code === '23514' && err.table === 'reservation_details') {
@@ -1049,6 +1052,10 @@ const updateReservationDetail = async (requestId, reservationData) => {
         console.error('Error updating reservation detail:', err);
     }
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      client.release();
+    }
   }
 };
 

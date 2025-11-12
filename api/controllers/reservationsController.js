@@ -855,9 +855,14 @@ const editReservationDetail = async (req, res) => {
     return res.status(400).json({ error: 'Invalid UUID format' });
   }
 
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
     // Fetch the existing reservation detail from the database to compare with the new data
-    const existingReservation = await selectReservationDetail(req.requestId, id);
+    const existingReservation = await selectReservationDetail(req.requestId, id, hotel_id, client);
 
     // Check if the plans_global_id and plans_hotel_id has changed
     if (
@@ -870,12 +875,13 @@ const editReservationDetail = async (req, res) => {
         plans_hotel_id,
         hotel_id,
         formatDate(existingReservation[0].date),
-        overrideRounding
+        overrideRounding,
+        client
       );
 
       if (newPrice !== undefined) {
         calcPrice.value = newPrice;
-        //console.log('Calculated newPrice:', newPrice);  
+        //console.log('Calculated newPrice:', newPrice);
       } else {
         // Handle the case where newPrice is undefined (fallback value)
         // console.log('Error: newPrice is undefined. Falling back to default value.');
@@ -895,9 +901,9 @@ const editReservationDetail = async (req, res) => {
       number_of_people,
       price: calcPrice.value,
       updated_by,
-    });
+    }, client);
     if (planChange) {
-      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by);
+      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by, client);
     }
 
     // Add the reservation add-ons if any
@@ -918,18 +924,22 @@ const editReservationDetail = async (req, res) => {
           tax_rate: addon.tax_rate,
           created_by: updated_by,
           updated_by,
-        })
+        }, client)
       );
 
       // Wait for all add-ons to be added
       await Promise.all(addOnPromises);
     }
 
+    await client.query('COMMIT');
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error updating reservation detail:', err);
     res.status(500).json({ error: 'Failed to update reservation detail' });
+  } finally {
+    client.release();
   }
 };
 

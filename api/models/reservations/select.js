@@ -83,8 +83,9 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
   }
 };
 
-const selectReservationDetail = async (requestId, id, hotel_id) => {
+const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null) => {
   const pool = getPool(requestId);
+  const executor = dbClient || pool;
   const query = `
     SELECT
       reservation_details.id,
@@ -211,7 +212,7 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
   const values = [id, hotel_id];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await executor.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error fetching reservation detail:', err);
