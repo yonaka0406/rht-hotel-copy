@@ -7,6 +7,28 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### November 13, 2025
 
+#### Enhanced Occupancy Data Export
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Request
+- **Description**: 
+  - Need to enhance the occupancy data download functionality to provide more granular data than the current daily report
+  - Current implementation in the first report of the report module lacks necessary detail for in-depth analysis
+- **Requested Features**:
+  - Add a dedicated export button for current occupancy data in the reports module
+  - Include more detailed metrics in the export (e.g., room types, rate plans, length of stay, market segments)
+  - Provide filtering options before export (date range, room types, rate codes, etc.)
+  - Support multiple export formats (CSV, Excel, PDF)
+  - Include both summary and detailed views in the export
+- **Technical Notes**:
+  - Should integrate with existing reporting infrastructure
+  - Consider performance implications for large date ranges
+  - Add loading indicators during report generation
+  - Ensure proper handling of timezone differences
+  - Include metadata in the export (report generation time, filter criteria, etc.)
+
+### November 13, 2025
+
 #### Temporary Extra Parking Spots
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
