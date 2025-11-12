@@ -1,5 +1,5 @@
 const parkingModel = require('../../models/parking');
-const { validateNumericParam, validateDateStringParam } = require('../../utils/validationUtils');
+const { validateNumericParam, validateDateStringParam, validateUuidParam } = require('../../utils/validationUtils');
 const { validateDateRange, validateCapacityAmount } = require('./utils/capacityValidation');
 const ParkingCapacityService = require('./services/parkingCapacityService');
 
@@ -233,10 +233,10 @@ const removeCapacityBlock = async (req, res) => {
             return res.status(400).json({ message: 'Block ID is required' });
         }
         
-        // Validate UUID format
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(blockId)) {
-            return res.status(400).json({ message: 'Invalid block ID format' });
+        try {
+            validateUuidParam(blockId, 'blockId');
+        } catch (validationError) {
+            return res.status(400).json({ message: validationError.message });
         }
         
         // Use ParkingCapacityService
