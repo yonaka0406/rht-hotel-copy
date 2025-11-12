@@ -916,12 +916,15 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             
             //logger.debug(`[saveParkingAssignments] Loading existing reservations for dates:`, { dates: allReservationDateStrings });
             const existingReservationsRes = await localClient.query(
-                `SELECT parking_spot_id, date, status
-                 FROM reservation_parking
-                 WHERE hotel_id = $1
-                   AND date = ANY($2::date[])
-                   AND cancelled IS NULL
-                   AND status IN ('confirmed','blocked')`,
+                `SELECT rp.parking_spot_id, rp.date, rp.status
+                 FROM reservation_parking rp
+                 INNER JOIN reservation_details rd ON rp.reservation_details_id = rd.id
+                    AND rp.hotel_id = rd.hotel_id
+                    AND rd.cancelled IS NULL
+                 WHERE rp.hotel_id = $1
+                   AND rp.date = ANY($2::date[])
+                   AND rp.cancelled IS NULL
+                   AND rp.status IN ('confirmed','blocked')`,
                 [hotel_id, allReservationDateStrings]
             );
             
