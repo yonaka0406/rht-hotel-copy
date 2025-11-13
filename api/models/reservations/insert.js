@@ -1,4 +1,5 @@
 let getPool = require('../../config/database').getPool;
+const { selectReservationBalance } = require('./select');
 
 const insertReservationPayment = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
   const pool = getPool(requestId);
@@ -127,91 +128,9 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
     client.release();
   }
 };
-const selectReservationBalance = async (requestId, hotelId, reservationId, endDate = null) => {
-  const pool = getPool(requestId);
-  
-  let dateFilterQuery = '';
-  const values = [hotelId, reservationId];
-
-  if (endDate) {
-    dateFilterQuery = 'AND rd.date <= $3';
-    values.push(endDate);
-  }
-
-  const query = `
-    SELECT
-      details.hotel_id,
-      details.reservation_id,
-      details.room_id,
-      details.total_price,
-      COALESCE(payments.total_payment, 0) AS total_payment,
-      COALESCE(details.total_price, 0) - COALESCE(payments.total_payment, 0) AS balance
-    FROM (
-      SELECT
-        rd.hotel_id,
-        rd.reservation_id,
-        rd.room_id,
-        SUM(
-            CASE
-                WHEN rd.billable IS TRUE AND rd.cancelled IS NULL THEN rd.price
-                WHEN rd.billable IS TRUE AND rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
-                ELSE 0
-            END
-        ) + COALESCE(SUM(ra_agg.total_addon_price), 0) AS total_price
-      FROM
-        reservation_details rd
-      LEFT JOIN (
-          SELECT
-              rr_sub.reservation_details_id,
-              SUM(rr_sub.price) AS base_rate_price
-          FROM
-              reservation_rates rr_sub
-          WHERE
-              rr_sub.adjustment_type = 'base_rate'
-          GROUP BY
-              rr_sub.reservation_details_id
-      ) AS rr_agg ON rd.id = rr_agg.reservation_details_id
-      LEFT JOIN (
-          SELECT
-              ra_sub.reservation_detail_id,
-              SUM(ra_sub.quantity * ra_sub.price) AS total_addon_price
-          FROM
-              reservation_addons ra_sub
-          GROUP BY
-              ra_sub.reservation_detail_id
-      ) AS ra_agg ON rd.id = ra_agg.reservation_detail_id
-      WHERE
-        rd.hotel_id = $1 AND rd.reservation_id = $2 ${dateFilterQuery}
-      GROUP BY
-        rd.hotel_id, rd.reservation_id, rd.room_id
-    ) AS details
-    LEFT JOIN (
-      SELECT
-        hotel_id,
-        reservation_id,
-        room_id,
-        SUM(value) AS total_payment
-      FROM
-        reservation_payments
-      WHERE
-        hotel_id = $1 AND reservation_id = $2
-      GROUP BY
-        hotel_id, reservation_id, room_id
-    ) AS payments ON details.hotel_id = payments.hotel_id AND details.reservation_id = payments.reservation_id AND details.room_id = payments.room_id
-    ORDER BY
-      1, 2, 6 DESC;
-  `;
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservation:', err);
-    throw new Error('Database error');
-  }
-};
 
 module.exports = {
     insertReservationPayment,
     insertBulkReservationPayment,
-    selectReservationBalance
+    insertReservationRate
 }
