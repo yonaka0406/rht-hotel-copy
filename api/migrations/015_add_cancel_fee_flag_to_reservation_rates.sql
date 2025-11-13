@@ -2,7 +2,13 @@
 ALTER TABLE reservation_rates
 ADD COLUMN include_in_cancel_fee BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Disable the logging trigger before the batch update
+ALTER TABLE reservation_rates DISABLE TRIGGER log_reservation_rates_trigger;
+
 -- Batch update existing base_rate entries to set the new flag to TRUE
 UPDATE reservation_rates
 SET include_in_cancel_fee = TRUE
 WHERE adjustment_type = 'base_rate';
+
+-- Enable the logging trigger after the batch update
+ALTER TABLE reservation_rates ENABLE TRIGGER log_reservation_rates_trigger;
