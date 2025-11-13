@@ -1,0 +1,8 @@
+-- Add include_in_cancel_fee to reservation_rates table
+ALTER TABLE reservation_rates
+ADD COLUMN include_in_cancel_fee BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Batch update existing base_rate entries to set the new flag to TRUE
+UPDATE reservation_rates
+SET include_in_cancel_fee = TRUE
+WHERE adjustment_type = 'base_rate';
