@@ -82,7 +82,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
 
     // Process each reservation in the data array
     for (const reservation of data) {
-      const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id, reservation.period_end);
+      const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id, reservation.period_end, client);
       let remainingPayment = reservation.period_payable;
       // Insert payment for each room, distributing the period_payable amount
       for (const balanceRow of balanceRows) {

@@ -337,8 +337,15 @@ const selectReservationParking = async (requestId, hotel_id, reservation_id) => 
   return result.rows;
 };
 
-const selectReservationBalance = async (requestId, hotelId, reservationId, endDate = null) => {
+const selectReservationBalance = async (requestId, hotelId, reservationId, endDate = null, client = null) => {
   const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
   
   let dateFilterQuery = '';
   const values = [hotelId, reservationId];
@@ -412,11 +419,15 @@ const selectReservationBalance = async (requestId, hotelId, reservationId, endDa
       1, 2, 6 DESC;
   `;
   try {
-    const result = await pool.query(query, values);
+    const result = await dbClient.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error fetching reservation:', err);
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 
