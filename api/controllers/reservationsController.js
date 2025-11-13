@@ -1,7 +1,7 @@
 const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   selectRoomsForIndicator, selectFailedOtaReservations, selectParkingSpotAvailability, getHotelIdByReservationId, addReservationHold, addReservationDetail,
-  addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
+  addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPaymentWithInvoice, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime,
   updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest,
   updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom,
@@ -797,7 +797,7 @@ const createReservationPayment = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const newPMT = await insertReservationPayment(req.requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
+    const newPMT = await insertReservationPaymentWithInvoice(req.requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
     res.status(200).json({
       message: 'Payment added to reservation successfully',
       data: newPMT

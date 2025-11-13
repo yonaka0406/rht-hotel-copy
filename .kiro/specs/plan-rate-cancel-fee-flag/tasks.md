@@ -48,3 +48,32 @@
   - [ ] Update API documentation.
   - [ ] Update frontend usage documentation.
 - [ ] **QA**: Perform end-to-end testing to ensure the flag works as expected from UI to calculation.
+
+### Phase 4: Post-Implementation Verification
+
+- [ ] **Plan Rates UI:**
+    - [ ] Navigate to the "Manage Plan Rates" page.
+    - [ ] Open the "New Adjustment" dialog.
+    - [ ] Verify the "Include in Cancellation Fee" checkbox is visible.
+    - [ ] Verify that when "Adjustment Type" is "Base Rate", the checkbox is checked by default.
+    - [ ] Verify that when "Adjustment Type" is "Percentage" or "Flat Fee", the checkbox is unchecked by default.
+    - [ ] Create a new "Base Rate" adjustment and uncheck the box. Save and verify it is saved as `false`.
+    - [ ] Create a new "Flat Fee" adjustment and check the box. Save and verify it is saved as `true`.
+- [ ] **Reservation Creation:**
+    - [ ] Create a new reservation using a plan that has a mix of rates (some with `include_in_cancel_fee` true, some false).
+    - [ ] Inspect the `reservation_rates` table for the newly created reservation.
+    - [ ] Verify that the `include_in_cancel_fee` flags were correctly copied from the `plan_rates`.
+- [ ] **Cancellation Logic:**
+    - [ ] Take the reservation created above and cancel one of the reservation details with a fee.
+    - [ ] Verify that the calculated cancellation price only includes the sum of rates where `include_in_cancel_fee` was `true`.
+    - [ ] Cancel another reservation detail without a fee.
+    - [ ] Verify that the price for that detail is set to 0.
+- [ ] **Bulk Payments:**
+    - [ ] Create a scenario with at least two different reservations for the same client.
+    - [ ] Use the bulk payment feature to apply a single payment across both reservations.
+    - [ ] Verify that the `reservation_payments` are created correctly for each reservation.
+    - [ ] Verify that the associated invoice is created correctly and linked to all payments.
+- [ ] **OTA Reservations:**
+    - [ ] Simulate the creation of an OTA reservation (e.g., via a test script or manual trigger).
+    - [ ] Inspect the `reservations`, `reservation_details`, and `reservation_rates` tables.
+    - [ ] Verify that the `reservation_rates` record created for the OTA reservation has `adjustment_type = 'base_rate'` and `include_in_cancel_fee = true`.

@@ -1,7 +1,7 @@
 let getPool = require('../../config/database').getPool;
 const { selectReservationBalance } = require('./select');
 
-const insertReservationPayment = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
+const insertReservationPaymentWithInvoice = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
   let invoiceId = null;
@@ -42,18 +42,10 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
       }
     }
 
-    const query = `
-      INSERT INTO reservation_payments (
-        hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-      RETURNING *;
-    `;
-    const values = [hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, invoiceId, userId];
-
-    const result = await client.query(query, values);
+    const result = await insertReservationPayment(requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, invoiceId, userId, client);
 
     await client.query('COMMIT');
-    return result.rows[0];
+    return result;
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error adding payment to reservation:', err);
@@ -63,12 +55,56 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
   }
 };
 
+const insertReservationPayment = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, invoiceId, userId, client = null) => {
+  const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
+  const query = `
+    INSERT INTO reservation_payments ( 
+      hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+    RETURNING *;
+  `;
+
+  const values = [hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, invoiceId, userId];
+
+  try {
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
+
+    const result = await dbClient.query(query, values);
+
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    if (shouldReleaseClient) {
+      await dbClient.query('ROLLBACK');
+    }
+    console.error('Error inserting reservation payment:', err);
+    throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
+  }
+};
+
 const insertBulkReservationPayment = async (requestId, data, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     // Always create a new single invoice ID for all reservations in the array
     const invoiceInsertResult = await client.query(
       `
@@ -92,25 +128,20 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
         const roomPayment = Math.min(remainingPayment, balanceRow.balance);
 
         if (roomPayment > 0) {
-          const query = `
-            INSERT INTO reservation_payments ( 
-              hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
-            RETURNING *;
-          `;
-
-          await client.query(query, [
+          await insertReservationPayment(
+            requestId,
             reservation.hotel_id,
             reservation.reservation_id,
             reservation.date,
             balanceRow.room_id,
             reservation.client_id,
-            5,
+            5, // Payment type for bulk payments
             roomPayment,
             reservation.details || null,
             bulkInvoiceId,
-            userId
-          ]);
+            userId,
+            client
+          );
 
           // Reduce the remaining payment amount
           remainingPayment -= roomPayment;
@@ -129,8 +160,72 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
   }
 };
 
+const insertReservationRate = async (requestId, rateData, client = null) => {
+  const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
+  const query = `
+    INSERT INTO reservation_rates (
+      hotel_id, 
+      reservation_details_id, 
+      adjustment_type, 
+      adjustment_value, 
+      tax_type_id, 
+      tax_rate, 
+      price, 
+      include_in_cancel_fee, 
+      created_by, 
+      updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+    RETURNING *;
+  `;
+
+  const values = [
+    rateData.hotel_id,
+    rateData.reservation_details_id,
+    rateData.adjustment_type,
+    rateData.adjustment_value,
+    rateData.tax_type_id,
+    rateData.tax_rate,
+    rateData.price,
+    rateData.include_in_cancel_fee,
+    rateData.created_by
+  ];
+
+  try {
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
+
+    const result = await dbClient.query(query, values);
+
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
+
+    return result.rows[0];
+  } catch (err) {
+    if (shouldReleaseClient) {
+      await dbClient.query('ROLLBACK');
+    }
+    console.error('Error adding reservation rate:', err);
+    throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
+  }
+};
+
 module.exports = {
-    insertReservationPayment,
-    insertBulkReservationPayment,
-    insertReservationRate
+  insertReservationPaymentWithInvoice,
+  insertReservationPayment,
+  insertBulkReservationPayment,
+  insertReservationRate
 }
