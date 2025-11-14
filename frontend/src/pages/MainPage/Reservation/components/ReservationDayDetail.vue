@@ -61,6 +61,14 @@
                                                             <label>税区分</label>
                                                         </FloatLabel>
                                                     </div>
+                                                    <div class="field mt-6 col-span-2">
+                                                        <div class="flex items-center">
+                                                            <Checkbox v-model="newRate.include_in_cancel_fee"
+                                                                inputId="newRateIncludeInCancelFee" :binary="true"
+                                                                :disabled="!(newRate.adjustment_type === 'flat_fee' || newRate.adjustment_type === 'percentage')" />
+                                                            <label for="newRateIncludeInCancelFee" class="ml-2">キャンセル料に含める</label>
+                                                        </div>
+                                                    </div>
                                                     <div class="field mt-6 col-span-2 flex justify-center">
                                                         <Button label="追加" type="submit" :loading="isSubmitting"
                                                             :disabled="isSubmitting" />
@@ -69,19 +77,23 @@
                                             </form>
                                             <Divider />
                                             <div class="field mt-6">
-                                                <DataTable :value="selectedRates" class="p-datatable-sm">
-                                                    <Column header="料金種類" style="width:40%">
+                                                <DataTable :value="selectedRates" class="p-datatable-sm datatable-tall-rows">
+                                                    <Column header="料金種類" style="width:30%">
                                                         <template #body="slotProps">
-                                                            <div class="grid grid-cols-3">
-                                                                <div class="flex items-center">
+                                                            <div>
+                                                                <div class="grid grid-cols-1">
                                                                     <Badge
                                                                         :severity="slotProps.data.adjustment_type === 'percentage' ? 'info' : slotProps.data.adjustment_type === 'flat_fee' ? 'secondary' : ''">
                                                                         {{
                                                                         defineRateType(slotProps.data.adjustment_type)
                                                                         }}
                                                                     </Badge>
+                                                                    <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
+                                                                        value="キャンセル料対象"
+                                                                        severity="danger">
+                                                                    </Badge>
                                                                 </div>
-                                                                <div class="col-span-2">
+                                                                <div>
                                                                     <Select v-model="slotProps.data.tax_type_id"
                                                                         :options="taxTypes" optionLabel="name"
                                                                         optionValue="id"
@@ -90,7 +102,7 @@
                                                             </div>
                                                         </template>
                                                     </Column>
-                                                    <Column header="数値">
+                                                    <Column header="数値" style="width:30%">
                                                         <template #body="slotProps">
                                                             <InputNumber v-model="slotProps.data.adjustment_value"
                                                                 placeholder="数値を記入"
@@ -98,12 +110,12 @@
                                                                 fluid />
                                                         </template>
                                                     </Column>
-                                                    <Column header="税込金額">
+                                                    <Column header="税込金額" style="width:30%">
                                                         <template #body="slotProps">
                                                             {{ formatCurrency(slotProps.data.price) }}
                                                         </template>
                                                     </Column>
-                                                    <Column header="操作">
+                                                    <Column header="操作" style="width:10%">
                                                         <template #body="slotProps">
                                                             <Button icon="pi pi-trash"
                                                                 class="p-button-text p-button-danger p-button-sm"
@@ -208,8 +220,7 @@
                             <!-- Tab 4: Cancel -->
                             <TabPanel value="3">
                                 <div class="mb-3">
-                                    <p>キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span
-                                            class="font-bold">基本料金</span>のみが請求されます。</p>
+                                    <p>キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、キャンセル料対象としてマークされた料金項目（例：基本料金、割合料金、固定料金）が請求されます。</p>
                                 </div>
                                 <div v-if="!reservationCancelled" class="flex justify-center items-center">
                                     <Button :label="isSubmitting ? '処理中...' : 'キャンセル'" @click="dayCancel"
@@ -283,6 +294,7 @@ const selectedPlan = ref(null);
 const newRate = ref({
     tax_type_id: 3,
     adjustment_type: 'base_rate',
+    include_in_cancel_fee: false,
 });
 const selectedRates = ref(null);
 const planBillType = ref(null);
@@ -630,6 +642,15 @@ watch(addons, (newValue, oldValue) => {
     }
 }, { deep: true });
 
+watch(() => newRate.value.adjustment_type, (newType) => {
+    if (newType === 'base_rate') {
+        newRate.value.include_in_cancel_fee = true;
+    } else if (newType === 'flat_fee') {
+        newRate.value.include_in_cancel_fee = false;
+    } else if (newType === 'percentage') {
+        newRate.value.include_in_cancel_fee = true;
+    }
+});
 </script>
 
 <style scoped></style>
