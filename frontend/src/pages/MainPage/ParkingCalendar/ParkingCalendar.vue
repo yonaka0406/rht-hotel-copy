@@ -2,18 +2,11 @@
     <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
       <Panel header="" class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">
         <template #header>
-          
-            <p class="text-lg font-bold dark:text-gray-100">駐車場カレンダー</p>
-            <div class="flex justify-start mr-4">
-              <p class="mr-2 dark:text-gray-100">日付へ飛ぶ：</p>
-              <InputText v-model="centerDate" type="date" fluid required
-                class="dark:bg-gray-800 dark:text-gray-100 rounded" />
-            </div>            
-            <div class="flex justify-end">
-              <SelectButton optionLabel="label" optionValue="value" :options="tableModeOptions" v-model="isCompactView"
-                class="dark:bg-gray-800 dark:text-gray-100" />
-            </div>
-          
+            <ParkingCalendarHeader 
+                :selectedHotel="selectedHotel"
+                v-model:centerDate="centerDate"
+                v-model:isCompactView="isCompactView"
+            />
         </template>
   
         <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': isCompactView }"
@@ -161,15 +154,15 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import { Panel, Skeleton, SelectButton, InputText, ConfirmDialog, Button, Drawer } from 'primevue';
+  import { Panel, Skeleton, ConfirmDialog, Button, Drawer } from 'primevue';
   
   // Components
   import ParkingCalendarLegend from './components/ParkingCalendarLegend.vue';
-  import ReservationEdit from '../Reservation/ReservationEdit.vue';
-  
+  import ParkingCalendarHeader from './components/ParkingCalendarHeader.vue';
+  import ReservationEdit from '../Reservation/ReservationEdit.vue';  
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';
-  const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
+  const { selectedHotelId, fetchHotels, fetchHotel, selectedHotel } = useHotelStore();
   import { useParkingStore } from '@/composables/useParkingStore';
   const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel, fetchParkingBlocks } = useParkingStore();
   
@@ -184,10 +177,6 @@
   
   const isUpdating = ref(false);
   const isLoading = ref(true);
-  const tableModeOptions = ref([
-    { label: '縮小', value: true },
-    { label: '拡大', value: false },
-  ]);
   const isCompactView = ref(true);
   const centerDate = ref(formatDate(new Date()));
   const pinnedRowIndex = ref(null);
