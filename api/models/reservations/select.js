@@ -197,9 +197,10 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
                 'adjustment_value', rr.adjustment_value,
                 'tax_type_id', rr.tax_type_id,
                 'tax_rate', rr.tax_rate,
-                'price', rr.price              
+                'price', rr.price,
+                'include_in_cancel_fee', rr.include_in_cancel_fee                
               )
-            ) AS rates_json
+            ) AS rates_json          
           FROM reservation_rates rr
           JOIN reservation_details rd 
             ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
