@@ -80,6 +80,7 @@ CREATE TABLE plans_rates (
     plans_global_id INT REFERENCES plans_global(id) ON DELETE CASCADE,
     plans_hotel_id INT,
     adjustment_type TEXT CHECK (adjustment_type IN ('base_rate', 'percentage', 'flat_fee')) NOT NULL,  -- Type of adjustment
+    include_in_cancel_fee BOOLEAN NOT NULL DEFAULT FALSE,
     adjustment_value DECIMAL(10, 2) NOT NULL,
     tax_type_id INT REFERENCES tax_info(id),
     tax_rate DECIMAL(12,4),
@@ -93,7 +94,7 @@ CREATE TABLE plans_rates (
     condition_type TEXT CHECK (condition_type IN ('no_restriction', 'day_of_week', 'month')) NOT NULL,  -- Type of condition
     condition_value TEXT NULL,  -- The specific condition (e.g., '土曜日', '2024-12-25', etc.)
     date_start DATE NOT NULL, -- Start of the applicable rate
-    date_end DATE DEFAULT NULL, -- End of the applicable rate (NULL = no end date)
+    date_end DATE DEFAULT NULL, -- End of the applicable rate (NULL = no end date)    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),

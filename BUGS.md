@@ -7,6 +7,29 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### November 13, 2025
 
+#### Plan Rates - Cancel Fee Inclusion Flag
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Request
+- **Description**:
+  - Need to add a flag to control whether a fee should be included in cancellation fee calculations
+  - Currently, flat fees are excluded from cancellation fees, but there's a need to include some flat fees in cancellation fees
+  - Instead of creating a new fee type, adding a flag provides more flexibility
+- **Requested Features**:
+  - Add a new boolean field `includeInCancelFee` to the plan rates table
+  - Update the cancellation fee calculation logic to respect this flag
+  - Add UI controls to set this flag when creating/editing plan rates
+  - Include the flag in relevant reports and exports
+- **Technical Notes**:
+  - Database migration required to add the new column
+  - Update API endpoints to handle the new field
+  - Ensure backward compatibility with existing plan rates (default to current behavior)
+  - Update documentation for the new field
+  - Consider impact on reporting and analytics
+  - Add validation to ensure proper handling when the flag is toggled
+
+### November 13, 2025
+
 #### Enhanced Occupancy Data Export
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
@@ -31,7 +54,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 #### Temporary Extra Parking Spots
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
 - **Source**: Internal Request
 - **Description**: 
   - Need the ability to add temporary extra parking spots to the system

@@ -74,7 +74,13 @@ let actualIsValidCondition = isValidCondition;
 const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
     const pool = actualGetPool(requestId);
     const query = `
-        SELECT * FROM plans_rates
+        SELECT 
+            id, hotel_id, plans_global_id, plans_hotel_id, 
+            adjustment_type, adjustment_value, tax_type_id, tax_rate, 
+            condition_type, condition_value, date_start, date_end, 
+            created_at, created_by, updated_by, 
+            include_in_cancel_fee, comment
+        FROM plans_rates
         WHERE 
             (plans_global_id = $1 AND plans_hotel_id IS NULL) OR 
             (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL)
@@ -97,7 +103,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
     const pool = actualGetPool(requestId);
-    const query = 'SELECT * FROM plans_rates WHERE id = $1';
+    const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, comment FROM plans_rates WHERE id = $1';
 
     try {
         const result = await pool.query(query, [id]);
@@ -234,6 +240,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             condition_value,
             tax_type_id,
             tax_rate,
+            include_in_cancel_fee,
             SUM(adjustment_value) AS adjustment_value
         FROM plans_rates
         WHERE 
@@ -243,7 +250,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             )
             AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
             OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
-        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate
+        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate, include_in_cancel_fee
         ORDER BY adjustment_type
     `;
     const values = [
@@ -283,8 +290,10 @@ const createPlansRate = async (requestId, plansRate) => {
             date_start, 
             date_end, 
             created_by,
-            updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            updated_by,
+            include_in_cancel_fee,
+            comment
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING *
     `;
 
@@ -301,7 +310,9 @@ const createPlansRate = async (requestId, plansRate) => {
         plansRate.date_start,
         plansRate.date_end,
         plansRate.created_by,
-        plansRate.updated_by
+        plansRate.updated_by,
+        plansRate.include_in_cancel_fee || false,
+        plansRate.comment
     ];
 
     try {
@@ -330,8 +341,10 @@ const updatePlansRate = async (requestId, id, plansRate) => {
             condition_value = $9,
             date_start = $10,
             date_end = $11,
-            updated_by = $12
-        WHERE id = $13
+            updated_by = $12,
+            include_in_cancel_fee = $13,
+            comment = $14
+        WHERE id = $15
         RETURNING *
     `;
 
@@ -348,6 +361,8 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         plansRate.date_start,
         plansRate.date_end,
         plansRate.updated_by,
+        plansRate.include_in_cancel_fee || false,
+        plansRate.comment,
         id
     ];
 
