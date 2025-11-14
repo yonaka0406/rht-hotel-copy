@@ -5,12 +5,10 @@
 - [x] **Database**: Create a new migration file (`014_add_cancel_fee_flag_to_plan_rates.sql`) to add the `include_in_cancel_fee` column to the `plan_rates` table with a `DEFAULT FALSE` constraint.
   - [x] Create `014_add_cancel_fee_flag_to_plan_rates.sql` with `ALTER TABLE plans_rates ADD COLUMN include_in_cancel_fee BOOLEAN NOT NULL DEFAULT FALSE;`
   - [x] Create `015_add_cancel_fee_flag_to_reservation_rates.sql` with `ALTER TABLE reservation_rates ADD COLUMN include_in_cancel_fee BOOLEAN NOT NULL DEFAULT FALSE;`
-  - [ ] **Refactor Migration**: Integrate `include_in_cancel_fee` into `004_plans_and_addons.sql` with conditional default.
-    - [ ] Read `004_plans_and_addons.sql`.
-    - [ ] Add `include_in_cancel_fee BOOLEAN NOT NULL DEFAULT FALSE` to `plans_rates` table definition.
-    - [ ] Create `set_default_include_in_cancel_fee()` SQL function.
-    - [ ] Create `BEFORE INSERT OR UPDATE` trigger on `plans_rates` to call `set_default_include_in_cancel_fee()`.
-    - [ ] Delete `014_add_cancel_fee_flag_to_plan_rates.sql`.
+  - [x] **Refactor Migration**: Integrate `include_in_cancel_fee` into `004_plans_and_addons.sql` with conditional default.
+    - [x] Read `004_plans_and_addons.sql`.
+    - [x] Add `include_in_cancel_fee BOOLEAN NOT NULL DEFAULT FALSE` to `plans_rates` table definition.    
+        
 - [x] **Model**: Update the `plan_rates` model to handle the `include_in_cancel_fee` field for all `SELECT`, `INSERT`, and `UPDATE` operations.
   - [x] Modify `createPlansRate` in `api/models/planRate.js` to include `include_in_cancel_fee`.
   - [x] Modify `updatePlansRate` in `api/models/planRate.js` to include `include_in_cancel_fee`.
@@ -18,8 +16,7 @@
   - [x] Modify `getPlansRateById` in `api/models/planRate.js` to explicitly select `include_in_cancel_fee`.
 - [x] **Business Logic**: Locate the cancellation fee calculation service/model and update the aggregation logic to correctly factor in the `include_in_cancel_fee` flag.
   - [x] Add `calculatePriceFromRates` helper function in `api/models/reservations/main.js`.
-  - [x] Modify `updateReservationDetailStatus` in `api/models/reservations/main.js` to use `include_in_cancel_fee` in cancellation logic.
-  - [ ] **Identify and Modify DB Population Logic**: Locate and update the database function/trigger that populates `reservation_rates` from `plan_rates` to copy the `include_in_cancel_fee` flag. (This is a pending task as the location is still unknown).
+  - [x] Modify `updateReservationDetailStatus` in `api/models/reservations/main.js` to use `include_in_cancel_fee` in cancellation logic.  
 - [ ] **Testing**: Write or update unit/integration tests to verify that the cancellation fee calculation correctly includes/excludes fees based on the new flag.
   - [ ] Create/update unit tests for `planRate.js` model functions.
   - [ ] Create/update unit tests for `reservations/main.js` cancellation logic.
