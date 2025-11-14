@@ -227,36 +227,7 @@ const insertAggregatedRates = async (requestId, rates, hotel_id, reservation_det
   if (!rates || rates.length === 0) {
     return;
   }
-
-  const validAdjustmentTypes = ['base_rate', 'percentage', 'flat_fee'];
-
-  for (let i = 0; i < rates.length; i++) {
-    const rate = rates[i];
-    if (typeof rate !== 'object' || rate === null) {
-      throw new Error(`Validation Error: Rate at index ${i} is not a valid object.`);
-    }
-
-    // Validate required keys and their types
-    if (!rate.adjustment_type || typeof rate.adjustment_type !== 'string' || !validAdjustmentTypes.includes(rate.adjustment_type)) {
-      throw new Error(`Validation Error: Rate at index ${i} has an invalid or missing 'adjustment_type'. Must be one of: ${validAdjustmentTypes.join(', ')}.`);
-    }
-    if (typeof rate.tax_type_id === 'undefined' || typeof rate.tax_type_id !== 'number') {
-      throw new Error(`Validation Error: Rate at index ${i} has an invalid or missing 'tax_type_id'. Must be a number.`);
-    }
-    if (typeof rate.tax_rate === 'undefined' || typeof rate.tax_rate !== 'number') {
-      throw new Error(`Validation Error: Rate at index ${i} has an invalid or missing 'tax_rate'. Must be a number.`);
-    }
-    if (typeof rate.adjustment_value === 'undefined' || typeof rate.adjustment_value !== 'number') {
-      throw new Error(`Validation Error: Rate at index ${i} has an invalid or missing 'adjustment_value'. Must be a number.`);
-    }
-    if (rate.adjustment_value === 0) {
-      throw new Error(`Validation Error: Rate at index ${i} has 'adjustment_value' of 0. Please set a non-zero value.`);
-    }
-    if (typeof rate.include_in_cancel_fee === 'undefined' || typeof rate.include_in_cancel_fee !== 'boolean') {
-      throw new Error(`Validation Error: Rate at index ${i} has an invalid or missing 'include_in_cancel_fee'. Must be a boolean.`);
-    }
-  }
-
+  
   // Aggregate rates by adjustment_type and tax_type_id
   const aggregatedRates = {};
   rates.forEach((rate) => {
