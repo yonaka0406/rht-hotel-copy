@@ -171,8 +171,8 @@
                                     </Card>
                                     <Divider />
                                     <div class="field-checkbox flex justify-center mt-4 mb-4">
-                                        <Checkbox id="overrideRounding" v-model="overrideRounding" :binary="true" />
-                                        <label for="overrideRounding" class="ml-2">端数処理を上書きする</label>
+                                        <Checkbox id="disableRounding" v-model="disableRounding" :binary="true" />
+                                        <label for="disableRounding" class="ml-2">端数処理を上書きする</label>
                                     </div>
                                     <div class="flex justify-center items-center">
                                         <Button label="保存" severity="info" type="submit" :loading="isSubmitting"
@@ -294,7 +294,7 @@ const selectedPlan = ref(null);
 const newRate = ref({
     tax_type_id: 3,
     adjustment_type: 'base_rate',
-    include_in_cancel_fee: false,
+    include_in_cancel_fee: true,
 });
 const selectedRates = ref(null);
 const planBillType = ref(null);
@@ -464,7 +464,7 @@ const savePlan = async () => {
 
         if (selectedPlanObject) {
             const filteredRates = selectedRates.value.filter(rate => rate.adjustment_value !== 0);
-            await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, filteredRates, price, overrideRounding.value);
+            await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, filteredRates, price, disableRounding.value);
         }
 
         const addonDataArray = selectedAddon.value.map(addon => ({
@@ -525,7 +525,7 @@ const selectedClients = ref(null);
 // Cancel
 const reservationCancelled = ref(false);
 const isSubmitting = ref(false);
-const overrideRounding = ref(false);
+const disableRounding = ref(false);
 const dayCancel = async () => {
     isSubmitting.value = true;
     try {
