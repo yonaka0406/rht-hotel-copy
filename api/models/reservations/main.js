@@ -7,7 +7,7 @@ const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
 const logger = require('../../config/logger');
 const { deleteReservationAddonsByDetailId } = require('./delete');
-const { insertReservationRate } = require('./insert');
+const { insertReservationRate, insertAggregatedRates } = require('./insert');
 
 // Helper
 const formatDate = (date) => {
@@ -4793,72 +4793,7 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
 };
 
 // Shared utility function for inserting rates with consistent price calculation
-const insertAggregatedRates = async (client, rates, hotel_id, reservation_details_id, user_id, overrideRounding = false) => {
-  if (!rates || rates.length === 0) {
-    return;
-  }
 
-  // Aggregate rates by adjustment_type and tax_type_id
-  const aggregatedRates = {};
-  rates.forEach((rate) => {
-    const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
-    if (!aggregatedRates[key]) {
-      aggregatedRates[key] = {
-        adjustment_type: rate.adjustment_type,
-        tax_type_id: rate.tax_type_id,
-        tax_rate: rate.tax_rate,
-        adjustment_value: 0,
-      };
-    }
-    aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
-  });
-
-  // Calculate total base rate first
-  let totalBaseRate = 0;
-  Object.values(aggregatedRates).forEach((rate) => {
-    if (rate.adjustment_type === 'base_rate') {
-      totalBaseRate += rate.adjustment_value;
-    }
-  });
-
-  // Insert aggregated rates with consistent price calculation
-  const insertPromises = Object.values(aggregatedRates).map(async (rate) => {
-    let price = 0;
-
-    if (rate.adjustment_type === 'base_rate') {
-      price = rate.adjustment_value;
-    } else if (rate.adjustment_type === 'percentage') {
-      if (!overrideRounding) {
-        price = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
-      } else {
-        price = totalBaseRate * (rate.adjustment_value / 100);
-      }
-    } else if (rate.adjustment_type === 'flat_fee') {
-      price = rate.adjustment_value;
-    }
-
-    const insertRateQuery = `
-      INSERT INTO reservation_rates (
-        hotel_id, reservation_details_id, adjustment_type, adjustment_value,
-        tax_type_id, tax_rate, price, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *;
-    `;
-
-    return client.query(insertRateQuery, [
-      hotel_id,
-      reservation_details_id,
-      rate.adjustment_type,
-      rate.adjustment_value,
-      rate.tax_type_id,
-      rate.tax_rate,
-      price,
-      user_id
-    ]);
-  });
-
-  await Promise.all(insertPromises);
-};
 
 const cancelReservationRooms = async (requestId, hotelId, reservationId, detailIds, updated_by, billable = false) => {
   const pool = getPool(requestId);
@@ -5038,6 +4973,5 @@ module.exports = {
   sanitizeName,
   selectFailedOtaReservations,    
   calculatePriceFromRates,
-  insertAggregatedRates,
   cancelReservationRooms,  
 };
