@@ -109,10 +109,10 @@
                                         <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="パーセント"
-                                            severity="warn">
+                                        <Badge v-if="slotProps.data.include_in_cancel_fee"
+                                            value="キャンセル料"
+                                            severity="warning"
+                                            class="ml-1">
                                         </Badge>
                                     </div>
                                     
@@ -175,10 +175,10 @@
                                         <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="パーセント"
-                                            severity="warn">
+                                        <Badge v-if="slotProps.data.include_in_cancel_fee"
+                                            value="キャンセル料"
+                                            severity="warning"
+                                            class="ml-1">
                                         </Badge>
                                     </div>
                                     
@@ -241,10 +241,10 @@
                                         <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="パーセント"
-                                            severity="warn">
+                                        <Badge v-if="slotProps.data.include_in_cancel_fee"
+                                            value="キャンセル料"
+                                            severity="warning"
+                                            class="ml-1">
                                         </Badge>
                                     </div>                                    
                                 </template>
@@ -398,6 +398,18 @@
                     />
                 </FloatLabel>
                 </div>
+                <div class="col-span-2">
+                    <FloatLabel>
+                        <label for="comment">コメント</label>
+                        <Textarea v-model="newAdjustment.comment" rows="3" class="w-full" />
+                    </FloatLabel>
+                </div>
+                <div class="col-span-2" v-if="newAdjustment.adjustment_type === 'flat_fee'">
+                    <div class="flex items-center">
+                        <Checkbox v-model="newAdjustment.include_in_cancel_fee" inputId="includeInCancelFee" :binary="true" />
+                        <label for="includeInCancelFee" class="ml-2">キャンセル料に含める</label>
+                    </div>
+                </div>
             </div>
             <template #footer>
                 <Button label="保存" icon="pi pi-check" @click="saveAdjustment" class="p-button-success p-button-text p-button-sm" />
@@ -515,6 +527,18 @@
                     />
                 </FloatLabel>
                 </div>
+                <div class="col-span-2">
+                    <FloatLabel>
+                        <label for="editComment">コメント</label>
+                        <Textarea v-model="editAdjustment.comment" rows="3" class="w-full" />
+                    </FloatLabel>
+                </div>
+                <div class="col-span-2" v-if="editAdjustment.adjustment_type === 'flat_fee'">
+                    <div class="flex items-center">
+                        <Checkbox v-model="editAdjustment.include_in_cancel_fee" inputId="editIncludeInCancelFee" :binary="true" />
+                        <label for="editIncludeInCancelFee" class="ml-2">キャンセル料に含める</label>
+                    </div>
+                </div>
             </div>
             <template #footer>
                 <Button label="更新" icon="pi pi-check" @click="updateAdjustment" class="p-button-success p-button-text p-button-sm" />
@@ -540,7 +564,7 @@
     import { useToast } from 'primevue/usetoast';    
     const toast = useToast();
     import { Card, Dialog, FloatLabel, DatePicker, InputNumber, MultiSelect, Select, Button,
-        Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Badge
+        Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Badge, Checkbox, Textarea
      } from 'primevue';
 
     // Stores
@@ -645,6 +669,8 @@
             condition_value: [],
             date_start: new Date().toISOString().split('T')[0],
             date_end: null,
+            include_in_cancel_fee: false,
+            comment: null,
         };
     };
     const editAdjustmentReset = () => {
@@ -660,6 +686,8 @@
             condition_value: [],
             date_start: new Date().toISOString().split('T')[0],
             date_end: null,
+            include_in_cancel_fee: false,
+            comment: null,
         };
     };
     const adjustmentNetPrice = computed(() => {
