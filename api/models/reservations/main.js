@@ -4978,7 +4978,12 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
 };
 
 
+const __setGetPool = (newGetPool) => { getPool = newGetPool; };
+const __getOriginalGetPool = () => require('../../config/database').getPool;
+
 module.exports = {
+  __setGetPool,
+  __getOriginalGetPool,
   selectAvailableRooms,
   selectAvailableParkingSpots,
   selectAndLockAvailableParkingSpot,  
