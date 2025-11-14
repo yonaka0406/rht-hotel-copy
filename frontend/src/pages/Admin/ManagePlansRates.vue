@@ -109,12 +109,17 @@
                                         <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
-                                        <Badge v-if="slotProps.data.include_in_cancel_fee"
-                                            value="キャンセル料"
-                                            severity="warning"
-                                            class="ml-1">
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
+                                        <Badge value="パーセント"
+                                            severity="warn">
                                         </Badge>
                                     </div>
+                                    <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
+                                        value="キャンセル料対象"
+                                        severity="danger"
+                                        class="ml-1">
+                                    </Badge>
                                     
                                 </template>
                             </Column>
@@ -175,12 +180,17 @@
                                         <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
-                                        <Badge v-if="slotProps.data.include_in_cancel_fee"
-                                            value="キャンセル料"
-                                            severity="warning"
-                                            class="ml-1">
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
+                                        <Badge value="パーセント"
+                                            severity="warn">
                                         </Badge>
                                     </div>
+                                    <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
+                                        value="キャンセル料対象"
+                                        severity="danger"
+                                        class="ml-1">
+                                    </Badge>
                                     
                                 </template>
                             </Column>
@@ -241,12 +251,17 @@
                                         <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
-                                        <Badge v-if="slotProps.data.include_in_cancel_fee"
-                                            value="キャンセル料"
-                                            severity="warning"
-                                            class="ml-1">
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
+                                        <Badge value="パーセント"
+                                            severity="warn">
                                         </Badge>
-                                    </div>                                    
+                                    </div>
+                                    <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
+                                        value="キャンセル料対象"
+                                        severity="danger"
+                                        class="ml-1">
+                                    </Badge>
                                 </template>
                             </Column>
                             <Column header="条件" style="min-width: 200px;">
@@ -404,7 +419,7 @@
                         <Textarea v-model="newAdjustment.comment" rows="3" class="w-full" />
                     </FloatLabel>
                 </div>
-                <div class="col-span-2" v-if="newAdjustment.adjustment_type === 'flat_fee'">
+                <div class="col-span-2" v-if="newAdjustment.adjustment_type === 'flat_fee' || newAdjustment.adjustment_type === 'percentage'">
                     <div class="flex items-center">
                         <Checkbox v-model="newAdjustment.include_in_cancel_fee" inputId="includeInCancelFee" :binary="true" />
                         <label for="includeInCancelFee" class="ml-2">キャンセル料に含める</label>
@@ -533,7 +548,7 @@
                         <Textarea v-model="editAdjustment.comment" rows="3" class="w-full" />
                     </FloatLabel>
                 </div>
-                <div class="col-span-2" v-if="editAdjustment.adjustment_type === 'flat_fee'">
+                <div class="col-span-2" v-if="editAdjustment.adjustment_type === 'flat_fee' || editAdjustment.adjustment_type === 'percentage'">
                     <div class="flex items-center">
                         <Checkbox v-model="editAdjustment.include_in_cancel_fee" inputId="editIncludeInCancelFee" :binary="true" />
                         <label for="editIncludeInCancelFee" class="ml-2">キャンセル料に含める</label>
