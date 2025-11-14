@@ -1,8 +1,9 @@
 <template>
     <div class="grid grid-cols-4 items-center">
         <div class="flex flex-col space-y-2">
-            <p class="text-lg font-bold mb-9 dark:text-gray-100">予約カレンダー</p>
-            <div class="flex items-center">
+            <h2 class="text-2xl font-bold dark:text-gray-100" v-if="hotelName">{{ hotelName }}</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">予約カレンダー</p>
+            <div class="flex items-center mt-6">
                 <FloatLabel>
                     <InputText :model-value="modelValue.date" @update:modelValue="updateDate" type="date" fluid required
                         class="dark:bg-gray-800 dark:text-gray-100 rounded" />
@@ -41,6 +42,10 @@ const props = defineProps({
     legendItems: {
         type: Array,
         default: () => []
+    },
+    hotelName: {
+        type: String,
+        default: ''
     }
 });
 

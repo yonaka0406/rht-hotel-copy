@@ -5,6 +5,7 @@
         <ReservationsCalendarHeader 
           v-model="headerState"
           :legend-items="uniqueLegendItems"
+          :hotel-name="selectedHotel ? selectedHotel.name : ''"
         />
       </template>
 <!--
@@ -266,7 +267,7 @@ import { Panel, Drawer, Card, Skeleton, ConfirmDialog, SpeedDial, ContextMenu, B
 
 // Stores  
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, removeCalendarSettings } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, removeCalendarSettings, selectedHotel } = useHotelStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom, convertBlockToReservation } = useReservationStore();
 import { useUserStore } from '@/composables/useUserStore';
