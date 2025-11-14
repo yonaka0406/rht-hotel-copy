@@ -346,7 +346,8 @@ const addRate = () => {
             tax_rate: selectedTax ? selectedTax.percentage : 0,
             adjustment_value: 0,
             price: 0,
-        });
+            include_in_cancel_fee: newRate.value.include_in_cancel_fee,
+        });    
     } else {
         console.error("Please select both adjustment type and tax type");
     }
