@@ -78,8 +78,8 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
             id, hotel_id, plans_global_id, plans_hotel_id, 
             adjustment_type, adjustment_value, tax_type_id, tax_rate, 
             condition_type, condition_value, date_start, date_end, 
-            created_at, created_by, updated_at, updated_by, 
-            include_in_cancel_fee
+            created_at, created_by, updated_by, 
+            include_in_cancel_fee, comment
         FROM plans_rates
         WHERE 
             (plans_global_id = $1 AND plans_hotel_id IS NULL) OR 
@@ -103,7 +103,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
     const pool = actualGetPool(requestId);
-    const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_at, updated_by, include_in_cancel_fee FROM plans_rates WHERE id = $1';
+    const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, comment FROM plans_rates WHERE id = $1';
 
     try {
         const result = await pool.query(query, [id]);
@@ -294,8 +294,9 @@ const createPlansRate = async (requestId, plansRate) => {
             date_end, 
             created_by,
             updated_by,
-            include_in_cancel_fee
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            include_in_cancel_fee,
+            comment
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING *
     `;
 
@@ -313,7 +314,8 @@ const createPlansRate = async (requestId, plansRate) => {
         plansRate.date_end,
         plansRate.created_by,
         plansRate.updated_by,
-        plansRate.include_in_cancel_fee || false
+        plansRate.include_in_cancel_fee || false,
+        plansRate.comment
     ];
 
     try {
@@ -343,8 +345,9 @@ const updatePlansRate = async (requestId, id, plansRate) => {
             date_start = $10,
             date_end = $11,
             updated_by = $12,
-            include_in_cancel_fee = $13
-        WHERE id = $14
+            include_in_cancel_fee = $13,
+            comment = $14
+        WHERE id = $15
         RETURNING *
     `;
 
@@ -362,6 +365,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         plansRate.date_end,
         plansRate.updated_by,
         plansRate.include_in_cancel_fee || false,
+        plansRate.comment,
         id
     ];
 
