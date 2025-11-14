@@ -1366,8 +1366,8 @@ const updateReservationComment = async (requestId, reservationData, client = nul
     const query = `
         UPDATE reservations
         SET
-          comment = $1,          
-          updated_by = $2          
+          comment = $1,
+          updated_by = $2
         WHERE id = $3::UUID AND hotel_id = $4
         RETURNING *;
     `;
@@ -1947,12 +1947,12 @@ const updateReservationGuest = async (requestId, oldValue, newValue, client = nu
 
   const query = `
     UPDATE reservation_clients
-    SET reservation_details_id = $1    
-    WHERE id IN 
+    SET reservation_details_id = $1
+    WHERE id IN
       (
-        SELECT id 
-        FROM reservation_clients 
-        WHERE reservation_details_id = $2 
+        SELECT id
+        FROM reservation_clients
+        WHERE reservation_details_id = $2
         LIMIT 1
       );
   `;
@@ -2104,7 +2104,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       await dbClient.query(deleteRatesQuery, [id]);
 
       // Insert rates using the shared utility function
-      await insertAggregatedRates(dbClient, rates, hotel_id, id, user_id);
+      await insertAggregatedRates(requestId, rates, hotel_id, id, user_id, false, dbClient);
     }
 
     await dbClient.query('COMMIT');
@@ -2436,7 +2436,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
 
       // Insert rates using the shared utility function
-      await insertAggregatedRates(dbClient, newrates, hotel_id, id, user_id);
+      await insertAggregatedRates(requestId, newrates, hotel_id, id, user_id, false, dbClient);
 
       // Update the price in reservation_details using the calculated price from rates
       const calculatedPrice = calculatePriceFromRates(newrates, overrideRounding);
