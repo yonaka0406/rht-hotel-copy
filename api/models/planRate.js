@@ -118,13 +118,9 @@ const getPlansRateById = async (requestId, id) => {
 };
 
 const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false, dbClient = null) => {
-    const client = dbClient || actualGetPool(requestId);
-    let releaseClient = false;
-
-    if (!dbClient) {
-        releaseClient = true;
-        await client.connect();
-    }
+    const pool = actualGetPool(requestId);
+    const client = dbClient || await pool.connect();
+    const releaseClient = !dbClient;
 
     const query = `        
         SELECT 
