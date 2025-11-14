@@ -240,6 +240,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             condition_value,
             tax_type_id,
             tax_rate,
+            include_in_cancel_fee,
             SUM(adjustment_value) AS adjustment_value
         FROM plans_rates
         WHERE 
@@ -249,7 +250,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             )
             AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
             OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
-        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate
+        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate, include_in_cancel_fee
         ORDER BY adjustment_type
     `;
     const values = [
