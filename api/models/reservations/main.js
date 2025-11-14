@@ -1209,18 +1209,22 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       WHERE reservation_details_id = $1 AND hotel_id = $2
     `;
     const ratesResult = await client.query(ratesQuery, [id, hotel_id]);
+    const rates = Array.isArray(ratesResult.rows) ? ratesResult.rows : Object.values(ratesResult.rows);
 
     let ratesToUse = [];
     let calculatedPrice;
 
     if (status === 'cancelled') {
       // When cancelling, only include rates that are flagged to be included.
-      ratesToUse = ratesResult.rows.filter(rate => rate.include_in_cancel_fee);
-      calculatedPrice = calculatePriceFromRates(ratesToUse);
+      ratesToUse = rates.filter(rate => rate.include_in_cancel_fee);
+      logger.debug(`[updateReservationDetailStatus] Status is 'cancelled'. Filtered ratesToUse: ${JSON.stringify(ratesToUse)}`);
+      calculatedPrice = calculatePriceFromRates(ratesToUse, false);
     } else {
-      // When recovering, use all rates for price calculation
-      calculatedPrice = calculatePriceFromRates(ratesResult.rows);
+      // When recovering, use all rates for price calculation      
+      logger.debug(`[updateReservationDetailStatus] Status is '${status}'. Using all rates: ${JSON.stringify(rates)}`);
+      calculatedPrice = calculatePriceFromRates(rates, false);
     }
+    logger.debug(`[updateReservationDetailStatus] Calculated price for detail ${id}: ${calculatedPrice}`);
 
     // 1. Update the reservation_details table based on the status
     if (status === 'cancelled') {
@@ -4648,6 +4652,7 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
               tax_type_id: rate.tax_type_id,
               tax_rate: rate.tax_rate,
               price: rate.price,
+              include_in_cancel_fee: rate.adjustment_type,
               created_by: userId,
             };
             logger.debug('[copyReservation] Creating new rate:', rateData);
@@ -4727,7 +4732,9 @@ const selectFailedOtaReservations = async (requestId) => {
 
 // Shared utility function for consistent price calculation
 const calculatePriceFromRates = (rates, overrideRounding = false) => {
+  logger.debug(`[calculatePriceFromRates] Input rates: ${JSON.stringify(rates)}`);
   if (!rates || rates.length === 0) {
+    logger.debug('[calculatePriceFromRates] No rates provided, returning 0.');
     return 0;
   }
 
@@ -4745,6 +4752,7 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
     }
     aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
   });
+  logger.debug(`[calculatePriceFromRates] Aggregated rates: ${JSON.stringify(aggregatedRates)}`);
 
   // Step 2: Calculate total base rate first
   let totalBaseRate = 0;
@@ -4753,6 +4761,7 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
       totalBaseRate += rate.adjustment_value;
     }
   });
+  logger.debug(`[calculatePriceFromRates] Total base rate: ${totalBaseRate}`);
 
   // Step 3: Calculate total price by summing individual rate prices (matching original logic)
   let totalPrice = 0;
@@ -4770,11 +4779,15 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
 
     totalPrice += ratePrice;
   });
+  logger.debug(`[calculatePriceFromRates] Total price before rounding: ${totalPrice}`);
 
   // Round down to nearest 100 yen (Japanese pricing convention)
   if (!overrideRounding) {
-    return Math.floor(totalPrice / 100) * 100;
+    const finalPrice = Math.floor(totalPrice / 100) * 100;
+    logger.debug(`[calculatePriceFromRates] Final price after rounding: ${finalPrice}`);
+    return finalPrice;
   } else {
+    logger.debug(`[calculatePriceFromRates] Final price (no rounding): ${totalPrice}`);
     return totalPrice;
   }
 };
