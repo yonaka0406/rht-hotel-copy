@@ -95,8 +95,7 @@
         </table>
       </div>
       <template #footer>
-        <div class="flex flex-wrap gap-3 p-3">
-        </div>
+        <StaticCalendarFooter @addMonths="handleAddMonths" :loading="isAddingMonths" />
       </template>
     </Panel>
 
@@ -117,6 +116,8 @@
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
 
 import Panel from 'primevue/panel';
 import Skeleton from 'primevue/skeleton';
@@ -124,6 +125,7 @@ import StaticCalendarHeader from './components/StaticCalendarHeader.vue';
 
 // Components
 import StaticCalendarDrawer from './components/StaticCalendarDrawer.vue';
+import StaticCalendarFooter from './components/StaticCalendarFooter.vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -194,6 +196,7 @@ const tooltipY = ref(0);
 const selectedClientId = ref(null);
 const isDrawerVisible = ref(false);
 const cardSelectedReservationId = ref(null);
+const isAddingMonths = ref(false);
 
 const selectReservationCard = (reservationId) => {
   if (cardSelectedReservationId.value === reservationId) {
@@ -257,6 +260,35 @@ const handleCellDoubleClick = (room_id, date) => {
   if (roomInfo && roomInfo.client_id) {
     selectedClientId.value = roomInfo.client_id;
     isDrawerVisible.value = true;
+  }
+};
+
+const handleAddMonths = async () => {
+  isAddingMonths.value = true; // Set loading to true
+  try {
+    // Get the current last date being displayed in the calendar
+    const currentLastDisplayedDate = new Date(dateRange.value[dateRange.value.length - 1]);
+
+    // Calculate the new end month (3 months after the last displayed month)
+    const tempNewEndDate = new Date(currentLastDisplayedDate.getFullYear(), currentLastDisplayedDate.getMonth() + 3, 1);
+    
+    // Get the last day of this new month
+    const newEndDate = new Date(tempNewEndDate.getFullYear(), tempNewEndDate.getMonth() + 1, 0);
+
+    // The startDate remains the same (first day of the initial currentMonth)
+    const initialStartDate = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1);
+    
+    dateRange.value = generateDateRange(initialStartDate, newEndDate);
+
+    await fetchReservations(formatDate(initialStartDate), formatDate(newEndDate));
+    await fetchReservedParkingSpots(selectedHotelId.value, formatDate(initialStartDate), formatDate(newEndDate));
+
+    toast.add({ severity: 'success', summary: '成功', detail: 'さらに3ヶ月分のデータを読み込みました。', life: 3000 });
+  } catch (error) {
+    console.error("Error in handleAddMonths:", error);
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'データの読み込み中にエラーが発生しました。', life: 3000 });
+  } finally {
+    isAddingMonths.value = false; // Set loading to false
   }
 };
 
@@ -608,7 +640,7 @@ watch(currentMonth, async (newMonth) => {
     const month = newMonth.getMonth();
 
     const startDate = new Date(currentYear, month, 1);
-    const endDate = new Date(currentYear, month + 2, 0);
+    const endDate = new Date(currentYear, month + 3, 0);
     
     dateRange.value = generateDateRange(startDate, endDate);
 
