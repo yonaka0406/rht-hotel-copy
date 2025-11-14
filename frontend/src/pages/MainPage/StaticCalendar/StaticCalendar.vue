@@ -1,23 +1,10 @@
 <template>
   <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
-    <div class="flex justify-between w-full items-center mb-4">
-      <h2 class="text-xl font-bold">予約照会</h2>
-      <div class="flex flex-wrap gap-2 p-2">
-        <div v-for="item in uniqueLegendItems" :key="item.plan_name" class="flex items-center gap-2">
-          <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: item.plan_color }"></span>
-          <span class="text-xs text-surface-700 dark:text-surface-300">{{ item.plan_name }}</span>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <DatePicker
-          v-model="currentMonth"
-          view="month"
-          dateFormat="yy/mm"
-          :showIcon="true"
-          class="p-inputtext-sm"
-        />
-      </div>
-    </div>
+    <StaticCalendarHeader
+      :selected-hotel="selectedHotel"
+      :unique-legend-items="uniqueLegendItems"
+      v-model:current-month="currentMonth"
+    />
     <Panel>
       <template #header>
         <div class="flex justify-between w-full items-center">
@@ -133,14 +120,14 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 
 import Panel from 'primevue/panel';
 import Skeleton from 'primevue/skeleton';
-import DatePicker from 'primevue/datepicker';
+import StaticCalendarHeader from './components/StaticCalendarHeader.vue';
 
 // Components
 import StaticCalendarDrawer from './components/StaticCalendarDrawer.vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, selectedHotel } = useHotelStore();
 const allParkingSpots = ref([]);
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservedRooms, fetchReservedRooms } = useReservationStore();
