@@ -50,7 +50,8 @@
                     isCellLast(spot.id, date) ? 'cell-last' : '',
                     'cursor-pointer',
                     isCompactView ? 'compact-cell' : '',
-                    !isSpotReserved(spot.id, date) ? 'dark:bg-gray-800 dark:text-gray-100' : ''
+                    !isSpotReserved(spot.id, date) ? 'dark:bg-gray-800 dark:text-gray-100' : '',
+                    isSpotReserved(spot.id, date) ? 'reserved-spot' : ''
                   ]" @mouseover="applyHover(spotIndex, dateIndex)" @mouseleave="removeHover(spotIndex, dateIndex)">
                   <div v-if="isLoading && !isSpotReserved(spot.id, date)">
                     <Skeleton class="mb-2 dark:bg-gray-700"></Skeleton>
@@ -682,6 +683,7 @@
   </script>
   
   <style scoped>
+  /* 1. General Layout & Container */
   .overflow-x-auto {
     overflow-x: auto;
     max-width: 100%;
@@ -696,6 +698,7 @@
     scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
   }
   
+  /* 2. Table Structure & Cells */
   th,
   td {
     border: none;
@@ -716,7 +719,7 @@
     border-right: none;
   }
   
-  /* Enhanced table header styling */
+  /* Enhanced table header styling (Light Mode) */
   thead th {
     background-color: #fff;
     font-weight: bold;
@@ -735,16 +738,16 @@
     border-right: none;
   }
   
-  /* For dark mode */
+  /* Enhanced table header styling (Dark Mode) */
   .dark thead th {
-    background-color: #fff;
-    color: #111827;
+    background-color: #374151; /* Adjusted for dark mode */
+    color: #f9fafb; /* Adjusted for dark mode */
     border-right: 1px solid #6b7280;
   }
   
   .dark thead th:first-child {
-    background-color: #fff;
-    color: #111827;
+    background-color: #374151; /* Adjusted for dark mode */
+    color: #f9fafb; /* Adjusted for dark mode */
     border-left: none;
     border-right: 1px solid #6b7280;
   }
@@ -753,6 +756,25 @@
     border-right: none;
   }
   
+  /* 3. Compact View */
+  .compact-view th,
+  .compact-view td {
+    padding: 4px 6px;
+    min-width: 20px;
+    max-width: 100px;
+    font-size: 10px;
+  }
+  
+  .compact-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 10px;
+    width: 20px;
+    font-size: 10px;
+  }
+  
+  /* 4. Cell Specific Styles */
   .cell-first {
     border-top-left-radius: 40px !important;
     border-top-right-radius: 40px !important;
@@ -763,65 +785,12 @@
     border-bottom-right-radius: 40px !important;
   }
   
-  .table-container::-webkit-scrollbar-button:single-button {
-    background-color: rgba(0, 0, 0, 0.3);
-    /* Make buttons always visible */
+  .reserved-spot {
+    background-color: #ffcf40 !important; /* Specific hex color for light mode */
   }
   
-  .table-container::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.3);
-    /* Scrollbar thumb color */
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-  }
-  
-  .table-container::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
-    /* Track color */
-  }
-  
-  .table-container::-webkit-scrollbar-button {
-    background-color: rgba(0, 0, 0, 0.1);
-    /* Button color */
-  }
-  
-  .table-container:active::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.7);
-  }
-  
-  .table-container:focus {
-    outline: none;
-    border: 2px solid #4CAF50;
-    /* Visual cue for focus */
-  }
-  
-  /* Compact Mode */
-  .compact-view th,
-  .compact-view td {
-    padding: 4px 6px;
-    min-width: 20px;
-    /* Adjust as needed */
-    max-width: 100px;
-    font-size: 10px;
-  }
-  
-  .compact-cell {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    height: 10px;
-    /* Adjust height */
-    width: 20px;
-    /* Adjust width */
-    font-size: 10px;
-  }
-  
-  .selected-room-by-day {
-    background-color: lightyellow !important;
-    color: goldenrod !important;
-  
-    border-top-width: 0.5cap;
-    border-bottom-width: 0.5cap;
+  .dark .reserved-spot {
+    background-color: #ffcf40 !important; /* Specific hex color for dark mode */
   }
   
   .cell-with-hover {
@@ -833,80 +802,7 @@
     background-color: lightgray;
   }
   
-  .title-cell-highlight {
-    /* Horizontal highlight (yellow) for first column (dates) */
-    background-color: #fef9c3 !important;
-    /* yellow-100, matches .highlight-row */
-    color: #92400e !important;
-    font-weight: bold;
-    transition: background-color 0.2s;
-  }
-  
-  .dark .title-cell-highlight {
-    background-color: #78350f !important;
-    /* matches .dark .highlight-row */
-    color: #fef3c7 !important;
-  }
-  
-  /* Blue highlight for first row (rooms) */
-  thead th.title-cell-highlight {
-    background-color: #e0f2fe !important;
-    /* sky-100, matches .highlight-col */
-    color: #0c4a6e !important;
-  }
-  
-  .dark thead th.title-cell-highlight {
-    background-color: #0c4a6e !important;
-    /* matches .dark .highlight-col */
-    color: #fef3c7 !important;
-  }
-  
-
-  
-  /* Enhanced room row styling */
-  tbody tr:nth-child(even) {
-    background-color: #e6fffa;
-  }
-  
-  tbody tr:nth-child(odd) {
-    background-color: #ffffff;
-  }
-  
-  /* Room column styling */
-  tbody td:first-child {
-    background-color: #fff;
-    font-weight: bold;
-    border-left: none;
-  }
-  
-  /* Hover effects for better visual feedback */
-  tbody tr:hover {
-    background-color: #f0f9ff;
-  }
-  
-  /* Dark mode support */
-  .dark tbody tr:nth-child(even) {
-    background-color: #374151;
-  }
-  
-  .dark tbody tr:nth-child(odd) {
-    background-color: #1f2937;
-  }
-  
-  .dark tbody tr:hover {
-    background-color: #1e40af;
-  }
-  
-  .dark thead th {
-    background-color: #374151;
-    border-color: #6b7280;
-  }
-  
-  .dark tbody td:first-child {
-    background-color: #fff;
-    border-left-color: #9ca3af;
-  }
-  
+  /* 5. Hover & Highlight Effects */
   .highlight-row::before,
   .highlight-col::before,
   .highlight-cell::before {
@@ -919,7 +815,7 @@
     pointer-events: none;
     z-index: 1;
   }
-
+  
   /* Light Mode Overlay Colors */
   .highlight-row::before {
     background-color: rgba(254, 249, 195, 0.2); /* yellow */
@@ -930,7 +826,7 @@
   .highlight-cell::before {
     background-color: rgba(253, 230, 138, 0.2); /* amber */
   }
-
+  
   /* Dark Mode Overlay Colors */
   .dark .highlight-row::before {
     background-color: rgba(120, 53, 15, 0.2);
@@ -941,7 +837,7 @@
   .dark .highlight-cell::before {
     background-color: rgba(180, 83, 9, 0.2);
   }
-
+  
   /* Border Effect for the Hovered Cell */
   .highlight-cell {
     box-shadow: 0 0 0 3px #f59e42 inset;
@@ -950,7 +846,32 @@
   .dark .highlight-cell {
     box-shadow: 0 0 0 3px #fbbf24 inset;
   }
-
+  
+  .title-cell-highlight {
+    /* Horizontal highlight (yellow) for first column (dates) */
+    background-color: #fef9c3 !important;
+    color: #92400e !important;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+  
+  .dark .title-cell-highlight {
+    background-color: #78350f !important;
+    color: #fef3c7 !important;
+  }
+  
+  /* Blue highlight for first row (rooms) */
+  thead th.title-cell-highlight {
+    background-color: #e0f2fe !important;
+    color: #0c4a6e !important;
+  }
+  
+  .dark thead th.title-cell-highlight {
+    background-color: #0c4a6e !important;
+    color: #fef3c7 !important;
+  }
+  
+  /* 6. Pinned Row */
   .row-is-pinned td {
     position: relative; 
     border-top: 2px solid #f59e42 !important;
@@ -967,13 +888,79 @@
     pointer-events: none;
     z-index: 1;
   }
-
+  
   .dark .row-is-pinned td {
     border-top-color: #fbbf24 !important; 
     border-bottom-color: #fbbf24 !important;
   }
   .dark .row-is-pinned td::before {
     background-color: rgba(251, 191, 36, 0.15); /* Subtle amber for dark mode */
+  }
+  
+  /* 7. Table Row Styling (Even/Odd) */
+  tbody tr:nth-child(even) {
+    background-color: #e6fffa;
+  }
+  
+  tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+  }
+  
+  tbody tr:hover {
+    background-color: #f0f9ff;
+  }
+  
+  /* Dark mode support for rows */
+  .dark tbody tr:nth-child(even) {
+    background-color: #374151;
+  }
+  
+  .dark tbody tr:nth-child(odd) {
+    background-color: #1f2937;
+  }
+  
+  .dark tbody tr:hover {
+    background-color: #1e40af;
+  }
+  
+  /* 8. First Column (Date) Styling */
+  tbody td:first-child {
+    background-color: #fff;
+    font-weight: bold;
+    border-left: none;
+  }
+  
+  .dark tbody td:first-child {
+    background-color: #374151; /* Adjusted for dark mode */
+    border-left-color: #9ca3af;
+  }
+  
+  /* 9. Scrollbar Styling */
+  .table-container::-webkit-scrollbar-button:single-button {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+  
+  .table-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .table-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  
+  .table-container::-webkit-scrollbar-button {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  .table-container:active::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  
+  .table-container:focus {
+    outline: none;
+    border: 2px solid #4CAF50;
   }
   </style>
   
