@@ -66,7 +66,7 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
   }
 
   const query = `
-    INSERT INTO reservation_payments ( 
+    INSERT INTO reservation_payments (
       hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
     RETURNING *;
@@ -172,15 +172,15 @@ const insertReservationRate = async (requestId, rateData, client = null) => {
 
   const query = `
     INSERT INTO reservation_rates (
-      hotel_id, 
-      reservation_details_id, 
-      adjustment_type, 
-      adjustment_value, 
-      tax_type_id, 
-      tax_rate, 
-      price, 
-      include_in_cancel_fee, 
-      created_by, 
+      hotel_id,
+      reservation_details_id,
+      adjustment_type,
+      adjustment_value,
+      tax_type_id,
+      tax_rate,
+      price,
+      include_in_cancel_fee,
+      created_by,
       updated_by
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
     RETURNING *;
@@ -223,7 +223,7 @@ const insertReservationRate = async (requestId, rateData, client = null) => {
   }
 };
 
-const insertAggregatedRates = async (client, rates, hotel_id, reservation_details_id, user_id, overrideRounding = false) => {
+const insertAggregatedRates = async (requestId, rates, hotel_id, reservation_details_id, user_id, overrideRounding = false, client = null) => {
   if (!rates || rates.length === 0) {
     return;
   }
@@ -268,25 +268,19 @@ const insertAggregatedRates = async (client, rates, hotel_id, reservation_detail
       price = rate.adjustment_value;
     }
 
-    const insertRateQuery = `
-      INSERT INTO reservation_rates (
-        hotel_id, reservation_details_id, adjustment_type, adjustment_value,
-        tax_type_id, tax_rate, price, include_in_cancel_fee, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *;
-    `;
-
-    return client.query(insertRateQuery, [
+    const rateData = {
       hotel_id,
       reservation_details_id,
-      rate.adjustment_type,
-      rate.adjustment_value,
-      rate.tax_type_id,
-      rate.tax_rate,
+      adjustment_type: rate.adjustment_type,
+      adjustment_value: rate.adjustment_value,
+      tax_type_id: rate.tax_type_id,
+      tax_rate: rate.tax_rate,
       price,
-      rate.include_in_cancel_fee,
-      user_id
-    ]);
+      include_in_cancel_fee: rate.include_in_cancel_fee,
+      created_by: user_id
+    };
+
+    return insertReservationRate(requestId, rateData, client);
   });
 
   await Promise.all(insertPromises);
