@@ -238,10 +238,10 @@ function validateDateRange(startDate, endDate) {
         };
     }
     
-    if (end <= start) {
+    if (end < start) {
         return {
             isValid: false,
-            error: 'End date must be after start date'
+            error: 'End date must be on or after start date'
         };
     }
     
