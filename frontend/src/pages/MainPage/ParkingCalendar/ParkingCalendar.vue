@@ -721,15 +721,12 @@
   
   /* Enhanced table header styling (Light Mode) */
   thead th {
-    background-color: #fff;
     font-weight: bold;
-    color: #111827;
     border-right: 1px solid #e5e7eb;
     padding: 8px 12px;
   }
   
   thead th:first-child {
-    background-color: #fff;
     border-left: none;
     border-right: 1px solid #e5e7eb;
   }
@@ -787,10 +784,11 @@
   
   .reserved-spot {
     background-color: #ffcf40 !important; /* Specific hex color for light mode */
+    color: #1f2937 !important; /* Dark text for readability on yellow background */
   }
   
   .dark .reserved-spot {
-    background-color: #ffcf40 !important; /* Specific hex color for dark mode */
+    background-color: #CC9900 !important; /* Darker orange/gold for dark mode */
   }
   
   .cell-with-hover {
@@ -925,7 +923,6 @@
   
   /* 8. First Column (Date) Styling */
   tbody td:first-child {
-    background-color: #fff;
     font-weight: bold;
     border-left: none;
   }
