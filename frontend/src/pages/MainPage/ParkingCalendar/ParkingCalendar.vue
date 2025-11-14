@@ -74,7 +74,7 @@
                         </template>
                         <template
                           v-else-if="fillSpotInfo(spot.id, date).status === 'confirmed'">
-                          <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>
+                          <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800 dark:text-white"></i>
                         </template>
                         <template
                           v-else-if="fillSpotInfo(spot.id, date).status === 'checked_in'">
@@ -350,48 +350,55 @@
       };
     }
   };
-  const getCellStyle = (spotId, date) => {
-    const spotInfo = fillSpotInfo(spotId, date);
-    let style = {};
-
-    // Apply styles based on reservation type
-    if (spotInfo) {
-      // Check for other/block status first
-      if (spotInfo.status === 'other') {
-        style = { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
-      } else if (spotInfo.status === 'block' && spotInfo.client_id === BLOCK_CLIENT_ID) {
-        style = { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
-      } else if (spotInfo.status === 'block' && spotInfo.client_id === LOCK_CLIENT_ID) {
-        style = { backgroundColor: '#fed7aa' }; // Light orange for provisional blocks
-      } else {
-        switch(spotInfo.type) {
-          case 'employee':
-            style = { backgroundColor: '#f3e5f5' }; // Light purple for employee
-            break;
-          case 'ota':
-            style = { backgroundColor: '#dbeafe' }; // Light blue for OTA
-            break;
-          case 'web':
-            style = { backgroundColor: '#bfdbfe' }; // Slightly darker blue for web
-            break;
-          case 'default':
-          default:
-            // Default style for normal reservations
-            if (spotInfo.status !== 'available') {
-              style = { 
-                backgroundColor: '#f0fdf4', // Light green for normal reservations
-                color: 'inherit', 
-                fontWeight: 'normal' 
-              };
-            }
-            break;
+      const getCellStyle = (spotId, date) => {
+        const spotInfo = fillSpotInfo(spotId, date);
+        let style = {};
+      
+        if (spotInfo) {
+          // Prioritize blocked spot styling
+          if (spotInfo.status === 'other') {
+            return { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
+          } else if (spotInfo.status === 'block' && spotInfo.client_id === BLOCK_CLIENT_ID) {
+            return { backgroundColor: '#fee2e2' }; // Light red for administrative blocks
+          } else if (spotInfo.status === 'block' && spotInfo.client_id === LOCK_CLIENT_ID) {
+            return { backgroundColor: '#fed7aa' }; // Light orange for provisional blocks
+          }
         }
-      }
-    }
-    
-    return style;
-  };
-  const isCellFirst = (spotId, date) => {
+      
+        // If it's a regular reserved spot (not blocked), let the .reserved-spot class handle the background color.
+        // We still need to check isSpotReserved to ensure it's actually reserved.
+        if (isSpotReserved(spotId, date)) {
+          return {}; // Return an empty style object to avoid inline background-color
+        }
+      
+        // Apply styles based on other reservation types (if not blocked and not generally reserved)
+        if (spotInfo) {
+          switch(spotInfo.type) {
+            case 'employee':
+              style = { backgroundColor: '#f3e5f5' }; // Light purple for employee
+              break;
+            case 'ota':
+              style = { backgroundColor: '#dbeafe' }; // Light blue for OTA
+              break;
+            case 'web':
+              style = { backgroundColor: '#bfdbfe' }; // Slightly darker blue for web
+              break;
+            case 'default':
+            default:
+              // Default style for normal reservations
+              if (spotInfo.status !== 'available') {
+                style = { 
+                  backgroundColor: '#f0fdf4', // Light green for normal reservations
+                  color: 'inherit', 
+                  fontWeight: 'normal' 
+                };
+              }
+              break;
+          }
+        }
+        
+        return style;
+      };  const isCellFirst = (spotId, date) => {
     const currentDate = new Date(date);
     const prevDate = new Date(currentDate);
     prevDate.setDate(prevDate.getDate() - 1);
@@ -787,9 +794,12 @@
     color: #1f2937 !important; /* Dark text for readability on yellow background */
   }
   
-  .dark .reserved-spot {
-    background-color: #CC9900 !important; /* Darker orange/gold for dark mode */
+  .dark td.reserved-spot {
+    background-color: #D1D5DB !important; /* Light gray for dark mode */
+    color: #1f2937 !important; /* Dark text for readability on light gray background */
   }
+  
+
   
   .cell-with-hover {
     position: relative;
