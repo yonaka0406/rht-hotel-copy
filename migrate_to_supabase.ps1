@@ -64,16 +64,16 @@ if ($containerRunning -ne "wehub-db") {
     exit 1
 }
 
-# Write-Log "Dumping local VPS database inside Docker container..."
+Write-Log "Dumping local VPS database inside Docker container..."
 
 # Dump from Docker container to a file inside the container in custom format
-# docker exec -e PGPASSFILE=/tmp/.pgpass wehub-db pg_dump -h host.docker.internal -U $LOCAL_DB_USER -d $LOCAL_DB_NAME -Fc -f $TEMP_DUMP_CONTAINER
+docker exec -e PGPASSFILE=/tmp/.pgpass wehub-db pg_dump -h host.docker.internal -U $LOCAL_DB_USER -d $LOCAL_DB_NAME -Fc -f $TEMP_DUMP_CONTAINER
 
-# if ($LASTEXITCODE -ne 0) {
-#     Write-Log "Migration FAILED: Local dump failed"
-#     docker exec wehub-db rm -f $TEMP_DUMP_CONTAINER
-#     exit 1
-# }
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "Migration FAILED: Local dump failed"
+    docker exec wehub-db rm -f $TEMP_DUMP_CONTAINER
+    exit 1
+}
 
 # Write-Log "Copying dump file from container to host..."
 # docker cp "wehub-db:$TEMP_DUMP_CONTAINER" $TEMP_DUMP_HOST
