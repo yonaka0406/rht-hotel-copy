@@ -38,7 +38,7 @@ $SUPABASE_PASSWORD = $env:SUPABASE_PASSWORD
 
 $TEMP_DUMP_CONTAINER = "/tmp/vps_migration_$(Get-Date -Format 'yyyyMMdd_HHmmss').dump"
 $TEMP_DUMP_HOST = "temp\vps_migration_$(Get-Date -Format 'yyyyMMdd_HHmmss').dump"
-$LOG_FILE = "temp\supabase_migration.log"
+$LOG_FILE = Join-Path $PSScriptRoot "temp\supabase_migration.log"
 
 # Create temp directory if it doesn't exist
 if (!(Test-Path "temp")) {
@@ -88,23 +88,6 @@ Write-Log "Copying dump file from container to host..."
 docker cp "wehub-db:$TEMP_DUMP_CONTAINER" $TEMP_DUMP_HOST
 
 Write-Log "Using dump file: $TEMP_DUMP_HOST for restore."
-
-# Drop and recreate public schema in batches
-Drop-PublicSchemaInBatches
-
-Write-Log "Restoring to Supabase from host..."
-
-# Set PGPASSWORD for pg_restore on host
-$env:PGPASSWORD = $SUPABASE_PASSWORD
-pg_restore -h $SUPABASE_DB_HOST -U $SUPABASE_DB_USER -d $SUPABASE_DB_NAME --no-owner --no-privileges $TEMP_DUMP_HOST 2>&1 | Tee-Object -Append -FilePath $LOG_FILE
-
-# Cleanup
-docker exec wehub-db rm -f $TEMP_DUMP_CONTAINER
-Remove-Item $TEMP_DUMP_HOST
-Write-Log "Migration successful"
-Write-Log "Migration complete"
-
-exit 0
 
 # Function to drop public schema in batches to avoid "out of shared memory" error
 function Drop-PublicSchemaInBatches {
@@ -215,3 +198,22 @@ function Drop-PublicSchemaInBatches {
     # Do not delete temp dir for inspection: Write-Log "Done. Temp dir: $tmpDir"
     Remove-Item $pgpassFile -ErrorAction SilentlyContinue
 }
+
+# Drop and recreate public schema in batches
+Drop-PublicSchemaInBatches
+
+Write-Log "Restoring to Supabase from host..."
+
+# Set PGPASSWORD for pg_restore on host
+$env:PGPASSWORD = $SUPABASE_PASSWORD
+pg_restore -h $SUPABASE_DB_HOST -U $SUPABASE_DB_USER -d $SUPABASE_DB_NAME --no-owner --no-privileges $TEMP_DUMP_HOST 2>&1 | Tee-Object -Append -FilePath $LOG_FILE
+
+# Cleanup
+docker exec wehub-db rm -f $TEMP_DUMP_CONTAINER
+Remove-Item $TEMP_DUMP_HOST
+Write-Log "Migration successful"
+Write-Log "Migration complete"
+
+exit 0
+
+
