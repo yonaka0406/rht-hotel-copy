@@ -5,6 +5,48 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 17, 2025
+
+#### Receipt Functionality Improvements
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Feedback / Google Chat
+- **Description**:
+  - Current receipt functionality has several areas for improvement to better meet Japanese business requirements
+- **Requested Changes**:
+  1. **Name Suffix Handling**:
+     - Change default honorific from "御中" to "様" for individual recipients
+     - Or implement a way to select between different honorifics
+  2. **Reissue Indicator**:
+     - Add an optional "Reissue" stamp/indicator for reprinted receipts
+  3. **Revenue Stamp Notice**:
+     - Add a notice about revenue stamp requirements for paper receipts over 50,000 yen
+     - Example text: "本領収書が紙で発行され、かつ金額が5万円を超える場合は、印紙税法に基づき収入印紙が必要です（電子発行の場合は不要）"
+  4. **Additional Changes**:
+     - Include other changes mentioned in the PDF from Google Chat (reference to be added)
+- **Technical Notes**:
+  - Consider making honorific selection configurable in system settings
+  - Ensure the reissue indicator is clearly visible but doesn't interfere with receipt content
+  - The revenue stamp notice should be conditionally displayed based on:
+    - Receipt amount (over 50,000 yen)
+    - Whether it's a paper or digital receipt
+  - Need to review the PDF from Google Chat for additional requirements
+
+#### Client List - Incorrect In/Out Period Display
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Testing
+- **Description**:
+  - The client list does not display the correct in/out period when there is an early check-out or cancelled dates between the in and out period
+  - The system should reflect the actual stay duration rather than the originally booked period
+- **Steps to Reproduce**:
+  1. Create a reservation with multiple nights
+  2. Perform an early check-out or cancel some dates in the middle of the stay
+  3. Check the client list - it may still show the original in/out dates
+- **Expected Behavior**:
+  - The client list should show the actual in/out dates based on the modified reservation
+  - Any cancelled dates or early check-outs should be reflected in the displayed period
+
 ### November 13, 2025
 
 #### Plan Rates - Cancel Fee Inclusion Flag
