@@ -88,9 +88,9 @@ Write-Log "Copying dump file from container to host..."
 docker cp "wehub-db:$TEMP_DUMP_CONTAINER" $TEMP_DUMP_HOST
 
 Write-Log "Using dump file: $TEMP_DUMP_HOST for restore."
-Write-Log "Dropping and recreating public schema on Supabase..."
-$env:PGPASSWORD = $SUPABASE_PASSWORD
-psql -h $SUPABASE_DB_HOST -U $SUPABASE_DB_USER -d $SUPABASE_DB_NAME -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" 2>&1 | Out-Null
+
+# Drop and recreate public schema in batches
+Drop-PublicSchemaInBatches
 
 Write-Log "Restoring to Supabase from host..."
 
