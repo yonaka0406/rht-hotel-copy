@@ -142,8 +142,8 @@ function Drop-PublicSchemaInBatches {
     # 6) Functions
     Run-SqlToFile "SELECT 'DROP FUNCTION IF EXISTS public.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ') CASCADE;' FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e' WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p') AND d.objid IS NULL ORDER BY p.proname;" "drops_functions.sql"
 
-    # 7) Types (user-defined composite types)
-    Run-SqlToFile "SELECT 'DROP TYPE IF EXISTS public.' || t.typname || ' CASCADE;' FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE n.nspname='public' AND t.typtype = 'c' ORDER BY t.typname;" "drops_types.sql"
+    # 7) Types (user-defined composite and enum types)
+    Run-SqlToFile "SELECT 'DROP TYPE IF EXISTS public.' || t.typname || ' CASCADE;' FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE n.nspname='public' AND t.typtype IN ('c', 'e') ORDER BY t.typname;" "drops_types.sql"
 
     # 8) Extensions in public (be cautious) - SKIPPING
     "" > "drops_extensions.sql"
