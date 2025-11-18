@@ -1236,7 +1236,8 @@ const updateInventoryMultipleDays = async (req, res) => {
             batch_size: batch.length
         });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+        // Increase delay to avoid rate limiting - 3 to 6 seconds between batches
+        const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
         await delay(randomDelay);
 
         let adjustmentTargetXml = '';
@@ -1309,10 +1310,17 @@ const updateInventoryMultipleDays = async (req, res) => {
         if (filteredInventory.length > 1000 || exceeds30Days) {        
             const batchSize = 30;
             let requestNumber = 0;
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            
             for (let i = 0; i < filteredInventory.length; i += batchSize) {            
                 const batch = filteredInventory.slice(i, i + batchSize);
                 await processInventoryBatch(batch, requestNumber);
                 requestNumber++;
+                
+                // Add delay between batch submissions to avoid rate limiting
+                if (i + batchSize < filteredInventory.length) {
+                    await delay(2000); // 2 second delay between batch submissions
+                }
             }
         } else {
             // Process all filtered inventory as a single batch
@@ -1419,7 +1427,8 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             batch_size: batch.length
         });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+        // Increase delay to avoid rate limiting - 3 to 6 seconds between batches
+        const randomDelay = Math.floor(Math.random() * (6000 - 3000 + 1)) + 3000;
         await delay(randomDelay);
 
         let adjustmentTargetXml = '';
@@ -1498,10 +1507,17 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         if (filteredInventory.length > 1000 || exceeds30Days) {        
             const batchSize = 30;
             let requestNumber = 0;
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            
             for (let i = 0; i < filteredInventory.length; i += batchSize) {            
                 const batch = filteredInventory.slice(i, i + batchSize);
                 await processInventoryBatch(batch, requestNumber);
                 requestNumber++;
+                
+                // Add delay between batch submissions to avoid rate limiting
+                if (i + batchSize < filteredInventory.length) {
+                    await delay(2000); // 2 second delay between batch submissions
+                }
             }
         } else {
             // Process all filtered inventory as a single batch
