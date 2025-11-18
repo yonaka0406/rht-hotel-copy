@@ -465,7 +465,6 @@ const savePlan = async () => {
 
         if (selectedPlanObject) {
             const filteredRates = selectedRates.value.filter(rate => rate.adjustment_value !== 0);
-            console.log('DEBUGGING: disableRounding.value before setReservationPlan:', disableRounding.value);
             await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, filteredRates, price, disableRounding.value);
         }
 
