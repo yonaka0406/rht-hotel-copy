@@ -1,3 +1,5 @@
+const { validatePhoneNumberFormat } = require('../../utils/validationUtils');
+const { ValidationError } = require('../../utils/customErrors');
 const clientsModel = require('../../models/clients');
 const reservationsModel = require('../../models/reservations');
 const logger = require('../../config/logger');
@@ -93,45 +95,59 @@ const getClientGroups = async (req, res) => {
 
 // POST
 const createClientBasic = async (req, res) => {
-  logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
-  const { name, name_kana, legal_or_natural_person, gender, email, phone } = req.body;
-  const created_by = req.user.id;
-  const updated_by = req.user.id;
-
-  let finalGender = gender; // Initialize with the passed gender
-  if (legal_or_natural_person === 'legal') {
-    finalGender = 'other'; // Assign plain value
-  }
-
-  const client = {
-    name,
-    name_kana,
-    legal_or_natural_person,
-    gender: finalGender, // Use finalGender here
-    email,
-    phone,
-    created_by,
-    updated_by,
-  };
-
   try {
+    logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
+    const { name, name_kana, legal_or_natural_person, gender, email, phone } = req.body;
+    const created_by = req.user.id;
+    const updated_by = req.user.id;
+
+    if (phone) {
+      validatePhoneNumberFormat(phone, 'phone');
+    }
+
+    let finalGender = gender; // Initialize with the passed gender
+    if (legal_or_natural_person === 'legal') {
+      finalGender = 'other'; // Assign plain value
+    }
+
+    const client = {
+      name,
+      name_kana,
+      legal_or_natural_person,
+      gender: finalGender, // Use finalGender here
+      email,
+      phone,
+      created_by,
+      updated_by,
+    };
+
     const newClient = await clientsModel.addClientByName(req.requestId, client);
     res.json(newClient);
   } catch (err) {
+    if (err instanceof ValidationError && err.code === 'INVALID_PHONE') {
+      return res.status(400).json({ error: err.message });
+    }
     console.error('Error creating client:', err);
     res.status(500).json({ error: 'Failed to create client' });
   }
 };
 
 const createClient = async (req, res) => {
-  logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
-  const clientFields = req.body;
-  const user_id = req.user.id;
-
   try {
+    logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
+    const clientFields = req.body;
+    const user_id = req.user.id;
+
+    if (clientFields.phone) {
+      validatePhoneNumberFormat(clientFields.phone, 'phone');
+    }
+
     const newClient = await clientsModel.addNewClient(req.requestId, user_id, clientFields);
-    res.json(newClient); 
+    res.json(newClient);
   } catch (err) {
+    if (err instanceof ValidationError && err.code === 'INVALID_PHONE') {
+      return res.status(400).json({ error: err.message });
+    }
     console.error('Error creating client:', err);
     res.status(500).json({ error: 'Failed to create client' });
   }
@@ -163,27 +179,41 @@ const createClientGroup = async (req, res) => {
 
 // PUT
 const updateClient = async (req, res) => {
-  const clientId = req.params.id;
-  const updatedFields = req.body;
-  const user_id = req.user.id;
-
   try {
+    const clientId = req.params.id;
+    const updatedFields = req.body;
+    const user_id = req.user.id;
+
+    if (updatedFields.phone) {
+      validatePhoneNumberFormat(updatedFields.phone, 'phone');
+    }
+
     const updatedClient = await clientsModel.editClient(req.requestId, clientId, updatedFields, user_id);
     res.json(updatedClient);
   } catch (err) {
+    if (err instanceof ValidationError && err.code === 'INVALID_PHONE') {
+      return res.status(400).json({ error: err.message });
+    }
     console.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update client' });
   }
 };
 const updateClientFull = async (req, res) => {
-  const clientId = req.params.id;
-  const updatedFields = req.body;
-  const user_id = req.user.id;
+  try {
+    const clientId = req.params.id;
+    const updatedFields = req.body;
+    const user_id = req.user.id;
 
-  try {    
+    if (updatedFields.phone) {
+      validatePhoneNumberFormat(updatedFields.phone, 'phone');
+    }
+
     const updatedClient = await clientsModel.editClientFull(req.requestId, clientId, updatedFields, user_id);
     res.json(updatedClient);
   } catch (err) {
+    if (err instanceof ValidationError && err.code === 'INVALID_PHONE') {
+      return res.status(400).json({ error: err.message });
+    }
     console.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update client' });
   }
