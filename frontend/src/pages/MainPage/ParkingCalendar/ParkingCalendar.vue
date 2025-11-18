@@ -547,23 +547,31 @@
   });
 
   onUnmounted(() => {
+    if (socket.value) {
+      socket.value.off('tableUpdate', handleTableUpdate);
+    }
     if (tableContainer.value) {
       tableContainer.value.removeEventListener("scroll", handleScroll);
     }
   });
     
-  watch(socket, (newSocket) => {
+  const handleTableUpdate = async (_data) => {
+    // Prevent fetching if bulk update is in progress
+    if (isUpdating.value) {
+      // console.log('Skipping fetchParkingReservationsLocal because update is still running');
+      return;
+    }
+    
+    // console.log('[ParkingCalendar] Refreshing parking data...');
+    await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+  };
+
+  watch(socket, (newSocket, oldSocket) => {
+    if (oldSocket) {
+      oldSocket.off('tableUpdate', handleTableUpdate);
+    }
     if (newSocket) {
-      newSocket.on('tableUpdate', async (_data) => {
-        // Prevent fetching if bulk update is in progress
-        if (isUpdating.value) {
-          // console.log('Skipping fetchParkingReservationsLocal because update is still running');
-          return;
-        }
-        
-        // console.log('[ParkingCalendar] Refreshing parking data...');
-        await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      });
+      newSocket.on('tableUpdate', handleTableUpdate);
     }
   }, { immediate: true });
 

@@ -158,7 +158,11 @@ try {
 */
 
 // Socket.IO setup
-const allowedSocketOrigins = [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL];
+const allowedSocketOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.PROD_FRONTEND_URL,
+].filter(Boolean); // Filters out any falsy values (undefined, null, '')
+
 if (process.env.NODE_ENV !== 'production') {
   allowedSocketOrigins.push('http://localhost:5173');
 }

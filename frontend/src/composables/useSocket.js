@@ -34,11 +34,7 @@ export function useSocket() {
   };
 
   onMounted(() => {
-    // Attempt to connect immediately if a hotel is already selected
-    if (hotelStore.selectedHotelId.value) {
-      connectSocket();
-    }
-    // The watch handler with immediate: true will handle subsequent connections/disconnections
+    // The watch handler with immediate: true will handle the initial connection.
   });
 
   onUnmounted(() => {

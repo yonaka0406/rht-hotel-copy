@@ -1610,19 +1610,27 @@ onMounted(async () => {
   isLoading.value = false;
 });
 onUnmounted(() => {
-  // The useSocket composable handles disconnection.
+  // The useSocket composable handles disconnection, but we must clean up component-specific listeners.
+  if (socket.value) {
+    socket.value.off('tableUpdate', handleTableUpdate);
+  }
 });
 
-watch(socket, (newSocket) => {
+const handleTableUpdate = async (data) => {
+  console.log('tableUpdate received on calendar', data);
+  if (isUpdating.value) {
+    console.log('Skipping fetchReservation because update is still running');
+    return;
+  }
+  await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+};
+
+watch(socket, (newSocket, oldSocket) => {
+  if (oldSocket) {
+    oldSocket.off('tableUpdate', handleTableUpdate);
+  }
   if (newSocket) {
-    newSocket.on('tableUpdate', async (data) => {
-      console.log('tableUpdate received on calendar', data);
-      if (isUpdating.value) {
-        console.log('Skipping fetchReservation because update is still running');
-        return;
-      }
-      await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-    });
+    newSocket.on('tableUpdate', handleTableUpdate);
   }
 }, { immediate: true });
 
