@@ -9,9 +9,9 @@ XML_USER_ID=P2823341
 XML_PASSWORD=g?Z+yy5U5!LR
 XML_REQUEST_URL=https://www.tl-lincoln.net/pmsservice/V1/
 */
-const insertXMLRequest = async (requestId, hotel_id, name, xml) => {
+const insertXMLRequest = async (requestId, hotel_id, name, xml, dbPool = null) => {
     try {
-        const pool = getPool(requestId);
+        const pool = dbPool || getPool(requestId);
         const result = await pool.query(
             "INSERT INTO xml_requests(hotel_id, name, request) VALUES($1, $2, $3) RETURNING *",
             [hotel_id, name, xml]
@@ -23,9 +23,9 @@ const insertXMLRequest = async (requestId, hotel_id, name, xml) => {
         throw error;
     }
 };
-const insertXMLResponse = async (requestId, hotel_id, name, xml) => {
+const insertXMLResponse = async (requestId, hotel_id, name, xml, dbPool = null) => {
     try {
-        const pool = getPool(requestId);
+        const pool = dbPool || getPool(requestId);
         const result = await pool.query(
             "INSERT INTO xml_responses(hotel_id, name, response) VALUES($1, $2, $3) RETURNING *",
             [hotel_id, name, xml]

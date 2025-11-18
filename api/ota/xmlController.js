@@ -538,12 +538,12 @@ const postXMLResponse = async (req, res) => {
 };
 
 // Lincoln
-const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
+const submitXMLTemplate = async (req, res, hotel_id, name, xml, dbPool = null) => {
     // logger.debug('submitXMLTemplate', name, xml);    
     
     try {        
         // Save the request in the database
-        await insertXMLRequest(req.requestId, hotel_id, name, xml);
+        await insertXMLRequest(req.requestId, hotel_id, name, xml, dbPool);
 
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
@@ -570,7 +570,7 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
         const responseXml = await response.text();
         // logger.debug('Response XML:', responseXml);
         // logger.debug('Inserting XML response into database...');
-        await insertXMLResponse(req.requestId, hotel_id, name, responseXml);
+        await insertXMLResponse(req.requestId, hotel_id, name, responseXml, dbPool);
 
         // Parse the XML response using xml2js
         const parsedJson = new Promise((resolve, reject) => {

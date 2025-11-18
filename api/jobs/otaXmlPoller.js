@@ -127,7 +127,7 @@ async function processQueueItem(item) {
                 currentRequestId: item.current_request_id,
                 xmlBodySnippet: item.xml_body.substring(0, 200) // Log a snippet of the XML body
             });
-            await submitXMLTemplate(dummyReq, dummyRes, item.hotel_id, item.service_name, item.xml_body);
+            await submitXMLTemplate(dummyReq, dummyRes, item.hotel_id, item.service_name, item.xml_body, getProdPool());
             success = true;
         } finally {
             apiCallSemaphore.release();
