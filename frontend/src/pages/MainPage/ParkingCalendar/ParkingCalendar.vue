@@ -562,8 +562,13 @@
       return;
     }
     
-    // console.log('[ParkingCalendar] Refreshing parking data...');
-    await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    isUpdating.value = true; // Set flag to true before starting fetch
+    try {
+      // console.log('[ParkingCalendar] Refreshing parking data...');
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    } finally {
+      isUpdating.value = false; // Always clear flag, even if fetch fails
+    }
   };
 
   watch(socket, (newSocket, oldSocket) => {

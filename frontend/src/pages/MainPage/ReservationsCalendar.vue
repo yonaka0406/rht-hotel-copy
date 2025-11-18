@@ -1531,8 +1531,8 @@ const openClientDialog = () => {
         };
     }
 
-    console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
-    console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
+    //console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
+    //console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
 
     showClientDialog.value = true;
 };
@@ -1580,7 +1580,7 @@ onMounted(async () => {
   await fetchHotels();
   await fetchHotel();
 
-  console.log('[ReservationsCalendar] selectedHotel on load:', selectedHotel.value);
+  //console.log('[ReservationsCalendar] selectedHotel on load:', selectedHotel.value);
 
   const today = new Date();
   const initialMinDate = new Date(today);
@@ -1622,7 +1622,20 @@ const handleTableUpdate = async (data) => {
     console.log('Skipping fetchReservation because update is still running');
     return;
   }
-  await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+
+  if (!dateRange.value || dateRange.value.length < 2) {
+    console.error('Cannot fetch reservations, dateRange is invalid.');
+    return;
+  }
+
+  isUpdating.value = true;
+  try {
+    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+  } catch (error) {
+    console.error('Failed to fetch reservations after table update:', error);
+  } finally {
+    isUpdating.value = false;
+  }
 };
 
 watch(socket, (newSocket, oldSocket) => {

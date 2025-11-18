@@ -614,13 +614,19 @@ const handleTableUpdate = async (data) => {
     return;
   }
   console.log('Received updated data:', data);
-  // Recalculate date range based on currentMonth
-  const currentYear = currentMonth.value.getFullYear();
-  const month = currentMonth.value.getMonth();
-  const startDate = new Date(currentYear, month, 1);
-  const endDate = new Date(currentYear, month + 3, 0); // Corrected from +2 to +3
-  await fetchReservations(formatDate(startDate), formatDate(endDate));
-  await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
+  
+  isUpdating.value = true;
+  try {
+    // Recalculate date range based on currentMonth
+    const currentYear = currentMonth.value.getFullYear();
+    const month = currentMonth.value.getMonth();
+    const startDate = new Date(currentYear, month, 1);
+    const endDate = new Date(currentYear, month + 3, 0); // Corrected from +2 to +3
+    await fetchReservations(formatDate(startDate), formatDate(endDate));
+    await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
+  } finally {
+    isUpdating.value = false;
+  }
 };
 
 watch(socket, (newSocket, oldSocket) => {
