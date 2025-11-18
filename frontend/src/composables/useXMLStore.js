@@ -3,6 +3,7 @@ import { ref } from 'vue';
 const template = ref(null);
 const responses = ref([]);
 const otaQueue = ref([]);
+const otaXmlQueueData = ref([]);
 
 const sc_serviceLabels = ref([
     { id: "NetRoomTypeMasterSearchService", label: "部屋タイプマスタ検索(ネット販売)" },
@@ -379,6 +380,31 @@ export function useXMLStore() {
         }
     };
 
+    const fetchOtaXmlQueue = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = '/api/xml-queue';
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to retrieve OTA XML queue data.');
+            }
+
+            otaXmlQueueData.value = data;
+
+        } catch (error) {
+            otaXmlQueueData.value = [];
+            console.error('Failed to retrieve OTA XML queue data.', error);
+        }
+    };
+
     return {        
         template,
         responses,
@@ -399,5 +425,7 @@ export function useXMLStore() {
         fetchInventoryForTL,
         updateTLInventory,
         fetchOtaQueue,
+        otaXmlQueueData,
+        fetchOtaXmlQueue,
     };
 }

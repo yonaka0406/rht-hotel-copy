@@ -20,7 +20,7 @@ const ManagePlans = () => import('@/pages/Admin/ManagePlans.vue');
 const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
 const ManageCalendar = () => import('@/pages/Admin/ManageCalendar.vue');
 const ManageSettings = () => import('@/pages/Admin/ManageSettings/ManageSettingsPage.vue');
-const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
+const ManageOTAPage = () => import('@/pages/Admin/ManageOTA/ManageOTAPage.vue');
 const ManagePMSImport = () => import('@/pages/Admin/ManagePMSImport.vue');
 const ManageFinancesImport = () => import('@/pages/Admin/ManageFinancesImport/ManageFinancesImport.vue');
 const ManageLoyaltyTiers = () => import('@/pages/Admin/ManageLoyaltyTiers.vue');
@@ -105,7 +105,7 @@ const routes = [
       { path: 'manage-parking', component: ManageParking },
       { path: 'parking-calendar', component: ManageParkingCalendar },
       { path: 'settings', component: ManageSettings },
-      { path: 'ota', component: ManageOTA },
+      { path: 'ota', component: ManageOTAPage },
       { path: 'pms-import', component: ManagePMSImport },
       { path: 'finances', component: ManageFinancesImport },
       { path: 'loyalty-tiers', name: 'ManageLoyaltyTiers', component: ManageLoyaltyTiers },

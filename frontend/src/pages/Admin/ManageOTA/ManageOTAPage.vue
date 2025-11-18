@@ -86,6 +86,12 @@
           </AccordionContent>
         </AccordionPanel>
         <AccordionPanel value="3">
+          <AccordionHeader>在庫調整依頼ステータス</AccordionHeader>
+          <AccordionContent>
+            <OtaXmlQueueTable />
+          </AccordionContent>
+        </AccordionPanel>
+        <AccordionPanel value="4">
           <AccordionHeader>XML手動操作</AccordionHeader>
           <AccordionContent>
             <Card class="mt-4">
@@ -197,6 +203,7 @@
 
   // Components
   import OtaQueueTable from '@/pages/Admin/components/OtaQueueTable.vue';
+  import OtaXmlQueueTable from './components/OtaXmlQueueTable.vue';
   
   // Helper
   const formatDateTime = (dateString) => {

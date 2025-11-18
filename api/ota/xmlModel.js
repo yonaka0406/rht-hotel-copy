@@ -1,6 +1,7 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
 const { getPool, getProdPool } = require("../config/database");
+const logger = require('../config/logger');
 
 /*
 Add to .env
@@ -569,6 +570,62 @@ const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
     }
 };
 
+const selectOTAXmlQueue = async (requestId) => {
+  logger.debug(`[${requestId}] Entering selectOTAXmlQueue model function.`);
+  const pool = getPool(requestId); // Use getPool as it's a read operation
+  try {
+    const query = `
+      SELECT DISTINCT
+        ota_xml_queue_id,
+        status,
+        retries,
+        last_error,
+        created_at,
+        processed_at,
+        hotel_name
+      FROM (
+        (SELECT
+            oq.ota_xml_queue_id,
+            oq.status,
+            oq.retries,
+            oq.last_error,
+            oq.created_at,
+            oq.processed_at,
+            h.name AS hotel_name
+        FROM ota_xml_queue oq
+        JOIN hotels h ON oq.hotel_id = h.id
+        ORDER BY oq.created_at DESC
+        LIMIT 100)
+        UNION
+        (SELECT
+            oq.ota_xml_queue_id,
+            oq.status,
+            oq.retries,
+            oq.last_error,
+            oq.created_at,
+            oq.processed_at,
+            h.name AS hotel_name
+        FROM ota_xml_queue oq
+        JOIN hotels h ON oq.hotel_id = h.id
+        WHERE oq.status <> 'completed')
+      ) AS combined_queue
+      ORDER BY created_at DESC;
+    `;
+
+    logger.debug(`[${requestId}] Executing database query for OTA XML queue.`);
+    const result = await pool.query(query);
+    logger.debug(`[${requestId}] Database query returned ${result.rows.length} rows.`);
+    return result.rows;
+  } catch (error) {
+    logger.error(`[${requestId}] Error in selectOTAXmlQueue: ${error.message}`, { stack: error.stack });
+    throw error;
+  } finally {
+    logger.debug(`[${requestId}] Exiting selectOTAXmlQueue model function.`);
+    // getPool returns a client from the pool, not a direct connection, so no client.release() needed here.
+    // The pool manages connection release.
+  }
+};
+
 module.exports = {
     insertXMLRequest,
     insertXMLResponse,
@@ -583,5 +640,6 @@ module.exports = {
     updateOTAReservationQueue,
     selectOTAReservationQueue,
     insertOTAXmlQueue,
-    updateOTAXmlQueue
-};
+    updateOTAXmlQueue,
+    selectOTAXmlQueue
+}; 

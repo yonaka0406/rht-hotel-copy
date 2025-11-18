@@ -21,7 +21,8 @@ const {
     updateOTAReservationQueue,
     getOTAReservationsByTransaction,
     selectOTAReservationQueue,
-    insertOTAXmlQueue
+    insertOTAXmlQueue,
+    selectOTAXmlQueue
 } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
@@ -503,6 +504,23 @@ const getXMLRecentResponses = async (req, res) => {
         console.error('Error getting xml responses:', error);
         res.status(500).json({ error: error.message });
     }
+};
+
+const getOTAXmlQueue = async (req, res) => {
+  const requestId = req.requestId;
+
+  logger.debug(`[${requestId}] Entering getOTAXmlQueue controller.`);
+
+  try {
+    logger.debug(`[${requestId}] Calling selectOTAXmlQueue from model.`);
+    const queueData = await selectOTAXmlQueue(requestId); // Call the model function
+    logger.debug(`[${requestId}] Received queueData from model: ${JSON.stringify(queueData ? queueData.slice(0, 5) : [])} ... (first 5 items)`); // Log first 5 items to avoid excessive log size
+    res.json(queueData);
+    logger.debug(`[${requestId}] Sent JSON response with OTA XML queue data.`);
+  } catch (error) {
+    logger.error(`[${requestId}] Error fetching OTA XML queue: ${error.message}`, { stack: error.stack });
+    res.status(500).json({ message: 'Error fetching OTA XML queue', error: error.message });
+  }
 };
 
 // POST
@@ -1663,5 +1681,6 @@ module.exports = {
     manualUpdateInventoryMultipleDays,
     processAndQueueReservation,
     processQueuedReservations,
-    setDatesNotForSale
+    setDatesNotForSale,
+    getOTAXmlQueue
 };
