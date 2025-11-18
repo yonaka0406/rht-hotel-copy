@@ -298,9 +298,9 @@
         { label: '法人', value: 'legal' },
         { label: '個人', value: 'natural' },
     ];
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../utils/validationUtils';
+
     const isValidEmail = ref(true);
-    const phonePattern = '^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$';
     const isValidPhone = ref(true);
     const isValidFAX = ref(true);
     const billingOptions = [
@@ -322,15 +322,13 @@
 
     // Helper    
     const validateEmail = (email) => {
-        isValidEmail.value = emailPattern.test(email);
+        isValidEmail.value = validateEmailUtil(email);
     };
     const validatePhone = (phone) => {
-        const regex = new RegExp(phonePattern);
-        isValidPhone.value = regex.test(phone);
+        isValidPhone.value = validatePhoneUtil(phone);
     };
     const validateFAX = (phone) => {
-        const regex = new RegExp(phonePattern);
-        isValidFAX.value = regex.test(phone);
+        isValidFAX.value = validatePhoneUtil(phone); // FAX uses the same validation as phone
     };
     const formatDate = (date) => {
         const year = date.getFullYear();

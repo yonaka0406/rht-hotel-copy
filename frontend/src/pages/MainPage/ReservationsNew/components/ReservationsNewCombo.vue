@@ -307,11 +307,14 @@ import { ref, computed, watch, onMounted, unref } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
+import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column, Divider, Textarea } from 'primevue';
-import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
+
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
@@ -849,9 +852,7 @@ const genderOptions = [
     { label: '女性', value: 'female' },
     { label: 'その他', value: 'other' },
 ];
-const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const isValidEmail = ref(true);
-const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
 const isValidPhone = ref(true);
 const isClientSelected = ref(false);
 const selectedClient = ref(null);
@@ -957,10 +958,10 @@ const normalizeKana = (str) => {
     return normalizedStr;
 };
 const validateEmail = (email) => {
-    isValidEmail.value = emailPattern.test(email);
+    isValidEmail.value = validateEmailUtil(email);
 };
 const validatePhone = (phone) => {
-    isValidPhone.value = phonePattern.test(phone);
+    isValidPhone.value = validatePhoneUtil(phone);
 };
 
 const submitReservation = async () => {

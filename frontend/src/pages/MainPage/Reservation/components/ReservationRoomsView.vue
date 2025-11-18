@@ -564,12 +564,14 @@ const normalizePhone = (phone) => {
     return normalized;
 };
 const validateEmail = (email) => {
-    isValidEmail.value = emailPattern.test(email);
-    return emailPattern.test(email);
+    const isValid = validateEmailUtil(email);
+    isValidEmail.value = isValid;
+    return isValid;
 };
 const validatePhone = (phone) => {
-    isValidPhone.value = phonePattern.test(phone);
-    return phonePattern.test(phone);
+    const isValid = validatePhoneUtil(phone);
+    isValidPhone.value = isValid;
+    return isValid;
 };
 const normalizeKana = (str) => {
     if (!str) return '';
@@ -989,9 +991,9 @@ const genderOptions = [
     { label: '女性', value: 'female' },
     { label: 'その他', value: 'other' },
 ];
-const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+
 const isValidEmail = ref(true);
-const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
 const isValidPhone = ref(true);
 const initializeGuests = () => {
     const capacity = selectedGroup.value.details[0]?.capacity || 0;

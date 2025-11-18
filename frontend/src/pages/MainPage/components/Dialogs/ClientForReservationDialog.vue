@@ -197,9 +197,7 @@ const isValidEmail = ref(true);
 const isValidPhone = ref(true);
 const impedimentStatus = ref(null);
 
-// Create RegExp objects for validation
-const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-const phoneRegex = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
 
 // HTML pattern attributes (simplified for HTML validity)
 const emailPattern = undefined;  // or just remove this line entirely
@@ -349,19 +347,11 @@ const normalizePhone = (phone) => {
     return normalized;
 };
 const validateEmail = (email) => {
-    if (!email) {
-        isValidEmail.value = true; // Empty is valid (optional field)
-        return;
-    }
-    isValidEmail.value = emailRegex.test(email);
+    isValidEmail.value = validateEmailUtil(email);
 };
 
 const validatePhone = (phone) => {
-    if (!phone) {
-        isValidPhone.value = true; // Empty is valid (optional field)
-        return;
-    }
-    isValidPhone.value = phoneRegex.test(phone);
+    isValidPhone.value = validatePhoneUtil(phone);
 };
 
 // Handle form submission
