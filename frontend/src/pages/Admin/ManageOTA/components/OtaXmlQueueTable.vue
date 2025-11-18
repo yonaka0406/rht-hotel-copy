@@ -106,10 +106,14 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
-import { useXMLStore } from '../../../../../src/composables/useXMLStore';
+import { useXMLStore } from '../../../../composables/useXMLStore';
 
 // PrimeVue Components
-import { DataTable, Column, Badge, InputText, InputNumber } from 'primevue';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Badge from 'primevue/badge';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
 
 const { otaXmlQueueData, fetchOtaXmlQueue } = useXMLStore();
 const loading = ref(true);
