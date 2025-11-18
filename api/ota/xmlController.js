@@ -89,7 +89,7 @@ async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, current
 
             await apiCallSemaphore.acquire();
             try {
-                const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+                const randomDelay = Math.floor(Math.random() * (3000 - 1000 + 1)) + 1000; // Random between 1000 and 3000 ms
                 await delay(randomDelay); // Use the global delay helper
                 const apiResponse = await submitXMLTemplate(req, res, hotel_id, serviceName, currentXmlBody);
                 return apiResponse; // Success
