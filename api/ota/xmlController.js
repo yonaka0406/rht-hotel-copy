@@ -1,3 +1,11 @@
+class OtaApiError extends Error {
+    constructor(message, details) {
+        super(message);
+        this.name = 'OtaApiError';
+        this.details = details;
+    }
+}
+
 require("dotenv").config();
 const xml2js = require('xml2js');
 const { 
@@ -547,14 +555,17 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
                     const isSuccess = result?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse']?.['return']?.['commonResponse']?.['isSuccess'];
                     if (isSuccess === 'false') {
                         const errorDescription = result?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse']?.['return']?.['commonResponse']?.['errorDescription'];
-                        logger.error('API Call Failed (isSuccess=false):', {
+                        const otaRequestId = result?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse']?.['return']?.['requestId'];
+                        const errorDetails = {
                             serviceName: name,
                             hotelId: hotel_id,
                             requestId: req.requestId,
+                            otaRequestId: otaRequestId,
                             errorDescription: errorDescription || 'No error description provided.',
                             xmlResponse: responseXml,
-                        });
-                        reject(new Error(`API call to ${name} failed: ${errorDescription || 'isSuccess is false'}`));
+                        };
+                        logger.error('API Call Failed (isSuccess=false):', errorDetails);
+                        reject(new OtaApiError(`API call to ${name} failed: ${errorDetails.errorDescription}`, errorDetails));
                     }
                     resolve(result);
                 }
@@ -1191,7 +1202,8 @@ const updateInventoryMultipleDays = async (req, res) => {
             batch_size: batch.length
         });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(5000); // 5-second pause
+        const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+        await delay(randomDelay);
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -1235,29 +1247,73 @@ const updateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        let requestId = log_id + (batch_no / 100);
-        requestId = requestId.toString();
-        if (requestId.length > 8) {
-            requestId = requestId.slice(-8); // keep the last 8 characters
+        let currentRequestId = log_id + (batch_no / 100);
+        currentRequestId = currentRequestId.toString();
+        if (currentRequestId.length > 8) {
+            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
         }
-        xmlBody = xmlBody.replace('{{requestId}}', requestId);
+        xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
 
-        // Do not send a response here!
-        try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-            return apiResponse;
-        } catch (error) {
-            const dateExtractor = item => new Date(item.date);
-            const dateRange = computeBatchDateRange(batch, dateExtractor);
+        const maxRetries = 3;
+        const retryDelay = 5000; // 5 seconds
+        let serviceName = name; 
+        let otaRequestIdForResend = null; // To store the requestId from the failed OTA call
 
-            logger.error(`Error in processInventoryBatch for batch ${batch_no}`, {
-                hotel_id: hotel_id,
-                dateRange: dateRange,
-                batch_no: batch_no,
-                error: error.message,
-                stack: error.stack
-            });
-            throw error; // Let the main function handle the response
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                let currentXmlBody = xmlBody; // Use a mutable copy for potential modifications
+
+                if (attempt > 1 && otaRequestIdForResend) {
+                    // Fetch the resend service template
+                    let resendTemplate = await selectXMLTemplate(req.requestId, hotel_id, 'NetStockBulkAdjustmentResponseResendService');
+                    if (!resendTemplate) {
+                        logger.error('Resend XML template not found for NetStockBulkAdjustmentResponseResendService.', {
+                            requestId: req.requestId,
+                            hotelId: hotel_id,
+                        });
+                        throw new Error('Resend XML template not found.');
+                    }
+                    // Replace the placeholder with the extracted otaRequestId
+                    currentXmlBody = resendTemplate.replace('{{otaRequestId}}', otaRequestIdForResend);
+                    // Also replace the internal requestId placeholder if it exists in the resend template
+                    if (currentXmlBody.includes('{{requestId}}')) {
+                        currentXmlBody = currentXmlBody.replace('{{requestId}}', currentRequestId);
+                    }
+                }
+
+                const apiResponse = await submitXMLTemplate(req, res, hotel_id, serviceName, currentXmlBody);
+                return apiResponse; // Success
+            } catch (error) {
+                const isRetryableError = error instanceof OtaApiError && error.message.includes('システム制限のため処理できませんでした');
+
+                logger.warn(`Attempt ${attempt} failed for batch ${batch_no} with service ${serviceName}.`, {
+                    isRetryable: isRetryableError,
+                    errorMessage: error.message,
+                    requestId: req.requestId,
+                });
+
+                if (isRetryableError && attempt < maxRetries) {
+                    // Store the otaRequestId for subsequent retries
+                    if (error.details && error.details.otaRequestId) {
+                        otaRequestIdForResend = error.details.otaRequestId;
+                    } else {
+                        logger.warn('otaRequestId not found in error details for retry.', {
+                            errorMessage: error.message,
+                            requestId: req.requestId,
+                        });
+                    }
+                    serviceName = 'NetStockBulkAdjustmentResponseResendService'; // Change service for retry
+                    logger.info(`Retrying batch ${batch_no} with ${serviceName} in ${retryDelay / 1000} seconds...`);
+                    await delay(retryDelay);
+                } else {
+                    logger.error(`Error in processInventoryBatch for batch ${batch_no} after ${attempt} attempts.`, {
+                        error: error.message,
+                        stack: error.stack,
+                        requestId: req.requestId,
+                    });
+                    throw error; // Final failure
+                }
+            }
         }
     };
     
@@ -1385,7 +1441,8 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             batch_size: batch.length
         });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(5000); // 5-second pause
+        const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+        await delay(randomDelay);
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -1434,39 +1491,76 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml
         );
 
-        let requestId = log_id + (batch_no / 100);
-        requestId = requestId.toString();
-        if (requestId.length > 8) {
-            requestId = requestId.slice(-8); // keep the last 8 characters
+        let currentRequestId = log_id + (batch_no / 100);
+        currentRequestId = currentRequestId.toString();
+        if (currentRequestId.length > 8) {
+            currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
         }
-        xmlBody = xmlBody.replace('{{requestId}}', requestId);
+        xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
 
         // logger.debug('updateInventoryMultipleDays xmlBody:', xmlBody);
 
-        try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-            return apiResponse;
-        } catch (error) {
-            const dateExtractor = item => {
-                const str = item.saleDate?.toString();
-                if (!/^\d{8}$/.test(str)) return null;
-                const year = parseInt(str.slice(0, 4), 10);
-                const month = parseInt(str.slice(4, 6), 10) - 1;
-                const day = parseInt(str.slice(6, 8), 10);
-                return new Date(year, month, day);
-            };
-            const dateRange = computeBatchDateRange(batch, dateExtractor);
+        const maxRetries = 3;
+        const retryDelay = 5000; // 5 seconds
+        let serviceName = name;
+        let otaRequestIdForResend = null; // To store the requestId from the failed OTA call
 
-            logger.error(`Error in processInventoryBatch for batch ${batch_no}`, {
-                hotel_id: hotel_id,
-                dateRange: dateRange,
-                batch_no: batch_no,
-                error: error.message,
-                stack: error.stack
-            });
-            throw error; // Re-throw to be handled by the main function
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                let currentXmlBody = xmlBody; // Use a mutable copy for potential modifications
+
+                if (attempt > 1 && otaRequestIdForResend) {
+                    // Fetch the resend service template
+                    let resendTemplate = await selectXMLTemplate(req.requestId, hotel_id, 'NetStockBulkAdjustmentResponseResendService');
+                    if (!resendTemplate) {
+                        logger.error('Resend XML template not found for NetStockBulkAdjustmentResponseResendService.', {
+                            requestId: req.requestId,
+                            hotelId: hotel_id,
+                        });
+                        throw new Error('Resend XML template not found.');
+                    }
+                    // Replace the placeholder with the extracted otaRequestId
+                    currentXmlBody = resendTemplate.replace('{{otaRequestId}}', otaRequestIdForResend);
+                    // Also replace the internal requestId placeholder if it exists in the resend template
+                    if (currentXmlBody.includes('{{requestId}}')) {
+                        currentXmlBody = currentXmlBody.replace('{{requestId}}', currentRequestId);
+                    }
+                }
+
+                const apiResponse = await submitXMLTemplate(req, res, hotel_id, serviceName, currentXmlBody);
+                return apiResponse; // Success
+            } catch (error) {
+                const isRetryableError = error instanceof OtaApiError && error.message.includes('システム制限のため処理できませんでした');
+
+                logger.warn(`Attempt ${attempt} failed for batch ${batch_no} with service ${serviceName}.`, {
+                    isRetryable: isRetryableError,
+                    errorMessage: error.message,
+                    requestId: req.requestId,
+                });
+
+                if (isRetryableError && attempt < maxRetries) {
+                    // Store the otaRequestId for subsequent retries
+                    if (error.details && error.details.otaRequestId) {
+                        otaRequestIdForResend = error.details.otaRequestId;
+                    } else {
+                        logger.warn('otaRequestId not found in error details for retry.', {
+                            errorMessage: error.message,
+                            requestId: req.requestId,
+                        });
+                    }
+                    serviceName = 'NetStockBulkAdjustmentResponseResendService'; // Change service for retry
+                    logger.info(`Retrying batch ${batch_no} with ${serviceName} in ${retryDelay / 1000} seconds...`);
+                    await delay(retryDelay);
+                } else {
+                    logger.error(`Error in processInventoryBatch for batch ${batch_no} after ${attempt} attempts.`, {
+                        error: error.message,
+                        stack: error.stack,
+                        requestId: req.requestId,
+                    });
+                    throw error; // Final failure
+                }
+            }
         }
-        
     };
     
     // Check if the date range exceeds 30 days for batching decision
