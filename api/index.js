@@ -293,82 +293,103 @@ const prodListenClient = new Pool({
 
 // Function to listen for changes in a specific table
 const listenForTableChanges = async () => {
-  /*
+  
   // --- Development database listener ---
-  let devClient;
-  try {
-    devClient = await listenClient.connect();
-    devClient.on('notification', async (msg) => {
-      if (msg.channel === 'logs_reservation_changed') {
-        //logger.debug('Notification received: logs_reservation_changed (dev)');
-        //logger.debug(`[Socket.IO] Number of connected clients: ${ioHttp.sockets.sockets.size}`);    
-        ioHttp.emit('tableUpdate', 'Reservation update detected');
-      }
-      if (msg.channel === 'reservation_log_inserted') {
-        const logId = parseInt(msg.payload, 10);
-        // logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
-                
-        let response = null;
-        response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            // No Authorization header needed for internal calls if backend doesn't require it for these specific log routes
-          }
-        });
-        const googleData = await response.json();
-        if (googleData && Object.keys(googleData).length > 0) {
-          const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
-          await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-        }
-
-        response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        const data = await response.json();
-        if (data && Object.keys(data).length > 0) {
-          response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-          const inventory = await response.json();
-
+  if (process.env.NODE_ENV !== 'production') {
+    let devClient;
+    try {
+      devClient = await listenClient.connect();
+      devClient.on('notification', async (msg) => {
+        if (msg.channel === 'logs_reservation_changed') {
           try {
-            if (process.env.NODE_ENV === 'production') {            
-              await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(inventory),
+            const payload = JSON.parse(msg.payload);
+            const { hotel_id } = payload;
+
+            if (hotel_id) {
+              logger.debug(`Notification for hotel ${hotel_id} received: logs_reservation_changed (dev)`);
+              ioHttp.to(`hotel:${hotel_id}`).emit('tableUpdate', {
+                message: 'Reservation update detected',
+                environment: 'dev',
+                ...payload
               });
+            } else {
+              logger.warn('logs_reservation_changed notification received without hotel_id (dev)', { payload });
             }
-            
-            // logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
-          } catch (siteControllerError) {
-            // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+          } catch (e) {
+            logger.error('Failed to parse logs_reservation_changed notification payload (dev)', { error: e, payload: msg.payload });
+            // Fallback to old behavior if parsing fails
+            ioHttp.emit('tableUpdate', {
+              message: 'Reservation update detected (unparsed)',
+              environment: 'dev'
+            });
           }
         }
-      }
-    });
+        // Google and Site Controller update should be made only in production
+        if (msg.channel === 'reservation_log_inserted' && process.env.NODE_ENV === 'production') {
+          const logId = parseInt(msg.payload, 10);
+          logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
+                  
+          let response = null;
+          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              // No Authorization header needed for internal calls if backend doesn't require it for these specific log routes
+            }
+          });
+          const googleData = await response.json();
+          if (googleData && Object.keys(googleData).length > 0) {
+            const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
+            await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+          }
 
-    await devClient.query('LISTEN logs_reservation_changed');
-    await devClient.query('LISTEN reservation_log_inserted');
-    // logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
-  } catch (error) {
-    // logger.error('Failed to connect to DEV database for LISTEN:', { errorMessage: error.message, stack: error.stack });
+          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          const data = await response.json();
+          if (data && Object.keys(data).length > 0) {
+            response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+            const inventory = await response.json();
+
+            try {
+              if (process.env.NODE_ENV === 'production') {            
+                await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(inventory),
+                });
+              }
+              
+              logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
+            } catch (siteControllerError) {
+              logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+            }
+          }
+        }
+      });
+
+      await devClient.query('LISTEN logs_reservation_changed');
+      await devClient.query('LISTEN reservation_log_inserted');
+      logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
+    } catch (error) {
+      logger.error('Failed to connect to DEV database for LISTEN:', { errorMessage: error.message, stack: error.stack });
+    }
   }
-  */
 
   // --- Production database listener ---
   // Ensure this block only runs if NODE_ENV is production, or if prod pool config is valid
@@ -377,11 +398,28 @@ const listenForTableChanges = async () => {
       const prodClient = await prodListenClient.connect();
       prodClient.on('notification', async (msg) => {
         if (msg.channel === 'logs_reservation_changed') {
-          // logger.info('Notification received: logs_reservation_changed (prod)');
-          ioHttp.emit('tableUpdate', {
-            message: 'Reservation update detected',
-            environment: 'prod'
-          });
+          try {
+            const payload = JSON.parse(msg.payload);
+            const { hotel_id } = payload;
+
+            if (hotel_id) {
+              logger.info(`Notification for hotel ${hotel_id} received: logs_reservation_changed (prod)`);
+              ioHttp.to(`hotel:${hotel_id}`).emit('tableUpdate', {
+                message: 'Reservation update detected',
+                environment: 'prod',
+                ...payload
+              });
+            } else {
+              logger.warn('logs_reservation_changed notification received without hotel_id (prod)', { payload });
+            }
+          } catch (e) {
+            logger.error('Failed to parse logs_reservation_changed notification payload', { error: e, payload: msg.payload });
+            // Fallback to old behavior if parsing fails, though less ideal
+            ioHttp.emit('tableUpdate', {
+              message: 'Reservation update detected (unparsed)',
+              environment: 'prod'
+            });
+          }
         }
         if (msg.channel === 'reservation_log_inserted') {
 
@@ -482,6 +520,19 @@ const listenForTableChanges = async () => {
 logger.debug('Socket.IO event handlers');
 ioHttp.on('connection', (socket) => {
   logger.debug('Client connected (HTTP)', { clientId: socket.id, origin: socket.handshake.headers.origin });
+
+  // The client can specify a hotel_id to join a room for targeted updates
+  const hotelId = socket.handshake.query.hotelId;
+  if (hotelId) {
+    logger.debug(`Client ${socket.id} joining room for hotel ${hotelId}`);
+    socket.join(`hotel:${hotelId}`);
+  }
+
+  socket.on('join_hotel_room', (hotelId) => {
+    logger.debug(`Client ${socket.id} requesting to join room for hotel ${hotelId}`);
+    socket.join(`hotel:${hotelId}`);
+  });
+
   logger.debug(`[Socket.IO] Client connected: ${socket.id}. Total clients: ${ioHttp.sockets.sockets.size}`);
   const origin = socket.handshake.headers.origin;
   const environment = origin && origin.includes('test.wehub') ? 'dev' : 'prod';
