@@ -1,6 +1,6 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { getPool } = require("../config/database");
+const { getPool, getProdPool } = require("../config/database");
 
 /*
 Add to .env
@@ -524,7 +524,7 @@ const selectOTAReservationQueue = async (requestId) => {
 };
 
 const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, current_request_id }) => {
-    const pool = getPool(requestId);
+    const pool = getProdPool();
     try {
         const result = await pool.query(
             `INSERT INTO ota_xml_queue 
@@ -540,7 +540,7 @@ const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, 
 };
 
 const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
-    const pool = getPool(requestId);
+    const pool = getProdPool();
     try {
         let setClauses = [`status = $1`, `last_error = $2`];
         let values = [status, error, id];
