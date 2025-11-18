@@ -158,9 +158,14 @@ try {
 */
 
 // Socket.IO setup
+const allowedSocketOrigins = [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL];
+if (process.env.NODE_ENV !== 'production') {
+  allowedSocketOrigins.push('http://localhost:5173');
+}
+
 const ioHttp = socketio(httpServer, {
   cors: {
-    origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
+    origin: allowedSocketOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Ensure OPTIONS is here too
     credentials: true // Important for Socket.IO HTTP polling
   }
