@@ -181,8 +181,8 @@ const paymentTimingInfo = {
   postpaid: { label: '後払い', severity: 'warn' },
 };
 //Websocket
-import io from 'socket.io-client';
-const socket = ref(null);
+import { useSocket } from '@/composables/useSocket';
+const { socket } = useSocket();
 
 // State
 const isLoading = ref(true);
@@ -605,30 +605,27 @@ const getCellStyle = (room_id, date) => {
 
 // Mount
 onMounted(async () => {
-  // Establish Socket.IO connection
-  socket.value = io(import.meta.env.VITE_API_BASE_URL);
-
-  socket.value.on('connect', () => {
-    console.log('Connected to server');
-  });
-
-  socket.value.on('tableUpdate', async (data) => {
-    if (isUpdating.value) {
-      console.log('Skipping fetchReservation because update is still running');
-      return;
-    }
-    console.log('Received updated data:', data);
-    // Recalculate date range based on currentMonth
-    const currentYear = currentMonth.value.getFullYear();
-    const month = currentMonth.value.getMonth();
-    const startDate = new Date(currentYear, month, 1);
-    const endDate = new Date(currentYear, month + 2, 0);
-    await fetchReservations(formatDate(startDate), formatDate(endDate));
-    await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
-  });
-
   // Initial data fetch is handled by the watch(currentMonth) which is triggered on mount
 });
+
+watch(socket, (newSocket) => {
+  if (newSocket) {
+    newSocket.on('tableUpdate', async (data) => {
+      if (isUpdating.value) {
+        console.log('Skipping fetchReservation because update is still running');
+        return;
+      }
+      console.log('Received updated data:', data);
+      // Recalculate date range based on currentMonth
+      const currentYear = currentMonth.value.getFullYear();
+      const month = currentMonth.value.getMonth();
+      const startDate = new Date(currentYear, month, 1);
+      const endDate = new Date(currentYear, month + 2, 0);
+      await fetchReservations(formatDate(startDate), formatDate(endDate));
+      await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
+    });
+  }
+}, { immediate: true });
 
 watch(currentMonth, async (newMonth) => {
   isLoading.value = true;
@@ -686,10 +683,7 @@ watch(selectedHotelId, async (newHotelId, oldHotelId) => {
 });
 
 onUnmounted(() => {
-  // Close the Socket.IO connection when the component is unmounted
-  if (socket.value) {
-    socket.value.disconnect();
-  }
+  // The useSocket composable handles disconnection.
 });
 
 </script>

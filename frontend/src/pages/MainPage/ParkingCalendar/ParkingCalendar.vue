@@ -149,8 +149,8 @@
   
   
   // Websocket
-  import io from 'socket.io-client';
-  const socket = ref(null);
+  import { useSocket } from '@/composables/useSocket';
+  const { socket } = useSocket();
   
   // Primevue
   import { useToast } from 'primevue/usetoast';
@@ -504,24 +504,6 @@
     // console.log('[ParkingCalendar] onMounted start');
     try {
       isLoading.value = true;
-
-      socket.value = io(import.meta.env.VITE_BACKEND_URL);
-      
-      socket.value.on('connect', () => {
-        // console.log('Connected to server');
-      });      
-
-      socket.value.on('tableUpdate', async (_data) => {
-        // Prevent fetching if bulk update is in progress
-        if (isUpdating.value) {
-          // console.log('Skipping fetchParkingReservationsLocal because update is still running');
-          return;
-        }
-        
-        // console.log('[ParkingCalendar] Refreshing parking data...');
-        await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      });
-            
       
       await fetchHotels();
       await fetchHotel();
@@ -565,15 +547,26 @@
   });
 
   onUnmounted(() => {
-    if (socket.value) {
-      socket.value.disconnect();
-    }
     if (tableContainer.value) {
       tableContainer.value.removeEventListener("scroll", handleScroll);
     }
   });
     
-  // Needed Watchers
+  watch(socket, (newSocket) => {
+    if (newSocket) {
+      newSocket.on('tableUpdate', async (_data) => {
+        // Prevent fetching if bulk update is in progress
+        if (isUpdating.value) {
+          // console.log('Skipping fetchParkingReservationsLocal because update is still running');
+          return;
+        }
+        
+        // console.log('[ParkingCalendar] Refreshing parking data...');
+        await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+      });
+    }
+  }, { immediate: true });
+
   watch(selectedHotelId, async (newVal, _oldVal) => {
     isLoading.value = true;
     if (_oldVal !== null && newVal !== null) {
