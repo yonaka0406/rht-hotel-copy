@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+const { getPool, getProdPool } = require('../config/database');
 const logger = require('../config/logger');
 const { submitXMLTemplate, selectXMLTemplate } = require('../ota/xmlController'); // We will need a modified submitXMLTemplate
 const { OtaApiError } = require('../ota/xmlController'); // Assuming OtaApiError is exported
@@ -41,8 +41,8 @@ const MAX_RETRIES = 5; // Max retries for a queued item
 const POLL_INTERVAL = 2000; // Poll every 2 seconds
 const BATCH_SIZE = 3; // Process up to 3 items per poll cycle
 
-async function fetchPendingRequests(requestId, limit) {
-    const pool = getPool(requestId);
+async function fetchPendingRequests(limit) {
+    const pool = getProdPool();
     try {
         // Select pending requests, ordered by creation time, and mark them as processing
         const result = await pool.query(
@@ -111,7 +111,7 @@ async function processQueueItem(item) {
 
     if (success) {        
         try {
-            await updateOTAXmlQueue(requestId, item.id, 'completed');
+            await updateOTAXmlQueue(null, item.id, 'completed');
             logger.info(`Successfully processed queued item ID: ${item.id}`, { queueId: item.id });
         } catch (error) {
             logger.error(`Failed to update queue item ID: ${item.id} to completed`, { queueId: item.id, error: error.message });
@@ -119,7 +119,7 @@ async function processQueueItem(item) {
     } else {
         const newStatus = (item.retries + 1 >= MAX_RETRIES) ? 'failed' : 'pending'; // Mark as pending for retry
         try {
-            await updateOTAXmlQueue(requestId, item.id, newStatus, errorMessage);
+            await updateOTAXmlQueue(null, item.id, newStatus, errorMessage);
             logger.warn(`Queued item ID: ${item.id} marked as ${newStatus}. Retries: ${item.retries + 1}`, { queueId: item.id, newStatus });
         } catch (error) {
             logger.error(`Failed to update queue item ID: ${item.id} to ${newStatus}`, { queueId: item.id, error: error.message });
@@ -141,7 +141,7 @@ async function otaXmlPoller() {
     logger.debug('Starting OTA XML Poller cycle', { requestId });
 
     try {
-        const pendingRequests = await fetchPendingRequests(requestId, BATCH_SIZE);
+        const pendingRequests = await fetchPendingRequests(BATCH_SIZE);
         if (pendingRequests.length === 0) {
             logger.debug('No pending OTA XML requests found.', { requestId });
         } else {
