@@ -1202,7 +1202,8 @@ const updateInventoryMultipleDays = async (req, res) => {
             batch_size: batch.length
         });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(5000); // 5-second pause
+        const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+        await delay(randomDelay);
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -1440,7 +1441,8 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
             batch_size: batch.length
         });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(5000); // 5-second pause
+        const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+        await delay(randomDelay);
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
