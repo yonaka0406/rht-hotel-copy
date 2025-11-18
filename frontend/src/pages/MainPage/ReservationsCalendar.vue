@@ -1617,9 +1617,9 @@ onUnmounted(() => {
 });
 
 const handleTableUpdate = async (data) => {
-  console.log('tableUpdate received on calendar', data);
+  //console.log('tableUpdate received on calendar', data);
   if (isUpdating.value) {
-    console.log('Skipping fetchReservation because update is still running');
+    //console.log('Skipping fetchReservation because update is still running');
     return;
   }
 

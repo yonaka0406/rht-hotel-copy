@@ -233,7 +233,7 @@ onUnmounted(() => {
 
 // Watchers
 const handleTableUpdate = (data) => {
-    console.log('tableUpdate received on edit', data);
+    //console.log('tableUpdate received on edit', data);
     // Check if the deleted reservation is the one currently being viewed
     if (data.action === 'DELETE' && data.record_id === props.reservation_id) {
         console.warn(`[ReservationEdit] Current reservation (ID: ${props.reservation_id}) has been deleted. Preventing data fetch.`);

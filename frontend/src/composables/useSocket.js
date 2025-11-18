@@ -13,18 +13,20 @@ export function useSocket() {
 
     const hotelId = hotelStore.selectedHotelId.value;
     if (!hotelId) {
-      console.log('No hotel selected, socket not connecting.');
+      console.warn('No hotel selected, socket not connecting.');
       return;
     }
 
-    console.log(`Connecting socket for hotelId: ${hotelId}`);
+    //console.log(`Connecting socket for hotelId: ${hotelId}`);
     socket.value = io(import.meta.env.VITE_BACKEND_URL, {
       query: { hotelId }
     });
 
+    /*
     socket.value.on('connect', () => {
       console.log('Socket connected');
     });
+    */
     socket.value.on('connect_error', (err) => {
       console.error('Socket connection error:', err);
     });

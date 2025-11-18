@@ -610,10 +610,10 @@ onMounted(async () => {
 
 const handleTableUpdate = async (data) => {
   if (isUpdating.value) {
-    console.log('Skipping fetchReservation because update is still running');
+    //console.log('Skipping fetchReservation because update is still running');
     return;
   }
-  console.log('Received updated data:', data);
+  //console.log('Received updated data:', data);
   
   isUpdating.value = true;
   try {
