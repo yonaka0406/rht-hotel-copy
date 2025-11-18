@@ -10,7 +10,7 @@ CREATE TABLE du_forecast (
    available_room_nights INTEGER, -- '客室数'
    rooms_sold_nights INTEGER, -- '販売客室数'
    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,   
-   created_by INT REFERENCE
+   created_by INT REFERENCES users(id),
    CONSTRAINT uq_hotel_month_plan_forecast UNIQUE (hotel_id, forecast_month, plan_global_id)
 );
 COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';

@@ -302,6 +302,8 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
       res.payment_timing,
       res.has_important_comment,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      c.id AS booker_client_id,
+      c.gender AS booker_gender,
       rd.id AS reservation_detail_id,
       rd.date,
       rd.cancelled,
@@ -310,6 +312,7 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
       rd.plan_name,
       rd.plan_type,
       details_agg.details,
+      COALESCE(res_clients.clients_json, '[]'::json) as clients_json,
       (details_agg.details_count < (res.check_out - res.check_in)) AS has_less_dates,
       (
           rd.cancelled IS NOT NULL
@@ -336,6 +339,24 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
       JOIN rooms r ON r.id = rd.room_id
       JOIN room_types rt ON rt.id = r.room_type_id
       LEFT JOIN ReservationDetailsAgg details_agg ON details_agg.reservation_id = res.id AND details_agg.room_id = rd.room_id
+      LEFT JOIN (
+        SELECT
+          rc.reservation_details_id,
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'client_id', rc.client_id,
+              'name', c.name,
+              'name_kana', c.name_kana,
+              'name_kanji', c.name_kanji,
+              'email', c.email,
+              'phone', c.phone,
+              'gender', c.gender
+            )
+          ) AS clients_json
+        FROM reservation_clients rc
+        JOIN clients c ON rc.client_id = c.id
+        GROUP BY rc.reservation_details_id
+    ) AS res_clients ON res_clients.reservation_details_id = rd.id
     WHERE
       rd.hotel_id = $1 AND
       (

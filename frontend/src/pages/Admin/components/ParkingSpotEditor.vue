@@ -27,7 +27,6 @@
     </div>
 
     <div class="layout-container" @dragover.prevent @drop="onDrop" @click="deselectSpot">
-      <!-- SVG Overlay for connection lines -->
       <svg class="connection-lines" :width="layoutWidth * cellSize" :height="layoutHeight * cellSize">
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -184,7 +183,7 @@ function addCustomSpotType() {
       name: `${customType.value.width}m × ${customType.value.height}m`,
       width: customType.value.width,
       height: customType.value.height,
-      color: getSpotColor(spotId) // Use the same color function for consistency
+      color: getSpotColor(spotId)
     };
     spotTypes.value.push(newType);
     customTypeDialogVisible.value = false;
@@ -207,14 +206,11 @@ const emit = defineEmits(['update:spots', 'save']);
 const toast = useToast();
 const api = useApi();
 
-// Constants
 const cellSize = 20; // Base size in pixels (smaller for more precise placement)
 
-// Layout dimensions
 const layoutWidth = ref(50); // Default width in cells
 const layoutHeight = ref(30); // Default height in cells
 
-// Reactive state
 const showGrid = ref(true);
 const saving = ref(false);
 const selectedSpotId = ref(null);
@@ -224,7 +220,8 @@ const draggedNewSpotType = ref(null);
 const draggedExistingSpot = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
 
-// Extract custom spot types from spots
+// Extracts custom spot types from the initial list of parking spots.
+// This ensures that custom types defined in existing spots are available in the editor.
 function extractCustomSpotTypes(spots) {
   const customTypes = [];
   const seenTypes = new Set();
@@ -248,17 +245,14 @@ function extractCustomSpotTypes(spots) {
   return customTypes;
 }
 
-// Base spot types
 const baseSpotTypes = [
   { id: 'standard', name: '標準', width: 2.5, height: 5, color: '#90caf9' },
   { id: 'large', name: '大型', width: 3.5, height: 6, color: '#ffcc80' },
   { id: 'motorcycle', name: 'バイク', width: 1.5, height: 2.5, color: '#b39ddb' }
 ];
 
-// Combined spot types (base + custom)
 const spotTypes = ref([...baseSpotTypes]);
 
-// Spot dialog
 const spotDialog = ref({
   visible: false,
   isEdit: false,
@@ -305,20 +299,16 @@ function validateSpotNumber() {
   return true;
 }
 
-// Parking spots
 const parkingSpots = ref([]);
 
-// Track blocking relationships with coordinates
 const blockingRelationships = computed(() => {
   const relationships = [];
   const spotMap = new Map();
   
-  // Create a map of spot IDs to their data
   parkingSpots.value.forEach(spot => {
     spotMap.set(spot.id || spot.tempId, spot);
   });
   
-  // Find all blocking relationships
   parkingSpots.value.forEach(spot => {
     if (spot.blocks_parking_spot_id) {
       const blockedSpot = spotMap.get(spot.blocks_parking_spot_id);
@@ -334,7 +324,6 @@ const blockingRelationships = computed(() => {
   return relationships;
 });
 
-// Track which spots are blocked (for styling)
 const blockedSpots = computed(() => {
   const blocked = new Set();
   parkingSpots.value.forEach(spot => {
@@ -346,7 +335,6 @@ const blockedSpots = computed(() => {
 });
 
 watch(() => props.initialSpots, (newSpots) => {
-  // Update parking spots with proper structure
   parkingSpots.value = newSpots.map(spot => {
     const layout = spot.layout_info || {
       x: spot.x,
@@ -362,12 +350,10 @@ watch(() => props.initialSpots, (newSpots) => {
       tempId: `temp-${Math.random().toString(36).substr(2, 9)}`
     };
     
-    // Calculate capacity if not provided
     if (!newSpot.capacity_units && layout.width && layout.height) {
       newSpot.capacity_units = Math.round(layout.width * layout.height * 8);
     }
     
-    // Clean up old properties
     delete newSpot.x;
     delete newSpot.y;
     delete newSpot.width;
@@ -377,7 +363,6 @@ watch(() => props.initialSpots, (newSpots) => {
     return newSpot;
   });
   
-  // Extract and add custom spot types
   const customTypes = extractCustomSpotTypes(newSpots);
   const existingTypeIds = new Set(spotTypes.value.map(t => t.id));
   
@@ -388,13 +373,13 @@ watch(() => props.initialSpots, (newSpots) => {
     }
   });
   
-  // Save initial state for dirty checking
   pristineSpotsState = JSON.stringify(parkingSpots.value);
   
-  console.log('[Spots Loaded] Current parking spots:', JSON.stringify(parkingSpots.value, null, 2));
-  console.log('[Spot Types] Updated spot types:', spotTypes.value);
+
+
 }, { immediate: true });
 
+// Watches for changes in parkingSpots to determine if the layout is "dirty" (i.e., has unsaved changes).
 watch(parkingSpots, (currentSpots) => {
   if (JSON.stringify(currentSpots) !== pristineSpotsState) {
     isDirty.value = true;
@@ -403,44 +388,36 @@ watch(parkingSpots, (currentSpots) => {
   }
 }, { deep: true });
 
-// Computed
-
-
 // Methods
 function getSpotType(typeId) {
   return spotTypes.value.find(t => t.id === typeId) || spotTypes.value[0];
 }
 
+// Determines the color for a parking spot based on its type.
+// For custom spot types, a consistent color is generated based on its dimensions.
 function getSpotColor(spotType) {
   if (!spotType) return '#cccccc';
   
-  // Check if we already have this type in our spot types
   const type = spotTypes.value.find(t => t.id === spotType);
   if (type) return type.color;
   
-  // Generate consistent color for custom spot types
   if (spotType.startsWith('custom-')) {
-    // Extract dimensions from spot type (e.g., "custom-3-5" -> ["3", "5"])
     const dimensions = spotType.match(/\d+/g) || [];
     
-    // Create a more unique hash using dimensions and spot type
     let hash = 0;
     const str = spotType + dimensions.join('');
     
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
+      hash = hash |= 0; // hash = hash & hash;
     }
     
-    // Use golden angle for better color distribution
     const goldenRatio = 0.618033988749895;
     let hue = (hash * goldenRatio) % 1;
     
-    // Convert to degrees (0-360)
     hue = Math.floor(hue * 360);
     
-    // Use higher saturation and vary lightness for better distinction
     const saturation = 70 + (hash % 15); // 70-85%
     const lightness = 60 + (hash % 21);  // 60-80%
     
@@ -458,13 +435,10 @@ function deselectSpot() {
   selectedSpotId.value = null;
 }
 
-function logParkingSpotsState(action) {
-  console.log(`[${action}] Current parking spots:`, JSON.parse(JSON.stringify(parkingSpots.value)));
-}
+
 
 async function deleteSpot(spotToDelete) {
   if (spotToDelete.tempId) {
-    // For unsaved spots, just remove from the local state
     parkingSpots.value = parkingSpots.value.filter(spot => spot.tempId !== spotToDelete.tempId);
     return;
   }
@@ -494,6 +468,7 @@ async function deleteSpot(spotToDelete) {
         life: 5000 
       });
       console.error('Error deleting parking spot:', error);
+
     }
   }
 }
@@ -531,7 +506,7 @@ function saveSpot() {
     
     parkingSpots.value.splice(index, 1, updatedSpot);
     spotDialog.value.visible = false;
-    logParkingSpotsState('Spot Updated');
+
     
     toast.add({
       severity: 'success',
@@ -547,7 +522,7 @@ function rotateSpot(spotToRotate) {
   if (index !== -1) {
     const newRotation = (parkingSpots.value[index].layout_info.rotation + 45) % 360;
     parkingSpots.value[index].layout_info.rotation = newRotation;
-    logParkingSpotsState('Spot Rotated');
+
   }
 }
 
@@ -586,10 +561,9 @@ function onDrop(event) {
   };
   delete newSpot.id;
   
-  // Check for collisions
   if (!checkCollision(newSpot)) {
     parkingSpots.value = [...parkingSpots.value, newSpot];
-    logParkingSpotsState('Spot Added');
+
   } else {
     toast.add({
       severity: 'warn',
@@ -609,7 +583,6 @@ function onSpotDrag(event, spot) {
   const x = Math.max(0, Math.round((event.clientX - rect.left - dragOffset.value.x) / cellSize));
   const y = Math.max(0, Math.round((event.clientY - rect.top - dragOffset.value.y) / cellSize));
 
-  // Update the spot's position
   const updatedSpot = {
     ...spot,
     layout_info: {
@@ -619,9 +592,7 @@ function onSpotDrag(event, spot) {
     }
   };
 
-  // Check for collisions with other spots (excluding self)
   if (!checkCollision(updatedSpot, spot.id || spot.tempId)) {
-    // Update the spot in the array
     const index = parkingSpots.value.findIndex(s => (s.id || s.tempId) === (spot.id || spot.tempId));
     if (index !== -1) {
       parkingSpots.value[index] = updatedSpot;
@@ -643,12 +614,14 @@ function onSpotDragStart(event, spot) {
 
 function onSpotDragEnd() {
   if (draggedExistingSpot.value) {
-    logParkingSpotsState('Spot Moved');
+
   }
   draggedExistingSpot.value = null;
   dragOffset.value = { x: 0, y: 0 };
 }
 
+// Calculates the Axis-Aligned Bounding Box (AABB) for a rotated rectangle.
+// This is used for collision detection, simplifying the rotated rectangle into an unrotated bounding box.
 function getRotatedAABB(layout) {
   const w = layout.width;
   const h = layout.height;
@@ -670,6 +643,8 @@ function getRotatedAABB(layout) {
   };
 }
 
+// Checks for collision between a given spot and existing parking spots,
+// excluding a specified spot from the check if provided.
 function checkCollision(spot, excludeId = null) {
   return parkingSpots.value.some(existingSpot => {
     if (excludeId && (existingSpot.id === excludeId || existingSpot.tempId === excludeId)) {
@@ -679,7 +654,6 @@ function checkCollision(spot, excludeId = null) {
     const spotRect = getRotatedAABB(spot.layout_info);
     const existingRect = getRotatedAABB(existingSpot.layout_info);
 
-    // Standard AABB collision check
     return (
       spotRect.x1 < existingRect.x2 &&
       spotRect.x2 > existingRect.x1 &&
@@ -705,7 +679,6 @@ async function saveLayout() {
 
   saving.value = true;
   try {
-    // Emit the save event with the current spots
     emit('save', parkingSpots.value);
     
     toast.add({

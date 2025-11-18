@@ -1,7 +1,7 @@
 const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   selectRoomsForIndicator, selectFailedOtaReservations, selectParkingSpotAvailability, getHotelIdByReservationId, addReservationHold, addReservationDetail,
-  addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
+  addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPaymentWithInvoice, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime,
   updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest,
   updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom,
@@ -797,7 +797,7 @@ const createReservationPayment = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const newPMT = await insertReservationPayment(req.requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
+    const newPMT = await insertReservationPaymentWithInvoice(req.requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
     res.status(200).json({
       message: 'Payment added to reservation successfully',
       data: newPMT
@@ -842,7 +842,7 @@ const editReservationDetail = async (req, res) => {
     , number_of_people
     , price
     , addons
-    , overrideRounding
+    , disableRounding
   } = req.body;
   const updated_by = req.user.id;
 
@@ -855,9 +855,14 @@ const editReservationDetail = async (req, res) => {
     return res.status(400).json({ error: 'Invalid UUID format' });
   }
 
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
     // Fetch the existing reservation detail from the database to compare with the new data
-    const existingReservation = await selectReservationDetail(req.requestId, id);
+    const existingReservation = await selectReservationDetail(req.requestId, id, hotel_id, client);
 
     // Check if the plans_global_id and plans_hotel_id has changed
     if (
@@ -870,12 +875,13 @@ const editReservationDetail = async (req, res) => {
         plans_hotel_id,
         hotel_id,
         formatDate(existingReservation[0].date),
-        overrideRounding
+        disableRounding,
+        client
       );
 
       if (newPrice !== undefined) {
         calcPrice.value = newPrice;
-        //console.log('Calculated newPrice:', newPrice);  
+        //console.log('Calculated newPrice:', newPrice);
       } else {
         // Handle the case where newPrice is undefined (fallback value)
         // console.log('Error: newPrice is undefined. Falling back to default value.');
@@ -895,9 +901,9 @@ const editReservationDetail = async (req, res) => {
       number_of_people,
       price: calcPrice.value,
       updated_by,
-    });
+    }, client);
     if (planChange) {
-      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by);
+      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by, client);
     }
 
     // Add the reservation add-ons if any
@@ -918,18 +924,22 @@ const editReservationDetail = async (req, res) => {
           tax_rate: addon.tax_rate,
           created_by: updated_by,
           updated_by,
-        })
+        }, client)
       );
 
       // Wait for all add-ons to be added
       await Promise.all(addOnPromises);
     }
 
+    await client.query('COMMIT');
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    await client.query('ROLLBACK');
+    logger.error(`[${req.requestId}] Error updating reservation detail: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Failed to update reservation detail' });
+  } finally {
+    client.release();
   }
 };
 
@@ -1013,11 +1023,11 @@ const editReservationGuests = async (req, res) => {
 
 const editReservationPlan = async (req, res) => {
   const { id } = req.params;
-  const { hotel_id, plan, rates, price, overrideRounding } = req.body;
+  const { hotel_id, plan, rates, price, disableRounding } = req.body;
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding);
+    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, plan, rates, price, user_id, disableRounding);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);
@@ -1060,7 +1070,8 @@ const editReservationRoom = async (req, res) => {
 
 const editReservationRoomPlan = async (req, res) => {
   const { hid, rid, id } = req.params;
-  const { plan, addons, daysOfTheWeek, overrideRounding } = req.body;
+  const { plan, addons, daysOfTheWeek, disableRounding } = req.body;
+  logger.debug(`[${req.requestId}] editReservationRoomPlan disableRounding from req.body: ${disableRounding}`);
   const user_id = req.user.id;
 
   try {
@@ -1072,7 +1083,7 @@ const editReservationRoomPlan = async (req, res) => {
       addons,
       daysOfTheWeek,
       userId: user_id,
-      overrideRounding
+      disableRounding
     };
     //console.log('DEBUGGING editReservationRoomPlan ARGS:', updateData);
 
@@ -1092,11 +1103,11 @@ const editReservationRoomPlan = async (req, res) => {
 
 const editReservationRoomPattern = async (req, res) => {
   const { hid, rid, id } = req.params;
-  const { pattern, overrideRounding } = req.body;
+  const { pattern, disableRounding } = req.body;
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationRoomPattern(req.requestId, id, hid, rid, pattern, user_id, overrideRounding);
+    const updatedReservation = await updateReservationRoomPattern(req.requestId, id, hid, rid, pattern, user_id, disableRounding);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);

@@ -434,8 +434,8 @@
         <template #footer>
             <div class="flex justify-center items-center">
                 <div v-if="tabsReservationBulkEditDialog === 0 && !isPatternInput" class="field-checkbox mr-4">
-                    <Checkbox id="overrideRounding" v-model="overrideRounding" :binary="true" />
-                    <label for="overrideRounding" class="ml-2">端数処理を上書きする</label>
+                    <Checkbox id="disableRounding" v-model="disableRounding" :binary="true" />
+                    <label for="disableRounding" class="ml-2">端数処理を上書きする</label>
                 </div>                                
                 <Button v-if="tabsReservationBulkEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check"
                     class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
@@ -499,6 +499,7 @@
 import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
+import { validate as uuidValidate } from 'uuid';
 
 import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
 import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
@@ -1149,11 +1150,27 @@ const handleKeydown = (event) => {
             });
             return;
         }
-        updateReservationComment(reservationInfo.value);
+        updateReservationComment(
+            reservationInfo.value.reservation_id,
+            reservationInfo.value.hotel_id,
+            reservationInfo.value.comment
+        );
     }
 };
 const updateReservationComment = async (reservationId, hotelId, comment) => {
     isSubmitting.value = true;
+
+    if (!uuidValidate(reservationId)) {
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '無効な予約IDです。',
+            life: 3000
+        });
+        isSubmitting.value = false;
+        return;
+    }
+
     try {
         await setReservationComment(reservationId, hotelId, comment);
         toast.add({
@@ -1305,7 +1322,7 @@ const selectedPatternDetails = ref(null);
 const selectedAddon = ref([]);
 const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
-const overrideRounding = ref(false);
+const disableRounding = ref(false);
 
 const updatePattern = async () => {
     if (selectedPattern.value !== null) {
@@ -1391,7 +1408,7 @@ const applyPlanChangesToAll = async () => {
                 plan: selectedPlan.value,
                 addons: adjustedAddons,
                 daysOfTheWeek: selectedDays.value,
-                overrideRounding: overrideRounding.value
+                disableRounding: disableRounding.value
             };
             // Assuming setRoomPlan is refactored to take one object
             return setRoomPlan(params);
@@ -1445,7 +1462,7 @@ const applyPatternChangesToAll = async () => {
                     roomId,
                     reservationInfo.value.reservation_id,
                     dayPlanSelections.value,
-                    overrideRounding.value
+                    disableRounding.value
                 );
                 // console.log('Pattern applied to room:', roomId, result);
                 return result;

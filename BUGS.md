@@ -5,6 +5,158 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 17, 2025
+
+#### Receipt Functionality Improvements
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Feedback / Google Chat
+- **Description**:
+  - Current receipt functionality has several areas for improvement to better meet Japanese business requirements
+- **Requested Changes**:
+  1. **Name Suffix Handling**:
+     - Change default honorific from "御中" to "様" for individual recipients
+     - Or implement a way to select between different honorifics
+  2. **Reissue Indicator**:
+     - Add an optional "Reissue" stamp/indicator for reprinted receipts
+  3. **Revenue Stamp Notice**:
+     - Add a notice about revenue stamp requirements for paper receipts over 50,000 yen
+     - Example text: "本領収書が紙で発行され、かつ金額が5万円を超える場合は、印紙税法に基づき収入印紙が必要です（電子発行の場合は不要）"
+  4. **Additional Changes**:
+     - Include other changes mentioned in the PDF from Google Chat (reference to be added)
+- **Technical Notes**:
+  - Consider making honorific selection configurable in system settings
+  - Ensure the reissue indicator is clearly visible but doesn't interfere with receipt content
+  - The revenue stamp notice should be conditionally displayed based on:
+    - Receipt amount (over 50,000 yen)
+    - Whether it's a paper or digital receipt
+  - Need to review the PDF from Google Chat for additional requirements
+
+#### Client List - Incorrect In/Out Period Display
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Testing
+- **Description**:
+  - The client list does not display the correct in/out period when there is an early check-out or cancelled dates between the in and out period
+  - The system should reflect the actual stay duration rather than the originally booked period
+- **Steps to Reproduce**:
+  1. Create a reservation with multiple nights
+  2. Perform an early check-out or cancel some dates in the middle of the stay
+  3. Check the client list - it may still show the original in/out dates
+- **Expected Behavior**:
+  - The client list should show the actual in/out dates based on the modified reservation
+  - Any cancelled dates or early check-outs should be reflected in the displayed period
+
+### November 13, 2025
+
+#### Plan Rates - Cancel Fee Inclusion Flag
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Request
+- **Description**:
+  - Need to add a flag to control whether a fee should be included in cancellation fee calculations
+  - Currently, flat fees are excluded from cancellation fees, but there's a need to include some flat fees in cancellation fees
+  - Instead of creating a new fee type, adding a flag provides more flexibility
+- **Requested Features**:
+  - Add a new boolean field `includeInCancelFee` to the plan rates table
+  - Update the cancellation fee calculation logic to respect this flag
+  - Add UI controls to set this flag when creating/editing plan rates
+  - Include the flag in relevant reports and exports
+- **Technical Notes**:
+  - Database migration required to add the new column
+  - Update API endpoints to handle the new field
+  - Ensure backward compatibility with existing plan rates (default to current behavior)
+  - Update documentation for the new field
+  - Consider impact on reporting and analytics
+  - Add validation to ensure proper handling when the flag is toggled
+
+### November 13, 2025
+
+#### Enhanced Occupancy Data Export
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Request
+- **Description**: 
+  - Need to enhance the occupancy data download functionality to provide more granular data than the current daily report
+  - Current implementation in the first report of the report module lacks necessary detail for in-depth analysis
+- **Requested Features**:
+  - Add a dedicated export button for current occupancy data in the reports module
+  - Include more detailed metrics in the export (e.g., room types, rate plans, length of stay, market segments)
+  - Provide filtering options before export (date range, room types, rate codes, etc.)
+  - Support multiple export formats (CSV, Excel, PDF)
+  - Include both summary and detailed views in the export
+- **Technical Notes**:
+  - Should integrate with existing reporting infrastructure
+  - Consider performance implications for large date ranges
+  - Add loading indicators during report generation
+  - Ensure proper handling of timezone differences
+  - Include metadata in the export (report generation time, filter criteria, etc.)
+
+### November 13, 2025
+
+#### Temporary Extra Parking Spots
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+- **Source**: Internal Request
+- **Description**: 
+  - Need the ability to add temporary extra parking spots to the system
+  - This is particularly useful for seasonal needs, such as renting additional parking space during winter
+- **Requested Features**:
+  - Add functionality to temporarily increase the total number of available parking spots
+  - Set start and end dates for the temporary spots
+  - Add notes/reason for the temporary increase
+  - Visual indication in the parking management interface when temporary spots are active
+  - Reporting on temporary spot usage
+- **Technical Notes**:
+  - Will require updates to the parking availability calculation logic
+  - Need to ensure proper handling of existing reservations when temporary spots are added/removed
+  - Consider impact on reporting and analytics
+  - Should integrate with existing parking management system
+  - Add permission controls to restrict who can manage temporary spots
+
+### November 12, 2025
+
+#### Missing Guest and Gender Information in Room Indicator
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Testing
+- **Description**: 
+  - After the recent room indicator revamp, the guest name and gender information are no longer displayed in the room indicator
+  - This information was previously visible and is important for staff to quickly identify guests
+- **Expected Behavior**:
+  - Room indicator should display guest name and gender as it did before the revamp
+  - The information should update in real-time when guest details are modified
+- **Proposed Solution**:
+  1. Review the room indicator component changes to identify what caused the regression
+  2. Ensure guest and gender data is properly passed to the room indicator component
+  3. Add proper styling to ensure the information is clearly visible
+  4. Add tests to prevent this regression in the future
+- **Affected Components**:
+  - Room indicator component
+  - Reservation display logic
+  - Guest information handling
+
+### November 10, 2025
+
+#### Sales Performance Reporting in CRM
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Internal Request
+- **Description**: 
+  - Need to add a sales performance reporting feature to the CRM/Report page
+  - Currently missing consolidated view of sales performance by salesperson
+- **Requested Features**:
+  - Display list of clients grouped by salesperson
+  - Show number of reservations per salesperson
+  - Include monthly and yearly performance metrics
+  - Filter by individual hotel or show consolidated view
+  - Export functionality for reports (Excel/PDF)
+- **Technical Notes**:
+  - Will require new API endpoints for data aggregation
+  - Consider caching for better performance with large datasets
+  - Ensure proper access controls for sensitive sales data
+  - Include loading states for better UX with large datasets
+
 ### November 7, 2025
 
 #### Plan Addons with End Date Being Ignored and Added to Incorrect Dates
@@ -25,8 +177,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Review the `applyAddonsToReservation` function in the reservation service
   - Add date range validation in the addon selection component
   - Consider adding visual indicators in the UI for addon date ranges
-
-
 
 ### November 5, 2025
 
@@ -81,34 +231,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should maintain a history of merged/split operations for auditing
   - Consider impact on reporting and invoicing for merged reservations
   - Ensure proper handling of special requests and add-ons during merge/split operations
-
-### October 24, 2025
-
-#### Feature #87: Parking Space Number Management
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  Simplify the parking module to focus on basic management of parking space numbers.
-- **Requirements**:
-  - **Basic Management**:
-    - Add/remove individual parking space numbers
-    - Support for bulk import/export of space numbers
-    - Simple list view of all parking spaces
-  - **Numbering System**:
-    - Support for alphanumeric space identifiers (e.g., A1, B2, 101, 102)
-    - Optional grouping by area/zone
-    - Basic availability status (available/occupied)
-  - **Assignment**:
-    - Simple assignment of spaces to reservations
-    - Basic availability checking
-- **User Story**:
-  As a hotel staff member,
-  I want to manage parking space numbers simply and efficiently
-  So that I can keep track of parking assignments without unnecessary complexity
-- **Technical Notes**:
-  - Minimal database schema changes needed
-  - Simple UI for managing space numbers
-  - Basic integration with reservation system for assignments
 
 ### October 24, 2025
 

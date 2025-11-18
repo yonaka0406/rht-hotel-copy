@@ -1,0 +1,850 @@
+<template>
+  <Dialog
+    :visible="modelValue"
+    @update:visible="$emit('update:modelValue', $event)"
+    :header="dialogTitle"
+    :closable="true"
+    :modal="true"
+    :style="{ width: '70vw', maxWidth: '900px' }"
+    @hide="onDialogHide"
+  >
+        <div class="parking-addon-dialog-content">
+          <!-- Form Grid -->
+                <div class="form-grid grid grid-cols-3 gap-8">
+                  <!-- Room Selection -->
+                  <div class="form-section col-span-3">
+                    <h5 class="section-title">部屋選択</h5>
+                    <div class="field">
+                      <FloatLabel>
+                                      <Select
+                                        fluid
+                                        v-model="localAddonData.roomId"
+                                        :options="rooms"
+                                        optionLabel="name"
+                                        optionValue="id"
+                                        class="w-full"
+                                        :class="{ 'p-invalid': errors.roomId }"
+                                        :disabled="processing || isEditMode"
+                                        @change="(e) => selectedRoom = rooms.find(r => r.id === e.value)"
+                                      />                        <label>部屋 *</label>
+                      </FloatLabel>
+                      <small v-if="errors.roomId" class="p-error">{{ errors.roomId }}</small>
+                    </div>
+                  </div>
+          
+                  <!-- Date Selection -->
+                  <div class="form-section col-span-3">
+                    <h5 class="section-title">利用期間</h5>
+                    <div class="date-fields">
+                      <div class="field">
+                        <FloatLabel>
+                                            <DatePicker
+                                              fluid
+                                              id="startDate"
+                                              v-model="startDate"
+                                              :min-date="minDate"
+                                              :max-date="maxDate"
+                                              :disabled="!localAddonData.roomId || processing"
+                                              :class="{ 'p-invalid': errors.startDate }"
+                                              date-format="yy-mm-dd"                    
+                                              show-icon
+                                            />                          <label for="startDate">開始日 (IN) *</label>
+                        </FloatLabel>
+                        <small v-if="errors.startDate" class="p-error">{{ errors.startDate }}</small>
+                      </div>
+                      
+                      <div class="field">
+                        <FloatLabel>
+                                            <DatePicker
+                                              fluid
+                                              id="endDate"
+                                              v-model="endDate"
+                                              :min-date="startDate || minDate"
+                                              :max-date="maxDate"
+                                              :disabled="!localAddonData.roomId || processing"
+                                              :class="{ 'p-invalid': errors.endDate }"
+                                              date-format="yy-mm-dd"                    
+                                              show-icon
+                                            />                          <label for="endDate">終了日 (OUT) *</label>
+                        </FloatLabel>
+                        <small v-if="errors.endDate" class="p-error">{{ errors.endDate }}</small>
+                      </div>
+                    </div>
+                  </div>
+          
+                  <!-- Basic Info -->
+                  <div class="form-section col-span-3">
+                    <h5 class="section-title">基本情報</h5>
+                    
+                    <div class="inline-fields">
+                      <!-- Addon Selector -->
+                      <div class="field field-grow">
+                        <FloatLabel>
+                                                              <Select
+                                                                fluid
+                                                                v-model="selectedAddon"
+                                                                :options="addonOptions"
+                                                                optionLabel="addon_name"
+                                                                optionValue="id"
+                                                                placeholder="アドオンを選択"
+                                                                :class="{ 'p-invalid': errors.addonId }"
+                                                                :disabled="processing"
+                                                              />                          <label>アドオン *</label>
+                        </FloatLabel>
+                        <small v-if="errors.addonId" class="p-error">{{ errors.addonId }}</small>
+                      </div>
+          
+                      <!-- Unit Price -->
+                      <div class="field field-shrink">
+                        <FloatLabel>
+                                                              <InputNumber
+                                                                fluid
+                                                                id="unitPrice"
+                                                                v-model="localAddonData.unitPrice"
+                                                                mode="currency"
+                                                                currency="JPY"
+                                                                locale="ja-JP"
+                                                                :class="{ 'p-invalid': errors.unitPrice }"
+                                                                :disabled="processing"
+                                                                :min="0"
+                                                              />                          <label for="unitPrice">単価 (税抜) *</label>
+                        </FloatLabel>
+                        <small v-if="errors.unitPrice" class="p-error">{{ errors.unitPrice }}</small>
+                      </div>
+                    </div>
+                    
+                    <!-- Inline pricing breakdown -->
+                    <div class="inline-pricing" v-if="dateRange.length > 0 && localAddonData.unitPrice">
+                      <div class="pricing-item">
+                        <span class="label">単価:</span>
+                        <span class="value">¥{{ localAddonData.unitPrice?.toLocaleString('ja-JP') || 0 }}</span>
+                      </div>
+                      <div class="pricing-item">
+                        <span class="label">日数:</span>
+                        <span class="value">{{ dateRange.length }}日</span>
+                      </div>
+                      <div class="pricing-item total">
+                        <span class="label">合計:</span>
+                        <span class="value">¥{{ calculatedTotalPrice?.toLocaleString('ja-JP') || 0 }}</span>
+                      </div>
+                    </div>
+                  </div>
+          
+                  <!-- Parking Spot Selection -->
+                  <div class="form-section col-span-3">
+                    <h5 class="section-title">駐車スポット選択</h5>
+                    
+                    <ParkingSpotSelector
+                      :hotel-id="hotelId"
+                      :dates="dateRange"
+                      :disabled="processing || dateRange.length === 0"
+                      :preselected-vehicle-category-id="localAddonData.vehicleCategoryId"
+                      @update:vehicle-category-id="onVehicleCategoryChange"
+                      @update:number-of-spots="onNumberOfSpotsChange"
+                      @selection-change="onParkingSelectionChange"
+                      @validation-change="onSpotValidationChange"
+                    />
+                  </div>
+          
+                </div>      <!-- Validation Summary -->
+      <div class="validation-summary" v-if="Object.keys(errors).length > 0">
+        <Message severity="error" :closable="false">
+          <div class="error-list">
+            <div class="error-header">
+              <i class="pi pi-exclamation-triangle"></i>
+              <span>入力エラーがあります:</span>
+            </div>
+            <ul>
+              <li v-for="(error, field) in errors" :key="field">{{ error }}</li>
+            </ul>
+          </div>
+        </Message>
+      </div>
+
+      <!-- Success Message -->
+      <div class="success-message" v-if="isFormValid && !processing">
+        <Message severity="success" :closable="false">
+          <div class="success-content">
+            <i class="pi pi-check-circle"></i>
+            <span>入力内容に問題ありません</span>
+          </div>
+        </Message>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="dialog-footer">
+        <Button
+          label="キャンセル"
+          icon="pi pi-times"
+          class="p-button-text p-button-secondary"
+          @click="onCancel"
+          :disabled="processing"
+        />
+        <Button
+          :label="isEditMode ? '更新' : '追加'"
+          :icon="processing ? 'pi pi-spin pi-spinner' : (isEditMode ? 'pi pi-save' : 'pi pi-plus')"
+          class="p-button-primary"
+          @click="onSave"
+          :disabled="!isFormValid || processing"
+          :loading="processing"
+        />
+      </div>
+    </template>
+  </Dialog>
+</template>
+
+<script setup>
+// Vue
+import { ref, computed, watch } from 'vue';
+import { formatDate } from '@/utils/dateUtils';
+
+// Props
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false
+  },
+  addonData: {
+    type: Object,
+    default: () => ({
+      name: '駐車場',
+      unitPrice: 1000,
+      vehicleCategoryId: null,
+      spotId: null,
+      roomId: null
+    })
+  },
+  reservationDetails: {
+    type: Array,
+    required: true
+  },
+  parkingReservations: {
+    type: Object,
+    default: () => ({})
+  },
+  initialDates: {
+    type: Array,
+    default: () => []
+  },
+  isEditMode: {
+    type: Boolean,
+    default: false
+  },
+  assignmentId: {
+    type: [Number, String],
+    default: null
+  }
+});
+
+// Emits
+const emit = defineEmits([
+  'update:modelValue',
+  'save',
+  'cancel',
+  'close'
+]);
+
+import ParkingSpotSelector from '@/pages/MainPage/Reservation/components/ParkingSpotSelector.vue';
+
+// Primevue
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
+import Dialog from 'primevue/dialog';
+import FloatLabel from 'primevue/floatlabel';
+import DatePicker from 'primevue/datepicker';
+import InputNumber from 'primevue/inputnumber';
+import Button from 'primevue/button';
+import Message from 'primevue/message';
+import Select from 'primevue/select';
+
+// Stores
+import { usePlansStore } from '@/composables/usePlansStore';
+const { fetchAllAddons } = usePlansStore();
+
+// Reactive state
+const localAddonData = ref({
+  roomId: null,
+  startDate: null,
+  endDate: null,
+  unitPrice: 1000,
+  vehicleCategoryId: null,
+  numberOfSpots: 1,
+  name: ''
+});
+
+const selectedAddon = ref(null);
+const startDate = ref(null);
+const endDate = ref(null);
+const selectedRoom = ref(null);
+const errors = ref({});
+const processing = ref(false);
+const spotValidationValid = ref(false);
+const selectedVehicleCategory = ref(null);
+const addonOptions = ref([]);
+
+// Computed properties
+const dialogTitle = computed(() => {
+  return props.isEditMode ? '駐車場アドオン編集' : '駐車場アドオン追加';
+});
+
+const hotelId = computed(() => {
+  // Get hotelId from the first reservation detail if available
+  return props.reservationDetails?.[0]?.hotel_id;
+});
+
+const reservationId = computed(() => {
+  // Get reservation ID from the first reservation detail if available
+  return props.reservationDetails?.[0]?.id;
+});
+
+const dateRange = computed(() => {
+  if (!startDate.value || !endDate.value) return [];
+  
+  const dates = [];
+  const start = new Date(startDate.value);
+  const end = new Date(endDate.value);
+  
+  // Use UTC to prevent timezone issues
+  let current = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate()));
+  const final = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()));
+
+  while (current < final) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  
+  return dates;
+});
+
+
+
+const rooms = computed(() => {
+  const uniqueRooms = new Map();
+  
+  props.reservationDetails.forEach(room => {
+    if (!uniqueRooms.has(room.room_id)) {
+      uniqueRooms.set(room.room_id, {
+        id: room.room_id,
+        name: room.room_name || `部屋${room.room_number || room.room_id}`,
+        checkIn: new Date(room.check_in),
+        checkOut: new Date(room.check_out)
+      });
+    }
+  });
+  
+  return Array.from(uniqueRooms.values());
+});
+
+const minDate = computed(() => {
+  return selectedRoom.value?.checkIn || null;
+});
+
+const maxDate = computed(() => {
+  if (!selectedRoom.value?.checkOut) return null;
+  const date = new Date(selectedRoom.value.checkOut);
+  return date;
+});
+
+const calculatedTotalPrice = computed(() => {
+  if (!localAddonData.value.unitPrice || dateRange.value.length === 0) return 0;
+  return localAddonData.value.unitPrice * dateRange.value.length;
+});
+
+const isFormValid = computed(() => {
+  return Object.keys(errors.value).length === 0 && 
+         spotValidationValid.value &&
+         localAddonData.value.unitPrice !== null && localAddonData.value.unitPrice >= 0 &&
+         dateRange.value.length > 0 &&
+         localAddonData.value.vehicleCategoryId &&
+         localAddonData.value.numberOfSpots > 0 &&
+         localAddonData.value.roomId &&
+         selectedAddon.value;
+});
+
+const saveDataForEmit = computed(() => {
+  const { ...restOfAddonData } = localAddonData.value;
+  const selectedAddonObj = addonOptions.value.find(a => a.id === selectedAddon.value);
+
+  return {
+    ...restOfAddonData,
+    startDate: startDate.value ? formatDate(startDate.value) : null,
+    endDate: endDate.value ? formatDate(endDate.value) : null,
+    addons_global_id: selectedAddonObj?.addons_global_id || null,
+    addons_hotel_id: selectedAddonObj?.addons_hotel_id || null,
+    addon_type: selectedAddonObj?.addon_type || 'parking',
+    hotel_id: hotelId.value,
+    totalPrice: calculatedTotalPrice.value,
+    numberOfSpots: localAddonData.value.numberOfSpots
+  };
+});
+
+watch(saveDataForEmit, (_newValue) => {
+  // console.log('[ParkingAddonDialog] Save data changed:', JSON.parse(JSON.stringify(newValue)));
+}, { deep: true });
+
+// Methods
+const validateForm = () => {
+  errors.value = {};
+  let isValid = true;
+  
+  if (!localAddonData.value.roomId) {
+    errors.value.roomId = '部屋を選択してください';
+    isValid = false;
+  }
+  
+  if (!startDate.value) {
+    errors.value.startDate = '開始日を選択してください';
+    isValid = false;
+  } else if (minDate.value && new Date(startDate.value) < new Date(minDate.value)) {
+    errors.value.startDate = `開始日は${formatDate(minDate.value)}以降を選択してください`;
+    isValid = false;
+  }
+  
+  if (!endDate.value) {
+    errors.value.endDate = '終了日を選択してください';
+    isValid = false;
+  } else if (maxDate.value && new Date(endDate.value) > new Date(maxDate.value)) {
+    errors.value.endDate = `終了日は${formatDate(maxDate.value)}以前を選択してください`;
+    isValid = false;
+  } else if (startDate.value && new Date(endDate.value) <= new Date(startDate.value)) {
+    errors.value.endDate = '終了日は開始日より後の日付を選択してください';
+    isValid = false;
+  }
+  
+  if (!selectedAddon.value) {
+    errors.value.addonId = 'アドオンを選択してください';
+    isValid = false;
+  }
+  
+  if (localAddonData.value.unitPrice === null || isNaN(localAddonData.value.unitPrice) || localAddonData.value.unitPrice < 0) {
+    errors.value.unitPrice = '有効な単価を入力してください';
+    isValid = false;
+  }
+
+  if (localAddonData.value.numberOfSpots <= 0) {
+    errors.value.numberOfSpots = '必要台数を入力してください';
+    isValid = false;
+  }
+  
+  return isValid && spotValidationValid.value;
+};
+
+
+const onDateChange = () => {
+  validateForm();
+};
+
+const onVehicleCategoryChange = (vehicleCategoryId) => {
+  localAddonData.value.vehicleCategoryId = vehicleCategoryId;
+  validateForm();
+};
+
+const onNumberOfSpotsChange = (numberOfSpots) => {
+  localAddonData.value.numberOfSpots = numberOfSpots;
+  validateForm();
+};
+
+const onParkingSelectionChange = (selectionData) => {
+  selectedVehicleCategory.value = selectionData.selectedCategory;
+  validateForm();
+};
+
+const onSpotValidationChange = (isValid) => {
+  spotValidationValid.value = isValid;
+  validateForm();
+};
+
+const onSave = async () => {
+  //console.log('[ParkingAddonDialog] onSave, saveDataForEmit:', saveDataForEmit.value);
+  if (!validateForm() || !spotValidationValid.value) {
+    toast.add({
+      severity: 'warn',
+      summary: '入力エラー',
+      detail: '入力内容を確認してください',
+      life: 3000
+    });
+    return;
+  }
+  
+  processing.value = true;
+  
+  try {
+    // Note: The actual API call to save the addon is not implemented here.
+    // This component currently only emits the data to the parent.
+    // The parent component is responsible for making the API call.
+    
+    const saveData = saveDataForEmit.value;
+        
+    toast.add({
+      severity: 'success',
+      summary: '成功',
+      detail: props.isEditMode ? '駐車場情報を更新しました' : '駐車場情報を保存しました',
+      life: 3000
+    });
+    
+    emit('save', saveData); // Emit the prepared data object
+    
+    emit('update:modelValue', false);
+    
+  } catch (error) {
+    console.error('Error saving parking addon:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: error.message || '駐車場アドオンの保存に失敗しました',
+      life: 5000
+    });
+  } finally {
+    processing.value = false;
+  }
+};
+
+const onCancel = () => {
+  emit('cancel');
+  emit('update:modelValue', false);
+};
+
+const onDialogHide = () => {
+  emit('close');
+};
+
+watch(selectedAddon, (newAddonId) => {
+  if (newAddonId) {
+    const selected = addonOptions.value.find(a => a.id === newAddonId);
+    if (selected) {
+      localAddonData.value.unitPrice = selected.price || 1000;
+      if (selected.addon_name) {
+        localAddonData.value.name = selected.addon_name;
+      }
+    }
+  }
+});
+
+// Auto-select first room when rooms are available
+watch(() => rooms.value, (newRooms) => {
+  if (newRooms.length > 0 && !selectedRoom.value) {
+    selectedRoom.value = newRooms[0];
+    // Also update the roomId in localAddonData
+    localAddonData.value.roomId = newRooms[0].id;
+    //console.log('[ParkingAddonDialog] Auto-selected first room:', selectedRoom.value);
+  }
+}, { immediate: true });
+
+// Sync selectedRoom with localAddonData.roomId
+watch(selectedRoom, (newRoom) => {
+  if (newRoom) {
+    localAddonData.value.roomId = newRoom.id;
+    // Update date range based on the selected room
+    if (newRoom.checkIn) startDate.value = newRoom.checkIn;
+    if (newRoom.checkOut) endDate.value = newRoom.checkOut;
+  }
+}, { immediate: true });
+
+// Watchers for date changes
+watch(startDate, (newStartDate) => {
+  //console.log('[ParkingAddonDialog] startDate changed:', newStartDate);
+  if (!newStartDate || !endDate.value) return;
+  
+  onDateChange();
+});
+
+watch(endDate, (newEndDate) => {
+  //console.log('[ParkingAddonDialog] endDate changed:', newEndDate);
+  if (!newEndDate || !startDate.value) return;
+  
+  onDateChange();
+});
+
+// Update the date range validation
+watch(() => props.modelValue, async (newValue) => {
+  if (newValue) {
+    // Dialog is opening
+    try {
+      localAddonData.value = { ...props.addonData, ...localAddonData.value };
+      selectedAddon.value = props.addonData?.id || null;
+      // Auto-select first room if available
+      if (rooms.value.length > 0 && !selectedRoom.value) {
+        selectedRoom.value = rooms.value[0];
+      }
+      if (!selectedAddon.value && addonOptions.value.length > 0) {
+        selectedAddon.value = addonOptions.value[0].id;
+      }
+      //console.log('[ParkingAddonDialog] Dialog opened. Selected Addon:', selectedAddon.value, 'Unit Price:', localAddonData.value.unitPrice);
+    } catch (error) {
+      console.error('Error on dialog open:', error);
+    }
+  }
+}, { immediate: true });
+
+watch(hotelId, async (newHotelId) => {
+  //console.log('[ParkingAddonDialog] hotelId changed:', newHotelId);
+  if (newHotelId) {
+    const allAddons = await fetchAllAddons(newHotelId);    
+    
+    if (allAddons && Array.isArray(allAddons)) {
+      const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');      
+      //console.log('[ParkingAddonDialog] Raw parking addons:', JSON.stringify(parkingAddons, null, 2));      
+      addonOptions.value = parkingAddons;
+    } else {
+      // If no addons are fetched or not an array, clear options and selection
+      //console.log('[ParkingAddonDialog] No addons fetched or invalid response');
+      addonOptions.value = [];
+      selectedAddon.value = null;
+    }
+  } else {
+    // If hotelId is null, clear options and selection
+    addonOptions.value = [];
+    selectedAddon.value = null;
+  }
+}, { immediate: true });
+
+// Watch selectedAddon changes
+watch(selectedAddon, (newValue, oldValue) => {
+  //console.log('[ParkingAddonDialog] selectedAddon changed from', oldValue, 'to', newValue);
+  const selectedAddonObj = addonOptions.value.find(a => a.id === newValue);
+  //console.log('[ParkingAddonDialog] Selected addon object:', selectedAddonObj);
+});
+</script>
+
+<style scoped>
+.parking-addon-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 0.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.date-summary {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.date-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.inline-pricing {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: var(--surface-50);
+  border-radius: 4px;
+}
+
+.pricing-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.pricing-item .label {
+  color: var(--text-color-secondary);
+}
+
+.pricing-item .value {
+  font-weight: 500;
+}
+
+.pricing-item.total {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.pricing-breakdown {
+  background: var(--surface-ground);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.breakdown-item:last-child {
+  border-bottom: none;
+}
+
+.breakdown-item.total {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+  border-top: 2px solid var(--primary-color);
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+}
+
+.vehicle-info-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+
+.info-row .value {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.validation-summary {
+  margin-top: 1rem;
+}
+
+.error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.error-list ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.error-list li {
+  margin: 0.25rem 0;
+}
+
+.success-message {
+  margin-top: 1rem;
+}
+
+.success-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.inline-fields {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.field-grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.field-shrink {
+  width: 200px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .date-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .breakdown-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+</style>

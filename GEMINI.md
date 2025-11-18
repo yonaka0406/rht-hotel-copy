@@ -45,6 +45,18 @@ RHT Hotel is a comprehensive hotel property management system designed to stream
 ## 4. Development Guidelines & Conventions
 
 *This is a summary of `instructions.md`. Refer to that file for full details.*
+*   **Contributing Guidelines:** Refer to `docs/CONTRIBUTING.md` for detailed contribution guidelines.
+
+### When to Update Documentation
+
+Update documentation when you:
+
+- Add a new feature or component
+- Modify existing functionality
+- Fix a bug that affects documented behavior
+- Change APIs or interfaces
+- Update configuration or deployment procedures
+- Discover documentation gaps or errors
 
 - **UI Language:** All user-facing text in the frontend **must be in Japanese**.
 - **Backend `requestId`:** The `requestId` from `req.requestId` **must** be passed as the first argument to all model functions to select the correct database pool (e.g., `model.fetchData(req.requestId, ...)`).

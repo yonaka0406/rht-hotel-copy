@@ -4,7 +4,8 @@ const { validateIntegerParam } = require('../../utils/validationUtils');
 // Parking Lot
 const getParkingLots = async (requestId, hotel_id) => {
     const pool = getPool(requestId);
-    const query = 'SELECT * FROM parking_lots WHERE hotel_id = $1 ORDER BY id';
+    // Exclude virtual capacity pool from results
+    const query = "SELECT * FROM parking_lots WHERE hotel_id = $1 AND name != 'Virtual Capacity Pool' ORDER BY id";
     const values = [hotel_id];
     const result = await pool.query(query, values);
     return result.rows;

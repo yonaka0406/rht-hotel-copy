@@ -89,10 +89,10 @@ const { roomsForIndicator } = useReservationStore();
     // In case of room changes, multiple rooms can be listed for checkout for the same reservation.
     // We need to select only the room the guest is in on the night before checkout.
     const checkoutGroups = categorizedRooms.checkOut.reduce((acc, room) => {
-      if (!acc[room.id]) {
-        acc[room.id] = [];
+      if (!acc[room.reservation_id]) {
+        acc[room.reservation_id] = [];
       }
-      acc[room.id].push(room);
+      acc[room.reservation_id].push(room);
       return acc;
     }, {});
 

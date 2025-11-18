@@ -1,0 +1,218 @@
+{
+  "migrationConfig": {
+    "version": "1.0",
+    "created": "2024-11-08",
+    "description": "Configuration for documentation migration from scattered files to organized structure"
+  },
+  "rootLevelMigrations": {
+    "ARCHITECTURE.md": {
+      "targetPath": "docs/architecture/system-overview.md",
+      "action": "move_and_enhance",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": [
+        "docs/design/system-architecture.md"
+      ],
+      "mergeStrategy": "manual",
+      "sourcePrecedence": "ARCHITECTURE.md"
+    },
+    "BOOKING_ENGINE_API_DOCUMENTATION.md": {
+      "targetPath": "docs/api/endpoints/booking-engine.md",
+      "action": "move_and_enhance",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    },
+    "BOOKING_ENGINE_INTEGRATION_STRATEGY.md": {
+      "targetPath": "docs/integrations/booking-engine/overview.md",
+      "action": "move_and_enhance",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    },
+    "STATE_MGMT.md": {
+      "targetPath": "docs/frontend/state-management.md",
+      "action": "move_and_enhance",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": [],
+      "note": "Update content to reflect current Vue 3 Composition API store pattern, not Pinia migration"
+    },
+    "square_payment_integration.md": {
+      "targetPath": "docs/integrations/payment-systems/square-integration.md",
+      "action": "move_and_enhance",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    },
+    "BUGS.md": {
+      "targetPath": "docs/development/known-issues.md",
+      "action": "move_and_enhance",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    },
+    "CHANGELOG.md": {
+      "targetPath": "docs/reference/changelog.md",
+      "action": "move",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    },
+    "DEALT.md": {
+      "targetPath": "docs/development/dealt-issues.md",
+      "action": "move",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    },
+    "GEMINI.md": {
+      "targetPath": "docs/development/ai-assistance.md",
+      "action": "move",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    },
+    "instructions.md": {
+      "targetPath": "docs/development/project-instructions.md",
+      "action": "move",
+      "preserveOriginal": false,
+      "updateLinks": true,
+      "consolidateWith": []
+    }
+  },
+  "existingDocsReorganization": {
+    "docs/design/": {
+      "targetPath": "docs/architecture/",
+      "action": "reorganize",
+      "files": {
+        "system-architecture.md": {
+          "targetPath": "docs/architecture/system-overview.md",
+          "mergeStrategy": "manual",
+          "sourcePrecedence": "docs/design/system-architecture.md"
+        },
+        "api-design.md": "docs/architecture/api-design.md",
+        "data-models.md": "docs/architecture/data-architecture.md",
+        "component-diagrams.md": "docs/architecture/component-architecture.md",
+        "data-flow-architecture.md": "docs/architecture/data-flow.md"
+      }
+    },
+    "docs/operations/": {
+      "targetPath": "docs/deployment/",
+      "action": "reorganize",
+      "files": {
+        "deployment-guide.md": "docs/deployment/deployment-guide.md",
+        "troubleshooting.md": "docs/deployment/troubleshooting.md"
+      }
+    }
+  },
+  "componentDocsConsolidation": {
+    "api/README.md": {
+      "targetPath": "docs/backend/api-overview.md",
+      "action": "consolidate",
+      "preserveOriginal": true,
+      "updateLinks": true
+    },
+    "frontend/README.md": {
+      "targetPath": "docs/frontend/frontend-overview.md",
+      "action": "consolidate",
+      "preserveOriginal": true,
+      "updateLinks": true
+    },
+    "frontend/FOLDER_STRUCTURE.md": {
+      "targetPath": "docs/frontend/folder-structure.md",
+      "action": "move",
+      "preserveOriginal": false,
+      "updateLinks": true
+    },
+    "scripts/README.md": {
+      "targetPath": "docs/development/scripts-overview.md",
+      "action": "consolidate",
+      "preserveOriginal": true,
+      "updateLinks": true
+    }
+  },
+  "newDirectoriesToCreate": [
+    "docs/getting-started",
+    "docs/architecture",
+    "docs/api",
+    "docs/api/endpoints",
+    "docs/api/integration-guides",
+    "docs/frontend",
+    "docs/backend",
+    "docs/deployment",
+    "docs/integrations",
+    "docs/integrations/booking-engine",
+    "docs/integrations/payment-systems",
+    "docs/integrations/ota-systems",
+    "docs/features",
+    "docs/features/reservation-management",
+    "docs/features/client-management",
+    "docs/features/billing-system",
+    "docs/features/waitlist-system",
+    "docs/features/reporting-analytics",
+    "docs/development",
+    "docs/reference",
+    "docs/templates"
+  ],
+  "linkUpdatePatterns": {
+    "rootToNewStructure": {
+      "ARCHITECTURE.md": "docs/architecture/system-overview.md",
+      "docs/design/system-architecture.md": "docs/architecture/system-overview.md",
+      "STATE_MGMT.md": "docs/frontend/state-management.md",
+      "BOOKING_ENGINE_API_DOCUMENTATION.md": "docs/api/endpoints/booking-engine.md"
+    },
+    "internalLinkPatterns": [
+      {
+        "pattern": "\\[([^\\]]+)\\]\\(ARCHITECTURE\\.md([^)]*)\\)",
+        "replacement": "[$1](docs/architecture/system-overview.md$2)"
+      },
+      {
+        "pattern": "\\[([^\\]]+)\\]\\(docs/design/([^)]*)\\)",
+        "replacement": "[$1](docs/architecture/$2)"
+      },
+      {
+        "pattern": "\\[([^\\]]+)\\]\\(docs/operations/([^)]*)\\)",
+        "replacement": "[$1](docs/deployment/$2)"
+      }
+    ]
+  },
+  "backupStrategy": {
+    "createBackup": true,
+    "backupPath": "docs/migration-backup",
+    "backupTimestamp": true,
+    "preserveGitHistory": true
+  },
+  "validationRules": {
+    "requiredSections": [
+      "getting-started",
+      "architecture", 
+      "api",
+      "frontend",
+      "backend",
+      "deployment",
+      "integrations",
+      "features",
+      "development",
+      "reference"
+    ],
+    "requiredIndexFiles": [
+      "docs/README.md",
+      "docs/getting-started/README.md",
+      "docs/architecture/README.md",
+      "docs/api/README.md",
+      "docs/frontend/README.md",
+      "docs/backend/README.md",
+      "docs/deployment/README.md",
+      "docs/integrations/README.md",
+      "docs/features/README.md",
+      "docs/development/README.md",
+      "docs/reference/README.md"
+    ],
+    "linkValidation": {
+      "checkInternalLinks": true,
+      "checkExternalLinks": false,
+      "reportBrokenLinks": true
+    }
+  }
+}

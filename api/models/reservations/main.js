@@ -7,6 +7,7 @@ const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
 const logger = require('../../config/logger');
 const { deleteReservationAddonsByDetailId } = require('./delete');
+const { insertReservationRate, insertAggregatedRates } = require('./insert');
 
 // Helper
 const formatDate = (date) => {
@@ -270,7 +271,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
                   'adjustment_value', rr.adjustment_value,
                   'tax_type_id', rr.tax_type_id,
                   'tax_rate', rr.tax_rate,
-                  'price', rr.price
+                  'price', rr.price,
+                  'include_in_cancel_fee', rr.include_in_cancel_fee
               )
           ) AS rates_json
       FROM reservation_rates rr
@@ -603,6 +605,7 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
         rp.hotel_id = $1
         AND rp.date BETWEEN $2 AND $3
         AND rd.cancelled IS NULL
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
       GROUP BY 
         ps.spot_type, ps.capacity_units, width, height
     ),
@@ -619,6 +622,7 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
       WHERE 
         pl.hotel_id = $1
         AND ps.is_active = TRUE
+        AND (ps.spot_type IS NULL OR ps.spot_type != 'capacity_pool')
       GROUP BY 
         ps.spot_type, ps.capacity_units, width, height
     )
@@ -843,14 +847,14 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
 };
 
 const addReservationAddon = async (requestId, addon, client = null) => {
-  // console.log('addReservationAddon:',addon)
   const pool = getPool(requestId);
   let dbClient = client;
   let shouldReleaseClient = false;
+  let shouldManageTransaction = (client === null);
 
   if (!dbClient) {
     dbClient = await pool.connect();
-    shouldReleaseClient = true;
+    shouldReleaseClient = true;    
   }
 
   const query = `
@@ -876,19 +880,19 @@ const addReservationAddon = async (requestId, addon, client = null) => {
   //console.log('[addReservationAddon] Inserting with values:', values);
 
   try {
-    if (shouldReleaseClient) {
+    if (shouldManageTransaction) {
       await dbClient.query('BEGIN');
     }
 
     const result = await dbClient.query(query, values);
 
-    if (shouldReleaseClient) {
+    if (shouldManageTransaction) {
       await dbClient.query('COMMIT');
     }
 
     return result.rows[0]; // Return the inserted reservation addon
   } catch (err) {
-    if (shouldReleaseClient) {
+    if (shouldManageTransaction) {
         try {
             await dbClient.query('ROLLBACK');
         } catch (rbErr) {
@@ -1004,9 +1008,12 @@ const updateBlockToReservation = async (requestId, reservationId, clientId, user
 };
 
 // Update entry
-const updateReservationDetail = async (requestId, reservationData) => {
+const updateReservationDetail = async (requestId, reservationData, dbClient = null) => {
   const pool = getPool(requestId);
   const { id, hotel_id, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, updated_by } = reservationData;
+
+  const client = dbClient || await pool.connect();
+  const shouldReleaseClient = !dbClient;
 
   const query = `
       UPDATE reservation_details
@@ -1038,7 +1045,7 @@ const updateReservationDetail = async (requestId, reservationData) => {
   //console.log('Values:', values);
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows[0];
   } catch (err) {
     if (err.code === '23514' && err.table === 'reservation_details') {
@@ -1047,6 +1054,10 @@ const updateReservationDetail = async (requestId, reservationData) => {
         console.error('Error updating reservation detail:', err);
     }
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      client.release();
+    }
   }
 };
 
@@ -1199,18 +1210,22 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       WHERE reservation_details_id = $1 AND hotel_id = $2
     `;
     const ratesResult = await client.query(ratesQuery, [id, hotel_id]);
+    const rates = Array.isArray(ratesResult.rows) ? ratesResult.rows : Object.values(ratesResult.rows);
 
     let ratesToUse = [];
     let calculatedPrice;
 
     if (status === 'cancelled') {
-      // When cancelling, exclude flat_fee rates for price calculation only
-      ratesToUse = ratesResult.rows.filter(rate => rate.adjustment_type !== 'flat_fee');
-      calculatedPrice = calculatePriceFromRates(ratesToUse);
+      // When cancelling, only include rates that are flagged to be included.
+      ratesToUse = rates.filter(rate => rate.include_in_cancel_fee);
+      logger.debug(`[updateReservationDetailStatus] Status is 'cancelled'. Filtered ratesToUse: ${JSON.stringify(ratesToUse)}`);
+      calculatedPrice = calculatePriceFromRates(ratesToUse, false);
     } else {
-      // When recovering, use all rates for price calculation
-      calculatedPrice = calculatePriceFromRates(ratesResult.rows);
+      // When recovering, use all rates for price calculation      
+      logger.debug(`[updateReservationDetailStatus] Status is '${status}'. Using all rates: ${JSON.stringify(rates)}`);
+      calculatedPrice = calculatePriceFromRates(rates, false);
     }
+    logger.debug(`[updateReservationDetailStatus] Calculated price for detail ${id}: ${calculatedPrice}`);
 
     // 1. Update the reservation_details table based on the status
     if (status === 'cancelled') {
@@ -1352,8 +1367,8 @@ const updateReservationComment = async (requestId, reservationData, client = nul
     const query = `
         UPDATE reservations
         SET
-          comment = $1,          
-          updated_by = $2          
+          comment = $1,
+          updated_by = $2
         WHERE id = $3::UUID AND hotel_id = $4
         RETURNING *;
     `;
@@ -1857,7 +1872,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     // Update the reservation details with promise    
     const dtlUpdatePromises = detailsArray.map(async ({ id, operation_mode, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       let newPrice = 0;
-      newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
+      newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)), false, client);
       // console.log('newPrice calculated:',newPrice);
 
       const dtlUpdateQuery = `
@@ -1933,12 +1948,12 @@ const updateReservationGuest = async (requestId, oldValue, newValue, client = nu
 
   const query = `
     UPDATE reservation_clients
-    SET reservation_details_id = $1    
-    WHERE id IN 
+    SET reservation_details_id = $1
+    WHERE id IN
       (
-        SELECT id 
-        FROM reservation_clients 
-        WHERE reservation_details_id = $2 
+        SELECT id
+        FROM reservation_clients
+        WHERE reservation_details_id = $2
         LIMIT 1
       );
   `;
@@ -2009,13 +2024,27 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
 
 };
 
-const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, disableRounding, client = null) => {
   //console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
   if (!plan) {
     console.warn('[updateReservationDetailPlan] plan is null or undefined');
   }
   const pool = getPool(requestId);
-  const client = await pool.connect();
+  let dbClient;
+  if (client) {
+    dbClient = client;
+  } else {
+    try {
+      dbClient = await pool.connect();
+    } catch (connectError) {
+      logger.error(`[${requestId}] Failed to acquire database client for updateReservationDetailPlan: ${connectError.message}`, { stack: connectError.stack });
+      throw new Error('Failed to acquire database client.');
+    }
+  }
+  if (!dbClient) {
+    throw new Error('Failed to acquire database client for updateReservationDetailPlan (dbClient is null after connect attempt).');
+  }
+  const shouldReleaseClient = !client;
 
   const plans_global_id = plan?.plans_global_id === 0 ? null : plan?.plans_global_id ?? null;
   const plans_hotel_id = plan?.plans_hotel_id === 0 ? null : plan?.plans_hotel_id ?? null;
@@ -2025,7 +2054,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   // Use unified price calculation
   let calculatedPrice = 0;
   if (rates && rates.length > 0) {
-    calculatedPrice = calculatePriceFromRates(rates, overrideRounding);
+    calculatedPrice = calculatePriceFromRates(rates, disableRounding);
 
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
@@ -2049,15 +2078,15 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   `;
 
   try {
-    await client.query('BEGIN');
+    await dbClient.query('BEGIN');
 
     // Set session user_id
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
-    await client.query(setSessionQuery);
+    await dbClient.query(setSessionQuery);
 
     // Update reservation_details with the recalculated price
     //console.log('[updateReservationDetailPlan] Executing update with recalculated price:', {plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id});
-    await client.query(updateReservationDetailsQuery, [
+    await dbClient.query(updateReservationDetailsQuery, [
       plans_global_id,
       plans_hotel_id,
       plan_name,
@@ -2073,15 +2102,15 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       const deleteRatesQuery = `
         DELETE FROM reservation_rates WHERE reservation_details_id = $1;
       `;
-      await client.query(deleteRatesQuery, [id]);
+      await dbClient.query(deleteRatesQuery, [id]);
 
       // Insert rates using the shared utility function
-      await insertAggregatedRates(client, rates, hotel_id, id, user_id);
+      await insertAggregatedRates(requestId, rates, hotel_id, id, user_id, disableRounding, dbClient);
     }
 
-    await client.query('COMMIT');
+    await dbClient.query('COMMIT');
   } catch (err) {
-    await client.query('ROLLBACK');
+    await dbClient.query('ROLLBACK');
     if (err.code === '23514' && err.table === 'reservation_details') {
         console.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
@@ -2089,32 +2118,56 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     }
     throw err;
   } finally {
-    client.release();
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 
-const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id) => {
+const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id, client = null) => {
   if (!Array.isArray(addons)) {
     addons = [];
   }
-  await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id);
-  
-  const addOnPromises = addons.map(addon =>
-    addReservationAddon(requestId, {
-      hotel_id: hotel_id,
-      reservation_detail_id: id,
-      addons_global_id: addon.addons_global_id,
-      addons_hotel_id: addon.addons_hotel_id,
-      addon_name: addon.addon_name,
-      quantity: addon.quantity,
-      price: addon.price,
-      tax_type_id: addon.tax_type_id,
-      tax_rate: addon.tax_rate,
-      created_by: user_id,
-      updated_by: user_id,
-    })
-  );
-  await Promise.all(addOnPromises);
+  const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
+  try {
+    // Set session user_id for logging
+    await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, user_id));
+
+    // Assuming deleteReservationAddonsByDetailId also accepts a client
+    await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id, dbClient);
+    
+    const addOnPromises = addons.map(addon =>
+      addReservationAddon(requestId, {
+        hotel_id: hotel_id,
+        reservation_detail_id: id,
+        addons_global_id: addon.addons_global_id,
+        addons_hotel_id: addon.addons_hotel_id,
+        addon_name: addon.addon_name,
+        quantity: addon.quantity,
+        price: addon.price,
+        tax_type_id: addon.tax_type_id,
+        tax_rate: addon.tax_rate,
+        created_by: user_id,
+        updated_by: user_id,
+      }, dbClient) // Pass the client here
+    );
+    await Promise.all(addOnPromises);
+  } catch (err) {
+    console.error('Error updating reservation detail addon:', err);
+    throw err;
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
+  }
 };
 
 const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {
@@ -2209,9 +2262,9 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
 
 const updateReservationRoomPlan = async (requestId, data) => {
   //console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
-  const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, overrideRounding } = data;
+  const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, disableRounding } = data;
 
-  // console.log('DEBUGGING updateReservationRoomPlan overrideRounding:', overrideRounding);
+  // console.log('DEBUGGING updateReservationRoomPlan disableRounding:', disableRounding);
 
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2238,7 +2291,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
       try {
         // 1. Update Plan      
         if (plan) {
-          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId);
+          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId, disableRounding);
         }
 
         // 2. Update Addons        
@@ -2252,7 +2305,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons    
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId, overrideRounding);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId, disableRounding);
 
 
     await client.query('COMMIT');
@@ -2275,7 +2328,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
   }
 };
 
-const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id, overrideRounding) => {
+const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id, disableRounding) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
 
@@ -2305,20 +2358,20 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
 
       // 1. Update Plan
       if (plan) {
-        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, overrideRounding);
+        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, disableRounding, client);
       } else {
         //console.log('[updateReservationDetailPlan] Skipped because plan is null');
       }
 
       // 2. Update Addons
-      await updateReservationDetailAddon(requestId, id, hotelId, addons, user_id);
+      await updateReservationDetailAddon(requestId, id, hotelId, addons, user_id, client);
 
     });
 
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id, overrideRounding);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id, disableRounding, client);
 
     await client.query('COMMIT');
 
@@ -2332,7 +2385,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
   }
 };
 
-const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, overrideRounding = false, client = null) => {
+const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, disableRounding = false, client = null) => {
   const pool = getPool(requestId);
 
   // Use provided client or create a new connection
@@ -2363,7 +2416,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       const formattedDate = formatDate(new Date(date));
       // Fetch new price
-      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, overrideRounding);
+      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, disableRounding, dbClient);
 
       // Update reservation_details
       const dtlUpdateQuery = `
@@ -2384,10 +2437,10 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
 
       // Insert rates using the shared utility function
-      await insertAggregatedRates(dbClient, newrates, hotel_id, id, user_id);
+      await insertAggregatedRates(requestId, newrates, hotel_id, id, user_id, false, dbClient);
 
       // Update the price in reservation_details using the calculated price from rates
-      const calculatedPrice = calculatePriceFromRates(newrates, overrideRounding);
+      const calculatedPrice = calculatePriceFromRates(newrates, disableRounding);
       const updatePriceQuery = `
         UPDATE reservation_details
         SET price = $1
@@ -3237,22 +3290,18 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
         }
 
-        query = `
-          INSERT INTO reservation_rates (
-              hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
-            ) VALUES ($1, $2, $3, 3, 0.1, $3, 1)
-            RETURNING *;
-        `;
-        values = [
+        const rateData = {
           hotel_id,
-          reservationDetailsId,
-          roomDetail.TotalPerRoomRate,
-        ];
-        // console.log('editOTAReservation reservation_rates:', values);
-        const reservationRates = await internalClient.query(query, values);
-        //console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
-
-        // Insert addon information if addons exist
+          reservation_details_id: reservationDetailsId,
+          adjustment_type: 'base_rate',
+          adjustment_value: roomDetail.TotalPerRoomRate,
+          tax_type_id: 3,
+          tax_rate: 0.1,
+          price: roomDetail.TotalPerRoomRate,
+          include_in_cancel_fee: true,
+          created_by: 1
+        };
+        const reservationRates = await insertReservationRate(requestId, rateData, internalClient);
         if (addons && Array.isArray(addons) && addons.length > 0) {
           for (const addon of addons) {
             query = `
@@ -4142,19 +4191,18 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
         }
 
-        query = `
-          INSERT INTO reservation_rates (
-              hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
-            ) VALUES ($1, $2, $3, 3, 0.1, $3, 1)
-            RETURNING *;
-        `;
-        values = [
+                const rateData = {
           hotel_id,
-          reservationDetailsId,
-          roomDetail.TotalPerRoomRate,
-        ];
-        // console.log('editOTAReservation reservation_rates:', values);
-        const reservationRates = await internalClient.query(query, values);
+          reservation_details_id: reservationDetailsId,
+          adjustment_type: 'base_rate',
+          adjustment_value: roomDetail.TotalPerRoomRate,
+          tax_type_id: 3,
+          tax_rate: 0.1,
+          price: roomDetail.TotalPerRoomRate,
+          include_in_cancel_fee: true,
+          created_by: 1
+        };
+        await insertReservationRate(requestId, rateData, internalClient);
         //console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
 
         // Insert addon information if addons exist
@@ -4605,28 +4653,11 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
               tax_type_id: rate.tax_type_id,
               tax_rate: rate.tax_rate,
               price: rate.price,
+              include_in_cancel_fee: rate.adjustment_type,
               created_by: userId,
             };
             logger.debug('[copyReservation] Creating new rate:', rateData);
-
-            const insertRateQuery = `
-              INSERT INTO reservation_rates (
-                hotel_id, reservation_details_id, adjustment_type, adjustment_value, 
-                tax_type_id, tax_rate, price, created_by
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-              RETURNING *;
-            `;
-
-            await client.query(insertRateQuery, [
-              rateData.hotel_id,
-              rateData.reservation_details_id,
-              rateData.adjustment_type,
-              rateData.adjustment_value,
-              rateData.tax_type_id,
-              rateData.tax_rate,
-              rateData.price,
-              rateData.created_by
-            ]);
+            await insertReservationRate(requestId, rateData, client);
           }
         } else {
           logger.debug('[copyReservation] No rates to copy for this detail.');
@@ -4701,8 +4732,11 @@ const selectFailedOtaReservations = async (requestId) => {
 };
 
 // Shared utility function for consistent price calculation
-const calculatePriceFromRates = (rates, overrideRounding = false) => {
+const calculatePriceFromRates = (rates, disableRounding = false) => {
+  logger.debug(`[calculatePriceFromRates] Input rates: ${JSON.stringify(rates)}`);
+  logger.debug(`[calculatePriceFromRates] disableRounding: ${disableRounding}`);
   if (!rates || rates.length === 0) {
+    logger.debug('[calculatePriceFromRates] No rates provided, returning 0.');
     return 0;
   }
 
@@ -4720,6 +4754,7 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
     }
     aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
   });
+  logger.debug(`[calculatePriceFromRates] Aggregated rates: ${JSON.stringify(aggregatedRates)}`);
 
   // Step 2: Calculate total base rate first
   let totalBaseRate = 0;
@@ -4728,6 +4763,7 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
       totalBaseRate += rate.adjustment_value;
     }
   });
+  logger.debug(`[calculatePriceFromRates] Total base rate: ${totalBaseRate}`);
 
   // Step 3: Calculate total price by summing individual rate prices (matching original logic)
   let totalPrice = 0;
@@ -4745,82 +4781,21 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
 
     totalPrice += ratePrice;
   });
+  logger.debug(`[calculatePriceFromRates] Total price before rounding: ${totalPrice}`);
 
   // Round down to nearest 100 yen (Japanese pricing convention)
-  if (!overrideRounding) {
-    return Math.floor(totalPrice / 100) * 100;
+  if (!disableRounding) {
+    const finalPrice = Math.floor(totalPrice / 100) * 100;
+    logger.debug(`[calculatePriceFromRates] Final price after rounding: ${finalPrice}`);
+    return finalPrice;
   } else {
+    logger.debug(`[calculatePriceFromRates] Final price (no rounding): ${totalPrice}`);
     return totalPrice;
   }
 };
 
 // Shared utility function for inserting rates with consistent price calculation
-const insertAggregatedRates = async (client, rates, hotel_id, reservation_details_id, user_id, overrideRounding = false) => {
-  if (!rates || rates.length === 0) {
-    return;
-  }
 
-  // Aggregate rates by adjustment_type and tax_type_id
-  const aggregatedRates = {};
-  rates.forEach((rate) => {
-    const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
-    if (!aggregatedRates[key]) {
-      aggregatedRates[key] = {
-        adjustment_type: rate.adjustment_type,
-        tax_type_id: rate.tax_type_id,
-        tax_rate: rate.tax_rate,
-        adjustment_value: 0,
-      };
-    }
-    aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
-  });
-
-  // Calculate total base rate first
-  let totalBaseRate = 0;
-  Object.values(aggregatedRates).forEach((rate) => {
-    if (rate.adjustment_type === 'base_rate') {
-      totalBaseRate += rate.adjustment_value;
-    }
-  });
-
-  // Insert aggregated rates with consistent price calculation
-  const insertPromises = Object.values(aggregatedRates).map(async (rate) => {
-    let price = 0;
-
-    if (rate.adjustment_type === 'base_rate') {
-      price = rate.adjustment_value;
-    } else if (rate.adjustment_type === 'percentage') {
-      if (!overrideRounding) {
-        price = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
-      } else {
-        price = totalBaseRate * (rate.adjustment_value / 100);
-      }
-    } else if (rate.adjustment_type === 'flat_fee') {
-      price = rate.adjustment_value;
-    }
-
-    const insertRateQuery = `
-      INSERT INTO reservation_rates (
-        hotel_id, reservation_details_id, adjustment_type, adjustment_value,
-        tax_type_id, tax_rate, price, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *;
-    `;
-
-    return client.query(insertRateQuery, [
-      hotel_id,
-      reservation_details_id,
-      rate.adjustment_type,
-      rate.adjustment_value,
-      rate.tax_type_id,
-      rate.tax_rate,
-      price,
-      user_id
-    ]);
-  });
-
-  await Promise.all(insertPromises);
-};
 
 const cancelReservationRooms = async (requestId, hotelId, reservationId, detailIds, updated_by, billable = false) => {
   const pool = getPool(requestId);
@@ -4843,8 +4818,8 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
       const ratesResult = await client.query(ratesQuery, [detailId, hotelId]);
 
       if (billable) {
-        // When cancelling with a fee, exclude flat_fee rates for price calculation
-        const ratesToUse = ratesResult.rows.filter(rate => rate.adjustment_type !== 'flat_fee');
+        // When cancelling with a fee, only include rates that are flagged to be included.
+        const ratesToUse = ratesResult.rows.filter(rate => rate.include_in_cancel_fee);
         calculatedPrice = calculatePriceFromRates(ratesToUse);
       } else {
         // When cancelling without a fee, the price should be 0
@@ -4953,7 +4928,12 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
 };
 
 
+const __setGetPool = (newGetPool) => { getPool = newGetPool; };
+const __getOriginalGetPool = () => require('../../config/database').getPool;
+
 module.exports = {
+  __setGetPool,
+  __getOriginalGetPool,
   selectAvailableRooms,
   selectAvailableParkingSpots,
   selectAndLockAvailableParkingSpot,  
@@ -4995,6 +4975,5 @@ module.exports = {
   sanitizeName,
   selectFailedOtaReservations,    
   calculatePriceFromRates,
-  insertAggregatedRates,
   cancelReservationRooms,  
 };

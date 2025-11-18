@@ -5,6 +5,7 @@
         <ReservationsCalendarHeader 
           v-model="headerState"
           :legend-items="uniqueLegendItems"
+          :hotel-name="selectedHotel ? selectedHotel.name : ''"
         />
       </template>
 <!--
@@ -253,8 +254,8 @@ import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.
 //import ReservationsCalendarGrid from './components/ReservationsCalendarGrid.vue';
 
 //Websocket
-import io from 'socket.io-client';
-const socket = ref(null);
+import { useSocket } from '@/composables/useSocket';
+const { socket } = useSocket();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -266,7 +267,7 @@ import { Panel, Drawer, Card, Skeleton, ConfirmDialog, SpeedDial, ContextMenu, B
 
 // Stores  
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, removeCalendarSettings } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, removeCalendarSettings, selectedHotel } = useHotelStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom, convertBlockToReservation } = useReservationStore();
 import { useUserStore } from '@/composables/useUserStore';
@@ -774,60 +775,145 @@ const handleCellClick = async (room, date) => {
     openDrawer(room.room_id, date);
   }
   else if (dragMode.value === 'roomByDay') {
-    if (reservedRoomsMap.value[key]) {
-      const index = selectedRoomByDay.value.findIndex(item => item.key === key);
-      // console.log('selectedRoomByDay.value.length', selectedRoomByDay.value.length)
-      if (index === -1) {
-        if (selectedRoomByDay.value.length === 0 || isContiguous(selectedRoomByDay.value, key)) {
-          selectedRoomByDay.value.push({ key: key, reservation: reservedRoomsMap.value[key] });
+    const key = `${room.room_id}_${date}`;
+    const clickedReservation = reservedRoomsMap.value[key];
+
+    if (selectedRoomByDay.value.length > 0) {
+      const isPartOfSelection = selectedRoomByDay.value.some(item => item.key === key);
+      const sourceReservation = selectedRoomByDay.value[0].reservation;
+
+      if (isPartOfSelection) {
+        // Deselection logic
+        const originalSelection = [...selectedRoomByDay.value];
+        const index = originalSelection.findIndex(item => item.key === key);
+        originalSelection.splice(index, 1);
+
+        if (originalSelection.length === 0) {
+          selectedRoomByDay.value = [];
         } else {
-          selectedRoomByDay.value = [{ key: key, reservation: reservedRoomsMap.value[key] }];
+          const sortedSelection = originalSelection.sort((a, b) => new Date(a.key.split('_')[1]) - new Date(b.key.split('_')[1]));
+          let isStillContiguous = true;
+          for (let i = 0; i < sortedSelection.length - 1; i++) {
+            const currentDay = new Date(sortedSelection[i].key.split('_')[1]);
+            const nextDay = new Date(sortedSelection[i + 1].key.split('_')[1]);
+            if (nextDay.getTime() - currentDay.getTime() !== 86400000) {
+              isStillContiguous = false;
+              break;
+            }
+          }
+
+          if (isStillContiguous) {
+            selectedRoomByDay.value = sortedSelection;
+          } else {
+            const firstBlock = [];
+            if (sortedSelection.length > 0) {
+              firstBlock.push(sortedSelection[0]);
+              for (let i = 0; i < sortedSelection.length - 1; i++) {
+                if (new Date(sortedSelection[i + 1].key.split('_')[1]).getTime() - new Date(sortedSelection[i].key.split('_')[1]).getTime() === 86400000) {
+                  firstBlock.push(sortedSelection[i + 1]);
+                } else {
+                  break;
+                }
+              }
+            }
+            selectedRoomByDay.value = firstBlock;
+          }
         }
-      } else if (index !== -1) {
-        // console.log('splice');
-        selectedRoomByDay.value.splice(index, 1);
-      }
-    } else {
-      if (selectedRoomByDay.value.length > 0) {
-        // console.log(selectedRoomByDay.value[0].reservation.room_number)
-        // console.log('areSelectedDatesAvailableInRoom', areSelectedDatesAvailableInRoom(room.room_id));
-        formattedMessage.value = `
-              <b>${selectedRoomByDay.value[0].reservation.room_number}号室</b>の予約を<br/>
-              <b>${room.room_number}号室</b>に移動しますか?<br/>
-              <p><b>対象期間：</b></p>
-              ${formatDate(new Date(selectedRoomByDayDateRange.value.minDate))}～
-              ${formatDate(new Date(selectedRoomByDayDateRange.value.maxDate))}              
-            `;
+      } else if (clickedReservation && clickedReservation.reservation_id === sourceReservation.reservation_id) {
+        // Range selection logic
+        selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
+        const selectedDates = selectedRoomByDay.value.map(item => new Date(item.key.split('_')[1]));
+        const minDate = new Date(Math.min.apply(null, selectedDates));
+        const maxDate = new Date(Math.max.apply(null, selectedDates));
+        const dateRange = [];
+        for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+          dateRange.push(formatDate(new Date(d)));
+        }
+        const reservationId = sourceReservation.reservation_id;
+        const roomId = sourceReservation.room_id;
+        const newSelection = dateRange.map(dateInRange => {
+          const rangeKey = `${roomId}_${dateInRange}`;
+          const reservationData = reservedRoomsMap.value[rangeKey];
+          if (reservationData && reservationData.reservation_id === reservationId) {
+            return { key: rangeKey, reservation: reservationData };
+          }
+          return null;
+        }).filter(Boolean);
+        selectedRoomByDay.value = newSelection;
+      } else {
+        // This is a target click for a move/swap operation.
+        const targetRoomId = room.room_id;
+        const sourceRoomId = sourceReservation.room_id;
+        const datesToOperate = selectedRoomByDay.value.map(day => day.key.split('_')[1]);
+        const executionPlan = { swaps: [], moves: [] };
+        let isConflict = false;
+
+        for (const opDate of datesToOperate) {
+          const sourceDay = reservedRoomsMap.value[`${sourceRoomId}_${opDate}`];
+          const targetDay = reservedRoomsMap.value[`${targetRoomId}_${opDate}`];
+
+          if (targetDay) {
+            if (targetDay.reservation_id === sourceReservation.reservation_id) {
+              isConflict = true;
+              toast.add({ severity: 'error', summary: '操作不可', detail: '同じ予約の別の部屋パートと直接スワップすることはできません。', life: 4000 });
+              break;
+            }
+            executionPlan.swaps.push({ source: sourceDay, target: targetDay });
+          } else {
+            executionPlan.moves.push(sourceDay);
+          }
+        }
+
+        if (isConflict) return;
+
+        const swapCount = executionPlan.swaps.length;
+        const moveCount = executionPlan.moves.length;
+
+        if (swapCount === 0 && moveCount === 0) return;
+
+        let message = `<b>${sourceReservation.room_number}号室</b>から<b>${room.room_number}号室</b>へ移動します。<br/><br/>`;
+        if (swapCount > 0) message += `・${swapCount}泊分を交換します。<br/>`;
+        if (moveCount > 0) message += `・${moveCount}泊分を空室へ移動します。<br/>`;
+        message += '<br/>よろしいですか？';
+
+        formattedMessage.value = message;
+
         confirmRoomMode.require({
           group: 'templating',
-          header: '日ごと移動確認',
-          icon: 'pi pi-exclamation-triangle',
-          acceptProps: {
-            label: 'はい'
-          },
+          header: '移動・交換の確認',
+          icon: 'pi pi-question-circle',
+          acceptProps: { label: 'はい' },
+          rejectProps: { label: 'キャンセル', severity: 'secondary', outlined: true },
           accept: async () => {
             isUpdating.value = true;
-            for (const item of selectedRoomByDay.value) {
-              await setReservationRoom(item.reservation.id, room.room_id);
+            try {
+              for (const pair of executionPlan.swaps) {
+                await setReservationRoom(pair.source.id, targetRoomId);
+                await setReservationRoom(pair.target.id, sourceRoomId);
+              }
+              for (const day of executionPlan.moves) {
+                await setReservationRoom(day.id, targetRoomId);
+              }
+              toast.add({ severity: 'success', summary: '成功', detail: '部屋を移動・交換しました。', life: 3000 });
+            } catch (error) {
+              toast.add({ severity: 'error', summary: 'エラー', detail: '操作に失敗しました。', life: 3000 });
+            } finally {
+              selectedRoomByDay.value = [];
+              isUpdating.value = false;
+              await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+              confirmRoomMode.close('templating');
             }
-            selectedRoomByDay.value = [];
-            isUpdating.value = false;
-            await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-            confirmRoomMode.close('templating');
-          },
-          rejectProps: {
-            label: 'キャンセル',
-            severity: 'secondary',
-            outlined: true
           },
           reject: () => {
-            // Cancel action
             confirmRoomMode.close('templating');
           }
         });
       }
+    } else {
+      if (clickedReservation) {
+        selectedRoomByDay.value.push({ key: key, reservation: clickedReservation });
+      }
     }
-    // console.log('handleCellClick:', selectedRoomByDay.value);
   }
   else if (dragMode.value === 'reorganizeRooms') {
     if (tempReservationsMap.value[key]) {
@@ -1445,8 +1531,8 @@ const openClientDialog = () => {
         };
     }
 
-    console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
-    console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
+    //console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
+    //console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
 
     showClientDialog.value = true;
 };
@@ -1490,28 +1576,11 @@ const handleClientSave = async (clientData) => {
 // Mount
 onMounted(async () => {
   isLoading.value = true;
-  // Establish Socket.IO connection
-  socket.value = io(import.meta.env.VITE_BACKEND_URL);
-
-  socket.value.on('connect', () => {
-    // console.log('Connected to server');
-  });
-
-  socket.value.on('tableUpdate', async (_data) => {
-    // Prevent fetching if bulk update is in progress
-    if (isUpdating.value) {
-      // console.log('Skipping fetchReservation because update is still running');
-      return;
-    }
-    // Update the reservations data in your component
-    // console.log('Received updated data:', data);
-    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-  });
 
   await fetchHotels();
   await fetchHotel();
 
-  console.log('[ReservationsCalendar] isCompactView on load:', headerState.value.isCompactView);
+  //console.log('[ReservationsCalendar] selectedHotel on load:', selectedHotel.value);
 
   const today = new Date();
   const initialMinDate = new Date(today);
@@ -1541,13 +1610,43 @@ onMounted(async () => {
   isLoading.value = false;
 });
 onUnmounted(() => {
-  // Close the Socket.IO connection when the component is unmounted
+  // The useSocket composable handles disconnection, but we must clean up component-specific listeners.
   if (socket.value) {
-    socket.value.disconnect();
+    socket.value.off('tableUpdate', handleTableUpdate);
   }
 });
 
-// Watchers
+const handleTableUpdate = async (data) => {
+  //console.log('tableUpdate received on calendar', data);
+  if (isUpdating.value) {
+    //console.log('Skipping fetchReservation because update is still running');
+    return;
+  }
+
+  if (!dateRange.value || dateRange.value.length < 2) {
+    console.error('Cannot fetch reservations, dateRange is invalid.');
+    return;
+  }
+
+  isUpdating.value = true;
+  try {
+    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+  } catch (error) {
+    console.error('Failed to fetch reservations after table update:', error);
+  } finally {
+    isUpdating.value = false;
+  }
+};
+
+watch(socket, (newSocket, oldSocket) => {
+  if (oldSocket) {
+    oldSocket.off('tableUpdate', handleTableUpdate);
+  }
+  if (newSocket) {
+    newSocket.on('tableUpdate', handleTableUpdate);
+  }
+}, { immediate: true });
+
 watch(reservationId, async (newReservationId, _oldReservationId) => {
   if (newReservationId) {
 

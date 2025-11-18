@@ -1183,3 +1183,31 @@ const versionMiddleware = (version) => {
 ```
 
 This comprehensive API design documentation provides a complete overview of the Hotel PMS API architecture, authentication patterns, integration strategies, and best practices for development, testing, and deployment.
+
+
+## See Also
+
+### Related Architecture Documentation
+- **[System Architecture](system-architecture.md)** - Overall system design and technology stack
+- **[Component Architecture](component-diagrams.md)** - Component structure and relationships
+- **[Data Flow Architecture](data-flow-architecture.md)** - Data flow patterns and processing
+- **[Data Models](data-models.md)** - Database schema and entity relationships
+
+### API Documentation
+- **[API Overview](../api/README.md)** - Complete API reference
+- **[API Authentication](../api/authentication.md)** - API authentication guide
+- **[API Endpoints](../api/endpoints/)** - Detailed endpoint documentation
+
+### Implementation Documentation
+- **[Backend Development](../backend/README.md)** - Backend implementation guide
+- **[Service Architecture](../backend/service-architecture.md)** - Service layer design
+- **[Testing Strategy](../development/testing-strategy.md)** - API testing approaches
+
+### Integration Documentation
+- **[Integration Patterns](../architecture/integration-patterns.md)** - External system integration
+- **[Integrations Overview](../integrations/README.md)** - External system connections
+- **[Booking Engine Integration](../integrations/booking-engine/)** - Booking engine API
+
+---
+
+*This document is part of the [Architecture Documentation](../architecture/README.md)*

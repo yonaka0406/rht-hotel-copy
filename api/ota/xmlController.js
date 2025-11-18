@@ -27,6 +27,26 @@ const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require(
 const { getPool } = require('../config/database');
 const logger = require('../config/logger'); // Winston logger
 
+const computeBatchDateRange = (batch, dateExtractor) => {
+    if (!batch || batch.length === 0) {
+        return { from: 'N/A', to: 'N/A' };
+    }
+
+    const dates = batch.map(dateExtractor).filter(d => d instanceof Date && !isNaN(d.getTime()));
+
+    if (dates.length === 0) {
+        return { from: 'N/A', to: 'N/A' };
+    }
+
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+
+    return {
+        from: minDate.toISOString().split('T')[0],
+        to: maxDate.toISOString().split('T')[0],
+    };
+};
+
 /**
  * Process reservation data and add to OTA queue
  * @param {string} requestId - The request ID for logging
@@ -980,10 +1000,10 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
 
     while (currentStartDate <= eDate) {
         let currentEndDate = new Date(currentStartDate);
-        currentEndDate.setDate(currentEndDate.getDate() + 29);
+        currentEndDate.setDate(currentEndDate.getDate() + 28); // Max 29 days inclusive
 
         if (currentEndDate > eDate) {
-            currentEndDate = eDate;
+            currentEndDate = new Date(eDate);
         }
 
         dateRanges.push({
@@ -1176,8 +1196,13 @@ const updateInventoryMultipleDays = async (req, res) => {
     // --- Proceed with batch processing if an update is needed ---
 
     const processInventoryBatch = async (batch, batch_no) => {
+        logger.warn(`Processing batch ${batch_no} for hotel ${hotel_id}`, {
+            hotel_id: hotel_id,
+            batch_no: batch_no,
+            batch_size: batch.length
+        });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(2000); // 2-second pause
+        await delay(5000); // 5-second pause
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -1314,11 +1339,20 @@ const updateInventoryMultipleDays = async (req, res) => {
             // Process all filtered inventory as a single batch
             await processInventoryBatch(filteredInventory, 0);
         }
-        res.status(200).send({ message: 'Inventory update processed.' });
+        res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
-        console.error('Error in updateInventoryMultipleDays:', error);
+        const dateRange = {
+            from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
+            to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
+        };
+        logger.error('Error in updateInventoryMultipleDays', {
+            hotel_id: hotel_id,
+            dateRange: dateRange,
+            error: error.message,
+            stack: error.stack
+        });
         if (!res.headersSent) {
-            res.status(500).send({ error: 'Failed to process inventory update.' });
+            res.status(500).send({ success: false, message: error.message });
         }
     }                
 
@@ -1400,8 +1434,13 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     // --- Proceed with batch ---
 
     const processInventoryBatch = async (batch, batch_no) => {
+        logger.warn(`Processing manual batch ${batch_no} for hotel ${hotel_id}`, {
+            hotel_id: hotel_id,
+            batch_no: batch_no,
+            batch_size: batch.length
+        });
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(2000); // 2-second pause
+        await delay(5000); // 5-second pause
 
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -1548,9 +1587,18 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         }
         res.status(200).send({ success: true, message: 'Inventory update processed.' });
     } catch (error) {
-        console.error('Error in manualUpdateInventoryMultipleDays:', error);
+        const dateRange = {
+            from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
+            to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
+        };
+        logger.error('Error in manualUpdateInventoryMultipleDays', {
+            hotel_id: hotel_id,
+            dateRange: dateRange,
+            error: error.message,
+            stack: error.stack
+        });
         if (!res.headersSent) {
-            res.status(500).send({ error: 'Failed to process inventory update.' });
+            res.status(500).send({ success: false, message: error.message });
         }
     }
 

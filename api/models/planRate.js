@@ -1,4 +1,4 @@
-let actualGetPool = require('../config/database').getPool;
+const { getPool } = require('../config/database');
 
 // Helper function to validate conditions
 const isValidCondition = (row, date) => {
@@ -72,9 +72,15 @@ let actualIsValidCondition = isValidCondition;
 
 // Return all plans_rates
 const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `
-        SELECT * FROM plans_rates
+        SELECT 
+            id, hotel_id, plans_global_id, plans_hotel_id, 
+            adjustment_type, adjustment_value, tax_type_id, tax_rate, 
+            condition_type, condition_value, date_start, date_end, 
+            created_at, created_by, updated_by, 
+            include_in_cancel_fee, comment
+        FROM plans_rates
         WHERE 
             (plans_global_id = $1 AND plans_hotel_id IS NULL) OR 
             (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL)
@@ -96,8 +102,8 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
-    const pool = actualGetPool(requestId);
-    const query = 'SELECT * FROM plans_rates WHERE id = $1';
+    const pool = getPool(requestId);
+    const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, comment FROM plans_rates WHERE id = $1';
 
     try {
         const result = await pool.query(query, [id]);
@@ -111,8 +117,11 @@ const getPlansRateById = async (requestId, id) => {
     }
 };
 
-const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false) => {
-    const pool = actualGetPool(requestId);
+const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, disableRounding = false, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const releaseClient = !dbClient;
+
     const query = `        
         SELECT 
             adjustment_type,
@@ -138,7 +147,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     ];
 
     try {
-        const result = await pool.query(query, values);        
+        const result = await client.query(query, values);        
 
         // console.log('Query:', query);
         // console.log('Values:', values);
@@ -191,7 +200,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         currentTotal = afterGroupA;
         
         // 2. Conditionally Round down to the nearest 100 (Japanese pricing convention)
-        if (!overrideRounding) {
+        if (!disableRounding) {
             const afterRounding = Math.floor(currentTotal / 100) * 100;
             //console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
             currentTotal = afterRounding;
@@ -216,10 +225,14 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
+    } finally {
+        if (releaseClient) {
+            client.release();
+        }
     }
 };
 const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `        
         SELECT 
             adjustment_type,
@@ -227,6 +240,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             condition_value,
             tax_type_id,
             tax_rate,
+            include_in_cancel_fee,
             SUM(adjustment_value) AS adjustment_value
         FROM plans_rates
         WHERE 
@@ -236,7 +250,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             )
             AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
             OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
-        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate
+        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate, include_in_cancel_fee
         ORDER BY adjustment_type
     `;
     const values = [
@@ -261,7 +275,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
 
 // Create a new plans_rate
 const createPlansRate = async (requestId, plansRate) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `
         INSERT INTO plans_rates (
             hotel_id, 
@@ -276,8 +290,10 @@ const createPlansRate = async (requestId, plansRate) => {
             date_start, 
             date_end, 
             created_by,
-            updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            updated_by,
+            include_in_cancel_fee,
+            comment
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING *
     `;
 
@@ -294,7 +310,9 @@ const createPlansRate = async (requestId, plansRate) => {
         plansRate.date_start,
         plansRate.date_end,
         plansRate.created_by,
-        plansRate.updated_by
+        plansRate.updated_by,
+        plansRate.include_in_cancel_fee || false,
+        plansRate.comment
     ];
 
     try {
@@ -308,7 +326,7 @@ const createPlansRate = async (requestId, plansRate) => {
 
 // Update an existing plans_rate
 const updatePlansRate = async (requestId, id, plansRate) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `
         UPDATE plans_rates
         SET 
@@ -323,8 +341,10 @@ const updatePlansRate = async (requestId, id, plansRate) => {
             condition_value = $9,
             date_start = $10,
             date_end = $11,
-            updated_by = $12
-        WHERE id = $13
+            updated_by = $12,
+            include_in_cancel_fee = $13,
+            comment = $14
+        WHERE id = $15
         RETURNING *
     `;
 
@@ -341,6 +361,8 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         plansRate.date_start,
         plansRate.date_end,
         plansRate.updated_by,
+        plansRate.include_in_cancel_fee || false,
+        plansRate.comment,
         id
     ];
 
@@ -358,7 +380,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
 
 // Delete a plans_rate by ID
 const deletePlansRate = async (requestId, id) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
 
     try {
@@ -373,11 +395,7 @@ const deletePlansRate = async (requestId, id) => {
     }
 };
 
-// Helper functions for testing to allow injection of mocks
-const __setGetPool = (newGetPool) => { actualGetPool = newGetPool; };
-const __getOriginalGetPool = () => require('../config/database').getPool;
-const __setIsValidCondition = (newIsValidCondition) => { actualIsValidCondition = newIsValidCondition; };
-const __getOriginalIsValidCondition = () => isValidCondition; // This refers to the original isValidCondition function defined in this file
+
 
 module.exports = {
     getAllPlansRates,
@@ -387,9 +405,5 @@ module.exports = {
     createPlansRate,
     updatePlansRate,
     deletePlansRate,
-    // For testing purposes
-    __setGetPool,
-    __getOriginalGetPool,
-    __setIsValidCondition,
-    __getOriginalIsValidCondition
+
 };

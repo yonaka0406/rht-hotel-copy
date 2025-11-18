@@ -405,8 +405,7 @@
                     <!-- Tab 6: Cancel -->
                     <TabPanel value="5">
                         <div class="mb-3">
-                            <p>この部屋の予約をキャンセルします。キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span
-                                    class="font-bold">基本料金</span>のみが請求されます。</p>
+                            <p>この部屋の予約をキャンセルします。キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、キャンセル料対象としてマークされた料金項目（例：基本料金、割合料金、固定料金）が請求されます。</p>
                         </div>
                         <div class="field grid grid-cols-12 mt-8">
                             <div class="col-span-12 md:col-span-5">
@@ -443,8 +442,8 @@
 
             
             <div v-if="tabsRoomEditDialog === 0 && !isPatternInput" class="field-checkbox mr-6">
-                <Checkbox id="overrideRounding" v-model="overrideRounding" :binary="true" />
-                <label for="overrideRounding" class="ml-2">端数処理を上書きする</label>
+                <Checkbox id="disableRounding" v-model="disableRounding" :binary="true" />
+                <label for="disableRounding" class="ml-2">端数処理を上書きする</label>
             </div>
             <Button v-if="tabsRoomEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check"
                 class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" :loading="isSubmitting" :disabled="isSubmitting" />
@@ -565,12 +564,14 @@ const normalizePhone = (phone) => {
     return normalized;
 };
 const validateEmail = (email) => {
-    isValidEmail.value = emailPattern.test(email);
-    return emailPattern.test(email);
+    const isValid = validateEmailUtil(email);
+    isValidEmail.value = isValid;
+    return isValid;
 };
 const validatePhone = (phone) => {
-    isValidPhone.value = phonePattern.test(phone);
-    return phonePattern.test(phone);
+    const isValid = validatePhoneUtil(phone);
+    isValidPhone.value = isValid;
+    return isValid;
 };
 const normalizeKana = (str) => {
     if (!str) return '';
@@ -794,7 +795,7 @@ const selectedPatternDetails = ref(null);
 const selectedAddon = ref([]);
 const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
-const overrideRounding = ref(false);
+const disableRounding = ref(false);
 const updatePattern = async () => {
 
     if (selectedPattern.value !== null) {
@@ -873,7 +874,7 @@ const applyPlanChanges = async () => {
             plan: selectedPlan.value,
             addons: selectedAddon.value,
             daysOfTheWeek: selectedDays.value,
-            overrideRounding: overrideRounding.value
+            disableRounding: disableRounding.value
         };
 
         const _result = await setRoomPlan(params);
@@ -918,7 +919,7 @@ const applyPatternChanges = async () => {
             return;
         }
 
-        await setRoomPattern(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, dayPlanSelections.value, overrideRounding.value);
+        await setRoomPattern(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, dayPlanSelections.value, disableRounding.value);
 
         closeRoomEditDialog();
 
@@ -990,9 +991,9 @@ const genderOptions = [
     { label: '女性', value: 'female' },
     { label: 'その他', value: 'other' },
 ];
-const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+
 const isValidEmail = ref(true);
-const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
 const isValidPhone = ref(true);
 const initializeGuests = () => {
     const capacity = selectedGroup.value.details[0]?.capacity || 0;

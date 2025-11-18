@@ -288,9 +288,9 @@ const genderOptions = [
   { label: '女性', value: 'female' },
   { label: 'その他', value: 'other' },
 ];
-const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+
 const isValidEmail = ref(true);
-const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
 const isValidPhone = ref(true);
 const isClientSelected = ref(false);
 const selectedClient = ref(null);
@@ -338,10 +338,10 @@ const normalizePhone = (phone) => {
   return normalized;
 };
 const validateEmail = () => {
-  isValidEmail.value = emailPattern.test(reservationDetails.value.email);
+    isValidEmail.value = validateEmailUtil(reservationDetails.value.email);
 };
 const validatePhone = () => {
-  isValidPhone.value = phonePattern.test(reservationDetails.value.phone);
+    isValidPhone.value = validatePhoneUtil(reservationDetails.value.phone);
 };
 // Generate dates
 const generateDateRange = (start, end) => {

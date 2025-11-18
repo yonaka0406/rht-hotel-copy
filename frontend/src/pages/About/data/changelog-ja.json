@@ -451,7 +451,7 @@
       "version": "1.1.19",
       "date": "2025-10-01",
       "changes": [
-        { "type": "feature", "description": "`recalculatePlanPrice`関数をリファクタリングし、`overrideRounding`のデフォルトを`false`に設定すると共に、内部呼び出しの不具合を修正しました。" },
+        { "type": "feature", "description": "`recalculatePlanPrice`関数をリファクタリングし、`disableRounding`のデフォルトを`false`に設定すると共に、内部呼び出しの不具合を修正しました。これにより、`disableRounding`が`true`の場合に丸め処理を無効化できるようになりました。" },
         { "type": "bugfix", "description": "チェックインに基づくエクセル名簿で、1予約あたり複数部屋が表示されるように修正しました。" }
       ]      
     },
@@ -582,6 +582,15 @@
       "changes": [
         { "type": "user-request", "description": "PDF請求書テンプレートの'顧客コード'を'取引先コード'に変更し、ビジネス用語との一貫性を向上させました。" },
         { "type": "improvement", "description": "WebSocket更新による編集の中断を防ぐため、予約コメントセクションを読み取り専用モードと編集ダイアログに分離しました。" }
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "date": "2025-11-11",
+      "changes": [
+        { "type": "feature", "description": "外部ホテル連携のためのスポットブロック機能と駐車スペース管理を備えた包括的な駐車場モジュールを導入しました。" },
+        { "type": "feature", "description": "予約カレンダーに部屋交換機能を追加し、移動先の部屋が既に予約されていても部屋の入れ替えが可能になり、ルーム管理の柔軟性が向上しました。" },
+        { "type": "bugfix", "description": "大規模な予約の一括編集時にJavaScriptのヒープメモリ不足が発生する問題を修正し、バルク編集時のデータベース接続を最適化して接続プールの枯渇を防ぐようにしました。" }
       ]
     }
   ],

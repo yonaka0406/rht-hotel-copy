@@ -83,8 +83,9 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
   }
 };
 
-const selectReservationDetail = async (requestId, id, hotel_id) => {
+const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null) => {
   const pool = getPool(requestId);
+  const executor = dbClient || pool;
   const query = `
     SELECT
       reservation_details.id,
@@ -196,9 +197,10 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
                 'adjustment_value', rr.adjustment_value,
                 'tax_type_id', rr.tax_type_id,
                 'tax_rate', rr.tax_rate,
-                'price', rr.price              
+                'price', rr.price,
+                'include_in_cancel_fee', rr.include_in_cancel_fee                
               )
-            ) AS rates_json
+            ) AS rates_json          
           FROM reservation_rates rr
           JOIN reservation_details rd 
             ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
@@ -211,7 +213,7 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
   const values = [id, hotel_id];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await executor.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error fetching reservation detail:', err);
@@ -336,11 +338,106 @@ const selectReservationParking = async (requestId, hotel_id, reservation_id) => 
   return result.rows;
 };
 
+const selectReservationBalance = async (requestId, hotelId, reservationId, endDate = null, client = null) => {
+  const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+  
+  let dateFilterQuery = '';
+  const values = [hotelId, reservationId];
+
+  if (endDate) {
+    dateFilterQuery = 'AND rd.date <= $3';
+    values.push(endDate);
+  }
+
+  const query = `
+    SELECT
+      details.hotel_id,
+      details.reservation_id,
+      details.room_id,
+      details.total_price,
+      COALESCE(payments.total_payment, 0) AS total_payment,
+      COALESCE(details.total_price, 0) - COALESCE(payments.total_payment, 0) AS balance
+    FROM (
+      SELECT
+        rd.hotel_id,
+        rd.reservation_id,
+        rd.room_id,
+        SUM(
+            CASE
+                WHEN rd.billable IS TRUE AND rd.cancelled IS NULL THEN rd.price
+                WHEN rd.billable IS TRUE AND rd.cancelled IS NOT NULL THEN COALESCE(rr_agg.base_rate_price, 0)
+                ELSE 0
+            END
+        ) + COALESCE(SUM(ra_agg.total_addon_price), 0) AS total_price
+      FROM
+        reservation_details rd
+      LEFT JOIN (
+          SELECT
+              rr_sub.reservation_details_id,
+              SUM(rr_sub.price) AS base_rate_price
+          FROM
+              reservation_rates rr_sub
+          WHERE
+              rr_sub.adjustment_type = 'base_rate'
+          GROUP BY
+              rr_sub.reservation_details_id
+      ) AS rr_agg ON rd.id = rr_agg.reservation_details_id
+      LEFT JOIN (
+          SELECT
+              ra_sub.reservation_detail_id,
+              SUM(ra_sub.quantity * ra_sub.price) AS total_addon_price
+          FROM
+              reservation_addons ra_sub
+          GROUP BY
+              ra_sub.reservation_detail_id
+      ) AS ra_agg ON rd.id = ra_agg.reservation_detail_id
+      WHERE
+        rd.hotel_id = $1 AND rd.reservation_id = $2 ${dateFilterQuery}
+      GROUP BY
+        rd.hotel_id, rd.reservation_id, rd.room_id
+    ) AS details
+    LEFT JOIN (
+      SELECT
+        hotel_id,
+        reservation_id,
+        room_id,
+        SUM(value) AS total_payment
+      FROM
+        reservation_payments
+      WHERE
+        hotel_id = $1 AND reservation_id = $2
+      GROUP BY
+        hotel_id, reservation_id, room_id
+    ) AS payments ON details.hotel_id = payments.hotel_id AND details.reservation_id = payments.reservation_id AND details.room_id = payments.room_id
+    ORDER BY
+      1, 2, 6 DESC;
+  `;
+  try {
+    const result = await dbClient.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservation:', err);
+    throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
+  }
+};
+
 module.exports = {  
   selectReservedRooms,
   selectReservationDetail,
   selectReservationAddons,
   selectReservationClientIds,
   selectReservationPayments,
-  selectReservationParking
+  selectReservationParking,
+  selectReservationBalance
 }

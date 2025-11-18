@@ -1,23 +1,10 @@
 <template>
   <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
-    <div class="flex justify-between w-full items-center mb-4">
-      <h2 class="text-xl font-bold">予約照会</h2>
-      <div class="flex flex-wrap gap-2 p-2">
-        <div v-for="item in uniqueLegendItems" :key="item.plan_name" class="flex items-center gap-2">
-          <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: item.plan_color }"></span>
-          <span class="text-xs text-surface-700 dark:text-surface-300">{{ item.plan_name }}</span>
-        </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <DatePicker
-          v-model="currentMonth"
-          view="month"
-          dateFormat="yy/mm"
-          :showIcon="true"
-          class="p-inputtext-sm"
-        />
-      </div>
-    </div>
+    <StaticCalendarHeader
+      :selected-hotel="selectedHotel"
+      :unique-legend-items="uniqueLegendItems"
+      v-model:current-month="currentMonth"
+    />
     <Panel>
       <template #header>
         <div class="flex justify-between w-full items-center">
@@ -108,8 +95,7 @@
         </table>
       </div>
       <template #footer>
-        <div class="flex flex-wrap gap-3 p-3">
-        </div>
+        <StaticCalendarFooter @addMonths="handleAddMonths" :loading="isAddingMonths" />
       </template>
     </Panel>
 
@@ -130,17 +116,20 @@
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
 
 import Panel from 'primevue/panel';
 import Skeleton from 'primevue/skeleton';
-import DatePicker from 'primevue/datepicker';
+import StaticCalendarHeader from './components/StaticCalendarHeader.vue';
 
 // Components
 import StaticCalendarDrawer from './components/StaticCalendarDrawer.vue';
+import StaticCalendarFooter from './components/StaticCalendarFooter.vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, selectedHotel } = useHotelStore();
 const allParkingSpots = ref([]);
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservedRooms, fetchReservedRooms } = useReservationStore();
@@ -192,8 +181,8 @@ const paymentTimingInfo = {
   postpaid: { label: '後払い', severity: 'warn' },
 };
 //Websocket
-import io from 'socket.io-client';
-const socket = ref(null);
+import { useSocket } from '@/composables/useSocket';
+const { socket } = useSocket();
 
 // State
 const isLoading = ref(true);
@@ -207,6 +196,7 @@ const tooltipY = ref(0);
 const selectedClientId = ref(null);
 const isDrawerVisible = ref(false);
 const cardSelectedReservationId = ref(null);
+const isAddingMonths = ref(false);
 
 const selectReservationCard = (reservationId) => {
   if (cardSelectedReservationId.value === reservationId) {
@@ -270,6 +260,35 @@ const handleCellDoubleClick = (room_id, date) => {
   if (roomInfo && roomInfo.client_id) {
     selectedClientId.value = roomInfo.client_id;
     isDrawerVisible.value = true;
+  }
+};
+
+const handleAddMonths = async () => {
+  isAddingMonths.value = true; // Set loading to true
+  try {
+    // Get the current last date being displayed in the calendar
+    const currentLastDisplayedDate = new Date(dateRange.value[dateRange.value.length - 1]);
+
+    // Calculate the new end month (3 months after the last displayed month)
+    const tempNewEndDate = new Date(currentLastDisplayedDate.getFullYear(), currentLastDisplayedDate.getMonth() + 3, 1);
+    
+    // Get the last day of this new month
+    const newEndDate = new Date(tempNewEndDate.getFullYear(), tempNewEndDate.getMonth() + 1, 0);
+
+    // The startDate remains the same (first day of the initial currentMonth)
+    const initialStartDate = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1);
+    
+    dateRange.value = generateDateRange(initialStartDate, newEndDate);
+
+    await fetchReservations(formatDate(initialStartDate), formatDate(newEndDate));
+    await fetchReservedParkingSpots(selectedHotelId.value, formatDate(initialStartDate), formatDate(newEndDate));
+
+    toast.add({ severity: 'success', summary: '成功', detail: 'さらに3ヶ月分のデータを読み込みました。', life: 3000 });
+  } catch (error) {
+    console.error("Error in handleAddMonths:", error);
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'データの読み込み中にエラーが発生しました。', life: 3000 });
+  } finally {
+    isAddingMonths.value = false; // Set loading to false
   }
 };
 
@@ -586,30 +605,38 @@ const getCellStyle = (room_id, date) => {
 
 // Mount
 onMounted(async () => {
-  // Establish Socket.IO connection
-  socket.value = io(import.meta.env.VITE_API_BASE_URL);
+  // Initial data fetch is handled by the watch(currentMonth) which is triggered on mount
+});
 
-  socket.value.on('connect', () => {
-    console.log('Connected to server');
-  });
-
-  socket.value.on('tableUpdate', async (data) => {
-    if (isUpdating.value) {
-      console.log('Skipping fetchReservation because update is still running');
-      return;
-    }
-    console.log('Received updated data:', data);
+const handleTableUpdate = async (data) => {
+  if (isUpdating.value) {
+    //console.log('Skipping fetchReservation because update is still running');
+    return;
+  }
+  //console.log('Received updated data:', data);
+  
+  isUpdating.value = true;
+  try {
     // Recalculate date range based on currentMonth
     const currentYear = currentMonth.value.getFullYear();
     const month = currentMonth.value.getMonth();
     const startDate = new Date(currentYear, month, 1);
-    const endDate = new Date(currentYear, month + 2, 0);
+    const endDate = new Date(currentYear, month + 3, 0); // Corrected from +2 to +3
     await fetchReservations(formatDate(startDate), formatDate(endDate));
     await fetchReservedParkingSpots(selectedHotelId.value, formatDate(startDate), formatDate(endDate));
-  });
+  } finally {
+    isUpdating.value = false;
+  }
+};
 
-  // Initial data fetch is handled by the watch(currentMonth) which is triggered on mount
-});
+watch(socket, (newSocket, oldSocket) => {
+  if (oldSocket) {
+    oldSocket.off('tableUpdate', handleTableUpdate);
+  }
+  if (newSocket) {
+    newSocket.on('tableUpdate', handleTableUpdate);
+  }
+}, { immediate: true });
 
 watch(currentMonth, async (newMonth) => {
   isLoading.value = true;
@@ -621,7 +648,7 @@ watch(currentMonth, async (newMonth) => {
     const month = newMonth.getMonth();
 
     const startDate = new Date(currentYear, month, 1);
-    const endDate = new Date(currentYear, month + 2, 0);
+    const endDate = new Date(currentYear, month + 3, 0);
     
     dateRange.value = generateDateRange(startDate, endDate);
 
@@ -667,9 +694,9 @@ watch(selectedHotelId, async (newHotelId, oldHotelId) => {
 });
 
 onUnmounted(() => {
-  // Close the Socket.IO connection when the component is unmounted
+  // The useSocket composable handles disconnection, but we must clean up component-specific listeners.
   if (socket.value) {
-    socket.value.disconnect();
+    socket.value.off('tableUpdate', handleTableUpdate);
   }
 });
 

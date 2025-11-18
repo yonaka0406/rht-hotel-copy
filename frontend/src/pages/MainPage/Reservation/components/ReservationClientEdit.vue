@@ -213,9 +213,9 @@
       { label: '女性', value: 'female' },
       { label: 'その他', value: 'other' },
     ];
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+
     const isValidEmail = ref(true);
-    const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
     const isValidPhone = ref(true);
     const isClientSelected = ref(false);
     const selectedClient = ref(null);
@@ -249,10 +249,10 @@
         return normalized;
     };
     const validateEmail = (email) => {
-      isValidEmail.value = emailPattern.test(email);
+      isValidEmail.value = validateEmailUtil(email);
     };
     const validatePhone = (phone) => {
-      isValidPhone.value = phonePattern.test(phone);
+      isValidPhone.value = validatePhoneUtil(phone);
     };
     const formatDate = (date) => {
       const year = date.getFullYear();

@@ -799,11 +799,17 @@ const generateInvoiceExcel = async (req, res) => {
         return `${y}-${m}-${d}`;
       }
 
+      // Filter dailyDetails to only include entries for the invoice month
+      const filteredDailyDetails = dailyDetails.filter(detail => {
+        const detailDate = new Date(detail.date);
+        return detailDate.getFullYear() === year && detailDate.getMonth() === month;
+      });
+
       for (let day = 1; day <= daysInMonth; day++) {
         const currentDate = new Date(year, month, day);
         const dateString = toYYYYMMDD(currentDate);
         
-        const todaysDetails = dailyDetails.filter(d => d.date.startsWith(dateString));
+        const todaysDetails = filteredDailyDetails.filter(d => d.date.startsWith(dateString));
 
         const planData = {
             4: { count: 0, price: 0 },
