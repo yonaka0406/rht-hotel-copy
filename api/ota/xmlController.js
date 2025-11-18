@@ -64,6 +64,7 @@ async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, current
     const { maxRetries = 3, retryDelay = 5000, batch_no = 'N/A' } = options;
 
 
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             let currentXmlBody = xmlBody; // Use a mutable copy for potential modifications
@@ -88,6 +89,8 @@ async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, current
 
             await apiCallSemaphore.acquire();
             try {
+                const randomDelay = Math.floor(Math.random() * (3000 - 500 + 1)) + 500; // Random between 500 and 3000 ms
+                await delay(randomDelay); // Use the global delay helper
                 const apiResponse = await submitXMLTemplate(req, res, hotel_id, serviceName, currentXmlBody);
                 return apiResponse; // Success
             } finally {
@@ -102,11 +105,16 @@ async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, current
                 requestId: req.requestId,
             });
 
-                            if (isRetryableError && attempt < maxRetries) {
-                                serviceName = 'NetStockBulkAdjustmentResponseResendService'; // Change service for retry
-                                logger.info(`Retrying batch ${batch_no} with ${serviceName} in ${retryDelay / 1000} seconds...`);
-                                await delay(retryDelay);
-                            } else {                logger.error(`Error in processInventoryBatch for batch ${batch_no} after ${attempt} attempts.`, {
+            if (isRetryableError && attempt < maxRetries) {
+
+                serviceName = 'NetStockBulkAdjustmentResponseResendService'; // Change service for retry
+
+                logger.info(`Retrying batch ${batch_no} with ${serviceName} in ${retryDelay / 1000} seconds...`);
+
+                await delay(retryDelay);
+
+            } else {                
+                logger.error(`Error in processInventoryBatch for batch ${batch_no} after ${attempt} attempts.`, {
                     error: error.message,
                     stack: error.stack,
                     requestId: req.requestId,
