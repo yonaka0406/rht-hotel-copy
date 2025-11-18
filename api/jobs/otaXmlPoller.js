@@ -69,7 +69,7 @@ async function fetchPendingRequests(limit) {
 
 async function processQueueItem(item) {
     const requestId = `ota-poller-${item.id}`; // Generate a unique requestId for poller's internal logging
-    logger.info(`Processing queued item ID: ${item.id} for hotel ${item.hotel_id} with service ${item.service_name}`, {
+    logger.warn(`Processing queued item ID: ${item.id} for hotel ${item.hotel_id} with service ${item.service_name}`, {
         queueId: item.id,
         hotelId: item.hotel_id,
         serviceName: item.service_name,
@@ -83,7 +83,35 @@ async function processQueueItem(item) {
     try {
         // We need a dummy req and res object for submitXMLTemplate
         const dummyReq = { requestId: requestId };
-        const dummyRes = {}; // submitXMLTemplate doesn't actually use res for sending response, only for error handling
+        const dummyRes = {
+            statusCode: 200, // Default status code
+            _headersSent: false, // Mimic headersSent flag
+
+            status: function(code) {
+                this.statusCode = code;
+                return this; // Allow chaining
+            },
+            json: function(obj) {
+                // Record the JSON response if needed for debugging, or just no-op
+                // logger.debug('dummyRes.json called', { response: obj });
+                this._jsonResponse = obj;
+                this._headersSent = true;
+            },
+            send: function(body) {
+                // Record the body if needed, or just no-op
+                // logger.debug('dummyRes.send called', { response: body });
+                this._body = body;
+                this._headersSent = true;
+            },
+            end: function() {
+                // No-op, just to prevent errors
+                this._headersSent = true;
+            },
+            // Add headersSent property for checks
+            get headersSent() {
+                return this._headersSent;
+            }
+        }; // submitXMLTemplate doesn't actually use res for sending response, only for error handling
 
         // Acquire semaphore before making the actual API call
         await apiCallSemaphore.acquire();
@@ -92,6 +120,13 @@ async function processQueueItem(item) {
             await delay(randomDelay); // Use the global delay helper
 
             // Call the original submitXMLTemplate directly
+            logger.warn('Calling submitXMLTemplate from poller', {
+                queueId: item.id,
+                hotelId: item.hotel_id,
+                serviceName: item.service_name,
+                currentRequestId: item.current_request_id,
+                xmlBodySnippet: item.xml_body.substring(0, 200) // Log a snippet of the XML body
+            });
             await submitXMLTemplate(dummyReq, dummyRes, item.hotel_id, item.service_name, item.xml_body);
             success = true;
         } finally {
