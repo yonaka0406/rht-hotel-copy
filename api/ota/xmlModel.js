@@ -1,6 +1,6 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { getPool } = require("../config/database");
+const { getPool, getProdPool } = require("../config/database");
 
 /*
 Add to .env
@@ -9,9 +9,9 @@ XML_USER_ID=P2823341
 XML_PASSWORD=g?Z+yy5U5!LR
 XML_REQUEST_URL=https://www.tl-lincoln.net/pmsservice/V1/
 */
-const insertXMLRequest = async (requestId, hotel_id, name, xml) => {
+const insertXMLRequest = async (requestId, hotel_id, name, xml, dbPool = null) => {
     try {
-        const pool = getPool(requestId);
+        const pool = dbPool || getPool(requestId);
         const result = await pool.query(
             "INSERT INTO xml_requests(hotel_id, name, request) VALUES($1, $2, $3) RETURNING *",
             [hotel_id, name, xml]
@@ -23,9 +23,9 @@ const insertXMLRequest = async (requestId, hotel_id, name, xml) => {
         throw error;
     }
 };
-const insertXMLResponse = async (requestId, hotel_id, name, xml) => {
+const insertXMLResponse = async (requestId, hotel_id, name, xml, dbPool = null) => {
     try {
-        const pool = getPool(requestId);
+        const pool = dbPool || getPool(requestId);
         const result = await pool.query(
             "INSERT INTO xml_responses(hotel_id, name, response) VALUES($1, $2, $3) RETURNING *",
             [hotel_id, name, xml]
@@ -523,6 +523,52 @@ const selectOTAReservationQueue = async (requestId) => {
     }
 };
 
+const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, current_request_id }) => {
+    const pool = getProdPool();
+    try {
+        const result = await pool.query(
+            `INSERT INTO ota_xml_queue 
+             (hotel_id, service_name, xml_body, current_request_id, status, retries)
+             VALUES ($1, $2, $3, $4, 'pending', 0)
+             RETURNING *`,
+            [hotel_id, service_name, xml_body, current_request_id]
+        );
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error in insertOTAXmlQueue:', error);
+        throw error;    }
+};
+
+const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
+    const pool = getProdPool();
+    try {
+        let setClauses = [`status = $1`, `last_error = $2`];
+        let values = [status, error, id];
+        
+        if (status === 'failed') {
+            setClauses.push(`retries = retries + 1`);
+            setClauses.push(`processed_at = CURRENT_TIMESTAMP`);
+        } else if (status === 'completed') {
+            setClauses.push(`processed_at = CURRENT_TIMESTAMP`);
+        } else if (status === 'pending') {
+            setClauses.push(`retries = retries + 1`); // Increment retries when going back to pending
+            // processed_at should not be updated here
+        }
+        // For 'processing' status, processed_at is set in fetchPendingRequests, no need to update here.
+
+        const query = `UPDATE ota_xml_queue SET ${setClauses.join(', ')} WHERE id = $3 RETURNING *`;
+
+        const result = await pool.query(query, values);
+        if (result.rows.length === 0) {
+            throw new Error(`No OTA XML queue item found with ID: ${id}`);
+        }
+        return result.rows[0];
+    } catch (updateError) {
+        console.error('Error updating OTA XML queue status:', { requestId, id, status, error: updateError.message, stack: updateError.stack });
+        throw updateError;
+    }
+};
+
 module.exports = {
     insertXMLRequest,
     insertXMLResponse,
@@ -535,5 +581,7 @@ module.exports = {
     insertTLPlanMaster,
     insertOTAReservationQueue,
     updateOTAReservationQueue,
-    selectOTAReservationQueue
+    selectOTAReservationQueue,
+    insertOTAXmlQueue,
+    updateOTAXmlQueue
 };
