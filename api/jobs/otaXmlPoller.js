@@ -109,8 +109,7 @@ async function processQueueItem(item) {
         });
     }
 
-    if (success) {
-    if (success) {
+    if (success) {        
         try {
             await updateOTAXmlQueue(requestId, item.id, 'completed');
             logger.info(`Successfully processed queued item ID: ${item.id}`, { queueId: item.id });

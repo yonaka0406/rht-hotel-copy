@@ -535,8 +535,8 @@ const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, 
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error in insertOTAXmlQueue:', error);        throw error;
-    }
+        console.error('Error in insertOTAXmlQueue:', error);
+        throw error;    }
 };
 
 const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
