@@ -271,7 +271,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
                   'adjustment_value', rr.adjustment_value,
                   'tax_type_id', rr.tax_type_id,
                   'tax_rate', rr.tax_rate,
-                  'price', rr.price
+                  'price', rr.price,
+                  'include_in_cancel_fee', rr.include_in_cancel_fee
               )
           ) AS rates_json
       FROM reservation_rates rr
@@ -2023,7 +2024,7 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
 
 };
 
-const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, overrideRounding, client = null) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, disableRounding, client = null) => {
   //console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
   if (!plan) {
     console.warn('[updateReservationDetailPlan] plan is null or undefined');
@@ -2053,7 +2054,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   // Use unified price calculation
   let calculatedPrice = 0;
   if (rates && rates.length > 0) {
-    calculatedPrice = calculatePriceFromRates(rates, overrideRounding);
+    calculatedPrice = calculatePriceFromRates(rates, disableRounding);
 
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
@@ -2104,7 +2105,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       await dbClient.query(deleteRatesQuery, [id]);
 
       // Insert rates using the shared utility function
-      await insertAggregatedRates(requestId, rates, hotel_id, id, user_id, false, dbClient);
+      await insertAggregatedRates(requestId, rates, hotel_id, id, user_id, disableRounding, dbClient);
     }
 
     await dbClient.query('COMMIT');
@@ -2261,9 +2262,9 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
 
 const updateReservationRoomPlan = async (requestId, data) => {
   //console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
-  const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, overrideRounding } = data;
+  const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, disableRounding } = data;
 
-  // console.log('DEBUGGING updateReservationRoomPlan overrideRounding:', overrideRounding);
+  // console.log('DEBUGGING updateReservationRoomPlan disableRounding:', disableRounding);
 
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2290,7 +2291,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
       try {
         // 1. Update Plan      
         if (plan) {
-          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId);
+          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId, disableRounding);
         }
 
         // 2. Update Addons        
@@ -2304,7 +2305,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons    
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId, overrideRounding);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId, disableRounding);
 
 
     await client.query('COMMIT');
@@ -2327,7 +2328,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
   }
 };
 
-const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id, overrideRounding) => {
+const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id, disableRounding) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
 
@@ -2357,7 +2358,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
 
       // 1. Update Plan
       if (plan) {
-        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, overrideRounding, client);
+        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, disableRounding, client);
       } else {
         //console.log('[updateReservationDetailPlan] Skipped because plan is null');
       }
@@ -2370,7 +2371,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id, overrideRounding, client);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id, disableRounding, client);
 
     await client.query('COMMIT');
 
@@ -2384,7 +2385,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
   }
 };
 
-const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, overrideRounding = false, client = null) => {
+const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, disableRounding = false, client = null) => {
   const pool = getPool(requestId);
 
   // Use provided client or create a new connection
@@ -2415,7 +2416,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       const formattedDate = formatDate(new Date(date));
       // Fetch new price
-      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, overrideRounding, dbClient);
+      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, disableRounding, dbClient);
 
       // Update reservation_details
       const dtlUpdateQuery = `
@@ -2439,7 +2440,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       await insertAggregatedRates(requestId, newrates, hotel_id, id, user_id, false, dbClient);
 
       // Update the price in reservation_details using the calculated price from rates
-      const calculatedPrice = calculatePriceFromRates(newrates, overrideRounding);
+      const calculatedPrice = calculatePriceFromRates(newrates, disableRounding);
       const updatePriceQuery = `
         UPDATE reservation_details
         SET price = $1
@@ -4731,8 +4732,9 @@ const selectFailedOtaReservations = async (requestId) => {
 };
 
 // Shared utility function for consistent price calculation
-const calculatePriceFromRates = (rates, overrideRounding = false) => {
+const calculatePriceFromRates = (rates, disableRounding = false) => {
   logger.debug(`[calculatePriceFromRates] Input rates: ${JSON.stringify(rates)}`);
+  logger.debug(`[calculatePriceFromRates] disableRounding: ${disableRounding}`);
   if (!rates || rates.length === 0) {
     logger.debug('[calculatePriceFromRates] No rates provided, returning 0.');
     return 0;
@@ -4782,7 +4784,7 @@ const calculatePriceFromRates = (rates, overrideRounding = false) => {
   logger.debug(`[calculatePriceFromRates] Total price before rounding: ${totalPrice}`);
 
   // Round down to nearest 100 yen (Japanese pricing convention)
-  if (!overrideRounding) {
+  if (!disableRounding) {
     const finalPrice = Math.floor(totalPrice / 100) * 100;
     logger.debug(`[calculatePriceFromRates] Final price after rounding: ${finalPrice}`);
     return finalPrice;

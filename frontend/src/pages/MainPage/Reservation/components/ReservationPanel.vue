@@ -1408,7 +1408,7 @@ const applyPlanChangesToAll = async () => {
                 plan: selectedPlan.value,
                 addons: adjustedAddons,
                 daysOfTheWeek: selectedDays.value,
-                overrideRounding: disableRounding.value
+                disableRounding: disableRounding.value
             };
             // Assuming setRoomPlan is refactored to take one object
             return setRoomPlan(params);

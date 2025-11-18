@@ -872,7 +872,7 @@ const applyPlanChanges = async () => {
             plan: selectedPlan.value,
             addons: selectedAddon.value,
             daysOfTheWeek: selectedDays.value,
-            overrideRounding: disableRounding.value
+            disableRounding: disableRounding.value
         };
 
         const _result = await setRoomPlan(params);

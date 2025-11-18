@@ -502,7 +502,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ## [1.1.19] - 2025-10-01
 
-- Bugfix: Refactored `recalculatePlanPrice` to default `overrideRounding` to `false` and corrected a buggy internal call.
+- Bugfix: Refactored `recalculatePlanPrice` to default `disableRounding` to `false` and corrected a buggy internal call.
 - Bugfix: Check-in based Excel roster was showing only one room per reservation.
 
 ---

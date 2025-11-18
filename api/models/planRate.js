@@ -1,4 +1,4 @@
-let actualGetPool = require('../config/database').getPool;
+const { getPool } = require('../config/database');
 
 // Helper function to validate conditions
 const isValidCondition = (row, date) => {
@@ -72,7 +72,7 @@ let actualIsValidCondition = isValidCondition;
 
 // Return all plans_rates
 const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `
         SELECT 
             id, hotel_id, plans_global_id, plans_hotel_id, 
@@ -102,7 +102,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, comment FROM plans_rates WHERE id = $1';
 
     try {
@@ -117,8 +117,8 @@ const getPlansRateById = async (requestId, id) => {
     }
 };
 
-const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, overrideRounding = false, dbClient = null) => {
-    const pool = actualGetPool(requestId);
+const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, disableRounding = false, dbClient = null) => {
+    const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const releaseClient = !dbClient;
 
@@ -200,7 +200,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         currentTotal = afterGroupA;
         
         // 2. Conditionally Round down to the nearest 100 (Japanese pricing convention)
-        if (!overrideRounding) {
+        if (!disableRounding) {
             const afterRounding = Math.floor(currentTotal / 100) * 100;
             //console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
             currentTotal = afterRounding;
@@ -232,7 +232,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     }
 };
 const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `        
         SELECT 
             adjustment_type,
@@ -275,7 +275,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
 
 // Create a new plans_rate
 const createPlansRate = async (requestId, plansRate) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `
         INSERT INTO plans_rates (
             hotel_id, 
@@ -326,7 +326,7 @@ const createPlansRate = async (requestId, plansRate) => {
 
 // Update an existing plans_rate
 const updatePlansRate = async (requestId, id, plansRate) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = `
         UPDATE plans_rates
         SET 
@@ -380,7 +380,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
 
 // Delete a plans_rate by ID
 const deletePlansRate = async (requestId, id) => {
-    const pool = actualGetPool(requestId);
+    const pool = getPool(requestId);
     const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
 
     try {
@@ -395,11 +395,7 @@ const deletePlansRate = async (requestId, id) => {
     }
 };
 
-// Helper functions for testing to allow injection of mocks
-const __setGetPool = (newGetPool) => { actualGetPool = newGetPool; };
-const __getOriginalGetPool = () => require('../config/database').getPool;
-const __setIsValidCondition = (newIsValidCondition) => { actualIsValidCondition = newIsValidCondition; };
-const __getOriginalIsValidCondition = () => isValidCondition; // This refers to the original isValidCondition function defined in this file
+
 
 module.exports = {
     getAllPlansRates,
@@ -409,9 +405,5 @@ module.exports = {
     createPlansRate,
     updatePlansRate,
     deletePlansRate,
-    // For testing purposes
-    __setGetPool,
-    __getOriginalGetPool,
-    __setIsValidCondition,
-    __getOriginalIsValidCondition
+
 };
