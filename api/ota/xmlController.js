@@ -1,4 +1,5 @@
 require("dotenv").config();
+const inventoryQueueService = require('../services/inventoryQueueService');
 const xml2js = require('xml2js');
 const { 
     selectXMLTemplate, 
@@ -1182,115 +1183,18 @@ const updateInventoryMultipleDays = async (req, res) => {
         return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
     }
 
-    // --- Proceed with batch processing if an update is needed ---
-
-    const processInventoryBatch = async (batch, batch_no) => {
-        logger.warn(`Processing batch ${batch_no} for hotel ${hotel_id}`, {
-            hotel_id: hotel_id,
-            batch_no: batch_no,
-            batch_size: batch.length
-        });
-        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(5000); // 5-second pause
-
-        let adjustmentTargetXml = '';
-        batch.forEach((item) => {
-            const adjustmentDate = (() => {
-                const date = new Date(item.date);
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}${month}${day}`;
-            })();
-            let remainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
-            remainingCount = remainingCount < 0 ? 0 : remainingCount;
-
-            let target = `
-                <adjustmentTarget>
-                    <adjustmentProcedureCode>1</adjustmentProcedureCode>
-                    <netRmTypeGroupCode>${item.netrmtypegroupcode}</netRmTypeGroupCode>
-                    <adjustmentDate>${adjustmentDate}</adjustmentDate>
-                    <remainingCount>${remainingCount}</remainingCount>
-                    <salesStatus>3</salesStatus>
-                </adjustmentTarget>
-            `;
-            adjustmentTargetXml += target;
-        });
-
-        let xmlBody = template.replace(
-            `<adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
-               <remainingCount>{{remainingCount}}</remainingCount>
-               <salesStatus>{{salesStatus}}</salesStatus>               
-            </adjustmentTarget>
-            <adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
-               <remainingCount>{{remainingCount2}}</remainingCount>
-               <salesStatus>{{salesStatus2}}</salesStatus>               
-            </adjustmentTarget>`,
-            adjustmentTargetXml
-        );
-
-        let requestId = log_id + (batch_no / 100);
-        requestId = requestId.toString();
-        if (requestId.length > 8) {
-            requestId = requestId.slice(-8); // keep the last 8 characters
-        }
-        xmlBody = xmlBody.replace('{{requestId}}', requestId);
-
-        // Do not send a response here!
-        try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-            return apiResponse;
-        } catch (error) {
-            const dateExtractor = item => new Date(item.date);
-            const dateRange = computeBatchDateRange(batch, dateExtractor);
-
-            logger.error(`Error in processInventoryBatch for batch ${batch_no}`, {
-                hotel_id: hotel_id,
-                dateRange: dateRange,
-                batch_no: batch_no,
-                error: error.message,
-                stack: error.stack
-            });
-            throw error; // Let the main function handle the response
-        }
-    };
-    
-    // Check if the date range exceeds 30 days for batching decision
-    const dateRangeExceeds30Days = (minDate, maxDate) => {
-        if (!minDate || !maxDate) return false;
-        const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
-        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        return daysDiff > 30;
-    };    
-    const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
-    
-    // Determine batch size and process inventory in batches or as a single request
+    // --- Proceed with queueing if an update is needed ---
     try {
-        if (filteredInventory.length > 1000 || exceeds30Days) {        
-            const batchSize = 30;
-            let requestNumber = 0;
-            for (let i = 0; i < filteredInventory.length; i += batchSize) {            
-                const batch = filteredInventory.slice(i, i + batchSize);
-                await processInventoryBatch(batch, requestNumber);
-                requestNumber++;
-            }
-        } else {
-            // Process all filtered inventory as a single batch
-            await processInventoryBatch(filteredInventory, 0);
-        }
-        res.status(200).send({ success: true, message: 'Inventory update processed.' });
+        // Add the entire filtered inventory to the queue as a single item
+        // The queue service will handle batching and delays internally
+        inventoryQueueService.addToQueue(req.requestId, hotel_id, log_id, filteredInventory, name, template);
+        res.status(202).send({ success: true, message: 'Inventory update request queued for processing.' });
     } catch (error) {
         const dateRange = {
             from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
             to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
         };
-        logger.error('Error in updateInventoryMultipleDays', {
+        logger.error('Error in updateInventoryMultipleDays while queuing request', {
             hotel_id: hotel_id,
             dateRange: dateRange,
             error: error.message,
@@ -1376,130 +1280,18 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     }
     // logger.debug('getInventoryDateRange', minDate, maxDate);
 
-    // --- Proceed with batch ---
-
-    const processInventoryBatch = async (batch, batch_no) => {
-        logger.warn(`Processing manual batch ${batch_no} for hotel ${hotel_id}`, {
-            hotel_id: hotel_id,
-            batch_no: batch_no,
-            batch_size: batch.length
-        });
-        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-        await delay(5000); // 5-second pause
-
-        let adjustmentTargetXml = '';
-        batch.forEach((item) => {
-            const adjustmentDate = item.saleDate;
-            const netRmTypeGroupCode = parseInt(item.netRmTypeGroupCode);
-            let remainingCount = parseInt(item.pmsRemainingCount);
-            if (remainingCount < 0) {
-                remainingCount = 0;
-            }
-            let salesStatus = parseInt(item.salesStatus);
-            if (salesStatus === 0) {
-                salesStatus = 3; // No change
-            } else if (salesStatus === 1) {
-                salesStatus = 1; // Start sales
-            } else {
-                salesStatus = 2; // Stop sales
-            }            
-
-            let target = `
-                <adjustmentTarget>
-                    <adjustmentProcedureCode>1</adjustmentProcedureCode>
-                    <netRmTypeGroupCode>${netRmTypeGroupCode}</netRmTypeGroupCode>
-                    <adjustmentDate>${adjustmentDate}</adjustmentDate>
-                    <remainingCount>${remainingCount}</remainingCount>
-                    <salesStatus>${salesStatus}</salesStatus>
-                </adjustmentTarget>
-            `;
-            adjustmentTargetXml += target;
-        });
-
-        let xmlBody = template.replace(
-            `<adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
-               <remainingCount>{{remainingCount}}</remainingCount>
-               <salesStatus>{{salesStatus}}</salesStatus>               
-            </adjustmentTarget>
-            <adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
-               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
-               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
-               <remainingCount>{{remainingCount2}}</remainingCount>
-               <salesStatus>{{salesStatus2}}</salesStatus>               
-            </adjustmentTarget>`,
-            adjustmentTargetXml
-        );
-
-        let requestId = log_id + (batch_no / 100);
-        requestId = requestId.toString();
-        if (requestId.length > 8) {
-            requestId = requestId.slice(-8); // keep the last 8 characters
-        }
-        xmlBody = xmlBody.replace('{{requestId}}', requestId);
-
-        // logger.debug('updateInventoryMultipleDays xmlBody:', xmlBody);
-
-        try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-            return apiResponse;
-        } catch (error) {
-            const dateExtractor = item => {
-                const str = item.saleDate?.toString();
-                if (!/^\d{8}$/.test(str)) return null;
-                const year = parseInt(str.slice(0, 4), 10);
-                const month = parseInt(str.slice(4, 6), 10) - 1;
-                const day = parseInt(str.slice(6, 8), 10);
-                return new Date(year, month, day);
-            };
-            const dateRange = computeBatchDateRange(batch, dateExtractor);
-
-            logger.error(`Error in processInventoryBatch for batch ${batch_no}`, {
-                hotel_id: hotel_id,
-                dateRange: dateRange,
-                batch_no: batch_no,
-                error: error.message,
-                stack: error.stack
-            });
-            throw error; // Re-throw to be handled by the main function
-        }
-        
-    };
-    
-    // Check if the date range exceeds 30 days for batching decision
-    const dateRangeExceeds30Days = (minDate, maxDate) => {
-        if (!minDate || !maxDate) return false;
-
-        const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
-        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        return daysDiff > 30;
-    };    
-    const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
-    
-    // Determine batch size and process inventory in batches or as a single request
+    // --- Proceed with queueing if an update is needed ---
     try {
-        if (filteredInventory.length > 1000 || exceeds30Days) {        
-            const batchSize = 30;
-            let requestNumber = 0;
-            for (let i = 0; i < filteredInventory.length; i += batchSize) {            
-                const batch = filteredInventory.slice(i, i + batchSize);
-                await processInventoryBatch(batch, requestNumber);
-                requestNumber++;
-            }
-        } else {
-            // Process all filtered inventory as a single batch
-            await processInventoryBatch(filteredInventory, 0);
-        }
-        res.status(200).send({ success: true, message: 'Inventory update processed.' });
+        // Add the entire filtered inventory to the queue as a single item
+        // The queue service will handle batching and delays internally
+        inventoryQueueService.addToQueue(req.requestId, hotel_id, log_id, filteredInventory, name, template);
+        res.status(202).send({ success: true, message: 'Manual inventory update request queued for processing.' });
     } catch (error) {
         const dateRange = {
             from: minDate ? minDate.toISOString().split('T')[0] : 'N/A',
             to: maxDate ? maxDate.toISOString().split('T')[0] : 'N/A',
         };
-        logger.error('Error in manualUpdateInventoryMultipleDays', {
+        logger.error('Error in manualUpdateInventoryMultipleDays while queuing request', {
             hotel_id: hotel_id,
             dateRange: dateRange,
             error: error.message,

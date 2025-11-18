@@ -22,6 +22,7 @@ const { startWaitlistJob } = require('./jobs/waitlistJob');
 const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
 const { scheduleDailyDigestEmailJob } = require('./jobs/dailyDigestEmailJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
+const inventoryQueueService = require('./services/inventoryQueueService');
 
 const app = express();
 const { closeSingletonBrowser } = require('./services/puppeteerService');
@@ -682,6 +683,12 @@ process.on('SIGTERM', () => {
 });
 
 // Start the servers
+if (process.env.NODE_ENV === 'production') {
+  inventoryQueueService.startProcessing();
+  logger.info('Inventory queue processing started for production environment.');
+} else {
+  logger.info('Inventory queue processing NOT started for non-production environment.');
+}
 httpServer.listen(PORT, '0.0.0.0', () => {
   logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
