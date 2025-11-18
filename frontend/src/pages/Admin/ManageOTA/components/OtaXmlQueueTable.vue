@@ -115,8 +115,7 @@ import Badge from 'primevue/badge';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 
-const { otaXmlQueueData, fetchOtaXmlQueue } = useXMLStore();
-const loading = ref(true);
+const { otaXmlQueueData, fetchOtaXmlQueue, otaXmlQueueLoading } = useXMLStore();
 
 const filters = ref({
   hotel_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -128,14 +127,8 @@ const filters = ref({
 });
 
 onMounted(() => {
-  fetchOtaXmlQueueData();
+  fetchOtaXmlQueue();
 });
-
-const fetchOtaXmlQueueData = async () => {
-  loading.value = true;
-  await fetchOtaXmlQueue();
-  loading.value = false;
-};
 
 const getSeverity = (status) => {
   switch (status) {

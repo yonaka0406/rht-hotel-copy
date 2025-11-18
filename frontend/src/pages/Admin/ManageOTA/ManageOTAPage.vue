@@ -122,8 +122,7 @@
                       optionValue="id"
                         fluid 
                       />
-                      <small class="p-error" v-if="templateName">{{ templateName }}</small>
-                    </FloatLabel>
+                      <small v-if="templateName" class="text-gray-500">選択中: {{ templateName }}</small>                    </FloatLabel>
                   </div>
                   <div class="p-field">
                     <Button label="テンプレート取得" @click="fetchTemplate" />
@@ -255,20 +254,23 @@
     selectedService.value = display;    
 
     // Dynamic import
-    activeComponent.value = (await import(`@/pages/Admin/OTA/${name}.vue`)).default;
+    try {
+      activeComponent.value = (await import(`@/pages/Admin/OTA/${name}.vue`)).default;
+    } catch (error) {
+      console.error(`Failed to load component: ${name}`, error);
+      // Reset state and show error to user
+      isSiteController.value = false;
+      activeComponent.value = null;
+      // Consider showing a toast/notification to the user
+    }
   };
-
   // Dialog
   const displayDialog = ref(false);
-  const selectedResponse = ref(null);
-  const dialogContent = ref('');  
-  const showResponseDetails = (response) => {
-    selectedResponse.value = response;
-    getDialogContent(selectedResponse.value.response);
-    displayDialog.value = true;
-  };
   const getDialogContent = (response) => {
-      if (!response) dialogContent.value = '';
+      if (!response) {
+        dialogContent.value = '';
+        return;
+      }
       
       // Check if the response is an error or success
       if (response.commonResponse?.isSuccess === 'true') {
@@ -278,9 +280,8 @@
       } else {
         dialogContent.value = getErrorContent(response);
       }    
-      
-      console.log('getDialogContentの結果:', dialogContent.value);
-  };
+  }; 
+    
   const getErrorContent = (response) => {
     const translatedResponse = {};
     for (const key in response) {
@@ -325,19 +326,20 @@
         const fieldName = match[1];
         const fieldValue = ''; // Initialize with empty string
         return { label: fieldName, value: fieldValue };
-      });
-    } else {
-      editableFields.value = [];
-    }
   });
 
   watch(selectedHotelId, async (newHotelId) => {
-    if (!newHotelId) return
+    if (!newHotelId) return;
 
-    const result = await fetchHotelSiteController(newHotelId)
-
-    hasSiteController.value = result && result.length > 0;    
-  });
+    try {
+      const result = await fetchHotelSiteController(newHotelId);
+      hasSiteController.value = result && result.length > 0;
+    } catch (error) {
+      console.error('Failed to fetch hotel site controller:', error);
+      hasSiteController.value = false;
+      // Consider showing error notification to user
+    }
+  }); 
       
 </script>
 <style scoped>

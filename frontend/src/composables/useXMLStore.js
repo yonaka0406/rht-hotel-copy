@@ -4,6 +4,7 @@ const template = ref(null);
 const responses = ref([]);
 const otaQueue = ref([]);
 const otaXmlQueueData = ref([]);
+const otaXmlQueueLoading = ref(false);
 
 const sc_serviceLabels = ref([
     { id: "NetRoomTypeMasterSearchService", label: "部屋タイプマスタ検索(ネット販売)" },
@@ -141,17 +142,19 @@ export function useXMLStore() {
                 },                
             });
 
-            const data = await response.text();
-
             if (!response.ok) {
-                throw new Error('Failed to retrieve data.');
+                const errorText = await response.text();
+                console.error('API Error in fetchXMLTemplate:', response.status, response.statusText, errorText);
+                throw new Error(`Failed to retrieve XML template: ${errorText}`);
             }
             
+            const data = await response.text();
             template.value = data;
             
         } catch (error) {
             template.value = null;
             console.error('Failed to retrieve data.', error);
+            throw error;
         }
     };
     const fetchXMLRecentResponses = async() => {
@@ -165,17 +168,19 @@ export function useXMLStore() {
                 },                
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error('Failed to retrieve data.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in fetchXMLRecentResponses:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to retrieve recent XML responses: ${errorData.message || JSON.stringify(errorData)}`);
             }
             
+            const data = await response.json();
             responses.value = data;
             
         } catch (error) {
             responses.value = [];
             console.error('Failed to retrieve data.', error);
+            throw error;
         }
     };
     const insertXMLResponse = async(hotel_id, name, xml) => {
@@ -194,8 +199,8 @@ export function useXMLStore() {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('API Error:', response.status, response.statusText, errorText);
-                throw new Error('データの送信に失敗しました。');
+                console.error('API Error in insertXMLResponse:', response.status, response.statusText, errorText);
+                throw new Error(`データの送信に失敗しました。: ${errorText}`);
             }
 
             const responseData = await response.json(); // Parse the JSON response from postXMLResponse
@@ -220,17 +225,19 @@ export function useXMLStore() {
                 },                
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error('Failed to retrieve data.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in fetchTLRoomMaster:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to retrieve TL Room Master: ${errorData.message || JSON.stringify(errorData)}`);
             }
             
+            const data = await response.json();
             tlRoomMaster.value = data;
             
         } catch (error) {
             tlRoomMaster.value = null;
             console.error('Failed to retrieve data.', error);
+            throw error;
         }
     };
     const insertTLRoomMaster = async (roomData) => {
@@ -246,12 +253,13 @@ export function useXMLStore() {
                 body: JSON.stringify(roomData),
             });
         
-            const data = await response.json();
-        
             if (!response.ok) {
-                throw new Error('Failed to create room master.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in insertTLRoomMaster:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to create room master: ${errorData.message || JSON.stringify(errorData)}`);
             }
         
+            const data = await response.json();
             return data;
         } catch (error) {
             console.error('Failed to create room master.', error);
@@ -269,17 +277,19 @@ export function useXMLStore() {
                 },                
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error('Failed to retrieve data.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in fetchTLPlanMaster:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to retrieve TL Plan Master: ${errorData.message || JSON.stringify(errorData)}`);
             }
             
+            const data = await response.json();
             tlPlanMaster.value = data;
             
         } catch (error) {
             tlPlanMaster.value = null;
             console.error('Failed to retrieve data.', error);
+            throw error;
         }
     };
     const insertTLPlanMaster = async (planData) => {
@@ -295,12 +305,13 @@ export function useXMLStore() {
                 body: JSON.stringify(planData),
             });
         
-            const data = await response.json();
-        
             if (!response.ok) {
-                throw new Error('Failed to create plan master.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in insertTLPlanMaster:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to create plan master: ${errorData.message || JSON.stringify(errorData)}`);
             }
         
+            const data = await response.json();
             return data;
         } catch (error) {
             console.error('Failed to create plan master.', error);
@@ -318,13 +329,16 @@ export function useXMLStore() {
                 }
             });
             if (!response.ok) {
-                throw new Error('Failed to retrieve data.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in fetchInventoryForTL:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to retrieve inventory for TL: ${errorData.message || JSON.stringify(errorData)}`);
             }
             const data = await response.json();
             
             return data;
         } catch (error) {
             console.error('Failed to retrieve data.', error);
+            throw error;
         }        
     };
     const updateTLInventory = async (hotel_id, inventory) => {
@@ -343,8 +357,8 @@ export function useXMLStore() {
             });
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('API Error:', response.status, response.statusText, errorText);
-                throw new Error('Failed to send data.');
+                console.error('API Error in updateTLInventory:', response.status, response.statusText, errorText);
+                throw new Error(`Failed to send data: ${errorText}`);
             }
             const data = await response.json();
             
@@ -352,6 +366,7 @@ export function useXMLStore() {
             
         } catch (error) {
           console.error(`Failed to update site controller for hotel ${hotel_id}:`, error);          
+          throw error;
         }
     };
 
@@ -366,21 +381,24 @@ export function useXMLStore() {
                 },
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error('Failed to retrieve data.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in fetchOtaQueue:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to retrieve OTA queue data: ${errorData.message || JSON.stringify(errorData)}`);
             }
 
+            const data = await response.json();
             otaQueue.value = data;
 
         } catch (error) {
             otaQueue.value = [];
             console.error('Failed to retrieve data.', error);
+            throw error;
         }
     };
 
     const fetchOtaXmlQueue = async () => {
+        otaXmlQueueLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
             const url = '/api/xml-queue';
@@ -391,17 +409,21 @@ export function useXMLStore() {
                 },
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error('Failed to retrieve OTA XML queue data.');
+                const errorData = await response.json(); // Assuming error responses are JSON
+                console.error('API Error in fetchOtaXmlQueue:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to retrieve OTA XML queue data: ${errorData.message || JSON.stringify(errorData)}`);
             }
 
+            const data = await response.json();
             otaXmlQueueData.value = data;
 
         } catch (error) {
             otaXmlQueueData.value = [];
             console.error('Failed to retrieve OTA XML queue data.', error);
+            throw error;
+        } finally {
+            otaXmlQueueLoading.value = false;
         }
     };
 

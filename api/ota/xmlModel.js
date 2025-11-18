@@ -576,7 +576,7 @@ const selectOTAXmlQueue = async (requestId) => {
   try {
     const query = `
       SELECT DISTINCT
-        ota_xml_queue_id,
+        id,
         status,
         retries,
         last_error,
@@ -585,7 +585,7 @@ const selectOTAXmlQueue = async (requestId) => {
         hotel_name
       FROM (
         (SELECT
-            oq.ota_xml_queue_id,
+            oq.id,
             oq.status,
             oq.retries,
             oq.last_error,
@@ -598,7 +598,7 @@ const selectOTAXmlQueue = async (requestId) => {
         LIMIT 100)
         UNION
         (SELECT
-            oq.ota_xml_queue_id,
+            oq.id,
             oq.status,
             oq.retries,
             oq.last_error,

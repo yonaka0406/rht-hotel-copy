@@ -514,15 +514,13 @@ const getOTAXmlQueue = async (req, res) => {
   try {
     logger.debug(`[${requestId}] Calling selectOTAXmlQueue from model.`);
     const queueData = await selectOTAXmlQueue(requestId); // Call the model function
-    logger.debug(`[${requestId}] Received queueData from model: ${JSON.stringify(queueData ? queueData.slice(0, 5) : [])} ... (first 5 items)`); // Log first 5 items to avoid excessive log size
+    logger.debug(`[${requestId}] Received queueData from model: ${JSON.stringify(Array.isArray(queueData) ? queueData.slice(0, 5) : queueData)} ... (first 5 items)`);
     res.json(queueData);
-    logger.debug(`[${requestId}] Sent JSON response with OTA XML queue data.`);
   } catch (error) {
     logger.error(`[${requestId}] Error fetching OTA XML queue: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: 'Error fetching OTA XML queue', error: error.message });
   }
 };
-
 // POST
 const postXMLResponse = async (req, res) => {    
     const { hotel_id, name } = req.params;
