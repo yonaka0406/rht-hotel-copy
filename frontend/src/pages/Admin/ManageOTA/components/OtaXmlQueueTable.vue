@@ -7,7 +7,7 @@
       :rowsPerPageOptions="[10, 25, 50]"
       v-model:filters="filters"
       filterDisplay="row"
-      :loading="loading"
+      :loading="otaXmlQueueLoading"
       dataKey="ota_xml_queue_id"
       responsiveLayout="scroll"
       stateStorage="session"
