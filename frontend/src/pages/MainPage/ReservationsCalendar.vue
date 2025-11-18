@@ -254,8 +254,8 @@ import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.
 //import ReservationsCalendarGrid from './components/ReservationsCalendarGrid.vue';
 
 //Websocket
-import io from 'socket.io-client';
-const socket = ref(null);
+import { useSocket } from '@/composables/useSocket';
+const { socket } = useSocket();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -1531,8 +1531,8 @@ const openClientDialog = () => {
         };
     }
 
-    console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
-    console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
+    //console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
+    //console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
 
     showClientDialog.value = true;
 };
@@ -1576,28 +1576,11 @@ const handleClientSave = async (clientData) => {
 // Mount
 onMounted(async () => {
   isLoading.value = true;
-  // Establish Socket.IO connection
-  socket.value = io(import.meta.env.VITE_BACKEND_URL);
-
-  socket.value.on('connect', () => {
-    // console.log('Connected to server');
-  });
-
-  socket.value.on('tableUpdate', async (_data) => {
-    // Prevent fetching if bulk update is in progress
-    if (isUpdating.value) {
-      // console.log('Skipping fetchReservation because update is still running');
-      return;
-    }
-    // Update the reservations data in your component
-    // console.log('Received updated data:', data);
-    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-  });
 
   await fetchHotels();
   await fetchHotel();
 
-  console.log('[ReservationsCalendar] isCompactView on load:', headerState.value.isCompactView);
+  //console.log('[ReservationsCalendar] selectedHotel on load:', selectedHotel.value);
 
   const today = new Date();
   const initialMinDate = new Date(today);
@@ -1627,13 +1610,43 @@ onMounted(async () => {
   isLoading.value = false;
 });
 onUnmounted(() => {
-  // Close the Socket.IO connection when the component is unmounted
+  // The useSocket composable handles disconnection, but we must clean up component-specific listeners.
   if (socket.value) {
-    socket.value.disconnect();
+    socket.value.off('tableUpdate', handleTableUpdate);
   }
 });
 
-// Watchers
+const handleTableUpdate = async (data) => {
+  console.log('tableUpdate received on calendar', data);
+  if (isUpdating.value) {
+    console.log('Skipping fetchReservation because update is still running');
+    return;
+  }
+
+  if (!dateRange.value || dateRange.value.length < 2) {
+    console.error('Cannot fetch reservations, dateRange is invalid.');
+    return;
+  }
+
+  isUpdating.value = true;
+  try {
+    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+  } catch (error) {
+    console.error('Failed to fetch reservations after table update:', error);
+  } finally {
+    isUpdating.value = false;
+  }
+};
+
+watch(socket, (newSocket, oldSocket) => {
+  if (oldSocket) {
+    oldSocket.off('tableUpdate', handleTableUpdate);
+  }
+  if (newSocket) {
+    newSocket.on('tableUpdate', handleTableUpdate);
+  }
+}, { immediate: true });
+
 watch(reservationId, async (newReservationId, _oldReservationId) => {
   if (newReservationId) {
 

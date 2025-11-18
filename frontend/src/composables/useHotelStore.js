@@ -13,15 +13,11 @@ const savedHotelId = localStorage.getItem(STORAGE_KEY);
 
 if (savedHotelId && savedHotelId !== 'undefined' && savedHotelId !== 'null') {
     selectedHotelId.value = parseInt(savedHotelId, 10);
-    // console.log('[useHotelStore] selectedHotelId initialized from localStorage:', selectedHotelId.value);
-} else {
-    // console.log('[useHotelStore] selectedHotelId remains null/undefined after localStorage check.');
 }
 
 export function useHotelStore() {
 
     const setHotelId = (id) => {
-        // console.log('[useHotelStore] setHotelId called with id:', id);
         if (id !== null && id !== undefined) {
             selectedHotelId.value = id;
             localStorage.setItem(STORAGE_KEY, id.toString());
@@ -45,25 +41,18 @@ export function useHotelStore() {
             });
             const data = await response.json();
             hotels.value = Array.isArray(data) ? data : [];
-            // console.log('[useHotelStore] fetchHotels completed. hotels.value:', hotels.value);
             
-            // If we have hotels but no selected hotel, select the first one
             if (hotels.value.length > 0) {
                 const savedHotelId = localStorage.getItem(STORAGE_KEY);
                 const savedHotel = savedHotelId ? hotels.value.find(h => h.id === parseInt(savedHotelId, 10)) : null;
                 
                 if (savedHotel) {
-                    // If we have a saved hotel ID and it exists in the hotels list, use it
                     selectedHotelId.value = savedHotel.id;
-                    // console.log('[useHotelStore] fetchHotels: Using savedHotelId:', selectedHotelId.value);
                 } else if (!selectedHotelId.value || !hotels.value.some(h => h.id === selectedHotelId.value)) {
-                    // If no valid selected hotel, use the first one
                     selectedHotelId.value = hotels.value[0].id;
                     localStorage.setItem(STORAGE_KEY, selectedHotelId.value.toString());
                     // console.log('[useHotelStore] fetchHotels: No valid selected hotel, defaulting to first:', selectedHotelId.value);
                 }
-            } else {
-                // console.log('[useHotelStore] fetchHotels: No hotels available.');
             }
         } catch (error) {
             console.error('Failed to fetch hotels', error);

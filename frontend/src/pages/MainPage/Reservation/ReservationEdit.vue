@@ -104,8 +104,8 @@ const props = defineProps({
 });
 
 // Websocket
-import { io } from 'socket.io-client';
-const socket = ref(null);
+import { useSocket } from '@/composables/useSocket';
+const { socket } = useSocket();
 
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
@@ -222,31 +222,37 @@ onMounted(async () => {
     await setReservationId(props.reservation_id);
     await fetchAllReservationData();
     initialLoad.value = false;
-    
-    socket.value = io(import.meta.env.VITE_BACKEND_URL);
-
-    socket.value.on('connect', () => {
-        //console.log('✅ [WebSocket] Connected to server.');
-    });
-
-    //console.log('[ReservationEdit] Setting up WebSocket listener for "tableUpdate".');
-
-    // Listen for a SPECIFIC event, not a generic one
-    socket.value.on('tableUpdate', (_data) => {
-        // This will now trigger on ANY 'tableUpdate' event from the server.
-        //console.log('📬 [WebSocket] "tableUpdate" event received. Calling fetchAllReservationData.'); // Debug log
-        fetchAllReservationData();
-    });
 });
 
 onUnmounted(() => {
+    // The useSocket composable handles disconnection, but we must clean up component-specific listeners.
     if (socket.value) {
-        //console.log('[ReservationEdit] Disconnecting WebSocket.');
-        socket.value.disconnect();
+        socket.value.off('tableUpdate', handleTableUpdate);
     }
 });
 
-// Watchers now simply call the centralized function
+// Watchers
+const handleTableUpdate = (data) => {
+    console.log('tableUpdate received on edit', data);
+    // Check if the deleted reservation is the one currently being viewed
+    if (data.action === 'DELETE' && data.record_id === props.reservation_id) {
+        console.warn(`[ReservationEdit] Current reservation (ID: ${props.reservation_id}) has been deleted. Preventing data fetch.`);
+        // Optionally, you might want to navigate away or show a message to the user
+        // router.push({ name: 'ReservationsCalendar' }); // Example navigation
+        return; // Prevent fetching data for a deleted reservation
+    }
+    fetchAllReservationData();
+};
+
+watch(socket, (newSocket, oldSocket) => {
+    if (oldSocket) {
+        oldSocket.off('tableUpdate', handleTableUpdate);
+    }
+    if (newSocket) {
+        newSocket.on('tableUpdate', handleTableUpdate);
+    }
+}, { immediate: true });
+
 watch(reservationIsUpdating, (isUpdating) => {
     if (isUpdating === false) {
         //console.log('[Watcher] reservationIsUpdating is now false. Refetching data.');

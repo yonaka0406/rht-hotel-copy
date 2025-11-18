@@ -149,8 +149,8 @@
   
   
   // Websocket
-  import io from 'socket.io-client';
-  const socket = ref(null);
+  import { useSocket } from '@/composables/useSocket';
+  const { socket } = useSocket();
   
   // Primevue
   import { useToast } from 'primevue/usetoast';
@@ -504,24 +504,6 @@
     // console.log('[ParkingCalendar] onMounted start');
     try {
       isLoading.value = true;
-
-      socket.value = io(import.meta.env.VITE_BACKEND_URL);
-      
-      socket.value.on('connect', () => {
-        // console.log('Connected to server');
-      });      
-
-      socket.value.on('tableUpdate', async (_data) => {
-        // Prevent fetching if bulk update is in progress
-        if (isUpdating.value) {
-          // console.log('Skipping fetchParkingReservationsLocal because update is still running');
-          return;
-        }
-        
-        // console.log('[ParkingCalendar] Refreshing parking data...');
-        await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      });
-            
       
       await fetchHotels();
       await fetchHotel();
@@ -566,14 +548,38 @@
 
   onUnmounted(() => {
     if (socket.value) {
-      socket.value.disconnect();
+      socket.value.off('tableUpdate', handleTableUpdate);
     }
     if (tableContainer.value) {
       tableContainer.value.removeEventListener("scroll", handleScroll);
     }
   });
     
-  // Needed Watchers
+  const handleTableUpdate = async (_data) => {
+    // Prevent fetching if bulk update is in progress
+    if (isUpdating.value) {
+      // console.log('Skipping fetchParkingReservationsLocal because update is still running');
+      return;
+    }
+    
+    isUpdating.value = true; // Set flag to true before starting fetch
+    try {
+      // console.log('[ParkingCalendar] Refreshing parking data...');
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    } finally {
+      isUpdating.value = false; // Always clear flag, even if fetch fails
+    }
+  };
+
+  watch(socket, (newSocket, oldSocket) => {
+    if (oldSocket) {
+      oldSocket.off('tableUpdate', handleTableUpdate);
+    }
+    if (newSocket) {
+      newSocket.on('tableUpdate', handleTableUpdate);
+    }
+  }, { immediate: true });
+
   watch(selectedHotelId, async (newVal, _oldVal) => {
     isLoading.value = true;
     if (_oldVal !== null && newVal !== null) {
