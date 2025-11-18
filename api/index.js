@@ -22,6 +22,7 @@ const { startWaitlistJob } = require('./jobs/waitlistJob');
 const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
 const { scheduleDailyDigestEmailJob } = require('./jobs/dailyDigestEmailJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
+const { startOtaXmlPoller, stopOtaXmlPoller, POLL_INTERVAL } = require('./jobs/otaXmlPoller.js');
 
 const app = express();
 const { closeSingletonBrowser } = require('./services/puppeteerService');
@@ -659,6 +660,10 @@ const shutdown = async (signal) => {
     logger.error('Error closing Puppeteer browser instance:', err);
   }
 
+  if (process.env.NODE_ENV === 'production') {
+    stopOtaXmlPoller(); // Stop the poller using its dedicated function
+  }
+
   logger.info('Graceful shutdown complete.');
   process.exit(0);
 };
@@ -703,6 +708,7 @@ if (process.env.NODE_ENV === 'production') {
   startWaitlistJob();
   scheduleDailyMetricsJob();
   startGoogleSheetsPoller();
+  startOtaXmlPoller(); // Start the poller using its dedicated function
   scheduleDailyDigestEmailJob();
   // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {

@@ -20,108 +20,46 @@ const {
     insertOTAReservationQueue,
     updateOTAReservationQueue,
     getOTAReservationsByTransaction,
-    selectOTAReservationQueue
+    selectOTAReservationQueue,
+    insertOTAXmlQueue
 } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
 const { getPool } = require('../config/database');
 const logger = require('../config/logger'); // Winston logger
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Simple Semaphore implementation
-class Semaphore {
-    constructor(maxConcurrency) {
-        this.maxConcurrency = maxConcurrency;
-        this.currentConcurrency = 0;
-        this.waiting = [];
-    }
 
-    async acquire() {
-        if (this.currentConcurrency < this.maxConcurrency) {
-            this.currentConcurrency++;
-            return Promise.resolve();
-        }
+async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}) {
+    const { batch_no = 'N/A' } = options;
 
-        return new Promise(resolve => {
-            this.waiting.push(resolve);
+    logger.info(`Queuing batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
+        hotel_id: hotel_id,
+        batch_no: batch_no,
+        serviceName: serviceName,
+        requestId: req.requestId,
+        currentRequestId: currentRequestId
+    });
+
+    try {
+        await insertOTAXmlQueue(req.requestId, {
+            hotel_id: hotel_id,
+            service_name: serviceName,
+            xml_body: xmlBody,
+            current_request_id: currentRequestId
         });
-    }
-
-    release() {
-        this.currentConcurrency--;
-        if (this.waiting.length > 0) {
-            const resolve = this.waiting.shift();
-            this.currentConcurrency++;
-            resolve();
-        }
-    }
-}
-
-const apiCallSemaphore = new Semaphore(3); // Limit to 3 simultaneous API calls
-
-async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}) {
-    const { maxRetries = 3, retryDelay = 5000, batch_no = 'N/A' } = options;
-
-
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            let currentXmlBody = xmlBody; // Use a mutable copy for potential modifications
-
-            if (attempt > 1) {
-                // Fetch the resend service template
-                let resendTemplate = await selectXMLTemplate(req.requestId, hotel_id, 'NetStockBulkAdjustmentResponseResendService');
-                if (!resendTemplate) {
-                    logger.error('Resend XML template not found for NetStockBulkAdjustmentResponseResendService.', {
-                        requestId: req.requestId,
-                        hotelId: hotel_id,
-                    });
-                    throw new Error('Resend XML template not found.');
-                }
-                // Replace the placeholder with the extracted otaRequestId
-                currentXmlBody = resendTemplate.replace('{{otaRequestId}}', currentRequestId);
-                // Also replace the internal requestId placeholder if it exists in the resend template
-                if (currentXmlBody.includes('{{requestId}}')) {
-                    currentXmlBody = currentXmlBody.replace('{{requestId}}', currentRequestId);
-                }
-            }
-
-            await apiCallSemaphore.acquire();
-            try {
-                const randomDelay = Math.floor(Math.random() * (3000 - 1000 + 1)) + 1000; // Random between 1000 and 3000 ms
-                await delay(randomDelay); // Use the global delay helper
-                const apiResponse = await submitXMLTemplate(req, res, hotel_id, serviceName, currentXmlBody);
-                return apiResponse; // Success
-            } finally {
-                apiCallSemaphore.release();
-            }
-        } catch (error) {
-            const isRetryableError = error instanceof OtaApiError && error.message.includes('システム制限のため処理できませんでした');
-
-            logger.warn(`Attempt ${attempt} failed for batch ${batch_no} with service ${serviceName}.`, {
-                isRetryable: isRetryableError,
-                errorMessage: error.message,
-                requestId: req.requestId,
-            });
-
-            if (isRetryableError && attempt < maxRetries) {
-
-                serviceName = 'NetStockBulkAdjustmentResponseResendService'; // Change service for retry
-
-                logger.info(`Retrying batch ${batch_no} with ${serviceName} in ${retryDelay / 1000} seconds...`);
-
-                await delay(retryDelay);
-
-            } else {                
-                logger.error(`Error in processInventoryBatch for batch ${batch_no} after ${attempt} attempts.`, {
-                    error: error.message,
-                    stack: error.stack,
-                    requestId: req.requestId,
-                });
-                throw error; // Final failure
-            }
-        }
+        return { success: true, message: 'Request successfully queued.' };
+    } catch (error) {
+        logger.error(`Failed to queue batch ${batch_no} for hotel ${hotel_id} with service ${serviceName}.`, {
+            hotel_id: hotel_id,
+            batch_no: batch_no,
+            serviceName: serviceName,
+            requestId: req.requestId,
+            currentRequestId: currentRequestId,
+            error: error.message,
+            stack: error.stack
+        });
+        throw error; // Rethrow original error
     }
 }const computeBatchDateRange = (batch, dateExtractor) => {
     if (!batch || batch.length === 0) {
@@ -1348,11 +1286,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         if (currentRequestId.length > 8) {
             currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
         }
-        xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
-
-        return await submitWithRetry(req, res, hotel_id, name, xmlBody, currentRequestId, {
-            maxRetries: 3,
-            retryDelay: 5000,
+        return await queueOtaXmlRequest(req, res, hotel_id, name, xmlBody, currentRequestId, {
             batch_no: batch_no
         });
     };
@@ -1540,9 +1474,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
 
         // logger.debug('updateInventoryMultipleDays xmlBody:', xmlBody);
 
-        return await submitWithRetry(req, res, hotel_id, name, xmlBody, currentRequestId, {
-            maxRetries: 3,
-            retryDelay: 5000,
+        return await queueOtaXmlRequest(req, res, hotel_id, name, xmlBody, currentRequestId, {
             batch_no: batch_no
         });
     };
