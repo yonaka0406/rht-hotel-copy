@@ -310,7 +310,7 @@ const router = useRouter();
 import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
 
-const phonePattern = /^[\\d\\s()+-]*$/;
+const phonePattern = /^[\\d\\s()+\\-]*$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Primevue
