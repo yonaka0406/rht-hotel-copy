@@ -1286,6 +1286,10 @@ const updateInventoryMultipleDays = async (req, res) => {
         if (currentRequestId.length > 8) {
             currentRequestId = currentRequestId.slice(-8); // keep the last 8 characters
         }
+        
+        // Replace requestId placeholder in XML body
+        xmlBody = xmlBody.replace('{{requestId}}', currentRequestId);
+        
         return await queueOtaXmlRequest(req, res, hotel_id, name, xmlBody, currentRequestId, {
             batch_no: batch_no
         });
