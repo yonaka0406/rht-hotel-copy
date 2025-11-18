@@ -62,13 +62,13 @@ const apiCallSemaphore = new Semaphore(3); // Limit to 3 simultaneous API calls
 
 async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, currentRequestId, options = {}) {
     const { maxRetries = 3, retryDelay = 5000, batch_no = 'N/A' } = options;
-    let otaRequestIdForResend = null; // To store the requestId from the failed OTA call
+
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             let currentXmlBody = xmlBody; // Use a mutable copy for potential modifications
 
-            if (attempt > 1 && otaRequestIdForResend) {
+            if (attempt > 1) {
                 // Fetch the resend service template
                 let resendTemplate = await selectXMLTemplate(req.requestId, hotel_id, 'NetStockBulkAdjustmentResponseResendService');
                 if (!resendTemplate) {
@@ -79,7 +79,7 @@ async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, current
                     throw new Error('Resend XML template not found.');
                 }
                 // Replace the placeholder with the extracted otaRequestId
-                currentXmlBody = resendTemplate.replace('{{otaRequestId}}', otaRequestIdForResend);
+                currentXmlBody = resendTemplate.replace('{{otaRequestId}}', currentRequestId);
                 // Also replace the internal requestId placeholder if it exists in the resend template
                 if (currentXmlBody.includes('{{requestId}}')) {
                     currentXmlBody = currentXmlBody.replace('{{requestId}}', currentRequestId);
@@ -102,21 +102,11 @@ async function submitWithRetry(req, res, hotel_id, serviceName, xmlBody, current
                 requestId: req.requestId,
             });
 
-            if (isRetryableError && attempt < maxRetries) {
-                // Store the otaRequestId for subsequent retries
-                if (error.details && error.details.otaRequestId) {
-                    otaRequestIdForResend = error.details.otaRequestId;
-                } else {
-                    logger.warn('otaRequestId not found in error details for retry.', {
-                        errorMessage: error.message,
-                        requestId: req.requestId,
-                    });
-                }
-                serviceName = 'NetStockBulkAdjustmentResponseResendService'; // Change service for retry
-                logger.info(`Retrying batch ${batch_no} with ${serviceName} in ${retryDelay / 1000} seconds...`);
-                await delay(retryDelay);
-            } else {
-                logger.error(`Error in processInventoryBatch for batch ${batch_no} after ${attempt} attempts.`, {
+                            if (isRetryableError && attempt < maxRetries) {
+                                serviceName = 'NetStockBulkAdjustmentResponseResendService'; // Change service for retry
+                                logger.info(`Retrying batch ${batch_no} with ${serviceName} in ${retryDelay / 1000} seconds...`);
+                                await delay(retryDelay);
+                            } else {                logger.error(`Error in processInventoryBatch for batch ${batch_no} after ${attempt} attempts.`, {
                     error: error.message,
                     stack: error.stack,
                     requestId: req.requestId,
