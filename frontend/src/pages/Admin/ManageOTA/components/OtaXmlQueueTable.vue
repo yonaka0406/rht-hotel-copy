@@ -23,15 +23,19 @@
       <Column field="hotel_name" header="ホテル名" :sortable="true"></Column>
       <Column field="status" header="ステータス" :sortable="true" style="min-width: 10rem">
         <template #body="{ data }">
-          <Badge :severity="getSeverity(data.status)" :value="data.status" />
+          <Badge :severity="statusSeverity(data.status)" :value="getStatusInJapanese(data.status)" />
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <InputText
-            type="text"
+          <Select
             v-model="filterModel.value"
-            @keydown.enter="filterCallback()"
+            :options="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="ステータスで絞り込み"
             class="p-column-filter"
-            placeholder="ステータスで検索"
+            :showClear="true"
+            @change="filterCallback()"
+            fluid
           />
         </template>
       </Column>    
@@ -48,22 +52,26 @@
               <strong>ID:</strong> {{ selectedRow.id }}
             </div>
             <div>
-              <strong>ステータス:</strong> {{ getStatusInJapanese(selectedRow.status) }}
+              <strong>ステータス:</strong>
+              <Badge :severity="statusSeverity(selectedRow.status)" :value="getStatusInJapanese(selectedRow.status)" class="ml-2" />
             </div>
             <div>
               <strong>リトライ数:</strong> {{ selectedRow.retries }}
             </div>
             <div class="col-span-3">
-              <strong>最終エラー:</strong> {{ selectedRow.last_error || 'N/A' }}
+              <strong>最終エラー:</strong> <small v-if="!selectedRow.last_error">エラーなし</small><span v-else>{{ selectedRow.last_error }}</span>
             </div>
             <div class="col-span-3">
-              <strong>作成日時:</strong> {{ formatDateTime(selectedRow.created_at) }}
+              <strong>作成日時:</strong> {{ formatDateTimeWithSeconds(selectedRow.created_at) }}
             </div>
             <div class="col-span-3">
-              <strong>処理日時:</strong> {{ formatDateTime(selectedRow.processed_at) || '未処理' }}
+              <strong>処理日時:</strong> {{ formatDateTimeWithSeconds(selectedRow.processed_at) || '未処理' }}
             </div>
             <div class="col-span-3">
               <strong>XMLボディ:</strong>
+              <Message severity="info" :closable="false" class="mb-2">
+                `adjustmentDate`タグは更新対象日を、`remainingCount`タグは更新対象数を、`netRmTypeGroupCode`タグは部屋タイプを指します。
+              </Message>
               <pre class="xml-display">{{ selectedRow.xml_body }}</pre>
             </div>
           </div>
@@ -75,7 +83,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { formatDateTime } from '../../../../utils/dateUtils';
+import { formatDateTime, formatDateTimeWithSeconds } from '../../../../utils/dateUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useXMLStore } from '../../../../composables/useXMLStore';
 
@@ -88,6 +96,7 @@ import Select from 'primevue/select';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Fieldset from 'primevue/fieldset';
+import Message from 'primevue/message';
 
 const { otaXmlQueueData, fetchOtaXmlQueue, otaXmlQueueLoading } = useXMLStore();
 
@@ -137,16 +146,16 @@ const statusMapping = {
   processing: '処理中',
 };
 
-const getSeverity = (status) => {
+const statusSeverity = (status) => {
   switch (status) {
     case 'completed':
       return 'success';
     case 'pending':
-      return 'warning'; // Changed from info to warning for pending
+      return 'warn';
     case 'failed':
       return 'danger';
     case 'processing':
-      return 'info'; // Changed from warning to info for processing
+      return 'info';
     default:
       return 'secondary';
   }

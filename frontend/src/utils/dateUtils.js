@@ -47,6 +47,32 @@ export const formatDateTime = (dateString) => {
   return formattedDate.replace(/\//g, '/');
 };
 
+export const formatDateTimeWithSeconds = (dateString) => {
+  if (!dateString) return null;
+
+  const d = new Date(dateString);
+
+  if (isNaN(d.getTime())) {
+    console.warn(`Invalid date object created from: ${dateString}`);
+    return null;
+  }
+
+  const options = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit', // Added seconds
+    hour12: false,
+    timeZone: 'Asia/Tokyo'
+  };
+
+  const formattedDate = d.toLocaleString('ja-JP', options);
+
+  return formattedDate.replace(/\//g, '/');
+};
+
 export const formatDateTimeJP = (dateString) => {
   if (!dateString) return '';
   try {
