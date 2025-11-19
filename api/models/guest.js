@@ -70,18 +70,29 @@ const getGuestListDetails = async (requestId, hotelId, reservationId) => {
 const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) => {
     const pool = getPool(requestId);
     const query = `
-      WITH room_stays AS (
+      WITH date_groups AS (
         SELECT
           rd.reservation_id,
           rd.room_id,
-          MIN(rd.date) AS first_stay_date,
-          MAX(rd.date) AS last_stay_date
+          rd.date,
+          (rd.date::date - (ROW_NUMBER() OVER (PARTITION BY rd.reservation_id, rd.room_id ORDER BY rd.date))::int) as island_group
         FROM reservation_details rd
         JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
         WHERE rd.hotel_id = $1
           AND rd.cancelled IS NULL
           AND $2 >= r.check_in AND $2 < r.check_out
-        GROUP BY rd.reservation_id, rd.room_id
+      ),
+      room_stays AS (
+        SELECT
+          reservation_id,
+          room_id,
+          island_group,
+          MIN(date) as first_stay_date,
+          MAX(date) as last_stay_date
+        FROM
+          date_groups
+        GROUP BY
+          reservation_id, room_id, island_group
       )
       SELECT DISTINCT ON (r.id, rooms.room_number, rd.room_id)
         r.id,
