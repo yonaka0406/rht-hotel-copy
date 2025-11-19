@@ -228,8 +228,7 @@ const fields = ref({});
 const guests = ref([]);
 
 const initializeFields = (reservation) => {
-    console.log('Initializing fields with reservation:', reservation);
-    
+        
     if (!reservation) {
         fields.value = {};
         guests.value = [];
@@ -364,8 +363,7 @@ const initializeSingleGuests = (reservation) => {
 
 watch(() => props.visible, (newValue) => {
     dialogVisible.value = newValue;
-    if (newValue) {
-        console.log('Dialog visibility changed, initializing fields with reservation:', props.reservation);
+    if (newValue) {        
         initializeFields(props.reservation);
     }
 });

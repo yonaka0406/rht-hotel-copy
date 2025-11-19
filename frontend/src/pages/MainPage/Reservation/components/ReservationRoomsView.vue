@@ -1627,6 +1627,21 @@ const visibleGuestListDialog = ref(false);
 const selectedReservationForGuestList = ref(null);
 const isGroupPDF = ref(false);
 
+const getRoomStayDates = (details, defaultCheckIn, defaultCheckOut) => {
+    const nonCancelledStays = details.filter(detail => !detail.cancelled);
+
+    if (nonCancelledStays.length > 0) {
+        nonCancelledStays.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const checkInDate = nonCancelledStays[0].date;
+        const lastStayDate = new Date(nonCancelledStays[nonCancelledStays.length - 1].date);
+        lastStayDate.setDate(lastStayDate.getDate() + 1);
+        const checkOutDate = formatDate(lastStayDate);
+        return { checkInDate, checkOutDate };
+    }
+
+    return { checkInDate: defaultCheckIn, checkOutDate: defaultCheckOut };
+};
+
 const openGuestListDialog = async (group, isGroup = false) => {
     isGroupPDF.value = isGroup;
 
@@ -1674,14 +1689,17 @@ const openGuestListDialog = async (group, isGroup = false) => {
             const assignedParkingData = await fetchParkingReservations(roomDetail.hotel_id, roomDetail.reservation_id);
             const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
 
+            const { checkInDate, checkOutDate } = getRoomStayDates(roomGroup.details, reservationInfo.value.check_in, reservationInfo.value.check_out);
+
+
             // Create individual room object
             const roomData = {
                 id: roomDetail.reservation_id,
                 hotel_id: roomDetail.hotel_id,
                 booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
                 alternative_name: '',
-                check_in: reservationInfo.value.check_in,
-                check_out: reservationInfo.value.check_out,
+                check_in: checkInDate,
+                check_out: checkOutDate,
                 room_numbers: [roomDetail.room_number],
                 room_number: roomDetail.room_number, // Individual room number
                 guests: roomGuests,
@@ -1736,13 +1754,15 @@ const openGuestListDialog = async (group, isGroup = false) => {
 
         await fetchPlansForHotel(reservationDetails.hotel_id);
 
+        const { checkInDate, checkOutDate } = getRoomStayDates(group.details, reservationInfo.value.check_in, reservationInfo.value.check_out);
+
         selectedReservationForGuestList.value = {
             id: reservationDetails.reservation_id,
             hotel_id: reservationDetails.hotel_id,
             booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
             alternative_name: '',
-            check_in: reservationInfo.value.check_in,
-            check_out: reservationInfo.value.check_out,
+            check_in: checkInDate,
+            check_out: checkOutDate,
             room_numbers: room_numbers,
             guests: guests,
             comment: reservationInfo.value.comment,
