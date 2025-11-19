@@ -17,16 +17,16 @@ export function useSocket() {
       return;
     }
 
-    //console.log(`Connecting socket for hotelId: ${hotelId}`);
+    console.log(`Connecting socket for hotelId: ${hotelId}`);
     socket.value = io(import.meta.env.VITE_BACKEND_URL, {
       query: { hotelId }
     });
 
-    /*
+    
     socket.value.on('connect', () => {
       console.log('Socket connected');
     });
-    */
+    
     socket.value.on('connect_error', (err) => {
       console.error('Socket connection error:', err);
     });
