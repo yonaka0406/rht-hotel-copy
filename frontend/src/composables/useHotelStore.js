@@ -6,6 +6,7 @@ const selectedHotelId = ref(null);
 const hotelRooms = ref([]);
 const hotelBlockedRooms = ref([]);
 const isLoadingHotelList = ref(false);
+const isInitialized = ref(false);
 
 // Load selected hotel ID from localStorage on module load
 const STORAGE_KEY = 'selectedHotelId';
@@ -59,6 +60,7 @@ export function useHotelStore() {
             hotels.value = [];
         } finally {
             isLoadingHotelList.value = false;
+            isInitialized.value = true;
         }
     };
     const fetchHotel = async () => {
@@ -405,6 +407,7 @@ export function useHotelStore() {
         selectedHotelRooms,
         hotelBlockedRooms,
         isLoadingHotelList,
+        isInitialized,
         setHotelId,
         fetchHotels,
         fetchHotel,

@@ -550,7 +550,7 @@ ioHttp.on('connection', (socket) => {
 
   // Handle client disconnection
   socket.on('disconnect', () => {
-    // logger.debug('Client disconnected (HTTP)', { clientId: socket.id });
+    logger.debug('Client disconnected (HTTP)', { clientId: socket.id });
   });
 });
 /*

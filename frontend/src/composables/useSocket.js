@@ -7,11 +7,18 @@ export function useSocket() {
   const hotelStore = useHotelStore();
   
   const connectSocket = () => {
+    const hotelId = hotelStore.selectedHotelId.value;
+
+    // Check if already connected to this hotel
+    if (socket.value && socket.value.connected && socket.value.io.opts.query.hotelId === hotelId) {
+        // console.log(`Already connected to socket for hotelId: ${hotelId}`);
+        return;
+    }
+
     if (socket.value) {
       socket.value.disconnect();
     }
 
-    const hotelId = hotelStore.selectedHotelId.value;
     if (!hotelId) {
       console.warn('No hotel selected, socket not connecting.');
       return;
@@ -46,8 +53,13 @@ export function useSocket() {
     }
   });
 
-  watch(hotelStore.selectedHotelId, (newHotelId, oldHotelId) => {
-    if (newHotelId && newHotelId !== oldHotelId) {
+  watch([hotelStore.selectedHotelId, hotelStore.isInitialized], ([newHotelId, isInitialized], [oldHotelId, oldIsInitialized]) => {
+    if (!isInitialized) {
+      return; // Do nothing if the store isn't ready
+    }
+
+    // Connect if the hotel ID changes or if the store just became initialized with a valid ID
+    if (newHotelId && (newHotelId !== oldHotelId || isInitialized !== oldIsInitialized)) {
       connectSocket();
     } else if (!newHotelId && socket.value) {
       socket.value.disconnect();
