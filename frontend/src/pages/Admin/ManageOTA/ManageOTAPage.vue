@@ -33,31 +33,32 @@
         <AccordionPanel value="1">
           <AccordionHeader>最新のサイトコントローラーの応答</AccordionHeader>
           <AccordionContent class="mt-4">
+            <div class="mb-4">
+              <Select
+                v-model="selectedStatus"
+                :options="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="ステータスで絞り込み"
+                class="w-full md:w-64"
+              />
+            </div>
             <DataTable
-              :value="responses"
+              :value="filteredResponses"
               :paginator="true"
               :rows="15"
-              :rowsPerPageOptions="[15, 25, 50]"              
+              :rowsPerPageOptions="[15, 25, 50]"
+              class="w-full"              
             >              
               <Column field="received_at" header="受信日時">                
                 <template #body="slotProps">
                   {{ formatDateTime(slotProps.data.received_at) }}
                   <Badge
-                    v-if="slotProps.data.status === '成功'"
-                    severity="success"
+                    :value="getBadgeDetails(slotProps.data.status).text"
+                    :severity="getBadgeDetails(slotProps.data.status).severity"
                     class="ml-2"
-                    icon="pi pi-check"
-                  >
-                    {{ slotProps.data.status }}
-                  </Badge>
-                  <Badge
-                    v-else-if="slotProps.data.status === 'エラー'"
-                    severity="danger"
-                    class="ml-2"
-                    icon="pi pi-times"                    
-                  >
-                    {{ slotProps.data.status }}
-                  </Badge>
+                    :icon="getBadgeDetails(slotProps.data.status).icon"
+                  ></Badge>
                 </template>
               </Column>              
               <Column field="name" header="リクエスト名">
@@ -111,15 +112,16 @@
                       class="w-48"
                       placeholder="ホテル選択"
                       filter
+                      fluid
                     />
                   </div>
                   <div class="p-field">
                     <FloatLabel>
                       <label for="templateName">テンプレート名</label>
                       <Select id="templateName" v-model="templateName" 
-                      :options="sc_serviceLabels"
-                      optionLabel="label"
-                      optionValue="id"
+                        :options="sc_serviceLabels"
+                        optionLabel="label"
+                        optionValue="id"
                         fluid 
                       />
                       <small v-if="templateName" class="text-gray-500">選択中: {{ templateName }}</small>                    </FloatLabel>
@@ -189,7 +191,7 @@
 
 <script setup>
   // Vue
-  import { ref, shallowRef, watch, onMounted } from 'vue';
+  import { ref, shallowRef, watch, onMounted, computed } from 'vue';
 
   // Stores
   import { useXMLStore } from '@/composables/useXMLStore';
@@ -201,7 +203,7 @@
   import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Select, Button, DataTable, Column, Badge, Dialog } from 'primevue';
 
   // Components
-  import OtaQueueTable from '@/pages/Admin/components/OtaQueueTable.vue';
+  import OtaQueueTable from '@/pages/Admin/ManageOTA/components/OtaQueueTable.vue';
   import OtaXmlQueueTable from './components/OtaXmlQueueTable.vue';
   
   // Helper
@@ -217,11 +219,51 @@
       });
   };
   
+  const getBadgeDetails = (status) => {
+    switch (status) {
+      case '成功':
+      case 'completed':
+        return { text: '完了', severity: 'success', icon: 'pi pi-check' };
+      case 'エラー':
+      case 'failed':
+        return { text: '失敗', severity: 'danger', icon: 'pi pi-times' };
+      case 'processing':
+        return { text: '処理中', severity: 'info', icon: 'pi pi-spin pi-cog' };
+      case 'pending':
+        return { text: '保留中', severity: 'warn', icon: 'pi pi-clock' };
+      default:
+        return { text: status, severity: 'info', icon: 'pi pi-info-circle' };
+    }
+  };
+  
   // Template
   const selectedHotelId = ref(null);
   const hasSiteController = ref(false);
   const templateName = ref('');
-  const editableFields = ref([]);  
+  const editableFields = ref([]);
+
+  const statusOptions = ref([
+    { label: 'すべて', value: null },
+    { label: '完了', value: 'completed' },
+    { label: '失敗', value: 'failed' },
+    { label: '処理中', value: 'processing' },
+    { label: '保留中', value: 'pending' }
+  ]);
+  const selectedStatus = ref(null);
+
+  const filteredResponses = computed(() => {
+    if (!selectedStatus.value) {
+      return responses.value;
+    }
+    if (selectedStatus.value === 'completed') {
+      return responses.value.filter(r => r.status === 'completed' || r.status === '成功');
+    }
+    if (selectedStatus.value === 'failed') {
+      return responses.value.filter(r => r.status === 'failed' || r.status === 'エラー');
+    }
+    return responses.value.filter(r => r.status === selectedStatus.value);
+  });
+  
   const fetchTemplate = async () => {
     await fetchXMLTemplate(selectedHotelId.value, templateName.value);
   };
@@ -266,6 +308,8 @@
   };
   // Dialog
   const displayDialog = ref(false);
+  const selectedResponse = ref(null);
+  const dialogContent = ref('');
   const getDialogContent = (response) => {
       if (!response) {
         dialogContent.value = '';
@@ -326,6 +370,10 @@
         const fieldName = match[1];
         const fieldValue = ''; // Initialize with empty string
         return { label: fieldName, value: fieldValue };
+      });
+    } else {
+      editableFields.value = [];
+    }
   });
 
   watch(selectedHotelId, async (newHotelId) => {

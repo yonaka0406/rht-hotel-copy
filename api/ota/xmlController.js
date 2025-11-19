@@ -506,16 +506,18 @@ const getXMLRecentResponses = async (req, res) => {
     }
 };
 
+const { redactCommonRequest } = require('./xmlService');
+
 const getOTAXmlQueue = async (req, res) => {
   const requestId = req.requestId;
-
-  logger.debug(`[${requestId}] Entering getOTAXmlQueue controller.`);
-
-  try {
-    logger.debug(`[${requestId}] Calling selectOTAXmlQueue from model.`);
-    const queueData = await selectOTAXmlQueue(requestId); // Call the model function
-    logger.debug(`[${requestId}] Received queueData from model: ${JSON.stringify(Array.isArray(queueData) ? queueData.slice(0, 5) : queueData)} ... (first 5 items)`);
-    res.json(queueData);
+  
+  try {    
+    const queueData = await selectOTAXmlQueue(requestId); // Call the model function    
+    const redactedData = queueData.map(item => ({
+      ...item,
+      xml_body: redactCommonRequest(item.xml_body),
+    }));
+    res.json(redactedData);
   } catch (error) {
     logger.error(`[${requestId}] Error fetching OTA XML queue: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: 'Error fetching OTA XML queue', error: error.message });
@@ -525,8 +527,6 @@ const getOTAXmlQueue = async (req, res) => {
 const postXMLResponse = async (req, res) => {    
     const { hotel_id, name } = req.params;
     const xml = req.body.toString('utf8');
-
-    // logger.debug('postXMLResponse', req.params, xml);
 
     try {
         const parser = new xml2js.Parser();

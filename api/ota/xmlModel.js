@@ -570,8 +570,7 @@ const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
     }
 };
 
-const selectOTAXmlQueue = async (requestId) => {
-  logger.debug(`[${requestId}] Entering selectOTAXmlQueue model function.`);
+const selectOTAXmlQueue = async (requestId) => {  
   const pool = getPool(requestId); // Use getPool as it's a read operation
   try {
     const query = `
@@ -582,7 +581,8 @@ const selectOTAXmlQueue = async (requestId) => {
         last_error,
         created_at,
         processed_at,
-        hotel_name
+        hotel_name,
+        xml_body
       FROM (
         (SELECT
             oq.id,
@@ -591,7 +591,8 @@ const selectOTAXmlQueue = async (requestId) => {
             oq.last_error,
             oq.created_at,
             oq.processed_at,
-            h.name AS hotel_name
+            h.name AS hotel_name,
+            oq.xml_body
         FROM ota_xml_queue oq
         JOIN hotels h ON oq.hotel_id = h.id
         ORDER BY oq.created_at DESC
@@ -604,23 +605,21 @@ const selectOTAXmlQueue = async (requestId) => {
             oq.last_error,
             oq.created_at,
             oq.processed_at,
-            h.name AS hotel_name
+            h.name AS hotel_name,
+            oq.xml_body
         FROM ota_xml_queue oq
         JOIN hotels h ON oq.hotel_id = h.id
         WHERE oq.status <> 'completed')
       ) AS combined_queue
       ORDER BY created_at DESC;
     `;
-
-    logger.debug(`[${requestId}] Executing database query for OTA XML queue.`);
-    const result = await pool.query(query);
-    logger.debug(`[${requestId}] Database query returned ${result.rows.length} rows.`);
+    
+    const result = await pool.query(query);    
     return result.rows;
   } catch (error) {
     logger.error(`[${requestId}] Error in selectOTAXmlQueue: ${error.message}`, { stack: error.stack });
     throw error;
-  } finally {
-    logger.debug(`[${requestId}] Exiting selectOTAXmlQueue model function.`);
+  } finally {    
     // getPool returns a client from the pool, not a direct connection, so no client.release() needed here.
     // The pool manages connection release.
   }

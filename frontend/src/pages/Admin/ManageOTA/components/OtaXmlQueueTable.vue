@@ -1,5 +1,6 @@
 <template>
-  <div class="card mt-4">
+  <div>
+    <p class="text-sm text-gray-500 mb-2">※最新のキューエントリーのみ表示されます。</p>
     <DataTable
       :value="otaXmlQueueData"
       :paginator="true"
@@ -9,24 +10,17 @@
       filterDisplay="row"
       :loading="otaXmlQueueLoading"
       dataKey="ota_xml_queue_id"
-      responsiveLayout="scroll"
-      stateStorage="session"
-      stateKey="otaxmlqueue-table"
     >
-      <Column field="hotel_name" header="ホテル名" :sortable="true" style="min-width: 12rem">
-        <template #body="{ data }">
-          {{ data.hotel_name }}
-        </template>
-        <template #filter="{ filterModel, filterCallback }">
-          <InputText
-            type="text"
-            v-model="filterModel.value"
-            @keydown.enter="filterCallback()"
-            class="p-column-filter"
-            placeholder="ホテル名で検索"
+      <Column header="詳細">
+        <template #body="slotProps">
+          <Button
+            icon="pi pi-eye"
+            class="p-button-rounded p-button-text"
+            @click="showRowDetails(slotProps.data)"
           />
         </template>
       </Column>
+      <Column field="hotel_name" header="ホテル名" :sortable="true"></Column>
       <Column field="status" header="ステータス" :sortable="true" style="min-width: 10rem">
         <template #body="{ data }">
           <Badge :severity="getSeverity(data.status)" :value="data.status" />
@@ -40,71 +34,48 @@
             placeholder="ステータスで検索"
           />
         </template>
-      </Column>
-      <Column field="retries" header="リトライ数" :sortable="true" style="min-width: 8rem">
-        <template #body="{ data }">
-          {{ data.retries }}
-        </template>
-        <template #filter="{ filterModel, filterCallback }">
-          <InputNumber
-            v-model="filterModel.value"
-            @keydown.enter="filterCallback()"
-            class="p-column-filter"
-            placeholder="リトライ数で検索"
-          />
-        </template>
-      </Column>
-      <Column field="last_error" header="最新エラー" :sortable="true" style="min-width: 16rem">
-        <template #body="{ data }">
-          <span v-if="data.last_error">{{ data.last_error }}</span>
-          <span v-else>N/A</span>
-        </template>
-        <template #filter="{ filterModel, filterCallback }">
-          <InputText
-            type="text"
-            v-model="filterModel.value"
-            @keydown.enter="filterCallback()"
-            class="p-column-filter"
-            placeholder="エラーメッセージで検索"
-          />
-        </template>
-      </Column>
-      <Column field="created_at" header="作成日時" :sortable="true" style="min-width: 14rem">
-        <template #body="{ data }">
-          {{ formatDateTime(data.created_at) }}
-        </template>
-        <template #filter="{ filterModel, filterCallback }">
-          <InputText
-            type="text"
-            v-model="filterModel.value"
-            @keydown.enter="filterCallback()"
-            class="p-column-filter"
-            placeholder="作成日時で検索"
-          />
-        </template>
-      </Column>
-      <Column field="processed_at" header="処理日時" :sortable="true" style="min-width: 14rem">
-        <template #body="{ data }">
-          <span v-if="data.processed_at">{{ formatDateTime(data.processed_at) }}</span>
-          <span v-else>未処理</span>
-        </template>
-        <template #filter="{ filterModel, filterCallback }">
-          <InputText
-            type="text"
-            v-model="filterModel.value"
-            @keydown.enter="filterCallback()"
-            class="p-column-filter"
-            placeholder="処理日時で検索"
-          />
-        </template>
-      </Column>
-      <!-- Add a column for viewing full XML request/response if needed -->
+      </Column>    
     </DataTable>
+
+    <Dialog v-model:visible="displayDialog" header="詳細" :modal="true" :style="{ width: '70vw' }">
+      <div v-if="selectedRow">
+        <Fieldset legend="キュー詳細">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="col-span-3">
+              <strong>ホテル名:</strong> {{ selectedRow.hotel_name }}
+            </div>
+            <div>
+              <strong>ID:</strong> {{ selectedRow.id }}
+            </div>
+            <div>
+              <strong>ステータス:</strong> {{ getStatusInJapanese(selectedRow.status) }}
+            </div>
+            <div>
+              <strong>リトライ数:</strong> {{ selectedRow.retries }}
+            </div>
+            <div class="col-span-3">
+              <strong>最終エラー:</strong> {{ selectedRow.last_error || 'N/A' }}
+            </div>
+            <div class="col-span-3">
+              <strong>作成日時:</strong> {{ formatDateTime(selectedRow.created_at) }}
+            </div>
+            <div class="col-span-3">
+              <strong>処理日時:</strong> {{ formatDateTime(selectedRow.processed_at) || '未処理' }}
+            </div>
+            <div class="col-span-3">
+              <strong>XMLボディ:</strong>
+              <pre class="xml-display">{{ selectedRow.xml_body }}</pre>
+            </div>
+          </div>
+        </Fieldset>
+      </div>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { formatDateTime } from '../../../../utils/dateUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useXMLStore } from '../../../../composables/useXMLStore';
 
@@ -113,53 +84,90 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Badge from 'primevue/badge';
 import InputText from 'primevue/inputtext';
-import InputNumber from 'primevue/inputnumber';
+import Select from 'primevue/select';
+import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
+import Fieldset from 'primevue/fieldset';
 
 const { otaXmlQueueData, fetchOtaXmlQueue, otaXmlQueueLoading } = useXMLStore();
 
+const displayDialog = ref(false);
+const selectedRow = ref(null);
+
+const showRowDetails = (row) => {
+  selectedRow.value = row;
+  displayDialog.value = true;
+};
+
 const filters = ref({
   hotel_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  status: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  retries: { value: null, matchMode: FilterMatchMode.EQUALS },
-  last_error: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  created_at: { value: null, matchMode: FilterMatchMode.CONTAINS },
-  processed_at: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  status: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
+
+const statusOptions = ref([
+  { label: 'すべて', value: null },
+  { label: '完了', value: 'completed' },
+  { label: '保留中', value: 'pending' },
+  { label: '失敗', value: 'failed' },
+  { label: '処理中', value: 'processing' },
+]);
 
 onMounted(() => {
   fetchOtaXmlQueue();
 });
+
+const dialogFieldLabels = {
+  id: 'ID',
+  hotel_name: 'ホテル名',
+  status: 'ステータス',
+  retries: 'リトライ数',
+  last_error: '最終エラー',
+  created_at: '作成日時',
+  processed_at: '処理日時',
+  xml_body: 'XMLボディ',
+  current_request_id: '現在のリクエストID',
+  service_name: 'サービス名',
+  // Add other fields as needed
+};
+
+const statusMapping = {
+  completed: '完了',
+  pending: '保留中',
+  failed: '失敗',
+  processing: '処理中',
+};
 
 const getSeverity = (status) => {
   switch (status) {
     case 'completed':
       return 'success';
     case 'pending':
-      return 'info';
+      return 'warning'; // Changed from info to warning for pending
     case 'failed':
       return 'danger';
     case 'processing':
-      return 'warning';
+      return 'info'; // Changed from warning to info for processing
     default:
       return 'secondary';
   }
 };
 
-const formatDateTime = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString('ja-JP', {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+const getStatusInJapanese = (status) => {
+  return statusMapping[status] || status;
 };
+
 </script>
 
 <style scoped>
-/* Add any specific styles for this component here */
+  .xml-display {
+    text-align: left;
+    white-space: pre-wrap; /* Allows text to wrap */
+    overflow-x: auto; /* Adds horizontal scrollbar if needed */
+    max-width: 100%; /* Ensures it doesn't exceed its container */
+    background-color: #f8f8f8; /* Light background for better readability */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace; /* Monospaced font for code */
+  }
 </style>
