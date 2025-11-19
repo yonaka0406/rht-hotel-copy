@@ -445,8 +445,12 @@ const getGuestListExcel = async (req, res) => {
                 const planNames = reservation.assigned_plan_names ? reservation.assigned_plan_names.join(' ・ ') : reservation.plan_name;
                 const selectedParkingLotNames = reservation.assigned_parking_lot_names ? reservation.assigned_parking_lot_names.split(',').map(lot => lot.trim()) : [];
 
-                const checkInDateFormatted = formatDateForGuestList(reservation.check_in);
-                const checkOutDateFormatted = formatDateForGuestList(reservation.check_out);
+                const roomCheckIn = new Date(reservation.room_check_in);
+                const lastStay = new Date(reservation.room_last_stay);
+                const roomCheckOut = new Date(lastStay.setDate(lastStay.getDate() + 1));
+
+                const checkInDateFormatted = formatDateForGuestList(roomCheckIn);
+                const checkOutDateFormatted = formatDateForGuestList(roomCheckOut);
 
                 const paymentTotal = totalPayableAmount.toLocaleString(); // Use the calculated totalPayableAmount
                 let paymentOption;

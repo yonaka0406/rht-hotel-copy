@@ -70,10 +70,23 @@ const getGuestListDetails = async (requestId, hotelId, reservationId) => {
 const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) => {
     const pool = getPool(requestId);
     const query = `
+      WITH room_stays AS (
+        SELECT
+          rd.reservation_id,
+          rd.room_id,
+          MIN(rd.date) AS first_stay_date,
+          MAX(rd.date) AS last_stay_date
+        FROM reservation_details rd
+        JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+        WHERE rd.hotel_id = $1
+          AND rd.cancelled IS NULL
+          AND $2 >= r.check_in AND $2 < r.check_out
+        GROUP BY rd.reservation_id, rd.room_id
+      )
       SELECT DISTINCT ON (r.id, rooms.room_number, rd.room_id)
         r.id,
-        r.check_in,
-        r.check_out,
+        rs.first_stay_date AS room_check_in,
+        rs.last_stay_date AS room_last_stay,
         rd.number_of_people, -- Use number_of_people from reservation_details
         (
             SELECT array_agg(DISTINCT COALESCE(ph_sub.name, pg_sub.name))
@@ -103,6 +116,8 @@ const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) =
         reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
       JOIN
         rooms ON rd.room_id = rooms.id AND rd.hotel_id = rooms.hotel_id
+      JOIN
+        room_stays rs ON r.id = rs.reservation_id AND rd.room_id = rs.room_id
       LEFT JOIN
         plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
       LEFT JOIN
@@ -138,8 +153,9 @@ const selectCheckInReservationsForGuestList = async (requestId, hotelId, date) =
       ) AS rc_json ON rd.id = rc_json.reservation_details_id
       WHERE
         r.hotel_id = $1
-        AND r.status = 'confirmed' -- Only confirmed reservations
-        AND r.check_in = $2 -- Only check-ins on the specified date
+        AND r.status NOT IN ('hold', 'provisory', 'cancelled')
+        AND rs.first_stay_date = $2 -- Check against the room's actual first day
+        AND rd.date = $2 -- Ensure we are getting the detail for the check-in day
       ORDER BY
         r.id, rooms.room_number, rd.room_id, r.check_in;
     `;
