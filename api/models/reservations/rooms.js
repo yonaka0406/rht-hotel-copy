@@ -259,10 +259,77 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
   const pool = getPool(requestId);
   
   const query = `
-    WITH ReservationDetailsAgg AS (
+    WITH RoomStayIntervals AS (
+        SELECT
+            rd_inner.reservation_id,
+            rd_inner.room_id,
+            rd_inner.date,
+            (rd_inner.date::date - (ROW_NUMBER() OVER (PARTITION BY rd_inner.reservation_id, rd_inner.room_id ORDER BY rd_inner.date))::int) as island_group
+        FROM
+            reservation_details rd_inner
+        WHERE
+            rd_inner.hotel_id = $1 AND rd_inner.cancelled IS NULL
+    ),
+    ContinuousRoomStays AS (
+        SELECT
+            reservation_id,
+            room_id,
+            MIN(date) as effective_check_in,
+            MAX(date) as effective_check_out
+        FROM
+            RoomStayIntervals
+        GROUP BY
+            reservation_id, room_id, island_group
+    ),
+    CheckoutRooms AS (
+        SELECT DISTINCT
+            crs.reservation_id,
+            crs.room_id,
+            ($2::date) AS date, -- The actual date of checkout
+            TRUE AS is_checkout,
+            FALSE AS is_occupied
+        FROM
+            ContinuousRoomStays crs
+        WHERE
+            crs.effective_check_out = ($2::date - INTERVAL '1 day')::date
+            AND NOT EXISTS ( -- Ensure no continuous stay starts on the checkout date for the same room
+                SELECT 1 FROM reservation_details rd_next
+                WHERE
+                    rd_next.reservation_id = crs.reservation_id
+                    AND rd_next.room_id = crs.room_id
+                    AND rd_next.date = $2
+                    AND rd_next.cancelled IS NULL
+            )
+    ),
+    OccupiedRooms AS (
+      SELECT DISTINCT
+          rd.reservation_id,
+          rd.room_id,
+          rd.date,
+          FALSE AS is_checkout,
+          TRUE AS is_occupied
+      FROM
+          reservation_details rd
+      WHERE
+          rd.hotel_id = $1 AND rd.date = $2 AND rd.cancelled IS NULL
+    ),
+    -- Combine occupied and checkout rooms, prioritizing occupied if there's an overlap (shouldn't happen with logic)
+    AllRelevantRoomsForDate AS (
+        SELECT
+            COALESCE(occ.reservation_id, chk.reservation_id) AS reservation_id,
+            COALESCE(occ.room_id, chk.room_id) AS room_id,
+            COALESCE(occ.date, chk.date) AS date,
+            COALESCE(occ.is_occupied, FALSE) AS is_occupied,
+            COALESCE(chk.is_checkout, FALSE) AS is_checkout
+        FROM
+            OccupiedRooms occ
+        FULL OUTER JOIN
+            CheckoutRooms chk ON occ.reservation_id = chk.reservation_id AND occ.room_id = chk.room_id AND occ.date = chk.date
+    ),
+    ReservationDetailsAgg AS (
       SELECT
-        rd_inner.reservation_id,
-        rd_inner.room_id,
+        ard.reservation_id,
+        ard.room_id,
         JSON_AGG(
           JSON_BUILD_OBJECT(
             'date', rd_inner.date,
@@ -279,10 +346,11 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
         reservation_details rd_inner
         LEFT JOIN plans_hotel ph ON ph.hotel_id = rd_inner.hotel_id AND ph.id = rd_inner.plans_hotel_id
         LEFT JOIN plans_global pg ON pg.id = rd_inner.plans_global_id
+      JOIN AllRelevantRoomsForDate ard ON rd_inner.reservation_id = ard.reservation_id AND rd_inner.room_id = ard.room_id
       WHERE rd_inner.hotel_id = $1
       GROUP BY
-        rd_inner.reservation_id,
-        rd_inner.room_id
+        ard.reservation_id,
+        ard.room_id
     )
     SELECT
       r.id AS room_id,
@@ -304,47 +372,51 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
       c.id AS booker_client_id,
       c.gender AS booker_gender,
-      rd.id AS reservation_detail_id,
-      rd.date,
-      rd.cancelled,
-      rd.number_of_people,
-      rd.price,
-      rd.plan_name,
-      rd.plan_type,
+      ard.date, -- The date being queried or the checkout date
+      ard.is_occupied,
+      ard.is_checkout,
+      -- Fetch actual reservation_details for the specific date identified by ard.date and ard.room_id
+      -- This needs to be carefully handled as ard.date might be the checkout date, not an occupied date
+      CASE WHEN ard.is_occupied THEN rd_occupied.id ELSE rd_prev_checkout.id END AS reservation_detail_id,
+      CASE WHEN ard.is_occupied THEN rd_occupied.cancelled ELSE rd_prev_checkout.cancelled END AS cancelled,
+      CASE WHEN ard.is_occupied THEN rd_occupied.number_of_people ELSE rd_prev_checkout.number_of_people END AS number_of_people,
+      CASE WHEN ard.is_occupied THEN rd_occupied.price ELSE rd_prev_checkout.price END AS price,
+      CASE WHEN ard.is_occupied THEN rd_occupied.plan_name ELSE rd_prev_checkout.plan_name END AS plan_name,
+      CASE WHEN ard.is_occupied THEN rd_occupied.plan_type ELSE rd_prev_checkout.plan_type END AS plan_type,
       details_agg.details,
       COALESCE(res_clients.clients_json, '[]'::json) as clients_json,
       (details_agg.details_count < (res.check_out - res.check_in)) AS has_less_dates,
       (
-          rd.cancelled IS NOT NULL
-          AND EXISTS (
-              SELECT 1
-              FROM json_array_elements(details_agg.details) AS d
-              WHERE d->>'date' = (rd.date - INTERVAL '1 day')::date::text
-                AND d->>'cancelled' IS NULL
-          )
+          ard.is_checkout
+          AND crs_main.effective_check_out < (res.check_out - INTERVAL '1 day')::date
       ) AS early_checkout,
       (
-          rd.cancelled IS NULL
-          AND EXISTS (
-              SELECT 1
-              FROM json_array_elements(details_agg.details) AS d
-              WHERE d->>'date' = (rd.date - INTERVAL '1 day')::date::text
-                AND d->>'cancelled' IS NOT NULL
-          )
+          ard.is_occupied
+          AND crs_main.effective_check_in > res.check_in
       ) AS late_checkin
     FROM
-      reservation_details rd
-      JOIN reservations res ON res.id = rd.reservation_id AND res.hotel_id = rd.hotel_id
+      AllRelevantRoomsForDate ard
+      JOIN reservations res ON res.id = ard.reservation_id AND res.hotel_id = $1
       JOIN clients c ON c.id = res.reservation_client_id
-      JOIN rooms r ON r.id = rd.room_id
+      JOIN rooms r ON r.id = ard.room_id AND r.hotel_id = $1
       JOIN room_types rt ON rt.id = r.room_type_id
-      LEFT JOIN ReservationDetailsAgg details_agg ON details_agg.reservation_id = res.id AND details_agg.room_id = rd.room_id
+      -- Conditional joins to get the correct reservation_details for the main output columns
+      LEFT JOIN reservation_details rd_occupied ON ard.is_occupied AND rd_occupied.reservation_id = ard.reservation_id AND rd_occupied.room_id = ard.room_id AND rd_occupied.date = ard.date AND rd_occupied.hotel_id = $1
+      LEFT JOIN reservation_details rd_prev_checkout ON ard.is_checkout AND rd_prev_checkout.reservation_id = ard.reservation_id AND rd_prev_checkout.room_id = ard.room_id AND rd_prev_checkout.date = (ard.date - INTERVAL '1 day')::date AND rd_prev_checkout.hotel_id = $1
+      JOIN ContinuousRoomStays crs_main ON
+            crs_main.reservation_id = ard.reservation_id AND
+            crs_main.room_id = ard.room_id AND
+            (
+                (ard.is_occupied AND ard.date BETWEEN crs_main.effective_check_in AND crs_main.effective_check_out) OR
+                (ard.is_checkout AND (ard.date - INTERVAL '1 day')::date = crs_main.effective_check_out)
+            )
+      LEFT JOIN ReservationDetailsAgg details_agg ON details_agg.reservation_id = ard.reservation_id AND details_agg.room_id = ard.room_id
       LEFT JOIN (
         SELECT
           rc.reservation_details_id,
           JSON_AGG(
             JSON_BUILD_OBJECT(
-              'client_id', rc.client_id,
+              'client_id', c.id,
               'name', c.name,
               'name_kana', c.name_kana,
               'name_kanji', c.name_kanji,
@@ -356,13 +428,7 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
         FROM reservation_clients rc
         JOIN clients c ON rc.client_id = c.id
         GROUP BY rc.reservation_details_id
-    ) AS res_clients ON res_clients.reservation_details_id = rd.id
-    WHERE
-      rd.hotel_id = $1 AND
-      (
-        rd.date = $2 OR
-        (res.check_out = $2 AND rd.date = ($2::date - INTERVAL '1 day')::date AND rd.cancelled IS NULL)
-      )
+    ) AS res_clients ON res_clients.reservation_details_id = COALESCE(rd_occupied.id, rd_prev_checkout.id)
     ORDER BY
       floor,
       room_number;
