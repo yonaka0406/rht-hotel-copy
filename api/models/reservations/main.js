@@ -2434,7 +2434,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       await dbClient.query(deleteRatesQuery, [id]);
 
       // Fetch new rates
-      const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
+      const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, dbClient);
 
       // Insert rates using the shared utility function
       await insertAggregatedRates(requestId, newrates, hotel_id, id, user_id, false, dbClient);

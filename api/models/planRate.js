@@ -231,10 +231,13 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         }
     }
 };
-const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
+const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, dbClient = null) => {
     const pool = getPool(requestId);
-    const query = `        
-        SELECT 
+    const client = dbClient || await pool.connect(); // Use provided client or get from pool
+    const releaseClient = !dbClient; // Only release if we acquired it
+
+    const query = `
+        SELECT
             adjustment_type,
             condition_type,
             condition_value,
@@ -243,12 +246,12 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             include_in_cancel_fee,
             SUM(adjustment_value) AS adjustment_value
         FROM plans_rates
-        WHERE 
+        WHERE
             (
-                $4 BETWEEN date_start AND COALESCE(date_end, $4)  -- Date is within the range
-                OR ($4 >= date_start AND date_end IS NULL)  -- Date is after the start date and no end date
+                $4 BETWEEN date_start AND COALESCE(date_end, $4)
+                OR ($4 >= date_start AND date_end IS NULL)
             )
-            AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
+            AND ((plans_global_id = $1 AND plans_hotel_id IS NULL)
             OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
         GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate, include_in_cancel_fee
         ORDER BY adjustment_type
@@ -261,7 +264,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
     ];
 
     try {
-        const result = await pool.query(query, values);  
+        const result = await client.query(query, values);  
         
         // Filter results using isValidCondition
         const filteredRates = result.rows.filter(row => actualIsValidCondition(row, date));
@@ -270,6 +273,10 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
+    } finally {
+        if (releaseClient) {
+            client.release();
+        }
     }
 };
 

@@ -40,7 +40,7 @@ const getPlanRateByDay = async (req, res) => {
     const date = req.params.date;
 
     try {
-        const rates = await getPriceForReservation(req.requestId, plans_global_id, plans_hotel_id, hotel_id, date);                
+        const rates = await getPriceForReservation(req.requestId, plans_global_id, plans_hotel_id, hotel_id, date, false, null);                
         res.json(rates);
     } catch (error) {
         console.error('Error getting plan rate:', error);
@@ -54,7 +54,7 @@ const getPlanRatesByDay = async (req, res) => {
     const date = req.params.date;
 
     try {
-        const rates = await getRatesForTheDay(req.requestId, plans_global_id, plans_hotel_id, hotel_id, date);                
+        const rates = await getRatesForTheDay(req.requestId, plans_global_id, plans_hotel_id, hotel_id, date, null);                
         res.json(rates);
     } catch (error) {
         console.error('Error getting plan rates:', error);
