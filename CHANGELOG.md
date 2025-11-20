@@ -631,6 +631,33 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.2.1] - 2025-11-20
+
+### Fixed
+- Database pooling issue where getRatesForTheDay and getPriceForReservation functions were not consistently using the same database client within a transaction, leading to potential schema mismatches or incorrect data access, especially in environments with separate development and production databases.
+  - Modified `getRatesForTheDay` in `api/models/planRate.js` to accept an optional `dbClient` parameter and to release the client only if it was acquired within the function.
+  - Modified `getPriceForReservation` in `api/models/planRate.js` to ensure it uses the passed client within its `try...finally` block.
+  - Updated calls to `getRatesForTheDay` within `recalculatePlanPrice` in `api/models/reservations/main.js` to pass the existing `dbClient` from the transaction.
+  - Updated calls to `getRatesForTheDay` and `getPriceForReservation` in `api/controllers/plansRateController.js` to explicitly pass `null` for the `dbClient` parameter when no transaction-specific client is available, ensuring correct parameter mapping.
+
+### Refactored
+- `selectRoomsForIndicator` to use 'islands of stays' logic to accurately identify checkout rooms, even with intermediate cancelled dates. Redefined `early_checkout` and `late_checkin` flags based on the comparison of continuous stay islands with the overall reservation check-in/check-out dates.
+
+### Feature
+- **Guest List Excel Export:** Enhanced the Excel guest list to display room-specific check-in and check-out dates, ensuring accuracy for reservations with room changes or partial cancellations. The underlying query now filters for active reservations and correctly calculates stay dates based on non-cancelled daily rates for each room.
+- **OTA XML Queuing:** Implemented a robust OTA XML queuing and polling system to manage rate limiting with the TL-Lincoln API. Outgoing requests are now stored in a database queue (`ota_xml_queue`) for asynchronous and controlled processing, improving system resilience.
+
+### Improved
+- **Websockets for Hotel-Specific Updates:** Websocket updates now only trigger for the logged-in hotel, significantly reducing the number of requests made per logged user. Previously, any reservation update would trigger all logged-in users; now, updates are sent only to users with the corresponding hotel selected.
+
+### Refactor
+- **Guest List Dialog:** Refactored the guest list (宿泊者名簿) dialog to use room-specific check-in and check-out dates, ensuring consistency with the exported Excel file.
+
+
+
+
+---
+
 ## Version History
 - **1.2.0** (2025-11-11) - Introduced comprehensive Parking Module with spot blocking for external hotel integration and room swapping capability in the reservation calendar. Fixed memory leaks in plan pattern bulk edit operations, significantly improving performance for large reservation batches.
 - **1.1.31** (2025-11-06) - Fixed room inventory view to exclude 'not for sale' rooms, resolved memory leaks in Puppeteer, improved form validation with reusable utilities, and enhanced UI with custom scrollbar styling for sidebars. Added new tab functionality for reservation details.

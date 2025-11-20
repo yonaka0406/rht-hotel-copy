@@ -592,6 +592,18 @@
         { "type": "feature", "description": "予約カレンダーに部屋交換機能を追加し、移動先の部屋が既に予約されていても部屋の入れ替えが可能になり、ルーム管理の柔軟性が向上しました。" },
         { "type": "bugfix", "description": "大規模な予約の一括編集時にJavaScriptのヒープメモリ不足が発生する問題を修正し、バルク編集時のデータベース接続を最適化して接続プールの枯渇を防ぐようにしました。" }
       ]
+    },
+    {
+      "version": "1.2.1",
+      "date": "2025-11-20",
+      "changes": [
+        { "type": "bugfix", "description": "データベースプーリングの問題を解決。`getRatesForTheDay` および `getPriceForReservation` 関数がトランザクション内で一貫したデータベースクライアントを使用せず、特に開発・本番環境でスキーマ不一致や不正確なデータアクセスを引き起こす可能性がありました。`api/models/planRate.js` の `getRatesForTheDay` はオプションの `dbClient` パラメータを受け入れ、関数内で取得した場合のみクライアントを解放するように変更されました。`api/models/planRate.js` の `getPriceForReservation` は、`try...finally` ブロック内で渡されたクライアントを使用するように変更されました。`api/models/reservations/main.js` の `recalculatePlanPrice` 内の `getRatesForTheDay` の呼び出しは、トランザクションから既存の `dbClient` を渡すように更新されました。`api/controllers/plansRateController.js` の `getRatesForTheDay` および `getPriceForReservation` の呼び出しは、トランザクション固有のクライアントが利用できない場合、`dbClient` パラメータに明示的に `null` を渡すように更新され、正しいパラメータマッピングが保証されます。" },
+        { "type": "refactor", "description": "`selectRoomsForIndicator` を「滞在の島」ロジックを使用してリファクタリングし、中間キャンセル日があってもチェックアウト部屋を正確に特定できるようにしました。継続的な滞在の島と全体の予約チェックイン/チェックアウト日との比較に基づいて、`early_checkout` および `late_checkin` フラグを再定義しました。" },
+        { "type": "feature", "description": "ゲストリストExcelエクスポートを強化し、部屋固有のチェックイン・チェックアウト日を表示するようにしました。部屋の変更や部分的なキャンセルがある予約でも正確性を確保します。基となるクエリはアクティブな予約をフィルタリングし、キャンセルされていない日次料金に基づいて各部屋の滞在日を正確に計算するようになりました。" },
+        { "type": "feature", "description": "OTA XMLキューイングを実装し、TL-Lincoln APIとのレート制限の問題に対処するための堅牢なOTA XMLキューイングおよびポーリングシステムを導入しました。送信されるOTA XMLリクエストはデータベースキュー（`ota_xml_queue`）に保存され、非同期かつ制御された処理が可能になり、システムの回復力が向上しました。" },
+        { "type": "refactor", "description": "ゲストリスト（宿泊者名簿）ダイアログをリファクタリングし、部屋固有のチェックイン・チェックアウト日を使用するように変更しました。これにより、エクスポートされたExcelファイルとの一貫性が確保されます。" },
+        { "type": "improvement", "description": "Websocketの更新は、ログインしているホテルに対してのみトリガーされるようになり、ログインしているユーザーあたりのリクエスト数を大幅に削減しました。以前は、どの予約更新でもすべてのログインユーザーをトリガーしていましたが、現在は、対応するホテルが選択されているユーザーにのみ更新が送信されます。" }
+      ]
     }
   ],
   "backlog": [
