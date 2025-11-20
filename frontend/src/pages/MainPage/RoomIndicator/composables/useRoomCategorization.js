@@ -66,8 +66,8 @@ const { roomsForIndicator } = useReservationStore();
           categorizedRooms.checkOut.push(room);
         }
       }
-      // Priority 2: Check-in today (only if not checking out) or late_checkin
-      else if (isCheckInToday || room.late_checkin) {
+      // Priority 2: Check-in today (only if not checking out)
+      else if (isCheckInToday) {
         // Ensure room_id is unique in checkIn category
         if (!categorizedRooms.checkIn.some(existingRoom => existingRoom.room_id === room.room_id)) {
           categorizedRooms.checkIn.push(room);
@@ -143,13 +143,14 @@ const { roomsForIndicator } = useReservationStore();
       ...categorizedRooms.checkIn.map(r => r.room_id)
     ]);
 
-    const roomChanges = allReservations.filter(room =>
-      room.has_less_dates === true &&
-      room.late_checkin === false &&
-      room.early_checkout === false &&
-      !checkInOrOutRoomIds.has(room.room_id) &&
-      (room.details && room.details.length > 0 && formatDate(selectedDateObj) === room.details[0].date)
-    );
+    const roomChanges = allReservations.filter(room => {
+      const firstActiveDate = room.details?.find(d => !d.cancelled)?.date;
+      return room.has_less_dates === true &&
+        room.late_checkin === false &&
+        room.early_checkout === false &&
+        !checkInOrOutRoomIds.has(room.room_id) &&
+        (firstActiveDate && formatDate(selectedDateObj) === firstActiveDate);
+    });
 
     categorizedRooms.roomChange = roomChanges;
 
