@@ -597,12 +597,14 @@
       "version": "1.2.1",
       "date": "2025-11-19",
       "changes": [
-        { "type": "bugfix", "description": "データベースプーリングの問題を解決。`getRatesForTheDay` および `getPriceForReservation` 関数がトランザクション内で一貫したデータベースクライアントを使用せず、特に開発・本番環境でスキーマ不一致や不正確なデータアクセスを引き起こす可能性がありました。`api/models/planRate.js` の `getRatesForTheDay` はオプションの `dbClient` パラメータを受け入れ、関数内で取得した場合のみクライアントを解放するように変更されました。`api/models/planRate.js` の `getPriceForReservation` は、`try...finally` ブロック内で渡されたクライアントを使用するように変更されました。`api/models/reservations/main.js` の `recalculatePlanPrice` 内の `getRatesForTheDay` の呼び出しは、トランザクションから既存の `dbClient` を渡すように更新されました。`api/controllers/plansRateController.js` の `getRatesForTheDay` および `getPriceForReservation` の呼び出しは、トランザクション固有のクライアントが利用できない場合、`dbClient` パラメータに明示的に `null` を渡すように更新され、正しいパラメータマッピングが保証されます。" },
-        { "type": "refactor", "description": "`selectRoomsForIndicator` を「滞在の島」ロジックを使用してリファクタリングし、中間キャンセル日があってもチェックアウト部屋を正確に特定できるようにしました。継続的な滞在の島と全体の予約チェックイン/チェックアウト日との比較に基づいて、`early_checkout` および `late_checkin` フラグを再定義しました。" },
-        { "type": "feature", "description": "ゲストリストExcelエクスポートを強化し、部屋固有のチェックイン・チェックアウト日を表示するようにしました。部屋の変更や部分的なキャンセルがある予約でも正確性を確保します。基となるクエリはアクティブな予約をフィルタリングし、キャンセルされていない日次料金に基づいて各部屋の滞在日を正確に計算するようになりました。" },
-        { "type": "feature", "description": "OTA XMLキューイングを実装し、TL-Lincoln APIとのレート制限の問題に対処するための堅牢なOTA XMLキューイングおよびポーリングシステムを導入しました。送信されるOTA XMLリクエストはデータベースキュー（`ota_xml_queue`）に保存され、非同期かつ制御された処理が可能になり、システムの回復力が向上しました。" },
-        { "type": "refactor", "description": "ゲストリスト（宿泊者名簿）ダイアログをリファクタリングし、部屋固有のチェックイン・チェックアウト日を使用するように変更しました。これにより、エクスポートされたExcelファイルとの一貫性が確保されます。" },
-        { "type": "improvement", "description": "Websocketの更新は、ログインしているホテルに対してのみトリガーされるようになり、ログインしているユーザーあたりのリクエスト数を大幅に削減しました。以前は、どの予約更新でもすべてのログインユーザーをトリガーしていましたが、現在は、対応するホテルが選択されているユーザーにのみ更新が送信されます。" }
+        { "type": "bugfix", "description": "データベースプーリングの問題を解決。`getRatesForTheDay` および `getPriceForReservation` 関数がトランザクション内で一貫したデータベースクライアントを使用しない問題を修正しました。`getRatesForTheDay` はオプションの `dbClient` を受け取り、関数内で取得した場合のみ解放するように変更。`getPriceForReservation` は渡されたクライアントを `try...finally` 内で適切に使用。関連する呼び出し元も正しいクライアントを渡すように更新しました。" },
+        { "type": "bugfix", "description": "部屋インジケーターのリニューアル後、表示されなくなっていたゲスト名と性別情報を復元しました。" },
+        { "type": "refactor", "description": "`selectRoomsForIndicator` を「滞在の島」ロジックで再構築し、中間キャンセル日がある場合でも正確にチェックアウト部屋を判定できるようにしました。`early_checkout` と `late_checkin` の定義も調整しました。" },
+        { "type": "feature", "description": "ゲストリストExcelエクスポートを強化し、部屋固有のチェックイン・チェックアウト日を表示するように改善しました。部屋変更や部分キャンセルに対応し、非キャンセル日を基に滞在日を算出するようクエリを更新しました。" },
+        { "type": "feature", "description": "OTA XMLキューイングとポーリングを実装し、TL-Lincoln APIのレート制限に対応。送信XMLリクエストを `ota_xml_queue` に保存し、非同期で制御された処理を実現しました。" },
+        { "type": "feature", "description": "静的カレンダーに「さらに読み込む」ボタンを追加し、より多くの月を表示できるようにしました。" },
+        { "type": "improvement", "description": "Websocket更新をログイン中のホテルに限定することで、ユーザーあたりの不要な更新処理を削減し、パフォーマンスを向上しました。" },
+        { "type": "refactor", "description": "ゲストリスト（宿泊者名簿）ダイアログを部屋固有のチェックイン・チェックアウト日を使用する形にリファクタリングし、Excel出力との一貫性を確保しました。" }
       ]
     }
   ],

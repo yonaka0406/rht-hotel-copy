@@ -32,44 +32,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
     - Whether it's a paper or digital receipt
   - Need to review the PDF from Google Chat for additional requirements
 
-#### Client List - Incorrect In/Out Period Display
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: Internal Testing
-- **Description**:
-  - The client list does not display the correct in/out period when there is an early check-out or cancelled dates between the in and out period
-  - The system should reflect the actual stay duration rather than the originally booked period
-- **Steps to Reproduce**:
-  1. Create a reservation with multiple nights
-  2. Perform an early check-out or cancel some dates in the middle of the stay
-  3. Check the client list - it may still show the original in/out dates
-- **Expected Behavior**:
-  - The client list should show the actual in/out dates based on the modified reservation
-  - Any cancelled dates or early check-outs should be reflected in the displayed period
-
-### November 13, 2025
-
-#### Plan Rates - Cancel Fee Inclusion Flag
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: Internal Request
-- **Description**:
-  - Need to add a flag to control whether a fee should be included in cancellation fee calculations
-  - Currently, flat fees are excluded from cancellation fees, but there's a need to include some flat fees in cancellation fees
-  - Instead of creating a new fee type, adding a flag provides more flexibility
-- **Requested Features**:
-  - Add a new boolean field `includeInCancelFee` to the plan rates table
-  - Update the cancellation fee calculation logic to respect this flag
-  - Add UI controls to set this flag when creating/editing plan rates
-  - Include the flag in relevant reports and exports
-- **Technical Notes**:
-  - Database migration required to add the new column
-  - Update API endpoints to handle the new field
-  - Ensure backward compatibility with existing plan rates (default to current behavior)
-  - Update documentation for the new field
-  - Consider impact on reporting and analytics
-  - Add validation to ensure proper handling when the flag is toggled
-
 ### November 13, 2025
 
 #### Enhanced Occupancy Data Export
@@ -113,28 +75,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider impact on reporting and analytics
   - Should integrate with existing parking management system
   - Add permission controls to restrict who can manage temporary spots
-
-### November 12, 2025
-
-#### Missing Guest and Gender Information in Room Indicator
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: Internal Testing
-- **Description**: 
-  - After the recent room indicator revamp, the guest name and gender information are no longer displayed in the room indicator
-  - This information was previously visible and is important for staff to quickly identify guests
-- **Expected Behavior**:
-  - Room indicator should display guest name and gender as it did before the revamp
-  - The information should update in real-time when guest details are modified
-- **Proposed Solution**:
-  1. Review the room indicator component changes to identify what caused the regression
-  2. Ensure guest and gender data is properly passed to the room indicator component
-  3. Add proper styling to ensure the information is clearly visible
-  4. Add tests to prevent this regression in the future
-- **Affected Components**:
-  - Room indicator component
-  - Reservation display logic
-  - Guest information handling
 
 ### November 10, 2025
 
@@ -199,22 +139,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding a setting to toggle tooltip behavior if some users prefer the current implementation
   - Test with various screen sizes to ensure readability
 
-### November 3, 2025
-
-#### Feature Request: Calendar Month Navigation Enhancement
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  - Enhance the static calendar display to show more months
-  - Add a "Load More" button to append additional months to the current view
-  - Add "Next" and "Previous" navigation buttons for easier month-to-month navigation
-  - Consider implementing infinite scroll for a smoother user experience
-- **Requirements**:
-  - Maintain current calendar functionality while adding new navigation options
-  - Ensure responsive design works with the new navigation elements
-  - Add visual indicators when more months are available to load
-  - Consider adding a month/year selector for quick navigation to specific dates
-
 ### October 29, 2025
 
 #### Feature Request #B: Merge and Split Reservations
@@ -231,28 +155,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should maintain a history of merged/split operations for auditing
   - Consider impact on reporting and invoicing for merged reservations
   - Ensure proper handling of special requests and add-ons during merge/split operations
-
-### October 24, 2025
-
-#### Feature #85: Room Movement Date Range Selection
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  In the calendar view, when double-clicking to select dates for room movement, the current behavior only allows selecting one day at a time. The request is to modify this to allow selecting a range of dates in one action.
-- **Requirements**:
-  - When a user double-clicks on a date, if no range is currently selected, it should start a new range selection
-  - If a range is already started, the second click should complete the range selection (from first click to second click)
-  - If the user clicks on a date that's not contiguous with the current selection, it should start a new range instead of clearing the current selection
-  - The selection should work across multiple days, weeks, or months as needed
-  - The UI should clearly indicate the currently selected date range
-- **User Story**:
-  As a hotel staff member,
-  I want to select a date range for room movements in one action
-  So that I can move guests between rooms for multiple days more efficiently
-- **Technical Notes**:
-  - This will require updates to the calendar component's date selection logic
-  - Need to ensure the date range validation works with existing room availability checks
-  - Should maintain backward compatibility with any existing single-day selection functionality
 
 ### October 10, 2025
 
