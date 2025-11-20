@@ -595,7 +595,7 @@
     },
     {
       "version": "1.2.1",
-      "date": "2025-11-20",
+      "date": "2025-11-19",
       "changes": [
         { "type": "bugfix", "description": "データベースプーリングの問題を解決。`getRatesForTheDay` および `getPriceForReservation` 関数がトランザクション内で一貫したデータベースクライアントを使用せず、特に開発・本番環境でスキーマ不一致や不正確なデータアクセスを引き起こす可能性がありました。`api/models/planRate.js` の `getRatesForTheDay` はオプションの `dbClient` パラメータを受け入れ、関数内で取得した場合のみクライアントを解放するように変更されました。`api/models/planRate.js` の `getPriceForReservation` は、`try...finally` ブロック内で渡されたクライアントを使用するように変更されました。`api/models/reservations/main.js` の `recalculatePlanPrice` 内の `getRatesForTheDay` の呼び出しは、トランザクションから既存の `dbClient` を渡すように更新されました。`api/controllers/plansRateController.js` の `getRatesForTheDay` および `getPriceForReservation` の呼び出しは、トランザクション固有のクライアントが利用できない場合、`dbClient` パラメータに明示的に `null` を渡すように更新され、正しいパラメータマッピングが保証されます。" },
         { "type": "refactor", "description": "`selectRoomsForIndicator` を「滞在の島」ロジックを使用してリファクタリングし、中間キャンセル日があってもチェックアウト部屋を正確に特定できるようにしました。継続的な滞在の島と全体の予約チェックイン/チェックアウト日との比較に基づいて、`early_checkout` および `late_checkin` フラグを再定義しました。" },

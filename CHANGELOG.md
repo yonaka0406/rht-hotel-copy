@@ -631,7 +631,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## [1.2.1] - 2025-11-20
+## [1.2.1] - 2025-11-19
 
 ### Fixed
 - Database pooling issue where getRatesForTheDay and getPriceForReservation functions were not consistently using the same database client within a transaction, leading to potential schema mismatches or incorrect data access, especially in environments with separate development and production databases.
