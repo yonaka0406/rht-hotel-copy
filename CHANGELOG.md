@@ -633,33 +633,24 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ## [1.2.1] - 2025-11-19
 
-### Fixed
-- Database pooling issue where getRatesForTheDay and getPriceForReservation functions were not consistently using the same database client within a transaction, leading to potential schema mismatches or incorrect data access, especially in environments with separate development and production databases.
-  - Modified `getRatesForTheDay` in `api/models/planRate.js` to accept an optional `dbClient` parameter and to release the client only if it was acquired within the function.
-  - Modified `getPriceForReservation` in `api/models/planRate.js` to ensure it uses the passed client within its `try...finally` block.
-  - Updated calls to `getRatesForTheDay` within `recalculatePlanPrice` in `api/models/reservations/main.js` to pass the existing `dbClient` from the transaction.
-  - Updated calls to `getRatesForTheDay` and `getPriceForReservation` in `api/controllers/plansRateController.js` to explicitly pass `null` for the `dbClient` parameter when no transaction-specific client is available, ensuring correct parameter mapping.
-
-### Refactored
-- `selectRoomsForIndicator` to use 'islands of stays' logic to accurately identify checkout rooms, even with intermediate cancelled dates. Redefined `early_checkout` and `late_checkin` flags based on the comparison of continuous stay islands with the overall reservation check-in/check-out dates.
-
-### Feature
-- **Guest List Excel Export:** Enhanced the Excel guest list to display room-specific check-in and check-out dates, ensuring accuracy for reservations with room changes or partial cancellations. The underlying query now filters for active reservations and correctly calculates stay dates based on non-cancelled daily rates for each room.
-- **OTA XML Queuing:** Implemented a robust OTA XML queuing and polling system to manage rate limiting with the TL-Lincoln API. Outgoing requests are now stored in a database queue (`ota_xml_queue`) for asynchronous and controlled processing, improving system resilience.
-
-### Improved
-- **Websockets for Hotel-Specific Updates:** Websocket updates now only trigger for the logged-in hotel, significantly reducing the number of requests made per logged user. Previously, any reservation update would trigger all logged-in users; now, updates are sent only to users with the corresponding hotel selected.
-
-### Refactor
-- **Guest List Dialog:** Refactored the guest list (宿泊者名簿) dialog to use room-specific check-in and check-out dates, ensuring consistency with the exported Excel file.
-
-
-
+- Bugfix: Fixed a database pooling issue where getRatesForTheDay and getPriceForReservation were not consistently using the same database client within a transaction. This could lead to schema mismatches or incorrect data access, particularly in environments with separate development and production databases.
+  - Updated getRatesForTheDay (api/models/planRate.js) to accept an optional dbClient and release it only when locally acquired.
+  - Updated getPriceForReservation (api/models/planRate.js) to correctly use the passed transaction client.
+  - Updated recalculatePlanPrice (api/models/reservations/main.js) to pass through the active transaction client.
+  - Updated controller calls (api/controllers/plansRateController.js) to pass null when no transaction-specific client is provided.
+- Bugfix: Restored missing guest name and gender information in the room indicator after the recent UI update.
+- Refactor: Improved selectRoomsForIndicator with “islands of stays” logic to more accurately detect checkout rooms, including cases with intermediate cancelled dates. Redefined early_checkout and late_checkin flags accordingly.
+- Feature: Enhanced Guest List Excel Export to include room-specific check-in and check-out dates. This ensures accuracy for reservations with room changes or partial day cancellations. Query now filters out cancelled dates and derives correct stay dates from active daily rates.
+- Feature: Added OTA XML queuing with asynchronous polling to handle TL-Lincoln API rate limits. Outgoing requests are now stored and processed from ota_xml_queue to improve system robustness.
+- Feature: Expanded static calendar with additional month navigation and a “Load More” button to extend the on-screen calendar range.
+- Improvement: Websocket updates are now hotel-scoped, reducing unnecessary updates across all logged-in users and improving overall performance.
+- Refactor: Updated the Guest List dialog to use room-specific stay dates, ensuring consistency with the Excel export.
 
 ---
 
 ## Version History
-- **1.2.0** (2025-11-11) - Introduced comprehensive Parking Module with spot blocking for external hotel integration and room swapping capability in the reservation calendar. Fixed memory leaks in plan pattern bulk edit operations, significantly improving performance for large reservation batches.
+- 1.2.1 (2025-11-19) – Fixed critical database client pooling inconsistencies affecting rate calculations, restored missing guest and gender details in the room indicator, and improved stay-date logic for checkout detection. Added room-specific stay dates to Guest List Excel export, implemented OTA XML queuing for rate-limit-safe integrations, expanded calendar month navigation, optimized websockets for hotel-specific updates, and refactored the guest list dialog for consistency.
+- 1.2.0 (2025-11-11) – Introduced comprehensive Parking Module with spot blocking for external hotel integration and room swapping capability in the reservation calendar. Fixed memory leaks in plan pattern bulk edit operations, significantly improving performance for large reservation batches.
 - **1.1.31** (2025-11-06) - Fixed room inventory view to exclude 'not for sale' rooms, resolved memory leaks in Puppeteer, improved form validation with reusable utilities, and enhanced UI with custom scrollbar styling for sidebars. Added new tab functionality for reservation details.
 - **1.1.30** (2025-11-05) - Implemented reservation splitting while maintaining related data and history. Fixed invoice display for reservations spanning multiple months and ensured consistent date formatting between frontend and backend for billing periods.
 - **1.1.29** (2025-10-31) - Enhanced reservation management with cancellation type controls and client list exports. Improved OTA booking visualization, fixed payment calculations for cancelled dates, and resolved invoice ID generation for shared reservations. Added reliable Google Sheets API authentication.
