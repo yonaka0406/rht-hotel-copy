@@ -1,97 +1,75 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 const format = require('pg-format');
 const logger = require('../config/logger');
 
-const getAllHotels = async (requestId) => {
+const createHotel = async (requestId, hotelData, userId) => {
   const pool = getPool(requestId);
-  const query = `
-    SELECT 
-      hotels.* 
-    FROM hotels 
-    ORDER BY sort_order ASC, id ASC
-  `;
+  const client = await pool.connect();
 
   try {
-    const result = await pool.query(query);
-    return result.rows; // Return all
-  } catch (err) {
-    logger.error(`[${requestId}] Error retrieving all hotels:`, err);
-    throw new Error('Database error');
+    await client.query('BEGIN');
+
+    const hotelQuery = `
+        INSERT INTO hotels (
+          formal_name, name, facility_type, 
+          open_date, total_rooms, postal_code,
+          address, email, phone_number,        
+          created_by, updated_by
+        ) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING id
+      `;
+
+    const hotelResult = await client.query(hotelQuery, [
+      hotelData.formal_name, hotelData.name, hotelData.facility_type_code,
+      hotelData.open_date, hotelData.total_rooms, hotelData.postal_code,
+      hotelData.address, hotelData.email, hotelData.phone_number,
+      userId, userId
+    ]);
+    const hotelId = hotelResult.rows[0].id;
+
+    const createPartition = async (tableName) => {
+      const partitionQuery = `
+          CREATE TABLE ${tableName}_${hotelId} 
+          PARTITION OF ${tableName} 
+          FOR VALUES IN (${hotelId})
+        `;
+      await client.query(partitionQuery);
+    };
+
+    const createPartitionsSequentially = async () => {
+      await createPartition('room_types');
+      await createPartition('rooms');
+      await createPartition('reservations');
+      await createPartition('reservation_details');
+      await createPartition('reservation_addons');
+      await createPartition('reservation_clients');
+      await createPartition('reservation_payments');
+      await createPartition('reservation_rates');
+      await createPartition('plans_hotel');
+      await createPartition('addons_hotel');
+      await createPartition('invoices');
+      await createPartition('receipts');
+      await createPartition('xml_requests');
+      await createPartition('xml_responses');
+      await createPartition('reservation_parking');
+      await createPartition('parking_blocks');
+    };
+
+    await createPartitionsSequentially();
+
+    await client.query('COMMIT');
+    return hotelId;
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error(`[${requestId}] Hotel creation error in model:`, error);
+    throw error;
+  } finally {
+    client.release();
   }
 };
-const getHotelByID = async (requestId, id, dbPool = null) => {
-  const selectedPool = dbPool || getPool(requestId);
-  const query = 'SELECT hotels.* FROM hotels WHERE hotels.id = $1';
-  const values = [id];
 
-  try {
-    const result = await selectedPool.query(query, values);
-    return result.rows[0]; // Return the first user found (or null if none)
-  } catch (err) {
-    logger.error(`[${requestId}] Error finding hotel by id:`, err);
-    throw new Error('Database error');
-  }
-};
-const getAllHotelSiteController = async (requestId) => {
-  logger.debug(`[${requestId}] [getAllHotelSiteController] Starting`);
-  const pool = getPool(requestId);
-  const query = `
-    SELECT sc_user_info.* 
-    FROM sc_user_info 
-    ORDER BY hotel_id
-  `;
-
-  logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
-
-  try {
-    logger.debug(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
-    const client = await pool.connect();
-
-    try {
-      logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query`);
-      const startTime = Date.now();
-      const result = await client.query(query);
-      const duration = Date.now() - startTime;
-
-      logger.debug(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
-      logger.debug(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
-
-      if (result.rows.length > 0) {
-        logger.debug(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
-      }
-
-      return result.rows;
-    } finally {
-      logger.debug(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
-      client.release();
-    }
-  } catch (err) {
-    logger.error(`[${requestId}] [getAllHotelSiteController] Error executing query:`, {
-      error: err.message,
-      code: err.code,
-      stack: err.stack,
-      query: query
-    });
-    throw new Error(`Database error: ${err.message}`);
-  }
-};
-const getHotelSiteController = async (requestId, id) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT sc_user_info.* 
-    FROM sc_user_info 
-    WHERE sc_user_info.hotel_id = $1
-  `;
-  const values = [id];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    logger.error(`[${requestId}] Error finding hotel by id:`, err);
-    throw new Error('Database error');
-  }
-};
 const updateHotel = async (requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, sort_order, updated_by) => {
   const pool = getPool(requestId);
   const query = `
@@ -125,6 +103,7 @@ const updateHotel = async (requestId, id, formal_name, name, postal_code, addres
     throw new Error('Database error');
   }
 };
+
 const updateHotelSiteController = async (requestId, id, data) => {
   const pool = getPool(requestId);
 
@@ -293,40 +272,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
     client.release();
   }
 };
-const selectBlockedRooms = async (requestId, hotelId) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT r.*, r.check_in as start_date, (r.check_out - INTERVAL '1 day') as end_date, d.room_id, d.room_type_name, d.room_number, h.name
-    FROM 
-      hotels h,
-      reservations r
-      ,(
-        SELECT 
-          rd.hotel_id, rd.reservation_id, rd.room_id, room_types.name as room_type_name, rooms.room_number
-        FROM reservation_details rd, rooms, room_types
-        WHERE 
-          rd.hotel_id = rooms.hotel_id AND rd.room_id = rooms.id AND rooms.hotel_id = room_types.hotel_id AND rooms.room_type_id = room_types.id          
-        GROUP BY rd.hotel_id, rd.reservation_id, rd.room_id, room_types.name, rooms.room_number
-      ) d
-    WHERE 
-      r.status = 'block'
-      AND r.hotel_id = $1
-      AND r.hotel_id = d.hotel_id
-      AND r.id = d.reservation_id
-      AND r.hotel_id = h.id
-      ORDER BY 
-        r.check_out DESC
-        ,d.room_number ASC
-  `;
 
-  try {
-    const result = await pool.query(query, [hotelId]);
-    return result.rows;
-  } catch (err) {
-    logger.error(`[${requestId}] Error retrieving blocked rooms:`, err);
-    throw new Error('Database error');
-  }
-};
 const deleteBlockedRooms = async (requestId, reservationId, userID) => {
   // Validate reservationId is a valid UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -362,27 +308,6 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
       parameters: { reservationId, userID }
     });
     throw new Error('Database error: ' + err.message);
-  }
-};
-
-const getPlanExclusionSettings = async (requestId, hotel_id) => {
-  const pool = getPool(requestId);
-  try {
-    const allGlobalPlansQuery = 'SELECT id, name FROM plans_global ORDER BY id;';
-    const allGlobalPlansResult = await pool.query(allGlobalPlansQuery);
-
-    const excludedPlansQuery = 'SELECT global_plan_id FROM hotel_plan_exclusions WHERE hotel_id = $1;';
-    const excludedPlansResult = await pool.query(excludedPlansQuery, [hotel_id]);
-
-    const excludedPlanIds = excludedPlansResult.rows.map(row => row.global_plan_id);
-
-    return {
-      all_global_plans: allGlobalPlansResult.rows,
-      excluded_plan_ids: excludedPlanIds,
-    };
-  } catch (err) {
-    logger.error(`[${requestId}] Error retrieving plan exclusion settings:`, err);
-    throw new Error('Database error retrieving plan exclusion settings');
   }
 };
 
@@ -425,20 +350,6 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getVehicleCategoryCapacity = async (requestId, vehicle_category_id) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT capacity_units_required FROM vehicle_categories WHERE id = $1;
-  `;
-  const values = [vehicle_category_id];
-  try {
-    const result = await pool.query(query, values);
-    return result.rows[0]?.capacity_units_required || 0;
-  } catch (err) {
-    logger.error(`[${requestId}] Error fetching vehicle category capacity:`, err);
-    throw new Error('Database error');
-  }
-};
 
 const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, room_type_counts_processed, parking_combos_processed, comment, number_of_people, userId) => {
   const pool = getPool(requestId);
@@ -537,6 +448,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
         const { vehicle_category_id, number_of_rooms: requestedSpots } = parkingCombo;
         logger.debug(`[${requestId}] Processing parking combo: vehicle_category_id=${vehicle_category_id}, requestedSpots=${requestedSpots}`);
 
+        const { getVehicleCategoryCapacity } = require('../models/hotel/read'); // Assuming this is now in read.js
         const capacity_units_required = await getVehicleCategoryCapacity(requestId, vehicle_category_id);
         logger.debug(`[${requestId}] Capacity units required for vehicle_category_id ${vehicle_category_id}: ${capacity_units_required}`);
         if (capacity_units_required === 0) {
@@ -597,40 +509,12 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
   }
 };
 
-const getAllHotelsWithEmail = async (requestId, dbPool = null) => {
-  const pool = dbPool || getPool(requestId);
-  const query = `
-    SELECT
-      id,
-      name,
-      email
-    FROM hotels
-    WHERE email IS NOT NULL AND email != ''
-    ORDER BY id ASC
-  `;
-
-  try {
-    const result = await pool.query(query);
-    return result.rows;
-  } catch (err) {
-    logger.error(`[${requestId}] Error retrieving hotels with email:`, err);
-    throw new Error('Database error');
-  }
-};
-
 module.exports = {
-  getAllHotels,
-  getHotelByID,
-  getAllHotelSiteController,
-  getHotelSiteController,
+  createHotel,
   updateHotel,
   updateHotelSiteController,
   updateHotelCalendar,
-  selectBlockedRooms,
   deleteBlockedRooms,
-  getPlanExclusionSettings,
   updatePlanExclusions,
-  blockRoomsByRoomType,
-  getVehicleCategoryCapacity,
-  getAllHotelsWithEmail,
+  blockRoomsByRoomType
 };

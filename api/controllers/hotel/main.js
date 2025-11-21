@@ -1,4 +1,3 @@
-const { getPool } = require('../../config/database');
 const { validateNumericParam, validateNonEmptyStringParam, validateDateStringParam, validateIntegerParam } = require('../../utils/validationUtils');
 const logger = require('../../config/logger');
 const hotelModel = require('../../models/hotel'); // Assuming hotelModel is needed for general hotel operations
@@ -18,78 +17,28 @@ const createHotel = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 
-  const pool = getPool(req.requestId);
-  const client = await pool.connect();
+  const hotelData = {
+    formal_name: validatedFormalName,
+    name: validatedName,
+    facility_type_code: req.body.facility_type.code,
+    open_date: validatedOpenDate,
+    total_rooms: validatedTotalRooms,
+    postal_code: req.body.postal_code,
+    address: validatedAddress,
+    email: validatedEmail,
+    phone_number: validatedPhoneNumber,
+  };
 
   try {
-    // Start a transaction
-    await client.query('BEGIN');
-
-    // Insert hotel
-    const hotelQuery = `
-        INSERT INTO hotels (
-          formal_name, name, facility_type, 
-          open_date, total_rooms, postal_code,
-          address, email, phone_number,        
-          created_by, updated_by
-        ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        RETURNING id
-      `;
-
-    const hotelResult = await client.query(hotelQuery, [
-      validatedFormalName, validatedName, req.body.facility_type.code, // Use validated names
-      validatedOpenDate, validatedTotalRooms, req.body.postal_code, // Use validated open_date and total_rooms
-      validatedAddress, validatedEmail, validatedPhoneNumber, // Use validated address, email, phone
-      req.user.id, req.user.id
-    ]);
-    const hotelId = hotelResult.rows[0].id;
-
-    // Dynamic Partition Creation Functions
-    const createPartition = async (tableName) => {
-      const partitionQuery = `
-          CREATE TABLE ${tableName}_${hotelId} 
-          PARTITION OF ${tableName} 
-          FOR VALUES IN (${hotelId})
-        `;
-      await client.query(partitionQuery);
-    };
-
-    const createPartitionsSequentially = async () => {
-      await createPartition('room_types');
-      await createPartition('rooms');
-      await createPartition('reservations');
-      await createPartition('reservation_details');
-      await createPartition('reservation_addons');
-      await createPartition('reservation_clients');
-      await createPartition('reservation_payments');
-      await createPartition('reservation_rates');
-      await createPartition('plans_hotel');
-      await createPartition('addons_hotel');
-      await createPartition('invoices');
-      await createPartition('receipts');
-      await createPartition('xml_requests');
-      await createPartition('xml_responses');
-      await createPartition('reservation_parking');
-      await createPartition('parking_blocks');
-    };
-
-    await createPartitionsSequentially();
-
-    // Commit transaction
-    await client.query('COMMIT');
+    const hotelId = await hotelModel.create(req.requestId, hotelData, req.user.id);
     res.status(201).json({
       message: 'Hotel created successfully with all partitions',
       id: hotelId
     });
 
   } catch (error) {
-    // Rollback in case of error
-    await client.query('ROLLBACK');
     logger.error('Hotel creation error:', error);
     res.status(500).json({ error: error.message });
-  } finally {
-    client.release();
   }
 };
 
