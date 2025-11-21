@@ -1,5 +1,6 @@
 const { getPool } = require('../config/database');
 const format = require('pg-format');
+const logger = require('../config/logger');
 
 const getAllHotels = async (requestId) => {
   const pool = getPool(requestId);
@@ -14,7 +15,7 @@ const getAllHotels = async (requestId) => {
     const result = await pool.query(query);
     return result.rows; // Return all
   } catch (err) {
-    console.error('Error retrieving all hotels:', err);
+    logger.error(`[${requestId}] Error retrieving all hotels:`, err);
     throw new Error('Database error');
   }
 };
@@ -27,12 +28,12 @@ const getHotelByID = async (requestId, id, dbPool = null) => {
     const result = await selectedPool.query(query, values);
     return result.rows[0]; // Return the first user found (or null if none)
   } catch (err) {
-    console.error('Error finding hotel by id:', err);
+    logger.error(`[${requestId}] Error finding hotel by id:`, err);
     throw new Error('Database error');
   }
 };
 const getAllHotelSiteController = async (requestId) => {
-  //console.log(`[${requestId}] [getAllHotelSiteController] Starting`);
+  logger.debug(`[${requestId}] [getAllHotelSiteController] Starting`);
   const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
@@ -40,32 +41,32 @@ const getAllHotelSiteController = async (requestId) => {
     ORDER BY hotel_id
   `;
 
-  //console.log(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
+  logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
 
   try {
-    //console.log(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
+    logger.debug(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
     const client = await pool.connect();
 
     try {
-      //console.log(`[${requestId}] [getAllHotelSiteController] Executing query`);
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Executing query`);
       const startTime = Date.now();
       const result = await client.query(query);
       const duration = Date.now() - startTime;
 
-      //console.log(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
-      //console.log(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
 
       if (result.rows.length > 0) {
-        //console.log(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
+        logger.debug(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
       }
 
       return result.rows;
     } finally {
-      //console.log(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
+      logger.debug(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
       client.release();
     }
   } catch (err) {
-    console.error(`[${requestId}] [getAllHotelSiteController] Error executing query:`, {
+    logger.error(`[${requestId}] [getAllHotelSiteController] Error executing query:`, {
       error: err.message,
       code: err.code,
       stack: err.stack,
@@ -87,7 +88,7 @@ const getHotelSiteController = async (requestId, id) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error finding hotel by id:', err);
+    logger.error(`[${requestId}] Error finding hotel by id:`, err);
     throw new Error('Database error');
   }
 };
@@ -120,7 +121,7 @@ const updateHotel = async (requestId, id, formal_name, name, postal_code, addres
     const result = await pool.query(query, values);
     return result.rows[0]; // Return the updated user
   } catch (err) {
-    console.error('Error updating hotel:', err);
+    logger.error(`[${requestId}] Error updating hotel:`, err);
     throw new Error('Database error');
   }
 };
@@ -157,33 +158,6 @@ const updateHotelSiteController = async (requestId, id, data) => {
     throw error;
   } finally {
     client.release();
-  }
-};
-
-const updateRoomType = async (requestId, id, name, description, updated_by, hotelId) => {
-  const pool = getPool(requestId);
-  const query = 'UPDATE room_types SET name = $1, description = $2, updated_by = $3 WHERE id = $4 AND hotel_id = $5 RETURNING *';
-  const values = [name, description, updated_by, id, hotelId];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows[0]; // Return the updated user
-  } catch (err) {
-    console.error('Error updating room type:', err);
-    throw new Error('Database error');
-  }
-};
-const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, updated_by, hotelId) => {
-  const pool = getPool(requestId);
-  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, has_wet_area = $7, is_staff_room = $8, updated_by = $9 WHERE id = $10 AND hotel_id = $11 RETURNING *';
-  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, updated_by, id, hotelId];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows[0]; // Return the updated user
-  } catch (err) {
-    console.error('Error updating room:', err);
-    throw new Error('Database error');
   }
 };
 
@@ -255,7 +229,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
             ]
           );
         } catch (error) {
-          console.error('Error inserting reservation:', error);
+          logger.error(`[${requestId}] Error inserting reservation:`, error);
           throw error;
         }
 
@@ -269,7 +243,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
             );
 
             if (existingReservation.rowCount > 0) {
-              console.error('Room already reserved for this date:', date);
+              logger.error(`[${requestId}] Room already reserved for this date:`, date);
               await client.query('ROLLBACK');
               return {
                 success: false,
@@ -294,7 +268,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
               ]
             );
           } catch (error) {
-            console.error('Error processing date:', date, error);
+            logger.error(`[${requestId}] Error processing date: ${date}`, error);
             throw error;
           }
         }
@@ -305,11 +279,11 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
     return { success: true, message: 'Calendar updated successfully' };
 
   } catch (error) {
-    console.error('Error in updateHotelCalendar:', error);
+    logger.error(`[${requestId}] Error in updateHotelCalendar:`, error);
     try {
       await client.query('ROLLBACK');
     } catch (rollbackError) {
-      console.error('Error during rollback:', rollbackError);
+      logger.error(`[${requestId}] Error during rollback:`, rollbackError);
     }
     return {
       success: false,
@@ -349,7 +323,7 @@ const selectBlockedRooms = async (requestId, hotelId) => {
     const result = await pool.query(query, [hotelId]);
     return result.rows;
   } catch (err) {
-    console.error('Error retrieving blocked rooms:', err);
+    logger.error(`[${requestId}] Error retrieving blocked rooms:`, err);
     throw new Error('Database error');
   }
 };
@@ -357,7 +331,7 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
   // Validate reservationId is a valid UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(reservationId)) {
-    console.error('Invalid UUID format for reservationId:', reservationId);
+    logger.error(`[${requestId}] Invalid UUID format for reservationId: ${reservationId}`);
     throw new Error('Invalid reservation ID format');
   }
 
@@ -375,12 +349,12 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
     const result = await pool.query(query);
 
     if (result.rowCount === 0) {
-      console.warn('No rows were deleted - reservation not found or not a block type');
+      logger.warn(`[${requestId}] No rows were deleted - reservation not found or not a block type`);
     }
 
     return true;
   } catch (err) {
-    console.error('Error deleting reservation:', {
+    logger.error(`[${requestId}] Error deleting reservation:`, {
       error: err.message,
       code: err.code,
       detail: err.detail,
@@ -391,52 +365,6 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
   }
 };
 
-const getAllHotelRoomTypesById = async (requestId, id) => {
-  const pool = getPool(requestId);
-  const query = 'SELECT * FROM room_types WHERE hotel_id = $1 ORDER By name';
-  const values = [id];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error finding by hotel id:', err);
-    throw new Error('Database error');
-  }
-};
-const getAllRoomsByHotelId = async (requestId, id) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT
-      hotels.*,
-      room_types.id as room_type_id,
-      room_types.name as room_type_name,
-      room_types.description as room_type_description,
-      rooms.id as room_id,
-      rooms.floor as room_floor,
-      rooms.room_number,
-      rooms.capacity as room_capacity,
-      rooms.for_sale as room_for_sale_idc,
-      rooms.smoking as room_smoking_idc,
-      rooms.has_wet_area as room_has_wet_area_idc,
-      rooms.is_staff_room
-    FROM
-      hotels JOIN room_types ON hotels.id = room_types.hotel_id
-      LEFT JOIN rooms ON room_types.id = rooms.room_type_id
-    WHERE hotels.id = $1
-    ORDER BY
-      room_types.id, rooms.floor, rooms.room_number ASC
-  `;
-  const values = [id];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows; // Return all
-  } catch (err) {
-    console.error('Error finding hotel by id:', err);
-    throw new Error('Database error');
-  }
-};
 const getPlanExclusionSettings = async (requestId, hotel_id) => {
   const pool = getPool(requestId);
   try {
@@ -453,7 +381,7 @@ const getPlanExclusionSettings = async (requestId, hotel_id) => {
       excluded_plan_ids: excludedPlanIds,
     };
   } catch (err) {
-    console.error('Error retrieving plan exclusion settings:', err);
+    logger.error(`[${requestId}] Error retrieving plan exclusion settings:`, err);
     throw new Error('Database error retrieving plan exclusion settings');
   }
 };
@@ -482,110 +410,12 @@ const updatePlanExclusions = async (requestId, hotel_id, global_plan_ids) => {
     // For now, let's not return anything specific for success, as the controller handles the response message.
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error updating plan exclusions:', err);
+    logger.error(`[${requestId}] Error updating plan exclusions:`, err);
     throw new Error('Database error updating plan exclusions');
   } finally {
     client.release();
   }
 };
-
-const getRoomTypeById = async (requestId, roomTypeId, hotelId = null, client = null) => {
-  const pool = getPool(requestId);
-  let dbClient = client;
-  let shouldReleaseClient = false;
-
-  if (!dbClient) {
-    dbClient = await pool.connect();
-    shouldReleaseClient = true;
-  }
-
-  let query = 'SELECT * FROM room_types WHERE id = $1';
-  let values = [roomTypeId];
-  if (hotelId !== null) {
-    query += ' AND hotel_id = $2';
-    values.push(hotelId);
-  }
-  try {
-    if (shouldReleaseClient) {
-      await dbClient.query('BEGIN');
-    }
-    const result = await dbClient.query(query, values);
-    if (shouldReleaseClient) {
-      await dbClient.query('COMMIT');
-    }
-    return result.rows[0] || null;
-  } catch (err) {
-    if (shouldReleaseClient) {
-      try {
-        await dbClient.query('ROLLBACK');
-      } catch (rbErr) {
-        console.error('Error rolling back transaction:', rbErr);
-      }
-    }
-    console.error('Error finding room type by id:', err);
-    throw new Error('Database error');
-  } finally {
-    if (shouldReleaseClient) {
-      dbClient.release();
-    }
-  }
-};
-
-const getRoomAssignmentOrder = async (requestId, hotelId) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT
-      r.id as room_id,
-      r.room_number,
-      r.floor,
-      rt.name as room_type_name,
-      r.assignment_priority,
-      r.capacity,
-      r.smoking,
-      r.for_sale,
-      r.has_wet_area,
-      r.room_type_id
-    FROM rooms r
-    JOIN room_types rt ON r.room_type_id = rt.id AND r.hotel_id = rt.hotel_id
-    WHERE r.hotel_id = $1
-    ORDER BY r.assignment_priority ASC NULLS LAST, r.floor, r.room_number;
-  `;
-  const values = [hotelId];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error getting room assignment order:', err);
-    throw new Error('Database error');
-  }
-};
-
-const updateRoomAssignmentOrder = async (requestId, hotelId, rooms, userId) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    const updatePromises = rooms.map(room => {
-      const query = 'UPDATE rooms SET assignment_priority = $1, updated_by = $2 WHERE id = $3 AND hotel_id = $4';
-      const values = [room.assignment_priority, userId, room.room_id, hotelId];
-      return client.query(query, values);
-    });
-
-    await Promise.all(updatePromises);
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error updating room assignment order:', error);
-    throw new Error('Database error');
-  } finally {
-    client.release();
-  }
-};
-
-
 
 // Helper
 const formatDate = (date) => {
@@ -605,7 +435,7 @@ const getVehicleCategoryCapacity = async (requestId, vehicle_category_id) => {
     const result = await pool.query(query, values);
     return result.rows[0]?.capacity_units_required || 0;
   } catch (err) {
-    console.error('Error fetching vehicle category capacity:', err);
+    logger.error(`[${requestId}] Error fetching vehicle category capacity:`, err);
     throw new Error('Database error');
   }
 };
@@ -672,7 +502,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
       const roomsToBlock = availableRoomsResult.rows.map(row => row.room_id);
 
       if (roomsToBlock.length < count) {
-        console.warn(`[${requestId}] Not enough rooms of type ${room_type_id} available. Requested: ${count}, Found: ${roomsToBlock.length}`);
+        logger.warn(`[${requestId}] Not enough rooms of type ${room_type_id} available. Requested: ${count}, Found: ${roomsToBlock.length}`);
       }
 
       for (const roomId of roomsToBlock) {
@@ -702,20 +532,20 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
       const { selectAvailableParkingSpots } = require('../models/reservations');
       const { saveParkingAssignments } = require('../models/parking'); // Import saveParkingAssignments 
 
-      console.log(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
+      logger.debug(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
       for (const parkingCombo of parking_combos_processed) {
         const { vehicle_category_id, number_of_rooms: requestedSpots } = parkingCombo;
-        console.log(`[${requestId}] Processing parking combo: vehicle_category_id=${vehicle_category_id}, requestedSpots=${requestedSpots}`);
+        logger.debug(`[${requestId}] Processing parking combo: vehicle_category_id=${vehicle_category_id}, requestedSpots=${requestedSpots}`);
 
         const capacity_units_required = await getVehicleCategoryCapacity(requestId, vehicle_category_id);
-        console.log(`[${requestId}] Capacity units required for vehicle_category_id ${vehicle_category_id}: ${capacity_units_required}`);
+        logger.debug(`[${requestId}] Capacity units required for vehicle_category_id ${vehicle_category_id}: ${capacity_units_required}`);
         if (capacity_units_required === 0) {
-          console.warn(`[${requestId}] Vehicle category ${vehicle_category_id} has 0 capacity units required. Skipping parking block.`);
+          logger.warn(`[${requestId}] Vehicle category ${vehicle_category_id} has 0 capacity units required. Skipping parking block.`);
           continue;
         }
 
         // Fetch available parking spots for the given dates and capacity units
-        console.log(`[${requestId}] Fetching available parking spots for hotel ${hotel_id}, dates ${formatDate(startDate)} to ${formatDate(endDate)}, capacity ${capacity_units_required}`);
+        logger.debug(`[${requestId}] Fetching available parking spots for hotel ${hotel_id}, dates ${formatDate(startDate)} to ${formatDate(endDate)}, capacity ${capacity_units_required}`);
         const availableSpots = await selectAvailableParkingSpots(
           requestId,
           hotel_id,
@@ -724,16 +554,16 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
           capacity_units_required,
           client // Pass the client for transaction
         );
-        console.log(`[${requestId}] Found ${availableSpots.length} available parking spots.`);
+        logger.debug(`[${requestId}] Found ${availableSpots.length} available parking spots.`);
 
         if (availableSpots.length < requestedSpots) {
-          console.warn(`[${requestId}] Not enough available parking spots for vehicle category ${vehicle_category_id}. Requested: ${requestedSpots}, Available: ${availableSpots.length}`);
+          logger.warn(`[${requestId}] Not enough available parking spots for vehicle category ${vehicle_category_id}. Requested: ${requestedSpots}, Available: ${availableSpots.length}`);
           throw new Error(`Not enough available parking spots for vehicle category ${vehicle_category_id}. Requested: ${requestedSpots}, Available: ${availableSpots.length}`);
         }
 
         // Select the required number of spots
         const spotsToReserve = availableSpots.slice(0, requestedSpots);
-        console.log(`[${requestId}] Selected ${spotsToReserve.length} spots to reserve:`, spotsToReserve.map(s => s.parking_spot_id));
+        logger.debug(`[${requestId}] Selected ${spotsToReserve.length} spots to reserve:`, spotsToReserve.map(s => s.parking_spot_id));
 
         // Prepare assignments for saveParkingAssignments
         const parkingAssignments = spotsToReserve.map(s => ({
@@ -748,11 +578,11 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
         }));
 
         await saveParkingAssignments(requestId, parkingAssignments, userId, client);
-        console.log(`[${requestId}] Successfully assigned ${parkingAssignments.length} parking spots.`);
+        logger.debug(`[${requestId}] Successfully assigned ${parkingAssignments.length} parking spots.`);
 
       }
     } else {
-      console.log(`[${requestId}] No parking combos to process.`);
+      logger.debug(`[${requestId}] No parking combos to process.`);
     }
 
     await client.query('COMMIT');
@@ -760,7 +590,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error(`[${requestId}] Error in blockRoomsByRoomType:`, error);
+    logger.error(`[${requestId}] Error in blockRoomsByRoomType:`, error);
     throw error;
   } finally {
     client.release();
@@ -783,7 +613,7 @@ const getAllHotelsWithEmail = async (requestId, dbPool = null) => {
     const result = await pool.query(query);
     return result.rows;
   } catch (err) {
-    console.error('Error retrieving hotels with email:', err);
+    logger.error(`[${requestId}] Error retrieving hotels with email:`, err);
     throw new Error('Database error');
   }
 };
@@ -795,18 +625,11 @@ module.exports = {
   getHotelSiteController,
   updateHotel,
   updateHotelSiteController,
-  updateRoomType,
-  updateRoom,
   updateHotelCalendar,
   selectBlockedRooms,
   deleteBlockedRooms,
-  getAllHotelRoomTypesById,
-  getAllRoomsByHotelId,
   getPlanExclusionSettings,
   updatePlanExclusions,
-  getRoomTypeById,
-  getRoomAssignmentOrder,
-  updateRoomAssignmentOrder,
   blockRoomsByRoomType,
   getVehicleCategoryCapacity,
   getAllHotelsWithEmail,
