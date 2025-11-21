@@ -7,6 +7,24 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### November 21, 2025
 
+#### Security Improvements
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Source**: Security Review
+- **Description**:
+  - Identified several areas for improving the application's security posture during a review of the login functionality.
+- **Recommendations**:
+  1. **Token Storage**:
+     - Move JWT storage from `localStorage` to `HttpOnly` cookies to prevent XSS attacks.
+  2. **Rate Limiting**:
+     - Implement rate limiting on login endpoints to protect against brute-force attacks.
+  3. **Security Headers**:
+     - Implement `helmet` middleware to set secure HTTP headers (HSTS, X-Frame-Options, etc.).
+  4. **Multi-Factor Authentication (MFA)**:
+     - Implement MFA for an additional layer of security.
+
+### November 21, 2025
+
 ## Staff Room Flag for Calendar
 
 ### Description
