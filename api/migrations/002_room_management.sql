@@ -28,3 +28,5 @@ CREATE TABLE rooms (
     UNIQUE (hotel_id, room_type_id, room_number), -- Prevent duplicate room numbers in a single hotel
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE rooms ADD COLUMN is_staff_room BOOLEAN NOT NULL DEFAULT FALSE;

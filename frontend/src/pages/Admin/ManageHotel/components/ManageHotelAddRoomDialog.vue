@@ -38,6 +38,10 @@
         <label for="has_wet_area" class="font-medium mb-2 block">水回り</label>
         <Checkbox id="has_wet_area" v-model="newRoom.has_wet_area" binary />
       </div>
+      <div class="col-span-1 mt-6">
+        <label for="is_staff_room" class="font-medium mb-2 block">スタッフルーム</label>
+        <Checkbox id="is_staff_room" v-model="newRoom.is_staff_room" binary />
+      </div>
     </div>
     <template #footer>
       <Button label="追加" icon="pi pi-plus" @click="save" class="p-button-success p-button-text p-button-sm" />
@@ -71,7 +75,8 @@ const newRoom = reactive({
   capacity: 1,
   smoking: false,
   for_sale: true,
-  has_wet_area: false
+  has_wet_area: false,
+  is_staff_room: false
 });
 
 watch(() => props.visible, (newValue) => {
@@ -83,7 +88,8 @@ watch(() => props.visible, (newValue) => {
       capacity: 1,
       smoking: false,
       for_sale: true,
-      has_wet_area: false
+      has_wet_area: false,
+      is_staff_room: false
     });
   }
 });

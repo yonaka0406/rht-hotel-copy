@@ -391,7 +391,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     const updated_by = req.user.id;
     
     let numericHotelId, validatedStartDate, validatedEndDate, validatedRoomIds = [];
-    const pool = getPool();
+    const pool = getPool(req.requestId);
     const client = await pool.connect();
 
     try {      

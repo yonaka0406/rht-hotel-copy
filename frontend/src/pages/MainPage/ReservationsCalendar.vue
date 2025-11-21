@@ -485,10 +485,13 @@ const fillRoomInfo = (room_id, date, useTemp = false) => {
 };
 const getCellStyle = (room_id, date, useTemp = false) => {
   const roomInfo = fillRoomInfo(room_id, date, dragMode.value === 'reorganizeRooms');
+  const room = selectedHotelRooms.value.find(r => r.room_id === room_id);
   let roomColor = '#d3063d';
   let style = {};
 
-  if (roomInfo && roomInfo.type === 'employee') {
+  if (room && room.is_staff_room && (!roomInfo || roomInfo.status === 'available')) {
+    style = { backgroundColor: '#f3e5f5' };
+  } else if (roomInfo && roomInfo.type === 'employee') {
     roomColor = '#f3e5f5';
     style = { backgroundColor: roomColor };
   } else if (roomInfo && roomInfo.status === 'provisory') {

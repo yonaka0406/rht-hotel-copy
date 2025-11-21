@@ -52,6 +52,13 @@
                 </div>
               </template>
             </Column>
+            <Column field="is_staff_room" header="スタッフ">
+              <template #body="slotProps">
+                <div class="flex items-center justify-center">
+                  <Checkbox v-model="slotProps.data.is_staff_room" binary @change="onCellEditComplete({ data: slotProps.data, field: 'is_staff_room', newValue: slotProps.data.is_staff_room })"/>
+                </div>
+              </template>
+            </Column>
           </DataTable>
         </AccordionContent>
       </AccordionPanel>
@@ -159,6 +166,7 @@ const saveChanges = async () => {
         smoking: room.smoking,
         for_sale: room.for_sale,
         has_wet_area: room.has_wet_area,
+        is_staff_room: room.is_staff_room,
         hotel_id: props.hotelId
       });
     }

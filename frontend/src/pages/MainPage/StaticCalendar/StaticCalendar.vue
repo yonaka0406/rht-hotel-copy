@@ -34,9 +34,10 @@
             <tr>
               <th v-for="(roomNumber, numIndex) in headerRoomsData.roomNumbers" :key="numIndex"
                 class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 sticky z-10" style="height: 19px; width: 50px; top: 19px; left: 180px;"
-                :class="{ 'pale-yellow-bg': highlightedRooms.has(roomNumber.room_id) }">
+                :class="{ 'pale-yellow-bg': highlightedRooms.has(roomNumber.room_id), 'bg-purple-100 dark:bg-purple-900': roomNumber.is_staff_room }">
                 <span class="text-xs">{{ roomNumber.room_number }}</span>
                 <div class="flex justify-center items-center gap-1">
+                  <span v-if="roomNumber.is_staff_room" class="emoji-small">STAFF</span>
                   <span v-if="roomNumber.smoking" class="emoji-small">🚬</span>
                   <span v-if="roomNumber.has_wet_area" class="emoji-small">🚿</span>
                   <span v-if="roomNumber.capacity > 1" class="emoji-small capacity-badge">{{ roomNumber.capacity }}</span>
@@ -500,7 +501,7 @@ const headerRoomsData = computed(() => {
     } else {
       currentColspan++;
     }
-    roomNumbers.push({ room_id: room.room_id, room_number: room.room_number, smoking: room.room_smoking_idc, has_wet_area: room.room_has_wet_area_idc, capacity: room.room_capacity });
+    roomNumbers.push({ room_id: room.room_id, room_number: room.room_number, smoking: room.room_smoking_idc, has_wet_area: room.room_has_wet_area_idc, capacity: room.room_capacity, is_staff_room: room.is_staff_room });
   });
 
   if (currentRoomType !== null) {
@@ -562,8 +563,13 @@ const isOTA = (room_id, date) => {
 };
 const getCellStyle = (room_id, date) => {
   const roomInfo = fillRoomInfo(room_id, date);
+  const room = selectedHotelRooms.value.find(r => r.room_id === room_id);
   let roomColor = '#d3063d';
   let style = {};
+
+  if (room && room.is_staff_room) {
+     style = { backgroundColor: '#f3e5f5' }; // Light purple for staff rooms
+  }
 
   if (roomInfo && roomInfo.type === 'employee') {
     roomColor = '#f3e5f5';
