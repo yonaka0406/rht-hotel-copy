@@ -153,9 +153,9 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
     await client.query('COMMIT');
     return { success: true };
   } catch (err) {
-    await client.query('ROLLBACK');
-    logger.error('Error adding room to reservation:', err);
-    throw new Error('Database error');
+    await client.query('ROLLBACK');  
+    logger.error('Error adding bulk reservation payment:', err);
+    throw new Error('Database error');  
   } finally {
     client.release();
   }
