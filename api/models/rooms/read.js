@@ -2,7 +2,27 @@
 const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
 
-const selectRoomType = async (requestId, roomTypeName, hotelId, client = null) => {
+const selectRoomTypeById = async (requestId, roomTypeId, hotelId, client = null) => {
+  const pool = getPool(requestId);
+  const dbClient = client || await pool.connect();
+  try {
+    const query = `
+      SELECT * FROM room_types
+      WHERE id = $1 AND hotel_id = $2
+    `;
+    const result = await dbClient.query(query, [roomTypeId, hotelId]);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`[${requestId}] Error retrieving room type by ID and hotel ID:`, err);
+    throw new Error('Database error');
+  } finally {
+    if (!client) {
+      dbClient.release();
+    }
+  }
+};
+
+const selectRoomTypeByName = async (requestId, roomTypeName, hotelId, client = null) => {
   const pool = getPool(requestId);
   const dbClient = client || await pool.connect();
   try {
@@ -108,7 +128,8 @@ const getRoomAssignmentOrder = async (requestId, hotelId) => {
 };
 
 module.exports = {
-  selectRoomType,
+  selectRoomTypeById,
+  selectRoomTypeByName,
   selectAllHotelRoomTypes,
   selectAllRoomsByHotel,
   selectRoomIdsByHotel,
