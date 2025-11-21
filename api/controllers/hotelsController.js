@@ -1,7 +1,10 @@
 const { getPool } = require('../config/database');
 const { validateNumericParam, validateNonEmptyStringParam, validateDateStringParam, validateIntegerParam } = require('../utils/validationUtils');
 const hotelModel = require('../models/hotel');
-const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllHotelRoomTypesById, getAllRoomsByHotelId, deleteBlockedRooms, getPlanExclusionSettings, updatePlanExclusions, getRoomAssignmentOrder, updateRoomAssignmentOrder } = hotelModel;
+const roomsModel = require('../models/rooms');
+const logger = require('../config/logger');
+const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateHotelCalendar, selectBlockedRooms, deleteBlockedRooms, getPlanExclusionSettings, updatePlanExclusions } = hotelModel;
+const { selectRoomType, selectAllHotelRoomTypes, selectAllRoomsByHotel, selectRoomIdsByHotel, selectRoomAssignmentOrder, createRoomType, createRoom, updateRoom, updateRoomAssignmentOrder, updateRoomType } = roomsModel;
 
 // POST
   const hotels = async (req, res) => {
