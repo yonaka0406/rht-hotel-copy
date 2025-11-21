@@ -63,6 +63,7 @@ const getRoomAssignmentOrderController = async (req, res) => {
     const order = await roomsModel.getRoomAssignmentOrder(req.requestId, numericId);
     res.status(200).json(order);
   } catch (error) {
+    logger.error('Error getting room assignment order:', error);
     res.status(500).json({ error: 'Internal server error while retrieving room assignment order.' });
   }
 };

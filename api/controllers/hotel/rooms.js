@@ -3,9 +3,7 @@ const { validateNumericParam, validateNonEmptyStringParam } = require('../../uti
 const roomsModel = require('../../models/rooms');
 const logger = require('../../config/logger');
 
-const roomCreate = async (req, res) => {
-  const pool = getPool(req.requestId);
-  const client = await pool.connect();
+const createRoom = async (req, res) => {
   const { floor, room_number, room_type, room_type_id, capacity, smoking, for_sale, has_wet_area, hotel_id: hotelIdFromBody } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
@@ -20,53 +18,56 @@ const roomCreate = async (req, res) => {
       validatedRoomTypeString = validateNonEmptyStringParam(room_type, 'Room Type Name (string)');
     }
   } catch (error) {
-    // The finally block will release the client
     return res.status(400).json({ error: error.message });
   }
 
-  let finalRoomTypeId = room_type_id; // This is numeric from body directly or 0
-
-  if (room_type_id === 0 && validatedRoomTypeString) { // Use validated string
-    // Fetch the room_type_id based on the room type name and hotel_id
-    const roomTypeQuery = `
-        SELECT id FROM room_types
-        WHERE name = $1 AND hotel_id = $2
-      `;
-    const roomTypeResult = await client.query(roomTypeQuery, [validatedRoomTypeString, numericHotelId]);
-
-    if (roomTypeResult.rows.length === 0) {
-      client.release(); // Release client before returning
-      return res.status(400).json({ error: 'Room type not found for the given hotel ID.' });
-    }
-
-    finalRoomTypeId = roomTypeResult.rows[0].id;
-  }
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query('BEGIN'); // Start transaction
 
-    // Insert room with the room_type_id
-    const insertRoomQuery = `
-        INSERT INTO rooms (room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        RETURNING id
-      `;
-    const result = await client.query(insertRoomQuery, [finalRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, has_wet_area, numericHotelId, created_by, updated_by]);
+    let finalRoomTypeId = room_type_id; // This is numeric from body directly or 0
 
-    await client.query('COMMIT');
+    if (room_type_id === 0 && validatedRoomTypeString) { // Use validated string
+      // Fetch the room_type_id based on the room type name and hotel_id
+      const roomTypeIdFromModel = await roomsModel.selectRoomTypeByName(req.requestId, validatedRoomTypeString, numericHotelId, client);
+
+      if (!roomTypeIdFromModel) {
+        await client.query('ROLLBACK'); // Rollback if room type not found
+        return res.status(400).json({ error: 'Room type not found for the given hotel ID.' });
+      }
+
+      finalRoomTypeId = roomTypeIdFromModel;
+    }
+
+    const roomId = await roomsModel.createRoom(req.requestId, {
+      room_type_id: finalRoomTypeId,
+      floor: numericFloor,
+      room_number: validatedRoomNumber,
+      capacity: numericCapacity,
+      smoking: smoking,
+      for_sale: for_sale,
+      has_wet_area: has_wet_area,
+      hotel_id: numericHotelId,
+      created_by: created_by,
+      updated_by: updated_by
+    }, client); // Pass client to model function
+
+    await client.query('COMMIT'); // Commit transaction
+
     res.status(201).json({
       message: 'Rooms created successfully',
-      roomId: result.rows[0].id
+      roomId: roomId
     });
 
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK'); // Rollback on error
     logger.error('Room creation error:', error);
     res.status(500).json({ error: error.message });
   } finally {
-    client.release();
+    client.release(); // Release client
   }
-
 };
 
 const getHotelRooms = async (req, res) => {
@@ -130,7 +131,7 @@ const editRoom = async (req, res) => {
 };
 
 module.exports = {
-  roomCreate,
+  createRoom,
   getHotelRooms,
   editRoom
 };

@@ -28,6 +28,9 @@ const createRoom = async (requestId, { room_type_id, floor, room_number, capacit
   const pool = getPool(requestId);
   const dbClient = client || await pool.connect();
   try {
+    if (!client) { // Only start a transaction if no client is passed in (i.e., not part of an external transaction)
+      await dbClient.query('BEGIN');
+    }
     const query = `
       INSERT INTO rooms (room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id, created_by, updated_by)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -35,8 +38,14 @@ const createRoom = async (requestId, { room_type_id, floor, room_number, capacit
     `;
     const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id, created_by, updated_by];
     const result = await dbClient.query(query, values);
+    if (!client) { // Only commit if no client is passed in
+      await dbClient.query('COMMIT');
+    }
     return result.rows[0].id;
   } catch (err) {
+    if (!client) { // Only rollback if no client is passed in
+      await dbClient.query('ROLLBACK');
+    }
     logger.error(`[${requestId}] Error creating room:`, err);
     throw new Error('Database error');
   } finally {
