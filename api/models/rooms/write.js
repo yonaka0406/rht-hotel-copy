@@ -92,17 +92,22 @@ const updateRoomAssignmentOrder = async (requestId, hotelId, rooms, userId) => {
   }
 };
 
-const updateRoomType = async (requestId, id, name, description, updated_by, hotelId) => {
+const updateRoomType = async (requestId, id, name, description, updated_by, hotelId, client = null) => {
   const pool = getPool(requestId);
+  const dbClient = client || await pool.connect();
   const query = 'UPDATE room_types SET name = $1, description = $2, updated_by = $3 WHERE id = $4 AND hotel_id = $5 RETURNING *';
   const values = [name, description, updated_by, id, hotelId];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await dbClient.query(query, values);
     return result.rows[0];
   } catch (err) {
     logger.error(`[${requestId}] Error updating room type:`, err);
     throw new Error('Database error');
+  } finally {
+    if (!client) {
+      dbClient.release();
+    }
   }
 };
 

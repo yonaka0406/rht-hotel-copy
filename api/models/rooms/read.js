@@ -110,7 +110,7 @@ const selectRoomIdsByHotel = async (requestId, hotelId, client = null) => {
   }
 };
 
-const getRoomAssignmentOrder = async (requestId, hotelId) => {
+const selectRoomAssignmentOrder = async (requestId, hotelId) => {
   const pool = getPool(requestId);
   try {
     const query = `
@@ -133,5 +133,5 @@ module.exports = {
   selectAllHotelRoomTypes,
   selectAllRoomsByHotel,
   selectRoomIdsByHotel,
-  getRoomAssignmentOrder
+  selectRoomAssignmentOrder
 };
