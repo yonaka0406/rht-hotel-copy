@@ -9,7 +9,7 @@ services:
     container_name: wehub-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: wehub
     ports:
@@ -24,7 +24,7 @@ services:
       - ./docker-entrypoint-initdb.d/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./docker-entrypoint-initdb.d/wehub-backup.dump:/docker-entrypoint-initdb.d/wehub-backup.dump
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d wehub"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d wehub"]
       interval: 20s
       timeout: 10s
       retries: 10
@@ -64,7 +64,7 @@ services:
         condition: service_healthy
     environment:      
       PG_HOST: wehub-db
-      PG_USER: ${POSTGRES_USER:-user}
+      PG_USER: ${POSTGRES_USER:-postgres}
       PG_PASSWORD: ${POSTGRES_PASSWORD:-password}
       PG_DATABASE: wehub
       PG_PORT: 5432

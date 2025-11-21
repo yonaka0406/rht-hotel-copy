@@ -14,7 +14,7 @@ createdb -U postgres wehub
 echo "Checking for backup file..."
 if [ -f "/docker-entrypoint-initdb.d/wehub-backup.dump" ]; then
     echo "Restoring database from backup..."
-    if ! pg_restore --verbose --no-acl --no-owner \
+    if ! pg_restore --verbose --no-acl --no-owner --role=postgres \
       --dbname=wehub \
       -U postgres \
       /docker-entrypoint-initdb.d/wehub-backup.dump; then
