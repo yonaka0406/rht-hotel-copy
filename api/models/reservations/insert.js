@@ -1,5 +1,6 @@
 let getPool = require('../../config/database').getPool;
 const { selectReservationBalance } = require('./select');
+const logger = require('../../config/logger');
 
 const insertReservationPaymentWithInvoice = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
   const pool = getPool(requestId);

@@ -1,4 +1,5 @@
 let getPool = require('../../config/database').getPool;
+const logger = require('../../config/logger');
 
 const updateReservationType = async (requestId, reservationData) => {
   const { id, hotel_id, type, updated_by } = reservationData;
@@ -55,7 +56,7 @@ const updateReservationType = async (requestId, reservationData) => {
       throw err; // Re-throw business errors without logging as system failures
     } else {
       // Log unexpected system errors (500+ or missing statusCode)
-      console.error(`[${requestId}] System Error updating reservation type for reservation ${id}, hotel ${hotel_id}:`, err.message, err.stack);
+      logger.error(`[${requestId}] System Error updating reservation type for reservation ${id}, hotel ${hotel_id}:`, err.message, err.stack);
       throw new Error('Database transaction failed during reservation type update.');
     }
   } finally {
@@ -96,7 +97,7 @@ const updateReservationResponsible = async (requestId, id, updatedFields, user_i
       throw err; // Re-throw business errors without logging as system failures
     } else {
       // Log unexpected system errors (500+ or missing statusCode)
-      console.error(`[${requestId}] System Error updating reservation responsible for reservation ${id}, hotel ${updatedFields.hotel_id}:`, err.message, err.stack);
+      logger.error(`[${requestId}] System Error updating reservation responsible for reservation ${id}, hotel ${updatedFields.hotel_id}:`, err.message, err.stack);
       throw new Error('Database error during reservation responsible update.');
     }
   }
@@ -142,7 +143,7 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
       throw err; // Re-throw business errors without logging as system failures
     } else {
       // Log unexpected system errors (500+ or missing statusCode)
-      console.error(`[${requestId}] System Error updating payment timing for reservation ${reservationId}, hotel ${hotelId}:`, err.message, err.stack);
+      logger.error(`[${requestId}] System Error updating payment timing for reservation ${reservationId}, hotel ${hotelId}:`, err.message, err.stack);
       throw new Error('Database error during payment timing update.');
     }
   }

@@ -1,5 +1,6 @@
 let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
+const logger = require('../../config/logger');
 
 const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, updated_by) => {
   const pool = getPool(requestId);
@@ -54,11 +55,11 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
       await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER USER;');
       await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER USER;');
     } catch (reEnableErr) {
-      console.error('Error re-enabling triggers after rollback:', reEnableErr);
+      logger.error('Error re-enabling triggers after rollback:', reEnableErr);
     }
 
     await client.query('ROLLBACK');
-    console.error(`[${requestId}] Transaction failed. Rolling back. Error:`, {
+    logger.error(`[${requestId}] Transaction failed. Rolling back. Error:`, {
       error: err.message,
       stack: err.stack
     });
@@ -91,7 +92,7 @@ const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_i
     const result = await dbClient.query(query);
     return result.rowCount;
   } catch (err) {
-    console.error('Error deleting reservation addon:', err);
+    logger.error('Error deleting reservation addon:', err);
     throw new Error('Database error');
   } finally {
     if (shouldReleaseClient) {
@@ -116,7 +117,7 @@ const deleteReservationClientsByDetailId = async (requestId, reservation_detail_
     const result = await pool.query(query);
     return result.rowCount;
   } catch (err) {
-    console.error('Error deleting reservation clients:', err);
+    logger.error('Error deleting reservation clients:', err);
     throw new Error('Database error');
   }
 };
@@ -126,7 +127,7 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
   const client = await pool.connect();
 
   try {
-    // console.log('Starting transaction...');
+    // logger.debug('Starting transaction...');
     await client.query('BEGIN');
 
     // Set session
@@ -165,7 +166,7 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error deleting room:', err);
+    logger.error('Error deleting room:', err);
     throw new Error('Database error');
   } finally {
     client.release();
@@ -229,7 +230,7 @@ const deleteReservationPayment = async (requestId, id, userId) => {
     return { success: true };
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error(`[${requestId}] Transaction failed during payment deletion. Rolling back. Error:`, {
+    logger.error(`[${requestId}] Transaction failed during payment deletion. Rolling back. Error:`, {
       error: err.message,
       stack: err.stack
     });
@@ -256,7 +257,7 @@ const deleteParkingReservation = async (requestId, id, userId) => {
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (error) {
-    console.error('Error deleting parking reservation:', error);
+    logger.error('Error deleting parking reservation:', error);
     throw new Error('Database error while deleting parking reservation');
   }
 };
@@ -282,7 +283,7 @@ const deleteBulkParkingReservations = async (requestId, ids, userId) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (error) {
-    console.error('Error bulk deleting parking reservations:', error);
+    logger.error('Error bulk deleting parking reservations:', error);
     throw new Error('Database error while bulk deleting parking reservations');
   }
 };

@@ -6,6 +6,8 @@ const { getAllPlanAddons } = require('../planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
 const logger = require('../../config/logger');
+
+const { selectReservation, selectAvailableRooms, selectAndLockAvailableParkingSpot } = require('./select');
 const { deleteReservationAddonsByDetailId } = require('./delete');
 const { insertReservationRate, insertAggregatedRates } = require('./insert');
 
@@ -22,305 +24,6 @@ const DEFAULT_CHECK_IN_TIME = '16:00';
 const DEFAULT_CHECK_OUT_TIME = '10:00';
 
 // Function to Select
-
-const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, client = null) => {
-  const pool = getPool(requestId);
-  const query = `
-    WITH occupied_rooms AS (
-      SELECT
-        room_id
-      FROM
-        reservation_details
-      WHERE
-        date >= $1 AND date < $2
-        AND room_id IS NOT NULL
-        AND cancelled IS NULL
-    )
-    SELECT
-      r.id AS room_id,
-      r.room_type_id,
-      rt.name AS room_type_name,
-      r.room_number,
-      r.floor,
-      r.capacity,
-      r.smoking,
-      r.has_wet_area,
-      r.for_sale
-    FROM
-      rooms r
-    JOIN room_types rt ON r.room_type_id = rt.id AND r.hotel_id = rt.hotel_id
-    WHERE
-      r.hotel_id = $3
-      AND r.id NOT IN (SELECT room_id FROM occupied_rooms)
-      AND r.for_sale = TRUE
-    ORDER BY r.assignment_priority ASC NULLS LAST, r.room_type_id, r.capacity DESC;
-  `;
-
-  const values = [checkIn, checkOut, hotelId];
-
-  try {
-    const executor = client ? client : pool;
-    const result = await executor.query(query, values);
-    return result.rows; // Return available rooms
-  } catch (err) {
-    console.error('Error fetching available rooms:', err);
-    throw new Error('Database error');
-  }
-};
-
-const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut, capacity_units_required, client = null) => {
-  const pool = getPool(requestId);
-  const query = `
-        WITH occupied_spots AS (
-            SELECT
-                parking_spot_id
-            FROM
-                reservation_parking
-            WHERE
-                date >= $1 AND date < $2
-                AND parking_spot_id IS NOT NULL
-        )
-        SELECT
-            ps.id AS parking_spot_id,
-            ps.spot_number,
-            ps.spot_type,
-            ps.capacity_units
-        FROM
-            parking_spots ps
-        JOIN
-            parking_lots pl ON ps.parking_lot_id = pl.id
-        WHERE
-            pl.hotel_id = $3
-            AND ps.is_active = TRUE
-            AND ps.capacity_units >= $4
-            AND ps.id NOT IN (SELECT parking_spot_id FROM occupied_spots)
-        ORDER BY ps.capacity_units, ps.id;
-    `;
-
-  const values = [checkIn, checkOut, hotelId, capacity_units_required];
-
-  try {
-    const executor = client ? client : pool;
-    const result = await executor.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching available parking spots:', err);
-    throw new Error('Database error');
-  }  
-};
-
-const selectAndLockAvailableParkingSpot = async (requestId, hotelId, checkIn, checkOut, capacity_units_required, client) => {
-  if (!client) {
-    throw new Error('A database client is required for locking.');
-  }
-  const query = `
-        WITH occupied_spots AS (
-            SELECT
-                parking_spot_id
-            FROM
-                reservation_parking
-            WHERE
-                date >= $1 AND date < $2
-                AND parking_spot_id IS NOT NULL
-        )
-        SELECT
-            ps.id AS parking_spot_id,
-            ps.spot_number,
-            ps.spot_type,
-            ps.capacity_units
-        FROM
-            parking_spots ps
-        JOIN
-            parking_lots pl ON ps.parking_lot_id = pl.id
-        WHERE
-            pl.hotel_id = $3
-            AND ps.is_active = TRUE
-            AND ps.capacity_units >= $4
-            AND ps.id NOT IN (SELECT parking_spot_id FROM occupied_spots)
-        ORDER BY ps.capacity_units, ps.id
-        LIMIT 1
-        FOR UPDATE of ps SKIP LOCKED;
-    `;
-
-  const values = [checkIn, checkOut, hotelId, capacity_units_required];
-
-  try {
-    const result = await client.query(query, values);
-    return result.rows[0] || null; // Return the single spot or null
-  } catch (err) {
-    console.error('Error fetching and locking available parking spot:', err);
-    throw new Error('Database error');
-  }
-};
-
-const selectReservation = async (requestId, id, hotel_id) => {
-  const pool = getPool(requestId);
-  const { validate: uuidValidate } = require('uuid');
-
-  // Validate that id is not null or undefined
-  if (!id || id === 'null' || id === 'undefined' || !uuidValidate(id)) {
-    logger.error('[selectReservation] Invalid reservation ID provided', { id });
-    throw new Error('Invalid reservation ID: ID cannot be null or undefined');
-  }
-  const query = `
-    SELECT
-      rd.id,
-      rd.hotel_id,
-      h.formal_name AS hotel_name,
-      rd.reservation_id,
-      rd.cancelled,
-      rd.billable,
-      c.id AS client_id,
-      COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
-      c.phone as client_phone,
-      c.fax as client_fax,
-      r.check_in,
-      r.check_in_time,
-      r.check_out,
-      r.check_out_time,
-      r.number_of_people AS reservation_number_of_people,
-      r.status,
-      r.type,
-      r.payment_timing,
-      r.agent,
-      r.ota_reservation_id,
-      r.comment,
-      r.has_important_comment,
-      rd.date,
-      rm.room_type_id,
-      rt.name AS room_type_name,
-      rd.room_id,
-      rm.room_number,
-      rm.smoking,
-      rm.has_wet_area,
-      rm.capacity,
-      rm.floor,      
-      rd.plans_global_id,
-      rd.plans_hotel_id,
-      rd.plan_type,
-      rd.plan_name,
-      rd.number_of_people,
-      rd.price AS plan_total_price,
-      COALESCE(ra.total_price, 0) AS addon_total_price,
-      CASE
-          WHEN rd.plan_type = 'per_room' THEN rd.price
-          ELSE rd.price * rd.number_of_people
-      END + COALESCE(ra.total_price, 0) AS price,
-      COALESCE(rc.clients_json, '[]'::json) AS reservation_clients,
-      COALESCE(ra.addons_json, '[]'::json) AS reservation_addons,
-      COALESCE(rr.rates_json, '[]'::json) AS reservation_rates
-  FROM
-      reservations r
-  JOIN
-      reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
-  JOIN
-      hotels h ON h.id = rd.hotel_id
-  JOIN
-      clients c ON c.id = r.reservation_client_id
-  JOIN
-      rooms rm ON rm.id = rd.room_id AND rm.hotel_id = rd.hotel_id
-  JOIN
-      room_types rt ON rt.id = rm.room_type_id AND rt.hotel_id = rm.hotel_id
-  LEFT JOIN LATERAL (
-      SELECT
-          SUM(ra.price * ra.quantity) AS total_price,
-          JSON_AGG(
-              JSON_BUILD_OBJECT(
-                  'addon_id', ra.id,
-                  'addons_global_id', ra.addons_global_id,
-                  'addons_hotel_id', ra.addons_hotel_id,
-                  'addon_name', ra.addon_name,
-                  'addon_type', ra.addon_type,
-                  'quantity', ra.quantity,
-                  'price', ra.price
-              )
-          ) AS addons_json
-      FROM reservation_addons ra
-      WHERE ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
-      GROUP BY ra.reservation_detail_id
-  ) ra ON true
-  LEFT JOIN LATERAL (
-      SELECT
-          JSON_AGG(
-              JSON_BUILD_OBJECT(
-                  'client_id', rc_inner.client_id,
-                  'name', c_inner.name,
-                  'name_kana', c_inner.name_kana,
-                  'name_kanji', c_inner.name_kanji,
-                  'email', c_inner.email,
-                  'phone', c_inner.phone,
-                  'gender', c_inner.gender,
-                  'address1', ad.street,
-                  'address2', ad.city,
-                  'postal_code', ad.postal_code
-              )
-          ) AS clients_json
-      FROM reservation_clients rc_inner
-      JOIN clients c_inner ON rc_inner.client_id = c_inner.id
-      LEFT JOIN (
-          SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
-          FROM addresses
-      ) ad ON ad.client_id = c_inner.id AND ad.rn = 1
-      WHERE rc_inner.reservation_details_id = rd.id AND rc_inner.hotel_id = rd.hotel_id
-  ) rc ON true
-  LEFT JOIN LATERAL (
-      SELECT
-          JSON_AGG(
-              JSON_BUILD_OBJECT(
-                  'adjustment_type', rr.adjustment_type,
-                  'adjustment_value', rr.adjustment_value,
-                  'tax_type_id', rr.tax_type_id,
-                  'tax_rate', rr.tax_rate,
-                  'price', rr.price,
-                  'include_in_cancel_fee', rr.include_in_cancel_fee
-              )
-          ) AS rates_json
-      FROM reservation_rates rr
-      WHERE rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
-      GROUP BY rr.reservation_details_id
-  ) rr ON true
-  WHERE
-      r.id = $1 AND rd.hotel_id = $2
-  ORDER BY
-      rm.room_number,
-      rd.date;
-  `;
-
-  const values = [id, hotel_id];
-
-  /*
-    // Removed because of performance
-
-    ,logs_reservation.log_time as reservation_log_time
-    ,logs_reservation_details.log_time as reservation_detail_log_time
-          LEFT JOIN 
-      (
-        SELECT * 
-        FROM logs_reservation 
-        WHERE record_id = $1 
-        ORDER BY logs_reservation.log_time DESC 
-        LIMIT 1
-      ) AS logs_reservation
-        ON logs_reservation.record_id = reservation_details.reservation_id
-        LEFT JOIN 
-      (
-          SELECT *
-          FROM logs_reservation 
-          WHERE record_id IN((SELECT id from reservation_details where reservation_id = $1))
-          ORDER BY logs_reservation.log_time DESC 
-          LIMIT 1
-      ) AS logs_reservation_details
-        ON logs_reservation.record_id = reservation_details.id
-  */
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservation:', err);
-    throw new Error('Database error');
-  }
-};
 
 const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservationId) => {
   const pool = getPool(requestId);
@@ -345,7 +48,7 @@ const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservat
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error fetching room reservation details:', err);
+    logger.error('Error fetching room reservation details:', err);
     throw new Error('Database error');
   }
 };
@@ -377,152 +80,11 @@ const selectMyHoldReservations = async (requestId, user_id) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error fetching reservations:', err);
+    logger.error('Error fetching reservations:', err);
     throw new Error('Database error');
   }
 };
-
-const selectReservationsToday = async (requestId, hotelId, date) => {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT a.*, b.details
-    FROM
-      (
-	      SELECT DISTINCT
-          reservations.hotel_id
-          ,reservations.id
-          ,reservations.reservation_client_id
-          ,COALESCE(r_client.name_kanji, r_client.name_kana, r_client.name) as client_name
-          ,reservations.check_in
-          ,reservations.check_in_time
-          ,reservations.check_out
-          ,reservations.check_out_time
-          ,reservations.number_of_people as reservation_number_of_people
-          ,reservations.status	
-          ,reservations.payment_timing        
-          ,reservations.has_important_comment
-          ,reservation_details.room_id      
-          ,rooms.room_number
-          ,rooms.floor
-          ,rooms.capacity
-          ,rooms.for_sale
-          ,rooms.smoking
-          ,rooms.has_wet_area
-          ,room_types.name as room_type_name
-          ,reservation_details.number_of_people
-          ,reservation_details.price
-          ,reservation_details.plans_global_id
-          ,reservation_details.plans_hotel_id
-          ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
-          ,reservation_details.plan_type
-          ,COALESCE(plans_hotel.color, plans_global.color) as plan_color
-          ,rc.clients_json::TEXT
-          ,reservation_details.cancelled
     
-        FROM
-          hotels
-          ,rooms
-          ,room_types
-          ,reservations
-          ,clients r_client
-          ,reservation_details
-            LEFT JOIN (
-                SELECT 
-                  rc.reservation_details_id,
-                  JSON_AGG(
-                    JSON_BUILD_OBJECT(
-                      'client_id', rc.client_id,
-                      'name', c.name,
-                      'name_kana', c.name_kana,
-                      'name_kanji', c.name_kanji,
-                      'email', c.email,
-                      'phone', c.phone,
-                      'gender', c.gender,
-                      'address1', ad.street,
-                      'address2', ad.city,
-                      'postal_code', ad.postal_code
-                    )
-                  ) AS clients_json
-                FROM reservation_clients rc
-                JOIN clients c ON rc.client_id = c.id
-                LEFT JOIN (
-                  SELECT *, ROW_NUMBER() OVER(PARTITION BY client_id ORDER BY created_at ASC) as rn
-                  FROM addresses
-                ) ad ON ad.client_id = c.id AND ad.rn = 1
-                GROUP BY rc.reservation_details_id
-              ) rc ON rc.reservation_details_id = reservation_details.id
-            LEFT JOIN plans_hotel 
-            ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
-            LEFT JOIN plans_global 
-            ON plans_global.id = reservation_details.plans_global_id
-      
-        WHERE
-          reservations.hotel_id = $1 
-          AND (reservation_details.date = $2 OR reservations.check_out = $2)
-          AND reservations.hotel_id = hotels.id
-          AND reservation_details.room_id = rooms.id
-          AND reservation_details.hotel_id = rooms.hotel_id
-          AND room_types.id = rooms.room_type_id
-          AND room_types.hotel_id = rooms.hotel_id
-          AND reservations.id = reservation_details.reservation_id
-          AND reservations.hotel_id = reservation_details.hotel_id
-          AND r_client.id = reservations.reservation_client_id
-      ) AS a
-      ,(
-        SELECT 
-	  	    r.hotel_id
-		      ,r.id
-		      ,rd.room_id		
-	  	    ,JSON_AGG(
-		        JSON_BUILD_OBJECT(
-			        'date', rd.date,
-			        'plans_global_id', rd.plans_global_id,
-      		    'plans_hotel_id', rd.plans_hotel_id,
-			        'plan_name', COALESCE(ph.name, pg.name),
-      		    'plan_type', rd.plan_type,
-      		    'plan_color', COALESCE(ph.color, pg.color)
-		        ) ORDER BY rd.date
-		      ) AS details
-	      FROM 
-          reservations r,
-          reservation_details rd
-          LEFT JOIN plans_hotel ph
-            ON ph.hotel_id = rd.hotel_id AND ph.id = rd.plans_hotel_id
-          LEFT JOIN plans_global pg
-            ON pg.id = rd.plans_global_id
-		  
-    	  WHERE	      	
-          r.id IN (
-            SELECT DISTINCT res.id 
-            FROM reservations res JOIN reservation_details red 
-              ON res.id = red.reservation_id AND res.hotel_id = red.hotel_id
-            WHERE res.hotel_id = $1 AND (red.date = $2 OR res.check_out = $2)
-          )
-          AND r.id = rd.reservation_id
-          AND r.hotel_id = rd.hotel_id
-      	GROUP BY
-		      r.hotel_id, r.id
-		      ,rd.room_id
-      ) b
-    WHERE
-	    a.hotel_id = b.hotel_id AND a.id = b.id AND a.room_id = b.room_id
-    ORDER BY 
-      a.floor
-      ,a.room_number
-      ,a.room_id;
-  `;
-
-  const values = [hotelId, date];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error fetching reservations:', err);
-    throw new Error('Database error');
-  }
-};
-
 const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn, checkOut) => {
   const pool = getPool(requestId);
   try {
@@ -549,7 +111,7 @@ const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn
 
     return { earliestCheckIn, latestCheckOut };
   } catch (error) {
-    console.error('Error getting available dates:', error);
+    logger.error('Error getting available dates:', error);
     throw error;
   }
 };
@@ -568,7 +130,7 @@ const getHotelIdByReservationId = async (requestId, reservationId) => {
     const result = await pool.query(query, values);
     return result.rows[0]?.hotel_id || null;
   } catch (err) {
-    console.error('Error fetching hotel ID by reservation ID:', err);
+    logger.error('Error fetching hotel ID by reservation ID:', err);
     throw new Error('Database error');
   }
 };
@@ -653,7 +215,7 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error fetching parking spot availability:', err);
+    logger.error('Error fetching parking spot availability:', err);
     throw new Error('Database error while fetching parking spot availability');
   }
 };
@@ -695,9 +257,9 @@ const addReservationHold = async (requestId, reservation, client = null, roomsTo
     try {
       await client.query('ROLLBACK');
     } catch (rbErr) {
-      console.error('Error rolling back transaction:', rbErr);
+      logger.error('Error rolling back transaction:', rbErr);
     }
-    console.error('Error adding reservation hold:', err);
+    logger.error('Error adding reservation hold:', err);
     throw err; // Rethrow the original error
   } finally {
     if (shouldReleaseClient) {
@@ -736,7 +298,7 @@ const addReservationDetail = async (requestId, detail, client = null) => {
     detail.created_by,
     detail.updated_by
   ];
-  //console.log('[addReservationDetail] Inserting with values:', values);
+  //logger.debug('[addReservationDetail] Inserting with values:', values);
 
   try {
     if (shouldReleaseClient) {
@@ -755,13 +317,13 @@ const addReservationDetail = async (requestId, detail, client = null) => {
         try {
             await dbClient.query('ROLLBACK');
         } catch (rbErr) {
-            console.error('Error rolling back transaction:', rbErr);
+            logger.error('Error rolling back transaction:', rbErr);
         }
     }
     if (err.code === '23514' && err.table === 'reservation_details') {
-        console.error(`Import Error: ${err.message}. ${err.detail}`);
+        logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        console.error('Error adding reservation detail:', err);
+        logger.error('Error adding reservation detail:', err);
     }
     throw new Error('Database error');
   } finally {
@@ -834,9 +396,9 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
       await dbClient.query('ROLLBACK');
     }
     if (err.code === '23514' && err.table === 'reservation_details') {
-        console.error(`Import Error: ${err.message}. ${err.detail}`);
+        logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        console.error('Error adding reservation hold details:', err);
+        logger.error('Error adding reservation hold details:', err);
     }
     throw err;
   } finally {
@@ -877,7 +439,7 @@ const addReservationAddon = async (requestId, addon, client = null) => {
     addon.created_by,
     addon.updated_by
   ];
-  //console.log('[addReservationAddon] Inserting with values:', values);
+  //logger.debug('[addReservationAddon] Inserting with values:', values);
 
   try {
     if (shouldManageTransaction) {
@@ -896,10 +458,10 @@ const addReservationAddon = async (requestId, addon, client = null) => {
         try {
             await dbClient.query('ROLLBACK');
         } catch (rbErr) {
-            console.error('Error rolling back transaction:', rbErr);
+            logger.error('Error rolling back transaction:', rbErr);
         }
     }
-    console.error('Error adding reservation addon:', err);
+    logger.error('Error adding reservation addon:', err);
     throw err;
   } finally {
     if (shouldReleaseClient) {
@@ -929,7 +491,7 @@ const addReservationClient = async (requestId, reservationClient) => {
     const result = await pool.query(query, values);
     return result.rows[0]; // Return the inserted reservation client
   } catch (err) {
-    console.error('Error adding reservation client:', err);
+    logger.error('Error adding reservation client:', err);
     throw new Error('Database error');
   }
 };
@@ -975,7 +537,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error adding room to reservation:', err);
+    logger.error('Error adding room to reservation:', err);
     throw new Error('Database error');
   } finally {
     client.release();    
@@ -1002,7 +564,7 @@ const updateBlockToReservation = async (requestId, reservationId, clientId, user
     }
     return result.rows[0];
   } catch (err) {
-    console.error('Error updating block to reservation:', err);
+    logger.error('Error updating block to reservation:', err);
     throw new Error('Database error');
   }
 };
@@ -1041,17 +603,17 @@ const updateReservationDetail = async (requestId, reservationData, dbClient = nu
     id,
     hotel_id,
   ];
-  //console.log('Query:', query);
-  //console.log('Values:', values);
+  //logger.debug('Query:', query);
+  //logger.debug('Values:', values);
 
   try {
     const result = await client.query(query, values);
     return result.rows[0];
   } catch (err) {
     if (err.code === '23514' && err.table === 'reservation_details') {
-        console.error(`Import Error: ${err.message}. ${err.detail}`);
+        logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        console.error('Error updating reservation detail:', err);
+        logger.error('Error updating reservation detail:', err);
     }
     throw new Error('Database error');
   } finally {
@@ -1094,7 +656,7 @@ const updateReservationStatus = async (requestId, reservationData) => {
     if (resStatus === 'cancelled') {
       // Determine if the cancellation is billable based on the original status
       const isBillable = type === 'full-fee';
-      // console.log(`Processing cancellation with billable = ${isBillable}`);
+      // logger.debug(`Processing cancellation with billable = ${isBillable}`);
 
       // Update reservation_details to mark as cancelled and set billable status
       const updateDetailsQuery = `
@@ -1168,7 +730,7 @@ const updateReservationStatus = async (requestId, reservationData) => {
   } catch (err) {
     // If any query fails, roll back the entire transaction
     await client.query('ROLLBACK');
-    console.error('Error in transaction, rolling back changes:', err);
+    logger.error('Error in transaction, rolling back changes:', err);
     throw new Error('Database transaction failed');
   } finally {
     // Always release the client back to the pool in the end
@@ -1339,7 +901,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
   } catch (err) {
     // If any query fails, roll back the entire transaction
     await client.query('ROLLBACK');
-    console.error('Error in transaction, rolling back changes:', err);
+    logger.error('Error in transaction, rolling back changes:', err);
     throw new Error('Database transaction failed');
   } finally {
     // Always release the client back to the pool
@@ -1390,10 +952,10 @@ const updateReservationComment = async (requestId, reservationData, client = nul
         try {
             await dbClient.query('ROLLBACK');
         } catch (rbErr) {
-            console.error('Error rolling back transaction:', rbErr);
+            logger.error('Error rolling back transaction:', rbErr);
         }
     }
-    console.error('Error updating reservation comment:', error);
+    logger.error('Error updating reservation comment:', error);
     throw error;
   } finally {
     if (shouldReleaseClient) {
@@ -1425,7 +987,7 @@ const updateReservationCommentFlag = async (requestId, reservationData) => {
     return result.rows[0];
 
   } catch (error) {
-    console.error('Error updating reservation comment flag:', error);
+    logger.error('Error updating reservation comment flag:', error);
     throw new Error('Database error');
   }
 };
@@ -1467,26 +1029,26 @@ const updateReservationTime = async (requestId, reservationData) => {
     return result.rows[0];
 
   } catch (error) {
-    console.error('Error updating reservation detail:', error);
+    logger.error('Error updating reservation detail:', error);
     throw new Error('Database error');
   }
 };
 
 const updateRoomByCalendar = async (requestId, roomData) => {
-  //console.log('--- Starting updateRoomByCalendar ---');
-  //console.log('Received roomData:', roomData);
+  //logger.debug('--- Starting updateRoomByCalendar ---');
+  //logger.debug('Received roomData:', roomData);
   const pool = getPool(requestId);
   const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode, updated_by } = roomData;
 
   // Calculate the shift direction in JavaScript
   const shiftDirection = new_check_in >= old_check_in ? 'DESC' : 'ASC';
-  //console.log(`Shift direction calculated as: ${shiftDirection}`);
+  //logger.debug(`Shift direction calculated as: ${shiftDirection}`);
 
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
-    //console.log('Transaction started.');
+    //logger.debug('Transaction started.');
 
     // Set session
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, updated_by);
@@ -1501,13 +1063,13 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     const checkValues = [id, hotel_id];
     const checkResult = await client.query(checkQuery, checkValues);
     const roomCount = checkResult.rows[0].room_count;
-    //console.log(`Initial room count for reservation ${id}: ${roomCount}`);
+    //logger.debug(`Initial room count for reservation ${id}: ${roomCount}`);
 
     let newReservationId = id;
 
     // If room_count > 1 and check_in/check_out dates change, create a new reservation_id
     if (roomCount > 1 && mode === 'solo' && (new_check_in !== old_check_in || new_check_out !== old_check_out)) {
-      //console.log('Condition met to split reservation. Creating a new reservation record.');
+      //logger.debug('Condition met to split reservation. Creating a new reservation record.');
       const insertReservationQuery = `
         INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, type, agent, ota_reservation_id, payment_timing, comment, has_important_comment, created_at, created_by, updated_by)
         SELECT hotel_id, reservation_client_id, $1, $2, $6, status, type, agent, ota_reservation_id, payment_timing, comment, has_important_comment, created_at, created_by, $3
@@ -1518,7 +1080,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       const insertReservationValues = [new_check_in, new_check_out, updated_by, id, hotel_id, number_of_people];
       const insertResult = await client.query(insertReservationQuery, insertReservationValues);
       newReservationId = insertResult.rows[0].id;
-      //console.log(`New reservation created with ID: ${newReservationId}`);
+      //logger.debug(`New reservation created with ID: ${newReservationId}`);
 
       // Adjust number_of_people in the original reservation
       const updateQuery = `
@@ -1528,17 +1090,17 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       `;
       const updateValues = [number_of_people, id, hotel_id];
       await client.query(updateQuery, updateValues);
-      //console.log(`Adjusted number_of_people on original reservation ${id}.`);
+      //logger.debug(`Adjusted number_of_people on original reservation ${id}.`);
     }
 
     // Calculate the difference in days
     const oldDuration = (new Date(old_check_out) - new Date(old_check_in)) / (1000 * 60 * 60 * 24);
     const newDuration = (new Date(new_check_out) - new Date(new_check_in)) / (1000 * 60 * 60 * 24);
-    //console.log(`Duration calculated - Old: ${oldDuration} days, New: ${newDuration} days.`);
+    //logger.debug(`Duration calculated - Old: ${oldDuration} days, New: ${newDuration} days.`);
 
         // If the duration is the same, update the dates. Else, add dates and delete the old ones
         if (oldDuration === newDuration) {
-          //console.log('Duration is the same. Updating existing reservation_details dates.');
+          //logger.debug('Duration is the same. Updating existing reservation_details dates.');
           const updateDatesQuery = `
             WITH date_diff AS (
               SELECT
@@ -1582,9 +1144,9 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             old_room_id
           ];
           const result = await client.query(updateDatesQuery, values);
-          //console.log(`${result.rowCount} reservation_details records updated.`);
+          //logger.debug(`${result.rowCount} reservation_details records updated.`);
         } else {
-          //console.log('Duration has changed. Recreating reservation_details records.');
+          //logger.debug('Duration has changed. Recreating reservation_details records.');
 
           const reservationIdForDetails = newReservationId;
 
@@ -1621,15 +1183,15 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     
           if (sourceResult.rows.length > 0) {
             const sourceDetailId = sourceResult.rows[0].id;
-            //console.log(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
+            //logger.debug(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
     
             const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
             clientsToCopy = clientsResult.rows;
-            //console.log(`Found ${clientsToCopy.length} clients to copy.`);
+            //logger.debug(`Found ${clientsToCopy.length} clients to copy.`);
     
             const addonsResult = await client.query('SELECT addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate FROM reservation_addons WHERE reservation_detail_id = $1', [sourceDetailId]);
             addonsToCopy = addonsResult.rows;
-            //console.log(`Found ${addonsToCopy.length} addons to copy.`);
+            //logger.debug(`Found ${addonsToCopy.length} addons to copy.`);
           }
           // --- NEW LOGIC: END ---
     
@@ -1643,7 +1205,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             RETURNING id, date;
           `;
           const deleteResult = await client.query(deleteOldQuery, [reservationIdForDetails, hotel_id, old_room_id, new_check_in, new_check_out]);
-          //console.log(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
+          //logger.debug(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
     
           // 3. Create all required new dates
           const newDates = [];
@@ -1708,7 +1270,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     
             const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
             const newReservationDetails = insertedDetails.rows;
-            //console.log(`Inserted ${newReservationDetails.length} new reservation_details records.`);
+            //logger.debug(`Inserted ${newReservationDetails.length} new reservation_details records.`);
     
             // --- MODIFIED LOGIC: START ---
             // 4. Copy clients/addons to new records using the data fetched earlier
@@ -1744,13 +1306,13 @@ const updateRoomByCalendar = async (requestId, roomData) => {
                   }
                 }
               }
-              //console.log(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
+              //logger.debug(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
             }
             // --- MODIFIED LOGIC: END ---
           }
         }
     // Update reservations table with new check_in and check_out
-    //console.log(`Updating main reservation record ${newReservationId} with new dates.`);
+    //logger.debug(`Updating main reservation record ${newReservationId} with new dates.`);
     const updateReservationQuery = `
       UPDATE reservations
       SET check_in = $1, check_out = $2, updated_by = $3
@@ -1760,13 +1322,13 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     await client.query(updateReservationQuery, updateReservationValues);
 
     // Recalculate plan price
-    //console.log('Recalculating plan price.');
+    //logger.debug('Recalculating plan price.');
     // Recalculating the plan here was overriding the OTA plan prices.
     // However, if we change to a new date and the conditional rules are different, the price will not be updated.
     //await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by, false, client);
 
     await client.query('COMMIT');
-    //console.log('Transaction committed successfully.');
+    //logger.debug('Transaction committed successfully.');
 
     const returnPayload = {
       success: true,
@@ -1774,16 +1336,16 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       original_reservation_id: id,
       message: 'Room calendar updated successfully'
     };
-    //console.log('--- Finished updateRoomByCalendar ---', returnPayload);
+    //logger.debug('--- Finished updateRoomByCalendar ---', returnPayload);
     return returnPayload;
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error in updateRoomByCalendar, transaction rolled back:', err);
+    logger.error('Error in updateRoomByCalendar, transaction rolled back:', err);
     throw new Error(`Failed to update reservation: ${err.message}`);
   } finally {
     client.release();
-    //console.log('Database client released.');
+    //logger.debug('Database client released.');
   }
 };
 
@@ -1828,14 +1390,14 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error occurred during update:', err);
+    logger.error('Error occurred during update:', err);
     throw err;
   } finally {
     client.release();
   }
 
   const { id, hotel_id, date, room_id } = roomData;
-  // console.log('roomData:', id, hotel_id, date, room_id);
+  // logger.debug('roomData:', id, hotel_id, date, room_id);
 
 
 };
@@ -1845,7 +1407,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
   const client = await pool.connect();
 
   try {
-    // console.log('Starting transaction...');
+    // logger.debug('Starting transaction...');
     await client.query('BEGIN');
 
     // Set session
@@ -1865,7 +1427,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     // Check if the number_of_people is now <= 0
     if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
       await client.query('ROLLBACK');
-      console.warn('Rollback: number_of_people is <= 0');
+      logger.warn('Rollback: number_of_people is <= 0');
       return { success: false, message: 'Invalid operation: number_of_people would be zero or negative' };
     }
 
@@ -1873,7 +1435,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     const dtlUpdatePromises = detailsArray.map(async ({ id, operation_mode, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       let newPrice = 0;
       newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)), false, client);
-      // console.log('newPrice calculated:',newPrice);
+      // logger.debug('newPrice calculated:',newPrice);
 
       const dtlUpdateQuery = `
         UPDATE reservation_details
@@ -1882,7 +1444,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
         WHERE id = $3
         RETURNING *;
       `;
-      // console.log('dtlUpdateQuery', dtlUpdateQuery);
+      // logger.debug('dtlUpdateQuery', dtlUpdateQuery);
       return client.query(dtlUpdateQuery, [operation_mode, newPrice, id]);
     });
 
@@ -1892,7 +1454,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     for (const result of dtlUpdateResults) {
       if (result.rows.length === 0 || result.rows[0].number_of_people <= 0) {
         await client.query('ROLLBACK');
-        console.warn('Rollback: number_of_people in reservation_details is <= 0');
+        logger.warn('Rollback: number_of_people in reservation_details is <= 0');
         return { success: false, message: 'Invalid operation: number_of_people in reservation_details would be zero or negative' };
       }
 
@@ -1928,11 +1490,11 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error updating room:', err);
+    logger.error('Error updating room:', err);
     throw new Error('Database error');
   } finally {
     client.release();
-    // console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    // logger.debug("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
 
@@ -1968,16 +1530,16 @@ const updateReservationGuest = async (requestId, oldValue, newValue, client = nu
     if (shouldReleaseClient) {
       await dbClient.query('COMMIT');
     }
-    // console.log('Reservation guest updated successfully');
+    // logger.debug('Reservation guest updated successfully');
   } catch (err) {
     if (shouldReleaseClient) {
         try {
             await dbClient.query('ROLLBACK');
         } catch (rbErr) {
-            console.error('Error rolling back transaction:', rbErr);
+            logger.error('Error rolling back transaction:', rbErr);
         }
     }
-    console.error('Error updating reservation guest:', err);
+    logger.error('Error updating reservation guest:', err);
     throw err;
   } finally {
     if (shouldReleaseClient) {
@@ -2015,7 +1577,7 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
     );
 
     await client.query('COMMIT'); // Commit transaction
-    // console.log('updateClientInReservation commit');
+    // logger.debug('updateClientInReservation commit');
   } catch (err) {
     await client.query('ROLLBACK'); // Rollback transaction on error    
   } finally {
@@ -2025,9 +1587,9 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
 };
 
 const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, disableRounding, client = null) => {
-  //console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
+  //logger.debug('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
   if (!plan) {
-    console.warn('[updateReservationDetailPlan] plan is null or undefined');
+    logger.warn('[updateReservationDetailPlan] plan is null or undefined');
   }
   const pool = getPool(requestId);
   let dbClient;
@@ -2058,7 +1620,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
-      console.warn(`[updateReservationDetailPlan] Price mismatch: provided=${price}, calculated=${calculatedPrice}`);
+      logger.warn(`[updateReservationDetailPlan] Price mismatch: provided=${price}, calculated=${calculatedPrice}`);
     }
 
     // Use the calculated price instead of the provided one
@@ -2085,7 +1647,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     await dbClient.query(setSessionQuery);
 
     // Update reservation_details with the recalculated price
-    //console.log('[updateReservationDetailPlan] Executing update with recalculated price:', {plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id});
+    //logger.debug('[updateReservationDetailPlan] Executing update with recalculated price:', {plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id});
     await dbClient.query(updateReservationDetailsQuery, [
       plans_global_id,
       plans_hotel_id,
@@ -2112,9 +1674,9 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   } catch (err) {
     await dbClient.query('ROLLBACK');
     if (err.code === '23514' && err.table === 'reservation_details') {
-        console.error(`Import Error: ${err.message}. ${err.detail}`);
+        logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        console.error('Error updating reservation detail plan:', err);
+        logger.error('Error updating reservation detail plan:', err);
     }
     throw err;
   } finally {
@@ -2161,7 +1723,7 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
     );
     await Promise.all(addOnPromises);
   } catch (err) {
-    console.error('Error updating reservation detail addon:', err);
+    logger.error('Error updating reservation detail addon:', err);
     throw err;
   } finally {
     if (shouldReleaseClient) {
@@ -2183,7 +1745,7 @@ const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {
   try {
     await pool.query(query, [room_id, user_id, id]);
   } catch (err) {
-    console.error('Error updating reservation guest:', err);
+    logger.error('Error updating reservation guest:', err);
   }
 };
 
@@ -2202,7 +1764,7 @@ const updateReservationRoom = async (requestId, reservation_id, room_id_old, roo
   try {
     await pool.query(query, [room_id_new, user_id, reservation_id, room_id_old]);
   } catch (err) {
-    console.error('Error updating reservation guest:', err);
+    logger.error('Error updating reservation guest:', err);
   }
 };
 
@@ -2254,17 +1816,17 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
 
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Error in transaction:", err);
+    logger.error("Error in transaction:", err);
   } finally {
     client.release();
   }
 };
 
 const updateReservationRoomPlan = async (requestId, data) => {
-  //console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
+  //logger.debug('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
   const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId, disableRounding } = data;
 
-  // console.log('DEBUGGING updateReservationRoomPlan disableRounding:', disableRounding);
+  // logger.debug('DEBUGGING updateReservationRoomPlan disableRounding:', disableRounding);
 
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2311,15 +1873,15 @@ const updateReservationRoomPlan = async (requestId, data) => {
     await client.query('COMMIT');
 
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in transaction:`, error);
+    logger.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in transaction:`, error);
     await client.query('ROLLBACK');
-    console.error(`[${new Date().toISOString()}] [Request ${requestId}] Transaction rolled back`);
+    logger.error(`[${new Date().toISOString()}] [Request ${requestId}] Transaction rolled back`);
     throw error;
   } finally {
-    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Releasing database connection`);
+    //logger.debug(`[${new Date().toISOString()}] [Request ${requestId}] Releasing database connection`);
     client.release();
     /*
-    console.log(`[${new Date().toISOString()}] [Request ${requestId}] Connection released. Pool status:`, {
+    logger.debug(`[${new Date().toISOString()}] [Request ${requestId}] Connection released. Pool status:`, {
       total: pool.totalCount,
       idle: pool.idleCount,
       waiting: pool.waitingCount
@@ -2360,7 +1922,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
       if (plan) {
         await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id, disableRounding, client);
       } else {
-        //console.log('[updateReservationDetailPlan] Skipped because plan is null');
+        //logger.debug('[updateReservationDetailPlan] Skipped because plan is null');
       }
 
       // 2. Update Addons
@@ -2377,11 +1939,11 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Error updating room plan:', error);
+    logger.error('Error updating room plan:', error);
     throw error;
   } finally {
     client.release();
-    //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    //logger.debug("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
 
@@ -2463,13 +2025,13 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     if (shouldManageTransaction) {
       await dbClient.query('ROLLBACK');
     }
-    console.error('Error recalculating plan price:', error);
+    logger.error('Error recalculating plan price:', error);
     throw error;
   } finally {
     // Only release connection if we created it
     if (shouldManageTransaction) {
       dbClient.release();
-      //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+      //logger.debug("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
     }
   }
 };
@@ -2672,29 +2234,29 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     shouldRelease = true;
   }
   // XML
-  // console.log('addOTAReservation data:', data);
+  // logger.debug('addOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
-  // console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
+  // logger.debug('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
   const BasicInformation = data?.BasicInformation || {};
-  // console.log('addOTAReservation BasicInformation:', BasicInformation);
+  // logger.debug('addOTAReservation BasicInformation:', BasicInformation);
   const BasicRateInformation = data?.BasicRateInformation || {};
-  // console.log('addOTAReservation BasicRateInformation:', BasicRateInformation);
+  // logger.debug('addOTAReservation BasicRateInformation:', BasicRateInformation);
   const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};
-  // console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
+  // logger.debug('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};
-  // console.log('addOTAReservation Basic:', Basic);
+  // logger.debug('addOTAReservation Basic:', Basic);
   const RoomAndRoomRateInformation = data?.RisaplsInformation?.RisaplsCommonInformation?.RoomAndRoomRateInformation || {};
-  // console.log('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
+  // logger.debug('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
-  // console.log('addOTAReservation Member:', Member);
+  // logger.debug('addOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
-  // console.log('addOTAReservation BasicRate:', BasicRate);
+  // logger.debug('addOTAReservation BasicRate:', BasicRate);
   const Extend = data?.RisaplsInformation?.AgentNativeInformation?.Extend || {};
-  // console.log('addOTAReservation Extend:', Extend);
+  // logger.debug('addOTAReservation Extend:', Extend);
   const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};
-  // console.log('addOTAReservation Extendmytrip:', Extendmytrip);
+  // logger.debug('addOTAReservation Extendmytrip:', Extendmytrip);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  // logger.debug('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   // Query  
   let query = '';
@@ -2744,7 +2306,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     return 'other';
   };
   const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
-  // console.log('selectTLRoomMaster:', roomMaster);
+  // logger.debug('selectTLRoomMaster:', roomMaster);
   const selectRoomTypeId = (code) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
@@ -2752,8 +2314,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
   const planMaster = await selectTLPlanMaster(requestId, hotel_id);
 
   const selectPlanId = async (code) => {
-    // console.log('selectTLPlanMaster:', planMaster);  
-    //console.log('selectPlanId code:', code);
+    // logger.debug('selectTLPlanMaster:', planMaster);  
+    //logger.debug('selectPlanId code:', code);
     const match = planMaster.find(item => item.plangroupcode == code);
     if (match) {
       return {
@@ -2849,7 +2411,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     if (existingClient.rows.length > 0) {
       // Use existing client
       reservationClientId = existingClient.rows[0].id;
-      //console.log('Using existing client with ID:', reservationClientId);
+      //logger.debug('Using existing client with ID:', reservationClientId);
     } else {
       // Insert new client
       query = `
@@ -2874,8 +2436,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
       const newClient = await internalClient.query(query, values);
       reservationClientId = newClient.rows[0].id;
-      //console.log('Created new client with ID:', reservationClientId);
-      //console.log('addOTAReservation client:', newClient.rows[0]);
+      //logger.debug('Created new client with ID:', reservationClientId);
+      //logger.debug('addOTAReservation client:', newClient.rows[0]);
 
       // Only insert address for new clients
       if (Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr) {
@@ -2903,7 +2465,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           1
         ];
         const newAddress = await internalClient.query(query, values);
-        //console.log('addOTAReservation addresses:', newAddress.rows[0]);
+        //logger.debug('addOTAReservation addresses:', newAddress.rows[0]);
       }
     }
 
@@ -2940,11 +2502,11 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       BasicInformation.TravelAgencyBookingNumber,
       reservationComment,
     ];
-    // console.log('addOTAReservation reservations:', values);  
+    // logger.debug('addOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
     const reservation = await internalClient.query(query, values);
     const reservationId = reservation.rows[0].id;
-    //console.log('addOTAReservation reservations:', reservation.rows[0]);
+    //logger.debug('addOTAReservation reservations:', reservation.rows[0]);
 
     // Get available rooms for the reservation period
     const roomsArray = await transformRoomData(RoomAndGuestList);
@@ -2961,7 +2523,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
         if (roomId === null) {
           const triedDates = roomDetailsArray.map(item => item.RoomDate).join(', ');
-          console.error(`ERROR: No available room found for RoomTypeCode ${netAgtRmTypeCode} (room_type_id: ${roomTypeId}, room_type_name: ${roomTypeName}) for dates: [${triedDates}]`);
+          logger.error(`ERROR: No available room found for RoomTypeCode ${netAgtRmTypeCode} (room_type_id: ${roomTypeId}, room_type_name: ${roomTypeName}) for dates: [${triedDates}]`);
           throw new Error(`Transaction Error: Could not assign room_id for RoomTypeCode: ${netAgtRmTypeCode} (room_type_id: ${roomTypeId}, room_type_name: ${roomTypeName}) for dates: [${triedDates}]. Transaction will be rolled back.`);
         }
 
@@ -2973,7 +2535,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         assignedRoomIds.add(roomId);
       }
     }
-    // console.log('roomsArrayWithID', roomsArrayWithID);
+    // logger.debug('roomsArrayWithID', roomsArrayWithID);
     let roomRateArray = [];
 
     if (Array.isArray(RoomAndRoomRateInformation)) {
@@ -3005,7 +2567,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       }
     }
 
-    //console.log('roomRateArray:', roomRateArray);
+    //logger.debug('roomRateArray:', roomRateArray);
 
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
@@ -3032,7 +2594,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           const guestList = guestInformation?.GuestInformationList;
 
           if (guestList && Array.isArray(guestList) && guestList.length > 0) {
-            //console.log('Processing guest information from GuestInformationList');
+            //logger.debug('Processing guest information from GuestInformationList');
             for (const guest of guestList) {
               const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
               const sanitizedName = sanitizeName(rawName);
@@ -3158,10 +2720,10 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         const reservationDetailsId = reservationDetails.rows[0].id;
 
         if (reservationDetails.rows.length === 0) {
-          console.error("Error: Failed to create reservation detail.");
+          logger.error("Error: Failed to create reservation detail.");
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
-        //console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
+        //logger.debug('addOTAReservation reservation_details:', reservationDetails.rows[0]);
         
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
@@ -3264,12 +2826,12 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                         ) VALUES ($1, $2, $3, 1, 1)
                         RETURNING *;
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
-              //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+              //logger.debug('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
-              //console.log('No reservationGuestId available to add to reservation_clients');
+              //logger.debug('No reservationGuestId available to add to reservation_clients');
             }
           } catch (error) {
-            console.error('Error adding booker to reservation_clients:', error);
+            logger.error('Error adding booker to reservation_clients:', error);
           }
 
         } else {
@@ -3282,9 +2844,9 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 ) VALUES ($1, $2, $3, 1, 1)
                 RETURNING *;
               `, [hotel_id, reservationDetailsId, client.id]);
-              //console.log('Added guest to reservation_clients:', result.rows[0]);
+              //logger.debug('Added guest to reservation_clients:', result.rows[0]);
             } catch (error) {
-              console.error('Error adding guest to reservation_clients:', error);
+              logger.error('Error adding guest to reservation_clients:', error);
               throw error; // Re-throw to trigger transaction rollback
             }
           }
@@ -3325,7 +2887,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
             ];
 
             const reservationAddon = await internalClient.query(query, values);
-            //console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
+            //logger.debug('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
       }
@@ -3466,7 +3028,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           ];
 
           const reservationPayments = await internalClient.query(query, values);
-          //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+          //logger.debug('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
           // Reduce remaining discount
           remainingDiscount -= discountForThisRoom;
@@ -3475,7 +3037,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
       // Log if there's any unused discount
       if (remainingDiscount > 0) {
-        console.warn(`Warning: ${remainingDiscount} discount amount couldn't be applied to any rooms`);
+        logger.warn(`Warning: ${remainingDiscount} discount amount couldn't be applied to any rooms`);
       }
     }
     // Outstanding balance    
@@ -3515,7 +3077,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               ];
 
               const reservationPayments = await internalClient.query(query, values);
-              //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+              //logger.debug('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
               // Reduce remaining payment
               remainingPayment -= paymentForThisRoom;
@@ -3530,16 +3092,16 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     }
     return { success: true };
   } catch (err) {
-    console.error("Transaction failed, error message:", err.message);
-    console.error("Full error object:", err);
+    logger.error("Transaction failed, error message:", err.message);
+    logger.error("Full error object:", err);
     try {
-      //console.log("Attempting to roll back transaction...");
+      //logger.debug("Attempting to roll back transaction...");
       if (shouldRelease) {
         await internalClient.query('ROLLBACK');
-        //console.log("Transaction successfully rolled back");
+        //logger.debug("Transaction successfully rolled back");
       }
     } catch (rollbackErr) {
-      console.error("Failed to roll back transaction:", rollbackErr);
+      logger.error("Failed to roll back transaction:", rollbackErr);
     }
     return { success: false, error: err.message };
   } finally {
@@ -3561,29 +3123,29 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     shouldRelease = true;
   }
   // XML
-  // console.log('editOTAReservation data:', data);
+  // logger.debug('editOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
-  // console.log('editOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
+  // logger.debug('editOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
   const BasicInformation = data?.BasicInformation || {};
-  // console.log('editOTAReservation BasicInformation:', BasicInformation);
+  // logger.debug('editOTAReservation BasicInformation:', BasicInformation);
   const BasicRateInformation = data?.BasicRateInformation || {};
-  // console.log('editOTAReservation BasicRateInformation:', BasicRateInformation);
+  // logger.debug('editOTAReservation BasicRateInformation:', BasicRateInformation);
   const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};
-  // console.log('editOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
+  // logger.debug('editOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};
-  // console.log('editOTAReservation Basic:', Basic);
+  // logger.debug('editOTAReservation Basic:', Basic);
   const RoomAndRoomRateInformation = data?.RisaplsInformation?.RisaplsCommonInformation?.RoomAndRoomRateInformation || {};
-  // console.log('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
+  // logger.debug('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
-  // console.log('editOTAReservation Member:', Member);
+  // logger.debug('editOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
-  // console.log('editOTAReservation BasicRate:', BasicRate);
+  // logger.debug('editOTAReservation BasicRate:', BasicRate);
   const Extend = data?.RisaplsInformation?.AgentNativeInformation?.Extend || {};
-  // console.log('addOTAReservation Extend:', Extend);
+  // logger.debug('addOTAReservation Extend:', Extend);
   const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};
-  // console.log('addOTAReservation Extendmytrip:', Extendmytrip);
+  // logger.debug('addOTAReservation Extendmytrip:', Extendmytrip);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  // console.log('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  // logger.debug('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
 
@@ -3634,7 +3196,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     return 'other';
   };
   const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
-  // console.log('selectTLRoomMaster:', roomMaster);
+  // logger.debug('selectTLRoomMaster:', roomMaster);
   const selectRoomTypeId = (code) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
@@ -3758,7 +3320,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       clientIdToUpdate,
     ];
     const newClient = await internalClient.query(query, values);
-    //console.log('editOTAReservation client:', newClient.rows[0]);
+    //logger.debug('editOTAReservation client:', newClient.rows[0]);
 
     // Insert address
     if (Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr) {
@@ -3812,7 +3374,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         1
       ];
       const newAddress = await internalClient.query(query, values);
-      //console.log('editOTAReservation addresses:', newAddress.rows[0]);
+      //logger.debug('editOTAReservation addresses:', newAddress.rows[0]);
     }
 
     // Insert reservations
@@ -3840,10 +3402,10 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       reservationIdToUpdate,
       hotel_id,
     ];
-    // console.log('editOTAReservation reservations:', values);  
+    // logger.debug('editOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
     const reservation = await internalClient.query(query, values);
-    //console.log('editOTAReservation reservations:', reservation.rows[0]);
+    //logger.debug('editOTAReservation reservations:', reservation.rows[0]);
 
     // Get available rooms for the reservation period
 
@@ -3872,7 +3434,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
       }
     }
-    // console.log('roomsArrayWithID', roomsArrayWithID);
+    // logger.debug('roomsArrayWithID', roomsArrayWithID);
     let roomRateArray = [];
 
     if (Array.isArray(RoomAndRoomRateInformation)) {
@@ -3904,7 +3466,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       }
     }
 
-    //console.log('roomRateArray:', roomRateArray);
+    //logger.debug('roomRateArray:', roomRateArray);
 
 
     for (const roomKey in roomsArrayWithID) {
@@ -3932,7 +3494,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           const guestList = guestInformation?.GuestInformationList;
 
           if (guestList && Array.isArray(guestList) && guestList.length > 0) {
-            //console.log('Processing guest information from GuestInformationList');
+            //logger.debug('Processing guest information from GuestInformationList');
             for (const guest of guestList) {
               const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
               const sanitizedName = sanitizeName(rawName);
@@ -4058,10 +3620,10 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         const reservationDetailsId = reservationDetails.rows[0].id;
 
         if (reservationDetails.rows.length === 0) {
-          console.error("Error: Failed to create reservation detail.");
+          logger.error("Error: Failed to create reservation detail.");
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
-        //console.log('editOTAReservation reservation_details:', reservationDetails.rows[0]);
+        //logger.debug('editOTAReservation reservation_details:', reservationDetails.rows[0]);
 
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
@@ -4165,12 +3727,12 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                         ) VALUES ($1, $2, $3, 1, 1)
                         RETURNING *;
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
-              //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+              //logger.debug('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
-              //console.log('No reservationGuestId available to add to reservation_clients');
+              //logger.debug('No reservationGuestId available to add to reservation_clients');
             }
           } catch (error) {
-            console.error('Error adding booker to reservation_clients:', error);
+            logger.error('Error adding booker to reservation_clients:', error);
           }
 
         } else {
@@ -4183,9 +3745,9 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 ) VALUES ($1, $2, $3, 1, 1)
                 RETURNING *;
               `, [hotel_id, reservationDetailsId, client.id]);
-              //console.log('Added guest to reservation_clients:', result.rows[0]);
+              //logger.debug('Added guest to reservation_clients:', result.rows[0]);
             } catch (error) {
-              console.error('Error adding guest to reservation_clients:', error);
+              logger.error('Error adding guest to reservation_clients:', error);
               throw error; // Re-throw to trigger transaction rollback
             }
           }
@@ -4203,7 +3765,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           created_by: 1
         };
         await insertReservationRate(requestId, rateData, internalClient);
-        //console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
+        //logger.debug('editOTAReservation reservation_rates:', reservationRates.rows[0]);
 
         // Insert addon information if addons exist
         if (addons && Array.isArray(addons) && addons.length > 0) {
@@ -4229,7 +3791,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
             ];
 
             const reservationAddon = await internalClient.query(query, values);
-            //console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
+            //logger.debug('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
       }
@@ -4293,7 +3855,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           ];
 
           const reservationPayments = await internalClient.query(query, values);
-          //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+          //logger.debug('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
           // Reduce remaining discount
           remainingDiscount -= discountForThisRoom;
@@ -4302,7 +3864,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
       // Log if there's any unused discount
       if (remainingDiscount > 0) {
-        console.warn(`Warning: ${remainingDiscount} discount amount couldn't be applied to any rooms`);
+        logger.warn(`Warning: ${remainingDiscount} discount amount couldn't be applied to any rooms`);
       }
     }
     // Outstanding balance    
@@ -4342,7 +3904,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               ];
 
               const reservationPayments = await internalClient.query(query, values);
-              //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+              //logger.debug('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
               // Reduce remaining payment
               remainingPayment -= paymentForThisRoom;
@@ -4364,12 +3926,12 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         const otaReservationId = data?.BasicInformation?.TravelAgencyBookingNumber;
         const hotelId = hotel_id;
         const reservationId = (typeof existingReservationResult !== 'undefined' && existingReservationResult.rows && existingReservationResult.rows[0]) ? existingReservationResult.rows[0].id : null;
-        console.error(
+        logger.error(
           `[editOTAReservation] Transaction rolled back for reservationId: ${reservationId}, OTA booking number: ${otaReservationId}, hotelId: ${hotelId}`
         );
       }
     } catch (rollbackErr) {
-      console.error("[editOTAReservation] Failed to roll back transaction:", rollbackErr);
+      logger.error("[editOTAReservation] Failed to roll back transaction:", rollbackErr);
     }
     return { success: false, error: err.message };
   } finally {
@@ -4435,7 +3997,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
       hotel_id,
     ];
     const reservation = await internalClient.query(query, values);
-    //console.log('cancelOTAReservation reservations:', reservation.rows[0]);
+    //logger.debug('cancelOTAReservation reservations:', reservation.rows[0]);
 
     query = `
         UPDATE reservation_details
@@ -4451,7 +4013,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
       hotel_id,
     ];
     const reservationDetails = await internalClient.query(query, values);
-    //console.log('cancelOTAReservation reservation_details:', reservationDetails.rows[0]);
+    //logger.debug('cancelOTAReservation reservation_details:', reservationDetails.rows[0]);
 
     if (cancellationCharge > 0) {
       query = `
@@ -4483,7 +4045,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
           cancellationCharge,
         ];
         const firstReservationDetail = await internalClient.query(query, values);
-        //console.log('cancelOTAReservation reservation_details:', firstReservationDetail.rows[0]);
+        //logger.debug('cancelOTAReservation reservation_details:', firstReservationDetail.rows[0]);
 
         query = `
           UPDATE reservation_rates
@@ -4502,9 +4064,9 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
           cancellationCharge,
         ];
         const reservationRates = await internalClient.query(query, values);
-        //console.log('cancelOTAReservation reservation_rates:', reservationRates.rows[0]);
+        //logger.debug('cancelOTAReservation reservation_rates:', reservationRates.rows[0]);
       } else {
-        console.warn('No reservation details found to update reservation_rates.');
+        logger.warn('No reservation details found to update reservation_rates.');
       }
     }
 
@@ -4513,16 +4075,16 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
     }
     return { success: true };
   } catch (err) {
-    console.error("Transaction failed, error message:", err.message);
-    console.error("Full error object:", err);
+    logger.error("Transaction failed, error message:", err.message);
+    logger.error("Full error object:", err);
     try {
-      //console.log("Attempting to roll back transaction...");
+      //logger.debug("Attempting to roll back transaction...");
       if (shouldRelease) {
         await internalClient.query('ROLLBACK');
       }
-      console.log("[cancelOTAReservation] Transaction successfully rolled back");
+      logger.debug("[cancelOTAReservation] Transaction successfully rolled back");
     } catch (rollbackErr) {
-      console.error("Failed to roll back transaction:", rollbackErr);
+      logger.error("Failed to roll back transaction:", rollbackErr);
     }
     return { success: false, error: err.message };
   } finally {
@@ -4726,7 +4288,7 @@ const selectFailedOtaReservations = async (requestId) => {
     const result = await pool.query(query);
     return result.rows;
   } catch (err) {
-    console.error('Error fetching failed OTA reservations:', err);
+    logger.error('Error fetching failed OTA reservations:', err);
     throw new Error('Database error');
   }
 };
@@ -4920,7 +4482,7 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error(`Error in cancelReservationRooms: ${error.message}`, error);
+    logger.error(`Error in cancelReservationRooms: ${error.message}`, error);
     throw new Error(`Failed to cancel reservation rooms: ${error.message}`);
   } finally {
     client.release();
@@ -4933,13 +4495,8 @@ const __getOriginalGetPool = () => require('../../config/database').getPool;
 
 module.exports = {
   __setGetPool,
-  __getOriginalGetPool,
-  selectAvailableRooms,
-  selectAvailableParkingSpots,
-  selectAndLockAvailableParkingSpot,  
-  selectReservation,  
-  selectMyHoldReservations,
-  selectReservationsToday,
+  __getOriginalGetPool,  
+  selectMyHoldReservations,  
   selectAvailableDatesForChange,  
   getHotelIdByReservationId,
   selectParkingSpotAvailability,

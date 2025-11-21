@@ -192,10 +192,10 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             await moveAssociatedPayments(newReservationId, userId, originalReservationId, hotelId, detailsToMove, client);
 
         } else { // !isFullPeriodSplit && !isFullRoomSplit
-            console.log('--- Debugging Partial Period, Partial Rooms Split ---');
-            console.log('Original Reservation ID:', originalReservationId);
-            console.log('Details to Move (NewRes1):', detailsToMove.map(d => ({ id: d.id, room_id: d.room_id, date: d.date })));
-            console.log('Details to Keep in Original:', detailsToKeepInOriginal.map(d => ({ id: d.id, room_id: d.room_id, date: d.date })));
+            logger.debug('--- Debugging Partial Period, Partial Rooms Split ---');
+            logger.debug('Original Reservation ID:', originalReservationId);
+            logger.debug('Details to Move (NewRes1):', detailsToMove.map(d => ({ id: d.id, room_id: d.room_id, date: d.date })));
+            logger.debug('Details to Keep in Original:', detailsToKeepInOriginal.map(d => ({ id: d.id, room_id: d.room_id, date: d.date })));
 
             // This is the most complex scenario, requiring two new reservations and adjustment of the original.
 
@@ -246,13 +246,13 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
                 }
             }
 
-            console.log('All Relevant Room IDs (including continuations):', [...allRelevantRoomIds]);
+            logger.debug('All Relevant Room IDs (including continuations):', [...allRelevantRoomIds]);
 
             const detailsForSecondNewReservation = allOriginalDetails.filter(detail =>
                 allRelevantRoomIds.has(detail.room_id) &&
                 !reservationDetailIdsToMove.includes(detail.id)
             );
-            console.log('Details for Second New Reservation (new logic):', detailsForSecondNewReservation.map(d => ({ id: d.id, room_id: d.room_id, date: d.date })));
+            logger.debug('Details for Second New Reservation (new logic):', detailsForSecondNewReservation.map(d => ({ id: d.id, room_id: d.room_id, date: d.date })));
 
             if (detailsForSecondNewReservation.length > 0) {
                 const newReservationId2 = await createNewReservation(originalReservation, userId, client);

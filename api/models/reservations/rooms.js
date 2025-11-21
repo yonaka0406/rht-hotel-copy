@@ -1,6 +1,7 @@
 let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
 const { formatDate } = require('../../utils/reportUtils');
+const logger = require('../../config/logger');
 
 const updateReservationRoomsPeriod = async (requestId, { originalReservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected }) => {
   //console.log('--- Starting updateReservationRoomsPeriod ---');
@@ -48,7 +49,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
             const peopleResult = await client.query(peopleQuery, [originalReservationId, roomIds, originalReservation.check_in]);
             totalPeopleMoved = peopleResult.rows[0].total_people_moved || 0;
         } catch (queryError) {
-            console.error(`[${requestId}] Error executing peopleQuery:`, queryError);
+            logger.error(`[${requestId}] Error executing peopleQuery:`, queryError);
             throw queryError;
         }
 
@@ -114,7 +115,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                 const originalDetailsResult = await client.query(originalDetailsQuery, [originalReservationId, roomId]);
                 originalDetails = originalDetailsResult.rows;
             } catch (queryError) {
-                console.error(`[${requestId}] Error executing originalDetailsQuery for room ${roomId}:`, queryError);
+                logger.error(`[${requestId}] Error executing originalDetailsQuery for room ${roomId}:`, queryError);
                 throw queryError;
             }
 
@@ -248,7 +249,7 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
     }
   } catch (error) {
         await client.query('ROLLBACK');
-        console.error(`[${requestId}] Error in updateReservationRoomsPeriod, transaction rolled back:`, error);
+        logger.error(`[${requestId}] Error in updateReservationRoomsPeriod, transaction rolled back:`, error);
         throw error;
     } finally {
         client.release();
@@ -440,7 +441,7 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error fetching room indicator data:', err);
+    logger.error('Error fetching room indicator data:', err);
     throw new Error('Database error');
   }
 };
