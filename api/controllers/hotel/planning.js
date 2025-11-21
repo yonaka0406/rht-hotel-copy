@@ -18,7 +18,7 @@ const getPlanExclusionSettingsController = async (req, res) => {
     res.status(200).json(settings);
   } catch (error) {
     logger.error('Error getting plan exclusion settings:', error);
-    res.status(500).json({ message: 'Internal server error while retrieving plan exclusion settings.' });
+    res.status(500).json({ error: 'Internal server error while retrieving plan exclusion settings.' });
   }
 };
 
@@ -34,14 +34,20 @@ const updatePlanExclusionSettingsController = async (req, res) => {
     const { global_plan_ids } = req.body; // e.g. { "global_plan_ids": [1, 2, 3] }
 
     if (!Array.isArray(global_plan_ids)) {
-      return res.status(400).json({ message: 'global_plan_ids must be an array.' });
+      return res.status(400).json({ error: 'global_plan_ids must be an array.' });
+    }
+
+    // Validate that every entry in global_plan_ids is an integer > 0
+    const invalidPlanId = global_plan_ids.find(id => !Number.isInteger(id) || id <= 0);
+    if (invalidPlanId !== undefined) {
+      return res.status(400).json({ error: 'All plan IDs must be positive integers.' });
     }
 
     await hotelModel.updatePlanExclusions(req.requestId, parsedId, global_plan_ids);
     res.status(200).json({ message: 'Plan exclusions updated successfully' });
   } catch (error) {
     logger.error('Error updating plan exclusion settings:', error);
-    res.status(500).json({ message: 'Internal server error while updating plan exclusion settings.' });
+    res.status(500).json({ error: 'Internal server error while updating plan exclusion settings.' });
   }
 };
 
@@ -55,10 +61,9 @@ const getRoomAssignmentOrderController = async (req, res) => {
 
   try {
     const order = await roomsModel.getRoomAssignmentOrder(req.requestId, numericId);
-    res.json(order);
+    res.status(200).json(order);
   } catch (error) {
-    logger.error('Error getting room assignment order:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Internal server error while retrieving room assignment order.' });
   }
 };
 
@@ -82,7 +87,7 @@ const updateRoomAssignmentOrderController = async (req, res) => {
     res.status(200).json({ message: 'Room assignment order updated successfully.' });
   } catch (error) {
     logger.error('Error updating room assignment order:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Internal server error while updating room assignment order.' });
   }
 };
 

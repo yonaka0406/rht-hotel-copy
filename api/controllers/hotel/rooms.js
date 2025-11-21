@@ -51,7 +51,7 @@ const roomCreate = async (req, res) => {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id
       `;
-    const result = await pool.query(insertRoomQuery, [finalRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, has_wet_area, numericHotelId, created_by, updated_by]);
+    const result = await client.query(insertRoomQuery, [finalRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, has_wet_area, numericHotelId, created_by, updated_by]);
 
     await client.query('COMMIT');
     res.status(201).json({
@@ -86,12 +86,23 @@ const getHotelRooms = async (req, res) => {
   }
 };
 
+const validateBooleanParam = (value, paramName) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'true') return true;
+    if (value.toLowerCase() === 'false') return false;
+  }
+  throw new Error(`${paramName} must be a boolean (true/false)`);
+};
+
 const editRoom = async (req, res) => {
   const { id: idParam } = req.params;
   const { room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id: hotelIdFromBody } = req.body;
   const updated_by = req.user.id;
 
-  let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, numericHotelId;
+  let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, numericHotelId, validatedSmoking, validatedForSale, validatedHasWetArea;
   try {
     numericId = validateNumericParam(idParam, 'Room ID');
     numericRoomTypeId = validateNumericParam(String(room_type_id), 'Room Type ID');
@@ -99,12 +110,15 @@ const editRoom = async (req, res) => {
     validatedRoomNumber = validateNonEmptyStringParam(room_number, 'Room Number');
     numericCapacity = validateNumericParam(String(capacity), 'Capacity');
     numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID');
+    validatedSmoking = validateBooleanParam(smoking, 'Smoking status');
+    validatedForSale = validateBooleanParam(for_sale, 'For sale status');
+    validatedHasWetArea = validateBooleanParam(has_wet_area, 'Has wet area status');
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
 
   try {
-    const updatedRoom = await roomsModel.updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, has_wet_area, updated_by, numericHotelId);
+    const updatedRoom = await roomsModel.updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, validatedSmoking, validatedForSale, validatedHasWetArea, updated_by, numericHotelId);
     if (!updatedRoom) {
       return res.status(404).json({ message: 'Room not found' });
     }

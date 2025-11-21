@@ -10,7 +10,6 @@ const editHotelCalendar = async (req, res) => {
 
   let numericHotelId, validatedStartDate, validatedEndDate, validatedRoomIds = [];
   const pool = getPool(req.requestId);
-  const client = await pool.connect();
 
   try {
     numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
@@ -26,7 +25,7 @@ const editHotelCalendar = async (req, res) => {
 
     // If roomIds is not provided, fetch all room IDs for the hotel
     if (!roomIds) {
-      const result = await client.query('SELECT id FROM rooms WHERE hotel_id = $1', [numericHotelId]);
+      const result = await pool.query('SELECT id FROM rooms WHERE hotel_id = $1', [numericHotelId]);
       validatedRoomIds = result.rows.map(row => row.id);
     } else {
       // If roomIds is provided, validate each one
@@ -72,7 +71,7 @@ const editHotelCalendar = async (req, res) => {
       error: error.message
     });
   } finally {
-    client.release();
+    // client is no longer acquired explicitly here, so no release needed.
   }
 };
 
@@ -113,7 +112,7 @@ const editBlockedRooms = async (req, res) => {
       logger.warn('Blocked room not found for ID:', blockId);
       return res.status(404).json({
         success: false,
-        message: 'Reservation not found',
+        message: 'Block not found',
         blockId: blockId
       });
     }
@@ -235,9 +234,8 @@ const blockMultipleRooms = async (req, res) => {
     });
   }
 
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-  // logger.debug('Database connection established');
+
+
 
   try {
     // Call the model function to block rooms by room type
@@ -282,10 +280,8 @@ const blockMultipleRooms = async (req, res) => {
       message: 'Failed to block rooms',
       error: error.message
     });
-  } finally {
-    // The client is released by blockRoomsByRoomType, so no need to release here.
-    // logger.debug('Database connection released');
-  }
+  } // Added missing closing brace for try...catch
+
 };
 
 module.exports = {

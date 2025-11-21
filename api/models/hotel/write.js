@@ -1,6 +1,6 @@
 const { getPool } = require('../../config/database');
 const format = require('pg-format');
-const logger = require('../config/logger');
+const logger = require('../../config/logger');
 
 const createHotel = async (requestId, hotelData, userId) => {
   const pool = getPool(requestId);

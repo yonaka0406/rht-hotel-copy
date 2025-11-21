@@ -27,7 +27,7 @@ const roomTypeCreate = async (req, res) => {
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
       `;
-    const result = await pool.query(insertRoomTypeQuery, [validatedRoomTypeName, description, numericHotelId, created_by, updated_by]);
+    const result = await client.query(insertRoomTypeQuery, [validatedRoomTypeName, description, numericHotelId, created_by, updated_by]);
 
     await client.query('COMMIT');
     res.status(201).json({
