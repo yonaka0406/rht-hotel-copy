@@ -66,6 +66,7 @@ Update documentation when you:
 - **Confirmation Dialogs:** Use `useConfirm()` with `acceptProps` and `rejectProps` for styling all confirmation dialogs.
 - **Client Name Display:** Display client names in the order of `name_kanji`, `name_kana`, `name` (using `COALESCE` in SQL).
 - **Backend Model Organization:** To keep model files focused and scalable, they should be split into read (query) and write (command) operations.
+  - **Flexibility in Model Organization:** While the read/write split is a general guideline, models may be organized more granularly (e.g., specific files for room types or other sub-entities) when it enhances clarity, maintainability, or reflects a natural separation of concerns within a larger domain. The primary goal is logical grouping and focused responsibilities.
   - **Structure:** For a model like `reservations`, create a directory `api/models/reservations/`.
     - `read.js`: Contains only `SELECT` queries that do not alter data.
     - `write.js`: Contains `INSERT`, `UPDATE`, and `DELETE` operations.
