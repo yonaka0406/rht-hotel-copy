@@ -49,7 +49,7 @@ const insertReservationPaymentWithInvoice = async (requestId, hotelId, reservati
     return result;
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error adding payment to reservation:', err);
+    logger.error('Error adding payment to reservation:', err);
     throw new Error('Database error');
   } finally {
     client.release();
@@ -91,7 +91,7 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
     if (shouldReleaseClient) {
       await dbClient.query('ROLLBACK');
     }
-    console.error('Error inserting reservation payment:', err);
+    logger.error('Error inserting reservation payment:', err);
     throw new Error('Database error');
   } finally {
     if (shouldReleaseClient) {
@@ -154,7 +154,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
     return { success: true };
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error adding room to reservation:', err);
+    logger.error('Error adding room to reservation:', err);
     throw new Error('Database error');
   } finally {
     client.release();
@@ -215,7 +215,7 @@ const insertReservationRate = async (requestId, rateData, client = null) => {
     if (shouldReleaseClient) {
       await dbClient.query('ROLLBACK');
     }
-    console.error('Error adding reservation rate:', err);
+    logger.error('Error adding reservation rate:', err);
     throw new Error('Database error');
   } finally {
     if (shouldReleaseClient) {

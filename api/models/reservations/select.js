@@ -613,8 +613,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
       ,a.room_id;
   `;
 
-  const values = [hotelId, date];
-    logger.error('Error fetching reservations:', err);
+  const values = [hotelId, date];   
 
   try {
     const result = await pool.query(query, values);

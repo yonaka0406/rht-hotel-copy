@@ -441,7 +441,7 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    logger.error('Error fetching room indicator data:', err);
+    logger.error(`[${requestId}] Error fetching room indicator data:`, err);    
     throw new Error('Database error');
   }
 };
