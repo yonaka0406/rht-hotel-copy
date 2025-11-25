@@ -22,7 +22,8 @@ const {
     getOTAReservationsByTransaction,
     selectOTAReservationQueue,
     insertOTAXmlQueue,
-    selectOTAXmlQueue
+    selectOTAXmlQueue,
+    updateOTAXmlQueue
 } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
@@ -1663,6 +1664,20 @@ const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
     }
 };
 
+const updateOTAXmlQueueStatus = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    const requestId = req.requestId;
+
+    try {
+        await updateOTAXmlQueue(requestId, id, status, null);
+        res.status(200).json({ message: 'Status updated successfully' });
+    } catch (error) {
+        logger.error(`[${requestId}] Error updating OTA XML queue status: ${error.message}`, { stack: error.stack });
+        res.status(500).json({ message: 'Error updating OTA XML queue status', error: error.message });
+    }
+};
+
 module.exports = {
     getXMLTemplate,
     getRecentQueuedReservations,
@@ -1680,5 +1695,6 @@ module.exports = {
     processAndQueueReservation,
     processQueuedReservations,
     setDatesNotForSale,
-    getOTAXmlQueue
+    getOTAXmlQueue,
+    updateOTAXmlQueueStatus
 };

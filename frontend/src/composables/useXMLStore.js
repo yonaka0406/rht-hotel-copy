@@ -427,6 +427,30 @@ export function useXMLStore() {
         }
     };
 
+    const markOtaXmlQueueAsCompleted = async (otaXmlQueueId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/xml-queue/${otaXmlQueueId}/status`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: 'completed' }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('API Error in markOtaXmlQueueAsCompleted:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to mark as completed: ${errorData.message || JSON.stringify(errorData)}`);
+            }
+        } catch (error) {
+            console.error('Failed to mark as completed.', error);
+            throw error;
+        }
+    };
+
     return {        
         template,
         responses,
@@ -449,5 +473,6 @@ export function useXMLStore() {
         fetchOtaQueue,
         otaXmlQueueData,
         fetchOtaXmlQueue,
+        markOtaXmlQueueAsCompleted,
     };
 }

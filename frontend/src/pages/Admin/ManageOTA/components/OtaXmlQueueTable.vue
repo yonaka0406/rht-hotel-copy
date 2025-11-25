@@ -89,6 +89,15 @@
           </div>
         </Fieldset>
       </div>
+      <template #footer>
+        <Button
+          v-if="selectedRow && selectedRow.status === 'failed'"
+          label="完了済みにする"
+          icon="pi pi-check"
+          class="p-button-success"
+          @click="markAsCompleted"
+        />
+      </template>
     </Dialog>
   </div>
 </template>
@@ -110,10 +119,19 @@ import Button from 'primevue/button';
 import Fieldset from 'primevue/fieldset';
 import Message from 'primevue/message';
 
-const { otaXmlQueueData, fetchOtaXmlQueue, otaXmlQueueLoading } = useXMLStore();
+const { otaXmlQueueData, fetchOtaXmlQueue, otaXmlQueueLoading, markOtaXmlQueueAsCompleted } = useXMLStore();
 
 const displayDialog = ref(false);
 const selectedRow = ref(null);
+
+const markAsCompleted = async () => {
+  if (selectedRow.value && selectedRow.value.status === 'failed') {
+    await markOtaXmlQueueAsCompleted(selectedRow.value.ota_xml_queue_id);
+    displayDialog.value = false;
+    fetchOtaXmlQueue();
+  }
+};
+
 
 const showRowDetails = (row) => {
   selectedRow.value = row;
