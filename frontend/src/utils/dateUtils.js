@@ -100,3 +100,13 @@ export const formatDateJP = (dateString) => {
     return dateString;
   }
 };
+
+export const formatDateToYYMMDD = (dateString) => {
+  if (!dateString || dateString.length !== 8) return '';
+  const formattedDateString = `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`;
+  const date = new Date(formattedDateString);
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}/${month}/${day}`;
+};

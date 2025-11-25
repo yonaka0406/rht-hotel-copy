@@ -95,7 +95,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { formatDateTime, formatDateTimeWithSeconds } from '../../../../utils/dateUtils';
+import { formatDateTime, formatDateTimeWithSeconds, formatDateToYYMMDD } from '../../../../utils/dateUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useXMLStore } from '../../../../composables/useXMLStore';
 
@@ -176,16 +176,6 @@ const getMinMaxAdjustmentDate = (xmlString) => {
   const sortedDates = dates.sort();
   const minDate = sortedDates[0];
   const maxDate = sortedDates[sortedDates.length - 1];
-
-  const formatDateToYYMMDD = (dateString) => {
-    if (!dateString || dateString.length !== 8) return '';
-    const formattedDateString = `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`;
-    const date = new Date(formattedDateString);
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}/${month}/${day}`;
-  };
 
   const formattedMinDate = formatDateToYYMMDD(minDate);
   const formattedMaxDate = formatDateToYYMMDD(maxDate);
