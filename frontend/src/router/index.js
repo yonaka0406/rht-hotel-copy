@@ -14,7 +14,7 @@ const ManageUsers = () => import('@/pages/Admin/ManageUsers.vue');
 const ManageRoles = () => import('@/pages/Admin/ManageRoles/ManageRolesPage.vue');
 const ManageParking = () => import('@/pages/Admin/ManageParking.vue');
 const ManageParkingCalendar = () => import('@/pages/Admin/ManageParkingCalendar/ManageParkingCalendar.vue');
-const ManageHotels = () => import('@/pages/Admin/ManageHotels.vue');
+const CreateHotel = () => import('@/pages/Admin/CreateHotel/CreateHotel.vue');
 const ManageHotel = () => import('@/pages/Admin/ManageHotel/ManageHotel.vue');
 const ManagePlans = () => import('@/pages/Admin/ManagePlans.vue');
 const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
@@ -97,7 +97,7 @@ const routes = [
     children: [
       { path: 'users', component: ManageUsers },
       { path: 'roles', component: ManageRoles },
-      { path: 'hotel-create', component: ManageHotels },
+      { path: 'hotel-create', component: CreateHotel },
       { path: 'hotel-edit', component: ManageHotel },
       { path: 'hotel-plans', component: ManagePlans },
       { path: 'hotel-addons', component: ManageAddons },

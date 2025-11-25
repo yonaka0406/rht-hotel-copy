@@ -1,5 +1,6 @@
 <template>
   <div class="p-4 max-w-7xl mx-auto">
+    <ConfirmDialog></ConfirmDialog>
     <Stepper v-model:value="currentStep">
       <StepList>
           <Step value="1">ホテル情報</Step>
@@ -121,7 +122,6 @@
                             class="p-button-text p-button-sm"
                             @click="editRoomType(slotProps.data)"
                           />
-                          <ConfirmDialog></ConfirmDialog>
                           <Button 
                             icon="pi pi-trash"
                             class="p-button-text p-button-danger p-button-sm"
@@ -342,54 +342,11 @@
     </Stepper>
   </div>
   
-  <Dialog 
-    v-model:visible="roomTypeDialog" 
-    :modal="true"
-    header="部屋タイプ追加"
-    :style="{ width: '450px' }"
-    class="p-fluid"
-    @hide="closeRoomTypeDialog"
-  >
-    <div class="flex flex-col gap-4">
-      <div class="flex flex-col">
-        <label for="name" class="font-medium mb-2 block">部屋タイプ名 *</label>
-        <InputText 
-          id="name"
-          v-model="newRoomType.name" 
-          required
-          autofocus
-          fluid
-        />
-      </div>
-
-      <div class="flex flex-col">
-        <label for="description" class="font-medium mb-2 block">詳細</label>
-        <Textarea 
-          id="description"
-          v-model="newRoomType.description" 
-          rows="3"
-          autoResize
-          fluid
-        />
-      </div>
-      
-    </div>
-
-    <template #footer>
-      <Button 
-        label="キャンセル" 
-        icon="pi pi-times" 
-        @click="closeRoomTypeDialog"
-        text 
-      />
-      <Button 
-        label="保存" 
-        icon="pi pi-check" 
-        @click="saveRoomType" 
-        :loading="saving"
-      />
-    </template>
-  </Dialog>
+  <RoomTypeDialog
+    v-model:visible="roomTypeDialog"
+    :roomType="editingRoomType"
+    @save="saveRoomType"
+  />
     
 </template>
 
@@ -398,6 +355,9 @@
   import { ref, reactive, computed, watch } from 'vue';
   import { useRouter } from 'vue-router';
   const router = useRouter();
+
+  // Components
+  import RoomTypeDialog from './components/RoomTypeDialog.vue';
 
   // Primevue  
   import { useToast } from 'primevue/usetoast';
@@ -411,8 +371,6 @@
   import InputMask from 'primevue/inputmask';
   import DataTable from 'primevue/datatable';
   import Column from 'primevue/column';  
-  import Dialog from 'primevue/dialog';
-  import Textarea from 'primevue/textarea';
   import InputNumber from 'primevue/inputnumber';
   import ConfirmDialog from 'primevue/confirmdialog';
   import Stepper from 'primevue/stepper';
@@ -434,7 +392,6 @@
   const currentStep = ref('1');
 
   const roomTypeDialog = ref(false);
-  const saving = ref(false);
   const editingRoomType = ref(null);
 
   const hotel = reactive({
@@ -454,10 +411,6 @@
   ];
 
   const roomTypes = ref([]);
-  const newRoomType = reactive({
-    name: '',
-    description: ''
-  });
 
   const roomGenerator = ref({
     floor: 1,
@@ -476,45 +429,26 @@
   // Room Types
 
   const openRoomTypeDialog = () => {
-    Object.assign(newRoomType, {
-      name: '',
-      description: ''
-    });
+    editingRoomType.value = null;
     roomTypeDialog.value = true;
   };
 
-  const closeRoomTypeDialog = () => {
-    roomTypeDialog.value = false;
-  };
-
-  const saveRoomType = async () => {
-    // Validation
-    if (!newRoomType.name) {
-      toast.add({
-        severity: 'error',
-        summary: 'バリデーションエラー',
-        detail: '名称は必須です。',
-        life: 3000
-      });
-      return;
-    }
-
+  const saveRoomType = (roomTypeData) => {
     try {
-      saving.value = true;
       if (editingRoomType.value) {
         // Update existing
         const index = roomTypes.value.findIndex(rt => rt === editingRoomType.value);
         if (index !== -1) {
           roomTypes.value[index] = {
             ...editingRoomType.value,
-            ...newRoomType,
+            ...roomTypeData,
             updated_at: new Date().toISOString()
           };
         }
       } else {
         // Add new
         roomTypes.value.push({
-          ...newRoomType,
+          ...roomTypeData,
           created_at: new Date().toISOString()
         });
       }
@@ -539,17 +473,11 @@
         detail: errorMessage,
         life: 3000
       });
-    } finally {
-      saving.value = false;
     }
   };
 
   const editRoomType = (roomType) => {
     editingRoomType.value = roomType;
-    Object.assign(newRoomType, {
-      name: roomType.name,
-      description: roomType.description
-    });
     roomTypeDialog.value = true;
   };
 
