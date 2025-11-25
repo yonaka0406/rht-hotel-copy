@@ -198,6 +198,12 @@
                               <Checkbox v-model="roomGenerator.has_wet_area" binary />
                             </div>                            
                           </div>
+                          <div class="flex flex-col">
+                            <label class="mb-2 font-medium">スタッフ部屋</label>
+                            <div class="flex items-center justify-center">
+                              <Checkbox v-model="roomGenerator.is_staff_room" binary />
+                            </div>                            
+                          </div>
                       </div>
                       <div class="flex justify-end mt-4">
                         <Button label="部屋追加" @click="generateRoomPreview" />
@@ -290,6 +296,18 @@
                                   <template #editor="slotProps">
                                     <div class="flex items-center justify-center">
                                       <Checkbox v-model="slotProps.data.has_wet_area" binary />
+                                    </div>
+                                  </template>
+                                </Column>
+                                <Column field="is_staff_room" header="スタッフ部屋">
+                                  <template #body="slotProps">
+                                    <div class="flex items-center justify-center">
+                                      <Checkbox v-model="slotProps.data.is_staff_room" binary />
+                                    </div>                                    
+                                  </template>
+                                  <template #editor="slotProps">
+                                    <div class="flex items-center justify-center">
+                                      <Checkbox v-model="slotProps.data.is_staff_room" binary />
                                     </div>
                                   </template>
                                 </Column>
@@ -450,7 +468,8 @@
     capacity: 1,
     smoking: false,
     for_sale: true,
-    has_wet_area: false
+    has_wet_area: false,
+    is_staff_room: false
   });
   const generatedRooms = ref([]);
 
@@ -598,7 +617,8 @@
           capacity: roomGenerator.value.capacity,
           smoking: roomGenerator.value.smoking,
           for_sale: roomGenerator.value.for_sale,
-          has_wet_area: roomGenerator.value.has_wet_area
+          has_wet_area: roomGenerator.value.has_wet_area,
+          is_staff_room: roomGenerator.value.is_staff_room
         });
       }else {        
         toast.add({
