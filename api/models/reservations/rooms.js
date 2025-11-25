@@ -364,7 +364,7 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
       rt.name AS room_type_name,
       res.id AS reservation_id,
       crs_main.effective_check_in AS check_in,
-      crs_main.effective_check_out AS check_out,
+      (crs_main.effective_check_out + INTERVAL '1 day')::date AS check_out,
       res.check_in_time,
       res.check_out_time,
       res.status,
