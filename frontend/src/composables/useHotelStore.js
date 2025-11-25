@@ -258,7 +258,7 @@ export function useHotelStore() {
                 // Create room types sequentially to avoid race conditions or database locks if any
                 for (const rt of roomTypes) {
                     const result = await createRoomType({ ...rt, hotel_id: hotelId });
-                    createdRoomTypes[rt.name] = result.id;
+                    createdRoomTypes[rt.name] = result.roomTypeId;
                 }
             }
 

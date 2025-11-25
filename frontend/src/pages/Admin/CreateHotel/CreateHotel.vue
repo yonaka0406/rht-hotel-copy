@@ -246,14 +246,13 @@
                                     <InputText v-model="slotProps.data.room_number" />
                                   </template>
                                 </Column>
-                                <Column field="room_type" header="部屋タイプ">
+                                <Column field="room_type.name" header="部屋タイプ">
                                   <template #editor="slotProps">
                                     <Select 
                                       id="roomTypeSelect" 
                                       v-model="slotProps.data.room_type" 
                                       :options="roomTypes" 
                                       optionLabel="name" 
-                                      optionValue="name"
                                       placeholder="部屋タイプを選択する。"
                                     />
                                   </template>
@@ -442,11 +441,10 @@
         // Update existing
         const index = roomTypes.value.findIndex(rt => rt === editingRoomType.value);
         if (index !== -1) {
-          roomTypes.value[index] = {
-            ...editingRoomType.value,
+          Object.assign(roomTypes.value[index], {
             ...roomTypeData,
             updated_at: new Date().toISOString()
-          };
+          });
         }
       } else {
         // Add new
@@ -543,7 +541,7 @@
         generatedRooms.value.push({
           floor,
           room_number: newRoomNumber,
-          room_type: roomGenerator.value.room_type.name,
+          room_type: roomGenerator.value.room_type,
           room_type_id: 0,
           capacity: roomGenerator.value.capacity,
           smoking: roomGenerator.value.smoking,
@@ -597,7 +595,11 @@
     }
 
     try {
-      const hotelData = await createHotelWithDetails(hotel, roomTypes.value, generatedRooms.value);
+      const roomsToCreate = generatedRooms.value.map(r => ({
+        ...r,
+        room_type: r.room_type.name
+      }));
+      const hotelData = await createHotelWithDetails(hotel, roomTypes.value, roomsToCreate);
       
       toast.add({
         severity: 'success',
