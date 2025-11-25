@@ -76,17 +76,14 @@ const updateRoomAssignmentOrder = async (requestId, hotelId, rooms, userId) => {
   try {
     await client.query('BEGIN');
 
-    // Clear existing order for the hotel
-    await client.query('DELETE FROM room_assignment_order WHERE hotel_id = $1', [hotelId]);
-
-    // Insert new order
     for (let i = 0; i < rooms.length; i++) {
       const room = rooms[i];
       const query = `
-        INSERT INTO room_assignment_order (hotel_id, room_id, sort_order, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5);
+        UPDATE rooms
+        SET assignment_priority = $1, updated_by = $2
+        WHERE id = $3 AND hotel_id = $4;
       `;
-      const values = [hotelId, room.id, i + 1, userId, userId];
+      const values = [i + 1, userId, room.id, hotelId];
       await client.query(query, values);
     }
 

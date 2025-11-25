@@ -114,10 +114,10 @@ const selectRoomAssignmentOrder = async (requestId, hotelId) => {
   const pool = getPool(requestId);
   try {
     const query = `
-      SELECT room_id, sort_order
-      FROM room_assignment_order
+      SELECT id as room_id, assignment_priority as sort_order
+      FROM rooms
       WHERE hotel_id = $1
-      ORDER BY sort_order;
+      ORDER BY assignment_priority ASC NULLS LAST;
     `;
     const result = await pool.query(query, [hotelId]);
     return result.rows;

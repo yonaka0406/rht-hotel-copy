@@ -30,7 +30,7 @@ const createHotel = async (req, res) => {
   };
 
   try {
-    const hotelId = await hotelModel.create(req.requestId, hotelData, req.user.id);
+    const hotelId = await hotelModel.createHotel(req.requestId, hotelData, req.user.id);
     res.status(201).json({
       message: 'Hotel created successfully with all partitions',
       id: hotelId
