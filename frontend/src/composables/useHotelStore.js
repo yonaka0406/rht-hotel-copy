@@ -244,7 +244,35 @@ export function useHotelStore() {
             console.error('Failed to create room', error);
             throw error;
         }
-    };    
+    };
+
+    const createHotelWithDetails = async (hotel, roomTypes, rooms) => {
+        try {
+            // 1. Create Hotel
+            const newHotel = await createHotel(hotel);
+            const hotelId = newHotel.id;
+
+            // 2. Create Room Types
+            if (roomTypes && roomTypes.length > 0) {
+                await Promise.all(roomTypes.map(rt => 
+                    createRoomType({ ...rt, hotel_id: hotelId })
+                ));
+            }
+
+            // 3. Create Rooms
+            if (rooms && rooms.length > 0) {
+                await Promise.all(rooms.map(room => 
+                    createRoom({ ...room, hotel_id: hotelId })
+                ));
+            }
+
+            return newHotel;
+        } catch (error) {
+            console.error('Failed to create hotel with details', error);
+            throw error;
+        }
+    };
+
     const fetchBlockedRooms = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -424,5 +452,6 @@ export function useHotelStore() {
         createHotel,
         createRoomType,
         createRoom,
+        createHotelWithDetails,
     };    
 }

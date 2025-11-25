@@ -36,13 +36,14 @@
       <Button 
         label="キャンセル" 
         icon="pi pi-times" 
-        @click="closeDialog"
-        text 
+        @click="closeDialog"        
+        class="p-button-text p-button-secondary"
       />
       <Button 
         label="保存" 
         icon="pi pi-check" 
         @click="save" 
+        text
       />
     </template>
   </Dialog>
@@ -78,8 +79,7 @@ const localRoomType = reactive({
 watch(() => props.visible, (newVal) => {
   if (newVal) {
     if (props.roomType) {
-      localRoomType.name = props.roomType.name;
-      localRoomType.description = props.roomType.description;
+      Object.assign(localRoomType, props.roomType);
     } else {
       localRoomType.name = '';
       localRoomType.description = '';

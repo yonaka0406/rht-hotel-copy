@@ -141,7 +141,7 @@
           </div>
         </StepPanel>
 
-        <StepPanel v-slot="{ }" value="3">
+        <StepPanel v-slot="{ activateCallback }" value="3">
           <div class="flex flex-col">
               <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-sm bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 
@@ -358,6 +358,9 @@
 
   // Components
   import RoomTypeDialog from './components/RoomTypeDialog.vue';
+  
+  // Utils
+  import { formatDate } from '@/utils/dateUtils';
 
   // Primevue  
   import { useToast } from 'primevue/usetoast';
@@ -387,7 +390,7 @@
   
   // Stores
   import { useHotelStore } from '@/composables/useHotelStore';
-  const { createHotel, createRoomType, createRoom } = useHotelStore();
+  const { createHotelWithDetails } = useHotelStore();
   
   const currentStep = ref('1');
 
@@ -588,29 +591,13 @@
 
   const saveHotelData = async () => {
 
-    // Conversion from Datetime to Date
-    let selectedDate = hotel.open_date;    
-    if (selectedDate instanceof Date) {      
-      selectedDate = selectedDate.toLocaleDateString('ja-JP');
+    // Ensure hotel.open_date is in YYYY-MM-DD format before sending
+    if (hotel.open_date instanceof Date) {
+      hotel.open_date = formatDate(hotel.open_date);
     }
-    hotel.open_date = selectedDate;
 
     try {
-      const hotelData = await createHotel(hotel);      
-      
-      for (const roomType of roomTypes.value) {
-        await createRoomType({
-          ...roomType,
-          hotel_id: hotelData.id
-        });
-      }
-      
-      for (const room of generatedRooms.value) {
-        await createRoom({
-          ...room,
-          hotel_id: hotelData.id
-        });
-      }
+      const hotelData = await createHotelWithDetails(hotel, roomTypes.value, generatedRooms.value);
       
       toast.add({
         severity: 'success',
@@ -657,15 +644,12 @@
   watch(
     () => hotel.open_date,
     (newVal) => {
-      // console.log('hotel changed from', oldVal, 'to', newVal);
-
-      // If the date is already a Date object, format it to YYYY-MM-DD
+      // If the date is a Date object, format it to YYYY-MM-DD using the utility function
       if (newVal instanceof Date) {
-        let selectedDate = newVal.toLocaleDateString('ja-JP'); 
-        hotel.open_date = selectedDate;
+        hotel.open_date = formatDate(newVal); 
       }
-
-      // console.log('Formatted hotel.open_date:', hotel.open_date); // Verify the correct format
+      // If it's already a string, assume it's in the correct format or leave it as is.
+      // The input type="date" will handle valid YYYY-MM-DD strings.
     }
   );
 
