@@ -74,7 +74,8 @@ const selectAllRoomsByHotel = async (requestId, id) => {
         rooms.for_sale as room_for_sale_idc,
         rooms.smoking as room_smoking_idc,
         rooms.has_wet_area as room_has_wet_area_idc,
-        rooms.is_staff_room
+        rooms.is_staff_room,
+        rooms.assignment_priority
       FROM
         hotels JOIN room_types ON hotels.id = room_types.hotel_id
         LEFT JOIN rooms ON room_types.id = rooms.room_type_id

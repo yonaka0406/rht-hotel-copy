@@ -174,9 +174,6 @@ const saveRoom = async (newRoom) => {
       });
       roomDialog.value = false;
       await fetchRoomTypes();
-      if (roomsDialogRef.value) {
-        roomsDialogRef.value.refreshRooms();
-      }
     } else {
       toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
     }
@@ -217,6 +214,8 @@ const fetchRoomTypes = async () => {
         smoking: item.room_smoking_idc,
         for_sale: item.room_for_sale_idc,
         has_wet_area: item.room_has_wet_area_idc,
+        is_staff_room: item.is_staff_room,
+        assignment_priority: item.assignment_priority,
         room_type_id: item.room_type_id,
       };
       roomsList.push(room);

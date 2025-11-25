@@ -24,7 +24,7 @@ const createRoomType = async (requestId, { name, description, hotel_id, created_
   }
 };
 
-const createRoom = async (requestId, { room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id, created_by, updated_by }, client) => {
+const createRoom = async (requestId, { room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, hotel_id, created_by, updated_by }, client) => {
   const pool = getPool(requestId);
   const dbClient = client || await pool.connect();
   try {
@@ -32,11 +32,11 @@ const createRoom = async (requestId, { room_type_id, floor, room_number, capacit
       await dbClient.query('BEGIN');
     }
     const query = `
-      INSERT INTO rooms (room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id, created_by, updated_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO rooms (room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, hotel_id, created_by, updated_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id
     `;
-    const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id, created_by, updated_by];
+    const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, hotel_id, created_by, updated_by];
     const result = await dbClient.query(query, values);
     if (!client) { // Only commit if no client is passed in
       await dbClient.query('COMMIT');
@@ -55,10 +55,10 @@ const createRoom = async (requestId, { room_type_id, floor, room_number, capacit
   }
 };
 
-const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, updated_by, hotelId) => {
+const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, updated_by, hotelId) => {
   const pool = getPool(requestId);
-  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, has_wet_area = $7, updated_by = $8 WHERE id = $9 AND hotel_id = $10 RETURNING *';
-  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, updated_by, id, hotelId];
+  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, has_wet_area = $7, is_staff_room = $8, updated_by = $9 WHERE id = $10 AND hotel_id = $11 RETURNING *';
+  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, updated_by, id, hotelId];
 
   try {
     const result = await pool.query(query, values);

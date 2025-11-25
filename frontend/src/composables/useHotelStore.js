@@ -252,18 +252,33 @@ export function useHotelStore() {
             const newHotel = await createHotel(hotel);
             const hotelId = newHotel.id;
 
-            // 2. Create Room Types
+            // 2. Create Room Types and map names to IDs
+            const createdRoomTypes = {}; // Map of room type name -> room type ID
             if (roomTypes && roomTypes.length > 0) {
-                await Promise.all(roomTypes.map(rt => 
-                    createRoomType({ ...rt, hotel_id: hotelId })
-                ));
+                // Create room types sequentially to avoid race conditions or database locks if any
+                for (const rt of roomTypes) {
+                    const result = await createRoomType({ ...rt, hotel_id: hotelId });
+                    createdRoomTypes[rt.name] = result.id;
+                }
             }
 
-            // 3. Create Rooms
+            // 3. Create Rooms with correct room_type_id
             if (rooms && rooms.length > 0) {
-                await Promise.all(rooms.map(room => 
-                    createRoom({ ...room, hotel_id: hotelId })
-                ));
+                await Promise.all(rooms.map(room => {
+                    // Resolve the correct room_type_id from the map using the room type name
+                    const resolvedRoomTypeId = createdRoomTypes[room.room_type];
+                    
+                    if (!resolvedRoomTypeId) {
+                        console.warn(`Could not resolve room type ID for room ${room.room_number} with type ${room.room_type}. Skipping.`);
+                        return Promise.resolve(); // Skip or handle error
+                    }
+
+                    return createRoom({ 
+                        ...room, 
+                        hotel_id: hotelId,
+                        room_type_id: resolvedRoomTypeId
+                    });
+                }));
             }
 
             return newHotel;

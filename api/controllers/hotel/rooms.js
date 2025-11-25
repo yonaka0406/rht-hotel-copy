@@ -4,16 +4,21 @@ const roomsModel = require('../../models/rooms');
 const logger = require('../../config/logger');
 
 const createRoom = async (req, res) => {
-  const { floor, room_number, room_type, room_type_id, capacity, smoking, for_sale, has_wet_area, hotel_id: hotelIdFromBody } = req.body;
+  const { floor, room_number, room_type, room_type_id, capacity, smoking, for_sale, has_wet_area, is_staff_room, hotel_id: hotelIdFromBody } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
 
-  let numericHotelId, numericFloor, validatedRoomNumber, numericCapacity, validatedRoomTypeString;
+  let numericHotelId, numericFloor, validatedRoomNumber, numericCapacity, validatedRoomTypeString, validatedSmoking, validatedForSale, validatedHasWetArea, validatedIsStaffRoom;
   try {
     numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
     numericFloor = validateNumericParam(String(floor), 'Floor');
     validatedRoomNumber = validateNonEmptyStringParam(room_number, 'Room Number');
     numericCapacity = validateNumericParam(String(capacity), 'Capacity');
+    validatedSmoking = validateBooleanParam(smoking, 'Smoking');
+    validatedForSale = validateBooleanParam(for_sale, 'For Sale');
+    validatedHasWetArea = validateBooleanParam(has_wet_area, 'Has Wet Area');
+    validatedIsStaffRoom = validateBooleanParam(is_staff_room, 'Is Staff Room');
+
     if (room_type_id === 0 && room_type) {
       validatedRoomTypeString = validateNonEmptyStringParam(room_type, 'Room Type Name (string)');
     }
@@ -46,9 +51,10 @@ const createRoom = async (req, res) => {
       floor: numericFloor,
       room_number: validatedRoomNumber,
       capacity: numericCapacity,
-      smoking: smoking,
-      for_sale: for_sale,
-      has_wet_area: has_wet_area,
+      smoking: validatedSmoking,
+      for_sale: validatedForSale,
+      has_wet_area: validatedHasWetArea,
+      is_staff_room: validatedIsStaffRoom,
       hotel_id: numericHotelId,
       created_by: created_by,
       updated_by: updated_by
@@ -100,10 +106,10 @@ const validateBooleanParam = (value, paramName) => {
 
 const editRoom = async (req, res) => {
   const { id: idParam } = req.params;
-  const { room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, hotel_id: hotelIdFromBody } = req.body;
+  const { room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, hotel_id: hotelIdFromBody } = req.body;
   const updated_by = req.user.id;
 
-  let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, numericHotelId, validatedSmoking, validatedForSale, validatedHasWetArea;
+  let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, numericHotelId, validatedSmoking, validatedForSale, validatedHasWetArea, validatedIsStaffRoom;
   try {
     numericId = validateNumericParam(idParam, 'Room ID');
     numericRoomTypeId = validateNumericParam(String(room_type_id), 'Room Type ID');
@@ -114,12 +120,13 @@ const editRoom = async (req, res) => {
     validatedSmoking = validateBooleanParam(smoking, 'Smoking status');
     validatedForSale = validateBooleanParam(for_sale, 'For sale status');
     validatedHasWetArea = validateBooleanParam(has_wet_area, 'Has wet area status');
+    validatedIsStaffRoom = validateBooleanParam(is_staff_room, 'Is staff room status');
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
 
   try {
-    const updatedRoom = await roomsModel.updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, validatedSmoking, validatedForSale, validatedHasWetArea, updated_by, numericHotelId);
+    const updatedRoom = await roomsModel.updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, validatedSmoking, validatedForSale, validatedHasWetArea, validatedIsStaffRoom, updated_by, numericHotelId);
     if (!updatedRoom) {
       return res.status(404).json({ message: 'Room not found' });
     }
