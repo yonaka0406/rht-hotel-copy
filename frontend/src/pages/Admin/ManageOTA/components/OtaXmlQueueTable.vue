@@ -10,6 +10,8 @@
       filterDisplay="row"
       :loading="otaXmlQueueLoading"
       dataKey="ota_xml_queue_id"
+      sortField="status"
+      :sortOrder="-1"
     >
       <Column header="詳細">
         <template #body="slotProps">
@@ -21,6 +23,11 @@
         </template>
       </Column>
       <Column field="hotel_name" header="ホテル名" :sortable="true"></Column>
+      <Column header="調整期間" :sortable="true" style="min-width: 12rem">
+        <template #body="{ data }">
+          {{ getMinMaxAdjustmentDate(data.xml_body) }}
+        </template>
+      </Column>
       <Column field="status" header="ステータス" :sortable="true" style="min-width: 10rem">
         <template #body="{ data }">
           <Badge :severity="statusSeverity(data.status)" :value="getStatusInJapanese(data.status)" />
@@ -37,6 +44,11 @@
             @change="filterCallback()"
             fluid
           />
+        </template>
+      </Column>
+      <Column field="created_at" header="作成日時" :sortable="true" style="min-width: 10rem">
+        <template #body="{ data }">
+          {{ formatDateTimeWithSeconds(data.created_at) }}
         </template>
       </Column>    
     </DataTable>
@@ -137,6 +149,51 @@ const dialogFieldLabels = {
   current_request_id: '現在のリクエストID',
   service_name: 'サービス名',
   // Add other fields as needed
+};
+
+
+const getAdjustmentDates = (xmlString) => {
+  if (!xmlString) return [];
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+    const adjustmentDateElements = xmlDoc.getElementsByTagName("adjustmentDate");
+    const dates = [];
+    for (let i = 0; i < adjustmentDateElements.length; i++) {
+      dates.push(adjustmentDateElements[i].textContent);
+    }
+    return dates;
+  } catch (error) {
+    console.error("Error parsing XML:", error);
+    return [];
+  }
+};
+
+const getMinMaxAdjustmentDate = (xmlString) => {
+  const dates = getAdjustmentDates(xmlString);
+  if (dates.length === 0) return 'N/A';
+
+  const sortedDates = dates.sort();
+  const minDate = sortedDates[0];
+  const maxDate = sortedDates[sortedDates.length - 1];
+
+  const formatDateToYYMMDD = (dateString) => {
+    if (!dateString || dateString.length !== 8) return '';
+    const formattedDateString = `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`;
+    const date = new Date(formattedDateString);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  };
+
+  const formattedMinDate = formatDateToYYMMDD(minDate);
+  const formattedMaxDate = formatDateToYYMMDD(maxDate);
+
+  if (formattedMinDate && formattedMaxDate) {
+    return `${formattedMinDate} ~ ${formattedMaxDate}`;
+  }
+  return 'N/A';
 };
 
 const statusMapping = {
