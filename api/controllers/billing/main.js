@@ -304,14 +304,11 @@ const generateInvoiceExcel = async (req, res) => {
 const handleGenerateReceiptRequest = async (req, res) => {
   const paymentId = req.params.payment_id;
   const paymentIds = req.body.payment_ids;
-  // Determine if it's single or consolidated
   const isConsolidated = !!req.body.payment_ids && !req.params.payment_id;
   const hotelId = req.params.hid;
   const userId = req.user.id;
   const taxBreakdownData = req.body.taxBreakdownData;
   const forceRegenerate = req.body.forceRegenerate;
-
-  // New receipt customization parameters
   const honorific = req.body.honorific || '様';
   const isReissue = req.body.isReissue || false;
   const customIssueDate = req.body.customIssueDate || null;
@@ -319,8 +316,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
   let page = null; // Initialize page to null
 
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
+
   try {
-    const userInfo = await getUsersByID(req.requestId, userId);
+    await client.query('BEGIN');
+    const userInfo = await getUsersByID(req.requestId, userId, client);
     if (!userInfo || userInfo.length === 0) {
       return res.status(404).json({ error: 'User info not found' });
     }
@@ -338,12 +339,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
     let existingReceipt = null;
     if (!isConsolidated && paymentId) {
       // For single payment requests, check if a receipt already exists
-      existingReceipt = await billingModel.getReceiptByPaymentId(req.requestId, paymentId, hotelId);
+      existingReceipt = await billingModel.getReceiptByPaymentId(req.requestId, paymentId, hotelId, client);
     } else if (isConsolidated && Array.isArray(paymentIds) && paymentIds.length > 0) {
       // For consolidated requests, check if any of the payments already has a receipt
       // If any payment already has a receipt, we should use that existing receipt data
       for (const pid of paymentIds) {
-        const existingReceiptForPayment = await billingModel.getReceiptByPaymentId(req.requestId, pid, hotelId);
+        const existingReceiptForPayment = await billingModel.getReceiptByPaymentId(req.requestId, pid, hotelId, client);
         if (existingReceiptForPayment) {
           existingReceipt = existingReceiptForPayment;
           break; // Use the first existing receipt found
@@ -364,7 +365,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
       // Get payment data for PDF generation (use first payment for consolidated)
       const paymentForPdfId = isConsolidated ? paymentIds[0] : paymentId;
-      paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentForPdfId, hotelId);
+      paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentForPdfId, hotelId, client);
       if (!paymentDataForPdf) {
         return res.status(404).json({ error: 'Payment data not found' });
       }
@@ -377,7 +378,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
       if (isConsolidated) {
         paymentsArrayForPdf = [];
         for (const pid of paymentIds) {
-          const paymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId);
+          const paymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId, client);
           if (paymentData) {
             paymentsArrayForPdf.push(paymentData);
           }
@@ -396,7 +397,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         let fetchedPaymentsData = [];
         let clientNameCheck = null;
         for (const pid of paymentIds) {
-          const singlePaymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId);
+          const singlePaymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId, client);
           if (!singlePaymentData) {
             return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
           }
@@ -437,7 +438,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           const year = receiptDateObj.getFullYear() % 100;
           const month = receiptDateObj.getMonth() + 1;
           const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj, client);
           let sequence = 1;
           if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
             sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
@@ -462,7 +463,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
-          honorific, customProviso, isReissue
+          honorific, customProviso, isReissue, client
         );
 
         if (!saveResult || !saveResult.id) {
@@ -471,7 +472,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Link all payments to the receipt
         for (const pData of fetchedPaymentsData) {
-          await billingModel.linkPaymentToReceipt(req.requestId, pData.id, saveResult.id, hotelId);
+          await billingModel.linkPaymentToReceipt(req.requestId, pData.id, saveResult.id, hotelId, client);
         }
 
       } else {
@@ -483,7 +484,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
-          paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentId, hotelId);
+          paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentId, hotelId, client);
           if (!paymentDataForPdf) {
             return res.status(404).json({ error: 'Payment data not found' });
           }
@@ -498,7 +499,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           const year = receiptDateObj.getFullYear() % 100;
           const month = receiptDateObj.getMonth() + 1;
           const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj, client);
           let sequence = 1;
           if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
             sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
@@ -526,7 +527,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
-          honorific, customProviso, isReissue
+          honorific, customProviso, isReissue, client
         );
 
         if (!saveResult || !saveResult.id) {
@@ -534,9 +535,10 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Link payment to receipt
-        await billingModel.linkPaymentToReceipt(req.requestId, paymentId, saveResult.id, hotelId);
+        await billingModel.linkPaymentToReceipt(req.requestId, paymentId, saveResult.id, hotelId, client);
       }
     }
+    await client.query('COMMIT');
 
     // Populate hotel details for PDF generation
     if (paymentDataForPdf && paymentDataForPdf.hotel_details) {
@@ -606,14 +608,17 @@ const handleGenerateReceiptRequest = async (req, res) => {
     res.contentType("application/pdf");
     res.send(Buffer.from(pdfBuffer));
 
+
   } catch (error) {
     logger.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
     res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
+    await client.query('ROLLBACK');
   } finally {
     if (page) {
       await page.close().catch(err => logger.error("Error closing page:", err));
     }
     await resetBrowser(false);
+    client.release();
   }
 };
 
