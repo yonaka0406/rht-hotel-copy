@@ -625,6 +625,39 @@ const selectOTAXmlQueue = async (requestId) => {
   }
 };
 
+const selectFailedOTAXmlQueue = async (requestId) => {  
+  logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Fetching failed OTA XML queue from database.`);
+  const pool = getPool(requestId); // Use getPool as it's a read operation
+  try {
+    const query = `
+      SELECT
+        oq.id,
+        oq.status,
+        oq.retries,
+        oq.last_error,
+        oq.created_at,
+        oq.processed_at,
+        h.name AS hotel_name,
+        oq.xml_body
+      FROM ota_xml_queue oq
+      JOIN hotels h ON oq.hotel_id = h.id
+      WHERE oq.status = 'failed'
+      ORDER BY oq.created_at DESC;
+    `;
+    logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Executing query: ${query}`);
+    
+    const result = await pool.query(query);    
+    logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Found ${result.rows.length} failed OTA XML queue items.`);
+    return result.rows;
+  } catch (error) {
+    logger.error(`[${requestId}] Error in selectFailedOTAXmlQueue: ${error.message}`, { stack: error.stack });
+    throw error;
+  } finally {    
+    // getPool returns a client from the pool, not a direct connection, so no client.release() needed here.
+    // The pool manages connection release.
+  }
+};
+
 module.exports = {
     insertXMLRequest,
     insertXMLResponse,
@@ -640,5 +673,6 @@ module.exports = {
     selectOTAReservationQueue,
     insertOTAXmlQueue,
     updateOTAXmlQueue,
-    selectOTAXmlQueue
+    selectOTAXmlQueue,
+    selectFailedOTAXmlQueue
 }; 

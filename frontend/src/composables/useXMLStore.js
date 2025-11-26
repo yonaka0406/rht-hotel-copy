@@ -5,6 +5,8 @@ const responses = ref([]);
 const otaQueue = ref([]);
 const otaXmlQueueData = ref([]);
 const otaXmlQueueLoading = ref(false);
+const otaFailedXmlQueueData = ref([]); // New reactive state for failed queue data
+const otaFailedXmlQueueLoading = ref(false); // New reactive state for failed queue loading
 
 const sc_serviceLabels = ref([
     { id: "NetRoomTypeMasterSearchService", label: "部屋タイプマスタ検索(ネット販売)" },
@@ -401,7 +403,7 @@ export function useXMLStore() {
         otaXmlQueueLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = '/api/xml-queue';
+            const url = '/api/xml-queue/recent';
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -424,6 +426,36 @@ export function useXMLStore() {
             throw error;
         } finally {
             otaXmlQueueLoading.value = false;
+        }
+    };
+
+    const fetchFailedOtaXmlQueue = async () => {
+        otaFailedXmlQueueLoading.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = '/api/xml-queue/failed';
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('API Error in fetchFailedOtaXmlQueue:', response.status, response.statusText, errorData);
+                throw new Error(`Failed to retrieve failed OTA XML queue data: ${errorData.message || JSON.stringify(errorData)}`);
+            }
+
+            const data = await response.json();
+            otaFailedXmlQueueData.value = data;
+
+        } catch (error) {
+            otaFailedXmlQueueData.value = [];
+            console.error('Failed to retrieve failed OTA XML queue data.', error);
+            throw error;
+        } finally {
+            otaFailedXmlQueueLoading.value = false;
         }
     };
 
@@ -481,6 +513,9 @@ export function useXMLStore() {
         fetchOtaQueue,
         otaXmlQueueData,
         fetchOtaXmlQueue,
+        otaFailedXmlQueueData, // Export new state
+        otaFailedXmlQueueLoading, // Export new loading state
+        fetchFailedOtaXmlQueue, // Export new function
         markOtaXmlQueueAsCompleted,
     };
 }

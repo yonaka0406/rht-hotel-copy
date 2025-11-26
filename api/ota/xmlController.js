@@ -23,7 +23,8 @@ const {
     selectOTAReservationQueue,
     insertOTAXmlQueue,
     selectOTAXmlQueue,
-    updateOTAXmlQueue
+    updateOTAXmlQueue,
+    selectFailedOTAXmlQueue
 } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
@@ -524,7 +525,24 @@ const getOTAXmlQueue = async (req, res) => {
     res.status(500).json({ message: 'Error fetching OTA XML queue', error: error.message });
   }
 };
-// POST
+
+const getFailedOTAXmlQueue = async (req, res) => {
+  const requestId = req.requestId;
+  logger.debug(`[${requestId}] Fetching failed OTA XML queue.`);
+  
+  try {    
+    const queueData = await selectFailedOTAXmlQueue(requestId); // Call the new model function    
+    logger.debug(`[${requestId}] Fetched ${queueData.length} failed OTA XML queue items.`);
+    const redactedData = queueData.map(item => ({
+      ...item,
+      xml_body: redactCommonRequest(item.xml_body),
+    }));
+    res.json(redactedData);
+  } catch (error) {
+    logger.error(`[${requestId}] Error fetching failed OTA XML queue: ${error.message}`, { stack: error.stack });
+    res.status(500).json({ message: 'Error fetching failed OTA XML queue', error: error.message });
+  }
+};
 const postXMLResponse = async (req, res) => {    
     const { hotel_id, name } = req.params;
     const xml = req.body.toString('utf8');
@@ -1713,5 +1731,6 @@ module.exports = {
     processQueuedReservations,
     setDatesNotForSale,
     getOTAXmlQueue,
-    updateOTAXmlQueueStatus
+    updateOTAXmlQueueStatus,
+    getFailedOTAXmlQueue
 };
