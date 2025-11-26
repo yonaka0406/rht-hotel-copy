@@ -39,11 +39,25 @@ export function useBillingStore() {
         }
     };
 
-    const handleGenerateReceipt = async (hotelId, paymentId, taxBreakdownData) => {        
+    const handleGenerateReceipt = async (
+        hotelId,
+        paymentId,
+        taxBreakdownData,
+        honorific = '様',
+        isReissue = false,
+        customIssueDate = null,
+        customProviso = null
+    ) => {        
         try {
             const authToken = localStorage.getItem('authToken');            
             const url = '/api/billing/res/generate-receipt/' + hotelId + '/' + paymentId;
-            const bodyPayload = { taxBreakdownData };
+            const bodyPayload = {
+                taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso
+            };
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -223,13 +237,25 @@ export function useBillingStore() {
         }
     };
 
-    const handleGenerateConsolidatedReceipt = async (hotelId, paymentIdsArray, taxBreakdownData) => {
+    const handleGenerateConsolidatedReceipt = async (
+        hotelId,
+        paymentIdsArray,
+        taxBreakdownData,
+        honorific = '様',
+        isReissue = false,
+        customIssueDate = null,
+        customProviso = null
+    ) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/billing/res/generate-consolidated-receipt/${hotelId}`;
             const bodyPayload = {
                 payment_ids: paymentIdsArray,
-                taxBreakdownData: taxBreakdownData
+                taxBreakdownData: taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso
             };
 
             const response = await fetch(url, {
