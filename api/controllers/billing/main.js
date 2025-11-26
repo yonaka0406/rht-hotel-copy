@@ -1,29 +1,12 @@
+const { getPool } = require('../../config/database');
 const billingModel = require('../../models/billing');
 const { getUsersByID } = require('../../models/user');
 const { getBrowser, resetBrowser } = require('../../services/puppeteerService');
+const { generateNewInvoiceNumber } = require('../services/invoiceService');
 const logger = require('../../config/logger');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
-
-// --- Helper Functions ---
-
-const generateNewInvoiceNumber = async (requestId, hotelId, date) => {
-  let result = await billingModel.selectMaxInvoiceNumber(requestId, hotelId, date);
-  let last_invoice_number = result.length > 0 ? result[0].last_invoice_number : null;
-
-  let new_invoice_number;
-  if (!last_invoice_number) {
-    const d = new Date(date);
-    const year = d.getFullYear() % 100; // last two digits of year
-    const month = d.getMonth() + 1; // getMonth returns 0-11
-
-    new_invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
-  } else {
-    new_invoice_number = parseInt(last_invoice_number, 10) + 1;
-  }
-  return new_invoice_number;
-};
 
 // --- Main Export Generation Functions ---
 
@@ -83,7 +66,8 @@ const generateInvoice = async (req, res) => {
 
   try {
     if (!invoiceData.invoice_number) {
-      invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
+      const maxInvoiceNumData = await billingModel.selectMaxInvoiceNumber(req.requestId, hotelId, invoiceData.date);
+      invoiceData.invoice_number = await generateNewInvoiceNumber(maxInvoiceNumData, hotelId, invoiceData.date);
     }
 
     await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
@@ -725,7 +709,8 @@ const generateInvoiceExcel = async (req, res) => {
 
   try {
     if (!invoiceData.invoice_number) {
-      invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
+      const maxInvoiceNumData = await billingModel.selectMaxInvoiceNumber(req.requestId, hotelId, invoiceData.date);
+      invoiceData.invoice_number = await generateNewInvoiceNumber(maxInvoiceNumData, hotelId, invoiceData.date);
     }
 
     const userInfo = await getUsersByID(req.requestId, userId);
