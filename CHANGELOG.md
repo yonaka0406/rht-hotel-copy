@@ -643,8 +643,16 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Enhanced Guest List Excel Export to include room-specific check-in and check-out dates. This ensures accuracy for reservations with room changes or partial day cancellations. Query now filters out cancelled dates and derives correct stay dates from active daily rates.
 - Feature: Added OTA XML queuing with asynchronous polling to handle TL-Lincoln API rate limits. Outgoing requests are now stored and processed from ota_xml_queue to improve system robustness.
 - Feature: Expanded static calendar with additional month navigation and a “Load More” button to extend the on-screen calendar range.
-- Improvement: Websocket updates are now hotel-scoped, reducing unnecessary updates across all logged-in users and improving overall performance.
-- Refactor: Updated the Guest List dialog to use room-specific stay dates, ensuring consistency with the Excel export.
+
+---
+
+## [1.2.2] - 2025-11-25
+
+- Feature: Added `is_staff_room` field to rooms table for better room categorization
+- Enhancement: Updated calendar UI to visually distinguish staff rooms from regular rooms
+- Bugfix: Fixed room indicator to correctly identify 'check-in today' status for rooms with interrupted continuous stays (due to cancellations)
+- Bugfix: Corrected check-out date calculation in room indicator by adding one day to effective_check_out to show the actual checkout day (day after last stay)
+- Cleanup: Removed temporary debug logs from frontend and backend code
 
 ---
 
