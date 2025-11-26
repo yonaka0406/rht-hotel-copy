@@ -5,6 +5,7 @@ const googleUtils = require('../utils/googleUtils');
 
 let isJobRunning = false;
 const POLLING_INTERVAL = 60 * 1000; // 60 seconds
+const TASK_PROCESSING_DELAY = 1000; // 1 second delay between processing each task
 
 const headers = [['施設ID', '施設名', '予約詳細ID', '日付', '部屋タイプ', '部屋番号', '予約者', 'プラン', 'ステータス', '種類', 'エージェント', '最終更新日時', '表示セル']];
 
@@ -65,7 +66,7 @@ async function processGoogleQueue() {
         // --- 1. Get Pending Tasks ---
         // Select all 'pending' tasks. The UNIQUE constraint in the DB
         // already ensures we don't have 60 duplicates. We just have 1.
-        // We limit to 50 tasks per minute to stay safely under the 60/min quota.
+        // We limit to 29 tasks per minute to stay safely under the 60/min quota.
         const { rows } = await client.query(
             `SELECT * FROM google_sheets_queue 
              WHERE status = 'pending' 
@@ -118,13 +119,19 @@ async function processGoogleQueue() {
                         [task.id]
                     );
                 } catch (dbError) {
+                    logger.error(`Failed to mark task ${task.id} as failed after Google Sheets error: ${dbError.message}`);
                 }
+                logger.error(`Failed to queue Google Sheets update for task ${task.id}: ${googleError.message}`);
+            } finally {
+                // Add a delay after processing each task to avoid hitting Google Sheets API rate limits
+                await new Promise(resolve => setTimeout(resolve, TASK_PROCESSING_DELAY));
             }
         }
         
     } catch (error) {
         // This is a fatal error (e.g., DB connection lost).
         // Tasks will remain 'pending' and be retried on the next run.
+        logger.error(`Fatal error in Google Sheets poller: ${error.message}`, { error: error.stack });
     } finally {
         isJobRunning = false;
         client.release();
