@@ -416,8 +416,8 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
 }
 
 // Actual implementations
-async function getPaymentById(requestId, paymentId, hotelId) {
-  const pool = getPool(requestId);
+async function getPaymentById(requestId, paymentId, hotelId, dbClient = null) {
+  const client = dbClient || getPool(requestId);
   const paymentQuery = `
     SELECT
       p.id,
@@ -441,7 +441,7 @@ async function getPaymentById(requestId, paymentId, hotelId) {
   `;
 
   try {
-    const paymentResult = await pool.query(paymentQuery, [paymentId, hotelId]);
+    const paymentResult = await client.query(paymentQuery, [paymentId, hotelId]);
     if (paymentResult.rows.length === 0) {
       return null;
     }
@@ -472,11 +472,11 @@ async function getPaymentById(requestId, paymentId, hotelId) {
   }
 }
 
-async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId) {
-  const pool = getPool(requestId);
+async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId, dbClient = null) {
+  const client = dbClient || await getPool(requestId);
   const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2 AND hotel_id = $3';
   try {
-    const result = await pool.query(query, [receiptId, paymentId, hotelId]);
+    const result = await client.query(query, [receiptId, paymentId, hotelId]);
     // Log if no row was updated, but still consider it a success if query executed
     if (result.rowCount === 0) {
       console.warn(`Attempted to link payment ${paymentId} to receipt ${receiptId}, but no payment row was updated. Payment ID might be incorrect or already linked.`);
