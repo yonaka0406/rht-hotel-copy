@@ -14,6 +14,8 @@ const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
 const { getPool } = require('../config/database');
+const { validateNumericParam } = require('../utils/validationUtils');
+const { ValidationError } = require('../utils/customErrors');
 
 //Helper
 const formatDate = (date) => {
@@ -203,16 +205,21 @@ const getRoomsForIndicator = async (req, res) => {
 };
 
 const getAvailableDatesForChange = async (req, res) => {
-  const { hid, rid, ci, co } = req.params;
-
   try {
-    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hid, rid, ci, co);
+    const { hid, rid, ci, co } = req.params;
+
+    const hotelId = validateNumericParam(hid, 'hid');
+    const roomId = validateNumericParam(rid, 'rid');
+
+    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hotelId, roomId, ci, co);
     res.status(200).json({ earliestCheckIn, latestCheckOut });
   } catch (error) {
-    console.error('Error getting available dates for change:', error);
+    if (error instanceof ValidationError) {
+      return res.status(400).json({ error: error.message, code: error.code });
+    }
+    logger.error('Error getting available dates for change:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-
 };
 
 const getReservationClientIds = async (req, res) => {
