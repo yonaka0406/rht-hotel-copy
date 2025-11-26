@@ -120,6 +120,7 @@
             :totalAmount="dialogTotalAmount"
             :isConsolidated="dialogIsConsolidated"
             :paymentData="dialogPaymentData"
+            :isReissue="dialogIsReissue"
             @generate="handleDialogGenerateReceipt"
         />
     </Panel>
@@ -191,6 +192,7 @@
     const dialogPaymentData = ref(null); // To store data for single or consolidated
     const dialogIsConsolidated = ref(false);
     const dialogTotalAmount = ref(0);
+    const dialogIsReissue = ref(false);
 
     // Selection and Drawer logic (mostly commented out for now)
     const selectedPayments = ref([]);
@@ -317,7 +319,14 @@
 
     const viewReceipt = (paymentData) => {        
         console.log("Viewing/Re-generating receipt for payment:", paymentData);
-        generateSingleReceipt(paymentData);
+        // Set dialog data
+        dialogPaymentData.value = paymentData;
+        dialogTotalAmount.value = parseFloat(paymentData.amount);
+        dialogIsConsolidated.value = false;
+        // Auto-set reissue flag for viewing existing receipts
+        dialogIsReissue.value = !!paymentData.existing_receipt_number;
+        // Open the dialog
+        showReceiptDialog.value = true;
     };
 
     // Filters
@@ -397,7 +406,14 @@
     };
 
     const handleDialogGenerateReceipt = async (eventPayload) => {
-      const { taxBreakdownData } = eventPayload;
+  const {
+    taxBreakdownData,
+    paymentDetails,
+    honorific,
+    isReissue,
+    customIssueDate,
+    customProviso
+  } = eventPayload;
 
       if (!selectedHotelId.value) {
           toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルが選択されていません。', life: 3000 });
@@ -417,7 +433,15 @@
           });
 
           try {
-              const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds, taxBreakdownData);
+              const result = await handleGenerateConsolidatedReceipt(
+                selectedHotelId.value,
+                paymentIds,
+                taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso
+              );
               if (result && result.success) {
                   const totalConsolidatedAmount = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
                   toast.add({
@@ -453,7 +477,15 @@
           });
 
           try {
-              const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id, taxBreakdownData);
+              const result = await handleGenerateReceipt(
+                selectedHotelId.value,
+                paymentData.payment_id,
+                taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso
+              );
                if (result && result.success) {
                   toast.add({
                       severity: 'success',

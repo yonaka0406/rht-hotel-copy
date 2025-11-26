@@ -51,7 +51,51 @@
           <small v-if="remainingAmount !== 0" class="p-error">割当額が合計支払額と一致していません。</small>
           <!-- The sortedTaxTypes.length > 0 check for small is implicitly covered by the parent div's v-if -->
         </div>
+
+        <!-- Receipt Customization Section -->
+        <div class="field col-span-12 mt-6 border-t pt-4">
+          <h3 class="text-base font-semibold mb-4">領収書カスタマイズ</h3>
+
+          <div class="grid col-span-12 gap-4">
+            <!-- Honorific Selection -->
+            <div class="field col-span-12 md:col-span-6">
+              <FloatLabel>
+                <Select id="honorific" v-model="honorific" :options="honorificOptions" optionLabel="label" optionValue="value" fluid />
+                <label for="honorific">敬称</label>
+              </FloatLabel>
+            </div>
+            <!-- Custom Issue Date -->
+            <div class="field col-span-12 md:col-span-6">
+              <FloatLabel>
+                <DatePicker id="customIssueDate" v-model="customIssueDate" dateFormat="yy-mm-dd" :showIcon="true" fluid />
+                <label for="customIssueDate">発行日（カスタム）</label>
+              </FloatLabel>
+              <small class="text-gray-500">空欄の場合は支払日が使用されます</small>
+            </div>
+            <!-- Custom Proviso -->
+            <div class="field col-span-12">
+              <FloatLabel>
+                <Textarea id="customProviso" v-model="customProviso" rows="2" fluid />
+                <label for="customProviso">但し書き（カスタム）</label>
+              </FloatLabel>
+              <small class="text-gray-500">空欄の場合は「施設名 宿泊料として」が使用されます</small>
+            </div>
+            <!-- Reissue Checkbox -->
+            <div class="field col-span-12 flex items-center gap-2">
+              <Checkbox id="isReissue" v-model="isReissue" :binary="true" />
+              <label for="isReissue" class="cursor-pointer">再発行</label>
+              <small class="text-gray-500">（再発行スタンプを表示）</small>
+            </div>
+          </div>
+        </div>
       </template>
+
+
+
+
+
+
+
     </div>
     <template #footer>
       <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" severity="secondary" text />
@@ -68,6 +112,10 @@
     import Button from 'primevue/button';
     import InputNumber from 'primevue/inputnumber';
     import FloatLabel from 'primevue/floatlabel';
+    import Select from 'primevue/select';
+    import DatePicker from 'primevue/datepicker';
+    import Textarea from 'primevue/textarea';
+    import Checkbox from 'primevue/checkbox';
 
     // Store
     import { useSettingsStore } from '@/composables/useSettingsStore';
@@ -75,6 +123,20 @@
 
     // Refs
     const isLoadingTaxTypes = ref(false);
+
+    // Receipt customization state
+    const honorific = ref('様');
+    const customIssueDate = ref(null);
+    const customProviso = ref('');
+    const isReissue = ref(false);
+
+    // Honorific options
+    const honorificOptions = [
+      { label: '様', value: '様' },
+      { label: '御中', value: '御中' },
+      { label: '殿', value: '殿' },
+      { label: '先生', value: '先生' }
+    ];
     const taxTypes = computed(() => settingsStore.taxTypes.value || []); // Keep for direct access to raw list if needed elsewhere
 
     const sortedTaxTypes = computed(() => {
@@ -107,6 +169,10 @@
     const allocatedAmounts = ref({}); // Object to store amounts, keyed by tax type id
     const allocatedTotal = ref(0);
     const remainingAmount = ref(0);
+    const recipientName = ref('');
+    const receiptDate = ref(new Date());
+    const receiptNotes = ref('');
+    const issueConsolidatedReceipt = ref(false);
 
     // Helper functions
     const formatCurrency = (value) => {
@@ -168,7 +234,18 @@
         });
     }
 
-    emit('generate', { taxBreakdownData: breakdown, paymentDetails: props.paymentData });
+    // Format custom issue date if provided
+    const formattedIssueDate = customIssueDate.value
+      ? new Date(customIssueDate.value).toISOString().split('T')[0]
+      : null;
+    emit('generate', {
+      taxBreakdownData: breakdown,
+      paymentDetails: props.paymentData,
+      honorific: honorific.value,
+      isReissue: isReissue.value,
+      customIssueDate: formattedIssueDate,
+      customProviso: customProviso.value || null
+    });
     closeDialog();
     };
 
@@ -207,6 +284,12 @@
             allocatedAmounts.value = {};
             allocatedTotal.value = 0;
             remainingAmount.value = 0;
+
+            // Reset customization fields
+            honorific.value = '様';
+            customIssueDate.value = null;
+            customProviso.value = '';
+            isReissue.value = false;
         }
     }, { immediate: true });
 
