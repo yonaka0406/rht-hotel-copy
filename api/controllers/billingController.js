@@ -231,6 +231,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const taxBreakdownData = req.body.taxBreakdownData;
   const forceRegenerate = req.body.forceRegenerate;
 
+  // New receipt customization parameters
+  const honorific = req.body.honorific || '様';
+  const isReissue = req.body.isReissue || false;
+  const customIssueDate = req.body.customIssueDate || null;
+  const customProviso = req.body.customProviso || null;
+
   //console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
   let page = null; // Initialize page to null
 
@@ -273,7 +279,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
       // Always use the stored receipt data from database
       receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
-      receiptDataForPdf.receipt_date = existingReceipt.receipt_date;
+      receiptDataForPdf.receipt_date = customIssueDate || existingReceipt.receipt_date;
       receiptDataForPdf.totalAmount = parseFloat(existingReceipt.amount);
       finalTaxBreakdownForPdf = existingReceipt.tax_breakdown;
       finalReceiptNumber = existingReceipt.receipt_number;
@@ -355,7 +361,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
         }
         receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
-        receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
+        receiptDataForPdf.receipt_date = customIssueDate || receiptDateObj.toISOString().split('T')[0];
         finalReceiptNumber = receiptDataForPdf.receipt_number;
 
         // Calculate total amount
@@ -373,7 +379,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
         //console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
-          receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
+          receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
+          honorific, customProviso, isReissue
         );
 
         if (!saveResult || !saveResult.id) {
@@ -414,7 +421,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
         }
         receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
-        receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
+        receiptDataForPdf.receipt_date = customIssueDate || receiptDateObj.toISOString().split('T')[0];
         finalReceiptNumber = receiptDataForPdf.receipt_number;
 
         // Calculate total amount and tax breakdown
@@ -434,7 +441,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
         //console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
-          receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf
+          receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
+          honorific, customProviso, isReissue
         );
 
         if (!saveResult || !saveResult.id) {
@@ -460,8 +468,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
     const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
 
     const htmlContent = isConsolidated ?
-      generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf) :
-      generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
+      generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf, honorific, isReissue, customIssueDate, customProviso) :
+      generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf, honorific, isReissue, customIssueDate, customProviso);
 
     const browser = await getBrowser(); // Get browser instance once
     page = await browser.newPage();
@@ -530,19 +538,15 @@ const handleGenerateReceiptRequest = async (req, res) => {
     await resetBrowser(false);
   }
 };
-function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) {
+function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData, honorific, isReissue, customIssueDate, customProviso) {
   let modifiedHTML = html;
   const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
 
   // Receipt Header
   modifiedHTML = modifiedHTML.replace(g('receipt_number'), receiptData.receipt_number || 'N/A');
-  modifiedHTML = modifiedHTML.replace(g('receipt_date'), receiptData.receipt_date || 'YYYY-MM-DD');
 
   // Customer Information
-  modifiedHTML = modifiedHTML.replace(g('customer_name'), paymentData.client_name || 'お客様名');
-
-  // Facility Name (for "但し書き")
-  modifiedHTML = modifiedHTML.replace(g('facility_name'), paymentData.facility_name || '施設利用');
+  modifiedHTML = modifiedHTML.replace(g('customer_name'), (paymentData.client_name || 'お客様名'));
 
   // Received Amount (Total)
   // This calculation is crucial and should remain.
@@ -554,6 +558,31 @@ function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakd
   }
   modifiedHTML = modifiedHTML.replace(g('received_amount'), calculatedReceivedAmount.toLocaleString());
 
+  // Honorific
+  modifiedHTML = modifiedHTML.replace(g('honorific'), honorific);
+  // Issue date (use custom if provided)
+  const displayIssueDate = customIssueDate || receiptData.receipt_date;
+  modifiedHTML = modifiedHTML.replace(g('receipt_date'), displayIssueDate);
+  // Proviso text (use custom if provided)
+  const provisoText = customProviso || `${paymentData.facility_name || '施設利用'} 宿泊料として`;
+  modifiedHTML = modifiedHTML.replace(g('proviso_text'), provisoText);
+  // Show reissue stamp if needed
+  if (isReissue) {
+      modifiedHTML = modifiedHTML.replace('</body>', `
+      <script>
+        document.getElementById('reissueStamp').style.display = 'block';
+      </script>
+    </body>`);
+  }
+  // Show revenue stamp notice for amounts > 50,000
+  const receiptAmount = parseFloat(receiptData.totalAmount) || calculatedReceivedAmount;
+  if (receiptAmount > 50000) {
+      modifiedHTML = modifiedHTML.replace('</body>', `
+      <script>
+        document.getElementById('revenueStampNotice').style.display = 'block';
+      </script>
+    </body>`);
+  }
 
   const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`; // Assuming stamp.png is served at the root by the public static file server
   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
@@ -561,12 +590,9 @@ function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakd
   let dynamicTaxDetailsHtml = '';
   if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
     taxBreakdownData.forEach(item => {
-      // Only process items that have a taxable amount, or if all amounts are zero,
-      // behavior might depend on whether zero-amount entries should be shown.
-      // Current logic from consolidated receipt only shows if item.amount > 0. Let's replicate.
-      if (item.amount > 0 || item.tax_amount > 0) { // Show if either amount or tax_amount has value if item.amount itself can be 0 but still part of breakdown
+      if (item.amount > 0 || item.tax_amount > 0) {
         const rateDisplay = (parseFloat(item.rate) * 100).toFixed(0) + '%';
-        dynamicTaxDetailsHtml += '<div class="tax-item" style="margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px;">'; // Added inline style for clarity
+        dynamicTaxDetailsHtml += '<div class="tax-item" style="margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px;">';
         dynamicTaxDetailsHtml += `<p style="margin: 0; font-size: 0.8em;">${item.name} 対象 ¥ ${item.amount.toLocaleString()}</p>`;
         if (parseFloat(item.rate) > 0) {
           dynamicTaxDetailsHtml += `<p style="margin: 0; font-size: 0.8em;">内消費税等 (${rateDisplay}) ¥ ${item.tax_amount.toLocaleString()}</p>`;
@@ -576,27 +602,21 @@ function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakd
     });
   }
 
-  // Regex to find the placeholder div.
-  // This assumes receipt.html contains <div id="taxDetailsPlaceholder"></div> or <div id="taxDetailsPlaceholder" class="some-class"></div>
   const taxDetailsPlaceholderRegex = /(<div id="taxDetailsPlaceholder"[^>]*>)[\s\S]*?(<\/div>)/i;
 
   if (modifiedHTML.match(taxDetailsPlaceholderRegex)) {
     if (dynamicTaxDetailsHtml) {
       modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, `$1${dynamicTaxDetailsHtml}$2`);
     } else {
-      // If no tax breakdown data, replace placeholder with a "Not applicable" message or leave it empty.
-      // For consistency with consolidated, let's use a message.
       modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, '$1<p style="font-size: 0.8em;">税区分適用なし</p>$2');
     }
   } else {
-    // If the placeholder isn't found, we should log a warning.
-    // This indicates that receipt.html might need to be updated.
     console.warn('taxDetailsPlaceholder not found in receipt.html template for generateReceiptHTML.');
   }
 
   return modifiedHTML;
 }
-function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName, taxBreakdownData) {
+function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName, taxBreakdownData, honorific, isReissue, customIssueDate, customProviso) {
   let modifiedHTML = html;
   const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
 
@@ -623,15 +643,22 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
     }, 0);
   }
   modifiedHTML = modifiedHTML.replace(g('received_amount'), totalConsolidatedAmount.toLocaleString());
+  modifiedHTML = modifiedHTML.replace(g('customer_name'), (firstPayment.client_name || 'お客様名') + honorific);
+  modifiedHTML = modifiedHTML.replace(g('honorific'), honorific);
 
-  // Proviso (但し書き) - Use facility_name as a base and append payment IDs for clarity
+  // Proviso (但し書き) - Use customProviso or facility_name as a base
   let facilityNameProviso = firstPayment.facility_name || '施設利用'; // Default facility name  
 
-  modifiedHTML = modifiedHTML.replace(g('facility_name'), facilityNameProviso);
+  modifiedHTML = modifiedHTML.replace(g('proviso_text'), customProviso || facilityNameProviso);
 
   // Stamp Image  
   const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
+
+  // Handle reissue stamp visibility
+  if (isReissue) {
+    modifiedHTML = modifiedHTML.replace(/(<div id="reissueStamp"[^>]*?)style="display: none;"(.*?>)/, '$1style="display: block;"$2');
+  }
 
   let dynamicTaxDetailsHtml = '';
   if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
