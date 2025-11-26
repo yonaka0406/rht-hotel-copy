@@ -140,7 +140,7 @@ const generateInvoice = async (req, res) => {
     res.send(Buffer.from(pdfBuffer));
   } catch (error) {
     logger.error('Error generating invoice PDF:', error);
-    res.status(500).send(`Error generating invoice PDF: ${error.message}`);
+    res.status(500).send('Internal server error while generating invoice PDF');
   } finally {
     if (page) {
       await page.close().catch(err => logger.error("Error closing page:", err));
@@ -868,7 +868,7 @@ const generateInvoiceExcel = async (req, res) => {
     res.end();
   } catch (error) {
     logger.error("Error generating Excel from template:", error);
-    res.status(500).send('Error generating Excel');
+    res.status(500).send('Internal server error while generating Excel invoice');
   }
 };
 

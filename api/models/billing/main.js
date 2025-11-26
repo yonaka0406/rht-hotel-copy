@@ -472,87 +472,6 @@ async function getPaymentById(requestId, paymentId, hotelId) {
   }
 }
 
-async function getReceiptByPaymentId(requestId, paymentId, hotelId) {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT
-        r.receipt_number,
-        TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as receipt_date,
-        r.amount,
-        r.tax_breakdown
-    FROM reservation_payments p
-    JOIN receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id    
-    WHERE p.id = $1 AND p.hotel_id = $2;
-  `;
-  try {
-    const result = await pool.query(query, [paymentId, hotelId]);
-    return result.rows.length > 0 ? result.rows[0] : null;
-  } catch (err) {
-    logger.error('Error in getReceiptByPaymentId:', err);
-    throw new Error('Database error while fetching receipt by payment ID.');
-  }
-}
-
-async function selectMaxReceiptNumber(requestId, hotelId, date) {
-  const pool = getPool(requestId);
-  // The date parameter is a JS Date object. We need to ensure it's formatted correctly for the query
-  // or use date_trunc with the passed date.
-  const query = `
-    SELECT receipt_number as last_receipt_number
-    FROM receipts
-    WHERE hotel_id = $1
-      AND receipt_date >= date_trunc('month', $2::date)
-      AND receipt_date < date_trunc('month', $2::date) + interval '1 month'
-    ORDER BY receipt_number DESC
-    LIMIT 1;
-  `;
-  try {
-    // Ensure 'date' is in a format PostgreSQL understands (e.g., YYYY-MM-DD) if it's not already a JS Date.
-    // If 'date' is a JS Date, $2::date should work.
-    const result = await pool.query(query, [hotelId, date]);
-    return result.rows.length > 0 ? result.rows[0] : { last_receipt_number: null };
-  } catch (err) {
-    logger.error('Error in selectMaxReceiptNumber:', err);
-    throw new Error('Database error while selecting max receipt number.');
-  }
-}
-
-async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData, honorific, customProviso, isReissue) {
-  const pool = getPool(requestId);
-  const query = `
-    INSERT INTO receipts
-      (hotel_id, receipt_number, receipt_date, amount, created_by, tax_breakdown, honorific, custom_proviso, is_reissue, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-    ON CONFLICT (hotel_id, receipt_number) DO UPDATE SET
-      receipt_date = EXCLUDED.receipt_date,
-      amount = EXCLUDED.amount,
-      tax_breakdown = EXCLUDED.tax_breakdown,
-      honorific = EXCLUDED.honorific,
-      custom_proviso = EXCLUDED.custom_proviso,
-      is_reissue = EXCLUDED.is_reissue
-    RETURNING id;
-  `;
-  try {
-    const values = [
-      hotelId,
-      receiptNumber,
-      receiptDate,
-      amount,
-      userId,
-      JSON.stringify(taxBreakdownData || []),
-      honorific || '様',
-      customProviso || null,
-      isReissue || false
-    ];
-    const result = await pool.query(query, values);
-    return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
-  } catch (err) {
-    logger.error('Error in saveReceiptNumber:', err);
-    logger.error('Failed to save receipt with data:', { hotelId, receiptNumber, taxBreakdownData });
-    throw new Error('Database error while saving receipt number.');
-  }
-}
-
 async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId) {
   const pool = getPool(requestId);
   const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2 AND hotel_id = $3';
@@ -577,9 +496,6 @@ module.exports = {
   selectMaxInvoiceNumber,
   updateInvoices,
   getPaymentById,
-  selectMaxReceiptNumber,
-  getReceiptByPaymentId,
-  saveReceiptNumber,
   selectPaymentsForReceiptsView,
   linkPaymentToReceipt,
 };
