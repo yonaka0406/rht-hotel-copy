@@ -512,6 +512,7 @@ export function useXMLStore() {
         updateTLInventory,
         fetchOtaQueue,
         otaXmlQueueData,
+        otaXmlQueueLoading,
         fetchOtaXmlQueue,
         otaFailedXmlQueueData, // Export new state
         otaFailedXmlQueueLoading, // Export new loading state

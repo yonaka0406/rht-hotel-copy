@@ -71,6 +71,7 @@
     <OtaNotificationsDrawer
         v-model:visible="showOtaDrawer"
         :failed-ota-reservations="failedOtaReservations"
+        :ota-failed-xml-queue-data="otaFailedXmlQueueData"
         @go-to-edit-reservation="goToEditReservationPage"
     />
 
@@ -109,7 +110,9 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, setHotelId, selectedHotelId, hotelBlockedRooms, fetchBlockedRooms, fetchHotels } = useHotelStore();
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { holdReservations, failedOtaReservations, fetchFailedOtaReservations, setReservationId } = useReservationStore();
+    const { holdReservations, setReservationId, failedOtaReservations, fetchFailedOtaReservations } = useReservationStore();
+    import { useXMLStore } from '@/composables/useXMLStore';
+    const { otaFailedXmlQueueData, fetchFailedOtaXmlQueue } = useXMLStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
     // Components (for Waitlist Modal and Global Search)
@@ -170,7 +173,9 @@
     });
 
     const otaNotificationsBadgeCount = computed(() => {
-        return Array.isArray(failedOtaReservations.value) ? failedOtaReservations.value.length : 0;
+        const xmlCount = Array.isArray(otaFailedXmlQueueData.value) ? otaFailedXmlQueueData.value.length : 0;
+        const reservationCount = Array.isArray(failedOtaReservations.value) ? failedOtaReservations.value.length : 0;
+        return xmlCount + reservationCount;
     });
 
     const notificationsBadgeCount = computed(() => {
@@ -271,7 +276,10 @@
         
         try {
             // console.log('[TopMenu] onMounted: Fetching failed OTA reservations...');
-            await fetchFailedOtaReservations();
+            await Promise.all([
+                fetchFailedOtaXmlQueue(),
+                fetchFailedOtaReservations()
+            ]);
         } catch (error) {
             console.error('[TopMenu] onMounted: Error in mounted hook:', error);
         }
