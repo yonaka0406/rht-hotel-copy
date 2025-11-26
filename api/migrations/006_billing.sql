@@ -34,6 +34,15 @@ CREATE TABLE receipts (
 COMMENT ON TABLE receipts IS 'Stores generated receipt information, linked to payments.';
 COMMENT ON COLUMN receipts.receipt_number IS 'The unique sequential number generated for the receipt, specific to the hotel.';
 
+ALTER TABLE receipts
+ADD COLUMN honorific TEXT DEFAULT '様',
+ADD COLUMN custom_proviso TEXT NULL,
+ADD COLUMN is_reissue BOOLEAN DEFAULT FALSE;
+
+COMMENT ON COLUMN receipts.honorific IS 'Honorific suffix used on the receipt (様, 御中, 殿, 先生)';
+COMMENT ON COLUMN receipts.custom_proviso IS 'Custom proviso text (但し書き) if provided, otherwise uses facility name';
+COMMENT ON COLUMN receipts.is_reissue IS 'Indicates if this receipt is a reissue/reprint of an existing receipt';
+
 -- Add the foreign key constraint from reservation_payments to receipts
 -- This was deferred from 005_reservations.sql
 ALTER TABLE reservation_payments
