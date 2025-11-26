@@ -1,6 +1,7 @@
 const billingModel = require('../models/billing');
 const { getUsersByID } = require('../models/user');
 const { getBrowser, resetBrowser } = require('../services/puppeteerService');
+const logger = require('../config/logger');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -40,7 +41,7 @@ const getBillableListView = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -62,7 +63,7 @@ const getBilledListView = async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -93,7 +94,7 @@ const generateInvoice = async (req, res) => {
     browser = await getBrowser();
     page = await browser.newPage();
     page.on('console', msg => {
-      console.log('PAGE LOG:', msg.type(), msg.text());
+      logger.debug('PAGE LOG:', msg.type(), msg.text());
     });
 
     //  1. Create HTML content for the PDF
@@ -119,10 +120,10 @@ const generateInvoice = async (req, res) => {
       return img.complete && img.naturalWidth > 0; //  Check if loaded
     }, 'img[alt="Company Stamp"]'); //  Use a specific selector
 
-    //console.log('Image loaded:', imageLoaded);
+    //logger.debug('Image loaded:', imageLoaded);
 
     if (!imageLoaded) {
-      console.warn('Image might not have loaded correctly.');
+      logger.warn('Image might not have loaded correctly.');
     }
 
 
@@ -139,11 +140,11 @@ const generateInvoice = async (req, res) => {
     res.contentType("application/pdf");
     res.send(Buffer.from(pdfBuffer));
   } catch (error) {
-    console.error('Error generating invoice PDF:', error);
+    logger.error('Error generating invoice PDF:', error);
     res.status(500).send(`Error generating invoice PDF: ${error.message}`);
   } finally {
     if (page) {
-      await page.close().catch(err => console.error("Error closing page:", err));
+      await page.close().catch(err => logger.error("Error closing page:", err));
     }
     await resetBrowser(false);
   }
@@ -159,7 +160,7 @@ function generateInvoiceHTML(html, data, userName) {
 
   let modifiedHTML = html;
 
-  // console.log("generateInvoiceHTML:", data);
+  // logger.debug("generateInvoiceHTML:", data);
 
   modifiedHTML = modifiedHTML.replace(/{{ stamp_image }}/g, imageUrl);
 
@@ -225,7 +226,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const paymentIds = req.body.payment_ids;
   // Determine if it's single or consolidated
   const isConsolidated = !!req.body.payment_ids && !req.params.payment_id;
-  //console.log(`[Receipt Generation] isConsolidated: ${isConsolidated}, paymentId: ${paymentId}, paymentIds: ${paymentIds ? paymentIds.join(',') : 'N/A'}`);
+  //logger.debug(`[Receipt Generation] isConsolidated: ${isConsolidated}, paymentId: ${paymentId}, paymentIds: ${paymentIds ? paymentIds.join(',') : 'N/A'}`);
   const hotelId = req.params.hid;
   const userId = req.user.id;
   const taxBreakdownData = req.body.taxBreakdownData;
@@ -237,7 +238,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const customIssueDate = req.body.customIssueDate || null;
   const customProviso = req.body.customProviso || null;
 
-  //console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
+  //logger.debug(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
   let page = null; // Initialize page to null
 
   try {
@@ -274,7 +275,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
     // If receipt exists and we're not forcing regeneration with new data, use existing receipt
     if (existingReceipt && !forceRegenerate && (!taxBreakdownData || taxBreakdownData.length === 0)) {
-      //console.log(`Using existing receipt: ${existingReceipt.receipt_number} for ${isConsolidated ? 'consolidated' : 'single'} request`);
+      //logger.debug(`Using existing receipt: ${existingReceipt.receipt_number} for ${isConsolidated ? 'consolidated' : 'single'} request`);
       isExistingReceipt = true;
 
       // Always use the stored receipt data from database
@@ -341,12 +342,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
           for (let i = 1; i < fetchedPaymentsData.length; i++) {
             if (fetchedPaymentsData[i].payment_date !== commonPaymentDate) {
               commonPaymentDate = null; // Dates are not common
-              //console.log('[Receipt Generation] Consolidated: Payment dates differ, defaulting to current date for receipt.');
+              //logger.debug('[Receipt Generation] Consolidated: Payment dates differ, defaulting to current date for receipt.');
               break;
             }
           }
           if (commonPaymentDate) {
-            //console.log(`[Receipt Generation] Consolidated: Using common payment date for receipt: ${commonPaymentDate}`);
+            //logger.debug(`[Receipt Generation] Consolidated: Using common payment date for receipt: ${commonPaymentDate}`);
           }
         }
 
@@ -376,7 +377,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         receiptDataForPdf.totalAmount = totalConsolidatedAmount;
 
         // Save consolidated receipt
-        //console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
+        //logger.debug(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
@@ -398,7 +399,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
         }
 
-        //console.log(`Generating new receipt for paymentId: ${paymentId}`);
+        //logger.debug(`Generating new receipt for paymentId: ${paymentId}`);
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
@@ -409,9 +410,9 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Generate receipt number and date based on payment date
-        //console.log(`[Receipt Generation] Single Path: Raw payment_date from paymentDataForPdf: '${paymentDataForPdf.payment_date}'`);
+        //logger.debug(`[Receipt Generation] Single Path: Raw payment_date from paymentDataForPdf: '${paymentDataForPdf.payment_date}'`);
         const receiptDateObj = new Date(paymentDataForPdf.payment_date);
-        //console.log(`[Receipt Generation] Single Path: Created receiptDateObj: ${receiptDateObj.toISOString()} (UTC)`);
+        //logger.debug(`[Receipt Generation] Single Path: Created receiptDateObj: ${receiptDateObj.toISOString()} (UTC)`);
         const year = receiptDateObj.getFullYear() % 100;
         const month = receiptDateObj.getMonth() + 1;
         const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
@@ -438,7 +439,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Save the new receipt
-        //console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
+        //logger.debug(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
@@ -485,7 +486,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
       }, imageSelector);
     } catch (e) {
-      console.warn(`Stamp image selector not found or timed out in ${isConsolidated ? 'consolidated' : 'single'} receipt:`, e.message);
+      logger.warn(`Stamp image selector not found or timed out in ${isConsolidated ? 'consolidated' : 'single'} receipt:`, e.message);
     }
 
     const pdfBuffer = await page.pdf({
@@ -502,10 +503,10 @@ const handleGenerateReceiptRequest = async (req, res) => {
     const fallbackFilename = `${finalReceiptNumber}_receipt.pdf`;
 
     // Debug: Log what we're working with
-    //console.log('Original client name:', paymentDataForPdf.client_name);
-    //console.log('Sanitized client name:', clientNameForFile);
-    //console.log('PDF filename before encoding:', pdfFilename);
-    //console.log('PDF filename after encoding:', encodeURIComponent(pdfFilename));
+    //logger.debug('Original client name:', paymentDataForPdf.client_name);
+    //logger.debug('Sanitized client name:', clientNameForFile);
+    //logger.debug('PDF filename before encoding:', pdfFilename);
+    //logger.debug('PDF filename after encoding:', encodeURIComponent(pdfFilename));
 
     // The UTF-8 encoded filename for modern browsers
     const encodedPdfFilenameForStar = encodeURIComponent(pdfFilename);
@@ -529,11 +530,11 @@ const handleGenerateReceiptRequest = async (req, res) => {
     res.send(Buffer.from(pdfBuffer));
 
   } catch (error) {
-    console.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
+    logger.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
     res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
   } finally {
     if (page) {
-      await page.close().catch(err => console.error("Error closing page:", err));
+      await page.close().catch(err => logger.error("Error closing page:", err));
     }
     await resetBrowser(false);
   }
@@ -611,7 +612,7 @@ function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakd
       modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, '$1<p style="font-size: 0.8em;">税区分適用なし</p>$2');
     }
   } else {
-    console.warn('taxDetailsPlaceholder not found in receipt.html template for generateReceiptHTML.');
+    logger.warn('taxDetailsPlaceholder not found in receipt.html template for generateReceiptHTML.');
   }
 
   return modifiedHTML;
@@ -683,7 +684,7 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
       modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, '$1$2');
     }
   } else {
-    console.warn('taxDetailsPlaceholder not found in receipt.html for generateConsolidatedReceiptHTML');
+    logger.warn('taxDetailsPlaceholder not found in receipt.html for generateConsolidatedReceiptHTML');
   }
 
   // Clean up any old Handlebars-style placeholders related to tax table
@@ -714,7 +715,7 @@ const getPaymentsForReceipts = async (req, res) => {
     // If data is an empty array, it's a valid response (no payments found), not a 404.
     res.json(data);
   } catch (err) {
-    console.error('Error in getPaymentsForReceipts controller:', err);
+    logger.error('Error in getPaymentsForReceipts controller:', err);
     // Check if the error is a known type, e.g., from the model indicating a specific issue
     if (err.message.includes('Database error')) { // Example check
       return res.status(503).json({ error: 'Service unavailable or database error.' });
@@ -872,7 +873,7 @@ const generateInvoiceExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error("Error generating Excel from template:", error);
+    logger.error("Error generating Excel from template:", error);
     res.status(500).send('Error generating Excel');
   }
 };
