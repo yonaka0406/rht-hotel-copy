@@ -18,7 +18,7 @@
           <template #item="{ item: reservation, index }">
             
             <!-- XML Queue Failure (Stock Adjustment) -->
-            <div v-if="reservation.type === 'xml'" :key="'xml-' + index"
+            <div v-if="reservation.type === 'xml'" :key="reservation.uniqueId"
               class="mx-2 mb-3 last:mb-0 rounded-lg shadow-sm border border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950 p-4 flex flex-col gap-2">
               <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center gap-2">
@@ -40,7 +40,7 @@
                   <span>受信日:</span>
                   <span class="font-medium">{{ formatDateTimeJP(reservation.created_at) }}</span>
                 </div>
-                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 col-span-2">
                   <i class="pi pi-calendar-plus text-green-500 text-xs" />
                   <span>対象期間:</span>
                   <span class="font-medium">{{ getAdjustmentDateRange(reservation.xml_body) }}</span>
@@ -49,7 +49,7 @@
             </div>
 
             <!-- Reservation Failure (OTA Sync) -->
-            <div v-else :key="'res-' + index"
+            <div v-else :key="reservation.uniqueId"
               class="mx-2 mb-3 last:mb-0 rounded-lg shadow-sm border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950 p-4 flex flex-col gap-2">
               <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center gap-2">
@@ -121,8 +121,8 @@ const props = defineProps({
 defineEmits(['update:visible']);
 
 const combinedNotifications = computed(() => {
-  const xmlItems = (props.otaFailedXmlQueueData || []).map(item => ({ ...item, type: 'xml' }));
-  const resItems = (props.failedOtaReservations || []).map(item => ({ ...item, type: 'reservation' }));
+  const xmlItems = (props.otaFailedXmlQueueData || []).map(item => ({ ...item, type: 'xml', uniqueId: `xml-${item.id}` }));
+  const resItems = (props.failedOtaReservations || []).map(item => ({ ...item, type: 'reservation', uniqueId: `res-${item.id}` }));
   return [...xmlItems, ...resItems].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
 

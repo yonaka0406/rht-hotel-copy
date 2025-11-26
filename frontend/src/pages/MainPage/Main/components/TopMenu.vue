@@ -276,10 +276,18 @@
         
         try {
             // console.log('[TopMenu] onMounted: Fetching failed OTA reservations...');
-            await Promise.all([
+            await Promise.allSettled([
                 fetchFailedOtaXmlQueue(),
                 fetchFailedOtaReservations()
-            ]);
+            ]).then(results => {
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled') {
+                        // console.log(`[TopMenu] Fetch operation ${index} fulfilled:`, result.value);
+                    } else {
+                        console.error(`[TopMenu] Fetch operation ${index} rejected:`, result.reason);
+                    }
+                });
+            });
         } catch (error) {
             console.error('[TopMenu] onMounted: Error in mounted hook:', error);
         }
