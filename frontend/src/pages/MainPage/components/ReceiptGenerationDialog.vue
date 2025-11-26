@@ -169,10 +169,6 @@
     const allocatedAmounts = ref({}); // Object to store amounts, keyed by tax type id
     const allocatedTotal = ref(0);
     const remainingAmount = ref(0);
-    const recipientName = ref('');
-    const receiptDate = ref(new Date());
-    const receiptNotes = ref('');
-    const issueConsolidatedReceipt = ref(false);
 
     // Helper functions
     const formatCurrency = (value) => {

@@ -120,7 +120,6 @@ const generateInvoice = async (req, res) => {
       return img.complete && img.naturalWidth > 0; //  Check if loaded
     }, 'img[alt="Company Stamp"]'); //  Use a specific selector
 
-    //logger.debug('Image loaded:', imageLoaded);
 
     if (!imageLoaded) {
       logger.warn('Image might not have loaded correctly.');
@@ -155,12 +154,10 @@ const generateInvoice = async (req, res) => {
  */
 function generateInvoiceHTML(html, data, userName) {
   const imagePath = path.join(__dirname, '../components/stamp.png');
-  //const imageUrl = `file:///${imagePath.replace(/\\/g, '/')}`;
   const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
 
   let modifiedHTML = html;
 
-  // logger.debug("generateInvoiceHTML:", data);
 
   modifiedHTML = modifiedHTML.replace(/{{ stamp_image }}/g, imageUrl);
 
@@ -226,7 +223,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const paymentIds = req.body.payment_ids;
   // Determine if it's single or consolidated
   const isConsolidated = !!req.body.payment_ids && !req.params.payment_id;
-  //logger.debug(`[Receipt Generation] isConsolidated: ${isConsolidated}, paymentId: ${paymentId}, paymentIds: ${paymentIds ? paymentIds.join(',') : 'N/A'}`);
   const hotelId = req.params.hid;
   const userId = req.user.id;
   const taxBreakdownData = req.body.taxBreakdownData;
@@ -238,7 +234,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const customIssueDate = req.body.customIssueDate || null;
   const customProviso = req.body.customProviso || null;
 
-  //logger.debug(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
   let page = null; // Initialize page to null
 
   try {
@@ -275,7 +270,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
     // If receipt exists and we're not forcing regeneration with new data, use existing receipt
     if (existingReceipt && !forceRegenerate && (!taxBreakdownData || taxBreakdownData.length === 0)) {
-      //logger.debug(`Using existing receipt: ${existingReceipt.receipt_number} for ${isConsolidated ? 'consolidated' : 'single'} request`);
       isExistingReceipt = true;
 
       // Always use the stored receipt data from database
@@ -377,7 +371,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
         receiptDataForPdf.totalAmount = totalConsolidatedAmount;
 
         // Save consolidated receipt
-        //logger.debug(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
@@ -399,7 +392,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
           return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
         }
 
-        //logger.debug(`Generating new receipt for paymentId: ${paymentId}`);
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
@@ -410,9 +402,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Generate receipt number and date based on payment date
-        //logger.debug(`[Receipt Generation] Single Path: Raw payment_date from paymentDataForPdf: '${paymentDataForPdf.payment_date}'`);
         const receiptDateObj = new Date(paymentDataForPdf.payment_date);
-        //logger.debug(`[Receipt Generation] Single Path: Created receiptDateObj: ${receiptDateObj.toISOString()} (UTC)`);
         const year = receiptDateObj.getFullYear() % 100;
         const month = receiptDateObj.getMonth() + 1;
         const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
@@ -439,7 +429,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Save the new receipt
-        //logger.debug(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
@@ -501,12 +490,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
     const pdfFilename = `${finalReceiptNumber}_${clientNameForFile}.pdf`;
     const fallbackFilename = `${finalReceiptNumber}_receipt.pdf`;
-
-    // Debug: Log what we're working with
-    //logger.debug('Original client name:', paymentDataForPdf.client_name);
-    //logger.debug('Sanitized client name:', clientNameForFile);
-    //logger.debug('PDF filename before encoding:', pdfFilename);
-    //logger.debug('PDF filename after encoding:', encodeURIComponent(pdfFilename));
 
     // The UTF-8 encoded filename for modern browsers
     const encodedPdfFilenameForStar = encodeURIComponent(pdfFilename);
@@ -664,7 +647,7 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
   let dynamicTaxDetailsHtml = '';
   if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
     taxBreakdownData.forEach(item => {
-      if (item.amount > 0) {
+      if (item.amount > 0 || item.tax_amount > 0) {
         const rateDisplay = (item.rate * 100).toFixed(0) + '%';
         dynamicTaxDetailsHtml += '<div class="tax-item">';
         dynamicTaxDetailsHtml += `<p>${item.name} 対象 ¥ ${item.amount.toLocaleString()}</p>`;

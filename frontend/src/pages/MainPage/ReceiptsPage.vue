@@ -271,7 +271,7 @@
     }
 
     // Submitting/generating a single receipt
-    const generateSingleReceipt = async (paymentData) => {
+    const _generateSingleReceipt = async (paymentData) => {
         if (!paymentData || !paymentData.payment_id) {
             toast.add({ severity: 'error', summary: 'エラー', detail: '有効な支払データがありません。', life: 3000 });
             return;
@@ -384,6 +384,7 @@
       dialogPaymentData.value = paymentData;
       dialogTotalAmount.value = parseFloat(paymentData.amount);
       dialogIsConsolidated.value = false;
+      dialogIsReissue.value = false; // Reset reissue flag for new receipts
       showReceiptDialog.value = true;
     };
 
@@ -402,13 +403,14 @@
       };
       dialogTotalAmount.value = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
       dialogIsConsolidated.value = true;
+      dialogIsReissue.value = false; // Consolidated dialogs always start with reissue=false
       showReceiptDialog.value = true;
     };
 
     const handleDialogGenerateReceipt = async (eventPayload) => {
   const {
     taxBreakdownData,
-    paymentDetails,
+    _paymentDetails,
     honorific,
     isReissue,
     customIssueDate,

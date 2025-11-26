@@ -198,6 +198,7 @@ export function useBillingStore() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 0);
     
         } catch (error) {
             console.error("Error generating/downloading PDF:", error);            
@@ -341,6 +342,7 @@ export function useBillingStore() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(() => window.URL.revokeObjectURL(excelUrl), 0);
 
         } catch (error) {
             console.error("Error generating/downloading Excel:", error);
