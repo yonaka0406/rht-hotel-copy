@@ -1,7 +1,7 @@
-const billingModel = require('../models/billing');
-const { getUsersByID } = require('../models/user');
-const { getBrowser, resetBrowser } = require('../services/puppeteerService');
-const logger = require('../config/logger');
+const billingModel = require('../../models/billing');
+const { getUsersByID } = require('../../models/user');
+const { getBrowser, resetBrowser } = require('../../services/puppeteerService');
+const logger = require('../../config/logger');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -347,15 +347,20 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Generate receipt number and date
         const receiptDateObj = commonPaymentDate ? new Date(commonPaymentDate) : new Date();
-        const year = receiptDateObj.getFullYear() % 100;
-        const month = receiptDateObj.getMonth() + 1;
-        const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-        let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
-        let sequence = 1;
-        if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-          sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
+
+        if (existingReceipt) {
+          receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
+        } else {
+          const year = receiptDateObj.getFullYear() % 100;
+          const month = receiptDateObj.getMonth() + 1;
+          const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
+          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+          let sequence = 1;
+          if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
+            sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
+          }
+          receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
         }
-        receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
         receiptDataForPdf.receipt_date = customIssueDate || receiptDateObj.toISOString().split('T')[0];
         finalReceiptNumber = receiptDataForPdf.receipt_number;
 
@@ -403,15 +408,21 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Generate receipt number and date based on payment date
         const receiptDateObj = new Date(paymentDataForPdf.payment_date);
-        const year = receiptDateObj.getFullYear() % 100;
-        const month = receiptDateObj.getMonth() + 1;
-        const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-        let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
-        let sequence = 1;
-        if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-          sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
+
+        if (existingReceipt) {
+          receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
+        } else {
+          const year = receiptDateObj.getFullYear() % 100;
+          const month = receiptDateObj.getMonth() + 1;
+          const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
+          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+          let sequence = 1;
+          if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
+            sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
+          }
+          receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
         }
-        receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
+
         receiptDataForPdf.receipt_date = customIssueDate || receiptDateObj.toISOString().split('T')[0];
         finalReceiptNumber = receiptDataForPdf.receipt_number;
 
@@ -552,7 +563,7 @@ function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakd
   modifiedHTML = modifiedHTML.replace(g('proviso_text'), provisoText);
   // Show reissue stamp if needed
   if (isReissue) {
-      modifiedHTML = modifiedHTML.replace('</body>', `
+    modifiedHTML = modifiedHTML.replace('</body>', `
       <script>
         document.getElementById('reissueStamp').style.display = 'block';
       </script>
@@ -561,7 +572,7 @@ function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakd
   // Show revenue stamp notice for amounts > 50,000
   const receiptAmount = parseFloat(receiptData.totalAmount) || calculatedReceivedAmount;
   if (receiptAmount > 50000) {
-      modifiedHTML = modifiedHTML.replace('</body>', `
+    modifiedHTML = modifiedHTML.replace('</body>', `
       <script>
         document.getElementById('revenueStampNotice').style.display = 'block';
       </script>
