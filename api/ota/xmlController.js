@@ -1669,11 +1669,28 @@ const updateOTAXmlQueueStatus = async (req, res) => {
     const { status } = req.body;
     const requestId = req.requestId;
 
+    // 1. Input Validation for 'id'
+    const otaXmlQueueId = parseInt(id, 10);
+    if (isNaN(otaXmlQueueId) || otaXmlQueueId <= 0) {
+        logger.warn(`[${requestId}] Validation Error: Invalid or missing 'id' parameter. Received: ${id}`);
+        return res.status(400).json({ message: 'Invalid or missing "id" parameter.' });
+    }
+
+    // 2. Input Validation for 'status'
+    const allowedStatuses = ['pending', 'processing', 'completed', 'failed'];
+    if (!status || !allowedStatuses.includes(status)) {
+        logger.warn(`[${requestId}] Validation Error: Invalid or missing 'status' in request body. Received: ${status}`);
+        return res.status(400).json({ message: 'Invalid or missing "status" in request body.' });
+    }
+
+    // Authentication/Authorization is assumed to be handled by authMiddlewareAdmin already
+
     try {
-        await updateOTAXmlQueue(requestId, id, status, null);
+        await updateOTAXmlQueue(requestId, otaXmlQueueId, status, null); // Pass null for error as it's a manual status update
+        logger.info(`[${requestId}] OTA XML queue item ${otaXmlQueueId} status updated to ${status} successfully.`);
         res.status(200).json({ message: 'Status updated successfully' });
     } catch (error) {
-        logger.error(`[${requestId}] Error updating OTA XML queue status: ${error.message}`, { stack: error.stack });
+        logger.error(`[${requestId}] Error updating OTA XML queue status for ID ${otaXmlQueueId}: ${error.message}`, { stack: error.stack });
         res.status(500).json({ message: 'Error updating OTA XML queue status', error: error.message });
     }
 };

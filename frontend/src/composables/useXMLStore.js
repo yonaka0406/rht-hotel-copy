@@ -445,6 +445,14 @@ export function useXMLStore() {
                 console.error('API Error in markOtaXmlQueueAsCompleted:', response.status, response.statusText, errorData);
                 throw new Error(`Failed to mark as completed: ${errorData.message || JSON.stringify(errorData)}`);
             }
+
+            // Update local reactive state
+            const index = otaXmlQueueData.value.findIndex(item => item.id === otaXmlQueueId);
+            if (index !== -1) {
+                otaXmlQueueData.value[index].status = 'completed';
+                otaXmlQueueData.value[index].processed_at = new Date().toISOString(); // Update processed_at
+            }
+            return true;
         } catch (error) {
             console.error('Failed to mark as completed.', error);
             throw error;

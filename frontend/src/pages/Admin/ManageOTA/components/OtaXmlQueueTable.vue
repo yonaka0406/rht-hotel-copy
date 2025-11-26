@@ -1,5 +1,7 @@
 <template>
   <div>
+    <Toast />
+    <ConfirmDialog></ConfirmDialog>
     <p class="text-sm text-gray-500 mb-2">※最新のキューエントリーのみ表示されます。</p>
     <DataTable
       :value="otaXmlQueueData"
@@ -94,8 +96,9 @@
           v-if="selectedRow && selectedRow.status === 'failed'"
           label="完了済みにする"
           icon="pi pi-check"
-          class="p-button-success"
+          class="p-button-text p-button-success"
           @click="markAsCompleted"
+          :loading="isMarkingAsCompleted"
         />
       </template>
     </Dialog>
@@ -107,6 +110,8 @@ import { ref, onMounted } from 'vue';
 import { formatDateTime, formatDateTimeWithSeconds, formatDateToYYMMDD } from '../../../../utils/dateUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useXMLStore } from '../../../../composables/useXMLStore';
+import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 
 // PrimeVue Components
 import DataTable from 'primevue/datatable';
@@ -118,18 +123,48 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Fieldset from 'primevue/fieldset';
 import Message from 'primevue/message';
+import Toast from 'primevue/toast';
+import ConfirmDialog from 'primevue/confirmdialog';
 
 const { otaXmlQueueData, fetchOtaXmlQueue, otaXmlQueueLoading, markOtaXmlQueueAsCompleted } = useXMLStore();
 
 const displayDialog = ref(false);
 const selectedRow = ref(null);
+const isMarkingAsCompleted = ref(false); // Local loading flag
+const toast = useToast();
+const confirm = useConfirm();
 
 const markAsCompleted = async () => {
-  if (selectedRow.value && selectedRow.value.status === 'failed') {
-    await markOtaXmlQueueAsCompleted(selectedRow.value.ota_xml_queue_id);
-    displayDialog.value = false;
-    fetchOtaXmlQueue();
+  if (!selectedRow.value || selectedRow.value.status !== 'failed') {
+    return;
   }
+
+  confirm.require({
+    message: 'この操作は元に戻せません。本当にこのキューを完了済みにしますか？',
+    header: '確認',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-success',
+    rejectClass: 'p-button-secondary',
+    acceptLabel: 'はい',
+    rejectLabel: 'いいえ',
+    accept: async () => {
+      isMarkingAsCompleted.value = true;
+      try {
+        await markOtaXmlQueueAsCompleted(selectedRow.value.id);
+        toast.add({ severity: 'success', summary: '成功', detail: 'XMLキューが完了としてマークされました。', life: 3000 });
+        displayDialog.value = false;
+        await fetchOtaXmlQueue();
+      } catch (error) {
+        console.error('Failed to mark OTA XML queue as completed:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: error.message || 'XMLキューの完了マークに失敗しました。', life: 3000 });
+      } finally {
+        isMarkingAsCompleted.value = false;
+      }
+    },
+    reject: () => {
+      toast.add({ severity: 'info', summary: 'キャンセル', detail: '操作はキャンセルされました。', life: 3000 });
+    }
+  });
 };
 
 
