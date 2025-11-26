@@ -625,8 +625,7 @@ const selectOTAXmlQueue = async (requestId) => {
   }
 };
 
-const selectFailedOTAXmlQueue = async (requestId) => {  
-  logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Fetching failed OTA XML queue from database.`);
+const selectFailedOTAXmlQueue = async (requestId) => {    
   const pool = getPool(requestId); // Use getPool as it's a read operation
   try {
     const query = `
@@ -644,8 +643,7 @@ const selectFailedOTAXmlQueue = async (requestId) => {
       WHERE oq.status = 'failed'
       ORDER BY oq.created_at DESC;
     `;
-    logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Executing query: ${query}`);
-    
+        
     const result = await pool.query(query);    
     logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Found ${result.rows.length} failed OTA XML queue items.`);
     return result.rows;
