@@ -2,6 +2,24 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### November 25, 2025
+
+## Staff Room Flag for Calendar
+
+### Description
+Need to add a staff room flag to the rooms table to visually distinguish staff rooms in the calendar with a different color.
+
+### Steps to Implement
+1. Add `is_staff_room` boolean column to the rooms table (default: false)
+2. Update room creation/editing forms to include the staff room toggle
+3. Modify the calendar display logic to show staff rooms with a distinct color (e.g., light purple #f3e5f5)
+4. Update any relevant API endpoints and models to handle the new field
+
+### Related Files
+- Database: `rooms` table
+- Frontend: Calendar components
+- API: Room creation/update endpoints
+
 ### November 19, 2025
 
 #### Client List - Incorrect In/Out Period Display

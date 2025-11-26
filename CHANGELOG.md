@@ -656,6 +656,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.2.3] - 2025-11-26
+
+- Feature: Enhanced OTA notifications with failed XML queue and combined data display
+
+---
+
 ## Version History
 - 1.2.1 (2025-11-19) – Fixed critical database client pooling inconsistencies affecting rate calculations, restored missing guest and gender details in the room indicator, and improved stay-date logic for checkout detection. Added room-specific stay dates to Guest List Excel export, implemented OTA XML queuing for rate-limit-safe integrations, expanded calendar month navigation, optimized websockets for hotel-specific updates, and refactored the guest list dialog for consistency.
 - 1.2.0 (2025-11-11) – Introduced comprehensive Parking Module with spot blocking for external hotel integration and room swapping capability in the reservation calendar. Fixed memory leaks in plan pattern bulk edit operations, significantly improving performance for large reservation batches.
