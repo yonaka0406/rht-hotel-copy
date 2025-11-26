@@ -325,6 +325,9 @@
         dialogIsConsolidated.value = false;
         // Auto-set reissue flag for viewing existing receipts
         dialogIsReissue.value = !!paymentData.existing_receipt_number;
+        dialogPaymentData.value.existing_honorific = paymentData.existing_honorific;
+        dialogPaymentData.value.existing_custom_proviso = paymentData.existing_custom_proviso;
+        dialogPaymentData.value.existing_receipt_date = paymentData.existing_receipt_date;
         // Open the dialog
         showReceiptDialog.value = true;
     };

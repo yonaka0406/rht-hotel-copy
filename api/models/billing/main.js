@@ -373,24 +373,27 @@ const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName
 
 async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endDate) {
   const pool = getPool(requestId);
-  const query = `    
+  const query = `
     SELECT
       res.check_in
-      ,res.check_out		
-      ,p.id as payment_id		
+      ,res.check_out
+      ,p.id as payment_id
       ,rs.room_number
       ,TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date
       ,p.value as amount
       ,COALESCE(c.name_kanji, c.name_kana, c.name) as client_name
       ,p.comment
       ,r.receipt_number as existing_receipt_number
+      ,r.honorific as existing_honorific
+      ,r.custom_proviso as existing_custom_proviso
+      ,TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as existing_receipt_date
     FROM
       reservation_payments p
         JOIN
       clients c ON p.client_id = c.id
         JOIN
       reservations res ON res.id = p.reservation_id AND res.hotel_id = p.hotel_id
-        JOIN 
+        JOIN
       rooms rs ON rs.id = p.room_id
         LEFT JOIN
       receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id
@@ -520,6 +523,13 @@ async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate,
     INSERT INTO receipts
       (hotel_id, receipt_number, receipt_date, amount, created_by, tax_breakdown, honorific, custom_proviso, is_reissue, created_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+    ON CONFLICT (hotel_id, receipt_number) DO UPDATE SET
+      receipt_date = EXCLUDED.receipt_date,
+      amount = EXCLUDED.amount,
+      tax_breakdown = EXCLUDED.tax_breakdown,
+      honorific = EXCLUDED.honorific,
+      custom_proviso = EXCLUDED.custom_proviso,
+      is_reissue = EXCLUDED.is_reissue
     RETURNING id;
   `;
   try {
