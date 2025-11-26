@@ -54,10 +54,9 @@
       </template>
     </div>
     <template #footer>
-      <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text p-button-danger p-button-sm"/>
-      <Button label="発行" icon="pi pi-check" @click="generateReceipt" autofocus :disabled="(sortedTaxTypes.length > 0 && remainingAmount !== 0) || (sortedTaxTypes.length === 0 && props.totalAmount > 0)" />
-    </template>
-  </Dialog>
+      <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" severity="secondary" text />
+      <Button label="発行" icon="pi pi-check" @click="generateReceipt" autofocus :disabled="(sortedTaxTypes.length > 0 && remainingAmount !== 0) || (sortedTaxTypes.length === 0 && props.totalAmount > 0)" text />
+    </template>  </Dialog>
 </template>
 
 <script setup>
