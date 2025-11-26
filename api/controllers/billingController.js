@@ -1,15 +1,4 @@
-const {
-  selectBillableListView,
-  selectBilledListView,
-  selectMaxInvoiceNumber,
-  updateInvoices,
-  getPaymentById,
-  selectMaxReceiptNumber,
-  getReceiptByPaymentId,
-  saveReceiptNumber,
-  selectPaymentsForReceiptsView,
-  linkPaymentToReceipt
-} = require('../models/billing');
+const billingModel = require('../models/billing');
 const { getUsersByID } = require('../models/user');
 const { getBrowser, resetBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
@@ -19,7 +8,7 @@ const ExcelJS = require("exceljs");
 // --- Helper Functions ---
 
 const generateNewInvoiceNumber = async (requestId, hotelId, date) => {
-  let result = await selectMaxInvoiceNumber(requestId, hotelId, date);
+  let result = await billingModel.selectMaxInvoiceNumber(requestId, hotelId, date);
   let last_invoice_number = result.length > 0 ? result[0].last_invoice_number : null;
 
   let new_invoice_number;
@@ -43,7 +32,7 @@ const getBillableListView = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const data = await selectBillableListView(req.requestId, hotelId, startDate, endDate);
+    const data = await billingModel.selectBillableListView(req.requestId, hotelId, startDate, endDate);
 
     if (!data || data.length === 0) {
       return res.status(200).json([]);
@@ -64,7 +53,7 @@ const getBilledListView = async (req, res) => {
   const month = req.params.mdate;
 
   try {
-    const data = await selectBilledListView(req.requestId, hotelId, month);
+    const data = await billingModel.selectBilledListView(req.requestId, hotelId, month);
 
     // Return empty array instead of 404 when no data found
     if (!data || data.length === 0) {
@@ -96,7 +85,7 @@ const generateInvoice = async (req, res) => {
       invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
     }
 
-    await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
+    await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
     const userInfo = await getUsersByID(req.requestId, userId);
 
@@ -264,12 +253,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
     let existingReceipt = null;
     if (!isConsolidated && paymentId) {
       // For single payment requests, check if a receipt already exists
-      existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId, hotelId);
+      existingReceipt = await billingModel.getReceiptByPaymentId(req.requestId, paymentId, hotelId);
     } else if (isConsolidated && Array.isArray(paymentIds) && paymentIds.length > 0) {
       // For consolidated requests, check if any of the payments already has a receipt
       // If any payment already has a receipt, we should use that existing receipt data
       for (const pid of paymentIds) {
-        const existingReceiptForPayment = await getReceiptByPaymentId(req.requestId, pid, hotelId);
+        const existingReceiptForPayment = await billingModel.getReceiptByPaymentId(req.requestId, pid, hotelId);
         if (existingReceiptForPayment) {
           existingReceipt = existingReceiptForPayment;
           break; // Use the first existing receipt found
@@ -291,7 +280,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
       // Get payment data for PDF generation (use first payment for consolidated)
       const paymentForPdfId = isConsolidated ? paymentIds[0] : paymentId;
-      paymentDataForPdf = await getPaymentById(req.requestId, paymentForPdfId, hotelId);
+      paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentForPdfId, hotelId);
       if (!paymentDataForPdf) {
         return res.status(404).json({ error: 'Payment data not found' });
       }
@@ -304,7 +293,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
       if (isConsolidated) {
         paymentsArrayForPdf = [];
         for (const pid of paymentIds) {
-          const paymentData = await getPaymentById(req.requestId, pid, hotelId);
+          const paymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId);
           if (paymentData) {
             paymentsArrayForPdf.push(paymentData);
           }
@@ -323,7 +312,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         let fetchedPaymentsData = [];
         let clientNameCheck = null;
         for (const pid of paymentIds) {
-          const singlePaymentData = await getPaymentById(req.requestId, pid, hotelId);
+          const singlePaymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId);
           if (!singlePaymentData) {
             return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
           }
@@ -360,7 +349,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         const year = receiptDateObj.getFullYear() % 100;
         const month = receiptDateObj.getMonth() + 1;
         const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-        let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+        let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
         let sequence = 1;
         if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
           sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
@@ -382,7 +371,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save consolidated receipt
         //console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
-        const saveResult = await saveReceiptNumber(
+        const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
         );
@@ -393,7 +382,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Link all payments to the receipt
         for (const pData of fetchedPaymentsData) {
-          await linkPaymentToReceipt(req.requestId, pData.id, saveResult.id, hotelId);
+          await billingModel.linkPaymentToReceipt(req.requestId, pData.id, saveResult.id, hotelId);
         }
 
       } else {
@@ -406,7 +395,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
-          paymentDataForPdf = await getPaymentById(req.requestId, paymentId, hotelId);
+          paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentId, hotelId);
           if (!paymentDataForPdf) {
             return res.status(404).json({ error: 'Payment data not found' });
           }
@@ -419,7 +408,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         const year = receiptDateObj.getFullYear() % 100;
         const month = receiptDateObj.getMonth() + 1;
         const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-        let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+        let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
         let sequence = 1;
         if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
           sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
@@ -443,7 +432,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save the new receipt
         //console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
-        const saveResult = await saveReceiptNumber(
+        const saveResult = await billingModel.saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf
         );
@@ -453,7 +442,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Link payment to receipt
-        await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id, hotelId);
+        await billingModel.linkPaymentToReceipt(req.requestId, paymentId, saveResult.id, hotelId);
       }
     }
 
@@ -691,7 +680,7 @@ const getPaymentsForReceipts = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const data = await selectPaymentsForReceiptsView(req.requestId, hotelId, startDate, endDate);
+    const data = await billingModel.selectPaymentsForReceiptsView(req.requestId, hotelId, startDate, endDate);
     if (!data) { // Changed from !data || data.length === 0 to handle cases where model might return null on error
       return res.status(404).json({ error: 'No payment data found for the specified criteria or an error occurred.' });
     }
@@ -713,151 +702,151 @@ const generateInvoiceExcel = async (req, res) => {
   const userId = req.user.id;
 
   try {
-      if (!invoiceData.invoice_number) {
-          invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
-      }
+    if (!invoiceData.invoice_number) {
+      invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
+    }
 
-      await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
-      const userInfo = await getUsersByID(req.requestId, userId);
+    const userInfo = await getUsersByID(req.requestId, userId);
+    await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
-      const mainTemplatePath = path.join(__dirname, '../components/請求書テンプレート.xlsx');
-      const detailsTemplatePath = path.join(__dirname, '../components/請求書明細（テンプレート）.xlsx');
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.readFile(mainTemplatePath);
-      const detailsWorkbook = new ExcelJS.Workbook();
-      await detailsWorkbook.xlsx.readFile(detailsTemplatePath);
+    const mainTemplatePath = path.join(__dirname, '../components/請求書テンプレート.xlsx');
+    const detailsTemplatePath = path.join(__dirname, '../components/請求書明細（テンプレート）.xlsx');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(mainTemplatePath);
+    const detailsWorkbook = new ExcelJS.Workbook();
+    await detailsWorkbook.xlsx.readFile(detailsTemplatePath);
 
-      const detailsTemplateSheet = detailsWorkbook.getWorksheet(1);
-      const newSheet = workbook.addWorksheet('請求書明細');
-      detailsTemplateSheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-          const newRow = newSheet.getRow(rowNumber);
-          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-              const newCell = newRow.getCell(colNumber);
-              newCell.value = cell.value;
-              newCell.style = JSON.parse(JSON.stringify(cell.style));
-          });
-          newRow.height = row.height;
+    const detailsTemplateSheet = detailsWorkbook.getWorksheet(1);
+    const newSheet = workbook.addWorksheet('請求書明細');
+    detailsTemplateSheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+      const newRow = newSheet.getRow(rowNumber);
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const newCell = newRow.getCell(colNumber);
+        newCell.value = cell.value;
+        newCell.style = JSON.parse(JSON.stringify(cell.style));
       });
-      for (let i = 1; i <= detailsTemplateSheet.columnCount; i++) {
-          newSheet.getColumn(i).width = detailsTemplateSheet.getColumn(i).width;
-      }
-      detailsTemplateSheet.model.merges.forEach(merge => {
-          newSheet.mergeCells(merge);
+      newRow.height = row.height;
+    });
+    for (let i = 1; i <= detailsTemplateSheet.columnCount; i++) {
+      newSheet.getColumn(i).width = detailsTemplateSheet.getColumn(i).width;
+    }
+    detailsTemplateSheet.model.merges.forEach(merge => {
+      newSheet.mergeCells(merge);
+    });
+    newSheet.views = JSON.parse(JSON.stringify(detailsTemplateSheet.views || []));
+    newSheet.pageSetup = JSON.parse(JSON.stringify(detailsTemplateSheet.pageSetup || {}));
+
+    const worksheet = workbook.getWorksheet('請求書フォーマット');
+    const detailsSheet = workbook.getWorksheet('請求書明細');
+
+    detailsSheet.getCell('A4').value = invoiceData.client_name;
+    detailsSheet.getCell('J1').value = invoiceData.invoice_number;
+    detailsSheet.getCell('G2').value = invoiceData.facility_name;
+
+    worksheet.getCell('L1').value = invoiceData.invoice_number;
+    worksheet.getCell('L2').value = new Date(invoiceData.date);
+    worksheet.getCell('A4').value = invoiceData.client_name;
+    worksheet.getCell('D5').value = invoiceData.customer_code ? String(invoiceData.customer_code).padStart(5, '0') : '';
+    worksheet.getCell('D9').value = invoiceData.facility_name ? `${invoiceData.facility_name} 宿泊料` : '宿泊料';
+    worksheet.getCell('D10').value = new Date(invoiceData.due_date);
+    worksheet.getCell('D11').value = `${invoiceData.bank_name ?? ''} ${invoiceData.bank_branch_name ?? ''}`.trim();
+    worksheet.getCell('D12').value = `${invoiceData.bank_account_type ?? ''} ${invoiceData.bank_account_number ?? ''}`.trim();
+    worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
+    worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
+    worksheet.getCell('D16').value = invoiceData.invoice_total_value;
+    worksheet.getCell('H20').value = `${invoiceData.invoice_total_stays} 泊`;
+    worksheet.getCell('J20').value = invoiceData.invoice_total_value;
+
+    let totalTax = 0;
+    let totalNet = 0;
+    if (invoiceData.items && Array.isArray(invoiceData.items)) {
+      invoiceData.items.forEach(item => {
+        totalTax += (item.total_price - item.total_net_price);
+        totalNet += item.total_net_price;
       });
-      newSheet.views = JSON.parse(JSON.stringify(detailsTemplateSheet.views || []));
-      newSheet.pageSetup = JSON.parse(JSON.stringify(detailsTemplateSheet.pageSetup || {}));
+    }
+    worksheet.getCell('I24').value = invoiceData.invoice_total_value;
+    worksheet.getCell('I25').value = totalTax;
+    worksheet.getCell('I27').value = totalNet;
+    worksheet.getCell('I28').value = totalTax;
+    worksheet.getCell('C33').value = invoiceData.comment;
+    worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
 
-      const worksheet = workbook.getWorksheet('請求書フォーマット');
-      const detailsSheet = workbook.getWorksheet('請求書明細');
+    // Populate the details sheet
+    const dailyDetails = invoiceData.daily_details || [];
 
-      detailsSheet.getCell('A4').value = invoiceData.client_name;
-      detailsSheet.getCell('J1').value = invoiceData.invoice_number;
-      detailsSheet.getCell('G2').value = invoiceData.facility_name;
+    const [invYear, invMonth, invDay] = invoiceData.date.split('-').map(Number);
+    const year = invYear;
+    const month = invMonth - 1; // month is 0-indexed for Date object
 
-      worksheet.getCell('L1').value = invoiceData.invoice_number;
-      worksheet.getCell('L2').value = new Date(invoiceData.date);
-      worksheet.getCell('A4').value = invoiceData.client_name;
-      worksheet.getCell('D5').value = invoiceData.customer_code ? String(invoiceData.customer_code).padStart(5, '0') : '';
-      worksheet.getCell('D9').value = invoiceData.facility_name ? `${invoiceData.facility_name} 宿泊料` : '宿泊料';
-      worksheet.getCell('D10').value = new Date(invoiceData.due_date);
-      worksheet.getCell('D11').value = `${invoiceData.bank_name ?? ''} ${invoiceData.bank_branch_name ?? ''}`.trim();
-      worksheet.getCell('D12').value = `${invoiceData.bank_account_type ?? ''} ${invoiceData.bank_account_number ?? ''}`.trim();
-      worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
-      worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
-      worksheet.getCell('D16').value = invoiceData.invoice_total_value;
-      worksheet.getCell('H20').value = `${invoiceData.invoice_total_stays} 泊`;
-      worksheet.getCell('J20').value = invoiceData.invoice_total_value;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      let totalTax = 0;
-      let totalNet = 0;
-      if (invoiceData.items && Array.isArray(invoiceData.items)) {
-          invoiceData.items.forEach(item => {
-              totalTax += (item.total_price - item.total_net_price);
-              totalNet += item.total_net_price;
-          });
-      }
-      worksheet.getCell('I24').value = invoiceData.invoice_total_value;
-      worksheet.getCell('I25').value = totalTax;
-      worksheet.getCell('I27').value = totalNet;
-      worksheet.getCell('I28').value = totalTax;
-      worksheet.getCell('C33').value = invoiceData.comment;
-      worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
+    const toYYYYMMDD = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
 
-      // Populate the details sheet
-      const dailyDetails = invoiceData.daily_details || [];
-      
-      const [invYear, invMonth, invDay] = invoiceData.date.split('-').map(Number);
-      const year = invYear;
-      const month = invMonth - 1; // month is 0-indexed for Date object
+    // Filter dailyDetails to only include entries for the invoice month
+    const filteredDailyDetails = dailyDetails.filter(detail => {
+      const detailDate = new Date(detail.date);
+      return detailDate.getFullYear() === year && detailDate.getMonth() === month;
+    });
 
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(year, month, day);
+      const dateString = toYYYYMMDD(currentDate);
 
-      const toYYYYMMDD = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-      }
+      const todaysDetails = filteredDailyDetails.filter(d => d.date.startsWith(dateString));
 
-      // Filter dailyDetails to only include entries for the invoice month
-      const filteredDailyDetails = dailyDetails.filter(detail => {
-        const detailDate = new Date(detail.date);
-        return detailDate.getFullYear() === year && detailDate.getMonth() === month;
-      });
+      const planData = {
+        4: { count: 0, price: 0 },
+        3: { count: 0, price: 0 },
+        2: { count: 0, price: 0 },
+        1: { count: 0, price: 0 },
+        5: { price: 0 }
+      };
+      let cancelledCount = 0;
 
-      for (let day = 1; day <= daysInMonth; day++) {
-        const currentDate = new Date(year, month, day);
-        const dateString = toYYYYMMDD(currentDate);
-        
-        const todaysDetails = filteredDailyDetails.filter(d => d.date.startsWith(dateString));
-
-        const planData = {
-            4: { count: 0, price: 0 },
-            3: { count: 0, price: 0 },
-            2: { count: 0, price: 0 },
-            1: { count: 0, price: 0 },
-            5: { price: 0 }
-        };
-        let cancelledCount = 0;
-
-        todaysDetails.forEach(detail => {
-            if (detail.cancelled && detail.billable) {
-                cancelledCount++;
-            } else if (!detail.cancelled) {
-                if (planData[detail.plans_global_id]) {
-                    if(planData[detail.plans_global_id].hasOwnProperty('count')) {
-                        planData[detail.plans_global_id].count++;
-                    }
-                    planData[detail.plans_global_id].price += detail.price;
-                }
+      todaysDetails.forEach(detail => {
+        if (detail.cancelled && detail.billable) {
+          cancelledCount++;
+        } else if (!detail.cancelled) {
+          if (planData[detail.plans_global_id]) {
+            if (planData[detail.plans_global_id].hasOwnProperty('count')) {
+              planData[detail.plans_global_id].count++;
             }
-        });
-        
-        const row = detailsSheet.getRow(8 + day);
-        
-        const utcCurrentDate = new Date(Date.UTC(year, month, day));
-        row.getCell('B').value = utcCurrentDate;
-        
-        row.getCell('C').value = planData[4].count > 0 ? planData[4].count : '';
-        row.getCell('D').value = planData[4].price > 0 ? planData[4].price : '';
-        row.getCell('E').value = planData[3].count > 0 ? planData[3].count : '';
-        row.getCell('F').value = planData[3].price > 0 ? planData[3].price : '';
-        row.getCell('G').value = planData[2].count > 0 ? planData[2].count : '';
-        row.getCell('H').value = planData[2].price > 0 ? planData[2].price : '';
-        row.getCell('I').value = planData[1].count > 0 ? planData[1].count : '';
-        row.getCell('J').value = planData[1].price > 0 ? planData[1].price : '';
-        row.getCell('K').value = planData[5].price > 0 ? planData[5].price : '';
-        row.getCell('L').value = cancelledCount > 0 ? cancelledCount : '';
-      }
+            planData[detail.plans_global_id].price += detail.price;
+          }
+        }
+      });
 
-      res.setHeader('Access-Control-Expose-Headers', 'X-Invoice-Number');
-      res.setHeader('X-Invoice-Number', invoiceData.invoice_number);
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      await workbook.xlsx.write(res);
-      res.end();
+      const row = detailsSheet.getRow(8 + day);
+
+      const utcCurrentDate = new Date(Date.UTC(year, month, day));
+      row.getCell('B').value = utcCurrentDate;
+
+      row.getCell('C').value = planData[4].count > 0 ? planData[4].count : '';
+      row.getCell('D').value = planData[4].price > 0 ? planData[4].price : '';
+      row.getCell('E').value = planData[3].count > 0 ? planData[3].count : '';
+      row.getCell('F').value = planData[3].price > 0 ? planData[3].price : '';
+      row.getCell('G').value = planData[2].count > 0 ? planData[2].count : '';
+      row.getCell('H').value = planData[2].price > 0 ? planData[2].price : '';
+      row.getCell('I').value = planData[1].count > 0 ? planData[1].count : '';
+      row.getCell('J').value = planData[1].price > 0 ? planData[1].price : '';
+      row.getCell('K').value = planData[5].price > 0 ? planData[5].price : '';
+      row.getCell('L').value = cancelledCount > 0 ? cancelledCount : '';
+    }
+
+    res.setHeader('Access-Control-Expose-Headers', 'X-Invoice-Number');
+    res.setHeader('X-Invoice-Number', invoiceData.invoice_number);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (error) {
-      console.error("Error generating Excel from template:", error);
-      res.status(500).send('Error generating Excel');
+    console.error("Error generating Excel from template:", error);
+    res.status(500).send('Error generating Excel');
   }
 };
 

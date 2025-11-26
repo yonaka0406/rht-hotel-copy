@@ -1,8 +1,8 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
 const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) => {
-    const pool = getPool(requestId);
-    const query = `
+  const pool = getPool(requestId);
+  const query = `
       SELECT
         reservations.hotel_id
         ,hotels.formal_name
@@ -178,15 +178,15 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         AND (details.plan_price + details.addon_price - details.payment) > 0
       ORDER BY 5, 7;
     `;
-    const values = [hotelId, dateStart, dateEnd];
+  const values = [hotelId, dateStart, dateEnd];
 
-    try {
-      const result = await pool.query(query, values);    
-      return result.rows;
-    } catch (err) {
-      console.error('Error retrieving data:', err);
-      throw new Error('Database error');
-    }
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
 };
 
 const selectBilledListView = async (requestId, hotelId, month) => {
@@ -343,7 +343,7 @@ const selectMaxInvoiceNumber = async (requestId, hotelId, date) => {
   }
 };
 
-const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName, invoiceNumber, due_date, total_stays, comment) => {  
+const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName, invoiceNumber, due_date, total_stays, comment) => {
   const pool = getPool(requestId);
   const query = `
     UPDATE invoices SET
@@ -362,7 +362,7 @@ const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName
   const values = [clientName, invoiceNumber, due_date, total_stays, comment, id, hotelId, date, clientId];
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error updating data:', err);
@@ -442,7 +442,7 @@ async function getPaymentById(requestId, paymentId, hotelId) {
       return null;
     }
     const paymentData = paymentResult.rows[0];
-    
+
     return {
       id: paymentData.id,
       amount: parseFloat(paymentData.amount),
@@ -513,7 +513,7 @@ async function selectMaxReceiptNumber(requestId, hotelId, date) {
   }
 }
 
-async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData) { 
+async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData) {
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
@@ -548,7 +548,7 @@ async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId) {
   } catch (err) {
     console.error(`Error in linkPaymentToReceipt for paymentId ${paymentId}, receiptId ${receiptId}:`, err);
     // Throw a more specific error or a generic one based on policy
-    
+
     throw new Error('Database error while linking payment to receipt.');
   }
 }
