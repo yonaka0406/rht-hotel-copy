@@ -386,6 +386,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
       ,r.receipt_number as existing_receipt_number
       ,r.honorific as existing_honorific
       ,r.custom_proviso as existing_custom_proviso
+      ,r.is_reissue as existing_is_reissue
       ,TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as existing_receipt_date
     FROM
       reservation_payments p

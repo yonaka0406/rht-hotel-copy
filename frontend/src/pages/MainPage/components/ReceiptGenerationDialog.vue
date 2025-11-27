@@ -216,7 +216,7 @@ const isChanged = computed(() => {
   if (currentProviso !== originalProviso) return true;
 
   const currentReissue = isReissue.value;
-  const originalReissue = props.isReissue || false;
+  const originalReissue = props.paymentData.existing_is_reissue || false;
   if (currentReissue !== originalReissue) return true;
 
   // Date comparison
