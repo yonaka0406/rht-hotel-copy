@@ -415,7 +415,7 @@ FROM
         LEFT JOIN
     receipts r_initial ON p.receipt_id = r_initial.id AND p.hotel_id = r_initial.hotel_id -- Initial join to get receipt_number
         LEFT JOIN
-    LatestReceipt lr ON lr.hotel_id = r_initial.hotel_id AND lr.receipt_number = r_initial.receipt_number AND lr.rn = 1
+    LatestReceipt lr ON lr.hotel_id = p.hotel_id AND lr.receipt_number = r_initial.receipt_number AND lr.rn = 1
 WHERE
     p.hotel_id = $1 AND
     p.date >= $2 AND
