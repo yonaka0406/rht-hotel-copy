@@ -1,6 +1,7 @@
 const { getPool } = require('../../config/database');
 const billingModel = require('../../models/billing');
 const { getUsersByID } = require('../../models/user');
+const { getHotelByID } = require('../../models/hotel');
 
 const { getBrowser, resetBrowser } = require('../../services/puppeteerService');
 const logger = require('../../config/logger');
@@ -42,8 +43,18 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
         const userName = userInfo[0].name;
 
+        // Fetch hotel information
+        const hotelInfo = await getHotelByID(req.requestId, hotelId, client);
+        if (!hotelInfo) {
+            logger.error(`[handleGenerateReceiptRequest] Hotel not found for ID: ${hotelId}`);
+            return res.status(404).json({ error: 'Hotel information not found' });
+        }
+        const hotelFormalName = hotelInfo.formal_name;
+
         // Variables for PDF generation
-        let receiptDataForPdf = {};
+        let receiptDataForPdf = {
+            hotel_company_name: hotelFormalName // Set hotel company name from fetched hotel info
+        };
         let paymentDataForPdf;
         let paymentsArrayForPdf;
         let finalReceiptNumber;
