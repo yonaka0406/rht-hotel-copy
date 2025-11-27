@@ -551,7 +551,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
     }
 
     // Generate PDF
-    const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
+    const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../../components/receipt.html'), 'utf-8');
 
     const htmlContent = isConsolidated ?
       generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf, honorific, isReissue, customIssueDate, customProviso) :
