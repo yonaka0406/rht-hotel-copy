@@ -12,7 +12,9 @@ function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakd
 
   // Received Amount (Total)
   let calculatedReceivedAmount = 0;
-  if (paymentData.items && paymentData.items.length > 0) {
+  if (receiptData.totalAmount && parseFloat(receiptData.totalAmount) > 0) {
+    calculatedReceivedAmount = parseFloat(receiptData.totalAmount);
+  } else if (paymentData.items && paymentData.items.length > 0) {
     calculatedReceivedAmount = paymentData.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
   } else {
     calculatedReceivedAmount = parseFloat(paymentData.amount) || 0;
@@ -95,7 +97,9 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
 
   // Calculate Total Consolidated Amount
   let totalConsolidatedAmount = 0;
-  if (paymentsData && paymentsData.length > 0) {
+  if (consolidatedReceiptData.totalAmount && parseFloat(consolidatedReceiptData.totalAmount) > 0) {
+    totalConsolidatedAmount = parseFloat(consolidatedReceiptData.totalAmount);
+  } else if (paymentsData && paymentsData.length > 0) {
     totalConsolidatedAmount = paymentsData.reduce((sum, payment) => {
       let paymentAmount = 0;
       if (payment.items && Array.isArray(payment.items) && payment.items.length > 0) {
