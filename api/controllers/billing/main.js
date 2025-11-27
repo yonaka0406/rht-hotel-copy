@@ -302,6 +302,10 @@ const generateInvoiceExcel = async (req, res) => {
 };
 
 const handleGenerateReceiptRequest = async (req, res) => {
+  logger.debug(`[handleGenerateReceiptRequest] - START`);
+  logger.debug(`[handleGenerateReceiptRequest] Request Body: ${JSON.stringify(req.body)}`);
+  logger.debug(`[handleGenerateReceiptRequest] Request Params: ${JSON.stringify(req.params)}`);
+
   const paymentId = req.params.payment_id;
   const paymentIds = req.body.payment_ids;
   const isConsolidated = !!req.body.payment_ids && !req.params.payment_id;
@@ -313,6 +317,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const isReissue = req.body.isReissue || false;
   const customIssueDate = req.body.customIssueDate || null;
   const customProviso = req.body.customProviso || null;
+
+  logger.debug(`[handleGenerateReceiptRequest] Parsed parameters: { paymentId: ${paymentId}, paymentIds: ${paymentIds}, isConsolidated: ${isConsolidated}, hotelId: ${hotelId}, userId: ${userId}, forceRegenerate: ${forceRegenerate}, isReissue: ${isReissue}, customIssueDate: ${customIssueDate}, customProviso: ${customProviso}, taxBreakdownData: ${JSON.stringify(taxBreakdownData)} }`);
 
   let page = null; // Initialize page to null
 
@@ -351,10 +357,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
       }
     }
+    logger.debug(`[handleGenerateReceiptRequest] After existing receipt check: { existingReceipt: ${!!existingReceipt}, forceRegenerate: ${forceRegenerate}, taxBreakdownDataExists: ${!!taxBreakdownData && taxBreakdownData.length > 0} }`);
 
     // If receipt exists and we're not forcing regeneration with new data, use existing receipt
-    if (existingReceipt && !forceRegenerate && (!taxBreakdownData || taxBreakdownData.length === 0)) {
+    if (existingReceipt && !forceRegenerate) {
       isExistingReceipt = true;
+      logger.debug(`[handleGenerateReceiptRequest] Using existing receipt data.`);
 
       // Always use the stored receipt data from database
       receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
@@ -388,6 +396,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
     // Generate new receipt if not using existing one
     if (!isExistingReceipt) {
+      logger.debug(`[handleGenerateReceiptRequest] Generating new receipt (or new version).`);
       if (isConsolidated) {
         // Consolidated receipt logic
         if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
@@ -461,6 +470,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save consolidated receipt
         let saveResult;
+        logger.debug(`[handleGenerateReceiptRequest] Consolidated: Before save/create version: { isReissue: ${isReissue}, existingReceipt: ${!!existingReceipt} }`);
         if (isReissue && existingReceipt) {
           saveResult = await billingModel.createNextReceiptVersion(
             req.requestId, hotelId, receiptDataForPdf.receipt_number,
@@ -534,6 +544,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save the new receipt
         let saveResult;
+        logger.debug(`[handleGenerateReceiptRequest] Single: Before save/create version: { isReissue: ${isReissue}, existingReceipt: ${!!existingReceipt} }`);
         if (isReissue && existingReceipt) {
           saveResult = await billingModel.createNextReceiptVersion(
             req.requestId, hotelId, receiptDataForPdf.receipt_number,
