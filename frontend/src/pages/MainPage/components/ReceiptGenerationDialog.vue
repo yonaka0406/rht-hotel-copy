@@ -349,8 +349,39 @@ watch(() => props.visible, async (isVisible) => {
             }
           });
           prefilled = true;
+        } else if (existingTotal > 0) {
+          // Proportional distribution
+          console.warn(`Existing tax breakdown total (${existingTotal}) does not match current total amount (${props.totalAmount}). Applying proportional distribution.`);
+          
+          let distributedTotal = 0;
+          let maxAllocatedId = null;
+          let maxAllocatedAmount = -1;
+
+          props.paymentData.existing_tax_breakdown.forEach(item => {
+            if (allocatedAmounts.value.hasOwnProperty(item.id)) {
+               const ratio = parseFloat(item.amount) / existingTotal;
+               const newAmount = Math.floor(props.totalAmount * ratio);
+               allocatedAmounts.value[item.id] = newAmount;
+               distributedTotal += newAmount;
+
+               if (newAmount > maxAllocatedAmount) {
+                 maxAllocatedAmount = newAmount;
+                 maxAllocatedId = item.id;
+               }
+            }
+          });
+
+          // Add remainder to the bucket with the largest amount to minimize distortion
+          const remainder = props.totalAmount - distributedTotal;
+          if (remainder > 0 && maxAllocatedId) {
+            allocatedAmounts.value[maxAllocatedId] += remainder;
+          } else if (remainder > 0 && sortedTaxTypes.value.length > 0) {
+             // Fallback if no max found (unlikely)
+             allocatedAmounts.value[sortedTaxTypes.value[0].id] += remainder;
+          }
+          prefilled = true;
         } else {
-          console.warn(`Existing tax breakdown total (${existingTotal}) does not match current total amount (${props.totalAmount}). Ignoring existing breakdown.`);
+           console.warn(`Existing tax breakdown total is 0 or invalid. Ignoring existing breakdown.`);
         }
       } 
       

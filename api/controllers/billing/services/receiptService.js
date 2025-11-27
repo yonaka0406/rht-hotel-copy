@@ -107,7 +107,7 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
     }, 0);
   }
   modifiedHTML = modifiedHTML.replace(g('received_amount'), totalConsolidatedAmount.toLocaleString());
-  modifiedHTML = modifiedHTML.replace(g('customer_name'), (firstPayment.client_name || 'お客様名') + honorific);
+  modifiedHTML = modifiedHTML.replace(g('customer_name'), (firstPayment.client_name || 'お客様名'));
   modifiedHTML = modifiedHTML.replace(g('honorific'), honorific);
 
   // Proviso
@@ -123,7 +123,20 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
 
   // Handle reissue stamp visibility
   if (isReissue) {
-    modifiedHTML = modifiedHTML.replace(/(<div id="reissueStamp"[^>]*?)style="display: none;"(.*?>)/, '$1style="display: block;"$2');
+    modifiedHTML = modifiedHTML.replace('</body>', `
+      <script>
+        document.getElementById('reissueStamp').style.display = 'block';
+      </script>
+    </body>`);
+  }
+
+  // Show revenue stamp notice for amounts > 50,000
+  if (totalConsolidatedAmount > 50000) {
+    modifiedHTML = modifiedHTML.replace('</body>', `
+      <script>
+        document.getElementById('revenueStampNotice').style.display = 'block';
+      </script>
+    </body>`);
   }
 
   let dynamicTaxDetailsHtml = '';
