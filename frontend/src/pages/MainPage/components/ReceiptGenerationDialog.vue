@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:visible="dialogVisible" :modal="true" style="width: 35vw">
+  <Dialog v-model:visible="dialogVisible" :modal="true" style="width: 50vw">
     <template #header>
       <div>
         <span class="p-dialog-title">領収書発行</span>
@@ -7,6 +7,9 @@
           <p>顧客名: {{ props.paymentData.client_name }}</p>
           <p v-if="props.paymentData.payment_date">
             支払日: {{ formatDate(props.paymentData.payment_date) }}
+          </p>
+          <p v-if="props.paymentData.existing_receipt_number">
+            領収書No.: {{ props.paymentData.existing_receipt_number }} (Ver. {{ props.paymentData.version || 1 }})
           </p>
         </div>
       </div>
