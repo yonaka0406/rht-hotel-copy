@@ -27,7 +27,6 @@
       <template v-else>
         <!-- Tax Inputs Section -->
         <template v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
-          <!-- This div will act as a row container for the tax inputs -->
           <div class="grid col-span-12 p-0">
             <div v-for="taxType in sortedTaxTypes" :key="taxType.id" class="field col-span-12 md:col-span-6 mt-6 mb-1">
               <FloatLabel>
@@ -44,14 +43,13 @@
           <p>税区分が設定されていません。設定画面で税区分を登録してください。</p>
         </div>
 
-        <!-- Allocation Summary Section (now full width and with top margin) -->
+        <!-- Allocation Summary Section -->
         <div class="field col-span-12 mt-4" v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
           <p>割当済み合計: {{ formatCurrency(allocatedTotal) }}</p>
           <p :class="{ 'text-red-500': remainingAmount !== 0, 'text-green-500': remainingAmount === 0 }">
             残額: {{ formatCurrency(remainingAmount) }}
           </p>
           <small v-if="remainingAmount !== 0" class="p-error">割当額が合計支払額と一致していません。</small>
-          <!-- The sortedTaxTypes.length > 0 check for small is implicitly covered by the parent div's v-if -->
         </div>
 
         <!-- Receipt Customization Section -->
@@ -92,14 +90,19 @@
             </div>
           </div>
         </div>
+
+        <!-- Versioning Notification -->
+        <div v-if="props.paymentData && props.paymentData.existing_receipt_number" class="field col-span-12 mt-4">
+           <div v-if="isChanged" class="p-3 bg-yellow-100 border border-yellow-300 rounded text-yellow-900 text-sm">
+             <i class="pi pi-exclamation-triangle mr-2"></i>
+             変更が検出されました。新しいバージョンとして保存・発行されます。
+           </div>
+           <div v-else class="p-3 bg-blue-100 border border-blue-300 rounded text-blue-900 text-sm">
+             <i class="pi pi-info-circle mr-2"></i>
+             変更がないため、既存の領収書データを使用します。
+           </div>
+        </div>
       </template>
-
-
-
-
-
-
-
     </div>
     <template #footer>
       <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" severity="secondary" text />
@@ -144,7 +147,7 @@ const honorificOptions = [
   { label: '殿', value: '殿' },
   { label: '先生', value: '先生' }
 ];
-const taxTypes = computed(() => settingsStore.taxTypes.value || []); // Keep for direct access to raw list if needed elsewhere
+const taxTypes = computed(() => settingsStore.taxTypes.value || []);
 
 const sortedTaxTypes = computed(() => {
   if (!settingsStore.taxTypes.value) return [];
@@ -160,11 +163,11 @@ const props = defineProps({
     type: Number,
     default: 0
   },
-  isConsolidated: { // This prop seems unused in the new tax logic but keep for now
+  isConsolidated: {
     type: Boolean,
     default: false
   },
-  paymentData: { // Add this prop
+  paymentData: {
     type: Object,
     default: () => null
   },
@@ -177,7 +180,7 @@ const emit = defineEmits(['update:visible', 'generate']);
 
 // Component State
 const dialogVisible = ref(false);
-const allocatedAmounts = ref({}); // Object to store amounts, keyed by tax type id
+const allocatedAmounts = ref({});
 const allocatedTotal = ref(0);
 const remainingAmount = ref(0);
 
@@ -190,13 +193,60 @@ const formatCurrency = (value) => {
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return dateString; // Return original if invalid
-  // Simple YYYY/MM/DD format
+  if (isNaN(date.getTime())) return dateString;
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}/${month}/${day}`;
 };
+
+// Computed property to detect changes
+const isChanged = computed(() => {
+  if (!props.paymentData || !props.paymentData.existing_receipt_number) {
+    return true; // New receipt, always treated as "change" (or rather, new data)
+  }
+
+  // 1. Check customization fields
+  const currentHonorific = honorific.value;
+  const originalHonorific = props.paymentData.existing_honorific || '様';
+  if (currentHonorific !== originalHonorific) return true;
+
+  const currentProviso = customProviso.value || '';
+  const originalProviso = props.paymentData.existing_custom_proviso || '';
+  if (currentProviso !== originalProviso) return true;
+
+  const currentReissue = isReissue.value;
+  const originalReissue = props.isReissue || false;
+  if (currentReissue !== originalReissue) return true;
+
+  // Date comparison
+  let currentDateStr = '';
+  if (customIssueDate.value) {
+    const d = new Date(customIssueDate.value);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    currentDateStr = `${year}-${month}-${day}`;
+  }
+  const originalDateStr = props.paymentData.existing_receipt_date ? props.paymentData.existing_receipt_date.split('T')[0] : '';
+  if (currentDateStr !== originalDateStr) return true;
+
+
+  // 2. Check Tax Breakdown
+  const existingBreakdown = props.paymentData.existing_tax_breakdown || [];
+  const existingMap = {};
+  existingBreakdown.forEach(item => {
+    existingMap[item.id] = Number(item.amount);
+  });
+
+  for (const [id, amount] of Object.entries(allocatedAmounts.value)) {
+    const numAmount = Number(amount);
+    const existingAmount = existingMap[id] || 0;
+    if (numAmount !== existingAmount) return true;
+  }
+  
+  return false;
+});
 
 // Methods
 const updateAllocations = () => {
@@ -220,7 +270,6 @@ const closeDialog = () => {
 const generateReceipt = () => {
   if (remainingAmount.value !== 0 && taxTypes.value.length > 0) {
     console.error("Validation failed: Allocated amount does not match total amount.");
-    // Add toast message here if PrimeVue's useToast is imported and setup
     return;
   }
 
@@ -244,7 +293,6 @@ const generateReceipt = () => {
     });
   }
 
-  // Format custom issue date if provided
   let formattedIssueDate = null;
   if (customIssueDate.value) {
     const d = new Date(customIssueDate.value);
@@ -259,7 +307,8 @@ const generateReceipt = () => {
     honorific: honorific.value,
     isReissue: isReissue.value,
     customIssueDate: formattedIssueDate,
-    customProviso: customProviso.value || null
+    customProviso: customProviso.value || null,
+    forceRegenerate: isChanged.value
   });
   closeDialog();
 };
@@ -276,39 +325,48 @@ watch(() => props.visible, async (isVisible) => {
 
       // Initialization logic
       allocatedAmounts.value = {};
+      
+      // Initialize all visible tax types to 0 first
       if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
-        // Initialize all visible tax types in allocatedAmounts to 0
         sortedTaxTypes.value.forEach(tt => {
           allocatedAmounts.value[tt.id] = 0;
         });
-        // Default the totalAmount to the first tax type in the sorted list (highest rate)
-        if (props.totalAmount > 0) {
-          allocatedAmounts.value[sortedTaxTypes.value[0].id] = props.totalAmount;
-        }
       }
-      updateAllocations(); // Recalculate totals
-      // NEW: Pre-fill customization fields if viewing existing receipt
+
+      // Check if we have existing tax breakdown to pre-fill
+      let prefilled = false;
+      if (props.paymentData && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
+        props.paymentData.existing_tax_breakdown.forEach(item => {
+          if (allocatedAmounts.value.hasOwnProperty(item.id)) {
+             allocatedAmounts.value[item.id] = Number(item.amount);
+          }
+        });
+        prefilled = true;
+      } 
+      
+      if (!prefilled && sortedTaxTypes.value && sortedTaxTypes.value.length > 0 && props.totalAmount > 0) {
+        allocatedAmounts.value[sortedTaxTypes.value[0].id] = props.totalAmount;
+      }
+
+      updateAllocations();
+
       if (props.paymentData && props.paymentData.existing_receipt_number) {
         honorific.value = props.paymentData.existing_honorific || '様';
         customProviso.value = props.paymentData.existing_custom_proviso || '';
         if (props.paymentData.existing_receipt_date) {
-          customIssueDate.value = new Date(props.paymentData.existing_receipt_date + 'T00:00:00');
+          customIssueDate.value = new Date(props.paymentData.existing_receipt_date);
         }
         isReissue.value = props.isReissue;
       }
     } catch (error) {
       console.error("Failed to fetch tax types in ReceiptGenerationDialog:", error);
-      // Consider adding a user-facing error message via toast if available
     } finally {
       isLoadingTaxTypes.value = false;
     }
   } else {
-    // Reset when dialog is hidden
     allocatedAmounts.value = {};
     allocatedTotal.value = 0;
     remainingAmount.value = 0;
-
-    // Reset customization fields
     honorific.value = '様';
     customIssueDate.value = null;
     customProviso.value = '';
@@ -318,13 +376,11 @@ watch(() => props.visible, async (isVisible) => {
 
 watch(() => props.totalAmount, (newTotal) => {
   if (dialogVisible.value) {
-    allocatedAmounts.value = {}; // Reset allocations
+    allocatedAmounts.value = {};
     if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
-      // Initialize all visible tax types in allocatedAmounts to 0
       sortedTaxTypes.value.forEach(tt => {
         allocatedAmounts.value[tt.id] = 0;
       });
-      // Default the newTotal to the first tax type in the sorted list
       if (newTotal > 0) {
         allocatedAmounts.value[sortedTaxTypes.value[0].id] = newTotal;
       }
@@ -333,7 +389,6 @@ watch(() => props.totalAmount, (newTotal) => {
   }
 });
 
-// Sync dialogVisible with props.visible for external control
 watch(dialogVisible, (newValue) => {
   if (props.visible !== newValue) {
     emit('update:visible', newValue);

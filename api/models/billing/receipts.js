@@ -1,22 +1,20 @@
 const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
 
-async function selectMaxReceiptNumber(requestId, hotelId, date, dbClient = null) {
+async function selectMaxReceiptNumber(requestId, hotelId, prefix, dbClient = null) {
     const client = dbClient || await getPool(requestId).connect();
-    logger.debug(`selectMaxReceiptNumber called with requestId: ${requestId}, hotelId: ${hotelId}, date: ${date}`);
-    // The date parameter is a JS Date object. We need to ensure it's formatted correctly for the query
-    // or use date_trunc with the passed date.
+    logger.debug(`selectMaxReceiptNumber called with requestId: ${requestId}, hotelId: ${hotelId}, prefix: ${prefix}`);
+
     const query = `
         SELECT receipt_number as last_receipt_number
         FROM receipts
         WHERE hotel_id = $1
-        AND receipt_date >= date_trunc('month', $2::date)
-        AND receipt_date < date_trunc('month', $2::date) + interval '1 month'
+        AND receipt_number LIKE $2 || '%'
         ORDER BY receipt_number DESC
         LIMIT 1;
     `;
     try {
-        const result = await client.query(query, [hotelId, date]);
+        const result = await client.query(query, [hotelId, prefix]);
         const output = result.rows.length > 0 ? result.rows[0] : { last_receipt_number: null };
         logger.debug(`selectMaxReceiptNumber query result: ${JSON.stringify(output)}`);
         return output;

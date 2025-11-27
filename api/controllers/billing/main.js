@@ -438,7 +438,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           const year = receiptDateObj.getFullYear() % 100;
           const month = receiptDateObj.getMonth() + 1;
           const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj, client);
+          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, prefixStr, client);
           let sequence = 1;
           if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
             sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
@@ -499,7 +499,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           const year = receiptDateObj.getFullYear() % 100;
           const month = receiptDateObj.getMonth() + 1;
           const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj, client);
+          let maxReceiptNumData = await billingModel.selectMaxReceiptNumber(req.requestId, hotelId, prefixStr, client);
           let sequence = 1;
           if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
             sequence = parseInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length), 10) + 1;
