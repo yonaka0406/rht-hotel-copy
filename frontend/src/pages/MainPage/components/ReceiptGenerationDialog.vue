@@ -339,12 +339,19 @@ watch(() => props.visible, async (isVisible) => {
       // Check if we have existing tax breakdown to pre-fill
       let prefilled = false;
       if (props.paymentData && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
-        props.paymentData.existing_tax_breakdown.forEach(item => {
-          if (allocatedAmounts.value.hasOwnProperty(item.id)) {
-             allocatedAmounts.value[item.id] = Number(item.amount);
-          }
-        });
-        prefilled = true;
+        const existingTotal = props.paymentData.existing_tax_breakdown.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        
+        // Only pre-fill if the existing breakdown total matches the current requested total amount
+        if (Math.abs(existingTotal - props.totalAmount) < 1.0) {
+          props.paymentData.existing_tax_breakdown.forEach(item => {
+            if (allocatedAmounts.value.hasOwnProperty(item.id)) {
+               allocatedAmounts.value[item.id] = Number(item.amount);
+            }
+          });
+          prefilled = true;
+        } else {
+          console.warn(`Existing tax breakdown total (${existingTotal}) does not match current total amount (${props.totalAmount}). Ignoring existing breakdown.`);
+        }
       } 
       
       if (!prefilled && sortedTaxTypes.value && sortedTaxTypes.value.length > 0 && props.totalAmount > 0) {
