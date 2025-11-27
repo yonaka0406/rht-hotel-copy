@@ -342,6 +342,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
     let isExistingReceipt = false;
 
     // Early check for existing receipt - check for both single and consolidated requests
+
+
+    let shouldProcessAsNewVersion = false;
+    let isExistingReceiptDataReady = false; // Flag to indicate if receiptDataForPdf is populated from existing receipt
+
+    // Early check for existing receipt - check for both single and consolidated requests
     let existingReceipt = null;
     if (!isConsolidated && paymentId) {
       // For single payment requests, check if a receipt already exists
@@ -358,44 +364,68 @@ const handleGenerateReceiptRequest = async (req, res) => {
       }
     }
     logger.debug(`[handleGenerateReceiptRequest] After existing receipt check: { existingReceipt: ${!!existingReceipt}, forceRegenerate: ${forceRegenerate}, taxBreakdownDataExists: ${!!taxBreakdownData && taxBreakdownData.length > 0} }`);
+    logger.debug(`[handleGenerateReceiptRequest] After existing receipt check: { existingReceipt: ${!!existingReceipt}, forceRegenerate: ${forceRegenerate}, isReissue: ${isReissue}, taxBreakdownDataExists: ${!!taxBreakdownData && taxBreakdownData.length > 0} }`);
 
-    // If receipt exists and we're not forcing regeneration with new data, use existing receipt
-    if (existingReceipt && !forceRegenerate) {
-      isExistingReceipt = true;
-      logger.debug(`[handleGenerateReceiptRequest] Using existing receipt data.`);
-
-      // Always use the stored receipt data from database
-      receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
-      receiptDataForPdf.receipt_date = customIssueDate || existingReceipt.receipt_date;
-      receiptDataForPdf.totalAmount = parseFloat(existingReceipt.amount);
-      finalTaxBreakdownForPdf = existingReceipt.tax_breakdown;
-      finalReceiptNumber = existingReceipt.receipt_number;
-
-      // Get payment data for PDF generation (use first payment for consolidated)
-      const paymentForPdfId = isConsolidated ? paymentIds[0] : paymentId;
-      paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentForPdfId, hotelId, client);
-      if (!paymentDataForPdf) {
-        return res.status(404).json({ error: 'Payment data not found' });
-      }
-
-      // Override payment amount with the actual receipt amount from database
-      // This ensures {{ received_amount }} always shows the stored receipt total
-      paymentDataForPdf.amount = existingReceipt.amount;
-
-      // For consolidated requests that are using existing receipt, we still need to get all payments for the proviso
-      if (isConsolidated) {
-        paymentsArrayForPdf = [];
-        for (const pid of paymentIds) {
-          const paymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId, client);
-          if (paymentData) {
-            paymentsArrayForPdf.push(paymentData);
-          }
+    if (existingReceipt) {
+      if (forceRegenerate) { // forceRegenerate now acts as isChanged from frontend
+        // If forceRegenerate (isChanged) is true, always create a new version.
+        shouldProcessAsNewVersion = true;
+        logger.debug(`[handleGenerateReceiptRequest] Existing receipt found, forceRegenerate is true, proceeding to generate new version.`);
+      } else if (isReissue) {
+        // If isReissue is true (and not forceRegenerate).
+        // Create a new version only if existing receipt is the initial version (version 1).
+        // If existing receipt.version > 1 (already reissued), then use existing for PDF.
+        if (existingReceipt.version === 1) { // Assuming version 1 is the initial non-reissued state
+            shouldProcessAsNewVersion = true;
+            logger.debug(`[handleGenerateReceiptRequest] Existing receipt (version 1) found and isReissue is true, proceeding to generate new version (e.g., version 2).`);
+        } else { // existingReceipt.version > 1, already reissued
+            isExistingReceiptDataReady = true; // Just download the existing reissued version
+            logger.debug(`[handleGenerateReceiptRequest] Existing receipt (version > 1) found and isReissue is true, but not forceRegenerate. Using existing receipt data for download/display.`);
         }
+      } else {
+        // If forceRegenerate (isChanged) is false and isReissue is false, use existing for PDF.
+        isExistingReceiptDataReady = true;
+        logger.debug(`[handleGenerateReceiptRequest] Existing receipt found, forceRegenerate (isChanged) is false and isReissue is false. Using existing receipt data for download/display.`);
       }
+    } else {
+      // No existing receipt found, always generate a new one
+      shouldProcessAsNewVersion = true;
+      logger.debug(`[handleGenerateReceiptRequest] No existing receipt found, generating a new receipt.`);
     }
 
-    // Generate new receipt if not using existing one
-    if (!isExistingReceipt) {
+    if (isExistingReceiptDataReady) {
+        logger.debug(`[handleGenerateReceiptRequest] Populating PDF data from existing receipt.`);
+        // Always use the stored receipt data from database
+        receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
+        receiptDataForPdf.receipt_date = customIssueDate || existingReceipt.receipt_date;
+        receiptDataForPdf.totalAmount = parseFloat(existingReceipt.amount);
+        finalTaxBreakdownForPdf = existingReceipt.tax_breakdown;
+        finalReceiptNumber = existingReceipt.receipt_number;
+
+        // Get payment data for PDF generation (use first payment for consolidated if applicable)
+        const paymentForPdfId = isConsolidated ? paymentIds[0] : paymentId;
+        paymentDataForPdf = await billingModel.getPaymentById(req.requestId, paymentForPdfId, hotelId, client);
+        if (!paymentDataForPdf) {
+          return res.status(404).json({ error: 'Payment data not found' });
+        }
+
+        // Override payment amount with the actual receipt amount from database
+        // This ensures {{ received_amount }} always shows the stored receipt total
+        paymentDataForPdf.amount = existingReceipt.amount;
+
+        // For consolidated requests that are using existing receipt, we still need to get all payments for the proviso
+        if (isConsolidated) {
+          paymentsArrayForPdf = [];
+          for (const pid of paymentIds) {
+            const paymentData = await billingModel.getPaymentById(req.requestId, pid, hotelId, client);
+            if (paymentData) {
+              paymentsArrayForPdf.push(paymentData);
+            }
+          }
+        }
+    }
+
+    if (shouldProcessAsNewVersion) {
       logger.debug(`[handleGenerateReceiptRequest] Generating new receipt (or new version).`);
       if (isConsolidated) {
         // Consolidated receipt logic
@@ -429,12 +459,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
           for (let i = 1; i < fetchedPaymentsData.length; i++) {
             if (fetchedPaymentsData[i].payment_date !== commonPaymentDate) {
               commonPaymentDate = null; // Dates are not common
-              //logger.debug('[Receipt Generation] Consolidated: Payment dates differ, defaulting to current date for receipt.');
               break;
             }
-          }
-          if (commonPaymentDate) {
-            //logger.debug(`[Receipt Generation] Consolidated: Using common payment date for receipt: ${commonPaymentDate}`);
           }
         }
 
@@ -470,8 +496,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save consolidated receipt
         let saveResult;
-        logger.debug(`[handleGenerateReceiptRequest] Consolidated: Before save/create version: { isReissue: ${isReissue}, existingReceipt: ${!!existingReceipt} }`);
-        if (isReissue && existingReceipt) {
+        logger.debug(`[handleGenerateReceiptRequest] Consolidated: Before save/create version: { isReissue: ${isReissue}, existingReceipt: ${!!existingReceipt}, shouldProcessAsNewVersion: ${shouldProcessAsNewVersion} }`);
+        if (existingReceipt && shouldProcessAsNewVersion) { // Reverted to shouldProcessAsNewVersion
           saveResult = await billingModel.createNextReceiptVersion(
             req.requestId, hotelId, receiptDataForPdf.receipt_number,
             receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
@@ -499,7 +525,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
         if (!paymentId) {
           return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
         }
-
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
@@ -544,16 +569,15 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Save the new receipt
         let saveResult;
-        logger.debug(`[handleGenerateReceiptRequest] Single: Before save/create version: { isReissue: ${isReissue}, existingReceipt: ${!!existingReceipt} }`);
-        if (isReissue && existingReceipt) {
+        logger.debug(`[handleGenerateReceiptRequest] Single: Before save/create version: { isReissue: ${isReissue}, existingReceipt: ${!!existingReceipt}, shouldProcessAsNewVersion: ${shouldProcessAsNewVersion} }`);
+        if (existingReceipt && shouldProcessAsNewVersion) { // Reverted to shouldProcessAsNewVersion
           saveResult = await billingModel.createNextReceiptVersion(
             req.requestId, hotelId, receiptDataForPdf.receipt_number,
             receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
             honorific, customProviso, isReissue, client
           );
         } else {
-          saveResult = await billingModel.saveReceiptNumber(
-            req.requestId, hotelId, receiptDataForPdf.receipt_number,
+          saveResult = await billingModel.saveReceiptNumber(            req.requestId, hotelId, receiptDataForPdf.receipt_number,
             receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
             honorific, customProviso, isReissue, client
           );
@@ -578,9 +602,22 @@ const handleGenerateReceiptRequest = async (req, res) => {
       receiptDataForPdf.hotel_fax = paymentDataForPdf.hotel_details.fax;
       receiptDataForPdf.hotel_registration_number = paymentDataForPdf.hotel_details.registration_number;
     }
+    await client.query('COMMIT');
+
+    // Populate hotel details for PDF generation
+    if (paymentDataForPdf && paymentDataForPdf.hotel_details) {
+      receiptDataForPdf.hotel_company_name = paymentDataForPdf.hotel_details.company_name;
+      receiptDataForPdf.hotel_zip_code = paymentDataForPdf.hotel_details.zip_code;
+      receiptDataForPdf.hotel_address = paymentDataForPdf.hotel_details.address;
+      receiptDataForPdf.hotel_tel = paymentDataForPdf.hotel_details.tel;
+      receiptDataForPdf.hotel_fax = paymentDataForPdf.hotel_details.fax;
+      receiptDataForPdf.hotel_registration_number = paymentDataForPdf.hotel_details.registration_number;
+    }
 
     // Generate PDF
     const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../../components/receipt.html'), 'utf-8');
+
+    logger.debug(`[handleGenerateReceiptRequest] Before generateReceiptHTML call: paymentDataForPdf = ${JSON.stringify(paymentDataForPdf)}`);
 
     const htmlContent = isConsolidated ?
       generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf, honorific, isReissue, customIssueDate, customProviso) :
