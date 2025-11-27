@@ -16,7 +16,7 @@
     </template>
     <div class="p-fluid grid">
       <div class="field col-span-12 my-2">
-        <p><strong>合計支払額: {{ formatCurrency(props.totalAmount) }}</strong></p>
+        <p><strong>合計支払額: {{ formatCurrency(displayTotalAmount) }}</strong></p>
       </div>
 
       <!-- Loading Indicator -->
@@ -49,10 +49,11 @@
         <!-- Allocation Summary Section -->
         <div class="field col-span-12 mt-4" v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
           <p>割当済み合計: {{ formatCurrency(allocatedTotal) }}</p>
-          <p :class="{ 'text-red-500': remainingAmount !== 0, 'text-green-500': remainingAmount === 0 }">
+          <p :class="{ 'text-red-500': !isValidAllocation, 'text-green-500': isValidAllocation }">
             残額: {{ formatCurrency(remainingAmount) }}
+            <span v-if="matchesExisting && Math.abs(remainingAmount) >= 1.0" class="text-sm ml-2">(既存領収書額と一致)</span>
           </p>
-          <small v-if="remainingAmount !== 0" class="p-error">割当額が合計支払額と一致していません。</small>
+          <small v-if="!isValidAllocation" class="p-error">割当額が合計支払額と一致していません。</small>
         </div>
 
         <!-- Receipt Customization Section -->
@@ -69,7 +70,7 @@
               </FloatLabel>
             </div>
             <!-- Custom Issue Date -->
-            <div class="field col-span-12 md:col-span-6">
+            <div class="field col-span-12 md:col-span-6 mt-6">
               <FloatLabel>
                 <DatePicker id="customIssueDate" v-model="customIssueDate" dateFormat="yy-mm-dd" :showIcon="true"
                   fluid />
@@ -78,7 +79,7 @@
               <small class="text-gray-500">空欄の場合は支払日が使用されます</small>
             </div>
             <!-- Custom Proviso -->
-            <div class="field col-span-12">
+            <div class="field col-span-12 mt-6">
               <FloatLabel>
                 <Textarea id="customProviso" v-model="customProviso" rows="2" fluid />
                 <label for="customProviso">但し書き（カスタム）</label>
@@ -187,6 +188,29 @@ const allocatedAmounts = ref({});
 const allocatedTotal = ref(0);
 const remainingAmount = ref(0);
 
+const existingBreakdownTotal = computed(() => {
+  if (props.paymentData && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
+    return props.paymentData.existing_tax_breakdown.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  }
+  return 0;
+});
+
+const matchesExisting = computed(() => {
+  if (!existingBreakdownTotal.value) return false;
+  return Math.abs(allocatedTotal.value - existingBreakdownTotal.value) < 1.0;
+});
+
+const isValidAllocation = computed(() => {
+  if (sortedTaxTypes.value.length === 0) return props.totalAmount === 0;
+  return Math.abs(remainingAmount.value) < 1.0 || matchesExisting.value;
+});
+
+const displayTotalAmount = computed(() => {
+  // If we have a valid existing breakdown (indicating an existing receipt), use its total.
+  // This handles consolidated receipts where the receipt total > single payment amount.
+  return existingBreakdownTotal.value > 0 ? existingBreakdownTotal.value : props.totalAmount;
+});
+
 // Helper functions
 const formatCurrency = (value) => {
   if (value == null || isNaN(Number(value))) return '';
@@ -262,7 +286,7 @@ const updateAllocations = () => {
     });
   }
   allocatedTotal.value = currentTotal;
-  remainingAmount.value = props.totalAmount - allocatedTotal.value;
+  remainingAmount.value = displayTotalAmount.value - allocatedTotal.value;
 };
 
 const closeDialog = () => {
@@ -338,51 +362,13 @@ watch(() => props.visible, async (isVisible) => {
 
       // Check if we have existing tax breakdown to pre-fill
       let prefilled = false;
-      if (props.paymentData && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
-        const existingTotal = props.paymentData.existing_tax_breakdown.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-        
-        // Only pre-fill if the existing breakdown total matches the current requested total amount
-        if (Math.abs(existingTotal - props.totalAmount) < 1.0) {
-          props.paymentData.existing_tax_breakdown.forEach(item => {
-            if (allocatedAmounts.value.hasOwnProperty(item.id)) {
-               allocatedAmounts.value[item.id] = Number(item.amount);
-            }
-          });
-          prefilled = true;
-        } else if (existingTotal > 0) {
-          // Proportional distribution
-          console.warn(`Existing tax breakdown total (${existingTotal}) does not match current total amount (${props.totalAmount}). Applying proportional distribution.`);
-          
-          let distributedTotal = 0;
-          let maxAllocatedId = null;
-          let maxAllocatedAmount = -1;
-
-          props.paymentData.existing_tax_breakdown.forEach(item => {
-            if (allocatedAmounts.value.hasOwnProperty(item.id)) {
-               const ratio = parseFloat(item.amount) / existingTotal;
-               const newAmount = Math.floor(props.totalAmount * ratio);
-               allocatedAmounts.value[item.id] = newAmount;
-               distributedTotal += newAmount;
-
-               if (newAmount > maxAllocatedAmount) {
-                 maxAllocatedAmount = newAmount;
-                 maxAllocatedId = item.id;
-               }
-            }
-          });
-
-          // Add remainder to the bucket with the largest amount to minimize distortion
-          const remainder = props.totalAmount - distributedTotal;
-          if (remainder > 0 && maxAllocatedId) {
-            allocatedAmounts.value[maxAllocatedId] += remainder;
-          } else if (remainder > 0 && sortedTaxTypes.value.length > 0) {
-             // Fallback if no max found (unlikely)
-             allocatedAmounts.value[sortedTaxTypes.value[0].id] += remainder;
+      if (props.paymentData && props.paymentData.existing_receipt_number && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
+        props.paymentData.existing_tax_breakdown.forEach(item => {
+          if (allocatedAmounts.value.hasOwnProperty(item.id)) {
+             allocatedAmounts.value[item.id] = Number(item.amount);
           }
-          prefilled = true;
-        } else {
-           console.warn(`Existing tax breakdown total is 0 or invalid. Ignoring existing breakdown.`);
-        }
+        });
+        prefilled = true;
       } 
       
       if (!prefilled && sortedTaxTypes.value && sortedTaxTypes.value.length > 0 && props.totalAmount > 0) {
