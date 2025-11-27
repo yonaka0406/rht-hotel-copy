@@ -284,7 +284,7 @@ const generateReceipt = () => {
         // Calculate tax from tax-inclusive amount
         // Formula: tax = amount - (amount / (1 + rate))
         // Example: For ¥10,000 at 8%: tax = 10000 - (10000 / 1.08) = 740.74 ≈ 740
-        const taxValue = Math.floor(taxableAmount - (taxableAmount / (1 + tt.percentage)));
+        const taxValue = Math.floor(taxableAmount - (taxableAmount / (1 + parseFloat(tt.percentage))));
         breakdown.push({
           id: tt.id,
           name: tt.name,
