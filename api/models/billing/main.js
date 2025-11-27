@@ -374,54 +374,46 @@ const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName
 async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endDate) {
   const pool = getPool(requestId);
   const query = `
-WITH LatestReceipt AS (
     SELECT
-        r_inner.id,
-        r_inner.receipt_number,
-        r_inner.honorific,
-        r_inner.custom_proviso,
-        r_inner.is_reissue,
-        r_inner.receipt_date,
-        r_inner.version,
-        r_inner.tax_breakdown,
-        ROW_NUMBER() OVER(PARTITION BY r_inner.hotel_id, r_inner.receipt_number ORDER BY r_inner.version DESC) as rn
+      res.check_in
+      ,res.check_out
+      ,p.id as payment_id
+      ,rs.room_number
+      ,TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date
+      ,p.value as amount
+      ,COALESCE(c.name_kanji, c.name_kana, c.name) as client_name
+      ,p.comment
+      ,latest_r.receipt_number as existing_receipt_number
+      ,latest_r.honorific as existing_honorific
+      ,latest_r.custom_proviso as existing_custom_proviso
+      ,latest_r.is_reissue as existing_is_reissue
+      ,TO_CHAR(latest_r.receipt_date, 'YYYY-MM-DD') as existing_receipt_date
+      ,latest_r.version as version
+      ,latest_r.tax_breakdown as existing_tax_breakdown
     FROM
-        receipts r_inner
-)
-SELECT
-    res.check_in
-    ,res.check_out
-    ,p.id as payment_id
-    ,rs.room_number
-    ,TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date
-    ,p.value as amount
-    ,COALESCE(c.name_kanji, c.name_kana, c.name) as client_name
-    ,p.comment
-    ,lr.receipt_number as existing_receipt_number
-    ,lr.honorific as existing_honorific
-    ,lr.custom_proviso as existing_custom_proviso
-    ,lr.is_reissue as existing_is_reissue
-    ,TO_CHAR(lr.receipt_date, 'YYYY-MM-DD') as existing_receipt_date
-    ,lr.version as version
-    ,lr.tax_breakdown as existing_tax_breakdown
-FROM
-    reservation_payments p
+      reservation_payments p
         JOIN
-    clients c ON p.client_id = c.id
+      clients c ON p.client_id = c.id
         JOIN
-    reservations res ON res.id = p.reservation_id AND res.hotel_id = p.hotel_id
+      reservations res ON res.id = p.reservation_id AND res.hotel_id = p.hotel_id
         JOIN
-    rooms rs ON rs.id = p.room_id
+      rooms rs ON rs.id = p.room_id
         LEFT JOIN
-    receipts r_initial ON p.receipt_id = r_initial.id AND p.hotel_id = r_initial.hotel_id -- Initial join to get receipt_number
-        LEFT JOIN
-    LatestReceipt lr ON lr.hotel_id = p.hotel_id AND lr.receipt_number = r_initial.receipt_number AND lr.rn = 1
-WHERE
-    p.hotel_id = $1 AND
-    p.date >= $2 AND
-    p.date <= $3
-ORDER BY
-    p.date DESC;
+      receipts r_linked ON p.receipt_id = r_linked.id AND p.hotel_id = r_linked.hotel_id -- Linked receipt
+        LEFT JOIN LATERAL (
+            SELECT r_latest.*
+            FROM receipts r_latest
+            WHERE r_latest.hotel_id = r_linked.hotel_id
+              AND r_latest.receipt_number = r_linked.receipt_number
+            ORDER BY r_latest.version DESC
+            LIMIT 1
+        ) latest_r ON r_linked.id IS NOT NULL -- Only join if r_linked exists
+    WHERE
+      p.hotel_id = $1 AND
+      p.date >= $2 AND
+      p.date <= $3
+    ORDER BY
+      p.date DESC;
   `;
   try {
     const result = await pool.query(query, [hotelId, startDate, endDate]);
