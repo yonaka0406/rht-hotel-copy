@@ -43,6 +43,14 @@ COMMENT ON COLUMN receipts.honorific IS 'Honorific suffix used on the receipt (�
 COMMENT ON COLUMN receipts.custom_proviso IS 'Custom proviso text (但し書き) if provided, otherwise uses facility name';
 COMMENT ON COLUMN receipts.is_reissue IS 'Indicates if this receipt is a reissue/reprint of an existing receipt';
 
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS version INT DEFAULT 1;
+
+-- Drop the old unique constraint
+ALTER TABLE receipts DROP CONSTRAINT IF EXISTS receipts_hotel_id_receipt_number_key;
+
+-- Add the new unique constraint including version
+ALTER TABLE receipts ADD CONSTRAINT receipts_hotel_id_receipt_number_version_key UNIQUE (hotel_id, receipt_number, version);
+
 -- Add the foreign key constraint from reservation_payments to receipts
 -- This was deferred from 005_reservations.sql
 ALTER TABLE reservation_payments
