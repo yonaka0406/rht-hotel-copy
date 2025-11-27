@@ -460,11 +460,20 @@ const handleGenerateReceiptRequest = async (req, res) => {
         receiptDataForPdf.totalAmount = totalConsolidatedAmount;
 
         // Save consolidated receipt
-        const saveResult = await billingModel.saveReceiptNumber(
-          req.requestId, hotelId, receiptDataForPdf.receipt_number,
-          receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
-          honorific, customProviso, isReissue, client
-        );
+        let saveResult;
+        if (isReissue && existingReceipt) {
+          saveResult = await billingModel.createNextReceiptVersion(
+            req.requestId, hotelId, receiptDataForPdf.receipt_number,
+            receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
+            honorific, customProviso, isReissue, client
+          );
+        } else {
+          saveResult = await billingModel.saveReceiptNumber(
+            req.requestId, hotelId, receiptDataForPdf.receipt_number,
+            receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf,
+            honorific, customProviso, isReissue, client
+          );
+        }
 
         if (!saveResult || !saveResult.id) {
           throw new Error('Failed to save consolidated receipt master record.');
@@ -524,11 +533,20 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Save the new receipt
-        const saveResult = await billingModel.saveReceiptNumber(
-          req.requestId, hotelId, receiptDataForPdf.receipt_number,
-          receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
-          honorific, customProviso, isReissue, client
-        );
+        let saveResult;
+        if (isReissue && existingReceipt) {
+          saveResult = await billingModel.createNextReceiptVersion(
+            req.requestId, hotelId, receiptDataForPdf.receipt_number,
+            receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
+            honorific, customProviso, isReissue, client
+          );
+        } else {
+          saveResult = await billingModel.saveReceiptNumber(
+            req.requestId, hotelId, receiptDataForPdf.receipt_number,
+            receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf,
+            honorific, customProviso, isReissue, client
+          );
+        }
 
         if (!saveResult || !saveResult.id) {
           throw new Error('Failed to save single receipt record.');
