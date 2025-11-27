@@ -61,7 +61,7 @@
 
           <div class="grid col-span-12 gap-4">
             <!-- Honorific Selection -->
-            <div class="field col-span-12 md:col-span-6">
+            <div class="field col-span-12 md:col-span-6 mt-6">
               <FloatLabel>
                 <Select id="honorific" v-model="honorific" :options="honorificOptions" optionLabel="label"
                   optionValue="value" fluid />
@@ -359,7 +359,7 @@ watch(() => props.visible, async (isVisible) => {
         if (props.paymentData.existing_receipt_date) {
           customIssueDate.value = new Date(props.paymentData.existing_receipt_date);
         }
-        isReissue.value = props.isReissue;
+        isReissue.value = props.paymentData.existing_is_reissue;
       }
     } catch (error) {
       console.error("Failed to fetch tax types in ReceiptGenerationDialog:", error);
