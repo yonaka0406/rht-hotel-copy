@@ -5,6 +5,34 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 27, 2025
+
+#### Inconsistent Parking Spot Addition Behavior
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Report
+- **Description**: 
+  - Users can only add one parking spot at a time through the dialog.
+  - Some users (like the reporter) can add multiple parking spots.
+- **Expected Behavior**:
+  - Consistent behavior for all users regarding the number of parking spots that can be added simultaneously through the dialog.
+- **Technical Notes**:
+  - Investigate the dialog's logic for adding parking spots.
+  - Check for any user-specific settings or permissions that might influence this behavior.
+  - Ensure the UI/UX clearly communicates how many spots can be added at once.
+
+#### When a plan is changed, the parking addon is being erased
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Report
+- **Description**: 
+  - When a reservation's plan is changed, any existing parking addon associated with that reservation is being erased.
+- **Expected Behavior**:
+  - Changing a reservation's plan should not automatically remove or erase associated parking addons. Parking addons should persist unless explicitly removed by the user.
+- **Technical Notes**:
+  - Investigate the reservation update logic, specifically how plan changes interact with existing addons.
+  - Ensure that the parking addon data is being correctly preserved or re-applied when a plan is modified.
+
 ### November 21, 2025
 
 #### Security Improvements
@@ -682,6 +710,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: October 29, 2025*
-*Total Bugs: 3* (last one #87)
+*Last Updated: November 27, 2025*
+*Total Bugs: 5* (last one #87)
 *Total Feature Requests: 30* (last one #C)
