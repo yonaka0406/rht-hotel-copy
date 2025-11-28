@@ -5,6 +5,29 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### November 28, 2025
+
+#### Wehub Dashboard Metrics Adjustment
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Request
+- **Description**: 
+  - On the Wehub dashboard, the following metrics should exclude on-hold (キープ) reservations:
+    - 稼働率 (Occupancy Rate)
+    - 売上 (Revenue)
+    - ADR (Average Daily Rate)
+    - RevPAR (Revenue Per Available Room)
+  - However, the system should still track and display the total revenue from on-hold reservations separately
+- **Requested Changes**:
+  1. Modify dashboard calculations to exclude on-hold reservations from the main metrics
+  2. Add a separate section or indicator showing the total revenue from on-hold reservations
+  3. Ensure the data remains accurate and consistent across all reports
+- **Technical Notes**:
+  - Review and update the database queries that calculate these metrics
+  - Add a new field or status indicator for on-hold reservations
+  - Ensure the changes don't affect historical data reporting
+  - Add appropriate tooltips or help text to explain the metrics
+
 ### November 27, 2025
 
 #### Inconsistent Parking Spot Addition Behavior
