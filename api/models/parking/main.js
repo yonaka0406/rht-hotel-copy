@@ -786,7 +786,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
                 // Query to check what reservation_details actually exist for this reservation
 
-            }
+            
             
             if (!reservationDetails.length) {
                 logger.warn(`No reservation details found for reservation ${reservation_id} with params:`, {

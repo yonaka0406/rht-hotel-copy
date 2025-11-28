@@ -10,6 +10,7 @@ const logger = require('../../config/logger');
 const { selectReservation, selectAvailableRooms, selectAndLockAvailableParkingSpot, selectReservationParkingAddons } = require('./select');
 const { deleteReservationAddonsByDetailId } = require('./delete');
 const { insertReservationRate, insertAggregatedRates } = require('./insert');
+const { addReservationAddon } = require('./addons');
 
 // Helper
 const formatDate = (date) => {
@@ -400,68 +401,6 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
     } else {
         logger.error('Error adding reservation hold details:', err);
     }
-    throw err;
-  } finally {
-    if (shouldReleaseClient) {
-      dbClient.release();
-    }
-  }
-};
-
-const addReservationAddon = async (requestId, addon, client = null) => {
-  const pool = getPool(requestId);
-  let dbClient = client;
-  let shouldReleaseClient = false;
-  let shouldManageTransaction = (client === null);
-
-  if (!dbClient) {
-    dbClient = await pool.connect();
-    shouldReleaseClient = true;    
-  }
-
-  const query = `
-    INSERT INTO reservation_addons (
-      hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, quantity, price, tax_type_id, tax_rate, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-    RETURNING *;
-  `;
-
-  const values = [
-    addon.hotel_id,
-    addon.reservation_detail_id,
-    addon.addons_global_id,
-    addon.addons_hotel_id,
-    addon.addon_name,
-    addon.quantity,
-    addon.price,
-    addon.tax_type_id,
-    addon.tax_rate,
-    addon.created_by,
-    addon.updated_by
-  ];
-  logger.debug('[addReservationAddon] Inserting with values:', values);
-
-  try {
-    if (shouldManageTransaction) {
-      await dbClient.query('BEGIN');
-    }
-
-    const result = await dbClient.query(query, values);
-
-    if (shouldManageTransaction) {
-      await dbClient.query('COMMIT');
-    }
-
-    return result.rows[0]; // Return the inserted reservation addon
-  } catch (err) {
-    if (shouldManageTransaction) {
-        try {
-            await dbClient.query('ROLLBACK');
-        } catch (rbErr) {
-            logger.error('Error rolling back transaction:', rbErr);
-        }
-    }
-    logger.error('Error adding reservation addon:', err);
     throw err;
   } finally {
     if (shouldReleaseClient) {
@@ -1716,7 +1655,8 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
     ];
 
 
-    // Delete existing non-parking reservation addons
+    // Delete existing non-parking reservation addons. Parking addons are explicitly excluded from deletion
+    // within the deleteReservationAddonsByDetailId function itself.
 
     await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id, dbClient);
 
@@ -4521,8 +4461,7 @@ module.exports = {
   selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,
-  addReservationDetailsBatch,
-  addReservationAddon,
+  addReservationDetailsBatch,  
   addReservationClient,
   addRoomToReservation,    
   updateReservationDetail,

@@ -68,7 +68,6 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
     client.release();
   }
 };
-
   
 const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by, client = null) => {
   const pool = getPool(requestId);
@@ -100,7 +99,6 @@ const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_i
     }
   }
 };
-
 
 const deleteReservationClientsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
   const pool = getPool(requestId);
