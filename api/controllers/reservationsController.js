@@ -14,7 +14,7 @@ const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
 const { getPool } = require('../config/database');
-const { validateNumericParam } = require('../utils/validationUtils');
+const { validateNumericParam, validateDateStringParam } = require('../utils/validationUtils');
 const { ValidationError } = require('../utils/customErrors');
 
 //Helper
@@ -205,16 +205,36 @@ const getRoomsForIndicator = async (req, res) => {
 };
 
 const getAvailableDatesForChange = async (req, res) => {
+  logger.warn(`[${req.requestId}] getAvailableDatesForChange - Received parameters: hid=${req.params.hid}, rid=${req.params.rid}, ci=${req.params.ci}, co=${req.params.co}`);
   try {
     const { hid, rid, ci, co } = req.params;
 
+    // Explicitly check for string "undefined" which causes DB errors
+    if (hid === 'undefined' || rid === 'undefined' || ci === 'undefined' || co === 'undefined') {
+      const msg = `[${req.requestId}] getAvailableDatesForChange - Received 'undefined' string in parameters. hid=${hid}, rid=${rid}, ci=${ci}, co=${co}`;
+      logger.warn(msg);
+      return res.status(400).json({ error: 'Invalid parameters: parameters cannot be "undefined".' });
+    }
+
     const hotelId = validateNumericParam(hid, 'hid');
     const roomId = validateNumericParam(rid, 'rid');
+    
+    const checkIn = validateDateStringParam(ci, 'ci');
+    const checkOut = validateDateStringParam(co, 'co');
 
-    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hotelId, roomId, ci, co);
+    if (!checkIn || !checkOut) {
+         logger.warn(`[${req.requestId}] getAvailableDatesForChange - Invalid date parameters: ci=${ci}, co=${co}`);
+         return res.status(400).json({ error: 'Invalid date format for check-in or check-out. Use YYYY-MM-DD.' });
+    }
+
+    logger.warn(`[${req.requestId}] getAvailableDatesForChange - Validated parameters: hotelId=${hotelId}, roomId=${roomId}, checkIn=${checkIn}, checkOut=${checkOut}`);
+
+    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hotelId, roomId, checkIn, checkOut);
+    logger.warn(`[${req.requestId}] getAvailableDatesForChange - Found available dates: earliestCheckIn=${earliestCheckIn}, latestCheckOut=${latestCheckOut}`);
     res.status(200).json({ earliestCheckIn, latestCheckOut });
   } catch (error) {
     if (error instanceof ValidationError) {
+      logger.warn(`[${req.requestId}] getAvailableDatesForChange - Validation Error: ${error.message}, code: ${error.code}`);
       return res.status(400).json({ error: error.message, code: error.code });
     }
     logger.error('Error getting available dates for change:', error);
