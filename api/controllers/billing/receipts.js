@@ -360,6 +360,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         res.set('Content-Disposition', `attachment; filename="${asciiSafeFallbackFilename}"; filename*=UTF-8''${encodedPdfFilenameForStar}`);
 
         res.contentType("application/pdf");
+        await client.query('COMMIT');
         res.send(Buffer.from(pdfBuffer));
 
 
