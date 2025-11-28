@@ -351,27 +351,23 @@ watch(() => props.visible, async (isVisible) => {
       }
 
       // Initialization logic
+      // Initialize allocatedAmounts with 0 for all visible tax types
       allocatedAmounts.value = {};
-      
-      // Initialize all visible tax types to 0 first
       if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
         sortedTaxTypes.value.forEach(tt => {
           allocatedAmounts.value[tt.id] = 0;
         });
       }
 
-      // Check if we have existing tax breakdown to pre-fill
-      let prefilled = false;
-      if (props.paymentData && props.paymentData.existing_receipt_number && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
+      // Pre-fill from existing tax breakdown if available
+      if (props.paymentData && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
         props.paymentData.existing_tax_breakdown.forEach(item => {
-          if (allocatedAmounts.value.hasOwnProperty(item.id)) {
+          if (allocatedAmounts.value.hasOwnProperty(item.id)) { // Only allocate if the tax type exists
              allocatedAmounts.value[item.id] = Number(item.amount);
           }
         });
-        prefilled = true;
-      } 
-      
-      if (!prefilled && sortedTaxTypes.value && sortedTaxTypes.value.length > 0 && props.totalAmount > 0) {
+      } else if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0 && props.totalAmount > 0) {
+        // If no existing breakdown, default the entire total to the first visible tax type
         allocatedAmounts.value[sortedTaxTypes.value[0].id] = props.totalAmount;
       }
 
