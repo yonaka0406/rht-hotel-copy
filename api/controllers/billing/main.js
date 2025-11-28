@@ -72,7 +72,7 @@ const generateInvoice = async (req, res) => {
   const invoiceId = req.params.invoice;
   const invoiceData = req.body;
   const userId = req.user.id;
-  const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');
+  const invoiceHTML = fs.readFileSync(path.join(__dirname, '../../components/invoice.html'), 'utf-8');
 
   let browser;
   let page;
@@ -160,8 +160,8 @@ const generateInvoiceExcel = async (req, res) => {
     const userInfo = await getUsersByID(req.requestId, userId);
     await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
-    const mainTemplatePath = path.join(__dirname, '../components/請求書テンプレート.xlsx');
-    const detailsTemplatePath = path.join(__dirname, '../components/請求書明細（テンプレート）.xlsx');
+    const mainTemplatePath = path.join(__dirname, '../../components/請求書テンプレート.xlsx');
+    const detailsTemplatePath = path.join(__dirname, '../../components/請求書明細（テンプレート）.xlsx');
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(mainTemplatePath);
     const detailsWorkbook = new ExcelJS.Workbook();

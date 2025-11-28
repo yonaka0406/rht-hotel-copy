@@ -363,7 +363,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
         await client.query('COMMIT');
         res.send(Buffer.from(pdfBuffer));
 
-
     } catch (error) {
         logger.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
         res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
