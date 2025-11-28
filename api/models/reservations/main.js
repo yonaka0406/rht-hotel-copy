@@ -1233,15 +1233,22 @@ const updateRoomByCalendar = async (requestId, roomData) => {
                 // Insert addons
                 if (addonsToCopy.length > 0) {
                   for (const addonRow of addonsToCopy) {
-                    const insertAddonQuery = `
-                      INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by)
-                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
-                    `;
-                    const addonResult = await client.query(insertAddonQuery, [
-                      hotel_id, detail.id, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name,
-                      addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, updated_by
-                    ]);
-                    addonsInserted += addonResult.rowCount || 0;
+                    const addonToInsert = {
+                      hotel_id: hotel_id,
+                      reservation_detail_id: detail.id,
+                      addons_global_id: addonRow.addons_global_id,
+                      addons_hotel_id: addonRow.addons_hotel_id,
+                      addon_name: addonRow.addon_name,
+                      addon_type: addonRow.addon_type,
+                      quantity: addonRow.quantity,
+                      price: addonRow.price,
+                      tax_type_id: addonRow.tax_type_id,
+                      tax_rate: addonRow.tax_rate,
+                      created_by: updated_by,
+                      updated_by: updated_by,
+                    };
+                    await addReservationAddon(requestId, addonToInsert, client);
+                    addonsInserted += 1; // Assuming addReservationAddon returns a single row
                   }
                 }
               }
@@ -1333,12 +1340,7 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
     throw err;
   } finally {
     client.release();
-  }
-
-  const { id, hotel_id, date, room_id } = roomData;
-  // logger.debug('roomData:', id, hotel_id, date, room_id);
-
-
+  }  
 };
 
 const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated_by) => {
@@ -1361,7 +1363,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
       WHERE id = $2 and hotel_id = $3
       RETURNING number_of_people;
     `;
-    const updateResult = await pool.query(updateQuery, [detailsArray[0].operation_mode, detailsArray[0].reservation_id, detailsArray[0].hotel_id, updated_by]);
+    const updateResult = await client.query(updateQuery, [detailsArray[0].operation_mode, detailsArray[0].reservation_id, detailsArray[0].hotel_id, updated_by]);
 
     // Check if the number_of_people is now <= 0
     if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
@@ -2825,27 +2827,21 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         const reservationRates = await insertReservationRate(requestId, rateData, internalClient);
         if (addons && Array.isArray(addons) && addons.length > 0) {
           for (const addon of addons) {
-            query = `
-              INSERT INTO reservation_addons (
-                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, quantity, price, tax_type_id, tax_rate, created_by, updated_by
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-              RETURNING *;
-            `;
-            values = [
-              hotel_id,
-              reservationDetailsId,
-              addon.addons_global_id,
-              addon.addons_hotel_id,
-              addon.addon_name,
-              addon.quantity,
-              addon.price,
-              addon.tax_type_id || 3,
-              addon.tax_rate || 0.1,
-              1,
-              1
-            ];
-
-            const reservationAddon = await internalClient.query(query, values);
+            const addonToInsert = {
+              hotel_id: hotel_id,
+              reservation_detail_id: reservationDetailsId,
+              addons_global_id: addon.addons_global_id,
+              addons_hotel_id: addon.addons_hotel_id,
+              addon_name: addon.addon_name,
+              addon_type: addon.addon_type, // Assuming addon.addon_type exists in the input
+              quantity: addon.quantity,
+              price: addon.price,
+              tax_type_id: addon.tax_type_id || 3,
+              tax_rate: addon.tax_rate || 0.1,
+              created_by: 1,
+              updated_by: 1
+            };
+            const reservationAddon = await addReservationAddon(requestId, addonToInsert, internalClient);
             //logger.debug('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
@@ -2882,15 +2878,22 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                   const parkingSpotId = availableSpot.parking_spot_id;
 
                   const parkingInsertPromises = detailsForRoom.map(async detail => {
-                      const addonQuery = `
-                          INSERT INTO reservation_addons 
-                              (hotel_id, reservation_detail_id, addons_global_id, addon_type, addon_name, price, quantity, tax_type_id, tax_rate, created_by, updated_by)
-                          VALUES ($1, $2, 3, 'parking', '駐車場', 0, 1, 3, 0.1, 1, 1)
-                          RETURNING id;
-                      `;
-                      const addonValues = [hotel_id, detail.id];
-                      const addonResult = await internalClient.query(addonQuery, addonValues);
-                      const reservationAddonId = addonResult.rows[0].id;
+                      const addonToInsert = {
+                          hotel_id: hotel_id,
+                          reservation_detail_id: detail.id,
+                          addons_global_id: 3, // Assuming 3 is the global ID for parking
+                          addons_hotel_id: null, // Parking is global in this context
+                          addon_name: '駐車場',
+                          addon_type: 'parking',
+                          quantity: 1,
+                          price: 0,
+                          tax_type_id: 3, // Assuming 3 is the tax_type_id for 10% tax
+                          tax_rate: 0.1, // Assuming 0.1 is the tax_rate
+                          created_by: 1,
+                          updated_by: 1
+                      };
+                      const createdAddon = await addReservationAddon(requestId, addonToInsert, internalClient);
+                      const reservationAddonId = createdAddon.id;
 
                       const parkingQuery = `
                           INSERT INTO reservation_parking (
@@ -2920,7 +2923,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
       }
     } catch (parkingError) {
-        logger.error('Failed to assign parking spot during OTA reservation creation. This error is non-critical and the reservation will be created without parking.', {
+        logger.warn('Failed to assign parking spot during OTA reservation creation. This error is non-critical and the reservation will be created without parking.', {
             requestId,
             hotel_id,
             otaReservationId: BasicInformation.TravelAgencyBookingNumber,
@@ -3712,7 +3715,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
         }
 
-                const rateData = {
+        const rateData = {
           hotel_id,
           reservation_details_id: reservationDetailsId,
           adjustment_type: 'base_rate',
@@ -3729,27 +3732,21 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         // Insert addon information if addons exist
         if (addons && Array.isArray(addons) && addons.length > 0) {
           for (const addon of addons) {
-            query = `
-              INSERT INTO reservation_addons (
-                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, quantity, price, tax_type_id, tax_rate, created_by, updated_by
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-              RETURNING *;
-            `;
-            values = [
-              hotel_id,
-              reservationDetailsId,
-              addon.addons_global_id,
-              addon.addons_hotel_id,
-              addon.addon_name,
-              addon.quantity,
-              addon.price,
-              addon.tax_type_id || 3,
-              addon.tax_rate || 0.1,
-              1,
-              1
-            ];
-
-            const reservationAddon = await internalClient.query(query, values);
+            const addonToInsert = {
+              hotel_id: hotel_id,
+              reservation_detail_id: reservationDetailsId,
+              addons_global_id: addon.addons_global_id,
+              addons_hotel_id: addon.addons_hotel_id,
+              addon_name: addon.addon_name,
+              addon_type: addon.addon_type, // Assuming addon.addon_type exists in the input
+              quantity: addon.quantity,
+              price: addon.price,
+              tax_type_id: addon.tax_type_id || 3,
+              tax_rate: addon.tax_rate || 0.1,
+              created_by: 1,
+              updated_by: 1
+            };
+            const reservationAddon = await addReservationAddon(requestId, addonToInsert, internalClient);
             //logger.debug('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
@@ -4174,7 +4171,7 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
               tax_type_id: rate.tax_type_id,
               tax_rate: rate.tax_rate,
               price: rate.price,
-              include_in_cancel_fee: rate.adjustment_type,
+              include_in_cancel_fee: rate.include_in_cancel_fee,              
               created_by: userId,
             };
             logger.debug('[copyReservation] Creating new rate:', rateData);
