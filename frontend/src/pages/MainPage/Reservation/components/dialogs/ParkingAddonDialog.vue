@@ -90,7 +90,8 @@
 
           <ParkingSpotSelector :hotel-id="hotelId" :dates="dateRange" :disabled="processing || dateRange.length === 0"
             :preselected-vehicle-category-id="localAddonData.vehicleCategoryId"
-            @update:vehicle-category-id="onVehicleCategoryChange" @update:number-of-spots="onNumberOfSpotsChange"
+            v-model:numberOfSpots="localAddonData.numberOfSpots"
+            @update:vehicle-category-id="onVehicleCategoryChange"
             @selection-change="onParkingSelectionChange" @validation-change="onSpotValidationChange" />
         </div>
 
@@ -378,10 +379,7 @@ const onVehicleCategoryChange = (vehicleCategoryId) => {
   validateForm();
 };
 
-const onNumberOfSpotsChange = (numberOfSpots) => {
-  localAddonData.value.numberOfSpots = numberOfSpots;
-  validateForm();
-};
+
 
 const onParkingSelectionChange = (selectionData) => {
   selectedVehicleCategory.value = selectionData.selectedCategory;

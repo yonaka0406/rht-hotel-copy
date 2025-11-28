@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, watch, ref, nextTick } from 'vue';
+import { computed, watch, ref, nextTick } from 'vue';
 import Card from 'primevue/card';
 import Select from 'primevue/select';
 import FloatLabel from 'primevue/floatlabel';

@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch, computed, onUnmounted } from 'vue'; // Add onUnmounted
+import { ref, watch, computed, onUnmounted } from 'vue'; // Add onUnmounted
 import { Dialog, Button, DatePicker, FloatLabel, InputText, Select } from 'primevue';
 import { useClientStore } from '@/composables/useClientStore';
 import { useToast } from 'primevue/usetoast'; // Import useToast

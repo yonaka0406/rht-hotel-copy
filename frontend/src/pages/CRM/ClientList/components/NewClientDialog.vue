@@ -86,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, watch, defineProps, defineEmits } from 'vue';
+import { ref, watch } from 'vue';
 import { Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import { useClientStore } from '@/composables/useClientStore';

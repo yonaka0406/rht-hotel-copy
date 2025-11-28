@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import Dialog from 'primevue/dialog';
 import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';

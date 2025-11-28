@@ -96,7 +96,7 @@
 
 <script setup>
 // Vue
-import { defineProps, defineEmits, computed, onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 
 // PrimeVue
 import Drawer from 'primevue/drawer';

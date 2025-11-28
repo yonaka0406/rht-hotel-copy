@@ -134,7 +134,11 @@ const parkingStore = useParkingStore();
 
 // Reactive state
 const selectedVehicleCategoryId = ref(props.preselectedVehicleCategoryId);
-const numberOfSpots = ref(1);
+// Use defineModel for two-way binding of numberOfSpots
+const numberOfSpots = defineModel('numberOfSpots', {
+  type: Number,
+  default: 1
+});
 const vehicleCategories = computed(() => parkingStore.vehicleCategories.value || []);
 const compatibleSpots = ref([]);
 const availabilityData = ref(null);

@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick, defineExpose } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 //import { useReservationSearch } from '../composables/useReservationSearch';
 //import SearchSuggestions from './SearchSuggestions.vue';
 import { InputText } from 'primevue';
