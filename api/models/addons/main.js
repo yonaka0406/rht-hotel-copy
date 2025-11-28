@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 // Return all
 const getAllGlobalAddons = async (requestId, dbClient = null) => {
@@ -9,8 +10,8 @@ const getAllGlobalAddons = async (requestId, dbClient = null) => {
         const result = await client.query(query);    
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving global addons:', err);
-        throw new Error('Database error');
+        logger.error('Error retrieving global addons:', err);
+        throw new Error(`Failed to retrieve global addons: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -24,8 +25,8 @@ const getAllHotelsAddons = async (requestId, dbClient = null) => {
         const result = await client.query(query);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotels addons:', err);
-        throw new Error('Database error');
+        logger.error('Error retrieving hotels addons:', err);
+        throw new Error(`Failed to retrieve hotels addons: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -109,8 +110,8 @@ const getAddons = async (requestId, hotel_id, dbClient = null) => {
         const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving addons:', err);
-        throw new Error('Database error');
+        logger.error('Error retrieving addons:', err);
+        throw new Error(`Failed to retrieve addons: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -124,8 +125,8 @@ const getAllHotelAddons = async (requestId, hotel_id, dbClient = null) => {
         const result = await client.query(query, values);    
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotel addons:', err);
-        throw new Error('Database error');
+        logger.error('Error retrieving hotel addons:', err);
+        throw new Error(`Failed to retrieve hotel addons: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -141,8 +142,8 @@ const getGlobalAddonById = async (requestId, id, dbClient = null) => {
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error finding global addon:', err);
-        throw new Error('Database error');
+        logger.error('Error finding global addon:', err);
+        throw new Error(`Failed to find global addon: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -157,8 +158,8 @@ const getHotelAddonById = async (requestId, hotel_id, id, dbClient = null) => {
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error finding hotel addon:', err);
-        throw new Error('Database error'); 
+        logger.error('Error finding hotel addon:', err); 
+        throw new Error(`Failed to find hotel addon: ${err.message}`, { cause: err });    
     } finally {
         if (!dbClient) client.release();
     }
@@ -187,8 +188,8 @@ const updateGlobalAddon = async (requestId, id, name, description, addon_type, p
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error updating global addon:', err);
-        throw new Error('Database error');
+        logger.error('Error updating global addon:', err);
+        throw new Error(`Failed to update global addon: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -217,8 +218,8 @@ const updateHotelAddon = async (requestId, id, hotel_id, addons_global_id, name,
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error updating hotel addon:', err);
-        throw new Error('Database error');
+        logger.error('Error updating hotel addon:', err);
+        throw new Error(`Failed to update hotel addon: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
