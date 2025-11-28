@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
 // Return all
 const getAllGlobalAddons = async (requestId) => {
