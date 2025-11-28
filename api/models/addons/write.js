@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 const newGlobalAddon = async (requestId, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
@@ -13,8 +14,8 @@ const newGlobalAddon = async (requestId, name, description, addon_type, price, t
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error adding global addon:', err);
-        throw new Error('Database error');
+        logger.error('Error adding global addon:', err);
+        throw new Error(`Failed to add global addon: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -33,8 +34,8 @@ const newHotelAddon = async (requestId, hotel_id, name, description, addon_type,
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error adding hotel addon:', err);
-        throw new Error('Database error');
+        logger.error('Error adding hotel addon:', err);
+        throw new Error(`Failed to add hotel addon: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
