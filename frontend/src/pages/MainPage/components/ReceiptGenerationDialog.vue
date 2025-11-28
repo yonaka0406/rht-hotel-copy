@@ -341,52 +341,85 @@ const generateReceipt = () => {
 };
 
 // Watchers
+const initializeDialogState = async () => {
+  isLoadingTaxTypes.value = true;
+  try {
+    if (!settingsStore.taxTypes.value || settingsStore.taxTypes.value.length === 0) {
+      await settingsStore.fetchTaxTypes();
+    }
+
+    // Initialization logic
+    // Initialize allocatedAmounts with 0 for all visible tax types
+    allocatedAmounts.value = {};
+    if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
+      sortedTaxTypes.value.forEach(tt => {
+        allocatedAmounts.value[tt.id] = 0;
+      });
+    }
+
+    // Pre-fill from existing tax breakdown if available
+    if (props.paymentData && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
+      props.paymentData.existing_tax_breakdown.forEach(item => {
+        if (allocatedAmounts.value.hasOwnProperty(item.id)) { // Only allocate if the tax type exists
+           allocatedAmounts.value[item.id] = Number(item.amount);
+        }
+      });
+    } else if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0 && props.totalAmount > 0) {
+      // If no existing breakdown, default the entire total to the first visible tax type
+      allocatedAmounts.value[sortedTaxTypes.value[0].id] = props.totalAmount;
+    }
+
+    updateAllocations();
+
+    // Initialize customization fields
+    if (props.paymentData && props.paymentData.existing_receipt_number) {
+      honorific.value = props.paymentData.existing_honorific || '様';
+      customProviso.value = props.paymentData.existing_custom_proviso || '';
+      if (props.paymentData.existing_receipt_date) {
+        customIssueDate.value = new Date(props.paymentData.existing_receipt_date);
+      } else {
+        customIssueDate.value = null; // Clear if no existing date
+      }
+      isReissue.value = props.paymentData.existing_is_reissue;
+    } else {
+      // Reset customization fields for new receipts
+      honorific.value = '様';
+      customProviso.value = '';
+      customIssueDate.value = null;
+      isReissue.value = false;
+    }
+
+  } catch (error) {
+    console.error("Failed to fetch tax types or initialize dialog state in ReceiptGenerationDialog:", error);
+  } finally {
+    isLoadingTaxTypes.value = false;
+  }
+};
+
 watch(() => props.visible, async (isVisible) => {
   dialogVisible.value = isVisible;
   if (isVisible) {
-    isLoadingTaxTypes.value = true;
-    try {
-      if (!settingsStore.taxTypes.value || settingsStore.taxTypes.value.length === 0) {
-        await settingsStore.fetchTaxTypes();
-      }
+    // initializeDialogState will be called by the watch on props.paymentData
+    // if paymentData changes, or it will be called explicitly if paymentData
+    // doesn't change but the dialog becomes visible for the first time
+    // or after being closed.
+    // However, to ensure it runs even if paymentData doesn't change but
+    // the dialog is opened (e.g., first time mount), we can call it here,
+    // and let the paymentData watcher handle subsequent data changes.
+    // Or, more cleanly, make the paymentData watcher handle the *entire* initialization
+    // whenever the dialog is visible.
 
-      // Initialization logic
-      // Initialize allocatedAmounts with 0 for all visible tax types
-      allocatedAmounts.value = {};
-      if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
-        sortedTaxTypes.value.forEach(tt => {
-          allocatedAmounts.value[tt.id] = 0;
-        });
-      }
+    // Given the prompt, the issue is about re-initialization with *different* data.
+    // The props.paymentData watch should handle this.
+    // But if props.paymentData doesn't change (e.g. re-opening the *same* dialog),
+    // we still need to initialize.
 
-      // Pre-fill from existing tax breakdown if available
-      if (props.paymentData && props.paymentData.existing_tax_breakdown && Array.isArray(props.paymentData.existing_tax_breakdown)) {
-        props.paymentData.existing_tax_breakdown.forEach(item => {
-          if (allocatedAmounts.value.hasOwnProperty(item.id)) { // Only allocate if the tax type exists
-             allocatedAmounts.value[item.id] = Number(item.amount);
-          }
-        });
-      } else if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0 && props.totalAmount > 0) {
-        // If no existing breakdown, default the entire total to the first visible tax type
-        allocatedAmounts.value[sortedTaxTypes.value[0].id] = props.totalAmount;
-      }
+    // Let's call it here for robustness if paymentData happens to be the same,
+    // but the dialog was closed and re-opened.
+    await initializeDialogState();
 
-      updateAllocations();
-
-      if (props.paymentData && props.paymentData.existing_receipt_number) {
-        honorific.value = props.paymentData.existing_honorific || '様';
-        customProviso.value = props.paymentData.existing_custom_proviso || '';
-        if (props.paymentData.existing_receipt_date) {
-          customIssueDate.value = new Date(props.paymentData.existing_receipt_date);
-        }
-        isReissue.value = props.paymentData.existing_is_reissue;
-      }
-    } catch (error) {
-      console.error("Failed to fetch tax types in ReceiptGenerationDialog:", error);
-    } finally {
-      isLoadingTaxTypes.value = false;
-    }
   } else {
+    // Reset logic when dialog is closed
     allocatedAmounts.value = {};
     allocatedTotal.value = 0;
     remainingAmount.value = 0;
@@ -395,22 +428,29 @@ watch(() => props.visible, async (isVisible) => {
     customProviso.value = '';
     isReissue.value = false;
   }
-}, { immediate: true });
-
-watch(() => props.totalAmount, (newTotal) => {
-  if (dialogVisible.value) {
-    allocatedAmounts.value = {};
-    if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
-      sortedTaxTypes.value.forEach(tt => {
-        allocatedAmounts.value[tt.id] = 0;
-      });
-      if (newTotal > 0) {
-        allocatedAmounts.value[sortedTaxTypes.value[0].id] = newTotal;
-      }
-    }
-    updateAllocations();
-  }
 });
+
+watch(() => props.paymentData, async (newVal, oldVal) => {
+  // Only re-initialize if the dialog is visible AND paymentData has actually changed
+  // (or it's the very first time paymentData is set and dialog is visible).
+  // Deep comparison for objects is usually required here, but for now
+  // let's assume if the object reference changes, we re-initialize.
+  // If paymentData is null or undefined, we should also reset.
+  const hasPaymentDataChanged = JSON.stringify(newVal) !== JSON.stringify(oldVal);
+
+  if (dialogVisible.value && hasPaymentDataChanged) {
+      await initializeDialogState();
+  } else if (!newVal) { // If paymentData becomes null/undefined while dialog is open, reset
+      // This is a defensive reset, though ideally paymentData shouldn't become null while dialog is open
+      allocatedAmounts.value = {};
+      allocatedTotal.value = 0;
+      remainingAmount.value = 0;
+      honorific.value = '様';
+      customIssueDate.value = null;
+      customProviso.value = '';
+      isReissue.value = false;
+  }
+}, { deep: true, immediate: true }); // Use deep watch for paymentData and immediate to handle initial load
 
 watch(dialogVisible, (newValue) => {
   if (props.visible !== newValue) {
