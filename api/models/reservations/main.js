@@ -7,7 +7,7 @@ const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
 const logger = require('../../config/logger');
 
-const { selectReservation, selectAvailableRooms, selectAndLockAvailableParkingSpot } = require('./select');
+const { selectReservation, selectAvailableRooms, selectAndLockAvailableParkingSpot, selectReservationParkingAddons } = require('./select');
 const { deleteReservationAddonsByDetailId } = require('./delete');
 const { insertReservationRate, insertAggregatedRates } = require('./insert');
 
@@ -439,7 +439,7 @@ const addReservationAddon = async (requestId, addon, client = null) => {
     addon.created_by,
     addon.updated_by
   ];
-  //logger.debug('[addReservationAddon] Inserting with values:', values);
+  logger.debug('[addReservationAddon] Inserting with values:', values);
 
   try {
     if (shouldManageTransaction) {
@@ -1700,19 +1700,36 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
   }
 
   try {
+    await dbClient.query('BEGIN'); // Start transaction here to ensure atomicity
+
     // Set session user_id for logging
     await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, user_id));
 
-    // Assuming deleteReservationAddonsByDetailId also accepts a client
+    // Fetch existing parking addons
+    const existingParkingAddons = await selectReservationParkingAddons(requestId, id, hotel_id, dbClient);
+
+
+    // Merge existing parking addons with the new addons (ensure parking addons are not duplicated if already present in 'addons')
+    const allAddonsToProcess = [
+      ...addons.filter(addon => addon.addon_type !== 'parking'), // Filter out any parking addons from incoming list
+      ...existingParkingAddons
+    ];
+
+
+    // Delete existing non-parking reservation addons
+
     await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id, dbClient);
+
     
-    const addOnPromises = addons.map(addon =>
-      addReservationAddon(requestId, {
+    const addOnPromises = allAddonsToProcess.map(addon => {
+
+      return addReservationAddon(requestId, {
         hotel_id: hotel_id,
         reservation_detail_id: id,
         addons_global_id: addon.addons_global_id,
         addons_hotel_id: addon.addons_hotel_id,
         addon_name: addon.addon_name,
+        addon_type: addon.addon_type, // Preserve addon_type
         quantity: addon.quantity,
         price: addon.price,
         tax_type_id: addon.tax_type_id,
@@ -1720,10 +1737,13 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
         created_by: user_id,
         updated_by: user_id,
       }, dbClient) // Pass the client here
-    );
+    });
     await Promise.all(addOnPromises);
+
+    await dbClient.query('COMMIT'); // Commit transaction here
   } catch (err) {
-    logger.error('Error updating reservation detail addon:', err);
+    await dbClient.query('ROLLBACK'); // Rollback on error
+    logger.error(`[${requestId}] Error updating reservation detail addon for detail ${id}:`, err);
     throw err;
   } finally {
     if (shouldReleaseClient) {
@@ -1731,7 +1751,6 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
     }
   }
 };
-
 const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {
   const pool = getPool(requestId);
   const query = `

@@ -293,7 +293,7 @@ class ParkingCapacityService {
                 }
             }
             
-            console.log(`[ParkingCapacityService.reserveCapacity] Addon details: ${addonDetails.name}, price=${unit_price}`);
+            console.log(`[ParkingCapacityService.reserveCapacity] Addon details: ${addonDetails.name}, price=${addonDetails.price}`);
             
             // Step 4: Create reservation_addons and reservation_parking records for each spot
             const createdRecords = [];
@@ -303,11 +303,12 @@ class ParkingCapacityService {
                 
                 for (const date of dates) {
                     // Create addon record
+
                     const addonInsertQuery = `
                         INSERT INTO reservation_addons (
                             hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id,
-                            addon_name, price, quantity, tax_type_id, tax_rate, created_by, updated_by
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                            addon_name, addon_type, price, quantity, tax_type_id, tax_rate, created_by, updated_by
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                         RETURNING id
                     `;
                     const addonValues = [
@@ -316,13 +317,15 @@ class ParkingCapacityService {
                         addon?.addons_global_id || null,
                         addon?.addons_hotel_id || null,
                         addonDetails.name,
-                        unit_price,
+                        addonDetails.addon_type, // Added addon_type
+                        addonDetails.price,     // Changed from unit_price to addonDetails.price
                         1,
                         addonDetails.tax_type_id,
                         addonDetails.tax_rate,
                         user_id,
                         user_id
                     ];
+
                     const addonResult = await client.query(addonInsertQuery, addonValues);
                     const addonId = addonResult.rows[0].id;
                     

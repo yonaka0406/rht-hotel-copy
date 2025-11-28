@@ -848,6 +848,25 @@ const selectAndLockAvailableParkingSpot = async (requestId, hotelId, checkIn, ch
   }
 };
 
+const selectReservationParkingAddons = async (requestId, id, hotelId, client = null) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT * FROM reservation_addons
+    WHERE reservation_detail_id = $1 AND hotel_id = $2 AND addon_type = 'parking'
+  `;
+
+  const values = [id, hotelId];
+
+  try {
+    const executor = client || pool;
+    const result = await executor.query(query, values);
+    return result.rows;
+  } catch (err) {
+    logger.error('Error fetching reservation parking addons:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {  
   selectReservation,  
   selectReservationDetail,
@@ -860,5 +879,6 @@ module.exports = {
   selectReservationBalance,
   selectAvailableRooms,
   selectAvailableParkingSpots,
-  selectAndLockAvailableParkingSpot
+  selectAndLockAvailableParkingSpot,
+  selectReservationParkingAddons
 }

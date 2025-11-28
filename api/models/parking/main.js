@@ -715,6 +715,7 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
     
     return addonDetails || {
         name: '駐車場',
+        addon_type: 'parking', // Added addon_type
         tax_type_id: null,
         tax_rate: 0.1, // Default 10% tax if not specified
         price: 0
@@ -722,7 +723,7 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
 }
 
 const saveParkingAssignments = async (requestId, assignments, userId, client = null) => {
-    logger.info(`[saveParkingAssignments] Entering with requestId: ${requestId}, assignments count: ${assignments.length}, userId: ${userId}`);
+
     const pool = getPool(requestId);
     const localClient = client || await pool.connect();
     const releaseClient = !client;
@@ -782,29 +783,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             const reservationDetails = detailsRes.rows;
             //logger.debug(`[saveParkingAssignments] Fetched reservation details (${reservationDetails.length} rows)`);
             
-            if (reservationDetails.length > 0) {
-                logger.debug(`[saveParkingAssignments] Found reservation_details:`, reservationDetails.map(rd => ({
-                    id: rd.id,
-                    room_id: rd.room_id,
-                    date: rd.date
-                })));
-            } else {
+
                 // Query to check what reservation_details actually exist for this reservation
-                const debugQuery = await localClient.query(
-                    `SELECT id, room_id, date, hotel_id 
-                     FROM reservation_details 
-                     WHERE reservation_id = $1 
-                     ORDER BY date`,
-                    [reservation_id]
-                );
-                logger.debug(`[saveParkingAssignments] All reservation_details for reservation ${reservation_id}:`, 
-                    debugQuery.rows.map(rd => ({
-                        id: rd.id,
-                        room_id: rd.room_id,
-                        date: formatDate(new Date(rd.date)),
-                        hotel_id: rd.hotel_id
-                    }))
-                );
+
             }
             
             if (!reservationDetails.length) {
@@ -1064,12 +1045,14 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                         global_addon_id,
                         hotel_addon_id,
                         addonDetails.name,
-                        unit_price,
+                        addonDetails.addon_type, // Added addon_type
+                        addonDetails.price,     // Changed from unit_price to addonDetails.price
                         1,
                         addonDetails.tax_type_id,
                         addonDetails.tax_rate,
                         userId
                     ]);
+
                     parkingValues.push({
                         hotel_id,
                         reservation_details_id: detail.id,
@@ -1081,22 +1064,22 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 }
             }
 
-            //logger.debug(`[saveParkingAssignments] Preparing to insert ${addonValues.length} addon records in batches.`);
+
             for (let i = 0; i < addonValues.length; i += BATCH_SIZE) {
                 const batch = addonValues.slice(i, i + BATCH_SIZE);
                 const placeholders = batch.map(
-                    (_, idx) => `($${idx*10+1},$${idx*10+2},$${idx*10+3},$${idx*10+4},$${idx*10+5},$${idx*10+6},$${idx*10+7},$${idx*10+8},$${idx*10+9},$${idx*10+10})`
+                    (_, idx) => `($${idx*11+1},$${idx*11+2},$${idx*11+3},$${idx*11+4},$${idx*11+5},$${idx*11+6},$${idx*11+7},$${idx*11+8},$${idx*11+9},$${idx*11+10},$${idx*11+11})`
                 ).join(',');
 
                 const flatValues = batch.flat();
                 const res = await localClient.query(
                     `INSERT INTO reservation_addons 
-                        (hotel_id,reservation_detail_id,addons_global_id,addons_hotel_id,addon_name,price,quantity,tax_type_id,tax_rate,created_by)
+                        (hotel_id,reservation_detail_id,addons_global_id,addons_hotel_id,addon_name,addon_type,price,quantity,tax_type_id,tax_rate,created_by)
                      VALUES ${placeholders} RETURNING id`
                     , flatValues
                 );
 
-                //logger.debug(`[saveParkingAssignments] Inserted batch of ${res.rows.length} addon records.`);
+
                 for (let j = 0; j < res.rows.length; j++) {
                     parkingValues[i + j].reservation_addon_id = res.rows[j].id;
                 }
