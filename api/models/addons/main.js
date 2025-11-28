@@ -1,34 +1,38 @@
 const { getPool } = require('../../config/database');
 
 // Return all
-const getAllGlobalAddons = async (requestId) => {
-    const pool = getPool(requestId);
+const getAllGlobalAddons = async (requestId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = 'SELECT * FROM addons_global ORDER BY visible DESC, name ASC';
 
     try {
-        const result = await pool.query(query);    
+        const result = await client.query(query);    
         return result.rows;
     } catch (err) {
         console.error('Error retrieving global addons:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const getAllHotelsAddons = async (requestId) => {
-    const pool = getPool(requestId);
+const getAllHotelsAddons = async (requestId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = 'SELECT * FROM addons_hotel ORDER BY hotel_id ASC, visible DESC, name ASC';    
 
     try {
-        const result = await pool.query(query);
+        const result = await client.query(query);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving hotels addons:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const getAddons = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
+const getAddons = async (requestId, hotel_id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     let query;
     let values = [];
 
@@ -102,59 +106,67 @@ const getAddons = async (requestId, hotel_id) => {
     }
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving addons:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
-const getAllHotelAddons = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
+const getAllHotelAddons = async (requestId, hotel_id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = 'SELECT * FROM addons_hotel WHERE hotel_id = $1 ORDER BY visible DESC, name ASC';
     const values = [hotel_id];
 
     try {
-        const result = await pool.query(query, values);    
+        const result = await client.query(query, values);    
         return result.rows;
     } catch (err) {
         console.error('Error retrieving hotel addons:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
 // Return one
-const getGlobalAddonById = async (requestId, id) => {
-    const pool = getPool(requestId);
+const getGlobalAddonById = async (requestId, id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = 'SELECT * FROM addons_global WHERE id = $1';
     const values = [id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error finding global addon:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const getHotelAddonById = async (requestId, hotel_id, id) => {
-    const pool = getPool(requestId);
+const getHotelAddonById = async (requestId, hotel_id, id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = 'SELECT * FROM addons_hotel WHERE hotel_id = $1 AND id = $2';
     const values = [hotel_id, id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error finding hotel addon:', err);
         throw new Error('Database error'); 
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
 // Add entry
-const newGlobalAddon = async (requestId, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by) => {
-    const pool = getPool(requestId);
+const newGlobalAddon = async (requestId, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         INSERT INTO addons_global (name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -163,16 +175,18 @@ const newGlobalAddon = async (requestId, name, description, addon_type, price, t
     const values = [name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error adding global addon:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const newHotelAddon = async (requestId, hotel_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by, addons_global_id) => {
-    const pool = getPool(requestId);
+const newHotelAddon = async (requestId, hotel_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by, addons_global_id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         INSERT INTO addons_hotel (hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -181,17 +195,19 @@ const newHotelAddon = async (requestId, hotel_id, name, description, addon_type,
     const values = [hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error adding hotel addon:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
 // Update entry
-const updateGlobalAddon = async (requestId, id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by) => {
-    const pool = getPool(requestId);
+const updateGlobalAddon = async (requestId, id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         UPDATE addons_global
         SET 
@@ -209,16 +225,18 @@ const updateGlobalAddon = async (requestId, id, name, description, addon_type, p
     const values = [name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by, id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error updating global addon:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const updateHotelAddon = async (requestId, id, hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by) => {
-    const pool = getPool(requestId);
+const updateHotelAddon = async (requestId, id, hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         UPDATE addons_hotel
         SET 
@@ -237,11 +255,13 @@ const updateHotelAddon = async (requestId, id, hotel_id, addons_global_id, name,
     const values = [addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by, hotel_id, id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error updating hotel addon:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
