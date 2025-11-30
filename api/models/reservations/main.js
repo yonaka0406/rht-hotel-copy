@@ -85,7 +85,7 @@ const selectMyHoldReservations = async (requestId, user_id) => {
     throw new Error('Database error');
   }
 };
-    
+
 const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn, checkOut) => {
   const pool = getPool(requestId);
   try {
@@ -225,7 +225,7 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
 const addReservationHold = async (requestId, reservation, client = null, roomsToReserve = []) => {
   const pool = client || getPool(requestId);
   let shouldReleaseClient = false;
-  if (!client) {    
+  if (!client) {
     client = await pool.connect();
     shouldReleaseClient = true;
   }
@@ -251,7 +251,7 @@ const addReservationHold = async (requestId, reservation, client = null, roomsTo
     ];
     const reservationResult = await client.query(reservationQuery, reservationValues);
     const newReservation = reservationResult.rows[0];
-    
+
     await client.query('COMMIT');
     return newReservation;
   } catch (err) {
@@ -315,16 +315,16 @@ const addReservationDetail = async (requestId, detail, client = null) => {
     return result.rows[0]; // Return the inserted reservation detail
   } catch (err) {
     if (shouldReleaseClient) {
-        try {
-            await dbClient.query('ROLLBACK');
-        } catch (rbErr) {
-            logger.error('Error rolling back transaction:', rbErr);
-        }
+      try {
+        await dbClient.query('ROLLBACK');
+      } catch (rbErr) {
+        logger.error('Error rolling back transaction:', rbErr);
+      }
     }
     if (err.code === '23514' && err.table === 'reservation_details') {
-        logger.error(`Import Error: ${err.message}. ${err.detail}`);
+      logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        logger.error('Error adding reservation detail:', err);
+      logger.error('Error adding reservation detail:', err);
     }
     throw new Error('Database error');
   } finally {
@@ -362,7 +362,7 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
 
     for (let i = 0; i < details.length; i += BATCH_SIZE) {
       const batch = details.slice(i, i + BATCH_SIZE);
-      
+
       const values = [];
       const placeholders = batch.map((d, j) => {
         const offset = j * NUM_COLUMNS;
@@ -382,7 +382,7 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
         VALUES ${placeholders}
         RETURNING *;
       `;
-      
+
       const result = await dbClient.query(query, values);
       allCreatedDetails.push(...result.rows);
     }
@@ -397,9 +397,9 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
       await dbClient.query('ROLLBACK');
     }
     if (err.code === '23514' && err.table === 'reservation_details') {
-        logger.error(`Import Error: ${err.message}. ${err.detail}`);
+      logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        logger.error('Error adding reservation hold details:', err);
+      logger.error('Error adding reservation hold details:', err);
     }
     throw err;
   } finally {
@@ -479,7 +479,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
     logger.error('Error adding room to reservation:', err);
     throw new Error('Database error');
   } finally {
-    client.release();    
+    client.release();
   }
 };
 
@@ -550,9 +550,9 @@ const updateReservationDetail = async (requestId, reservationData, dbClient = nu
     return result.rows[0];
   } catch (err) {
     if (err.code === '23514' && err.table === 'reservation_details') {
-        logger.error(`Import Error: ${err.message}. ${err.detail}`);
+      logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        logger.error('Error updating reservation detail:', err);
+      logger.error('Error updating reservation detail:', err);
     }
     throw new Error('Database error');
   } finally {
@@ -888,11 +888,11 @@ const updateReservationComment = async (requestId, reservationData, client = nul
 
   } catch (error) {
     if (shouldReleaseClient) {
-        try {
-            await dbClient.query('ROLLBACK');
-        } catch (rbErr) {
-            logger.error('Error rolling back transaction:', rbErr);
-        }
+      try {
+        await dbClient.query('ROLLBACK');
+      } catch (rbErr) {
+        logger.error('Error rolling back transaction:', rbErr);
+      }
     }
     logger.error('Error updating reservation comment:', error);
     throw error;
@@ -1037,10 +1037,10 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     const newDuration = (new Date(new_check_out) - new Date(new_check_in)) / (1000 * 60 * 60 * 24);
     //logger.debug(`Duration calculated - Old: ${oldDuration} days, New: ${newDuration} days.`);
 
-        // If the duration is the same, update the dates. Else, add dates and delete the old ones
-        if (oldDuration === newDuration) {
-          //logger.debug('Duration is the same. Updating existing reservation_details dates.');
-          const updateDatesQuery = `
+    // If the duration is the same, update the dates. Else, add dates and delete the old ones
+    if (oldDuration === newDuration) {
+      //logger.debug('Duration is the same. Updating existing reservation_details dates.');
+      const updateDatesQuery = `
             WITH date_diff AS (
               SELECT
                 reservations.check_in AS old_check_in,
@@ -1073,47 +1073,46 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             )
             SELECT * FROM updated_dates;
           `;
-          const values = [
-            new_check_in,
-            id,
-            hotel_id,
-            newReservationId,
-            new_room_id,
-            updated_by,
-            old_room_id
-          ];
-          const result = await client.query(updateDatesQuery, values);
-          //logger.debug(`${result.rowCount} reservation_details records updated.`);
-        } else {
-          //logger.debug('Duration has changed. Recreating reservation_details records.');
+      const values = [
+        new_check_in,
+        id,
+        hotel_id,
+        newReservationId,
+        new_room_id,
+        updated_by,
+        old_room_id
+      ];
+      const result = await client.query(updateDatesQuery, values);
+      //logger.debug(`${result.rowCount} reservation_details records updated.`);
+    } else {
+      //logger.debug('Duration has changed. Recreating reservation_details records.');
 
-          const reservationIdForDetails = newReservationId;
+      const reservationIdForDetails = newReservationId;
 
-          if (newReservationId !== id) { // isSplitting
-            const moveQuery = `
+      if (newReservationId !== id) { // isSplitting
+        const moveQuery = `
               UPDATE reservation_details
               SET reservation_id = $1
               WHERE reservation_id = $2 AND hotel_id = $3 AND room_id = $4
             `;
-            await client.query(moveQuery, [newReservationId, id, hotel_id, old_room_id]);
-          }
-    
-          // Get all original details to preserve plans day by day
-          const originalDetailsQuery = `
+        await client.query(moveQuery, [newReservationId, id, hotel_id, old_room_id]);
+      }
+
+      // Get all original details to preserve plans day by day
+      const originalDetailsQuery = `
             SELECT id, date, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable
             FROM reservation_details
             WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
             ORDER BY date ASC
           `;
-          const originalDetailsResult = await client.query(originalDetailsQuery, [reservationIdForDetails, hotel_id, old_room_id]);
-          const originalDetailsMap = new Map(originalDetailsResult.rows.map(d => [formatDate(new Date(d.date)), d]));
-    
-          // --- NEW LOGIC: START ---
-          // 1. Fetch client and addon data BEFORE deleting old records
-          let clientsToCopy = [];
-          let addonsToCopy = [];
-    
-          const sourceDetailQuery = `
+      const originalDetailsResult = await client.query(originalDetailsQuery, [reservationIdForDetails, hotel_id, old_room_id]);
+      const originalDetailsMap = new Map(originalDetailsResult.rows.map(d => [formatDate(new Date(d.date)), d]));
+
+      // 1. Fetch client and addon data BEFORE deleting old records
+      let clientsToCopy = [];
+      let addonsToCopy = [];
+
+      const sourceDetailQuery = `
             SELECT id FROM reservation_details
             WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
             ORDER BY date ASC LIMIT 1
@@ -1340,7 +1339,7 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
     throw err;
   } finally {
     client.release();
-  }  
+  }
 };
 
 const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated_by) => {
@@ -1474,11 +1473,11 @@ const updateReservationGuest = async (requestId, oldValue, newValue, client = nu
     // logger.debug('Reservation guest updated successfully');
   } catch (err) {
     if (shouldReleaseClient) {
-        try {
-            await dbClient.query('ROLLBACK');
-        } catch (rbErr) {
-            logger.error('Error rolling back transaction:', rbErr);
-        }
+      try {
+        await dbClient.query('ROLLBACK');
+      } catch (rbErr) {
+        logger.error('Error rolling back transaction:', rbErr);
+      }
     }
     logger.error('Error updating reservation guest:', err);
     throw err;
@@ -1615,9 +1614,9 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   } catch (err) {
     await dbClient.query('ROLLBACK');
     if (err.code === '23514' && err.table === 'reservation_details') {
-        logger.error(`Import Error: ${err.message}. ${err.detail}`);
+      logger.error(`Import Error: ${err.message}. ${err.detail}`);
     } else {
-        logger.error('Error updating reservation detail plan:', err);
+      logger.error('Error updating reservation detail plan:', err);
     }
     throw err;
   } finally {
@@ -1645,24 +1644,12 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
 
     // Set session user_id for logging
     await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, user_id));
-
-    // Fetch existing parking addons
-    const existingParkingAddons = await selectReservationParkingAddons(requestId, id, hotel_id, dbClient);
-
-
-    // Merge existing parking addons with the new addons (ensure parking addons are not duplicated if already present in 'addons')
-    const allAddonsToProcess = [
-      ...addons.filter(addon => addon.addon_type !== 'parking'), // Filter out any parking addons from incoming list
-      ...existingParkingAddons
-    ];
-
-
-    // Delete existing non-parking reservation addons. Parking addons are explicitly excluded from deletion
-    // within the deleteReservationAddonsByDetailId function itself.
-
+    // Filter out any parking addons from incoming list. 
+    // Existing parking addons are preserved because deleteReservationAddonsByDetailId excludes them.
+    const allAddonsToProcess = addons.filter(addon => addon.addon_type !== 'parking');
     await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id, dbClient);
 
-    
+
     const addOnPromises = allAddonsToProcess.map(addon => {
 
       return addReservationAddon(requestId, {
@@ -2309,7 +2296,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     let clientGender = selectGender(Member?.UserGendar);
 
     if (clientGender === 'other') {
-      
+
       const grandTotal = (parseInt(BasicInformation.TotalPaxMaleCount, 10) || 0) + (parseInt(BasicInformation.TotalPaxFemaleCount, 10) || 0);
       const maleTotal = parseInt(BasicInformation.TotalPaxMaleCount, 10) || 0;
       const femaleTotal = parseInt(BasicInformation.TotalPaxFemaleCount, 10) || 0;
@@ -2432,7 +2419,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
     let agentName = SalesOfficeInformation.SalesOfficeCompanyName;
     if (BasicInformation.TravelAgencyBookingNumber && BasicInformation.TravelAgencyBookingNumber.startsWith('TY')) {
-        agentName += '（r-with)';
+      agentName += '（r-with)';
     }
 
     let reservationType = 'ota';
@@ -2685,7 +2672,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
         //logger.debug('addOTAReservation reservation_details:', reservationDetails.rows[0]);
-        
+
         if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
           if (Member?.UserName?.trim()) {
@@ -2851,10 +2838,10 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     try {
       const firstRoomKey = Object.keys(roomsArrayWithID)[0];
       if (firstRoomKey) {
-          const firstRoomDetails = roomsArrayWithID[firstRoomKey];
-          const firstRoomId = firstRoomDetails[0].room_id;
+        const firstRoomDetails = roomsArrayWithID[firstRoomKey];
+        const firstRoomId = firstRoomDetails[0].room_id;
 
-          const detailsQuery = `
+        const detailsQuery = `
               SELECT id, date FROM reservation_details
               WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
           `;
@@ -2923,13 +2910,13 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
       }
     } catch (parkingError) {
-        logger.warn('Failed to assign parking spot during OTA reservation creation. This error is non-critical and the reservation will be created without parking.', {
-            requestId,
-            hotel_id,
-            otaReservationId: BasicInformation.TravelAgencyBookingNumber,
-            error: parkingError.message,
-            stack: parkingError.stack
-        });
+      logger.warn('Failed to assign parking spot during OTA reservation creation. This error is non-critical and the reservation will be created without parking.', {
+        requestId,
+        hotel_id,
+        otaReservationId: BasicInformation.TravelAgencyBookingNumber,
+        error: parkingError.message,
+        stack: parkingError.stack
+      });
     }
 
     // Payment    
@@ -4171,7 +4158,7 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
               tax_type_id: rate.tax_type_id,
               tax_rate: rate.tax_rate,
               price: rate.price,
-              include_in_cancel_fee: rate.include_in_cancel_fee,              
+              include_in_cancel_fee: rate.include_in_cancel_fee,
               created_by: userId,
             };
             logger.debug('[copyReservation] Creating new rate:', rateData);
@@ -4451,16 +4438,16 @@ const __getOriginalGetPool = () => require('../../config/database').getPool;
 
 module.exports = {
   __setGetPool,
-  __getOriginalGetPool,  
-  selectMyHoldReservations,  
-  selectAvailableDatesForChange,  
+  __getOriginalGetPool,
+  selectMyHoldReservations,
+  selectAvailableDatesForChange,
   getHotelIdByReservationId,
   selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,
-  addReservationDetailsBatch,  
+  addReservationDetailsBatch,
   addReservationClient,
-  addRoomToReservation,    
+  addRoomToReservation,
   updateReservationDetail,
   updateReservationStatus,
   updateReservationDetailStatus,
@@ -4485,7 +4472,7 @@ module.exports = {
   cancelOTAReservation,
   insertCopyReservation,
   sanitizeName,
-  selectFailedOtaReservations,    
+  selectFailedOtaReservations,
   calculatePriceFromRates,
-  cancelReservationRooms,  
+  cancelReservationRooms,
 };
