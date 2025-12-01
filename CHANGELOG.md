@@ -656,9 +656,11 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## [1.2.3] - 2025-11-26
+## [1.2.3] - 2025-12-02
 
 - Feature: Enhanced OTA notifications with failed XML queue and combined data display
+- Fix: Resolved issue where parking addons were being erased when changing reservation plans
+- Fix: Fixed issue where temporary blocked rooms were not saving the correct number of people when converted to reservations
 
 ---
 

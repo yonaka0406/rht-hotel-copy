@@ -1,152 +1,101 @@
 <template>
-  <Dialog
-    :visible="modelValue"
-    @update:visible="$emit('update:modelValue', $event)"
-    :header="dialogTitle"
-    :closable="true"
-    :modal="true"
-    :style="{ width: '70vw', maxWidth: '900px' }"
-    @hide="onDialogHide"
-  >
-        <div class="parking-addon-dialog-content">
-          <!-- Form Grid -->
-                <div class="form-grid grid grid-cols-3 gap-8">
-                  <!-- Room Selection -->
-                  <div class="form-section col-span-3">
-                    <h5 class="section-title">部屋選択</h5>
-                    <div class="field">
-                      <FloatLabel>
-                                      <Select
-                                        fluid
-                                        v-model="localAddonData.roomId"
-                                        :options="rooms"
-                                        optionLabel="name"
-                                        optionValue="id"
-                                        class="w-full"
-                                        :class="{ 'p-invalid': errors.roomId }"
-                                        :disabled="processing || isEditMode"
-                                        @change="(e) => selectedRoom = rooms.find(r => r.id === e.value)"
-                                      />                        <label>部屋 *</label>
-                      </FloatLabel>
-                      <small v-if="errors.roomId" class="p-error">{{ errors.roomId }}</small>
-                    </div>
-                  </div>
-          
-                  <!-- Date Selection -->
-                  <div class="form-section col-span-3">
-                    <h5 class="section-title">利用期間</h5>
-                    <div class="date-fields">
-                      <div class="field">
-                        <FloatLabel>
-                                            <DatePicker
-                                              fluid
-                                              id="startDate"
-                                              v-model="startDate"
-                                              :min-date="minDate"
-                                              :max-date="maxDate"
-                                              :disabled="!localAddonData.roomId || processing"
-                                              :class="{ 'p-invalid': errors.startDate }"
-                                              date-format="yy-mm-dd"                    
-                                              show-icon
-                                            />                          <label for="startDate">開始日 (IN) *</label>
-                        </FloatLabel>
-                        <small v-if="errors.startDate" class="p-error">{{ errors.startDate }}</small>
-                      </div>
-                      
-                      <div class="field">
-                        <FloatLabel>
-                                            <DatePicker
-                                              fluid
-                                              id="endDate"
-                                              v-model="endDate"
-                                              :min-date="startDate || minDate"
-                                              :max-date="maxDate"
-                                              :disabled="!localAddonData.roomId || processing"
-                                              :class="{ 'p-invalid': errors.endDate }"
-                                              date-format="yy-mm-dd"                    
-                                              show-icon
-                                            />                          <label for="endDate">終了日 (OUT) *</label>
-                        </FloatLabel>
-                        <small v-if="errors.endDate" class="p-error">{{ errors.endDate }}</small>
-                      </div>
-                    </div>
-                  </div>
-          
-                  <!-- Basic Info -->
-                  <div class="form-section col-span-3">
-                    <h5 class="section-title">基本情報</h5>
-                    
-                    <div class="inline-fields">
-                      <!-- Addon Selector -->
-                      <div class="field field-grow">
-                        <FloatLabel>
-                                                              <Select
-                                                                fluid
-                                                                v-model="selectedAddon"
-                                                                :options="addonOptions"
-                                                                optionLabel="addon_name"
-                                                                optionValue="id"
-                                                                placeholder="アドオンを選択"
-                                                                :class="{ 'p-invalid': errors.addonId }"
-                                                                :disabled="processing"
-                                                              />                          <label>アドオン *</label>
-                        </FloatLabel>
-                        <small v-if="errors.addonId" class="p-error">{{ errors.addonId }}</small>
-                      </div>
-          
-                      <!-- Unit Price -->
-                      <div class="field field-shrink">
-                        <FloatLabel>
-                                                              <InputNumber
-                                                                fluid
-                                                                id="unitPrice"
-                                                                v-model="localAddonData.unitPrice"
-                                                                mode="currency"
-                                                                currency="JPY"
-                                                                locale="ja-JP"
-                                                                :class="{ 'p-invalid': errors.unitPrice }"
-                                                                :disabled="processing"
-                                                                :min="0"
-                                                              />                          <label for="unitPrice">単価 (税抜) *</label>
-                        </FloatLabel>
-                        <small v-if="errors.unitPrice" class="p-error">{{ errors.unitPrice }}</small>
-                      </div>
-                    </div>
-                    
-                    <!-- Inline pricing breakdown -->
-                    <div class="inline-pricing" v-if="dateRange.length > 0 && localAddonData.unitPrice">
-                      <div class="pricing-item">
-                        <span class="label">単価:</span>
-                        <span class="value">¥{{ localAddonData.unitPrice?.toLocaleString('ja-JP') || 0 }}</span>
-                      </div>
-                      <div class="pricing-item">
-                        <span class="label">日数:</span>
-                        <span class="value">{{ dateRange.length }}日</span>
-                      </div>
-                      <div class="pricing-item total">
-                        <span class="label">合計:</span>
-                        <span class="value">¥{{ calculatedTotalPrice?.toLocaleString('ja-JP') || 0 }}</span>
-                      </div>
-                    </div>
-                  </div>
-          
-                  <!-- Parking Spot Selection -->
-                  <div class="form-section col-span-3">
-                    <h5 class="section-title">駐車スポット選択</h5>
-                    
-                    <ParkingSpotSelector
-                      :hotel-id="hotelId"
-                      :dates="dateRange"
-                      :disabled="processing || dateRange.length === 0"
-                      :preselected-vehicle-category-id="localAddonData.vehicleCategoryId"
-                      @update:vehicle-category-id="onVehicleCategoryChange"
-                      @update:number-of-spots="onNumberOfSpotsChange"
-                      @selection-change="onParkingSelectionChange"
-                      @validation-change="onSpotValidationChange"
-                    />
-                  </div>
-          
-                </div>      <!-- Validation Summary -->
+  <Dialog :visible="modelValue" @update:visible="$emit('update:modelValue', $event)" :header="dialogTitle"
+    :closable="true" :modal="true" :style="{ width: '70vw', maxWidth: '900px' }" @hide="onDialogHide">
+    <div class="parking-addon-dialog-content">
+      <!-- Form Grid -->
+      <div class="form-grid grid grid-cols-3 gap-8">
+        <!-- Room Selection -->
+        <div class="form-section col-span-3">
+          <h5 class="section-title">部屋選択</h5>
+          <div class="field">
+            <FloatLabel>
+              <Select fluid v-model="localAddonData.roomId" :options="rooms" optionLabel="name" optionValue="id"
+                class="w-full" :class="{ 'p-invalid': errors.roomId }" :disabled="processing || isEditMode"
+                @change="(e) => selectedRoom = rooms.find(r => r.id === e.value)" /> <label>部屋 *</label>
+            </FloatLabel>
+            <small v-if="errors.roomId" class="p-error">{{ errors.roomId }}</small>
+          </div>
+        </div>
+
+        <!-- Date Selection -->
+        <div class="form-section col-span-3">
+          <h5 class="section-title">利用期間</h5>
+          <div class="date-fields">
+            <div class="field">
+              <FloatLabel>
+                <DatePicker fluid id="startDate" v-model="startDate" :min-date="minDate" :max-date="maxDate"
+                  :disabled="!localAddonData.roomId || processing" :class="{ 'p-invalid': errors.startDate }"
+                  date-format="yy-mm-dd" show-icon /> <label for="startDate">開始日 (IN) *</label>
+              </FloatLabel>
+              <small v-if="errors.startDate" class="p-error">{{ errors.startDate }}</small>
+            </div>
+
+            <div class="field">
+              <FloatLabel>
+                <DatePicker fluid id="endDate" v-model="endDate" :min-date="startDate || minDate" :max-date="maxDate"
+                  :disabled="!localAddonData.roomId || processing" :class="{ 'p-invalid': errors.endDate }"
+                  date-format="yy-mm-dd" show-icon /> <label for="endDate">終了日 (OUT) *</label>
+              </FloatLabel>
+              <small v-if="errors.endDate" class="p-error">{{ errors.endDate }}</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Basic Info -->
+        <div class="form-section col-span-3">
+          <h5 class="section-title">基本情報</h5>
+
+          <div class="inline-fields">
+            <!-- Addon Selector -->
+            <div class="field field-grow">
+              <FloatLabel>
+                <Select fluid v-model="selectedAddon" :options="addonOptions" optionLabel="addon_name" optionValue="id"
+                  placeholder="アドオンを選択" :class="{ 'p-invalid': errors.addonId }" :disabled="processing" /> <label>アドオン
+                  *</label>
+              </FloatLabel>
+              <small v-if="errors.addonId" class="p-error">{{ errors.addonId }}</small>
+            </div>
+
+            <!-- Unit Price -->
+            <div class="field field-shrink">
+              <FloatLabel>
+                <InputNumber fluid id="unitPrice" v-model="localAddonData.unitPrice" mode="currency" currency="JPY"
+                  locale="ja-JP" :class="{ 'p-invalid': errors.unitPrice }" :disabled="processing" :min="0" />
+                <label for="unitPrice">単価 (税抜) *</label>
+              </FloatLabel>
+              <small v-if="errors.unitPrice" class="p-error">{{ errors.unitPrice }}</small>
+            </div>
+          </div>
+
+          <!-- Inline pricing breakdown -->
+          <div class="inline-pricing" v-if="dateRange.length > 0 && localAddonData.unitPrice">
+            <div class="pricing-item">
+              <span class="label">単価:</span>
+              <span class="value">¥{{ localAddonData.unitPrice?.toLocaleString('ja-JP') || 0 }}</span>
+            </div>
+            <div class="pricing-item">
+              <span class="label">日数:</span>
+              <span class="value">{{ dateRange.length }}日</span>
+            </div>
+            <div class="pricing-item total">
+              <span class="label">合計:</span>
+              <span class="value">¥{{ calculatedTotalPrice?.toLocaleString('ja-JP') || 0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parking Spot Selection -->
+        <div class="form-section col-span-3">
+          <h5 class="section-title">駐車スポット選択</h5>
+
+          <ParkingSpotSelector :hotel-id="hotelId" :dates="dateRange" :disabled="processing || dateRange.length === 0"
+            :preselected-vehicle-category-id="localAddonData.vehicleCategoryId"
+            v-model:numberOfSpots="localAddonData.numberOfSpots"
+            @update:vehicle-category-id="onVehicleCategoryChange"
+            @selection-change="onParkingSelectionChange" @validation-change="onSpotValidationChange" />
+        </div>
+
+      </div> <!-- Validation Summary -->
       <div class="validation-summary" v-if="Object.keys(errors).length > 0">
         <Message severity="error" :closable="false">
           <div class="error-list">
@@ -174,21 +123,11 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <Button
-          label="キャンセル"
-          icon="pi pi-times"
-          class="p-button-text p-button-secondary"
-          @click="onCancel"
-          :disabled="processing"
-        />
-        <Button
-          :label="isEditMode ? '更新' : '追加'"
+        <Button label="キャンセル" icon="pi pi-times" class="p-button-text p-button-secondary" @click="onCancel"
+          :disabled="processing" />
+        <Button :label="isEditMode ? '更新' : '追加'"
           :icon="processing ? 'pi pi-spin pi-spinner' : (isEditMode ? 'pi pi-save' : 'pi pi-plus')"
-          class="p-button-primary"
-          @click="onSave"
-          :disabled="!isFormValid || processing"
-          :loading="processing"
-        />
+          class="p-button-primary" @click="onSave" :disabled="!isFormValid || processing" :loading="processing" />
       </div>
     </template>
   </Dialog>
@@ -300,11 +239,11 @@ const reservationId = computed(() => {
 
 const dateRange = computed(() => {
   if (!startDate.value || !endDate.value) return [];
-  
+
   const dates = [];
   const start = new Date(startDate.value);
   const end = new Date(endDate.value);
-  
+
   // Use UTC to prevent timezone issues
   let current = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate()));
   const final = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()));
@@ -313,7 +252,7 @@ const dateRange = computed(() => {
     dates.push(current.toISOString().slice(0, 10));
     current.setUTCDate(current.getUTCDate() + 1);
   }
-  
+
   return dates;
 });
 
@@ -321,7 +260,7 @@ const dateRange = computed(() => {
 
 const rooms = computed(() => {
   const uniqueRooms = new Map();
-  
+
   props.reservationDetails.forEach(room => {
     if (!uniqueRooms.has(room.room_id)) {
       uniqueRooms.set(room.room_id, {
@@ -332,7 +271,7 @@ const rooms = computed(() => {
       });
     }
   });
-  
+
   return Array.from(uniqueRooms.values());
 });
 
@@ -352,14 +291,14 @@ const calculatedTotalPrice = computed(() => {
 });
 
 const isFormValid = computed(() => {
-  return Object.keys(errors.value).length === 0 && 
-         spotValidationValid.value &&
-         localAddonData.value.unitPrice !== null && localAddonData.value.unitPrice >= 0 &&
-         dateRange.value.length > 0 &&
-         localAddonData.value.vehicleCategoryId &&
-         localAddonData.value.numberOfSpots > 0 &&
-         localAddonData.value.roomId &&
-         selectedAddon.value;
+  return Object.keys(errors.value).length === 0 &&
+    spotValidationValid.value &&
+    localAddonData.value.unitPrice !== null && localAddonData.value.unitPrice >= 0 &&
+    dateRange.value.length > 0 &&
+    localAddonData.value.vehicleCategoryId &&
+    localAddonData.value.numberOfSpots > 0 &&
+    localAddonData.value.roomId &&
+    selectedAddon.value;
 });
 
 const saveDataForEmit = computed(() => {
@@ -387,12 +326,12 @@ watch(saveDataForEmit, (_newValue) => {
 const validateForm = () => {
   errors.value = {};
   let isValid = true;
-  
+
   if (!localAddonData.value.roomId) {
     errors.value.roomId = '部屋を選択してください';
     isValid = false;
   }
-  
+
   if (!startDate.value) {
     errors.value.startDate = '開始日を選択してください';
     isValid = false;
@@ -400,7 +339,7 @@ const validateForm = () => {
     errors.value.startDate = `開始日は${formatDate(minDate.value)}以降を選択してください`;
     isValid = false;
   }
-  
+
   if (!endDate.value) {
     errors.value.endDate = '終了日を選択してください';
     isValid = false;
@@ -411,12 +350,12 @@ const validateForm = () => {
     errors.value.endDate = '終了日は開始日より後の日付を選択してください';
     isValid = false;
   }
-  
+
   if (!selectedAddon.value) {
     errors.value.addonId = 'アドオンを選択してください';
     isValid = false;
   }
-  
+
   if (localAddonData.value.unitPrice === null || isNaN(localAddonData.value.unitPrice) || localAddonData.value.unitPrice < 0) {
     errors.value.unitPrice = '有効な単価を入力してください';
     isValid = false;
@@ -426,7 +365,7 @@ const validateForm = () => {
     errors.value.numberOfSpots = '必要台数を入力してください';
     isValid = false;
   }
-  
+
   return isValid && spotValidationValid.value;
 };
 
@@ -440,10 +379,7 @@ const onVehicleCategoryChange = (vehicleCategoryId) => {
   validateForm();
 };
 
-const onNumberOfSpotsChange = (numberOfSpots) => {
-  localAddonData.value.numberOfSpots = numberOfSpots;
-  validateForm();
-};
+
 
 const onParkingSelectionChange = (selectionData) => {
   selectedVehicleCategory.value = selectionData.selectedCategory;
@@ -466,27 +402,27 @@ const onSave = async () => {
     });
     return;
   }
-  
+
   processing.value = true;
-  
+
   try {
     // Note: The actual API call to save the addon is not implemented here.
     // This component currently only emits the data to the parent.
     // The parent component is responsible for making the API call.
-    
+
     const saveData = saveDataForEmit.value;
-        
+
     toast.add({
       severity: 'success',
       summary: '成功',
       detail: props.isEditMode ? '駐車場情報を更新しました' : '駐車場情報を保存しました',
       life: 3000
     });
-    
+
     emit('save', saveData); // Emit the prepared data object
-    
+
     emit('update:modelValue', false);
-    
+
   } catch (error) {
     console.error('Error saving parking addon:', error);
     toast.add({
@@ -545,14 +481,14 @@ watch(selectedRoom, (newRoom) => {
 watch(startDate, (newStartDate) => {
   //console.log('[ParkingAddonDialog] startDate changed:', newStartDate);
   if (!newStartDate || !endDate.value) return;
-  
+
   onDateChange();
 });
 
 watch(endDate, (newEndDate) => {
   //console.log('[ParkingAddonDialog] endDate changed:', newEndDate);
   if (!newEndDate || !startDate.value) return;
-  
+
   onDateChange();
 });
 
@@ -580,10 +516,10 @@ watch(() => props.modelValue, async (newValue) => {
 watch(hotelId, async (newHotelId) => {
   //console.log('[ParkingAddonDialog] hotelId changed:', newHotelId);
   if (newHotelId) {
-    const allAddons = await fetchAllAddons(newHotelId);    
-    
+    const allAddons = await fetchAllAddons(newHotelId);
+
     if (allAddons && Array.isArray(allAddons)) {
-      const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');      
+      const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
       //console.log('[ParkingAddonDialog] Raw parking addons:', JSON.stringify(parkingAddons, null, 2));      
       addonOptions.value = parkingAddons;
     } else {
@@ -822,25 +758,25 @@ watch(selectedAddon, (newValue, oldValue) => {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .date-fields {
     grid-template-columns: 1fr;
   }
-  
+
   .pricing-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .info-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
   }
-  
+
   .breakdown-item {
     flex-direction: column;
     align-items: flex-start;

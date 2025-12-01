@@ -6,14 +6,17 @@ const {
   updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest,
   updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom,
   updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
+  updateReservationMemberCount,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
   insertCopyReservation, selectReservationParking, deleteParkingReservation, deleteBulkParkingReservations, cancelReservationRooms: cancelReservationRoomsModel,
-  updatePaymentTiming, updateReservationRoomsPeriod, splitReservation,
+  updatePaymentTiming, updateReservationRoomsPeriod, splitReservation, selectReservationAddonByDetail,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
 const { getPool } = require('../config/database');
+const { validateNumericParam, validateDateStringParam } = require('../utils/validationUtils');
+const { ValidationError } = require('../utils/customErrors');
 
 //Helper
 const formatDate = (date) => {
@@ -203,16 +206,41 @@ const getRoomsForIndicator = async (req, res) => {
 };
 
 const getAvailableDatesForChange = async (req, res) => {
-  const { hid, rid, ci, co } = req.params;
-
+  logger.warn(`[${req.requestId}] getAvailableDatesForChange - Received parameters: hid=${req.params.hid}, rid=${req.params.rid}, ci=${req.params.ci}, co=${req.params.co}`);
   try {
-    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hid, rid, ci, co);
+    const { hid, rid, ci, co } = req.params;
+
+    // Explicitly check for string "undefined" which causes DB errors
+    if (hid === 'undefined' || rid === 'undefined' || ci === 'undefined' || co === 'undefined') {
+      const msg = `[${req.requestId}] getAvailableDatesForChange - Received 'undefined' string in parameters. hid=${hid}, rid=${rid}, ci=${ci}, co=${co}`;
+      logger.warn(msg);
+      return res.status(400).json({ error: 'Invalid parameters: parameters cannot be "undefined".' });
+    }
+
+    const hotelId = validateNumericParam(hid, 'hid');
+    const roomId = validateNumericParam(rid, 'rid');
+    
+    const checkIn = validateDateStringParam(ci, 'ci');
+    const checkOut = validateDateStringParam(co, 'co');
+
+    if (!checkIn || !checkOut) {
+         logger.warn(`[${req.requestId}] getAvailableDatesForChange - Invalid date parameters: ci=${ci}, co=${co}`);
+         return res.status(400).json({ error: 'Invalid date format for check-in or check-out. Use YYYY-MM-DD.' });
+    }
+
+    logger.warn(`[${req.requestId}] getAvailableDatesForChange - Validated parameters: hotelId=${hotelId}, roomId=${roomId}, checkIn=${checkIn}, checkOut=${checkOut}`);
+
+    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hotelId, roomId, checkIn, checkOut);
+    logger.warn(`[${req.requestId}] getAvailableDatesForChange - Found available dates: earliestCheckIn=${earliestCheckIn}, latestCheckOut=${latestCheckOut}`);
     res.status(200).json({ earliestCheckIn, latestCheckOut });
   } catch (error) {
-    console.error('Error getting available dates for change:', error);
+    if (error instanceof ValidationError) {
+      logger.warn(`[${req.requestId}] getAvailableDatesForChange - Validation Error: ${error.message}, code: ${error.code}`);
+      return res.status(400).json({ error: error.message, code: error.code });
+    }
+    logger.error('Error getting available dates for change:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-
 };
 
 const getReservationClientIds = async (req, res) => {
@@ -1500,7 +1528,12 @@ const convertBlockToReservation = async (req, res) => {
     return res.status(400).json({ error: 'Client information is required' });
   }
 
+  const pool = getPool(req.requestId);
+  const dbClient = await pool.connect();
+
   try {
+    await dbClient.query('BEGIN');
+
     let finalClientId = client.client_id;
 
     // If client doesn't have an ID, create a new client
@@ -1521,24 +1554,32 @@ const convertBlockToReservation = async (req, res) => {
         updated_by: user_id,
       };
 
-      const newClient = await addClientByName(req.requestId, clientData);
+      const newClient = await addClientByName(req.requestId, clientData, dbClient);
       finalClientId = newClient.id;
       logger.warn(`[CONVERT_BLOCK] Created new client`, { client_id: finalClientId });
     }
 
     // Update the reservation with the client ID
-    const updatedReservation = await updateBlockToReservation(req.requestId, id, finalClientId, user_id);
+    const updatedReservation = await updateBlockToReservation(req.requestId, id, finalClientId, user_id, dbClient);
+
+    // Recalculate and update the number of people based on the reservation details
+    const finalReservation = await updateReservationMemberCount(req.requestId, id, user_id, dbClient);
+
+    await dbClient.query('COMMIT');
 
     res.status(200).json({
       message: 'Reservation updated successfully',
-      reservation: updatedReservation
+      reservation: finalReservation
     });
   } catch (error) {
+    await dbClient.query('ROLLBACK');
     logger.error('[convertBlockToReservation][controller] Error converting block to reservation:', error);
     const status = error.message.includes('not found') ? 404 : 500;
     res.status(status).json({
       error: error.message || 'Failed to convert block to reservation'
     });
+  } finally {
+    dbClient.release();
   }
 };
 

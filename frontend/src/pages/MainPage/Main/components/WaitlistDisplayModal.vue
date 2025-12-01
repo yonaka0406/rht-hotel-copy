@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { computed, watch, ref } from 'vue'; // defineProps and defineEmits are compiler macros
+import { computed, watch, ref } from 'vue'; 
 import Dialog from 'primevue/dialog';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';

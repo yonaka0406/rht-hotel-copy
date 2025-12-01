@@ -39,7 +39,6 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';

@@ -2,6 +2,20 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### November 28, 2025
+
+#### When a plan is changed, the parking addon is being erased
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Report
+- **Description**: 
+  - When a reservation's plan is changed, any existing parking addon associated with that reservation is being erased.
+- **Expected Behavior**:
+  - Changing a reservation's plan should not automatically remove or erase associated parking addons. Parking addons should persist unless explicitly removed by the user.
+- **Technical Notes**:
+  - Investigate the reservation update logic, specifically how plan changes interact with existing addons.
+  - Ensure that the parking addon data is being correctly preserved or re-applied when a plan is modified.
+
 ### November 25, 2025
 
 ## Staff Room Flag for Calendar

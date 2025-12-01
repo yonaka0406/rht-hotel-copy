@@ -314,28 +314,36 @@ const insertYadomasterAddons = async (requestId, addons) => {
     try {
         await client.query('BEGIN');
 
+        if (addons.length === 0) {
+            await client.query('COMMIT');
+            return { success: true, count: 0 };
+        }
+
         const valuePlaceholders = [];
         const values = [];
         let valueIndex = 1;
 
-        for (const addon of addons) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, 3, 0.1, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+        for (const addonData of addons) {
+            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
-                parseInt(addon.hotel_id, 10),
-                addon.reservation_detail_id,
-                addon.addons_global_id,
-                addon.addons_hotel_id,
-                addon.addon_name,
-                addon.addon_type,
-                addon.quantity,
-                addon.price,
-                addon.created_by,
+                parseInt(addonData.hotel_id, 10),
+                addonData.reservation_detail_id,
+                addonData.addons_global_id,
+                addonData.addons_hotel_id,
+                addonData.addon_name,
+                addonData.addon_type,
+                addonData.quantity,
+                addonData.price,
+                addonData.tax_type_id || 3, // Use addonData.tax_type_id or default to 3
+                addonData.tax_rate || 0.1,    // Use addonData.tax_rate or default to 0.1
+                addonData.created_by,
+                addonData.created_by // Assuming updated_by is same as created_by for imports
             );
         }
 
         const query = `
             INSERT INTO reservation_addons (
-                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, tax_type_id, tax_rate, quantity, price, created_by
+                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 

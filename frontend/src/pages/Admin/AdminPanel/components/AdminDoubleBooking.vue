@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineExpose } from 'vue';
+import { ref, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';

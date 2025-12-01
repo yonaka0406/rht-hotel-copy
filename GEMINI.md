@@ -172,7 +172,7 @@ To connect to the PostgreSQL database container using `docker-compose`, you can 
 The `postgres` user is the default superuser. You can connect to the `wehub` database using:
 
 ```bash
-docker-compose exec db psql -U postgres -d wehub
+docker-compose exec -T db psql -U postgres -d wehub
 ```
 
 ### Connecting as the `rhtsys_user` application user
@@ -180,7 +180,7 @@ docker-compose exec db psql -U postgres -d wehub
 The `rhtsys_user` is the application-specific user created during database initialization. You can connect to the `wehub` database using:
 
 ```bash
-docker-compose exec db psql -U rhtsys_user -d wehub
+docker-compose exec -T db psql -U rhtsys_user -d wehub
 ```
 
 ## 9. Database Query Optimization Workflow
@@ -249,3 +249,6 @@ This command copies the backup file created in the previous step from the contai
 ```bash
 docker cp wehub-db:/tmp/daily_plan_metrics_backup.sql C:\Users\almeida.ped_redhorse\Documents\GitHub\rht-hotel\temp
 ```
+
+## 13. Docker Compose Database Access
+You can use `docker compose` to access the database.

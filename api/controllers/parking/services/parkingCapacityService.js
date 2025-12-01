@@ -1,5 +1,6 @@
 const { getPool } = require('../../../config/database');
 const { formatDate } = require('../../../utils/reportUtils');
+const { addReservationAddon } = require('../../../models/reservations/addons');
 
 /**
  * ParkingCapacityService - Manages capacity-based parking reservations
@@ -293,7 +294,7 @@ class ParkingCapacityService {
                 }
             }
             
-            console.log(`[ParkingCapacityService.reserveCapacity] Addon details: ${addonDetails.name}, price=${unit_price}`);
+            console.log(`[ParkingCapacityService.reserveCapacity] Addon details: ${addonDetails.name}, price=${addonDetails.price}`);
             
             // Step 4: Create reservation_addons and reservation_parking records for each spot
             const createdRecords = [];
@@ -302,31 +303,25 @@ class ParkingCapacityService {
                 console.log(`[ParkingCapacityService.reserveCapacity] Creating records for spot ${spotIndex + 1}/${number_of_spots}`);
                 
                 for (const date of dates) {
-                    // Create addon record
-                    const addonInsertQuery = `
-                        INSERT INTO reservation_addons (
-                            hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id,
-                            addon_name, price, quantity, tax_type_id, tax_rate, created_by, updated_by
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                        RETURNING id
-                    `;
-                    const addonValues = [
-                        hotel_id,
-                        reservation_details_id,
-                        addon?.addons_global_id || null,
-                        addon?.addons_hotel_id || null,
-                        addonDetails.name,
-                        unit_price,
-                        1,
-                        addonDetails.tax_type_id,
-                        addonDetails.tax_rate,
-                        user_id,
-                        user_id
-                    ];
-                    const addonResult = await client.query(addonInsertQuery, addonValues);
-                    const addonId = addonResult.rows[0].id;
+                    // Create addon record using addReservationAddon
+                    const newAddon = {
+                        hotel_id: hotel_id,
+                        reservation_detail_id: reservation_details_id,
+                        addons_global_id: addon?.addons_global_id || null,
+                        addons_hotel_id: addon?.addons_hotel_id || null,
+                        addon_name: addonDetails.name,
+                        addon_type: addonDetails.addon_type,
+                        quantity: 1, // Always 1 for a single parking spot on a given day
+                        price: addonDetails.price,
+                        tax_type_id: addonDetails.tax_type_id,
+                        tax_rate: addonDetails.tax_rate,
+                        created_by: user_id,
+                        updated_by: user_id,
+                    };
+                    const createdAddon = await addReservationAddon(this.requestId, newAddon, client);
+                    const addonId = createdAddon.id;
                     
-                    console.log(`[ParkingCapacityService.reserveCapacity] Created addon record: ${addonId} for date ${date}`);
+                    console.log(`[ParkingCapacityService.reserveCapacity] Created addon record using addReservationAddon: ${addonId} for date ${date}`);
                     
                     // Create parking record
                     const parkingInsertQuery = `

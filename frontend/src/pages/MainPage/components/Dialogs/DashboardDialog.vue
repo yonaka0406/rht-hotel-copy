@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Dialog, SelectButton, Button, DataTable, Column } from 'primevue';
 import { useToast } from "primevue/usetoast";
 

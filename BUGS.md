@@ -5,6 +5,84 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### December 1, 2025
+
+#### 宿泊税 (Accommodation Tax) Report Download
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Request
+- **Description**:
+  - Add functionality to download 宿泊税 (Accommodation Tax) reports directly from the 予約一覧 (Reservation List) page
+  - The report should include all necessary tax information for the selected reservations
+- **Requested Changes**:
+  1. Add a download button for the 宿泊税 report in the 予約一覧 page
+  2. Include relevant tax details in the report (e.g., guest names, stay dates, room rates, tax amounts)
+  3. Support date range filtering for the report
+  4. Generate the report in Excel format for easy processing
+- **Technical Notes**:
+  - Ensure the report includes all required fields for tax filing
+  - Consider adding a print-friendly format option
+  - Include validation to ensure all required data is present before generating the report
+
+#### Monthly Report Tax Value Issue
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Source**: Bug Report
+- **Description**:
+  - The monthly report in the PMS module is incorrectly displaying the tax-included value instead of the tax-excluded value
+  - This affects financial reporting accuracy and accounting processes
+- **Expected Behavior**:
+  - The report should display the pre-tax (tax-excluded) values for all financial figures
+  - Tax amounts should be shown as a separate column for reference
+- **Steps to Reproduce**:
+  1. Navigate to the PMS module
+  2. Generate a monthly report
+  3. Observe that the values shown include tax when they should not
+- **Technical Notes**:
+  - Review the report generation query to ensure proper tax calculation
+  - Consider adding a toggle to switch between tax-included and tax-excluded views if needed
+  - Verify that all monetary values in the report are consistently using the same tax treatment
+  - Ensure the fix doesn't affect other reports or modules
+
+### November 28, 2025
+
+#### Wehub Dashboard Metrics Adjustment
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Request
+- **Description**: 
+  - On the Wehub dashboard, the following metrics should exclude on-hold (キープ) reservations:
+    - 稼働率 (Occupancy Rate)
+    - 売上 (Revenue)
+    - ADR (Average Daily Rate)
+    - RevPAR (Revenue Per Available Room)
+  - However, the system should still track and display the total revenue from on-hold reservations separately
+- **Requested Changes**:
+  1. Modify dashboard calculations to exclude on-hold reservations from the main metrics
+  2. Add a separate section or indicator showing the total revenue from on-hold reservations
+  3. Ensure the data remains accurate and consistent across all reports
+- **Technical Notes**:
+  - Review and update the database queries that calculate these metrics
+  - Add a new field or status indicator for on-hold reservations
+  - Ensure the changes don't affect historical data reporting
+  - Add appropriate tooltips or help text to explain the metrics
+
+### November 27, 2025
+
+#### Inconsistent Parking Spot Addition Behavior
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Report
+- **Description**: 
+  - Users can only add one parking spot at a time through the dialog.
+  - Some users (like the reporter) can add multiple parking spots.
+- **Expected Behavior**:
+  - Consistent behavior for all users regarding the number of parking spots that can be added simultaneously through the dialog.
+- **Technical Notes**:
+  - Investigate the dialog's logic for adding parking spots.
+  - Check for any user-specific settings or permissions that might influence this behavior.
+  - Ensure the UI/UX clearly communicates how many spots can be added at once.
+
 ### November 21, 2025
 
 #### Security Improvements
@@ -682,6 +760,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: October 29, 2025*
-*Total Bugs: 3* (last one #87)
+*Last Updated: November 27, 2025*
+*Total Bugs: 5* (last one #87)
 *Total Feature Requests: 30* (last one #C)

@@ -1,4 +1,4 @@
-const { getAllGlobalAddons, getAllHotelsAddons, getAddons, getAllHotelAddons, newGlobalAddon, newHotelAddon, updateGlobalAddon, updateHotelAddon } = require('../models/addon');
+const { getAllGlobalAddons, getAllHotelsAddons, getAddons, getAllHotelAddons, newGlobalAddon, newHotelAddon, updateGlobalAddon, updateHotelAddon } = require('../../models/addons');
 
 // GET
 const getAllAddons = async (req, res) => {

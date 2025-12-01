@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, onMounted, computed } from 'vue';
+import { computed } from 'vue';
 import { Drawer, VirtualScroller, ProgressSpinner } from 'primevue';
 import { formatDateTimeJP, formatDateJP } from '@/utils/dateUtils';
 import { useXMLStore } from '@/composables/useXMLStore';

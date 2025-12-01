@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineProps } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useMetricsStore } from '@/composables/useMetricsStore';
 import StatCard from './StatCard.vue';
 

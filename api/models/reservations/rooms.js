@@ -2,6 +2,8 @@ let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
 const { formatDate } = require('../../utils/reportUtils');
 const logger = require('../../config/logger');
+const { addReservationAddon } = require('./addons');
+const clientsModels = require('./clients');
 
 const updateReservationRoomsPeriod = async (requestId, { originalReservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected }) => {
   //console.log('--- Starting updateReservationRoomsPeriod ---');
@@ -185,13 +187,33 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                 // Copy clients and addons to the new detail
                 if (clientsToCopy.length > 0) {
                     for (const clientRow of clientsToCopy) {
-                        await client.query('INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by) VALUES ($1, $2, $3, $4, $4)', [hotelId, newDetailId, clientRow.client_id, userId]);
+                        const reservationClient = {
+                            hotel_id: hotelId,
+                            reservation_details_id: newDetailId,
+                            client_id: clientRow.client_id,
+                            created_by: userId,
+                            updated_by: userId,
+                        };
+                        await clientsModels.addReservationClient(requestId, reservationClient, client);
                     }
                 }
                 if (addonsToCopy.length > 0) {
                     for (const addonRow of addonsToCopy) {
-                        await client.query('INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
-                        [hotelId, newDetailId, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name, addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, userId, userId]);
+                        const addonToInsert = {
+                            hotel_id: hotelId,
+                            reservation_detail_id: newDetailId,
+                            addons_global_id: addonRow.addons_global_id,
+                            addons_hotel_id: addonRow.addons_hotel_id,
+                            addon_name: addonRow.addon_name,
+                            addon_type: addonRow.addon_type,
+                            quantity: addonRow.quantity,
+                            price: addonRow.price,
+                            tax_type_id: addonRow.tax_type_id,
+                            tax_rate: addonRow.tax_rate,
+                            created_by: userId,
+                            updated_by: userId,
+                        };
+                        await addReservationAddon(requestId, addonToInsert, client);
                     }
                 }
             }

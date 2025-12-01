@@ -118,8 +118,8 @@
 </template>
 
 <script setup>
-// Vue
-import { ref, defineProps, defineEmits, watch, computed } from 'vue';
+    // Vue
+    import { ref, watch, computed } from 'vue';
 
 // Primevue
 import Dialog from 'primevue/dialog';

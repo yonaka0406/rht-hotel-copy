@@ -394,7 +394,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
 
       // Find available rooms of this type for the entire date range
       const availableRoomsResult = await client.query(
-        `SELECT r.id AS room_id
+        `SELECT r.id AS room_id, r.capacity
          FROM rooms r
          WHERE r.hotel_id = $1 AND r.room_type_id = $2
          AND NOT EXISTS (
@@ -410,13 +410,17 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
         [hotel_id, room_type_id, startDate, endDate, count]
       );
 
-      const roomsToBlock = availableRoomsResult.rows.map(row => row.room_id);
+      const roomsToBlock = availableRoomsResult.rows.map(row => ({
+        id: row.room_id,
+        capacity: row.capacity
+      }));
 
       if (roomsToBlock.length < count) {
         logger.warn(`[${requestId}] Not enough rooms of type ${room_type_id} available. Requested: ${count}, Found: ${roomsToBlock.length}`);
       }
 
-      for (const roomId of roomsToBlock) {
+      for (const room of roomsToBlock) {
+        const peopleForRoom = Math.min(number_of_people || 1, room.capacity);
         // Insert reservation details for each day, using the single mockReservationId
         for (const date of dateArray) {
           await client.query(
@@ -426,14 +430,14 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
               hotel_id,
               mockReservationId,
               date,
-              roomId,
-              number_of_people || 1,
+              room.id,
+              peopleForRoom,
               userId,
               userId,
             ]
           );
         }
-        blockedRoomIds.push(roomId);
+        blockedRoomIds.push(room.id);
       }
     }
 

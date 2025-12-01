@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Drawer from 'primevue/drawer';
 import Card from 'primevue/card';
