@@ -1,3 +1,4 @@
+// npx playwright install in api folder
 const { chromium } = require('playwright');
 const logger = require('../config/logger');
 
@@ -5,7 +6,7 @@ let browserInstance = null;
 let browserLaunchPromise = null;
 
 const getBrowser = async () => {
-  if (browserInstance && !browserInstance.isClosed()) { // Playwright uses isClosed()
+  if (browserInstance && browserInstance.isConnected()) {
     return browserInstance;
   }
 

@@ -3,7 +3,7 @@ const billingModel = require('../../models/billing');
 const { getUsersByID } = require('../../models/user');
 const { getHotelByID } = require('../../models/hotel');
 
-const { getBrowser, resetBrowser } = require('../../services/puppeteerService');
+const { getBrowser, resetBrowser } = require('../../services/playwrightService');
 const logger = require('../../config/logger');
 const fs = require('fs');
 const path = require('path');

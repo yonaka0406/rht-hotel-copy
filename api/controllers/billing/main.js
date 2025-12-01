@@ -1,7 +1,7 @@
 const { getPool } = require('../../config/database');
 const billingModel = require('../../models/billing');
 const { getUsersByID } = require('../../models/user');
-const { getBrowser, resetBrowser } = require('../../services/puppeteerService');
+const { getBrowser, resetBrowser } = require('../../services/playwrightService');
 const { generateNewInvoiceNumber, generateInvoiceHTML } = require('./services/invoiceService');
 
 const logger = require('../../config/logger');

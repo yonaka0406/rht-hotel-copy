@@ -25,7 +25,7 @@ const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 const { startOtaXmlPoller, stopOtaXmlPoller, POLL_INTERVAL } = require('./jobs/otaXmlPoller.js');
 
 const app = express();
-const { closeSingletonBrowser } = require('./services/puppeteerService');
+const { closeSingletonBrowser } = require('./services/playwrightService');
 app.locals.logger = logger; // Make logger globally available
 app.set('trust proxy', 1);
 

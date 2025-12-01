@@ -1,4 +1,4 @@
-const { getBrowser } = require('../services/puppeteerService');
+const { getBrowser, resetBrowser } = require('../services/playwrightService');
 const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
@@ -299,6 +299,8 @@ const generateGuestList = async (req, res) => {
     } catch (error) {
         console.error('Error generating guest list PDF:', error);
         res.status(500).send('Error generating guest list PDF');
+    } finally {
+        await resetBrowser(false);
     }
 };
 
