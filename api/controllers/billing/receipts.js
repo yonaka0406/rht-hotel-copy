@@ -88,7 +88,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
             logger.debug(`[handleGenerateReceiptRequest] No existing receipt found. A new receipt record will be generated.`);
         } else {
             // Existing receipt found. Decide whether to create a new version or use the existing one.
-            if (forceRegenerate || (isReissue && existingReceipt.version === 1)) {
+            logger.debug(`[handleGenerateReceiptRequest] Existing receipt decision factors: forceRegenerate = ${forceRegenerate}, isReissue = ${isReissue}, existingReceipt.version = ${existingReceipt ? existingReceipt.version : 'N/A'}`);
+            if (forceRegenerate) {
                 // If forced regeneration or reissuing the initial version, create a new record.
                 shouldGenerateNewReceiptRecord = true;
                 logger.debug(`[handleGenerateReceiptRequest] Existing receipt will be re-generated (new version) due to forceRegenerate or initial reissue.`);
