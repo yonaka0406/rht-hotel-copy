@@ -28,6 +28,23 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Ensure the changes don't affect historical data reporting
   - Add appropriate tooltips or help text to explain the metrics
 
+#### 宿泊税 (Accommodation Tax) Report Download
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Request
+- **Description**:
+  - Add functionality to download 宿泊税 (Accommodation Tax) reports directly from the 予約一覧 (Reservation List) page
+  - The report should include all necessary tax information for the selected reservations
+- **Requested Changes**:
+  1. Add a download button for the 宿泊税 report in the 予約一覧 page
+  2. Include relevant tax details in the report (e.g., guest names, stay dates, room rates, tax amounts)
+  3. Support date range filtering for the report
+  4. Generate the report in Excel format for easy processing
+- **Technical Notes**:
+  - Ensure the report includes all required fields for tax filing
+  - Consider adding a print-friendly format option
+  - Include validation to ensure all required data is present before generating the report
+
 ### November 27, 2025
 
 #### Inconsistent Parking Spot Addition Behavior
