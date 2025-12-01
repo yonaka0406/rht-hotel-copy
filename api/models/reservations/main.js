@@ -1156,8 +1156,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             clientsToCopy = clientsResult.rows;
             //logger.debug(`Found ${clientsToCopy.length} clients to copy.`);
     
-            const addonsResult = await client.query('SELECT addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate FROM reservation_addons WHERE reservation_detail_id = $1', [sourceDetailId]);
-            addonsToCopy = addonsResult.rows;
+            addonsToCopy = await selectReservationAddonByDetail(requestId, sourceDetailId, client);
             //logger.debug(`Found ${addonsToCopy.length} addons to copy.`);
           }
           // --- NEW LOGIC: END ---
