@@ -63,6 +63,24 @@ const addReservationAddon = async (requestId, addon, client = null) => {
   }
 };
 
+const selectReservationAddonByDetail = async (requestId, reservationDetailId, client = null) => {
+  const pool = client || getPool(requestId);
+  const query = `
+    SELECT * FROM reservation_addons
+    WHERE reservation_detail_id = $1;
+  `;
+  const values = [reservationDetailId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    logger.error('Error selecting reservation addon by detail:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
-  addReservationAddon
+  addReservationAddon,
+  selectReservationAddonByDetail
 }
