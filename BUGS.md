@@ -5,6 +5,45 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### December 1, 2025
+
+#### 宿泊税 (Accommodation Tax) Report Download
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Request
+- **Description**:
+  - Add functionality to download 宿泊税 (Accommodation Tax) reports directly from the 予約一覧 (Reservation List) page
+  - The report should include all necessary tax information for the selected reservations
+- **Requested Changes**:
+  1. Add a download button for the 宿泊税 report in the 予約一覧 page
+  2. Include relevant tax details in the report (e.g., guest names, stay dates, room rates, tax amounts)
+  3. Support date range filtering for the report
+  4. Generate the report in Excel format for easy processing
+- **Technical Notes**:
+  - Ensure the report includes all required fields for tax filing
+  - Consider adding a print-friendly format option
+  - Include validation to ensure all required data is present before generating the report
+
+#### Monthly Report Tax Value Issue
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Source**: Bug Report
+- **Description**:
+  - The monthly report in the PMS module is incorrectly displaying the tax-included value instead of the tax-excluded value
+  - This affects financial reporting accuracy and accounting processes
+- **Expected Behavior**:
+  - The report should display the pre-tax (tax-excluded) values for all financial figures
+  - Tax amounts should be shown as a separate column for reference
+- **Steps to Reproduce**:
+  1. Navigate to the PMS module
+  2. Generate a monthly report
+  3. Observe that the values shown include tax when they should not
+- **Technical Notes**:
+  - Review the report generation query to ensure proper tax calculation
+  - Consider adding a toggle to switch between tax-included and tax-excluded views if needed
+  - Verify that all monetary values in the report are consistently using the same tax treatment
+  - Ensure the fix doesn't affect other reports or modules
+
 ### November 28, 2025
 
 #### Wehub Dashboard Metrics Adjustment
@@ -27,23 +66,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Add a new field or status indicator for on-hold reservations
   - Ensure the changes don't affect historical data reporting
   - Add appropriate tooltips or help text to explain the metrics
-
-#### 宿泊税 (Accommodation Tax) Report Download
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: User Request
-- **Description**:
-  - Add functionality to download 宿泊税 (Accommodation Tax) reports directly from the 予約一覧 (Reservation List) page
-  - The report should include all necessary tax information for the selected reservations
-- **Requested Changes**:
-  1. Add a download button for the 宿泊税 report in the 予約一覧 page
-  2. Include relevant tax details in the report (e.g., guest names, stay dates, room rates, tax amounts)
-  3. Support date range filtering for the report
-  4. Generate the report in Excel format for easy processing
-- **Technical Notes**:
-  - Ensure the report includes all required fields for tax filing
-  - Consider adding a print-friendly format option
-  - Include validation to ensure all required data is present before generating the report
 
 ### November 27, 2025
 
