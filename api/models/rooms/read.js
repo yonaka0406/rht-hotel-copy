@@ -46,7 +46,7 @@ const selectAllHotelRoomTypes = async (requestId, hotelId) => {
   const pool = getPool(requestId);
   try {
     const query = `
-      SELECT id, name, description, created_at, updated_at
+      SELECT id, name, description, created_at, updated_by
       FROM room_types
       WHERE hotel_id = $1
     `;
