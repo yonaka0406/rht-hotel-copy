@@ -484,7 +484,7 @@ async function getPaymentById(requestId, paymentId, hotelId, dbClient = null) {
 }
 
 async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId, dbClient = null) {
-  const client = dbClient || await getPool(requestId);
+  const client = dbClient || getPool(requestId);
   const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2 AND hotel_id = $3';
   try {
     const result = await client.query(query, [receiptId, paymentId, hotelId]);
