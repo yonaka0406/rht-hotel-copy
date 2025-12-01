@@ -57,8 +57,41 @@ const createRoom = async (requestId, { room_type_id, floor, room_number, capacit
 
 const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, updated_by, hotelId) => {
   const pool = getPool(requestId);
-  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, has_wet_area = $7, is_staff_room = $8, updated_by = $9 WHERE id = $10 AND hotel_id = $11 RETURNING *';
-  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, has_wet_area, is_staff_room, updated_by, id, hotelId];
+  const updates = [];
+  const values = [];
+  let paramIndex = 1;
+
+  const addUpdate = (field, value) => {
+    if (value !== undefined) {
+      updates.push(`${field} = $${paramIndex++}`);
+      values.push(value);
+    }
+  };
+
+  addUpdate('room_type_id', room_type_id);
+  addUpdate('floor', floor);
+  addUpdate('room_number', room_number);
+  addUpdate('capacity', capacity);
+  addUpdate('smoking', smoking);
+  addUpdate('for_sale', for_sale);
+  addUpdate('has_wet_area', has_wet_area);
+  addUpdate('is_staff_room', is_staff_room);
+  addUpdate('updated_by', updated_by);
+
+  if (updates.length === 0) {
+    // No fields to update, return the existing room
+    const result = await pool.query('SELECT * FROM rooms WHERE id = $1 AND hotel_id = $2', [id, hotelId]);
+    return result.rows[0];
+  }
+
+  values.push(id, hotelId); // Add id and hotelId for WHERE clause at the end
+
+  const query = `
+    UPDATE rooms
+    SET ${updates.join(', ')}
+    WHERE id = $${paramIndex++} AND hotel_id = $${paramIndex++}
+    RETURNING *;
+  `;
 
   try {
     const result = await pool.query(query, values);

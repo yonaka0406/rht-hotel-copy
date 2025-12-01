@@ -113,7 +113,7 @@ const editRoom = async (req, res) => {
   try {
     numericId = validateNumericParam(idParam, 'Room ID');
     numericRoomTypeId = validateNumericParam(String(room_type_id), 'Room Type ID');
-    numericFloor = validateNumericParam(String(floor), 'Floor');
+    numericFloor = floor !== undefined ? validateNumericParam(String(floor), 'Floor') : undefined;
     validatedRoomNumber = validateNonEmptyStringParam(room_number, 'Room Number');
     numericCapacity = validateNumericParam(String(capacity), 'Capacity');
     numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID');
