@@ -2,7 +2,7 @@ let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
 const { formatDate } = require('../../utils/reportUtils');
 const logger = require('../../config/logger');
-const { addReservationAddon } = require('../reservations/addons');
+const { addReservationAddon } = require('./addons');
 const clientsModels = require('./clients');
 
 const updateReservationRoomsPeriod = async (requestId, { originalReservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected }) => {
