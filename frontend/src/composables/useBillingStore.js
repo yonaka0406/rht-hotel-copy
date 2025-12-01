@@ -39,11 +39,27 @@ export function useBillingStore() {
         }
     };
 
-    const handleGenerateReceipt = async (hotelId, paymentId, taxBreakdownData) => {        
+    const handleGenerateReceipt = async (
+        hotelId,
+        paymentId,
+        taxBreakdownData,
+        honorific = '様',
+        isReissue = false,
+        customIssueDate = null,
+        customProviso = null,
+        forceRegenerate = false // Add forceRegenerate parameter with default false
+    ) => {        
         try {
             const authToken = localStorage.getItem('authToken');            
             const url = '/api/billing/res/generate-receipt/' + hotelId + '/' + paymentId;
-            const bodyPayload = { taxBreakdownData };
+            const bodyPayload = {
+                taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso,
+                forceRegenerate // Include forceRegenerate in the payload
+            };
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -184,6 +200,7 @@ export function useBillingStore() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 0);
     
         } catch (error) {
             console.error("Error generating/downloading PDF:", error);            
@@ -223,13 +240,27 @@ export function useBillingStore() {
         }
     };
 
-    const handleGenerateConsolidatedReceipt = async (hotelId, paymentIdsArray, taxBreakdownData) => {
+    const handleGenerateConsolidatedReceipt = async (
+        hotelId,
+        paymentIdsArray,
+        taxBreakdownData,
+        honorific = '様',
+        isReissue = false,
+        customIssueDate = null,
+        customProviso = null,
+        forceRegenerate = false // Add forceRegenerate parameter with default false
+    ) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/billing/res/generate-consolidated-receipt/${hotelId}`;
             const bodyPayload = {
                 payment_ids: paymentIdsArray,
-                taxBreakdownData: taxBreakdownData
+                taxBreakdownData: taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso,
+                forceRegenerate // Include forceRegenerate in the payload
             };
 
             const response = await fetch(url, {
@@ -315,6 +346,7 @@ export function useBillingStore() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(() => window.URL.revokeObjectURL(excelUrl), 0);
 
         } catch (error) {
             console.error("Error generating/downloading Excel:", error);

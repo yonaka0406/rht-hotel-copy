@@ -1,8 +1,9 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) => {
-    const pool = getPool(requestId);
-    const query = `
+  const pool = getPool(requestId);
+  const query = `
       SELECT
         reservations.hotel_id
         ,hotels.formal_name
@@ -178,15 +179,15 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         AND (details.plan_price + details.addon_price - details.payment) > 0
       ORDER BY 5, 7;
     `;
-    const values = [hotelId, dateStart, dateEnd];
+  const values = [hotelId, dateStart, dateEnd];
 
-    try {
-      const result = await pool.query(query, values);    
-      return result.rows;
-    } catch (err) {
-      console.error('Error retrieving data:', err);
-      throw new Error('Database error');
-    }
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    logger.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
 };
 
 const selectBilledListView = async (requestId, hotelId, month) => {
@@ -315,7 +316,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error retrieving data:', err);
+    logger.error('Error retrieving data:', err);
     throw new Error('Database error');
   }
 };
@@ -338,12 +339,12 @@ const selectMaxInvoiceNumber = async (requestId, hotelId, date) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error retrieving data:', err);
+    logger.error('Error retrieving data:', err);
     throw new Error('Database error');
   }
 };
 
-const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName, invoiceNumber, due_date, total_stays, comment) => {  
+const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName, invoiceNumber, due_date, total_stays, comment) => {
   const pool = getPool(requestId);
   const query = `
     UPDATE invoices SET
@@ -362,37 +363,51 @@ const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName
   const values = [clientName, invoiceNumber, due_date, total_stays, comment, id, hotelId, date, clientId];
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error updating data:', err);
+    logger.error('Error updating data:', err);
     throw new Error('Database error');
   }
 };
 
 async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endDate) {
   const pool = getPool(requestId);
-  const query = `    
+  const query = `
     SELECT
       res.check_in
-      ,res.check_out		
-      ,p.id as payment_id		
+      ,res.check_out
+      ,p.id as payment_id
       ,rs.room_number
       ,TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date
       ,p.value as amount
       ,COALESCE(c.name_kanji, c.name_kana, c.name) as client_name
       ,p.comment
-      ,r.receipt_number as existing_receipt_number
+      ,latest_r.receipt_number as existing_receipt_number
+      ,latest_r.honorific as existing_honorific
+      ,latest_r.custom_proviso as existing_custom_proviso
+      ,latest_r.is_reissue as existing_is_reissue
+      ,TO_CHAR(latest_r.receipt_date, 'YYYY-MM-DD') as existing_receipt_date
+      ,latest_r.version as version
+      ,latest_r.tax_breakdown as existing_tax_breakdown
     FROM
       reservation_payments p
         JOIN
       clients c ON p.client_id = c.id
         JOIN
       reservations res ON res.id = p.reservation_id AND res.hotel_id = p.hotel_id
-        JOIN 
+        JOIN
       rooms rs ON rs.id = p.room_id
         LEFT JOIN
-      receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id
+      receipts r_linked ON p.receipt_id = r_linked.id AND p.hotel_id = r_linked.hotel_id -- Linked receipt
+        LEFT JOIN LATERAL (
+            SELECT r_latest.*
+            FROM receipts r_latest
+            WHERE r_latest.hotel_id = r_linked.hotel_id
+              AND r_latest.receipt_number = r_linked.receipt_number
+            ORDER BY r_latest.version DESC
+            LIMIT 1
+        ) latest_r ON r_linked.id IS NOT NULL -- Only join if r_linked exists
     WHERE
       p.hotel_id = $1 AND
       p.date >= $2 AND
@@ -404,7 +419,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
     const result = await pool.query(query, [hotelId, startDate, endDate]);
     return result.rows;
   } catch (err) {
-    console.error('Error in selectPaymentsForReceiptsView:', err);
+    logger.error('Error in selectPaymentsForReceiptsView:', err);
     // It's often better to throw the error to be handled by the controller,
     // allowing for more specific error responses.
     throw new Error('Database error while fetching payments for receipts view.');
@@ -412,8 +427,8 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
 }
 
 // Actual implementations
-async function getPaymentById(requestId, paymentId, hotelId) {
-  const pool = getPool(requestId);
+async function getPaymentById(requestId, paymentId, hotelId, dbClient = null) {
+  const client = dbClient || getPool(requestId);
   const paymentQuery = `
     SELECT
       p.id,
@@ -437,12 +452,12 @@ async function getPaymentById(requestId, paymentId, hotelId) {
   `;
 
   try {
-    const paymentResult = await pool.query(paymentQuery, [paymentId, hotelId]);
+    const paymentResult = await client.query(paymentQuery, [paymentId, hotelId]);
     if (paymentResult.rows.length === 0) {
       return null;
     }
     const paymentData = paymentResult.rows[0];
-    
+
     return {
       id: paymentData.id,
       amount: parseFloat(paymentData.amount),
@@ -463,92 +478,25 @@ async function getPaymentById(requestId, paymentId, hotelId) {
       items: [] // No separate payment_items table
     };
   } catch (err) {
-    console.error('Error in getPaymentById:', err);
+    logger.error('Error in getPaymentById:', err);
     throw new Error('Database error while fetching payment details.');
   }
 }
 
-async function getReceiptByPaymentId(requestId, paymentId, hotelId) {
-  const pool = getPool(requestId);
-  const query = `
-    SELECT
-        r.receipt_number,
-        TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as receipt_date,
-        r.amount,
-        r.tax_breakdown
-    FROM reservation_payments p
-    JOIN receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id    
-    WHERE p.id = $1 AND p.hotel_id = $2;
-  `;
-  try {
-    const result = await pool.query(query, [paymentId, hotelId]);
-    return result.rows.length > 0 ? result.rows[0] : null;
-  } catch (err) {
-    console.error('Error in getReceiptByPaymentId:', err);
-    throw new Error('Database error while fetching receipt by payment ID.');
-  }
-}
-
-async function selectMaxReceiptNumber(requestId, hotelId, date) {
-  const pool = getPool(requestId);
-  // The date parameter is a JS Date object. We need to ensure it's formatted correctly for the query
-  // or use date_trunc with the passed date.
-  const query = `
-    SELECT receipt_number as last_receipt_number
-    FROM receipts
-    WHERE hotel_id = $1
-      AND receipt_date >= date_trunc('month', $2::date)
-      AND receipt_date < date_trunc('month', $2::date) + interval '1 month'
-    ORDER BY receipt_number DESC
-    LIMIT 1;
-  `;
-  try {
-    // Ensure 'date' is in a format PostgreSQL understands (e.g., YYYY-MM-DD) if it's not already a JS Date.
-    // If 'date' is a JS Date, $2::date should work.
-    const result = await pool.query(query, [hotelId, date]);
-    return result.rows.length > 0 ? result.rows[0] : { last_receipt_number: null };
-  } catch (err) {
-    console.error('Error in selectMaxReceiptNumber:', err);
-    throw new Error('Database error while selecting max receipt number.');
-  }
-}
-
-async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData) { 
-  const pool = getPool(requestId);
-  const query = `
-    INSERT INTO receipts
-      (hotel_id, receipt_number, receipt_date, amount, created_by, tax_breakdown, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, NOW())
-    RETURNING id;
-  `;
-  try {
-    // Ensure taxBreakdownData is null if undefined, or an empty array if it's an empty array,
-    // which are both valid for JSONB. The pg driver should handle stringifying objects/arrays.
-    const values = [hotelId, receiptNumber, receiptDate, amount, userId, JSON.stringify(taxBreakdownData || [])]; // Pass taxBreakdownData
-    const result = await pool.query(query, values);
-    return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
-  } catch (err) {
-    console.error('Error in saveReceiptNumber:', err);
-    // Add more context to the error if possible
-    console.error('Failed to save receipt with data:', { hotelId, receiptNumber, taxBreakdownData });
-    throw new Error('Database error while saving receipt number.');
-  }
-}
-
-async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId) {
-  const pool = getPool(requestId);
+async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId, dbClient = null) {
+  const client = dbClient || await getPool(requestId);
   const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2 AND hotel_id = $3';
   try {
-    const result = await pool.query(query, [receiptId, paymentId, hotelId]);
+    const result = await client.query(query, [receiptId, paymentId, hotelId]);
     // Log if no row was updated, but still consider it a success if query executed
     if (result.rowCount === 0) {
       console.warn(`Attempted to link payment ${paymentId} to receipt ${receiptId}, but no payment row was updated. Payment ID might be incorrect or already linked.`);
     }
     return { success: true, rowCount: result.rowCount };
   } catch (err) {
-    console.error(`Error in linkPaymentToReceipt for paymentId ${paymentId}, receiptId ${receiptId}:`, err);
+    logger.error(`Error in linkPaymentToReceipt for paymentId ${paymentId}, receiptId ${receiptId}:`, err);
     // Throw a more specific error or a generic one based on policy
-    
+
     throw new Error('Database error while linking payment to receipt.');
   }
 }
@@ -559,9 +507,6 @@ module.exports = {
   selectMaxInvoiceNumber,
   updateInvoices,
   getPaymentById,
-  selectMaxReceiptNumber,
-  getReceiptByPaymentId,
-  saveReceiptNumber,
   selectPaymentsForReceiptsView,
   linkPaymentToReceipt,
 };

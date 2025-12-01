@@ -120,6 +120,7 @@
             :totalAmount="dialogTotalAmount"
             :isConsolidated="dialogIsConsolidated"
             :paymentData="dialogPaymentData"
+            :isReissue="dialogIsReissue"
             @generate="handleDialogGenerateReceipt"
         />
     </Panel>
@@ -191,6 +192,7 @@
     const dialogPaymentData = ref(null); // To store data for single or consolidated
     const dialogIsConsolidated = ref(false);
     const dialogTotalAmount = ref(0);
+    const dialogIsReissue = ref(false);
 
     // Selection and Drawer logic (mostly commented out for now)
     const selectedPayments = ref([]);
@@ -269,7 +271,7 @@
     }
 
     // Submitting/generating a single receipt
-    const generateSingleReceipt = async (paymentData) => {
+    const _generateSingleReceipt = async (paymentData) => {
         if (!paymentData || !paymentData.payment_id) {
             toast.add({ severity: 'error', summary: 'エラー', detail: '有効な支払データがありません。', life: 3000 });
             return;
@@ -317,7 +319,17 @@
 
     const viewReceipt = (paymentData) => {        
         console.log("Viewing/Re-generating receipt for payment:", paymentData);
-        generateSingleReceipt(paymentData);
+        // Set dialog data
+        dialogPaymentData.value = paymentData;
+        dialogTotalAmount.value = parseFloat(paymentData.amount);
+        dialogIsConsolidated.value = false;
+        // Auto-set reissue flag for viewing existing receipts
+        dialogIsReissue.value = !!paymentData.existing_receipt_number;
+        dialogPaymentData.value.existing_honorific = paymentData.existing_honorific;
+        dialogPaymentData.value.existing_custom_proviso = paymentData.existing_custom_proviso;
+        dialogPaymentData.value.existing_receipt_date = paymentData.existing_receipt_date;
+        // Open the dialog
+        showReceiptDialog.value = true;
     };
 
     // Filters
@@ -375,6 +387,7 @@
       dialogPaymentData.value = paymentData;
       dialogTotalAmount.value = parseFloat(paymentData.amount);
       dialogIsConsolidated.value = false;
+      dialogIsReissue.value = false; // Reset reissue flag for new receipts
       showReceiptDialog.value = true;
     };
 
@@ -393,11 +406,20 @@
       };
       dialogTotalAmount.value = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
       dialogIsConsolidated.value = true;
+      dialogIsReissue.value = false; // Consolidated dialogs always start with reissue=false
       showReceiptDialog.value = true;
     };
 
     const handleDialogGenerateReceipt = async (eventPayload) => {
-      const { taxBreakdownData } = eventPayload;
+  const {
+    taxBreakdownData,
+    _paymentDetails,
+    honorific,
+    isReissue,
+    customIssueDate,
+    customProviso,
+    forceRegenerate // Destructure forceRegenerate here
+  } = eventPayload;
 
       if (!selectedHotelId.value) {
           toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルが選択されていません。', life: 3000 });
@@ -417,7 +439,16 @@
           });
 
           try {
-              const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds, taxBreakdownData);
+              const result = await handleGenerateConsolidatedReceipt(
+                selectedHotelId.value,
+                paymentIds,
+                taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso,
+                forceRegenerate // Pass forceRegenerate here
+              );
               if (result && result.success) {
                   const totalConsolidatedAmount = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
                   toast.add({
@@ -453,7 +484,16 @@
           });
 
           try {
-              const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id, taxBreakdownData);
+              const result = await handleGenerateReceipt(
+                selectedHotelId.value,
+                paymentData.payment_id,
+                taxBreakdownData,
+                honorific,
+                isReissue,
+                customIssueDate,
+                customProviso,
+                forceRegenerate // Pass forceRegenerate here
+              );
                if (result && result.success) {
                   toast.add({
                       severity: 'success',

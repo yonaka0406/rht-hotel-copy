@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getBillableListView, getBilledListView, generateInvoice, generateInvoiceExcel, getPaymentsForReceipts, handleGenerateReceiptRequest } = require('../controllers/billingController');
+const { getBillableListView, getBilledListView, generateInvoice, generateInvoiceExcel, getPaymentsForReceipts, handleGenerateReceiptRequest } = require('../controllers/billing');
 const { authMiddleware, authMiddlewareCRUDAccess } = require('../middleware/authMiddleware');
 
 router.get('/billing/res/billable-list/:hid/:sdate/:edate', authMiddleware, getBillableListView);

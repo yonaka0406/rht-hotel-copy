@@ -8,7 +8,7 @@ const getAllUsers = async (requestId) => {
   const query = 'SELECT users.*, user_roles.role_name, user_roles.permissions FROM users, user_roles WHERE users.role_id = user_roles.id ORDER BY status_id, role_id, email, id ASC';
 
   try {
-    const result = await pool.query(query);    
+    const result = await pool.query(query);
     return result.rows; // Return all
   } catch (err) {
     console.error('Error retrieving all users:', err);
@@ -16,9 +16,10 @@ const getAllUsers = async (requestId) => {
   }
 };
 
-const getUsersByID = async (requestId, id) => {
-  const pool = getPool(requestId);
-  const query = `
+const getUsersByID = async (requestId, id, dbClient = null) => {
+  const client = dbClient || getPool(requestId);
+  try {
+    const query = `
       SELECT 
           users.id, 
           users.email, 
@@ -44,13 +45,13 @@ const getUsersByID = async (requestId, id) => {
       ORDER BY 
           users.id ASC
   `;
-  const values = [id];
-  try {      
-      const result = await pool.query(query, values);
-      return result.rows;
+    const values = [id];
+
+    const result = await client.query(query, values);
+    return result.rows;
   } catch (err) {
-      console.error('Error retrieving user by id:', err);
-      throw new Error('Database error');
+    console.error('Error retrieving user by id:', err);
+    throw new Error('Database error');
   }
 };
 
@@ -74,7 +75,7 @@ const updatePasswordHash = async (requestId, email, passwordHash, updated_by) =>
   const pool = getPool(requestId);
   const query = 'UPDATE users SET password_hash = $1, updated_by = $2 WHERE email = $3 RETURNING *';
   const values = [passwordHash, updated_by, email];
-  
+
   try {
     const result = await pool.query(query, values);
     return result.rows[0]; // Return the updated user
@@ -88,7 +89,7 @@ const updatePasswordHash = async (requestId, email, passwordHash, updated_by) =>
 const updateUserInfo = async (requestId, user_id, name, status_id, role_id, updated_by) => {
   const pool = getPool(requestId);
   const query = 'UPDATE users SET name = $1, status_id = $2, role_id = $3, updated_by = $4 WHERE id = $5 RETURNING *';
-  const values = [name, status_id, role_id, updated_by, user_id];  
+  const values = [name, status_id, role_id, updated_by, user_id];
 
   try {
     const result = await pool.query(query, values);
@@ -100,7 +101,7 @@ const updateUserInfo = async (requestId, user_id, name, status_id, role_id, upda
 };
 
 // Create a user 
-const createUser = async (requestId, email, name, password, role_id, created_by, updated_by) => {  
+const createUser = async (requestId, email, name, password, role_id, created_by, updated_by) => {
   const pool = getPool(requestId);
   const hashedPassword = await bcrypt.hash(password, 10);
   const query = `
@@ -142,14 +143,14 @@ async function findUserByProviderId(requestId, provider, providerUserId) {
 // Update user's Google OAuth tokens
 async function updateUserGoogleTokens(requestId, userId, accessToken, refreshToken, expiryDateTimestampMs) {
   const pool = getPool(requestId);
-  
+
   let expiryDate;
   if (expiryDateTimestampMs) {
     expiryDate = new Date(expiryDateTimestampMs);
   } else {
     // Default to null if not provided, or could set a default like 1 hour from now
     // For now, strictly using the provided value or null.
-    expiryDate = null; 
+    expiryDate = null;
   }
 
   const query = `
@@ -214,7 +215,7 @@ async function createUserWithGoogle(requestId, googleUserId, email, name, roleId
 // Update user's calendar specific settings
 async function updateUserCalendarSettings(requestId, userId, settings) {
   const pool = getPool(requestId);
-  
+
   // Fields that can be updated by this function
   const updatableFields = ['google_calendar_id', 'last_successful_google_sync'];
   const setClauses = [];
@@ -248,16 +249,16 @@ async function updateUserCalendarSettings(requestId, userId, settings) {
   // Assuming an 'updated_at' field that automatically updates on row change via a DB trigger is preferred.
   // If not, 'updated_at = CURRENT_TIMESTAMP' should be added here.
   setClauses.push(`updated_by = $${paramIndex++}`);
-  values.push(userId); 
+  values.push(userId);
 
   if (setClauses.length === 1 && setClauses[0].startsWith('updated_by')) {
-      // This means no actual calendar settings were in the 'settings' object.
-      // Depending on desired behavior, one might return early or proceed to only update 'updated_by'.
-      // For this function, it's better to require at least one actual setting.
-      // However, the dynamic nature means if only 'updated_by' is set, the query is still valid.
-      // Let's refine: if ONLY updated_by is set because no other settings were provided, it's not an "error" but maybe not the intended use.
-      // The check "if (setClauses.length === 0)" before adding updated_by would be more strict.
-      // The current structure will always include updated_by.
+    // This means no actual calendar settings were in the 'settings' object.
+    // Depending on desired behavior, one might return early or proceed to only update 'updated_by'.
+    // For this function, it's better to require at least one actual setting.
+    // However, the dynamic nature means if only 'updated_by' is set, the query is still valid.
+    // Let's refine: if ONLY updated_by is set because no other settings were provided, it's not an "error" but maybe not the intended use.
+    // The check "if (setClauses.length === 0)" before adding updated_by would be more strict.
+    // The current structure will always include updated_by.
   }
 
 

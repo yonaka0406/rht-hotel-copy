@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <title>領収書 - {{ receipt_number }}</title>
@@ -9,31 +10,35 @@
             font-size: 10pt;
             color: #000;
             margin: 0;
-            padding: 20px; /* Add some overall padding to the body */
+            padding: 20px;
             background-color: #fff;
             line-height: 1.5;
-            box-sizing: border-box; /* Include padding in element's total width and height */
-            max-width: 800px; /* Limit width for better readability on large screens */
-            margin: 20px auto; /* Center the whole document */
-            border: 1px solid #eee; /* Light border around the whole receipt */            
+            box-sizing: border-box;
+            max-width: 800px;
+            margin: 20px auto;
+            border: 1px solid #eee;
         }
+
         .container {
             width: 100%;
             padding: 20px;
         }
+
         .header {
             text-align: center;
             margin-bottom: 30px;
             position: relative;
         }
+
         h1 {
-            font-size: 24pt; /* Larger title */
+            font-size: 24pt;
             margin: 0;
             letter-spacing: 5px;
             display: inline-block;
-            padding: 5px 20px;            
+            padding: 5px 20px;
             border-bottom: 2px solid #ccc;
         }
+
         .receipt-info {
             position: absolute;
             top: 0;
@@ -41,71 +46,98 @@
             font-size: 9pt;
             text-align: right;
             line-height: 1.2;
-        }        
-        .receipt-info p {
-            padding-right: 15px; /* Adjust this value as needed for more padding */
         }
+
+        .receipt-info p {
+            padding-right: 15px;
+        }
+
+        .reissue-stamp {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: transparent;
+            color: #ff6b6b;
+            padding: 6px 15px;
+            border: 3px solid #ff6b6b;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12pt;
+            letter-spacing: 2px;
+        }
+
         .customer-info {
             margin-bottom: 30px;
             font-size: 11pt;
             padding-bottom: 5px;
             border-bottom: 1px solid #ccc;
         }
+
         .customer-name {
             font-size: 14pt;
             font-weight: bold;
             display: inline-block;
             padding-bottom: 5px;
-            border-bottom: 2px solid #000; /* Underline for customer name */
+            border-bottom: 2px solid #000;
         }
+
         .amount-section {
             text-align: center;
             margin: 40px 0;
         }
+
         .received-amount {
-            font-size: 28pt; /* Very prominent amount */
+            font-size: 28pt;
             font-weight: bold;
             display: inline-block;
             padding: 10px 30px;
-            background-color: #f0f0f0; /* Light background for amount */
+            background-color: #f0f0f0;
             border-radius: 5px;
             margin-bottom: 15px;
         }
+
         .note-text {
             font-size: 10pt;
-            text-align: left; /* Align to the left relative to its container */
-            margin-left: auto; /* Push to center if container is wider */
+            text-align: left;
+            margin-left: auto;
             margin-right: auto;
-            width: fit-content; /* Shrink to content width */
+            width: fit-content;
         }
+
         .tax-section {
-            text-align: right; /* Align tax details to the right */
+            text-align: right;
             margin-top: 20px;
             margin-bottom: 20px;
-            padding-right: 15px; /* Align with receipt-info padding */
-            border-top: 1px dashed #ccc; /* Subtle separator */
+            padding-right: 15px;
+            border-top: 1px dashed #ccc;
             padding-top: 10px;
-        }        
+        }
+
         .tax-item p {
             font-size: 10pt;
-            margin: 0; /* Remove default paragraph margins */
-            line-height: 1.4; /* Adjust line spacing */
+            margin: 0;
+            line-height: 1.4;
         }
+
         .company-info-block {
             text-align: right;
             margin-top: 50px;
-            position: relative; /* For stamp positioning */
-            padding-right: 150px; /* Space for the stamp */
+            position: relative;
+            padding-right: 150px;
         }
+
         .company-name {
             font-size: 12pt;
             font-weight: bold;
             margin-bottom: 5px;
         }
-        .company-address, .company-contact {
+
+        .company-address,
+        .company-contact {
             font-size: 9pt;
             line-height: 1.4;
-        }        
+        }
+
         .company-info-block img {
             position: absolute;
             top: 0;
@@ -113,10 +145,11 @@
             width: 150px;
             opacity: 0.4;
         }
+
         .stamp-box {
             position: absolute;
-            bottom: 0; /* Align to bottom of company-info-block */
-            left: 0; /* Adjust as needed, possibly right: 0; if on the right */
+            bottom: 0;
+            left: 0;
             width: 120px;
             height: 120px;
             border: 1px solid #000;
@@ -124,15 +157,26 @@
             justify-content: center;
             align-items: center;
             font-size: 14pt;
-            writing-mode: vertical-rl; /* For vertical text */
-            text-orientation: upright; /* For upright characters in vertical text */
+            writing-mode: vertical-rl;
+            text-orientation: upright;
             padding: 10px;
-            background-color: #fdfaf7; /* Light beige background */
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
-            color: #888; /* Lighter text color for "印収紙入" */
+            background-color: #fdfaf7;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+            color: #888;
+        }
+
+        .revenue-stamp-notice {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            font-size: 9pt;
+            line-height: 1.6;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -141,18 +185,22 @@
                 <p>発行日: {{ receipt_date }}</p>
                 <p>領収No.: {{ receipt_number }}</p>
             </div>
+            <!-- Reissue stamp (conditionally displayed via JS) -->
+            <div id="reissueStamp" class="reissue-stamp" style="display: none;">
+                再発行
+            </div>
         </div>
 
         <div class="customer-info">
-            <span class="customer-name">{{ customer_name }}</span> 御中
+            <span class="customer-name">{{ customer_name }}</span> {{ honorific }}
         </div>
 
         <div class="amount-section">
             <div class="received-amount">
-                ¥ {{ received_amount }} (税込)
+                ¥ {{ received_amount }}
             </div>
             <div class="note-text">
-                但し {{ facility_name }} 宿泊料として
+                但し {{ proviso_text }}
             </div>
             <div class="note-text">
                 上記金額を正に領収いたしました
@@ -169,6 +217,7 @@
         </div>
 
         <div class="company-info-block">
+            <div class="hotel-name">{{ hotel_company_name }}</div>
             <div class="company-name">レッドホーストラスト株式会社</div>
             <div class="company-address">
                 〒060-0061<br>
@@ -181,14 +230,26 @@
             </div>
             <p>登録番号: T2430001042062</p>
 
-            <img src="{{ stamp_image }}" alt="Company Stamp" style="position: absolute; top: 0; right: 5px; width: 150px; opacity: 0.4;">
+            <img src="{{ stamp_image }}" alt="Company Stamp"
+                style="position: absolute; top: 0; right: 5px; width: 150px; opacity: 0.4;">
 
             <div class="stamp-box" style="right: 20px;">
                 収　入<br>
                 印　紙
+                <div
+                    style="position: absolute; bottom: 5px; left: 0; width: 100%; text-align: center; writing-mode: horizontal-tb; font-size: 10pt; line-height: 1;">
+                    5万円以上貼付
+                </div>
             </div>
+        </div>
+
+        <!-- Revenue stamp notice (conditionally displayed via JS for amounts > 50,000 JPY) -->
+        <div id="revenueStampNotice" class="revenue-stamp-notice" style="display: none;">
+            <strong>【収入印紙に関するご案内】</strong><br>
+            本領収書が紙で発行され、かつ金額が5万円を超える場合は、印紙税法に基づき収入印紙が必要です（電子発行の場合は不要）。
         </div>
 
     </div>
 </body>
+
 </html>
