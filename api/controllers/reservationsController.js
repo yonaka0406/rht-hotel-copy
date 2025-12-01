@@ -6,9 +6,10 @@ const {
   updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest,
   updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom,
   updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
+  updateReservationMemberCount,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
   insertCopyReservation, selectReservationParking, deleteParkingReservation, deleteBulkParkingReservations, cancelReservationRooms: cancelReservationRoomsModel,
-  updatePaymentTiming, updateReservationRoomsPeriod, splitReservation,
+  updatePaymentTiming, updateReservationRoomsPeriod, splitReservation, selectReservationAddonByDetail,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -1527,7 +1528,12 @@ const convertBlockToReservation = async (req, res) => {
     return res.status(400).json({ error: 'Client information is required' });
   }
 
+  const pool = getPool(req.requestId);
+  const dbClient = await pool.connect();
+
   try {
+    await dbClient.query('BEGIN');
+
     let finalClientId = client.client_id;
 
     // If client doesn't have an ID, create a new client
@@ -1548,24 +1554,32 @@ const convertBlockToReservation = async (req, res) => {
         updated_by: user_id,
       };
 
-      const newClient = await addClientByName(req.requestId, clientData);
+      const newClient = await addClientByName(req.requestId, clientData, dbClient);
       finalClientId = newClient.id;
       logger.warn(`[CONVERT_BLOCK] Created new client`, { client_id: finalClientId });
     }
 
     // Update the reservation with the client ID
-    const updatedReservation = await updateBlockToReservation(req.requestId, id, finalClientId, user_id);
+    const updatedReservation = await updateBlockToReservation(req.requestId, id, finalClientId, user_id, dbClient);
+
+    // Recalculate and update the number of people based on the reservation details
+    const finalReservation = await updateReservationMemberCount(req.requestId, id, user_id, dbClient);
+
+    await dbClient.query('COMMIT');
 
     res.status(200).json({
       message: 'Reservation updated successfully',
-      reservation: updatedReservation
+      reservation: finalReservation
     });
   } catch (error) {
+    await dbClient.query('ROLLBACK');
     logger.error('[convertBlockToReservation][controller] Error converting block to reservation:', error);
     const status = error.message.includes('not found') ? 404 : 500;
     res.status(status).json({
       error: error.message || 'Failed to convert block to reservation'
     });
+  } finally {
+    dbClient.release();
   }
 };
 

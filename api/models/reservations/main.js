@@ -10,7 +10,7 @@ const logger = require('../../config/logger');
 const { selectReservation, selectAvailableRooms, selectAndLockAvailableParkingSpot, selectReservationParkingAddons } = require('./select');
 const { deleteReservationAddonsByDetailId } = require('./delete');
 const { insertReservationRate, insertAggregatedRates } = require('./insert');
-const { addReservationAddon } = require('./addons');
+const { addReservationAddon, selectReservationAddonByDetail } = require('./addons');
 
 // Helper
 const formatDate = (date) => {
@@ -483,8 +483,9 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
   }
 };
 
-const updateBlockToReservation = async (requestId, reservationId, clientId, userId) => {
-  const pool = getPool(requestId);
+const updateBlockToReservation = async (requestId, reservationId, clientId, userId, dbClient = null) => {
+  const pool = dbClient || getPool(requestId);
+  
   const query = `
     UPDATE reservations
     SET
@@ -498,12 +499,40 @@ const updateBlockToReservation = async (requestId, reservationId, clientId, user
 
   try {
     const result = await pool.query(query, values);
-    if (result.rows.length === 0) {
+    if (result.rowCount === 0) {
       throw new Error('Reservation not found or not in "block" status.');
     }
     return result.rows[0];
   } catch (err) {
     logger.error('Error updating block to reservation:', err);
+    throw new Error('Database error');
+  }
+};
+
+const updateReservationMemberCount = async (requestId, reservationId, userId, dbClient = null) => {
+  const pool = dbClient || getPool(requestId);
+  const query = `
+    UPDATE reservations r
+    SET number_of_people = (
+      SELECT COALESCE(MAX(daily_total), 0)
+      FROM (
+        SELECT SUM(number_of_people) as daily_total
+        FROM reservation_details
+        WHERE reservation_id = $1
+        GROUP BY date
+      ) as sub
+    ),
+    updated_by = $2
+    WHERE r.id = $1
+    RETURNING *;
+  `;
+  
+  try {
+    const result = await pool.query(query, [reservationId, userId]);
+    logger.debug(`[updateReservationMemberCount] Updated reservation ${reservationId}:`, result.rows[0]);
+    return result.rows[0];
+  } catch (err) {
+    logger.error('Error updating reservation member count:', err);
     throw new Error('Database error');
   }
 };
@@ -4467,6 +4496,7 @@ module.exports = {
   updateReservationRoomPlan,
   updateReservationRoomPattern,
   updateBlockToReservation,
+  updateReservationMemberCount,
   addOTAReservation,
   editOTAReservation,
   cancelOTAReservation,
@@ -4475,4 +4505,5 @@ module.exports = {
   selectFailedOtaReservations,
   calculatePriceFromRates,
   cancelReservationRooms,
+  selectReservationAddonByDetail,
 };
