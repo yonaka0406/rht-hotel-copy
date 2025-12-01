@@ -57,13 +57,18 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
     - ADR (Average Daily Rate)
     - RevPAR (Revenue Per Available Room)
   - However, the system should still track and display the total revenue from on-hold reservations separately
+  - Add a flag to the plan to distinguish between accommodation sales and non-accommodation sales
 - **Requested Changes**:
   1. Modify dashboard calculations to exclude on-hold reservations from the main metrics
   2. Add a separate section or indicator showing the total revenue from on-hold reservations
   3. Ensure the data remains accurate and consistent across all reports
+  4. Add a flag to the plan to identify accommodation vs non-accommodation sales
 - **Technical Notes**:
   - Review and update the database queries that calculate these metrics
   - Add a new field or status indicator for on-hold reservations
+  - Add a new boolean flag `is_accommodation_sales` to the plan table (default: true)
+  - Update all relevant queries to filter by this flag when calculating metrics
+  - Changes should be effective from January 2026 onwards
   - Ensure the changes don't affect historical data reporting
   - Add appropriate tooltips or help text to explain the metrics
 
