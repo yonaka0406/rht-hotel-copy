@@ -3,6 +3,7 @@ const format = require('pg-format');
 const { formatDate } = require('../../utils/reportUtils');
 const logger = require('../../config/logger');
 const { addReservationAddon } = require('../reservations/addons');
+const clientsModels = require('./clients');
 
 const updateReservationRoomsPeriod = async (requestId, { originalReservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected }) => {
   //console.log('--- Starting updateReservationRoomsPeriod ---');
@@ -186,7 +187,14 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
                 // Copy clients and addons to the new detail
                 if (clientsToCopy.length > 0) {
                     for (const clientRow of clientsToCopy) {
-                        await client.query('INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by) VALUES ($1, $2, $3, $4, $4)', [hotelId, newDetailId, clientRow.client_id, userId]);
+                        const reservationClient = {
+                            hotel_id: hotelId,
+                            reservation_details_id: newDetailId,
+                            client_id: clientRow.client_id,
+                            created_by: userId,
+                            updated_by: userId,
+                        };
+                        await clientsModels.addReservationClient(requestId, reservationClient, client);
                     }
                 }
                 if (addonsToCopy.length > 0) {

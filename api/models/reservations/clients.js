@@ -1,8 +1,8 @@
 let getPool = require('../../config/database').getPool;
 const logger = require('../../config/logger');
 
-const addReservationClient = async (requestId, reservationClient) => {
-  const pool = getPool(requestId);
+const addReservationClient = async (requestId, reservationClient, dbClient = null) => {
+  const client = dbClient || await getPool(requestId).connect();
   const query = `
     INSERT INTO reservation_clients (
       hotel_id, reservation_details_id, client_id, created_by, updated_by
@@ -19,11 +19,15 @@ const addReservationClient = async (requestId, reservationClient) => {
   ];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows[0]; // Return the inserted reservation client
   } catch (err) {
     logger.error('Error adding reservation client:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
   }
 };
 

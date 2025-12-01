@@ -11,6 +11,7 @@ const { selectReservation, selectAvailableRooms, selectAndLockAvailableParkingSp
 const { deleteReservationAddonsByDetailId } = require('./delete');
 const { insertReservationRate, insertAggregatedRates } = require('./insert');
 const { addReservationAddon, selectReservationAddonByDetail } = require('./addons');
+const clientsModels = require('./clients');
 
 // Helper
 const formatDate = (date) => {
@@ -1222,12 +1223,15 @@ const updateRoomByCalendar = async (requestId, roomData) => {
                 // Insert clients
                 if (clientsToCopy.length > 0) {
                   for (const clientRow of clientsToCopy) {
-                    const insertClientQuery = `
-                      INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by)
-                      VALUES ($1, $2, $3, $4, $4)
-                    `;
-                    const clientResult = await client.query(insertClientQuery, [hotel_id, detail.id, clientRow.client_id, updated_by]);
-                    clientsInserted += clientResult.rowCount || 0;
+                    const reservationClient = {
+                      hotel_id: hotel_id,
+                      reservation_details_id: detail.id,
+                      client_id: clientRow.client_id,
+                      created_by: updated_by,
+                      updated_by: updated_by
+                    };
+                    const clientResult = await clientsModels.addReservationClient(requestId, reservationClient, client);
+                    clientsInserted += (clientResult ? 1 : 0); // Assuming addReservationClient returns the inserted row
                   }
                 }
     
@@ -1407,7 +1411,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
         FROM reservation_clients
         WHERE reservation_details_id = $1;
       `;
-      const clientCountResult = await pool.query(clientCountQuery, [id]);
+      const clientCountResult = await client.query(clientCountQuery, [id]);
       const clientCount = parseInt(clientCountResult.rows[0].client_count, 10);
 
       if (number_of_people < clientCount) {
@@ -1421,10 +1425,8 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
           DELETE FROM reservation_clients
           WHERE id IN (SELECT id FROM deleted);
         `;
-        await pool.query(deleteClientQuery, [id]);
+        await client.query(deleteClientQuery, [id]);
       }
-
-
     }
 
     await client.query('COMMIT');
@@ -1519,13 +1521,14 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
     );
 
     await client.query('COMMIT'); // Commit transaction
-    // logger.debug('updateClientInReservation commit');
+    // logger.debug('updateClientInReservation commit');  
   } catch (err) {
-    await client.query('ROLLBACK'); // Rollback transaction on error    
+    await client.query('ROLLBACK'); // Rollback transaction on error
+    logger.error('Error updating client in reservation:', err);
+    throw err;
   } finally {
     client.release(); // Release the client back to the pool
   }
-
 };
 
 const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id, disableRounding, client = null) => {
@@ -2770,13 +2773,15 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           // Add booker's client ID to reservation_clients for testing
           try {
             if (reservationGuestId) {
-              const result = await internalClient.query(`
-                        INSERT INTO reservation_clients (
-                            hotel_id, reservation_details_id, client_id, created_by, updated_by
-                        ) VALUES ($1, $2, $3, 1, 1)
-                        RETURNING *;
-                    `, [hotel_id, reservationDetailsId, reservationGuestId]);
-              //logger.debug('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+              const reservationClient = {
+                hotel_id: hotel_id,
+                reservation_details_id: reservationDetailsId,
+                client_id: reservationGuestId,
+                created_by: 1,
+                updated_by: 1
+              };
+              const result = await clientsModels.addReservationClient(requestId, reservationClient, internalClient);
+              //logger.debug('Added booker to reservation_clients:', result || 'No rows inserted (possible conflict)');
             } else {
               //logger.debug('No reservationGuestId available to add to reservation_clients');
             }
@@ -2788,13 +2793,15 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           // Add each client from insertedClients to reservation_clients
           for (const client of insertedClients) {
             try {
-              const result = await internalClient.query(`
-                INSERT INTO reservation_clients (
-                  hotel_id, reservation_details_id, client_id, created_by, updated_by
-                ) VALUES ($1, $2, $3, 1, 1)
-                RETURNING *;
-              `, [hotel_id, reservationDetailsId, client.id]);
-              //logger.debug('Added guest to reservation_clients:', result.rows[0]);
+              const reservationClient = {
+                hotel_id: hotel_id,
+                reservation_details_id: reservationDetailsId,
+                client_id: client.id,
+                created_by: 1,
+                updated_by: 1
+              };
+              const result = await clientsModels.addReservationClient(requestId, reservationClient, internalClient);
+              //logger.debug('Added guest to reservation_clients:', result);
             } catch (error) {
               logger.error('Error adding guest to reservation_clients:', error);
               throw error; // Re-throw to trigger transaction rollback
@@ -3672,13 +3679,15 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           // Add booker's client ID to reservation_clients for testing
           try {
             if (reservationGuestId) {
-              const result = await internalClient.query(`
-                        INSERT INTO reservation_clients (
-                            hotel_id, reservation_details_id, client_id, created_by, updated_by
-                        ) VALUES ($1, $2, $3, 1, 1)
-                        RETURNING *;
-                    `, [hotel_id, reservationDetailsId, reservationGuestId]);
-              //logger.debug('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+              const reservationClient = {
+                hotel_id: hotel_id,
+                reservation_details_id: reservationDetailsId,
+                client_id: reservationGuestId,
+                created_by: 1,
+                updated_by: 1
+              };
+              const result = await clientsModels.addReservationClient(requestId, reservationClient, internalClient);
+              //logger.debug('Added booker to reservation_clients:', result || 'No rows inserted (possible conflict)');
             } else {
               //logger.debug('No reservationGuestId available to add to reservation_clients');
             }
@@ -3690,13 +3699,15 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           // Add each client from insertedClients to reservation_clients
           for (const client of insertedClients) {
             try {
-              const result = await internalClient.query(`
-                INSERT INTO reservation_clients (
-                  hotel_id, reservation_details_id, client_id, created_by, updated_by
-                ) VALUES ($1, $2, $3, 1, 1)
-                RETURNING *;
-              `, [hotel_id, reservationDetailsId, client.id]);
-              //logger.debug('Added guest to reservation_clients:', result.rows[0]);
+              const reservationClient = {
+                hotel_id: hotel_id,
+                reservation_details_id: reservationDetailsId,
+                client_id: client.id,
+                created_by: 1,
+                updated_by: 1
+              };
+              const result = await clientsModels.addReservationClient(requestId, reservationClient, internalClient);
+              //logger.debug('Added guest to reservation_clients:', result);
             } catch (error) {
               logger.error('Error adding guest to reservation_clients:', error);
               throw error; // Re-throw to trigger transaction rollback
@@ -4476,6 +4487,5 @@ module.exports = {
   sanitizeName,
   selectFailedOtaReservations,
   calculatePriceFromRates,
-  cancelReservationRooms,
-  selectReservationAddonByDetail,
+  cancelReservationRooms
 };
