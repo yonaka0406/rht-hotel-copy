@@ -46,7 +46,8 @@ export function useBillingStore() {
         honorific = '様',
         isReissue = false,
         customIssueDate = null,
-        customProviso = null
+        customProviso = null,
+        forceRegenerate = false // Add forceRegenerate parameter with default false
     ) => {        
         try {
             const authToken = localStorage.getItem('authToken');            
@@ -56,7 +57,8 @@ export function useBillingStore() {
                 honorific,
                 isReissue,
                 customIssueDate,
-                customProviso
+                customProviso,
+                forceRegenerate // Include forceRegenerate in the payload
             };
 
             const response = await fetch(url, {
@@ -245,7 +247,8 @@ export function useBillingStore() {
         honorific = '様',
         isReissue = false,
         customIssueDate = null,
-        customProviso = null
+        customProviso = null,
+        forceRegenerate = false // Add forceRegenerate parameter with default false
     ) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -256,7 +259,8 @@ export function useBillingStore() {
                 honorific,
                 isReissue,
                 customIssueDate,
-                customProviso
+                customProviso,
+                forceRegenerate // Include forceRegenerate in the payload
             };
 
             const response = await fetch(url, {

@@ -417,7 +417,8 @@
     honorific,
     isReissue,
     customIssueDate,
-    customProviso
+    customProviso,
+    forceRegenerate // Destructure forceRegenerate here
   } = eventPayload;
 
       if (!selectedHotelId.value) {
@@ -445,7 +446,8 @@
                 honorific,
                 isReissue,
                 customIssueDate,
-                customProviso
+                customProviso,
+                forceRegenerate // Pass forceRegenerate here
               );
               if (result && result.success) {
                   const totalConsolidatedAmount = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
@@ -489,7 +491,8 @@
                 honorific,
                 isReissue,
                 customIssueDate,
-                customProviso
+                customProviso,
+                forceRegenerate // Pass forceRegenerate here
               );
                if (result && result.success) {
                   toast.add({
