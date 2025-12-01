@@ -14,7 +14,7 @@ const createPlanAddon = async (requestId, planAddon, dbClient = null) => {
         let plans_global_id = null;
         let plans_hotel_id = null;
         let addons_hotel_id = null;
-        let addons_global_id = null;    
+        let addons_global_id = null;
 
         if (planAddon.addons_id && typeof planAddon.addons_id === 'string') {
             if (planAddon.addons_id.startsWith('H')) {
@@ -58,8 +58,9 @@ const createPlanAddon = async (requestId, planAddon, dbClient = null) => {
                 date_start, 
                 date_end, 
                 created_by,
-                updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                updated_by,
+                sales_category
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
         `;
 
@@ -76,7 +77,8 @@ const createPlanAddon = async (requestId, planAddon, dbClient = null) => {
             planAddon.date_start,
             planAddon.date_end,
             planAddon.created_by,
-            planAddon.updated_by
+            planAddon.updated_by,
+            planAddon.sales_category || 'accommodation'
         ];
 
         const result = await client.query(query, values);
@@ -119,8 +121,9 @@ const updatePlanAddon = async (requestId, id, planAddon, dbClient = null) => {
                 price = $6,
                 date_start = $7,
                 date_end = $8,
-                updated_by = $9
-            WHERE id = $10
+                updated_by = $9,
+                sales_category = $10
+            WHERE id = $11
             RETURNING *
         `;
 
@@ -134,6 +137,7 @@ const updatePlanAddon = async (requestId, id, planAddon, dbClient = null) => {
             planAddon.date_start,
             planAddon.date_end,
             planAddon.updated_by,
+            planAddon.sales_category || 'accommodation',
             id
         ];
 

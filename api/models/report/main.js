@@ -660,22 +660,21 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     SELECT
       COALESCE(pg.name, ph.name, 'プラン未設定') AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
-      SUM(
-        CASE
-          WHEN rd.plan_type = 'per_room' THEN rd.price
-          ELSE rd.price * rd.number_of_people
-        END
-      ) AS total_sales,
-      SUM(COALESCE(rr.net_price, 0)) AS total_sales_net
+      SUM(COALESCE(rr.accommodation_price, 0)) AS accommodation_sales,
+      SUM(COALESCE(rr.other_price, 0)) AS other_sales,
+      SUM(COALESCE(rr.accommodation_net_price, 0)) AS accommodation_sales_net,
+      SUM(COALESCE(rr.other_net_price, 0)) AS other_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
     LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
     LEFT JOIN (
-        SELECT
             hotel_id,
             reservation_details_id,
-            SUM(net_price) AS net_price
+            SUM(CASE WHEN sales_category = 'accommodation' OR sales_category IS NULL THEN price ELSE 0 END) AS accommodation_price,
+            SUM(CASE WHEN sales_category = 'other' THEN price ELSE 0 END) AS other_price,
+            SUM(CASE WHEN sales_category = 'accommodation' OR sales_category IS NULL THEN net_price ELSE 0 END) AS accommodation_net_price,
+            SUM(CASE WHEN sales_category = 'other' THEN net_price ELSE 0 END) AS other_net_price
         FROM
             reservation_rates
         GROUP BY
@@ -702,8 +701,10 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         ELSE ra.addon_type
       END || '(' || (ra.tax_rate * 100)::integer || '%)' AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
-      SUM(ra.price * ra.quantity) AS total_sales,
-      SUM(ra.net_price * ra.quantity) AS total_sales_net
+      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_sales,
+      SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_sales,
+      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_sales_net,
+      SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
@@ -1028,13 +1029,13 @@ const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) =>
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
-  selectCountReservationDetailsAddons,  
+  selectCountReservationDetailsAddons,
   selectReservationListView,
   selectReservationsInventory,
-  selectAllRoomTypesInventory,  
+  selectAllRoomTypesInventory,
   selectActiveReservationsChange,
   selectMonthlyReservationEvolution,
-  selectSalesByPlan,  
+  selectSalesByPlan,
   selectChannelSummary,
-  selectCheckInOutReport,  
+  selectCheckInOutReport,
 };

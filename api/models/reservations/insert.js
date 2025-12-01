@@ -153,9 +153,9 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
     await client.query('COMMIT');
     return { success: true };
   } catch (err) {
-    await client.query('ROLLBACK');  
+    await client.query('ROLLBACK');
     logger.error('Error adding bulk reservation payment:', err);
-    throw new Error('Database error');  
+    throw new Error('Database error');
   } finally {
     client.release();
   }
@@ -181,9 +181,10 @@ const insertReservationRate = async (requestId, rateData, client = null) => {
       tax_rate,
       price,
       include_in_cancel_fee,
+      sales_category,
       created_by,
       updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
     RETURNING *;
   `;
 
@@ -196,6 +197,7 @@ const insertReservationRate = async (requestId, rateData, client = null) => {
     rateData.tax_rate,
     rateData.price,
     rateData.include_in_cancel_fee,
+    rateData.sales_category || 'accommodation',
     rateData.created_by
   ];
 
@@ -228,17 +230,18 @@ const insertAggregatedRates = async (requestId, rates, hotel_id, reservation_det
   if (!rates || rates.length === 0) {
     return;
   }
-  
+
   // Aggregate rates by adjustment_type and tax_type_id
   const aggregatedRates = {};
   rates.forEach((rate) => {
-    const key = `${rate.adjustment_type}-${rate.tax_type_id}-${rate.include_in_cancel_fee}`;
+    const key = `${rate.adjustment_type}-${rate.tax_type_id}-${rate.include_in_cancel_fee}-${rate.sales_category}`;
     if (!aggregatedRates[key]) {
       aggregatedRates[key] = {
         adjustment_type: rate.adjustment_type,
         tax_type_id: rate.tax_type_id,
         tax_rate: rate.tax_rate,
         include_in_cancel_fee: rate.include_in_cancel_fee,
+        sales_category: rate.sales_category,
         adjustment_value: 0,
       };
     }
@@ -278,6 +281,7 @@ const insertAggregatedRates = async (requestId, rates, hotel_id, reservation_det
       tax_rate: rate.tax_rate,
       price,
       include_in_cancel_fee: rate.include_in_cancel_fee,
+      sales_category: rate.sales_category,
       created_by: user_id
     };
 

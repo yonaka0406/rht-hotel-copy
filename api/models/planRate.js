@@ -7,7 +7,7 @@ const isValidCondition = (row, date) => {
     // Custom parser for TEXT format condition_value
     const parseConditionValue = (value) => {
         if (!value) return [];
-        
+
         try {
             // Try to parse as JSON first (for properly formatted JSON arrays)
             if (value.startsWith('[') && value.endsWith(']')) {
@@ -16,7 +16,7 @@ const isValidCondition = (row, date) => {
                     return parsed.map(v => String(v).trim().toLowerCase());
                 }
             }
-            
+
             // Fallback to string parsing for malformed JSON or plain strings
             return value
                 .replace(/[\[\]{}]"/g, '') // Remove square brackets, curly braces and quotes
@@ -36,12 +36,12 @@ const isValidCondition = (row, date) => {
     // console.log('Parsed Date:', targetDate);
     // console.log('Raw Condition Value:', condition_value);
     // console.log('Parsed Condition Value:', parsedCondition);
-    
+
     switch (condition_type) {
         case 'month': {
             // Get month in English only to match frontend behavior
             const targetMonth = targetDate.toLocaleString('en-US', { month: 'long' }).toLowerCase();
-            
+
             // Debug log to see what we're comparing
             /*
             console.log(`[${new Date().toISOString()}] Month Check - `, {
@@ -51,7 +51,7 @@ const isValidCondition = (row, date) => {
                 matches: parsedCondition.includes(targetMonth)
             });
             */
-            
+
             // Check if English month name matches
             return parsedCondition.includes(targetMonth);
         }
@@ -79,7 +79,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
             adjustment_type, adjustment_value, tax_type_id, tax_rate, 
             condition_type, condition_value, date_start, date_end, 
             created_at, created_by, updated_by, 
-            include_in_cancel_fee, comment
+            include_in_cancel_fee, sales_category, comment
         FROM plans_rates
         WHERE 
             (plans_global_id = $1 AND plans_hotel_id IS NULL) OR 
@@ -103,7 +103,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
     const pool = getPool(requestId);
-    const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, comment FROM plans_rates WHERE id = $1';
+    const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, sales_category, comment FROM plans_rates WHERE id = $1';
 
     try {
         const result = await pool.query(query, [id]);
@@ -147,7 +147,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     ];
 
     try {
-        const result = await client.query(query, values);        
+        const result = await client.query(query, values);
 
         // console.log('Query:', query);
         // console.log('Values:', values);
@@ -157,7 +157,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         let groupAPercentageEffect = 0; // For tax_type_id != 1
         let groupBPercentageEffect = 0; // For tax_type_id == 1
         let flatFeeTotal = 0;
-        
+
         // Loop through the result rows and sum up adjustments
         result.rows.forEach(row => {
             if (actualIsValidCondition(row, date)) {
@@ -175,7 +175,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
                 }
             }
         });
-        
+
         // Debug log with timestamp
         const timestamp = new Date().toISOString();
         /*
@@ -193,33 +193,33 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         // Sequential Calculation
         let currentTotal = baseRateTotal;
         //console.log(`[${timestamp}] DEBUG - Starting with base rate:`, currentTotal);
-        
+
         // 1. Apply Group A Percentage Effect (taxable)
         const afterGroupA = currentTotal * (1 + groupAPercentageEffect);
         //console.log(`[${timestamp}] DEBUG - After Group A (${groupAPercentageEffect * 100}%):`, afterGroupA);
         currentTotal = afterGroupA;
-        
+
         // 2. Conditionally Round down to the nearest 100 (Japanese pricing convention)
         if (!disableRounding) {
             const afterRounding = Math.floor(currentTotal / 100) * 100;
             //console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
             currentTotal = afterRounding;
         }
-        
+
         // 3. Calculate Group B Adjustment (non-taxable, applied after rounding like flat fees)
         const groupBAdjustment = currentTotal * groupBPercentageEffect;
         //console.log(`[${timestamp}] DEBUG - Group B Adjustment (${groupBPercentageEffect * 100}% of ${currentTotal}):`, groupBAdjustment);
-        
+
         // 4. Add Group B Adjustment and Flat Fee Total (both non-taxable)
         const beforeFinalFloor = currentTotal + groupBAdjustment + flatFeeTotal;
         //console.log(`[${timestamp}] DEBUG - Before final floor (Total + GroupB + FlatFee):`, beforeFinalFloor);
-        
+
         // 5. Final floor to ensure we don't have any decimal places
         currentTotal = Math.floor(beforeFinalFloor);
-        
+
         // 6. Ensure the price is not negative
         currentTotal = Math.max(0, currentTotal);
-        
+
         //console.log(`[${timestamp}] DEBUG - Final calculated price:`, currentTotal);
         return currentTotal;
     } catch (err) {
@@ -244,6 +244,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             tax_type_id,
             tax_rate,
             include_in_cancel_fee,
+            sales_category,
             SUM(adjustment_value) AS adjustment_value
         FROM plans_rates
         WHERE
@@ -253,7 +254,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
             )
             AND ((plans_global_id = $1 AND plans_hotel_id IS NULL)
             OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
-        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate, include_in_cancel_fee
+        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate, include_in_cancel_fee, sales_category
         ORDER BY adjustment_type
     `;
     const values = [
@@ -264,11 +265,11 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
     ];
 
     try {
-        const result = await client.query(query, values);  
-        
+        const result = await client.query(query, values);
+
         // Filter results using isValidCondition
         const filteredRates = result.rows.filter(row => actualIsValidCondition(row, date));
-              
+
         return filteredRates;
     } catch (err) {
         console.error('Error calculating price:', err);
@@ -299,8 +300,9 @@ const createPlansRate = async (requestId, plansRate) => {
             created_by,
             updated_by,
             include_in_cancel_fee,
+            sales_category,
             comment
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING *
     `;
 
@@ -319,6 +321,7 @@ const createPlansRate = async (requestId, plansRate) => {
         plansRate.created_by,
         plansRate.updated_by,
         plansRate.include_in_cancel_fee || false,
+        plansRate.sales_category || 'accommodation',
         plansRate.comment
     ];
 
@@ -350,8 +353,9 @@ const updatePlansRate = async (requestId, id, plansRate) => {
             date_end = $11,
             updated_by = $12,
             include_in_cancel_fee = $13,
-            comment = $14
-        WHERE id = $15
+            sales_category = $14,
+            comment = $15
+        WHERE id = $16
         RETURNING *
     `;
 
@@ -369,6 +373,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         plansRate.date_end,
         plansRate.updated_by,
         plansRate.include_in_cancel_fee || false,
+        plansRate.sales_category || 'accommodation',
         plansRate.comment,
         id
     ];

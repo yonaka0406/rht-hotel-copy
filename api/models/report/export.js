@@ -410,18 +410,18 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
 };
 
 const calculateAndSaveDailyMetrics = async (requestId) => {
-    const pool = getPool(requestId);
-    const client = await pool.connect();
+  const pool = getPool(requestId);
+  const client = await pool.connect();
 
-    try {
-        await client.query('BEGIN');
-        
-        const metricDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
+  try {
+    await client.query('BEGIN');
 
-        await client.query('DELETE FROM daily_plan_metrics WHERE metric_date = $1', [metricDate]);
-        await client.query("SELECT setval('daily_plan_metrics_id_seq', COALESCE((SELECT MAX(id) + 1 FROM daily_plan_metrics), 1), false);");
+    const metricDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
 
-        const hotelsWithReservationsResult = await client.query(`
+    await client.query('DELETE FROM daily_plan_metrics WHERE metric_date = $1', [metricDate]);
+    await client.query("SELECT setval('daily_plan_metrics_id_seq', COALESCE((SELECT MAX(id) + 1 FROM daily_plan_metrics), 1), false);");
+
+    const hotelsWithReservationsResult = await client.query(`
             SELECT r.hotel_id, MAX(r.check_out) as last_date
             FROM reservations r
             JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
@@ -429,15 +429,15 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
             GROUP BY r.hotel_id;
         `, [metricDate]);
 
-        const hotelsWithReservations = hotelsWithReservationsResult.rows;
+    const hotelsWithReservations = hotelsWithReservationsResult.rows;
 
-        for (const hotel of hotelsWithReservations) {
-            const hotelId = hotel.hotel_id;
-            const lastDate = hotel.last_date;
+    for (const hotel of hotelsWithReservations) {
+      const hotelId = hotel.hotel_id;
+      const lastDate = hotel.last_date;
 
-            const query = `
+      const query = `
 
-              INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, normal_sales, cancellation_sales)
+              INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, normal_sales, cancellation_sales, accommodation_sales, other_sales, accommodation_sales_cancelled, other_sales_cancelled)
 
                 WITH months AS (
                     SELECT generate_series(
@@ -451,11 +451,26 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     SELECT
                         ra.hotel_id,
                         ra.reservation_detail_id,
+                        SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_addon_price,
+                        SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_addon_price,
                         SUM(ra.price * ra.quantity) AS total_addon_price
                     FROM
                         reservation_addons ra
                     GROUP BY
                         ra.hotel_id, ra.reservation_detail_id
+                ),
+
+                rate_sums AS (
+                    SELECT
+                        rr.hotel_id,
+                        rr.reservation_details_id,
+                        SUM(CASE WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN rr.price ELSE 0 END) AS accommodation_rate_price,
+                        SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS other_rate_price,
+                        SUM(rr.price) AS total_rate_price
+                    FROM
+                        reservation_rates rr
+                    GROUP BY
+                        rr.hotel_id, rr.reservation_details_id
                 )
 
                 SELECT                                
@@ -472,7 +487,11 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' THEN rd.id END) AS non_billable_cancelled_stays,
                     COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS normal_sales,
-                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS cancellation_sales
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS cancellation_sales,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_price, 0) + COALESCE(ads.accommodation_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_sales,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.other_rate_price, 0) + COALESCE(ads.other_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS other_sales,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_price, 0) + COALESCE(ads.accommodation_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_sales_cancelled,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (COALESCE(rs.other_rate_price, 0) + COALESCE(ads.other_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS other_sales_cancelled
 
                 FROM
                     months m
@@ -486,6 +505,8 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     plans_global pg ON rd.plans_global_id = pg.id
                 LEFT JOIN
                     addon_sums ads ON rd.hotel_id = ads.hotel_id AND rd.id = ads.reservation_detail_id
+                LEFT JOIN
+                    rate_sums rs ON rd.hotel_id = rs.hotel_id AND rd.id = rs.reservation_details_id
                 WHERE
                     rd.hotel_id = $3
                     AND r.status <> 'block'
@@ -494,38 +515,38 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     m.month, rd.plans_global_id, rd.plans_hotel_id, ph.name, pg.name;                        
             `;
 
-            await client.query(query, [metricDate, lastDate, hotelId]);
-        }
-
-        await client.query('COMMIT');
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Error calculating and saving daily metrics:', err);
-        throw new Error('Database error');
-    } finally {
-        client.release();
+      await client.query(query, [metricDate, lastDate, hotelId]);
     }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error calculating and saving daily metrics:', err);
+    throw new Error('Database error');
+  } finally {
+    client.release();
+  }
 };
 
 const getAvailableMetricDates = async (requestId) => {
-    const pool = getPool(requestId);
-    const query = `
+  const pool = getPool(requestId);
+  const query = `
         SELECT DISTINCT metric_date
         FROM daily_plan_metrics
         ORDER BY metric_date DESC;
     `;
-    try {
-        const result = await pool.query(query);
-        return result.rows.map(row => row.metric_date);
-    } catch (err) {
-        console.error('Error retrieving available metric dates:', err);
-        throw new Error('Database error');
-    }
+  try {
+    const result = await pool.query(query);
+    return result.rows.map(row => row.metric_date);
+  } catch (err) {
+    console.error('Error retrieving available metric dates:', err);
+    throw new Error('Database error');
+  }
 };
 
 const selectDailyReportData = async (requestId, metricDate) => {
-    const pool = getPool(requestId);
-    const query = `
+  const pool = getPool(requestId);
+  const query = `
         SELECT
             dpm.metric_date,
             dpm.month,
@@ -542,6 +563,10 @@ const selectDailyReportData = async (requestId, metricDate) => {
             SUM(dpm.employee_stays) as employee_stays,
             SUM(dpm.normal_sales) as normal_sales,
             SUM(dpm.cancellation_sales) as cancellation_sales,
+            SUM(dpm.accommodation_sales) as accommodation_sales,
+            SUM(dpm.other_sales) as other_sales,
+            SUM(dpm.accommodation_sales_cancelled) as accommodation_sales_cancelled,
+            SUM(dpm.other_sales_cancelled) as other_sales_cancelled,
             MAX(dpm.created_at) as created_at
 
         FROM
@@ -556,15 +581,15 @@ const selectDailyReportData = async (requestId, metricDate) => {
             dpm.hotel_id, dpm.month, h.name, dpm.plan_name;
     `;
 
-    const values = [metricDate];
+  const values = [metricDate];
 
-    try {
-        const result = await pool.query(query, values);
-        return result.rows;
-    } catch (err) {
-        console.error('Error retrieving daily report data:', err);
-        throw new Error('Database error');
-    }
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving daily report data:', err);
+    throw new Error('Database error');
+  }
 };
 
 module.exports = {
