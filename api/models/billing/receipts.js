@@ -89,11 +89,27 @@ async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate,
 
 async function createNextReceiptVersion(requestId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData, honorific, customProviso, isReissue, dbClient = null) {
     const client = dbClient || await getPool(requestId).connect();
+    const useOwnClient = !dbClient; // Flag to indicate if this function is managing its own client and transaction
+
     logger.debug(`createNextReceiptVersion called with requestId: ${requestId}, hotelId: ${hotelId}, receiptNumber: ${receiptNumber}`);
 
     try {
-        // 1. Get the current max version for this receipt number
-        const maxVerQuery = `SELECT MAX(version) as max_ver FROM receipts WHERE hotel_id = $1 AND receipt_number = $2`;
+        if (useOwnClient) {
+            await client.query('BEGIN');
+        }
+
+        // 1. Get the current max version for this receipt number with FOR UPDATE to prevent race conditions
+        const maxVerQuery = `
+            SELECT MAX(version) as max_ver
+            FROM receipts
+            WHERE hotel_id = $1 AND receipt_number = $2;
+        `;
+        // Acquire an advisory lock for the specific receipt number within the transaction
+        // Use two integer keys for the advisory lock: hotelId and a numeric representation of receiptNumber
+        // Assuming receiptNumber is always numeric for this purpose.
+        // Convert receiptNumber to integer for the advisory lock.
+        const receiptNumIntForLock = parseInt(receiptNumber, 10);
+        await client.query(`SELECT pg_advisory_xact_lock($1, $2)`, [hotelId, receiptNumIntForLock]);
         const maxVerResult = await client.query(maxVerQuery, [hotelId, receiptNumber]);
         const nextVersion = (maxVerResult.rows[0].max_ver || 0) + 1;
 
@@ -119,15 +135,23 @@ async function createNextReceiptVersion(requestId, hotelId, receiptNumber, recei
         ];
 
         const result = await client.query(insertQuery, values);
+        if (useOwnClient) {
+            await client.query('COMMIT');
+        }
         const output = result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
         logger.debug(`createNextReceiptVersion result: ${JSON.stringify(output)}`);
         return output;
 
     } catch (err) {
+        if (useOwnClient) {
+            await client.query('ROLLBACK');
+        }
         logger.error('Error in createNextReceiptVersion:', err);
         throw new Error('Database error while creating next receipt version.');
     } finally {
-        if (!dbClient) client.release();
+        if (useOwnClient) {
+            client.release();
+        }
     }
 }
 
