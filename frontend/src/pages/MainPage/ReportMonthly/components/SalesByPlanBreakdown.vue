@@ -14,7 +14,13 @@
         <template #content>
             <div v-if="salesByPlanViewMode === 'chart'" ref="salesByPlanChart" class="w-full h-96"></div>
             <DataTable v-else :value="processedSalesByPlan" responsiveLayout="scroll">                        
-                <Column field="plan_name" header="プラン名"></Column>
+                <Column field="plan_name" header="プラン名">
+                  <template #body="slotProps">
+                    {{ slotProps.data.plan_name }}
+                    <Badge v-if="slotProps.data.sales_category === 'other'" 
+                           value="その他" severity="warning" class="ml-2"/>
+                  </template>
+                </Column>
                 <Column header="通常売上" bodyStyle="text-align:right">
                     <template #body="slotProps">
                         <span v-if="salesByPlanChartMode === 'tax_included'">
@@ -136,6 +142,7 @@ const combinedSalesByPlan = computed(() => {
         if (!combined[planName]) {
             combined[planName] = {
                 plan_name: planName,
+                sales_category: item.sales_category,
                 regular_sales: 0,
                 cancelled_sales: 0,
                 regular_net_sales: 0,
