@@ -5,7 +5,10 @@
 
             </template>                
             <template #subtitle>
-                <p>曜日毎の予約数ヒートマップ ({{ selectedMonth.getFullYear() }}年 {{ selectedMonth.getMonth() + 1 }}月基点)</p>
+                <div class="flex justify-between items-center">
+                    <p>曜日毎の予約数ヒートマップ ({{ selectedMonth.getFullYear() }}年 {{ selectedMonth.getMonth() + 1 }}月基点)</p>
+                    <SelectButton v-model="occCalcMode" :options="occOptions" optionLabel="name" optionValue="value" />
+                </div>
             </template>
             <template #content>
                 <div ref="heatMap" class="w-full h-96"></div>             
@@ -16,7 +19,13 @@
 
 <script setup>
 import { defineProps, ref, onMounted, onBeforeUnmount, watch } from 'vue';
-import { Card, Panel } from 'primevue';
+import { Card, Panel, SelectButton } from 'primevue';
+// ...
+const occCalcMode = ref('accommodation'); // Default to accommodation
+const occOptions = ref([
+    { name: '宿泊のみ', value: 'accommodation' },
+    { name: '全て', value: 'all' }
+]);
 import * as echarts from 'echarts/core';
 import {
     TooltipComponent,
@@ -84,11 +93,16 @@ const processHeatMapData = () => {
     const start = props.normalizeDate(new Date(props.heatMapDisplayStartDate));
     const end = props.normalizeDate(new Date(props.heatMapDisplayEndDate));
            
-    // Filter reservations for the heatmap's specific display window
-    const relevantReservations = props.allReservationsData.filter(r => {
+    // Filter relevant reservations for the heatmap's specific display window
+    let relevantReservations = props.allReservationsData.filter(r => {
         const rDate = props.normalizeDate(new Date(r.date));
         return rDate >= start && rDate <= end;
     });
+
+    // Apply filtering based on occCalcMode
+    if (occCalcMode.value === 'accommodation') {
+        relevantReservations = relevantReservations.filter(r => parseFloat(r.accommodation_price || 0) > 0);
+    }
             
     if(relevantReservations && relevantReservations.length > 0){
         heatMapMax.value = relevantReservations[0].total_rooms; 
@@ -183,7 +197,7 @@ onBeforeUnmount(() => {
     if (myHeatMap) myHeatMap.dispose();
 });
 
-watch([() => props.allReservationsData, () => props.selectedMonth, () => props.heatMapDisplayStartDate, () => props.heatMapDisplayEndDate], () => {
+watch([() => props.allReservationsData, () => props.selectedMonth, () => props.heatMapDisplayStartDate, () => props.heatMapDisplayEndDate, occCalcMode], () => {
     processHeatMapData();
 }, { deep: true });
 </script>
