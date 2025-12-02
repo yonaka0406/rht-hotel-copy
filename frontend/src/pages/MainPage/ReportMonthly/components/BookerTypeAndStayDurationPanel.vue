@@ -171,7 +171,11 @@ const processAverageLengthOfStayData = () => {
     let reservationCount = 0;
 
     props.reservationListData
-        .filter(res => res.number_of_nights > 0 && res.number_of_people > 0)
+        .filter(res => 
+            res.number_of_nights > 0 && 
+            res.number_of_people > 0 && 
+            res.plan_sales_category !== 'other' 
+        )
         .forEach(res => {
             const nights = Number(res.number_of_nights);
             const people = Number(res.number_of_people);
