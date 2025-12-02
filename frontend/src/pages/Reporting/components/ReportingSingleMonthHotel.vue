@@ -46,7 +46,7 @@
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">                        
                         <div class="w-full md:w-1/2">
-                            <div ref="totalChartContainer" style="height: 450px; width: 100%;"></div>
+                            <RevenuePlanVsActualChart :revenueData="singleHotelRevenueChartDataSource[0]" />
                         </div>
                         <div class="w-full md:w-1/2">
                             <div ref="totalOccupancyChartContainer" style="height: 450px; width: 100%;"></div>
@@ -231,6 +231,9 @@
         },   
     });
 
+    // Components
+    import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
+
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
 
@@ -238,8 +241,6 @@
     import { 
         formatCurrencyForReporting as formatCurrency, 
         formatPercentage, 
-        formatYenInTenThousands, 
-        formatYenInTenThousandsNoDecimal 
     } from '@/utils/formatUtils';
     import { getSeverity as getSeverityUtil, colorScheme } from '@/utils/reportingUtils';
 
@@ -362,7 +363,7 @@
         DatasetComponent,
         TransformComponent,        
     } from 'echarts/components';    
-    import { BarChart, LineChart, GaugeChart } from 'echarts/charts';    
+    import { BarChart, GaugeChart } from 'echarts/charts';    
     import { CanvasRenderer } from 'echarts/renderers';
 
     // Register ECharts components
@@ -374,22 +375,18 @@
         DatasetComponent,
         TransformComponent,        
         BarChart,
-        LineChart,
         GaugeChart,
         CanvasRenderer
     ]);    
     const resizeChartHandler = () => {
-        if (selectedView.value === 'graph') {            
-            totalChartInstance.value?.resize();
+        if (selectedView.value === 'graph') {
             totalOccupancyChartInstance.value?.resize();
         }
     };
 
     // --- Chart Refs and Instances ---    
-    const totalChartContainer = ref(null);
     const totalOccupancyChartContainer = ref(null);
     
-    const totalChartInstance = shallowRef(null);
     const totalOccupancyChartInstance = shallowRef(null);
 
     // --- Data Computeds for Charts ---
@@ -408,117 +405,6 @@
     });
 
     // --- ECharts Options ---    
-    const totalChartOptions = computed(() => {
-        if (!hasRevenueDataForChart.value) { 
-            return {};
-        }
-
-        // Data comes from currentHotelAggregateData via singleHotelRevenueChartDataSource
-        const { total_forecast_revenue, total_period_accommodation_revenue } = singleHotelRevenueChartDataSource.value[0];        
-        const varianceAmount = total_period_accommodation_revenue - total_forecast_revenue;
-    
-        let displayVariancePercent;
-        if (total_forecast_revenue === 0 || total_forecast_revenue === null) {
-        displayVariancePercent = (total_period_accommodation_revenue === 0 || total_period_accommodation_revenue === null) ? "0.00%" : "N/A";
-        } else {
-        const percent = (varianceAmount / total_forecast_revenue) * 100;
-            displayVariancePercent = `${percent.toFixed(2)}%`;
-        }
-
-        const variancePositiveColor = '#4CAF50'; // Green for positive variance
-        const varianceNegativeColor = '#F44336'; // Red for negative variance
-
-        return {
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: { type: 'shadow' },
-                formatter: (params) => {
-                const valueParam = params.find(p => p.seriesName === '売上');
-                if (!valueParam || valueParam.value === undefined) { // Check for undefined value from placeholder
-                                // Try to get data from the placeholder if main series has no value (e.g. for base of variance)
-                                const placeholderParam = params.find(p => p.seriesName === 'PlaceholderBase');
-                                if(placeholderParam && valueParam && valueParam.name === '分散'){
-                                        // Special handling for variance tooltip if actual value is on placeholder
-                                } else if (!valueParam) {
-                                    return '';
-                                }
-                                }
-
-                let tooltipText = `${valueParam.name}<br/>`; // X-axis category
-                
-                if (valueParam.name === '分散') {
-                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(varianceAmount)}<br/>`; // Use varianceAmount directly
-                    tooltipText += `率: ${displayVariancePercent}`;
-                } else {
-                                // For '計画売上' and '実績売上', valueParam.value is correct
-                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(valueParam.value)}`;
-                }
-                return tooltipText;
-                }
-            },        
-            grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
-            xAxis: [{
-                type: 'category',
-                data: ['計画売上', '分散', '実績売上'],
-                        splitLine: { show: false },
-                axisLabel: { interval: 0 }
-            }],
-            yAxis: [{
-                type: 'value',
-                name: '金額 (万円)',
-                axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` },
-                splitLine: { show: true } 
-            }],
-            series: [
-                { // Invisible base for stacking
-                    name: 'PlaceholderBase', 
-                    type: 'bar',
-                    stack: 'total',
-                                barWidth: '60%', // Adjust bar width as needed
-                    itemStyle: { borderColor: 'transparent', color: 'transparent' },
-                    emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' }},
-                    data: [
-                        0, // Base for '計画売上' is 0
-                        varianceAmount >= 0 ? total_forecast_revenue : total_period_accommodation_revenue, // Base for '分散'
-                        0  // Base for '実績売上' is 0
-                    ]
-                },
-                { // Visible bars
-                    name: '売上', 
-                    type: 'bar',
-                    stack: 'total',
-                                barWidth: '60%',
-                    label: {
-                        show: true,
-                        formatter: (params) => {
-                        if (params.name === '分散') {
-                            return displayVariancePercent;
-                        }
-                        return formatYenInTenThousandsNoDecimal(params.value);
-                        }
-                    },
-                    data: [
-                        { // 計画売上
-                        value: total_forecast_revenue,
-                        itemStyle: { color: colorScheme.forecast },
-                        label: { position: 'top' } 
-                        },
-                        { // 分散                
-                            value: Math.abs(varianceAmount),                
-                            itemStyle: { color: varianceAmount >= 0 ? variancePositiveColor : varianceNegativeColor },
-                            label: { position: 'top' }
-                        },
-                        { // 実績売上
-                        value: total_period_accommodation_revenue,
-                        itemStyle: { color: colorScheme.actual },
-                        label: { position: 'top'}
-                        }
-                    ]
-                }
-            ]
-        };
-    });
-
     const totalOccupancyChartOptions = computed(() => {        
         if (!props.occupancyData ) return {};
 
@@ -615,12 +501,6 @@
         }
     };    
     const refreshAllCharts = () => {
-        if (hasRevenueDataForChart.value) {            
-            initOrUpdateChart(totalChartInstance, totalChartContainer, totalChartOptions.value);
-        } else {            
-            totalChartInstance.value?.dispose(); totalChartInstance.value = null;
-        }  
-        
         // Occupancy Charts
         if (props.occupancyData) {            
             // Total Occupancy Gauge Chart (now in the combined card with revenue)
@@ -630,7 +510,7 @@
         }
     };
     const disposeAllCharts = () => {        
-        totalChartInstance.value?.dispose(); totalChartInstance.value = null;totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
+        totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
     };
 
     // Table
