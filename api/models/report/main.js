@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 // GET
 const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) => {
@@ -184,6 +185,11 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
 
   try {
     const result = await pool.query(query, values);
+    logger.debug(`[selectCountReservation] Query params: ${JSON.stringify({ hotelId, dateStart, dateEnd })}`);
+    logger.debug(`[selectCountReservation] Total rows: ${result.rows.length}`);
+    if (result.rows.length > 0) {
+      logger.debug(`[selectCountReservation] First row sample: ${JSON.stringify(result.rows[0])}`);
+    }
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);

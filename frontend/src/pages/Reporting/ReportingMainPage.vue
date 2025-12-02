@@ -246,9 +246,9 @@
         while (currentIterMonth <= lastIterMonthDate) {
             const monthKey = formatDateMonth(currentIterMonth);
             monthlyAggregates[monthKey] = {};
-            monthlyAggregates[monthKey]['0'] = { pms_revenue: null, forecast_revenue: null, acc_revenue: null };
+            monthlyAggregates[monthKey]['0'] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
             selectedHotels.value.forEach(hotelId => {
-                monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, forecast_revenue: null, acc_revenue: null };
+                monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
             });
             currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
         }
@@ -274,7 +274,48 @@
                 }
             }
         };
-        aggregateDataSource(pmsTotalData.value, 'pms_revenue');
+        
+        // Aggregate PMS data with separate accommodation and other revenue
+        const aggregatePmsDataSource = (sourceDataByHotel) => {
+            for (const stringHotelIdKey in sourceDataByHotel) { 
+                const hotelDataArray = sourceDataByHotel[stringHotelIdKey];
+                if (Array.isArray(hotelDataArray)) {
+                    hotelDataArray.forEach(record => {
+                        if (record && record.date) {
+                            const monthKey = formatDateMonth(new Date(record.date));
+                            if (monthlyAggregates[monthKey]) {
+                                if (monthlyAggregates[monthKey][stringHotelIdKey]) {
+                                    if (typeof record.revenue === 'number') {
+                                        monthlyAggregates[monthKey][stringHotelIdKey].pms_revenue += record.revenue;
+                                    }
+                                    if (typeof record.accommodation_revenue === 'number') {
+                                        monthlyAggregates[monthKey][stringHotelIdKey].pms_accommodation_revenue += record.accommodation_revenue;
+                                    }
+                                    if (typeof record.other_revenue === 'number') {
+                                        monthlyAggregates[monthKey][stringHotelIdKey].pms_other_revenue += record.other_revenue;
+                                    }
+                                }
+                                if (monthlyAggregates[monthKey]['0']) {
+                                    if (typeof record.revenue === 'number') {
+                                        monthlyAggregates[monthKey]['0'].pms_revenue += record.revenue;
+                                    }
+                                    if (typeof record.accommodation_revenue === 'number') {
+                                        monthlyAggregates[monthKey]['0'].pms_accommodation_revenue += record.accommodation_revenue;
+                                    }
+                                    if (typeof record.other_revenue === 'number') {
+                                        monthlyAggregates[monthKey]['0'].pms_other_revenue += record.other_revenue;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else if (hotelDataArray && hotelDataArray.error) {
+                    // console.warn(`RMP: Skipping PMS aggregation for hotel ${stringHotelIdKey} due to previous fetch error.`);
+                }
+            }
+        };
+        
+        aggregatePmsDataSource(pmsTotalData.value);
         aggregateDataSource(forecastTotalData.value, 'forecast_revenue');
         aggregateDataSource(accountingTotalData.value, 'acc_revenue');
         Object.keys(monthlyAggregates).sort().forEach(monthKey => { 
@@ -286,14 +327,19 @@
                 }
                 const aggregatedMonthData = monthlyAggregates[monthKey][hotelIdStringKeyInMonth];
                 const pmsRev = aggregatedMonthData.pms_revenue;
+                const pmsAccommodationRev = aggregatedMonthData.pms_accommodation_revenue;
+                const pmsOtherRev = aggregatedMonthData.pms_other_revenue;
                 const forecastRev = aggregatedMonthData.forecast_revenue;
                 const accRev = aggregatedMonthData.acc_revenue;
                 const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
-                // Reverted: Prioritize accounting revenue if available
+                // Prioritize accounting revenue if available, otherwise use PMS
                 let periodRev = (accRev !== null) ? accRev : (pmsRev || 0);
+                let accommodationRev = (accRev !== null) ? accRev : (pmsAccommodationRev || 0);
+                let otherRev = (accRev !== null) ? 0 : (pmsOtherRev || 0); // If using accounting, other is 0 since accounting only has accommodation
                 result.push({
                     month: monthKey, hotel_id: outputHotelId, hotel_name: hotelName,
                     pms_revenue: pmsRev, forecast_revenue: forecastRev, acc_revenue: accRev, period_revenue: periodRev,
+                    accommodation_revenue: accommodationRev, other_revenue: otherRev,
                 });
             }
         });
@@ -544,6 +590,7 @@
                 currentProcessingHotelId = hotelId;
                 // Fetch PMS data from Jan 1st
                 const rawPmsData = await fetchCountReservation(hotelId, pmsFetchStartDate, pmsFetchEndDate);
+                //console.log('[ReportingMainPage] Raw PMS data sample for hotel', hotelId, ':', rawPmsData?.[0]);
 
                 // Fetch Forecast and Accounting data using original date range (firstDayofFetch to lastDayofFetch)
                 // as these might not need the full year data for their specific calculations.
@@ -564,13 +611,17 @@
                         pmsFallbackCapacities.value[String(hotelId)] = 0; // Default if no data or no total_rooms
                     }
 
-                    newPmsTotalData[String(hotelId)] = rawPmsData.map(item => ({
+                    const mappedData = rawPmsData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.date))),
                         revenue: item.price !== undefined ? Number(item.price) : 0,
+                        accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
+                        other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
                         room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
                         total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                         total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
                     })).filter(item => item.date !== null);
+                    //console.log('[ReportingMainPage] Mapped PMS data sample for hotel', hotelId, ':', mappedData[0]);
+                    newPmsTotalData[String(hotelId)] = mappedData;
                 } else {
                      newPmsTotalData[String(hotelId)] = [];
                      pmsFallbackCapacities.value[String(hotelId)] = 0;
@@ -605,9 +656,9 @@
         } finally {
             loading.value = false;
         }
-        // console.log('RMP: Fetched Summary pmsTotalData', pmsTotalData.value);
-        // console.log('RMP: Fetched Summary forecastTotalData', forecastTotalData.value);
-        // console.log('RMP: Fetched Summary accountingTotalData', accountingTotalData.value);
+        //console.log('[ReportingMainPage] Fetched Summary pmsTotalData', pmsTotalData.value);
+        //console.log('[ReportingMainPage] Fetched Summary forecastTotalData', forecastTotalData.value);
+        //console.log('[ReportingMainPage] Fetched Summary accountingTotalData', accountingTotalData.value);
     };
 
     const handleDateChange = async (newDate) => {

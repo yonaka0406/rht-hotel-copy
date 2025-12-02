@@ -121,19 +121,19 @@
                                     </div>
                                 </template>
                             </Column>
-                            <Column field="period_revenue" header="実績①" sortable style="width: 20%">
+                            <Column field="accommodation_revenue" header="実績①" sortable style="width: 20%">
                                 <template #body="{ data }">
                                     <div class="flex justify-end mr-2"> 
-                                        {{ formatCurrency(data.period_revenue) }}
+                                        {{ formatCurrency(data.accommodation_revenue) }}
                                     </div>
                                 </template>
                             </Column>
                             <Column header="分散" sortable style="width: 30%">
                                 <template #body="{ data }">
                                     <div class="flex justify-end mr-2">                                        
-                                        {{ formatCurrency(data.period_revenue - data.forecast_revenue) }}
-                                        <Badge class="ml-2" :severity="getSeverity((data.period_revenue / data.forecast_revenue) - 1)" size="small">
-                                            {{ formatPercentage((data.period_revenue / data.forecast_revenue) - 1) }}
+                                        {{ formatCurrency(data.accommodation_revenue - data.forecast_revenue) }}
+                                        <Badge class="ml-2" :severity="getSeverity((data.accommodation_revenue / data.forecast_revenue) - 1)" size="small">
+                                            {{ formatPercentage((data.accommodation_revenue / data.forecast_revenue) - 1) }}
                                         </Badge>
                                     </div>
                                 </template>
@@ -293,23 +293,18 @@
         console.log('[ReportingSingleMonthHotel] revenueData:', props.revenueData);
         
         let total_forecast_revenue = 0;
-        let total_period_revenue = 0;
         let total_period_accommodation_revenue = 0;
         props.revenueData?.forEach((item, index) => {
             console.log(`[ReportingSingleMonthHotel] revenueData[${index}]:`, {
-                period_revenue: item.period_revenue,
                 accommodation_revenue: item.accommodation_revenue,
                 other_revenue: item.other_revenue,
                 forecast_revenue: item.forecast_revenue
             });
             total_forecast_revenue += (item.forecast_revenue || 0);
-            // Use accommodation_revenue if available, otherwise fall back to period_revenue for backward compatibility
-            total_period_accommodation_revenue += (item.accommodation_revenue || item.period_revenue || 0);
-            total_period_revenue += (item.period_revenue || 0);
+            total_period_accommodation_revenue += (item.accommodation_revenue || 0);
         });
         
         console.log('[ReportingSingleMonthHotel] Totals:', {
-            total_period_revenue,
             total_period_accommodation_revenue,
             total_forecast_revenue
         });
@@ -340,7 +335,6 @@
 
         return {
             total_forecast_revenue,
-            total_period_revenue,
             total_period_accommodation_revenue,
             total_fc_sold_rooms,
             total_sold_rooms,
@@ -456,7 +450,7 @@
     const hasRevenueDataForChart = computed(() => {
         return singleHotelRevenueChartDataSource.value.length > 0 &&
                (singleHotelRevenueChartDataSource.value[0].total_forecast_revenue !== undefined || 
-                singleHotelRevenueChartDataSource.value[0].total_period_revenue !== undefined);
+                singleHotelRevenueChartDataSource.value[0].total_period_accommodation_revenue !== undefined);
     });
 
     // --- ECharts Options ---    
@@ -466,12 +460,12 @@
         }
 
         // Data comes from currentHotelAggregateData via singleHotelRevenueChartDataSource
-        const { total_forecast_revenue, total_period_revenue } = singleHotelRevenueChartDataSource.value[0];        
-        const varianceAmount = total_period_revenue - total_forecast_revenue;
+        const { total_forecast_revenue, total_period_accommodation_revenue } = singleHotelRevenueChartDataSource.value[0];        
+        const varianceAmount = total_period_accommodation_revenue - total_forecast_revenue;
     
         let displayVariancePercent;
         if (total_forecast_revenue === 0 || total_forecast_revenue === null) {
-        displayVariancePercent = (total_period_revenue === 0 || total_period_revenue === null) ? "0.00%" : "N/A";
+        displayVariancePercent = (total_period_accommodation_revenue === 0 || total_period_accommodation_revenue === null) ? "0.00%" : "N/A";
         } else {
         const percent = (varianceAmount / total_forecast_revenue) * 100;
             displayVariancePercent = `${percent.toFixed(2)}%`;
@@ -531,7 +525,7 @@
                     emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' }},
                     data: [
                         0, // Base for '計画売上' is 0
-                        varianceAmount >= 0 ? total_forecast_revenue : total_period_revenue, // Base for '分散'
+                        varianceAmount >= 0 ? total_forecast_revenue : total_period_accommodation_revenue, // Base for '分散'
                         0  // Base for '実績売上' is 0
                     ]
                 },
@@ -561,7 +555,7 @@
                             label: { position: 'top' }
                         },
                         { // 実績売上
-                        value: total_period_revenue,
+                        value: total_period_accommodation_revenue,
                         itemStyle: { color: colorScheme.actual },
                         label: { position: 'top'}
                         }
@@ -707,19 +701,19 @@
             // If it contains multiple months for that hotel, they will be exported.
             props.revenueData.forEach(row => {
                 const forecastRevenue = row.forecast_revenue || 0;
-                const periodRevenue = row.period_revenue || 0;
-                const varianceAmount = periodRevenue - forecastRevenue;
+                const accommodationRevenue = row.accommodation_revenue || 0;
+                const varianceAmount = accommodationRevenue - forecastRevenue;
                 let variancePercentage = 0;
-                if (forecastRevenue !== 0) variancePercentage = ((periodRevenue / forecastRevenue) - 1) * 100;
-                else if (periodRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
+                if (forecastRevenue !== 0) variancePercentage = ((accommodationRevenue / forecastRevenue) - 1) * 100;
+                else if (accommodationRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
                 
                 const csvRow = [
                     `"${row.hotel_name || ''}"`,
                     `"${row.month || ''}"`,
                     forecastRevenue,
-                    periodRevenue,
+                    accommodationRevenue,
                     varianceAmount,
-                    (forecastRevenue === 0 && periodRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
+                    (forecastRevenue === 0 && accommodationRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
                 ];
                 csvRows.push(csvRow.join(','));
             });
