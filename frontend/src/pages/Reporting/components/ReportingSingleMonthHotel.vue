@@ -49,7 +49,7 @@
                             <RevenuePlanVsActualChart :revenueData="singleHotelRevenueChartDataSource[0]" />
                         </div>
                         <div class="w-full md:w-1/2">
-                            <div ref="totalOccupancyChartContainer" style="height: 450px; width: 100%;"></div>
+                            <OccupancyGaugeChart :occupancyData="props.occupancyData[0]" />
                         </div>                        
                     </div>
                 </template> 
@@ -217,7 +217,7 @@
 </template>
 <script setup>
     // Vue
-    import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+    import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
     
     // Props
     const props = defineProps({
@@ -233,6 +233,7 @@
 
     // Components
     import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
+    import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
@@ -242,7 +243,7 @@
         formatCurrencyForReporting as formatCurrency, 
         formatPercentage, 
     } from '@/utils/formatUtils';
-    import { getSeverity as getSeverityUtil, colorScheme } from '@/utils/reportingUtils';
+    import { getSeverity as getSeverityUtil } from '@/utils/reportingUtils';
 
     // View selection
     const selectedView = ref('graph'); // Default view
@@ -272,49 +273,26 @@
         // Sums up values from props.revenueData and props.occupancyData.
         // This is useful if parent sends multiple month data for the single selected hotel.
         // For a single month view, it will correctly use the single entry.
-        
-        console.log('[ReportingSingleMonthHotel] revenueData:', props.revenueData);
-        
+                        
         let total_forecast_revenue = 0;
         let total_period_accommodation_revenue = 0;
-        props.revenueData?.forEach((item, index) => {
-            console.log(`[ReportingSingleMonthHotel] revenueData[${index}]:`, {
-                accommodation_revenue: item.accommodation_revenue,
-                other_revenue: item.other_revenue,
-                forecast_revenue: item.forecast_revenue
-            });
+        props.revenueData?.forEach((item, index) => {            
             total_forecast_revenue += (item.forecast_revenue || 0);
             total_period_accommodation_revenue += (item.accommodation_revenue || 0);
         });
-        
-        console.log('[ReportingSingleMonthHotel] Totals:', {
-            total_period_accommodation_revenue,
-            total_forecast_revenue
-        });
-
+                
         let total_fc_sold_rooms = 0;
         let total_sold_rooms = 0;
         let total_fc_available_rooms = 0;
         let total_available_rooms = 0;
-        props.occupancyData?.forEach((item, index) => {
-            console.log(`[ReportingSingleMonthHotel] occupancyData[${index}]:`, {
-                sold_rooms: item.sold_rooms,
-                fc_sold_rooms: item.fc_sold_rooms,
-                total_rooms: item.total_rooms,
-                fc_total_rooms: item.fc_total_rooms
-            });
+        props.occupancyData?.forEach((item, index) => {            
             total_fc_sold_rooms += (item.fc_sold_rooms || 0);
             total_sold_rooms += (item.sold_rooms || 0);
             total_fc_available_rooms += (item.fc_total_rooms || 0); // fc_total_rooms is total available rooms for forecast
             total_available_rooms += (item.total_rooms || 0);    // total_rooms is total available rooms for actual
         });
         
-        console.log('[ReportingSingleMonthHotel] Occupancy Totals:', {
-            total_sold_rooms,
-            total_fc_sold_rooms,
-            total_available_rooms,
-            total_fc_available_rooms
-        });
+        
 
         return {
             total_forecast_revenue,
@@ -329,7 +307,6 @@
     const actualADR = computed(() => {
         const { total_period_accommodation_revenue, total_sold_rooms } = currentHotelAggregateData.value;
         if (total_sold_rooms === 0 || total_sold_rooms === null || total_sold_rooms === undefined) return NaN;
-        console.log('[ReportingSingleMonthHotel] ADR calculation - accommodation_revenue:', total_period_accommodation_revenue, 'sold_rooms:', total_sold_rooms);
         return Math.round(total_period_accommodation_revenue / total_sold_rooms);
     });
 
@@ -353,42 +330,14 @@
 
 
 
-    // ECharts imports
-    import * as echarts from 'echarts/core';
-    import {        
-        TitleComponent,
-        TooltipComponent,
-        GridComponent,
-        LegendComponent,
-        DatasetComponent,
-        TransformComponent,        
-    } from 'echarts/components';    
-    import { BarChart, GaugeChart } from 'echarts/charts';    
-    import { CanvasRenderer } from 'echarts/renderers';
-
-    // Register ECharts components
-    echarts.use([        
-        TitleComponent,
-        TooltipComponent,
-        GridComponent,
-        LegendComponent,
-        DatasetComponent,
-        TransformComponent,        
-        BarChart,
-        GaugeChart,
-        CanvasRenderer
-    ]);    
+    // ECharts imports    
     const resizeChartHandler = () => {
         if (selectedView.value === 'graph') {
-            totalOccupancyChartInstance.value?.resize();
+            // Nothing to resize here, as charts are now components
         }
     };
 
     // --- Chart Refs and Instances ---    
-    const totalOccupancyChartContainer = ref(null);
-    
-    const totalOccupancyChartInstance = shallowRef(null);
-
     // --- Data Computeds for Charts ---
     // Provides the data for the main revenue chart (now for the single hotel)
     const singleHotelRevenueChartDataSource = computed(() => {
@@ -403,115 +352,6 @@
                (singleHotelRevenueChartDataSource.value[0].total_forecast_revenue !== undefined || 
                 singleHotelRevenueChartDataSource.value[0].total_period_accommodation_revenue !== undefined);
     });
-
-    // --- ECharts Options ---    
-    const totalOccupancyChartOptions = computed(() => {        
-        if (!props.occupancyData ) return {};
-
-        const actualSold = props.occupancyData[0].sold_rooms;
-        const actualAvailable = props.occupancyData[0].total_rooms;
-        const forecastSold = props.occupancyData[0].fc_sold_rooms;
-        const forecastAvailable = props.occupancyData[0].fc_total_rooms;
-        
-        const totalActualOccupancy = actualAvailable > 0 ? actualSold / actualAvailable : 0;
-        const totalForecastOccupancy = forecastAvailable > 0 ? forecastSold / forecastAvailable : 0;
-        
-        return {
-            tooltip: {
-                formatter: (params) => {
-                    if (params.seriesName === '実績稼働率') {
-                        return `実績稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
-                    }
-                    return '';
-                }
-            },
-            series: [{
-                type: 'gauge',
-                radius: '90%',
-                center: ['50%', '55%'], 
-                startAngle: 180, 
-                endAngle: 0,     
-                min: 0,
-                max: 1, 
-                splitNumber: 4, 
-                axisLine: {
-                    lineStyle: {
-                        width: 22, 
-                        color: [ 
-                            [1, '#E0E0E0'] 
-                        ]
-                    }
-                },
-                progress: { 
-                    show: true,
-                    width: 22, 
-                    itemStyle: { 
-                        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                            { offset: 0, color: colorScheme.actual_gradient_bottom }, 
-                            { offset: 1, color: colorScheme.actual_gradient_top }    
-                        ])
-                    }
-                },
-                pointer: { show: false }, 
-                axisTick: { show: false },
-                splitLine: { show: false },
-                axisLabel: { 
-                    show: true,
-                    distance: 5, 
-                    formatter: function (value) { return (value * 100).toFixed(0) + '%'; },
-                    fontSize: 10,
-                    color: '#555'
-                },
-                title: { 
-                    offsetCenter: [0, '25%'], 
-                    fontSize: 14,
-                    color: '#333',
-                    fontWeight: 'normal'
-                },
-                detail: { 
-                    width: '70%',
-                    lineHeight: 22,
-                    offsetCenter: [0, '-10%'], 
-                    valueAnimation: true,
-                    formatter: function (value) {
-                        let forecastText = `計画: ${formatPercentage(totalForecastOccupancy)}`;
-                        return `{actual|${formatPercentage(value)}}\n{forecast|${forecastText}}`;
-                    },
-                    rich: {
-                        actual: { fontSize: 24, fontWeight: 'bold', color: colorScheme.actual },
-                        forecast: { fontSize: 13, color: colorScheme.forecast, paddingTop: 8 }
-                    }
-                },
-                data: [{ value: totalActualOccupancy, name: '実績稼働率' }]
-            }]
-        };
-    });
-    
-    // Initialize charts
-    const initOrUpdateChart = (instanceRef, containerRef, options) => {
-        if (containerRef.value) { 
-            if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
-                instanceRef.value = echarts.init(containerRef.value);
-            }
-            instanceRef.value.setOption(options, true); 
-            instanceRef.value.resize();
-        } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
-            instanceRef.value.dispose();
-            instanceRef.value = null; 
-        }
-    };    
-    const refreshAllCharts = () => {
-        // Occupancy Charts
-        if (props.occupancyData) {            
-            // Total Occupancy Gauge Chart (now in the combined card with revenue)
-            initOrUpdateChart(totalOccupancyChartInstance, totalOccupancyChartContainer, totalOccupancyChartOptions.value);
-        } else {            
-            totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
-        }
-    };
-    const disposeAllCharts = () => {        
-        totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
-    };
 
     // Table
     const getSeverity = (value) => getSeverityUtil(value);
@@ -598,15 +438,9 @@
 
     onMounted(async () => {
         // console.log('RSMHotel: onMounted', props.revenueData, props.occupancyData); // Updated console log prefix
-
-        if (selectedView.value === 'graph') {
-            // Use nextTick to ensure containers are rendered before initializing
-            nextTick(refreshAllCharts);
-        }
         window.addEventListener('resize', resizeChartHandler);
     });
     onBeforeUnmount(() => {
-        disposeAllCharts();
         window.removeEventListener('resize', resizeChartHandler);
     });
 
@@ -614,10 +448,6 @@
     watch(selectedView, async (newView) => {
         if (newView === 'graph') {
             await nextTick(); 
-            disposeAllCharts();            
-            refreshAllCharts();
-        } else {            
-            disposeAllCharts();
         }
     });    
 

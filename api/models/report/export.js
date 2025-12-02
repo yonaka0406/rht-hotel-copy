@@ -518,15 +518,7 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
 
       const result = await client.query(query, [metricDate, lastDate, hotelId]);
       console.log(`[calculateAndSaveDailyMetrics] Hotel ${hotelId}: Inserted ${result.rowCount} rows (metricDate: ${metricDate}, lastDate: ${lastDate})`);
-      
-      if (hotelId === 39) {
-        const checkResult = await client.query(`
-          SELECT plan_name, confirmed_stays, non_accommodation_stays 
-          FROM daily_plan_metrics 
-          WHERE hotel_id = 39 AND metric_date = $1 AND month = '2025-12-01'
-        `, [metricDate]);
-        console.log('[calculateAndSaveDailyMetrics] Hotel 39 December metrics:', checkResult.rows);
-      }
+            
     }
 
     await client.query('COMMIT');
@@ -596,18 +588,7 @@ const selectDailyReportData = async (requestId, metricDate) => {
   const values = [metricDate];
 
   try {
-    const result = await pool.query(query, values);
-    console.log(`[selectDailyReportData] Retrieved ${result.rows.length} rows for date ${metricDate}`);
-    
-    const nakashibetsuRows = result.rows.filter(r => r.hotel_name?.includes('中標津'));
-    if (nakashibetsuRows.length > 0) {
-      console.log('[selectDailyReportData] 中標津 rows:', nakashibetsuRows);
-    }
-    
-    const luggageRow = result.rows.find(r => r.plan_name?.includes('荷物'));
-    if (luggageRow) {
-      console.log('[selectDailyReportData] 荷物キープ row:', luggageRow);
-    }
+    const result = await pool.query(query, values);    
     return result.rows;
   } catch (err) {
     console.error('Error retrieving daily report data:', err);
