@@ -127,8 +127,6 @@ const initBookingSourceChart = () => {
         series: {
             type: 'treemap',
             data: data,
-            radius: [0, '100%'],
-            center: ['50%', '50%'],                                           
             label: {
                 formatter: (params) => {
                     // This formatter will now apply to lower levels
@@ -293,11 +291,11 @@ onBeforeUnmount(() => {
     if (myPaymentTimingChart) myPaymentTimingChart.dispose();
 });
 
-watch([() => props.bookingSourceData], () => {
+watch(() => props.bookingSourceData, () => {
     initBookingSourceChart();
 }, { deep: true });
 
-watch([() => props.paymentTimingData], () => {
+watch(() => props.paymentTimingData, () => {
     initPaymentTimingChart();
 }, { deep: true });
 </script>

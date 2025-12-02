@@ -7,24 +7,40 @@
  * @returns {string} Variance percentage formatted to 2 decimal places or 'N/A'
  */
 export const calculateVariancePercentage = (period, forecast) => {
-    if (forecast === 0 || forecast === null || forecast === undefined) {
-        return (period === 0 || period === null || period === undefined) ? '0.00' : 'N/A';
+    // Convert to numbers and check validity
+    const periodNum = Number(period);
+    const forecastNum = Number(forecast);
+    
+    // Handle invalid or zero forecast
+    if (!Number.isFinite(forecastNum) || forecastNum === 0) {
+        // If both are zero or invalid, return '0.00'
+        if ((!Number.isFinite(periodNum) || periodNum === 0)) {
+            return '0.00';
+        }
+        return 'N/A';
     }
-    const variance = ((period - forecast) / forecast) * 100;
+    
+    // Check if period is valid
+    if (!Number.isFinite(periodNum)) {
+        return 'N/A';
+    }
+    
+    const variance = ((periodNum - forecastNum) / forecastNum) * 100;
     return variance.toFixed(2);
 };
 
 /**
- * Get PrimeVue severity level based on variance value
- * @param {number} value - Variance value (can be percentage or absolute)
+ * Get PrimeVue severity level based on variance percentage value
+ * @param {number|string} value - Variance percentage (e.g., 5.00 means 5%, -10.50 means -10.5%)
  * @returns {string} PrimeVue severity: 'success', 'warn', 'danger', or 'secondary'
  */
 export const getSeverity = (value) => {
-    if (value === null || value === undefined || isNaN(value)) return 'secondary';
-    if (value >= 0.05) return 'success';  // 5% or more positive
-    if (value >= 0) return 'warn';        // 0-5% positive
-    if (value >= -0.05) return 'warn';    // 0-5% negative
-    return 'danger';                      // More than 5% negative
+    const numValue = Number(value);
+    if (!Number.isFinite(numValue)) return 'secondary';
+    if (numValue >= 5) return 'success';   // 5% or more positive
+    if (numValue >= 0) return 'warn';      // 0-5% positive
+    if (numValue >= -5) return 'warn';     // 0-5% negative
+    return 'danger';                       // More than 5% negative
 };
 
 /**

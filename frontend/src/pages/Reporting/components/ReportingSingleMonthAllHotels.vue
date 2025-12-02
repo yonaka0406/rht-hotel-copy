@@ -74,7 +74,9 @@
                         <div class="w-full md:w-1/2">
                             <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
-                            <div v-else ref="allHotelsOccupancyChartContainer" :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
+                            <div v-else>
+                                <AllHotelsOccupancyChart :occupancyData="props.occupancyData" />
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -256,6 +258,7 @@
 
     // Components
     import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
+    import AllHotelsOccupancyChart from './charts/AllHotelsOccupancyChart.vue';
 
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
@@ -364,26 +367,25 @@
         DatasetComponent,
         TransformComponent,
         BarChart,
-        LineChart,
         PieChart,
         CanvasRenderer
-    ]);    
+    ]);
+    
+    // --- Chart Refs and Instances ---
+    const revenueDistributionChartContainer = ref(null);
+    const allHotelsRevenueChartContainer = ref(null);
+    
+    const revenueDistributionChartInstance = shallowRef(null);
+    const allHotelsRevenueChartInstance = shallowRef(null);
+    
     const resizeChartHandler = () => {
         if (selectedView.value === 'graph') {            
             allHotelsRevenueChartInstance.value?.resize();
-            allHotelsOccupancyChartInstance.value?.resize();
             revenueDistributionChartInstance.value?.resize();
         }
     };
 
-    // --- Chart Refs and Instances ---    
-    const allHotelsRevenueChartContainer = ref(null);
-    const allHotelsOccupancyChartContainer = ref(null);
-    const revenueDistributionChartContainer = ref(null);
-    
-    const allHotelsRevenueChartInstance = shallowRef(null);
-    const allHotelsOccupancyChartInstance = shallowRef(null);
-    const revenueDistributionChartInstance = shallowRef(null);
+
 
     // --- Data Computeds for Charts ---
     const filteredRevenueForChart = computed(() => {
@@ -429,33 +431,12 @@
         });
     });
     const hasAllHotelsRevenueData = computed(() => allHotelsRevenueChartData.value.length > 0);
-
-    const allHotelsOccupancyChartData = computed(() => {
-        if (!props.occupancyData || props.occupancyData.length === 0) return [];
-        const hotelMap = new Map();
-        props.occupancyData.forEach(item => {
-             if (item.hotel_name) {
-                const entry = hotelMap.get(item.hotel_name) || { 
-                    hotel_name: item.hotel_name, 
-                    sum_fc_sold_rooms: 0, sum_fc_total_rooms: 0,
-                    sum_sold_rooms: 0, sum_total_rooms: 0 
-                };
-                entry.sum_fc_sold_rooms += (item.fc_sold_rooms || 0);
-                entry.sum_fc_total_rooms += (item.fc_total_rooms || 0);
-                entry.sum_sold_rooms += (item.sold_rooms || 0);
-                entry.sum_total_rooms += (item.total_rooms || 0);
-                hotelMap.set(item.hotel_name, entry);
-            }
-        });
-        return Array.from(hotelMap.values()).map(hotel => {
-            const forecast_occupancy_rate = hotel.sum_fc_total_rooms > 0 ? (hotel.sum_fc_sold_rooms / hotel.sum_fc_total_rooms) * 100 : 0;
-            const actual_occupancy_rate = hotel.sum_total_rooms > 0 ? (hotel.sum_sold_rooms / hotel.sum_total_rooms) * 100 : 0;
-            const occupancy_variance = actual_occupancy_rate - forecast_occupancy_rate;
-            return { ...hotel, forecast_occupancy_rate, actual_occupancy_rate, occupancy_variance };
-        });
+    
+    const hasAllHotelsOccupancyData = computed(() => {
+        return props.occupancyData && props.occupancyData.length > 0 && 
+               props.occupancyData.some(item => item.hotel_id !== 0);
     });
-    const hasAllHotelsOccupancyData = computed(() => allHotelsOccupancyChartData.value.length > 0);
-
+    
     const allHotelsChartHeight = computed(() => {
         const numHotels = allHotelsRevenueChartData.value.length;
         const baseHeight = 150; // Base height for axes, legend, etc.
@@ -557,37 +538,6 @@
                     barGap: '5%',
                     label: { show: true, position: 'right', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' }
                 }
-            ]
-        };
-    });
-    const allHotelsOccupancyChartOptions = computed(() => {
-        const data = allHotelsOccupancyChartData.value;
-        if (!data.length) return {};
-        const hotelNames = data.map(item => item.hotel_name);
-        const forecastValues = data.map(item => item.forecast_occupancy_rate);
-        const actualValues = data.map(item => item.actual_occupancy_rate);
-        const varianceValues = data.map(item => item.occupancy_variance);
-
-        return {
-            tooltip: { 
-                trigger: 'axis', 
-                axisPointer: { type: 'shadow' }, 
-                formatter: params => {
-                    let tooltip = `${params[0].name}<br/>`;
-                    params.forEach(param => {
-                        tooltip += `${param.marker} ${param.seriesName}: ${formatPercentage(param.value / 100)}${param.seriesName.includes('差異') ? 'p.p.' : '%'}<br/>`;
-                    });
-                    return tooltip;
-                }
-            },
-            legend: { data: ['計画稼働率', '実績稼働率', '稼働率差異 (p.p.)'], top: 'bottom' },
-            grid: { containLabel: true, left: '3%', right: '5%', bottom: '10%' },
-            xAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
-            yAxis: { type: 'category', data: hotelNames, inverse: true },
-            series: [
-                { name: '計画稼働率', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'right', formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''} },
-                { name: '実績稼働率', type: 'bar', data: actualValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'right', formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''} },
-                { name: '稼働率差異 (p.p.)', type: 'bar', data: varianceValues, itemStyle: { color: colorScheme.variance }, barGap: '5%', barMaxWidth: '15%', label: { show: true, position: (params) => params.value < 0 ? 'left' : 'right', formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''} }
             ]
         };
     });
@@ -705,11 +655,6 @@
         } else {
             allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
         }
-        if (hasAllHotelsOccupancyData.value) {
-            initOrUpdateChart(allHotelsOccupancyChartInstance, allHotelsOccupancyChartContainer, allHotelsOccupancyChartOptions.value);
-        } else {
-            allHotelsOccupancyChartInstance.value?.dispose(); allHotelsOccupancyChartInstance.value = null;
-        }
 
         const rdData = revenueDistributionChartData.value;
         if ((rdData.actualSeriesData && rdData.actualSeriesData.length > 0 && rdData.actualSeriesData.some(d=>d.value > 0)) || 
@@ -722,7 +667,6 @@
     };
     const disposeAllCharts = () => {        
         allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
-        allHotelsOccupancyChartInstance.value?.dispose(); allHotelsOccupancyChartInstance.value = null;
         revenueDistributionChartInstance.value?.dispose(); revenueDistributionChartInstance.value = null;
     };
 

@@ -234,14 +234,16 @@ const insertAggregatedRates = async (requestId, rates, hotel_id, reservation_det
   // Aggregate rates by adjustment_type and tax_type_id
   const aggregatedRates = {};
   rates.forEach((rate) => {
-    const key = `${rate.adjustment_type}-${rate.tax_type_id}-${rate.include_in_cancel_fee}-${rate.sales_category}`;
+    // Normalize sales_category to avoid "undefined" or "null" in the key
+    const salesCategory = rate.sales_category ?? 'accommodation';
+    const key = `${rate.adjustment_type}-${rate.tax_type_id}-${rate.include_in_cancel_fee}-${salesCategory}`;
     if (!aggregatedRates[key]) {
       aggregatedRates[key] = {
         adjustment_type: rate.adjustment_type,
         tax_type_id: rate.tax_type_id,
         tax_rate: rate.tax_rate,
         include_in_cancel_fee: rate.include_in_cancel_fee,
-        sales_category: rate.sales_category,
+        sales_category: salesCategory,
         adjustment_value: 0,
       };
     }
