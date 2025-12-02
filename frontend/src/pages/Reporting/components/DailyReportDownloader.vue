@@ -437,15 +437,7 @@ const loadReport = async () => { // Made async to await getDailyReportData
             console.error('Failed to generate daily metrics:', result.error);
         }
     }
-
-    const nakashibetsuData = reportData.value.filter(r => r.hotel_name?.includes('中標津') && r.month?.includes('2025-12'));
-    console.log('[DailyReportDownloader] 中標津 2025-12 data:', nakashibetsuData);
-    
-    const luggageRow = nakashibetsuData.find(r => r.plan_name?.includes('荷物'));
-    if (luggageRow) {
-        console.log('[DailyReportDownloader] 荷物キープ row:', luggageRow);
-    }
-
+                    
     loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
     loadedDate.value = date;
 };
