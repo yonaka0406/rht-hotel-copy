@@ -41,7 +41,8 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
       AND DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $1::DATE)
       AND reservation_details.cancelled IS NULL
       AND reservations.type <> 'employee'
-      AND reservations.status NOT IN ('hold')      
+      AND reservations.status NOT IN ('hold')
+      AND COALESCE(reservation_details.is_accommodation, TRUE) = TRUE
     GROUP BY roomTotal.total_rooms, roomTotal.last_day;
   `;
 
@@ -79,9 +80,10 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
           COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
           COALESCE(rr.sales_category, 'accommodation') AS sales_category,
           COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) AS undecided_nights,
-          COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) AS confirmed_nights,
+          COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS confirmed_nights,
           COUNT(CASE WHEN r.type = 'employee' THEN 1 END) AS employee_nights,
           COUNT(CASE WHEN r.status = 'block' THEN 1 END) AS blocked_nights,
+          COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) = FALSE AND r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) AS non_accommodation_nights,
           (COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) +
            COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) +
            COUNT(CASE WHEN r.type = 'employee' THEN 1 END) +
@@ -112,6 +114,7 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
             confirmed_nights,
             employee_nights,
             blocked_nights,
+            non_accommodation_nights,
             total_occupied_nights,
             total_reservation_details_nights,
             (SELECT total_bookable_room_nights FROM total_bookable_nights) AS total_bookable_room_nights
@@ -126,6 +129,7 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
             0::bigint AS confirmed_nights,
             0::bigint AS employee_nights,
             0::bigint AS blocked_nights,
+            0::bigint AS non_accommodation_nights,
             0::bigint AS total_occupied_nights,
             0::bigint AS total_reservation_details_nights,
             total_bookable_room_nights
