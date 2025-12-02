@@ -30,7 +30,7 @@
                         {{ parseInt(slotProps.data.blocked_nights || '0').toLocaleString('ja-JP') }}
                     </template>
                 </Column>
-                <Column field="total_occupied_nights" header="合計稼働泊数" bodyStyle="text-align:right">
+                <Column field="total_occupied_nights" header="合計稼働数" bodyStyle="text-align:right">
                     <template #body="slotProps">
                         {{ parseInt(slotProps.data.total_occupied_nights || '0').toLocaleString('ja-JP') }}
                     </template>
