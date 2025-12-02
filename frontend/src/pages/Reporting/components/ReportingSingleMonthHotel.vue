@@ -234,32 +234,14 @@
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
 
-    // Helper
-    const formatCurrency = (value) => {
-        if (value === null || value === undefined || Number.isNaN(value)) return '- 円'; // Handle NaN
-        return parseFloat(value).toLocaleString('ja-JP') + ' 円';
-    };
-    const formatPercentage = (value) => {
-        if (value === null || value === undefined) return '-';
-        return parseFloat(value).toLocaleString('ja-JP', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
-    const _calculateVariancePercentage = (period, forecast) => {
-        if (forecast === 0 || forecast === null || forecast === undefined) {
-            return (period === 0 || period === null || period === undefined) ? '0.00' : 'N/A'; // Or handle as per requirement, e.g. 100% if period > 0
-        }
-        const variance = ((period - forecast) / forecast) * 100;
-        return variance.toFixed(2);
-    };
-    const formatYenInTenThousands = (value) => {
-        if (value === null || value === undefined) return '-';
-        const valueInMan = value / 10000;        
-        return valueInMan.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '万円';
-    };
-    const formatYenInTenThousandsNoDecimal = (value) => {
-        if (value === null || value === undefined) return '-';
-        const valueInMan = value / 10000;        
-        return valueInMan.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '万円';
-    };
+    // Utilities
+    import { 
+        formatCurrencyForReporting as formatCurrency, 
+        formatPercentage, 
+        formatYenInTenThousands, 
+        formatYenInTenThousandsNoDecimal 
+    } from '@/utils/formatUtils';
+    import { getSeverity as getSeverityUtil, colorScheme } from '@/utils/reportingUtils';
 
     // View selection
     const selectedView = ref('graph'); // Default view
@@ -369,34 +351,6 @@
     });
 
 
-    // Color scheme    
-    const colorScheme = {
-        // Solid base colors
-        actual: '#C8102E',      // Deep red for actual revenue
-        forecast: '#F2A900',    // Golden yellow for projected revenue
-        variance: '#555555',    // Neutral gray for variance label
-        toForecast: '#5AB1BB',  // Light blue for gap to forecast
-
-        // Gradient for Actual (from dark red to light red)
-        actual_gradient_top: '#A60D25',
-        actual_gradient_middle: '#C8102E',
-        actual_gradient_bottom: '#E94A57',
-
-        // Gradient for Forecast (from golden to soft yellow)
-        forecast_gradient_top: '#D48F00',
-        forecast_gradient_middle: '#F2A900',
-        forecast_gradient_bottom: '#FFE066',
-
-        // Gradient for Variance (negative to positive)
-        variance_gradient_top: '#888888',      // Light gray (low variance)
-        variance_gradient_middle: '#555555',   // Medium gray (baseline)
-        variance_gradient_bottom: '#222222',   // Dark gray (high variance)
-
-        // Gradient for To Forecast
-        toForecast_gradient_top: '#7FC5CC',
-        toForecast_gradient_middle: '#5AB1BB',
-        toForecast_gradient_bottom: '#3C8E93',
-    };
 
     // ECharts imports
     import * as echarts from 'echarts/core';
@@ -680,13 +634,7 @@
     };
 
     // Table
-    const getSeverity = (value) => {
-        if (value === null || value === undefined || value === -1) return 'secondary';
-        if (value > 0) return 'success';
-        if (value < -0.5) return 'danger';
-        if (value < 0) return 'warn';
-        return 'info';
-    };
+    const getSeverity = (value) => getSeverityUtil(value);
     const exportCSV = (tableType) => {
         let csvString = '';
         let filename = 'data.csv';

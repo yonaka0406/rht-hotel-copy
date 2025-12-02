@@ -4,7 +4,7 @@
  * Calculate variance percentage between actual and forecast values
  * @param {number} period - Actual period value
  * @param {number} forecast - Forecast value
- * @returns {string|number} Variance percentage or special value
+ * @returns {string} Variance percentage formatted to 2 decimal places or 'N/A'
  */
 export const calculateVariancePercentage = (period, forecast) => {
     if (forecast === 0 || forecast === null || forecast === undefined) {
