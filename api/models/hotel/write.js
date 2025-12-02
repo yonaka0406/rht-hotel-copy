@@ -230,18 +230,23 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
               };
             }
 
+            // Temp blocks are temporary holds (is_accommodation = TRUE)
+            // System blocks (non-temp) are permanent blocks (is_accommodation = FALSE)
+            const isAccommodation = block_type === 'temp';
+            
             await client.query(
-              `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, created_by, updated_by)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+              `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, is_accommodation, created_by, updated_by)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                ON CONFLICT (hotel_id, reservation_id, room_id, date) 
                WHERE cancelled IS NULL 
-               DO UPDATE SET updated_by = $6`,
+               DO UPDATE SET updated_by = $7`,
               [
                 currentHotelId,
                 mockReservationId,
                 date,
                 roomId,
                 number_of_people || 1,
+                isAccommodation,
                 updated_by,
                 updated_by,
               ]
@@ -422,10 +427,11 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
       for (const room of roomsToBlock) {
         const peopleForRoom = Math.min(number_of_people || 1, room.capacity);
         // Insert reservation details for each day, using the single mockReservationId
+        // blockRoomsByRoomType creates temp blocks (temporary holds), so is_accommodation = TRUE
         for (const date of dateArray) {
           await client.query(
-            `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, created_by, updated_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, is_accommodation, created_by, updated_by)
+             VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7)`,
             [
               hotel_id,
               mockReservationId,
