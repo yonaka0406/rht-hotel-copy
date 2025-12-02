@@ -14,7 +14,15 @@ export const validatePhone = (phone) => {
 };
 
 export const validateEmail = (email) => {
-    if (!email) return true; // Allow empty email addresses
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  if (!email) return true; // Allow empty email addresses
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+export const isValidDateString = (dateStr) => {
+  // Only allow YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return true;
+  }
+  return false;
 };
