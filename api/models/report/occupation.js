@@ -77,6 +77,7 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
     plan_data AS (
       SELECT
           COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
+          COALESCE(ph.sales_category, pg.sales_category) AS sales_category,
           COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) AS undecided_nights,
           COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) AS confirmed_nights,
           COUNT(CASE WHEN r.type = 'employee' THEN 1 END) AS employee_nights,
@@ -94,11 +95,13 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
         AND rd.date BETWEEN $2 AND $3
         AND rd.cancelled IS NULL
       GROUP BY
-          COALESCE(ph.name, pg.name, 'プラン未設定')
+          COALESCE(ph.name, pg.name, 'プラン未設定'),
+          COALESCE(ph.sales_category, pg.sales_category)
     )
     SELECT * FROM (
         SELECT 
             plan_name,
+            sales_category,
             undecided_nights,
             confirmed_nights,
             employee_nights,
@@ -112,6 +115,7 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
         
         SELECT
             'Total Available' AS plan_name,
+            NULL AS sales_category,
             0::bigint AS undecided_nights,
             0::bigint AS confirmed_nights,
             0::bigint AS employee_nights,
