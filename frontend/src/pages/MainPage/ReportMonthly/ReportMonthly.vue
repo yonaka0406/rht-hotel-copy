@@ -21,11 +21,15 @@
             />
 
             <LineChartPanel 
-                :lineChartTitle="lineChartTitle"
-                :lineChartAxisX="lineChartAxisX"
-                :lineChartSeriesData="lineChartSeriesData"
-                :lineChartSeriesSumData="lineChartSeriesSumData"
+                :allReservationsData="allReservationsData"
+                :selectedMonth="selectedMonth"
                 :viewMode="viewMode"
+                :metricsEffectiveStartDate="metricsEffectiveStartDate"
+                :metricsEffectiveEndDate="metricsEffectiveEndDate"
+                :formatDate="formatDate"
+                :normalizeDate="normalizeDate"
+                :addDaysUTC="addDaysUTC"
+                :isWeekend="isWeekend"
             />
 
             <HeatMapPanel 
@@ -145,7 +149,7 @@
     const forecastData = ref([]);
     const accountingData = ref([]);
     const salesByPlan = ref([]);
-    const occupationBreakdownData = ref(null);
+    const occupationBreakdownData = ref([]);
     const bookingSourceData = ref([]);
     const paymentTimingData = ref([]);
     const forecastDataByPlan = ref([]);
