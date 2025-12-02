@@ -297,6 +297,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
         ,details.addon_price
         ,(details.plan_price + details.addon_price) AS price
         ,details.payment
+        ,details.plan_sales_category
         ,details.clients_json
         ,details.payers_json
       FROM
@@ -307,6 +308,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
           SELECT 
             reservation_details.hotel_id
             ,reservation_details.reservation_id
+            ,COALESCE(ph.sales_category, pg.sales_category, 'accommodation') AS plan_sales_category
             ,rc.clients_json::TEXT AS clients_json
             ,rpc.clients_json::TEXT AS payers_json          
             ,COALESCE(rp.payment,0) as payment          
@@ -330,6 +332,8 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
             ) AS addon_price
           FROM
             reservation_details 
+              LEFT JOIN plans_hotel ph ON reservation_details.plans_hotel_id = ph.id AND reservation_details.hotel_id = ph.hotel_id
+              LEFT JOIN plans_global pg ON reservation_details.plans_global_id = pg.id
               LEFT JOIN
             (
               SELECT 
@@ -397,6 +401,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
           GROUP BY
             reservation_details.hotel_id
             ,reservation_details.reservation_id
+            ,COALESCE(ph.sales_category, pg.sales_category, 'accommodation')
             ,rc.clients_json::TEXT
             ,rpc.clients_json::TEXT          
             ,rp.payment
