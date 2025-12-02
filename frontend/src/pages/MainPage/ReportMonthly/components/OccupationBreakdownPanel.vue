@@ -52,11 +52,10 @@
                         <Column footer="確定泊数 / (合計利用可能泊数 - ブロック泊数):" :colspan="5" footerStyle="text-align:right"/>
                         <Column :footer="
                             (() => {
-                                const confirmed = occupationBreakdownTotals.confirmed_nights;
-                                const totalAvailable = occupationBreakdownTotals.total_bookable_room_nights;
-                                const blocked = occupationBreakdownTotals.blocked_nights;
-                                const denominator = totalAvailable - blocked;
-                                if (denominator <= 0) return 'N/A';
+                                                                        const confirmed = confirmedOccupancyNights.value;
+                                                                        const totalAvailable = occupationBreakdownTotals.total_bookable_room_nights;
+                                                                        const blocked = blockedOccupancyNights.value;
+                                                                        const denominator = totalAvailable - blocked;                                if (denominator <= 0) return 'N/A';
                                 return ((confirmed / denominator) * 100).toFixed(2) + '%';
                             })()
                         " footerStyle="text-align:right"/>
@@ -145,9 +144,35 @@ const occupationBreakdownTotals = computed(() => {
     return totals;
 });
 
+const confirmedOccupancyNights = computed(() => {
+    if (!props.occupationBreakdownData) return 0;
+    return props.occupationBreakdownData
+        .filter(item => 
+            item.plan_name !== 'Total Available' &&
+            item.sales_category !== 'employee' &&
+            item.sales_category !== 'block'
+        )
+        .reduce((sum, item) => sum + parseInt(item.confirmed_nights || '0'), 0);
+});
+
+const blockedOccupancyNights = computed(() => {
+    if (!props.occupationBreakdownData) return 0;
+    return props.occupationBreakdownData
+        .filter(item => 
+            item.plan_name !== 'Total Available' &&
+            item.sales_category !== 'employee' && 
+            item.sales_category !== 'block'     
+        )
+        .reduce((sum, item) => sum + parseInt(item.blocked_nights || '0'), 0);
+});
+
 const filteredOccupationBreakdownData = computed(() => {
     if (!props.occupationBreakdownData) return [];
-    return props.occupationBreakdownData.filter(item => item.plan_name !== 'Total Available');
+    return props.occupationBreakdownData.filter(item => 
+        item.plan_name !== 'Total Available' &&
+        item.sales_category !== 'employee' &&
+        item.sales_category !== 'block'
+    );
 });
 
 const processOccupationBreakdownChartData = () => {
