@@ -39,30 +39,137 @@ echarts.use([
 ]);
 
 const props = defineProps({
-    lineChartTitle: {
-        type: String,
-        required: true
-    },
-    lineChartAxisX: {
+    allReservationsData: {
         type: Array,
         required: true
     },
-    lineChartSeriesData: {
-        type: Array,
-        required: true
-    },
-    lineChartSeriesSumData: {
-        type: Array,
+    selectedMonth: {
+        type: Date,
         required: true
     },
     viewMode: {
         type: String,
+        required: true
+    },
+    metricsEffectiveStartDate: {
+        type: String,
+        required: true
+    },
+    metricsEffectiveEndDate: {
+        type: String,
+        required: true
+    },
+    formatDate: {
+        type: Function,
+        required: true
+    },
+    normalizeDate: {
+        type: Function,
+        required: true
+    },
+    addDaysUTC: {
+        type: Function,
+        required: true
+    },
+    isWeekend: {
+        type: Function,
         required: true
     }
 });
 
 const lineChart = ref(null);
 let myLineChart = null;
+
+const computedLineChartTitle = computed(() => {
+    const year = props.selectedMonth.getFullYear();
+    const month = props.selectedMonth.getMonth() + 1;
+    if (props.viewMode === 'month') {
+        return `${year}年${month}月の日次売上`;
+    } else {
+        return `${year}年度 月次売上 (1月～${month}月累計)`;
+    }
+});
+
+const yearOfSelectedMonth = computed(() => props.selectedMonth.getFullYear());
+
+const processLineChartData = () => {
+    if (!props.allReservationsData || !lineChart.value) {
+        initLineChart([], [], [], []);
+        return;
+    }
+
+    const startDateForChart = props.formatDate(new Date(props.metricsEffectiveStartDate));
+    const endDateForChart = props.formatDate(new Date(props.metricsEffectiveEndDate));
+
+    const relevantChartReservations = props.allReservationsData.filter(res => {
+        const resDate = res.date;
+        return resDate >= startDateForChart && resDate <= endDateForChart;
+    });
+    
+    const dailySalesMap = new Map(); 
+    relevantChartReservations.forEach(res => {
+        const dayKey = res.date;            
+        const currentSales = dailySalesMap.get(dayKey) || { accommodation: 0, other: 0 };
+        currentSales.accommodation += parseFloat(res.accommodation_price || 0);
+        currentSales.other += parseFloat(res.other_price || 0);
+        dailySalesMap.set(dayKey, currentSales);
+    });
+    
+    const newXAxis = [];
+    const accommodationData = [];
+    const otherData = [];
+    const cumulativeAccommodationData = [];
+    let cumulativeAccommodationSum = 0;
+
+    if (props.viewMode === 'month') {
+        let currentDate = props.normalizeDate(new Date(startDateForChart));
+        const endDate = props.normalizeDate(new Date(endDateForChart));
+        while (currentDate <= endDate) {
+            
+            const dayKey = props.formatDate(currentDate);
+            newXAxis.push(dayKey);
+
+            const salesForDay = dailySalesMap.get(dayKey) || { accommodation: 0, other: 0 };
+            
+            // Accommodation
+            const accItem = { value: Math.round(salesForDay.accommodation) };
+            if (props.isWeekend(dayKey)) accItem.itemStyle = { color: '#FFC0CB' };
+            accommodationData.push(accItem);
+
+            // Other Sales
+            const otherItem = { value: Math.round(salesForDay.other) };
+            if (props.isWeekend(dayKey)) otherItem.itemStyle = { color: '#FFC0CB' };
+            otherData.push(otherItem);
+
+            cumulativeAccommodationSum += salesForDay.accommodation;
+            cumulativeAccommodationData.push(Math.round(cumulativeAccommodationSum));
+
+            currentDate = props.addDaysUTC(currentDate, 1);
+        }                        
+    } else { // yearCumulative
+        const endMonthIndex = props.selectedMonth.getMonth();
+        for (let monthIdx = 0; monthIdx <= endMonthIndex; monthIdx++) {
+            const currentYear = yearOfSelectedMonth.value;
+            const monthKey = `${currentYear}-${String(monthIdx + 1).padStart(2, '0')}`; // For filtering dailySalesMap
+
+            let salesForMonthAccommodation = 0;
+            let salesForMonthOther = 0;
+            dailySalesMap.forEach((sales, fullDateKey) => { // sales is { accommodation, other }
+                if (fullDateKey.startsWith(monthKey)) {
+                    salesForMonthAccommodation += sales.accommodation;
+                    salesForMonthOther += sales.other;
+                }
+            });
+            newXAxis.push(`${currentYear}年${monthIdx + 1}月`);
+            accommodationData.push(Math.round(salesForMonthAccommodation));
+            otherData.push(Math.round(salesForMonthOther));
+
+            cumulativeAccommodationSum += salesForMonthAccommodation;
+            cumulativeAccommodationData.push(Math.round(cumulativeAccommodationSum));
+        }
+    }
+    initLineChart(newXAxis, accommodationData, otherData, cumulativeAccommodationData);
+};
 
 const initLineChart = () => {
     if (!lineChart.value) return;
