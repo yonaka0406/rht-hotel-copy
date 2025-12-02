@@ -4,7 +4,7 @@
             <ReportSelectionCard v-model:selectedMonth="selectedMonth" v-model:viewMode="viewMode" :viewOptions="viewOptions" />
             
 
-            <KpiCardsPanel 
+            <KPIMetricsPanel 
                 :viewMode="viewMode"
                 :displayedCumulativeSales="displayedCumulativeSales"
                 :forecastSales="forecastSales"
@@ -68,7 +68,7 @@
 
     // Components
     import ReportSelectionCard from './components/ReportSelectionCard.vue';
-    import KpiCardsPanel from './components/KpiCardsPanel.vue';
+    import KPIMetricsPanel from './components/KPIMetricsPanel.vue';
     import LineChartPanel from './components/LineChartPanel.vue';
     import HeatMapPanel from './components/HeatMapPanel.vue';
     import BookerTypeAndStayDurationPanel from './components/BookerTypeAndStayDurationPanel.vue';
