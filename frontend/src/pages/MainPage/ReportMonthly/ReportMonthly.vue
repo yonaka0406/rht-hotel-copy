@@ -263,7 +263,7 @@
         let totalRoomsSold = 0;
 
         filteredMetricsReservations.forEach(res => {
-            totalRevenue += parseFloat(res.price || 0);
+            totalRevenue += parseFloat(res.accommodation_price || 0);
             totalRoomsSold += parseInt(res.room_count || 0);
         });        
 
