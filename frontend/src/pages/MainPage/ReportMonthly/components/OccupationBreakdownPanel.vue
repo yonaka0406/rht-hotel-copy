@@ -243,19 +243,20 @@ const initOccupationBreakdownChart = () => {
         
         const planEntry = planMap.get(planName);
         
-        // Add confirmed nights
+        // Add confirmed nights (accommodation)
         const confirmed = parseInt(plan.confirmed_nights || '0');
-        if (plan.sales_category === 'other') {
-             planEntry['確定 (その他)'] += confirmed;
-        } else {
-             planEntry['確定'] += confirmed;
-        }
+        planEntry['確定'] += confirmed;
+        
+        // Add non-accommodation nights
+        const nonAccommodation = parseInt(plan.non_accommodation_nights || '0');
+        planEntry['確定 (その他)'] += nonAccommodation;
         
         // Add blocked nights
         planEntry['ブロック'] += parseInt(plan.blocked_nights || '0');
         
         // Count total occupied nights for this plan
         totalOccupiedNights += confirmed;
+        totalOccupiedNights += nonAccommodation;
         totalOccupiedNights += parseInt(plan.blocked_nights || '0');
         totalOccupiedNights += parseInt(plan.employee_nights || '0');
     });

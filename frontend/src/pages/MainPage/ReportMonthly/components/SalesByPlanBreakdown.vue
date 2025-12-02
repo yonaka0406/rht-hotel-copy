@@ -3,7 +3,7 @@
         <template #title>
             <div class="flex justify-between items-center">
                 <div>
-                    <p>プラン別売上内訳</p>
+                    <p>プラン別宿泊売上内訳</p>
                     <small v-if="salesByPlanChartMode === 'tax_included'">（税込み）</small>
                     <small v-else>（税抜き）</small>
                 </div>                        
@@ -137,6 +137,8 @@ const salesByPlanChartOptions = ref([
 const combinedSalesByPlan = computed(() => {
     const combined = {};
 
+    console.log('[SalesByPlan] Raw salesByPlan data:', props.salesByPlan);
+
     props.salesByPlan.forEach(item => {
         const planName = item.plan_name;
         if (!combined[planName]) {
@@ -154,8 +156,9 @@ const combinedSalesByPlan = computed(() => {
             combined[planName].cancelled_sales += parseFloat(item.accommodation_sales || 0) + parseFloat(item.other_sales || 0);
             combined[planName].cancelled_net_sales += parseFloat(item.accommodation_sales_net || 0) + parseFloat(item.other_sales_net || 0);
         } else {
-            combined[planName].regular_sales += parseFloat(item.accommodation_sales || 0) + parseFloat(item.other_sales || 0);
-            combined[planName].regular_net_sales += parseFloat(item.accommodation_sales_net || 0) + parseFloat(item.other_sales_net || 0);
+            // 通常売上 should only include accommodation_sales, not other_sales
+            combined[planName].regular_sales += parseFloat(item.accommodation_sales || 0);
+            combined[planName].regular_net_sales += parseFloat(item.accommodation_sales_net || 0);
         }
     });
 
@@ -175,7 +178,9 @@ const combinedSalesByPlan = computed(() => {
         combined[planName].forecast_sales += parseFloat(forecastItem.accommodation_revenue || 0);
     });
 
-    return Object.values(combined);
+    const result = Object.values(combined);
+    console.log('[SalesByPlan] Combined data:', result);
+    return result;
 });
 
 const processedSalesByPlan = computed(() => {
