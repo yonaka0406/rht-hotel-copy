@@ -68,7 +68,7 @@
     import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from "vue";    
 
     // Primevue
-    import { Card, DataTable, Column, ColumnGroup, Row, Panel, Badge } from 'primevue';
+    import { Card, DataTable, Column, ColumnGroup, Row, Panel } from 'primevue';
 
     // Components
     import ReportSelectionCard from './components/ReportSelectionCard.vue';
@@ -153,39 +153,6 @@
     const bookingSourceData = ref([]);
     const paymentTimingData = ref([]);
     const forecastDataByPlan = ref([]);
-
-    const processedSalesByPlan = computed(() => {
-        const sortedData = [...combinedSalesByPlan.value];
-        sortedData.sort((a, b) => {
-            // Primary sort by regular_sales (descending)
-            if (b.regular_sales !== a.regular_sales) {
-                return b.regular_sales - a.regular_sales;
-            }
-            
-            // Secondary sort by plan_name (ascending) if regular_sales are the same
-            if (a.plan_name < b.plan_name) return -1;
-            if (a.plan_name > b.plan_name) return 1;
-            return 0;
-        });
-        return sortedData;
-    });
-
-    const salesByPlanTotals = computed(() => {
-        const totals = processedSalesByPlan.value.reduce((acc, item) => {
-            acc.regular_sales += item.regular_sales;
-            acc.cancelled_sales += item.cancelled_sales;
-            acc.regular_net_sales += item.regular_net_sales;
-            acc.cancelled_net_sales += item.cancelled_net_sales;
-            acc.forecast_sales += item.forecast_sales;
-            return acc;
-        }, { regular_sales: 0, cancelled_sales: 0, regular_net_sales: 0, cancelled_net_sales: 0, forecast_sales: 0 });
-
-        totals.grand_total_sales = totals.regular_sales + totals.cancelled_sales;
-        totals.grand_total_net_sales = totals.regular_net_sales + totals.cancelled_net_sales;
-        totals.grand_total_forecast_sales = totals.forecast_sales;
-
-        return totals;
-    });
 
     const dataFetchStartDate = computed(() => startOfYear.value);
     const dataFetchEndDate = computed(() => { // For heatmap range, ending last day of selectedMonth + 2 months
@@ -336,29 +303,6 @@
         revPARDifference.value = Math.round(revPAR.value) - forecastRevPAR.value;
         OCCDifference.value = OCC.value - forecastOCC.value;
     };
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     const handleResize = () => {

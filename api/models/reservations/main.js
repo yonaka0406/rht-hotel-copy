@@ -25,7 +25,8 @@ const formatDate = (date) => {
 const DEFAULT_CHECK_IN_TIME = '16:00';
 const DEFAULT_CHECK_OUT_TIME = '10:00';
 
-const SYSTEM_BLOCK_USER_ID = '11111111-1111-1111-1111-111111111111';
+
+
 
 // Function to Select
 
@@ -301,7 +302,7 @@ const addReservationDetail = async (requestId, detail, client = null) => {
     detail.price,
     detail.created_by,
     detail.updated_by,
-    isSystemBlock(detail.created_by) ? false : (detail.is_accommodation ?? true)
+    (detail.is_accommodation ?? true)
   ];
   //logger.debug('[addReservationDetail] Inserting with values:', values);
 
@@ -374,7 +375,7 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
           d.hotel_id, d.reservation_id, d.date, d.room_id,
           d.plans_global_id, d.plans_hotel_id, d.plan_name, d.plan_type,
           d.number_of_people, d.price, d.created_by, d.updated_by,
-          isSystemBlock(d.created_by) ? false : (d.is_accommodation ?? true)
+          (d.is_accommodation ?? true)
         );
         return `(${Array.from(
           { length: NUM_COLUMNS },
@@ -464,7 +465,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
 
 const updateBlockToReservation = async (requestId, reservationId, clientId, userId, dbClient = null) => {
   const pool = dbClient || getPool(requestId);
-  
+
   const query = `
     UPDATE reservations
     SET
@@ -505,7 +506,7 @@ const updateReservationMemberCount = async (requestId, reservationId, userId, db
     WHERE r.id = $1
     RETURNING *;
   `;
-  
+
   try {
     const result = await pool.query(query, [reservationId, userId]);
     logger.debug(`[updateReservationMemberCount] Updated reservation ${reservationId}:`, result.rows[0]);
@@ -1125,23 +1126,23 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
             ORDER BY date ASC LIMIT 1
           `;
-          const sourceResult = await client.query(sourceDetailQuery, [reservationIdForDetails, hotel_id, old_room_id]);
-    
-          if (sourceResult.rows.length > 0) {
-            const sourceDetailId = sourceResult.rows[0].id;
-            //logger.debug(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
-    
-            const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
-            clientsToCopy = clientsResult.rows;
-            //logger.debug(`Found ${clientsToCopy.length} clients to copy.`);
-    
-            addonsToCopy = await selectReservationAddonByDetail(requestId, sourceDetailId, client);
-            //logger.debug(`Found ${addonsToCopy.length} addons to copy.`);
-          }
-          // --- NEW LOGIC: END ---
-    
-          // 2. Delete old records
-          const deleteOldQuery = `
+      const sourceResult = await client.query(sourceDetailQuery, [reservationIdForDetails, hotel_id, old_room_id]);
+
+      if (sourceResult.rows.length > 0) {
+        const sourceDetailId = sourceResult.rows[0].id;
+        //logger.debug(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
+
+        const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
+        clientsToCopy = clientsResult.rows;
+        //logger.debug(`Found ${clientsToCopy.length} clients to copy.`);
+
+        addonsToCopy = await selectReservationAddonByDetail(requestId, sourceDetailId, client);
+        //logger.debug(`Found ${addonsToCopy.length} addons to copy.`);
+      }
+      // --- NEW LOGIC: END ---
+
+      // 2. Delete old records
+      const deleteOldQuery = `
             DELETE FROM reservation_details 
             WHERE reservation_id = $1 
               AND hotel_id = $2 
@@ -1149,32 +1150,32 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               AND (date < $4 OR date >= $5)
             RETURNING id, date;
           `;
-          const deleteResult = await client.query(deleteOldQuery, [reservationIdForDetails, hotel_id, old_room_id, new_check_in, new_check_out]);
-          //logger.debug(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
-    
-          // 3. Create all required new dates
-          const newDates = [];
-          let currentDate = new Date(new_check_in);
-          while (currentDate < new Date(new_check_out)) {
-            newDates.push(formatDate(currentDate));
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-    
-          const existingDates = new Set(originalDetailsResult.rows.map(d => formatDate(new Date(d.date))));
-          const datesToCreate = newDates.filter(d => !existingDates.has(d));
-    
-          if (datesToCreate.length > 0) {
-            const template = originalDetailsResult.rows[0] || {
-              plans_global_id: null,
-              plans_hotel_id: null,
-              plan_name: null,
-              plan_type: 'per_room',
-              number_of_people: number_of_people,
-              price: 0,
-              billable: true
-            };
-    
-            const insertDetailsQuery = `
+      const deleteResult = await client.query(deleteOldQuery, [reservationIdForDetails, hotel_id, old_room_id, new_check_in, new_check_out]);
+      //logger.debug(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
+
+      // 3. Create all required new dates
+      const newDates = [];
+      let currentDate = new Date(new_check_in);
+      while (currentDate < new Date(new_check_out)) {
+        newDates.push(formatDate(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      const existingDates = new Set(originalDetailsResult.rows.map(d => formatDate(new Date(d.date))));
+      const datesToCreate = newDates.filter(d => !existingDates.has(d));
+
+      if (datesToCreate.length > 0) {
+        const template = originalDetailsResult.rows[0] || {
+          plans_global_id: null,
+          plans_hotel_id: null,
+          plan_name: null,
+          plan_type: 'per_room',
+          number_of_people: number_of_people,
+          price: 0,
+          billable: true
+        };
+
+        const insertDetailsQuery = `
               INSERT INTO reservation_details ( 
                 hotel_id, reservation_id, date, room_id, 
                 plans_global_id, plans_hotel_id, plan_name, plan_type, 
@@ -1197,75 +1198,75 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               FROM unnest($12::date[]) as date_series(date)
               RETURNING id;
             `;
-    
-            const insertDetailsValues = [
-              hotel_id,
-              newReservationId,
-              new_room_id,
-              template.plans_global_id,
-              template.plans_hotel_id,
-              template.plan_name,
-              template.plan_type,
-              template.number_of_people,
-              template.price,
-              template.billable,
-              updated_by,
-              datesToCreate
-            ];
-    
-            const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
-            const newReservationDetails = insertedDetails.rows;
-            //logger.debug(`Inserted ${newReservationDetails.length} new reservation_details records.`);
-    
-            // --- MODIFIED LOGIC: START ---
-            // 4. Copy clients/addons to new records using the data fetched earlier
-            if (newReservationDetails.length > 0) {
-              let clientsInserted = 0;
-              let addonsInserted = 0;
-    
-              for (const detail of newReservationDetails) {
-                // Insert clients
-                if (clientsToCopy.length > 0) {
-                  for (const clientRow of clientsToCopy) {
-                    const reservationClient = {
-                      hotel_id: hotel_id,
-                      reservation_details_id: detail.id,
-                      client_id: clientRow.client_id,
-                      created_by: updated_by,
-                      updated_by: updated_by
-                    };
-                    const clientResult = await clientsModels.addReservationClient(requestId, reservationClient, client);
-                    clientsInserted += (clientResult ? 1 : 0); // Assuming addReservationClient returns the inserted row
-                  }
-                }
-    
-                // Insert addons
-                if (addonsToCopy.length > 0) {
-                  for (const addonRow of addonsToCopy) {
-                    const addonToInsert = {
-                      hotel_id: hotel_id,
-                      reservation_detail_id: detail.id,
-                      addons_global_id: addonRow.addons_global_id,
-                      addons_hotel_id: addonRow.addons_hotel_id,
-                      addon_name: addonRow.addon_name,
-                      addon_type: addonRow.addon_type,
-                      quantity: addonRow.quantity,
-                      price: addonRow.price,
-                      tax_type_id: addonRow.tax_type_id,
-                      tax_rate: addonRow.tax_rate,
-                      created_by: updated_by,
-                      updated_by: updated_by,
-                    };
-                    await addReservationAddon(requestId, addonToInsert, client);
-                    addonsInserted += 1; // Assuming addReservationAddon returns a single row
-                  }
-                }
+
+        const insertDetailsValues = [
+          hotel_id,
+          newReservationId,
+          new_room_id,
+          template.plans_global_id,
+          template.plans_hotel_id,
+          template.plan_name,
+          template.plan_type,
+          template.number_of_people,
+          template.price,
+          template.billable,
+          updated_by,
+          datesToCreate
+        ];
+
+        const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
+        const newReservationDetails = insertedDetails.rows;
+        //logger.debug(`Inserted ${newReservationDetails.length} new reservation_details records.`);
+
+        // --- MODIFIED LOGIC: START ---
+        // 4. Copy clients/addons to new records using the data fetched earlier
+        if (newReservationDetails.length > 0) {
+          let clientsInserted = 0;
+          let addonsInserted = 0;
+
+          for (const detail of newReservationDetails) {
+            // Insert clients
+            if (clientsToCopy.length > 0) {
+              for (const clientRow of clientsToCopy) {
+                const reservationClient = {
+                  hotel_id: hotel_id,
+                  reservation_details_id: detail.id,
+                  client_id: clientRow.client_id,
+                  created_by: updated_by,
+                  updated_by: updated_by
+                };
+                const clientResult = await clientsModels.addReservationClient(requestId, reservationClient, client);
+                clientsInserted += (clientResult ? 1 : 0); // Assuming addReservationClient returns the inserted row
               }
-              //logger.debug(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
             }
-            // --- MODIFIED LOGIC: END ---
+
+            // Insert addons
+            if (addonsToCopy.length > 0) {
+              for (const addonRow of addonsToCopy) {
+                const addonToInsert = {
+                  hotel_id: hotel_id,
+                  reservation_detail_id: detail.id,
+                  addons_global_id: addonRow.addons_global_id,
+                  addons_hotel_id: addonRow.addons_hotel_id,
+                  addon_name: addonRow.addon_name,
+                  addon_type: addonRow.addon_type,
+                  quantity: addonRow.quantity,
+                  price: addonRow.price,
+                  tax_type_id: addonRow.tax_type_id,
+                  tax_rate: addonRow.tax_rate,
+                  created_by: updated_by,
+                  updated_by: updated_by,
+                };
+                await addReservationAddon(requestId, addonToInsert, client);
+                addonsInserted += 1; // Assuming addReservationAddon returns a single row
+              }
+            }
           }
+          //logger.debug(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
         }
+        // --- MODIFIED LOGIC: END ---
+      }
+    }
     // Update reservations table with new check_in and check_out
     //logger.debug(`Updating main reservation record ${newReservationId} with new dates.`);
     const updateReservationQuery = `
@@ -1580,7 +1581,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   } else {
     // If no rates, we can't determine sales_category, so stick to default isAccommodation = true
     // This is consistent with the migration default for existing records
-    isAccommodation = true; 
+    isAccommodation = true;
   }
 
   const updateReservationDetailsQuery = `
@@ -2870,44 +2871,44 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               SELECT id, date FROM reservation_details
               WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
           `;
-          const detailsResult = await internalClient.query(detailsQuery, [reservationId, hotel_id, firstRoomId]);
-          const detailsForRoom = detailsResult.rows;
+        const detailsResult = await internalClient.query(detailsQuery, [reservationId, hotel_id, firstRoomId]);
+        const detailsForRoom = detailsResult.rows;
 
-          if (detailsForRoom.length > 0) {
-              const checkIn = BasicInformation.CheckInDate;
-              const checkOut = BasicInformation.CheckOutDate;
+        if (detailsForRoom.length > 0) {
+          const checkIn = BasicInformation.CheckInDate;
+          const checkOut = BasicInformation.CheckOutDate;
 
-              const availableSpot = await selectAndLockAvailableParkingSpot(
-                  requestId,
-                  hotel_id,
-                  checkIn,
-                  checkOut,
-                  100, // capacity_units_required
-                  internalClient
-              );
+          const availableSpot = await selectAndLockAvailableParkingSpot(
+            requestId,
+            hotel_id,
+            checkIn,
+            checkOut,
+            100, // capacity_units_required
+            internalClient
+          );
 
-              if (availableSpot) {
-                  const parkingSpotId = availableSpot.parking_spot_id;
+          if (availableSpot) {
+            const parkingSpotId = availableSpot.parking_spot_id;
 
-                  const parkingInsertPromises = detailsForRoom.map(async detail => {
-                      const addonToInsert = {
-                          hotel_id: hotel_id,
-                          reservation_detail_id: detail.id,
-                          addons_global_id: 3, // Assuming 3 is the global ID for parking
-                          addons_hotel_id: null, // Parking is global in this context
-                          addon_name: '駐車場',
-                          addon_type: 'parking',
-                          quantity: 1,
-                          price: 0,
-                          tax_type_id: 3, // Assuming 3 is the tax_type_id for 10% tax
-                          tax_rate: 0.1, // Assuming 0.1 is the tax_rate
-                          created_by: 1,
-                          updated_by: 1
-                      };
-                      const createdAddon = await addReservationAddon(requestId, addonToInsert, internalClient);
-                      const reservationAddonId = createdAddon.id;
+            const parkingInsertPromises = detailsForRoom.map(async detail => {
+              const addonToInsert = {
+                hotel_id: hotel_id,
+                reservation_detail_id: detail.id,
+                addons_global_id: 3, // Assuming 3 is the global ID for parking
+                addons_hotel_id: null, // Parking is global in this context
+                addon_name: '駐車場',
+                addon_type: 'parking',
+                quantity: 1,
+                price: 0,
+                tax_type_id: 3, // Assuming 3 is the tax_type_id for 10% tax
+                tax_rate: 0.1, // Assuming 0.1 is the tax_rate
+                created_by: 1,
+                updated_by: 1
+              };
+              const createdAddon = await addReservationAddon(requestId, addonToInsert, internalClient);
+              const reservationAddonId = createdAddon.id;
 
-                      const parkingQuery = `
+              const parkingQuery = `
                           INSERT INTO reservation_parking (
                               hotel_id,
                               reservation_details_id,
@@ -2920,19 +2921,19 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                               updated_by
                           ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', 1, 1)
                       `;
-                      const parkingValues = [
-                          hotel_id,
-                          detail.id,
-                          reservationAddonId,
-                          1, // vehicle_category_id
-                          parkingSpotId,
-                          detail.date
-                      ];
-                      return internalClient.query(parkingQuery, parkingValues);
-                  });
-                  await Promise.all(parkingInsertPromises);
-              }
+              const parkingValues = [
+                hotel_id,
+                detail.id,
+                reservationAddonId,
+                1, // vehicle_category_id
+                parkingSpotId,
+                detail.date
+              ];
+              return internalClient.query(parkingQuery, parkingValues);
+            });
+            await Promise.all(parkingInsertPromises);
           }
+        }
       }
     } catch (parkingError) {
       logger.warn('Failed to assign parking spot during OTA reservation creation. This error is non-critical and the reservation will be created without parking.', {

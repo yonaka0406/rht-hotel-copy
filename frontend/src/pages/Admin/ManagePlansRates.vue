@@ -72,6 +72,16 @@
                     </div>
                 </template>
             </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">販売区分:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <Badge v-for="category in filteredSalesCategory" :key="category" :value="formatSalesCategory(category)" severity="secondary" class="mr-2"></Badge>
+                    </div>
+                </template>
+            </Card>
             
         </div>
 
@@ -119,6 +129,10 @@
                                         value="キャンセル料対象"
                                         severity="danger"
                                         class="ml-1">
+                                    </Badge>
+                                    <Badge :value="formatSalesCategory(slotProps.data.sales_category)" 
+                                           :severity="slotProps.data.sales_category === 'other' ? 'warn' : 'success'" 
+                                           class="ml-1">
                                     </Badge>
                                     
                                 </template>
@@ -191,6 +205,10 @@
                                         severity="danger"
                                         class="ml-1">
                                     </Badge>
+                                    <Badge :value="formatSalesCategory(slotProps.data.sales_category)" 
+                                           :severity="slotProps.data.sales_category === 'other' ? 'warn' : 'success'" 
+                                           class="ml-1">
+                                    </Badge>
                                     
                                 </template>
                             </Column>
@@ -262,6 +280,10 @@
                                         severity="danger"
                                         class="ml-1">
                                     </Badge>
+                                    <Badge :value="formatSalesCategory(slotProps.data.sales_category)" 
+                                           :severity="slotProps.data.sales_category === 'other' ? 'warn' : 'success'" 
+                                           class="ml-1">
+                                    </Badge>
                                 </template>
                             </Column>
                             <Column header="条件" style="min-width: 200px;">
@@ -308,15 +330,26 @@
         <Dialog header="新規調整" v-model:visible="showAdjustmentDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
             <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
                 <div class="col-span-2">
-                <FloatLabel>
-                    <label for="adjustmentType">調整種類 *</label>
-                    <Select v-model="newAdjustment.adjustment_type"
-                    :options="adjustmentTypes"
-                    optionLabel="label"
-                    optionValue="value"
-                    fluid
-                    required />
-                </FloatLabel>
+                    <FloatLabel>
+                        <Select v-model="newAdjustment.adjustment_type"
+                        :options="adjustmentTypes"
+                        optionLabel="label"
+                        optionValue="value"
+                        fluid
+                        required />
+                    </FloatLabel>
+                </div>
+                <div class="col-span-2">
+                    <FloatLabel>
+                        <Select
+                            v-model="newAdjustment.sales_category"
+                            :options="sales_category_options"
+                            optionLabel="label"
+                            optionValue="value"
+                            fluid
+                        />
+                        <label>販売区分</label>
+                    </FloatLabel>
                 </div>
                 <div class="col-span-1">
                 <FloatLabel>
@@ -435,16 +468,27 @@
         <Dialog header="調整編集" v-model:visible="showEditAdjustmentDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
             <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
                 <div class="col-span-2">
-                <FloatLabel>
-                    <label for="adjustmentType">調整種類 *</label>
-                    <Select v-model="editAdjustment.adjustment_type"
-                        :options="adjustmentTypes"
-                        optionLabel="label"
-                        optionValue="value"
-                        fluid
-                        required 
-                    />
-                </FloatLabel>
+                    <FloatLabel>
+                        <Select v-model="editAdjustment.adjustment_type"
+                            :options="adjustmentTypes"
+                            optionLabel="label"
+                            optionValue="value"
+                            fluid
+                            required 
+                        />
+                    </FloatLabel>
+                </div>
+                <div class="col-span-2">
+                    <FloatLabel>
+                        <Select
+                            v-model="editAdjustment.sales_category"
+                            :options="sales_category_options"
+                            optionLabel="label"
+                            optionValue="value"
+                            fluid
+                        />
+                        <label>販売区分</label>
+                    </FloatLabel>
                 </div>
                 <div class="col-span-1">
                 <FloatLabel>
@@ -644,6 +688,11 @@
         { label: '月毎', value: 'month' },
     ];
 
+    const sales_category_options = ref([
+        { label: '宿泊', value: 'accommodation' },
+        { label: 'その他', value: 'other' },
+    ]);
+
     // Panel    
     const selectedDate = ref(new Date().toISOString().split('T')[0]);
     const planId = ref({                
@@ -686,6 +735,7 @@
             date_end: null,
             include_in_cancel_fee: false,
             comment: null,
+            sales_category: 'accommodation'
         };
     };
     const editAdjustmentReset = () => {
@@ -703,6 +753,7 @@
             date_end: null,
             include_in_cancel_fee: false,
             comment: null,
+            sales_category: 'accommodation'
         };
     };
     const adjustmentNetPrice = computed(() => {
@@ -738,7 +789,10 @@
     };
     const openEditAdjustmentDialog = (adjustmentData) => {
         // console.log('[openEditAdjustmentDialog] adjustmentData:', adjustmentData);
-        editAdjustment.value = { ...adjustmentData };
+        editAdjustment.value = { 
+            ...adjustmentData, 
+            sales_category: adjustmentData.sales_category || 'accommodation' 
+        };
         // Ensure condition_type is set before updating options
         updateEditConditionValues();
         // Log condition_type and conditionValues
@@ -1075,6 +1129,30 @@
         }, 0);
         return sum !== 0 ? sum : null;
     });
+    const filteredSalesCategory = computed(() => {
+        if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
+            return [props.plan.sales_category];
+        }
+        const selectedDateObj = new Date(selectedDate.value);
+        const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
+        const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
+        const categories = new Set();
+        filteredCurrentConditions.value.forEach(rate => {
+            let match = false;
+            if (rate.condition_type === 'day_of_week') {
+                match = toArray(rate.condition_value).includes(selectedDay);
+            } else if (rate.condition_type === 'month') {
+                match = toArray(rate.condition_value).includes(selectedMonth);
+            } else if (rate.condition_type === 'no_restriction') {
+                match = true;
+            }
+            if (match) {
+                categories.add(rate.sales_category);
+            }
+        });
+        const result = Array.from(categories);
+        return result.length > 0 ? result : [props.plan.sales_category];
+    });
     const filteredCurrentConditions = computed(() => {
         if (!selectedDate.value) return null;
 
@@ -1301,6 +1379,22 @@
             }
         }
         return [val];
+    };
+
+    const formatSalesCategory = (categories) => {
+        if (!Array.isArray(categories)) {
+            categories = [categories];
+        }
+        return categories.map(category => {
+            switch (category) {
+                case 'accommodation':
+                    return '宿泊';
+                case 'other':
+                    return 'その他';
+                default:
+                    return category;
+            }
+        }).join(', ');
     };
  
 </script>

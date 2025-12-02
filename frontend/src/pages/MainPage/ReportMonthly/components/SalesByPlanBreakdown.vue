@@ -18,7 +18,7 @@
                   <template #body="slotProps">
                     {{ slotProps.data.plan_name }}
                     <Badge v-if="slotProps.data.sales_category === 'other'" 
-                           value="その他" severity="warning" class="ml-2"/>
+                           value="宿泊以外" severity="warn" class="ml-2"/>
                   </template>
                 </Column>
                 <Column header="通常売上" bodyStyle="text-align:right">
