@@ -215,7 +215,6 @@ const initOccupationBreakdownChart = () => {
     // Get unique plan names and process them
     const planMap = new Map();
     let totalOccupiedNights = 0;
-    let totalConfirmedNights = 0; // Initialize totalConfirmedNights
     
     planData.forEach(plan => {
         let planName = plan.plan_name;
@@ -250,7 +249,6 @@ const initOccupationBreakdownChart = () => {
         } else {
              planEntry['確定'] += confirmed;
         }
-        totalConfirmedNights += confirmed; // Accumulate total confirmed nights
         
         // Add blocked nights
         planEntry['ブロック'] += parseInt(plan.blocked_nights || '0');
@@ -280,6 +278,9 @@ const initOccupationBreakdownChart = () => {
         ...data,
         total: data['確定'] + data['確定 (その他)'] + data['ブロック'] + data['未予約']
     })).sort((a, b) => b.total - a.total);
+
+    // Calculate the actual total for the '確定' (宿泊) category from the processed data
+    const totalConfirmedAccommodationNights = processedPlans.reduce((sum, plan) => sum + plan['確定'], 0);
 
     
     
@@ -312,36 +313,34 @@ const initOccupationBreakdownChart = () => {
 
     // Add a dummy series for the total confirmed nights markPoint
     series.push({
-        name: '', // Set an empty name to prevent it from showing in tooltip/legend
-        type: 'scatter', // Use scatter to just show a point
-        showInLegend: false, // Hide this series from the legend
-        data: [
-            {
-                name: '確定合計',
-                value: totalConfirmedNights,
-                xAxis: totalConfirmedNights,
-                yAxis: '確定',
-                label: {
-                    show: true,
-                    formatter: `{c} 泊`,
-                    position: 'right'
-                },
-                itemStyle: {
-                    opacity: 0 // Make the point invisible
-                }
-            }
-        ],
+        name: '確定（宿泊）合計', // A meaningful name for the tooltip
+        type: 'scatter',
+        showInLegend: false,
+        data: [], // No actual points, only markPoint
         markPoint: {
+            symbol: 'rect', // Changed symbol to rectangle
+            symbolSize: 40, // Increased size
+            symbolOffset: [0, -10], // Adjust position
             data: [
                 {
-                    name: '確定合計',
-                    value: totalConfirmedNights,
-                    xAxis: totalConfirmedNights,
-                    yAxis: '確定',
+                    name: '確定（宿泊）合計',
+                    value: totalConfirmedAccommodationNights, // Use correctly calculated total
+                    xAxis: totalConfirmedAccommodationNights, // Use correctly calculated total
+                    yAxis: '確定', // Position on the Y-axis category
                     label: {
                         show: true,
                         formatter: `{c} 泊`,
-                        position: 'right'
+                        position: 'top', // Place the label above the mark point
+                        color: '#000',
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                        borderRadius: 3,
+                        padding: [4, 5]
+                    },
+                    itemStyle: {
+                        color: 'red', // Make the mark point visible
+                        opacity: 1
                     }
                 }
             ]
@@ -360,8 +359,8 @@ const initOccupationBreakdownChart = () => {
                 let tooltipContent = `${categoryName}<br/>`;
                 let totalForCategory = 0;
                 
-                // Filter out the dummy series from params for total calculation
-                const filteredParams = params.filter(item => item.seriesName !== '' && item.seriesName !== '確定合計');
+                // Filter out the markPoint series from params for total calculation and prevent it from showing in the main tooltip list
+                const filteredParams = params.filter(item => item.seriesName !== '確定（宿泊）合計');
 
                 // Calculate total for the current category
                 filteredParams.forEach(item => {
@@ -420,6 +419,7 @@ const initOccupationBreakdownChart = () => {
         myOccupationBreakdownChart = echarts.init(occupationBreakdownChart.value);
     }
     myOccupationBreakdownChart.setOption(option, true);
+
 };
 
 

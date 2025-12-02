@@ -150,10 +150,13 @@ const combinedSalesByPlan = computed(() => {
                 forecast_sales: 0
             };
         }
-        combined[planName].regular_sales += parseFloat(item.regular_sales || 0);
-        combined[planName].cancelled_sales += parseFloat(item.cancelled_sales || 0);
-        combined[planName].regular_net_sales += parseFloat(item.regular_net_sales || 0);
-        combined[planName].cancelled_net_sales += parseFloat(item.cancelled_net_sales || 0);
+        if (item.is_cancelled_billable) {
+            combined[planName].cancelled_sales += parseFloat(item.accommodation_sales || 0) + parseFloat(item.other_sales || 0);
+            combined[planName].cancelled_net_sales += parseFloat(item.accommodation_sales_net || 0) + parseFloat(item.other_sales_net || 0);
+        } else {
+            combined[planName].regular_sales += parseFloat(item.accommodation_sales || 0) + parseFloat(item.other_sales || 0);
+            combined[planName].regular_net_sales += parseFloat(item.accommodation_sales_net || 0) + parseFloat(item.other_sales_net || 0);
+        }
     });
 
     props.forecastDataByPlan.forEach(forecastItem => {
@@ -161,6 +164,7 @@ const combinedSalesByPlan = computed(() => {
         if (!combined[planName]) {
             combined[planName] = {
                 plan_name: planName,
+                sales_category: 'forecast', // Assign a category for forecast items if needed
                 regular_sales: 0,
                 cancelled_sales: 0,
                 regular_net_sales: 0,
@@ -168,7 +172,7 @@ const combinedSalesByPlan = computed(() => {
                 forecast_sales: 0
             };
         }
-        combined[planName].forecast_sales += parseFloat(forecastItem.forecast_sales || 0);
+        combined[planName].forecast_sales += parseFloat(forecastItem.accommodation_revenue || 0);
     });
 
     return Object.values(combined);
