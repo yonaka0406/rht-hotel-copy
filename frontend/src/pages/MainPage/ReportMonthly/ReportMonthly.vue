@@ -269,6 +269,9 @@
             }
         });        
 
+        // Assign Total Revenue to displayedCumulativeSales
+        displayedCumulativeSales.value = Math.round(totalRevenue);
+
         // ADR
         // ADR
         ADR.value = totalRoomsSold > 0 ? Math.round(totalRevenue / totalRoomsSold) : 0;

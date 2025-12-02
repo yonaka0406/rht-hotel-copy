@@ -168,10 +168,10 @@ const processLineChartData = () => {
             cumulativeAccommodationData.push(Math.round(cumulativeAccommodationSum));
         }
     }
-    initLineChart(newXAxis, accommodationData, otherData, cumulativeAccommodationData);
+    initLineChart(newXAxis, accommodationData, otherData, cumulativeAccommodationData); // Pass otherData
 };
 
-const initLineChart = () => {
+const initLineChart = (newXAxis, accommodationData, otherData, cumulativeAccommodationData) => { // Accept otherData
     if (!lineChart.value) return;
     const option = {
         tooltip: {
@@ -195,14 +195,14 @@ const initLineChart = () => {
             }
         },
         legend: {
-            data: props.viewMode === 'month' ? ['日次売上', '当月累計'] : ['月次売上', '年度累計'],
+            data: props.viewMode === 'month' ? ['宿泊売上', 'その他売上', '当月累計'] : ['宿泊売上', 'その他売上', '年度累計'], // Updated legend
             bottom: 0
         },
-        grid: { top: '20%', height: '70%', left: '3%', right: '10%', bottom: '10%', containLabel: true }, // Increased right padding
+        grid: { top: '20%', height: '70%', left: '3%', right: '10%', bottom: '10%', containLabel: true },
         xAxis: {
             type: 'category',
-            boundaryGap: true, // Always true for bar charts
-            data: props.lineChartAxisX,
+            boundaryGap: true,
+            data: newXAxis,
             axisLabel: {
                 rotate: props.viewMode === 'month' ? 45 : 0,
                 formatter: (value) => {
@@ -213,39 +213,48 @@ const initLineChart = () => {
                 }
             }
         },
-        yAxis: [ // Changed to an array for two Y-axes
+        yAxis: [
             {
                 type: 'value',
-                name: props.viewMode === 'month' ? '日次売上 (円)' : '月次売上 (円)',
+                name: props.viewMode === 'month' ? '日次総売上 (円)' : '月次総売上 (円)', // Updated yAxis name
                 axisLabel: {
                     formatter: (value) => value >= 10000 ? `${(value / 10000).toLocaleString()}万円` : `${value.toLocaleString()}円`
                 }
             },
             {
                 type: 'value',
-                name: props.viewMode === 'month' ? '当月累計 (円)' : '年度累計 (円)', // Name for the second Y-axis
+                name: props.viewMode === 'month' ? '当月累計 (円)' : '年度累計 (円)',
                 axisLabel: {
                     formatter: (value) => value >= 10000 ? `${(value / 10000).toLocaleString()}万円` : `${value.toLocaleString()}円`
                 },
-                alignTicks: true // Align ticks with the first y-axis
+                alignTicks: true
             }
         ],
         series: [
             {
-                name: props.viewMode === 'month' ? '日次売上' : '月次売上',
+                name: props.viewMode === 'month' ? '宿泊売上' : '宿泊売上', // Changed name for clarity
                 type: 'bar',
-                data: props.lineChartSeriesData,
-                itemStyle: { color: '#4ea397' }, // Updated color
-                yAxisIndex: 0, // Explicitly assign to the first Y-axis
-                barCategoryGap: '20%' // Add gap between bars
+                data: accommodationData,
+                itemStyle: { color: '#4ea397' },
+                yAxisIndex: 0,
+                barCategoryGap: '20%',
+                stack: 'total' // Added stacking
+            },
+            {
+                name: 'その他売上', // New series for other sales
+                type: 'bar',
+                data: otherData, // Use otherData
+                itemStyle: { color: '#ffcc00' }, // Yellow color for other sales
+                yAxisIndex: 0,
+                stack: 'total' // Added stacking
             },
             {
                 name: props.viewMode === 'month' ? '当月累計' : '年度累計',
                 type: 'line',
                 smooth: true,
-                data: props.lineChartSeriesSumData,
-                itemStyle: { color: '#22c3aa' }, // Updated color
-                yAxisIndex: 1 // Assign to the second Y-axis
+                data: cumulativeAccommodationData,
+                itemStyle: { color: '#22c3aa' },
+                yAxisIndex: 1
             }
         ]
     };
@@ -260,7 +269,7 @@ const handleResize = () => {
 };
 
 onMounted(() => {
-    initLineChart();
+    processLineChartData(); // Call processLineChartData on mount
     window.addEventListener('resize', handleResize);
 });
 
@@ -269,7 +278,11 @@ onBeforeUnmount(() => {
     if (myLineChart) myLineChart.dispose();
 });
 
-watch([() => props.lineChartAxisX, () => props.lineChartSeriesData, () => props.lineChartSeriesSumData, () => props.viewMode], () => {
-    initLineChart();
-}, { deep: true });
+watch([
+    () => props.allReservationsData,
+    () => props.selectedMonth,
+    () => props.viewMode,
+    () => props.metricsEffectiveStartDate,
+    () => props.metricsEffectiveEndDate
+], processLineChartData, { deep: true }); // Watch relevant props and call processLineChartData
 </script>
