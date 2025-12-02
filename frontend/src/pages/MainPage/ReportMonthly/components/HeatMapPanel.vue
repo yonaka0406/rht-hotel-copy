@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-import { defineProps, ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { Card, Panel, SelectButton } from 'primevue';
 // ...
 const occCalcMode = ref('accommodation'); // Default to accommodation
@@ -76,7 +76,23 @@ const props = defineProps({
 
 const heatMap = ref(null);
 let myHeatMap; 
-const heatMapAxisX = ref([]);
+
+const heatMapAxisX = computed(() => {
+    const start = new Date(props.heatMapDisplayStartDate);
+    const end = new Date(props.heatMapDisplayEndDate);
+    const weekIntervals = [];
+    let current = new Date(start);
+    
+    while (current <= end) {
+        const month = current.getMonth() + 1;
+        const day = current.getDate();
+        weekIntervals.push(`${month}月${day}日の週`);
+        current.setDate(current.getDate() + 7);
+    }
+    
+    return weekIntervals;
+});
+
 const heatMapAxisY = ref([
     '日', '土', '金', '木', '水', '火', '月'
 ]);
@@ -127,7 +143,7 @@ const processHeatMapData = () => {
         }
         
         currentMapDate = props.addDaysUTC(currentMapDate, 1);
-    }        
+    }
     
     const processedData = [];
     relevantReservations.forEach(reservation => {

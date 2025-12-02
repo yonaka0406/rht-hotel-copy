@@ -52,10 +52,11 @@
                         <Column footer="確定泊数 / (合計利用可能泊数 - ブロック泊数):" :colspan="5" footerStyle="text-align:right"/>
                         <Column :footer="
                             (() => {
-                                                                        const confirmed = confirmedOccupancyNights.value;
-                                                                        const totalAvailable = occupationBreakdownTotals.total_bookable_room_nights;
-                                                                        const blocked = blockedOccupancyNights.value;
-                                                                        const denominator = totalAvailable - blocked;                                if (denominator <= 0) return 'N/A';
+                                const confirmed = confirmedOccupancyNights;
+                                const totalAvailable = occupationBreakdownTotals.total_bookable_room_nights;
+                                const blocked = blockedOccupancyNights;
+                                const denominator = totalAvailable - blocked;
+                                if (denominator <= 0) return 'N/A';
                                 return ((confirmed / denominator) * 100).toFixed(2) + '%';
                             })()
                         " footerStyle="text-align:right"/>
