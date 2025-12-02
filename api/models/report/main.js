@@ -702,52 +702,53 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
     LEFT JOIN (
         SELECT
-            hotel_id,
-            reservation_details_id,
+            rr.hotel_id,
+            rr.reservation_details_id,
             SUM(
                 CASE 
-                    WHEN sales_category = 'accommodation' OR sales_category IS NULL THEN 
+                    WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
                         CASE 
-                            WHEN plan_type = 'per_room' THEN price
-                            ELSE price * number_of_people
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.price
+                            ELSE rr.price * rd_inner.number_of_people
                         END
                     ELSE 0 
                 END
             ) AS accommodation_price,
             SUM(
                 CASE 
-                    WHEN sales_category = 'other' THEN 
+                    WHEN rr.sales_category = 'other' THEN 
                         CASE 
-                            WHEN plan_type = 'per_room' THEN price
-                            ELSE price * number_of_people
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.price
+                            ELSE rr.price * rd_inner.number_of_people
                         END
                     ELSE 0 
                 END
             ) AS other_price,
             SUM(
                 CASE 
-                    WHEN sales_category = 'accommodation' OR sales_category IS NULL THEN 
+                    WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
                         CASE 
-                            WHEN plan_type = 'per_room' THEN net_price
-                            ELSE net_price * number_of_people
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                            ELSE rr.net_price * rd_inner.number_of_people
                         END
                     ELSE 0 
                 END
             ) AS accommodation_net_price,
             SUM(
                 CASE 
-                    WHEN sales_category = 'other' THEN 
+                    WHEN rr.sales_category = 'other' THEN 
                         CASE 
-                            WHEN plan_type = 'per_room' THEN net_price
-                            ELSE net_price * number_of_people
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                            ELSE rr.net_price * rd_inner.number_of_people
                         END
                     ELSE 0 
                 END
             ) AS other_net_price
         FROM
-            reservation_rates
+            reservation_rates rr
+        JOIN reservation_details rd_inner ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
         GROUP BY
-            hotel_id, reservation_details_id
+            rr.hotel_id, rr.reservation_details_id, rd_inner.plan_type, rd_inner.number_of_people
     ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
