@@ -264,7 +264,9 @@
 
         filteredMetricsReservations.forEach(res => {
             totalRevenue += parseFloat(res.accommodation_price || 0);
-            totalRoomsSold += parseInt(res.room_count || 0);
+            if (parseFloat(res.accommodation_price || 0) > 0) {
+                totalRoomsSold += parseInt(res.room_count || 0);
+            }
         });        
 
         // ADR

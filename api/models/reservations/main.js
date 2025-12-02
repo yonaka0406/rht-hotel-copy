@@ -282,8 +282,8 @@ const addReservationDetail = async (requestId, detail, client = null) => {
 
   const query = `
     INSERT INTO reservation_details (
-      hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by, is_accommodation
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     RETURNING *;
   `;
   const values = [
@@ -298,7 +298,8 @@ const addReservationDetail = async (requestId, detail, client = null) => {
     detail.number_of_people,
     detail.price,
     detail.created_by,
-    detail.updated_by
+    detail.updated_by,
+    detail.is_accommodation ?? true
   ];
   //logger.debug('[addReservationDetail] Inserting with values:', values);
 
@@ -353,7 +354,7 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
     const columns = [
       'hotel_id', 'reservation_id', 'date', 'room_id', 'plans_global_id',
       'plans_hotel_id', 'plan_name', 'plan_type', 'number_of_people', 'price',
-      'created_by', 'updated_by'
+      'created_by', 'updated_by', 'is_accommodation'
     ];
     const NUM_COLUMNS = columns.length;
     const POSTGRES_PARAM_LIMIT = 32767;
@@ -370,7 +371,8 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
         values.push(
           d.hotel_id, d.reservation_id, d.date, d.room_id,
           d.plans_global_id, d.plans_hotel_id, d.plan_name, d.plan_type,
-          d.number_of_people, d.price, d.created_by, d.updated_by
+          d.number_of_people, d.price, d.created_by, d.updated_by,
+          d.is_accommodation ?? true
         );
         return `(${Array.from(
           { length: NUM_COLUMNS },
@@ -1560,8 +1562,18 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 
   // Use unified price calculation
   let calculatedPrice = 0;
+  let isAccommodation = true; // Default to true if no rates provided, or handle logic differently? 
+                              // If no rates, maybe we don't update is_accommodation? 
+                              // But here we are updating the plan, so we should probably update it.
+                              // However, without rates, we can't determine it. 
+                              // If plan changes, rates should change.
+                              // Assuming rates are always passed if plan changes.
+                              // If rates array is empty, it might mean no charge? or error?
+                              // Let's default to true for safety as per migration default.
+
   if (rates && rates.length > 0) {
     calculatedPrice = calculatePriceFromRates(rates, disableRounding);
+    isAccommodation = rates.some(r => r.sales_category === 'accommodation');
 
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
@@ -1580,6 +1592,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       ,plan_type = $4
       ,price = $5
       ,updated_by = $6
+      ,is_accommodation = $9
     WHERE hotel_id = $7 AND id = $8::uuid
     RETURNING *;
   `;
@@ -1602,6 +1615,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       user_id,
       hotel_id,
       id,
+      isAccommodation
     ]);
 
     if (rates && rates.length > 0) {
@@ -1951,6 +1965,9 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       // Fetch new rates
       const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, dbClient);
 
+      // Determine if this is accommodation
+      const isAccommodation = newrates.some(rate => rate.sales_category === 'accommodation');
+
       // Insert rates using the shared utility function
       await insertAggregatedRates(requestId, newrates, hotel_id, id, user_id, false, dbClient);
 
@@ -1958,10 +1975,10 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       const calculatedPrice = calculatePriceFromRates(newrates, disableRounding);
       const updatePriceQuery = `
         UPDATE reservation_details
-        SET price = $1
+        SET price = $1, is_accommodation = $3
         WHERE id = $2;
       `;
-      await dbClient.query(updatePriceQuery, [calculatedPrice, id]);
+      await dbClient.query(updatePriceQuery, [calculatedPrice, id, isAccommodation]);
     });
 
     // Wait for all updates to complete

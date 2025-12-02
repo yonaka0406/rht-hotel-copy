@@ -332,8 +332,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
             ) AS addon_price
           FROM
             reservation_details 
-              LEFT JOIN plans_hotel ph ON reservation_details.plans_hotel_id = ph.id AND reservation_details.hotel_id = ph.hotel_id
-              LEFT JOIN plans_global pg ON reservation_details.plans_global_id = pg.id
+              LEFT JOIN reservation_rates rr ON reservation_details.id = rr.reservation_details_id
               LEFT JOIN
             (
               SELECT 
