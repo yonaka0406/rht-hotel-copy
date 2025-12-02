@@ -210,7 +210,7 @@ const initOccupationBreakdownChart = () => {
     }
     
     // Define Y-axis categories
-    const yAxisCategories = ['確定', 'ブロック', '未予約'];
+    const yAxisCategories = ['確定', '確定 (その他)', 'ブロック', '未予約'];
     
     // Get unique plan names and process them
     const planMap = new Map();
@@ -235,6 +235,7 @@ const initOccupationBreakdownChart = () => {
         if (!planMap.has(planName)) {
             planMap.set(planName, {
                 '確定': 0,
+                '確定 (その他)': 0,
                 'ブロック': 0,
                 '未予約': 0
             });
@@ -244,7 +245,11 @@ const initOccupationBreakdownChart = () => {
         
         // Add confirmed nights
         const confirmed = parseInt(plan.confirmed_nights || '0');
-        planEntry['確定'] += confirmed;
+        if (plan.sales_category === 'other') {
+             planEntry['確定 (その他)'] += confirmed;
+        } else {
+             planEntry['確定'] += confirmed;
+        }
         totalConfirmedNights += confirmed; // Accumulate total confirmed nights
         
         // Add blocked nights
@@ -263,6 +268,7 @@ const initOccupationBreakdownChart = () => {
     if (totalNotBookedNights > 0) {
         planMap.set('未予約', {
             '確定': 0,
+            '確定 (その他)': 0,
             'ブロック': 0,
             '未予約': totalNotBookedNights
         });
@@ -272,7 +278,7 @@ const initOccupationBreakdownChart = () => {
     const processedPlans = Array.from(planMap.entries()).map(([planName, data]) => ({
         planName,
         ...data,
-        total: data['確定'] + data['ブロック'] + data['未予約']
+        total: data['確定'] + data['確定 (その他)'] + data['ブロック'] + data['未予約']
     })).sort((a, b) => b.total - a.total);
 
     
@@ -398,7 +404,8 @@ const initOccupationBreakdownChart = () => {
             axisLabel: {
                 formatter: (value) => {
                     const labels = {
-                        '確定': '確定',
+                        '確定': '確定 (宿泊)',
+                        '確定 (その他)': '確定 (その他)',
                         'ブロック': 'ブロック',
                         '未予約': '未予約'
                     };
