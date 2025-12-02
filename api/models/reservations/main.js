@@ -1966,8 +1966,8 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       // Fetch new rates
       const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, dbClient);
 
-      // Determine if this is accommodation
-      const isAccommodation = newrates.some(rate => rate.sales_category === 'accommodation');
+      // Determine if this is accommodation using the calculation service
+      const isAccommodation = calculateIsAccommodation(newrates, false);
 
       // Insert rates using the shared utility function
       await insertAggregatedRates(requestId, newrates, hotel_id, id, user_id, false, dbClient);
