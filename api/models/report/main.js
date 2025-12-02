@@ -308,7 +308,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
           SELECT 
             reservation_details.hotel_id
             ,reservation_details.reservation_id
-            ,COALESCE(ph.sales_category, pg.sales_category, 'accommodation') AS plan_sales_category
+            ,COALESCE(MIN(rr.sales_category), 'accommodation') AS plan_sales_category
             ,rc.clients_json::TEXT AS clients_json
             ,rpc.clients_json::TEXT AS payers_json          
             ,COALESCE(rp.payment,0) as payment          
@@ -400,7 +400,6 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
           GROUP BY
             reservation_details.hotel_id
             ,reservation_details.reservation_id
-            ,COALESCE(ph.sales_category, pg.sales_category, 'accommodation')
             ,rc.clients_json::TEXT
             ,rpc.clients_json::TEXT          
             ,rp.payment

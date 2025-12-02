@@ -25,6 +25,8 @@ const formatDate = (date) => {
 const DEFAULT_CHECK_IN_TIME = '16:00';
 const DEFAULT_CHECK_OUT_TIME = '10:00';
 
+const SYSTEM_BLOCK_USER_ID = '11111111-1111-1111-1111-111111111111';
+
 // Function to Select
 
 const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservationId) => {
@@ -299,7 +301,7 @@ const addReservationDetail = async (requestId, detail, client = null) => {
     detail.price,
     detail.created_by,
     detail.updated_by,
-    detail.is_accommodation ?? true
+    isSystemBlock(detail.created_by) ? false : (detail.is_accommodation ?? true)
   ];
   //logger.debug('[addReservationDetail] Inserting with values:', values);
 
@@ -372,7 +374,7 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
           d.hotel_id, d.reservation_id, d.date, d.room_id,
           d.plans_global_id, d.plans_hotel_id, d.plan_name, d.plan_type,
           d.number_of_people, d.price, d.created_by, d.updated_by,
-          d.is_accommodation ?? true
+          isSystemBlock(d.created_by) ? false : (d.is_accommodation ?? true)
         );
         return `(${Array.from(
           { length: NUM_COLUMNS },
@@ -1562,14 +1564,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 
   // Use unified price calculation
   let calculatedPrice = 0;
-  let isAccommodation = true; // Default to true if no rates provided, or handle logic differently? 
-                              // If no rates, maybe we don't update is_accommodation? 
-                              // But here we are updating the plan, so we should probably update it.
-                              // However, without rates, we can't determine it. 
-                              // If plan changes, rates should change.
-                              // Assuming rates are always passed if plan changes.
-                              // If rates array is empty, it might mean no charge? or error?
-                              // Let's default to true for safety as per migration default.
+  let isAccommodation = true; // Default to true as per migration
 
   if (rates && rates.length > 0) {
     calculatedPrice = calculatePriceFromRates(rates, disableRounding);
@@ -1582,6 +1577,10 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 
     // Use the calculated price instead of the provided one
     price = calculatedPrice;
+  } else {
+    // If no rates, we can't determine sales_category, so stick to default isAccommodation = true
+    // This is consistent with the migration default for existing records
+    isAccommodation = true; 
   }
 
   const updateReservationDetailsQuery = `
