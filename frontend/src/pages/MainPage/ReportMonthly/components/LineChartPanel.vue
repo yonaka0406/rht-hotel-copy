@@ -5,7 +5,7 @@
                 
             </template>
             <template #subtitle>
-                <p>{{ lineChartTitle }}</p>
+                <p>{{ computedLineChartTitle }}</p>
             </template>
             <template #content>    
                 <div ref="lineChart" class="w-full h-60"></div>                
@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { defineProps, ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { defineProps, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { Card, Panel } from 'primevue';
 import * as echarts from 'echarts/core';
 import {
