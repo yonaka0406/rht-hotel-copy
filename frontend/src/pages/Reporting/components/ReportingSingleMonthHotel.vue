@@ -290,27 +290,58 @@
         // This is useful if parent sends multiple month data for the single selected hotel.
         // For a single month view, it will correctly use the single entry.
         
+        console.log('[ReportingSingleMonthHotel] revenueData:', props.revenueData);
+        
         let total_forecast_revenue = 0;
         let total_period_revenue = 0;
-        props.revenueData?.forEach(item => {
+        let total_period_accommodation_revenue = 0;
+        props.revenueData?.forEach((item, index) => {
+            console.log(`[ReportingSingleMonthHotel] revenueData[${index}]:`, {
+                period_revenue: item.period_revenue,
+                accommodation_revenue: item.accommodation_revenue,
+                other_revenue: item.other_revenue,
+                forecast_revenue: item.forecast_revenue
+            });
             total_forecast_revenue += (item.forecast_revenue || 0);
+            // Use accommodation_revenue if available, otherwise fall back to period_revenue for backward compatibility
+            total_period_accommodation_revenue += (item.accommodation_revenue || item.period_revenue || 0);
             total_period_revenue += (item.period_revenue || 0);
+        });
+        
+        console.log('[ReportingSingleMonthHotel] Totals:', {
+            total_period_revenue,
+            total_period_accommodation_revenue,
+            total_forecast_revenue
         });
 
         let total_fc_sold_rooms = 0;
         let total_sold_rooms = 0;
         let total_fc_available_rooms = 0;
         let total_available_rooms = 0;
-        props.occupancyData?.forEach(item => {
+        props.occupancyData?.forEach((item, index) => {
+            console.log(`[ReportingSingleMonthHotel] occupancyData[${index}]:`, {
+                sold_rooms: item.sold_rooms,
+                fc_sold_rooms: item.fc_sold_rooms,
+                total_rooms: item.total_rooms,
+                fc_total_rooms: item.fc_total_rooms
+            });
             total_fc_sold_rooms += (item.fc_sold_rooms || 0);
             total_sold_rooms += (item.sold_rooms || 0);
             total_fc_available_rooms += (item.fc_total_rooms || 0); // fc_total_rooms is total available rooms for forecast
             total_available_rooms += (item.total_rooms || 0);    // total_rooms is total available rooms for actual
         });
+        
+        console.log('[ReportingSingleMonthHotel] Occupancy Totals:', {
+            total_sold_rooms,
+            total_fc_sold_rooms,
+            total_available_rooms,
+            total_fc_available_rooms
+        });
 
         return {
             total_forecast_revenue,
             total_period_revenue,
+            total_period_accommodation_revenue,
             total_fc_sold_rooms,
             total_sold_rooms,
             total_fc_available_rooms,
@@ -319,9 +350,10 @@
     });
 
     const actualADR = computed(() => {
-        const { total_period_revenue, total_sold_rooms } = currentHotelAggregateData.value;
+        const { total_period_accommodation_revenue, total_sold_rooms } = currentHotelAggregateData.value;
         if (total_sold_rooms === 0 || total_sold_rooms === null || total_sold_rooms === undefined) return NaN;
-        return Math.round(total_period_revenue / total_sold_rooms);
+        console.log('[ReportingSingleMonthHotel] ADR calculation - accommodation_revenue:', total_period_accommodation_revenue, 'sold_rooms:', total_sold_rooms);
+        return Math.round(total_period_accommodation_revenue / total_sold_rooms);
     });
 
     const forecastADR = computed(() => {
@@ -331,9 +363,9 @@
     });
 
     const actualRevPAR = computed(() => {
-        const { total_period_revenue, total_available_rooms } = currentHotelAggregateData.value;
+        const { total_period_accommodation_revenue, total_available_rooms } = currentHotelAggregateData.value;
         if (total_available_rooms === 0 || total_available_rooms === null || total_available_rooms === undefined) return NaN;
-        return Math.round(total_period_revenue / total_available_rooms);
+        return Math.round(total_period_accommodation_revenue / total_available_rooms);
     });
 
     const forecastRevPAR = computed(() => {

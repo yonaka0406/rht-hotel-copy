@@ -137,7 +137,7 @@ const salesByPlanChartOptions = ref([
 const combinedSalesByPlan = computed(() => {
     const combined = {};
 
-    console.log('[SalesByPlan] Raw salesByPlan data:', props.salesByPlan);
+    //console.log('[SalesByPlan] Raw salesByPlan data:', props.salesByPlan);
 
     props.salesByPlan.forEach(item => {
         const planName = item.plan_name;
@@ -179,7 +179,7 @@ const combinedSalesByPlan = computed(() => {
     });
 
     const result = Object.values(combined);
-    console.log('[SalesByPlan] Combined data:', result);
+    //console.log('[SalesByPlan] Combined data:', result);
     return result;
 });
 

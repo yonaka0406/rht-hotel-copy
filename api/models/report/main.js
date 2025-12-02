@@ -63,6 +63,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
             rd.reservation_id,
             rd.id AS reservation_detail_id,
             rd.number_of_people,
+            COALESCE(rd.is_accommodation, TRUE) AS is_accommodation,
             CASE WHEN rd.cancelled IS NULL THEN FALSE ELSE TRUE END AS cancelled,
             -- Calculate net plan price split by sales_category
             COALESCE(rr.accommodation_net_price, 0) AS accommodation_net_plan_price,
@@ -160,7 +161,9 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       rt.date,
       rt.total_rooms,
       rt.total_rooms_real,
-      COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.reservation_detail_id END) AS room_count, -- Adjusted room_count
+      COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL 
+                 WHEN rdn.is_accommodation = TRUE THEN rdn.reservation_detail_id 
+                 ELSE NULL END) AS room_count, -- Only count accommodation reservations
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.number_of_people END) AS people_sum, -- Adjusted people_sum      
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.male_count END) AS male_count,
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.female_count END) AS female_count,

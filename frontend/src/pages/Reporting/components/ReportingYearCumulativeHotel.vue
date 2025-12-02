@@ -338,12 +338,14 @@
 
     // Aggregated data for KPIs
     const aggregatedCurrentHotelRevenue = computed(() => {
-        if (!currentHotelRevenueData.value) return { total_forecast_revenue: 0, total_period_revenue: 0 };
+        if (!currentHotelRevenueData.value) return { total_forecast_revenue: 0, total_period_revenue: 0, total_period_accommodation_revenue: 0 };
+        console.log('[ReportingYearCumulativeHotel] currentHotelRevenueData:', currentHotelRevenueData.value);
         return currentHotelRevenueData.value.reduce((acc, item) => {
             acc.total_forecast_revenue += (item.forecast_revenue || 0);
             acc.total_period_revenue += (item.period_revenue || 0);
+            acc.total_period_accommodation_revenue += (item.accommodation_revenue || item.period_revenue || 0);
             return acc;
-        }, { total_forecast_revenue: 0, total_period_revenue: 0 });
+        }, { total_forecast_revenue: 0, total_period_revenue: 0, total_period_accommodation_revenue: 0 });
     });
 
     const aggregatedCurrentHotelOccupancy = computed(() => {
@@ -365,8 +367,9 @@
 
     // KPIs
     const actualADR = computed(() => {
-        const revenue = aggregatedCurrentHotelRevenue.value.total_period_revenue;
+        const revenue = aggregatedCurrentHotelRevenue.value.total_period_accommodation_revenue;
         const soldRooms = aggregatedCurrentHotelOccupancy.value.total_sold_rooms;
+        console.log('[ReportingYearCumulativeHotel] ADR calculation - accommodation_revenue:', revenue, 'sold_rooms:', soldRooms);
         return soldRooms ? Math.round(revenue / soldRooms) : NaN;
     });
     const forecastADR = computed(() => {
@@ -375,7 +378,7 @@
         return soldRooms ? Math.round(revenue / soldRooms) : NaN;
     });
     const actualRevPAR = computed(() => {
-        const revenue = aggregatedCurrentHotelRevenue.value.total_period_revenue;
+        const revenue = aggregatedCurrentHotelRevenue.value.total_period_accommodation_revenue;
         const availableRooms = aggregatedCurrentHotelOccupancy.value.total_available_rooms;
         return availableRooms ? Math.round(revenue / availableRooms) : NaN;
     });
