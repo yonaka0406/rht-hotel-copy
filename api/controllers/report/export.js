@@ -554,6 +554,7 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: '月', key: 'month', width: 15 },
             { header: 'プラン名', key: 'plan_name', width: 30 },
             { header: '確定', key: 'confirmed_stays', width: 10 },
+            { header: '非宿泊数', key: 'non_accommodation_stays', width: 10 },
             { header: '仮予約', key: 'pending_stays', width: 10 },
             { header: '保留中', key: 'in_talks_stays', width: 10 },
             { header: 'キャンセル', key: 'cancelled_stays', width: 10 },
@@ -561,6 +562,10 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: '社員', key: 'employee_stays', width: 10 },
             { header: '通常売上(税込)', key: 'normal_sales', width: 15 },
             { header: 'キャンセル売上(税込)', key: 'cancellation_sales', width: 15 },
+            { header: '宿泊売上(税込)', key: 'accommodation_sales', width: 15 },
+            { header: 'その他売上(税込)', key: 'other_sales', width: 15 },
+            { header: '宿泊売上キャンセル(税込)', key: 'accommodation_sales_cancelled', width: 20 },
+            { header: 'その他売上キャンセル(税込)', key: 'other_sales_cancelled', width: 20 },
             { header: '作成日時', key: 'created_at', width: 20 },
         ];
 
@@ -677,6 +682,7 @@ const getExportDailyReportExcel = async (req, res) => {
                     month: formatDate(row.month),
                     plan_name: row.plan_name,
                     confirmed_stays: parseInt(row.confirmed_stays || 0),
+                    non_accommodation_stays: parseInt(row.non_accommodation_stays || 0),
                     pending_stays: parseInt(row.pending_stays || 0),
                     in_talks_stays: parseInt(row.in_talks_stays || 0),
                     cancelled_stays: parseInt(row.cancelled_stays || 0),
@@ -684,6 +690,10 @@ const getExportDailyReportExcel = async (req, res) => {
                     employee_stays: parseInt(row.employee_stays || 0),
                     normal_sales: parseInt(row.normal_sales || 0),
                     cancellation_sales: parseInt(row.cancellation_sales || 0),
+                    accommodation_sales: parseInt(row.accommodation_sales || 0),
+                    other_sales: parseInt(row.other_sales || 0),
+                    accommodation_sales_cancelled: parseInt(row.accommodation_sales_cancelled || 0),
+                    other_sales_cancelled: parseInt(row.other_sales_cancelled || 0),
                     created_at: formatDateTime(row.created_at),
                 });
             });

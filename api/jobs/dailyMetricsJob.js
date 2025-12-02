@@ -28,7 +28,7 @@ const performDailyMetricsCalculation = async () => {
             const lastDate = hotel.last_date;
 
             const query = `
-                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, normal_sales, cancellation_sales, accommodation_sales, other_sales, accommodation_sales_cancelled, other_sales_cancelled)
+                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, non_accommodation_stays, normal_sales, cancellation_sales, accommodation_sales, other_sales, accommodation_sales_cancelled, other_sales_cancelled)
                 WITH months AS (
                     SELECT generate_series(
                         date_trunc('month', $1::date),
@@ -66,12 +66,13 @@ const performDailyMetricsCalculation = async () => {
                     rd.plans_global_id,
                     rd.plans_hotel_id,
                     COALESCE(ph.name, pg.name, '未設定') AS plan_name,
-                    COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS confirmed_stays,
-                    COUNT(CASE WHEN r.status = 'provisory' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS pending_stays,
-                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS in_talks_stays,
-                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS cancelled_stays,
-                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' THEN rd.id END) AS non_billable_cancelled_stays,
+                    COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS confirmed_stays,
+                    COUNT(CASE WHEN r.status = 'provisory' AND rd.cancelled IS NULL AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS pending_stays,
+                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS in_talks_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS cancelled_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS non_billable_cancelled_stays,
                     COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays,
+                    COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = FALSE THEN rd.id END) AS non_accommodation_stays,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS normal_sales,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS cancellation_sales,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_price, 0) + COALESCE(ads.accommodation_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_sales,

@@ -437,7 +437,7 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
 
       const query = `
 
-              INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, normal_sales, cancellation_sales, accommodation_sales, other_sales, accommodation_sales_cancelled, other_sales_cancelled)
+              INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, non_accommodation_stays, normal_sales, cancellation_sales, accommodation_sales, other_sales, accommodation_sales_cancelled, other_sales_cancelled)
 
                 WITH months AS (
                     SELECT generate_series(
@@ -480,12 +480,13 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     rd.plans_global_id,
                     rd.plans_hotel_id,
                     COALESCE(ph.name, pg.name, '未設定') AS plan_name,
-                    COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS confirmed_stays,
-                    COUNT(CASE WHEN r.status = 'provisory' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS pending_stays,
-                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND r.type <> 'employee' THEN rd.id END) AS in_talks_stays,
-                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' THEN rd.id END) AS cancelled_stays,
-                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' THEN rd.id END) AS non_billable_cancelled_stays,
+                    COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS confirmed_stays,
+                    COUNT(CASE WHEN r.status = 'provisory' AND rd.cancelled IS NULL AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS pending_stays,
+                    COUNT(CASE WHEN r.status = 'hold' AND rd.cancelled IS NULL AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS in_talks_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS cancelled_stays,
+                    COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS FALSE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS non_billable_cancelled_stays,
                     COUNT(CASE WHEN r.type = 'employee' THEN rd.id END) AS employee_stays,
+                    COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = FALSE THEN rd.id END) AS non_accommodation_stays,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS normal_sales,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (rd.price + COALESCE(ads.total_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS cancellation_sales,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_price, 0) + COALESCE(ads.accommodation_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_sales,
@@ -515,7 +516,17 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
                     m.month, rd.plans_global_id, rd.plans_hotel_id, ph.name, pg.name;                        
             `;
 
-      await client.query(query, [metricDate, lastDate, hotelId]);
+      const result = await client.query(query, [metricDate, lastDate, hotelId]);
+      console.log(`[calculateAndSaveDailyMetrics] Hotel ${hotelId}: Inserted ${result.rowCount} rows (metricDate: ${metricDate}, lastDate: ${lastDate})`);
+      
+      if (hotelId === 39) {
+        const checkResult = await client.query(`
+          SELECT plan_name, confirmed_stays, non_accommodation_stays 
+          FROM daily_plan_metrics 
+          WHERE hotel_id = 39 AND metric_date = $1 AND month = '2025-12-01'
+        `, [metricDate]);
+        console.log('[calculateAndSaveDailyMetrics] Hotel 39 December metrics:', checkResult.rows);
+      }
     }
 
     await client.query('COMMIT');
@@ -567,6 +578,7 @@ const selectDailyReportData = async (requestId, metricDate) => {
             SUM(dpm.other_sales) as other_sales,
             SUM(dpm.accommodation_sales_cancelled) as accommodation_sales_cancelled,
             SUM(dpm.other_sales_cancelled) as other_sales_cancelled,
+            SUM(dpm.non_accommodation_stays) as non_accommodation_stays,
             MAX(dpm.created_at) as created_at
 
         FROM
@@ -585,6 +597,17 @@ const selectDailyReportData = async (requestId, metricDate) => {
 
   try {
     const result = await pool.query(query, values);
+    console.log(`[selectDailyReportData] Retrieved ${result.rows.length} rows for date ${metricDate}`);
+    
+    const nakashibetsuRows = result.rows.filter(r => r.hotel_name?.includes('中標津'));
+    if (nakashibetsuRows.length > 0) {
+      console.log('[selectDailyReportData] 中標津 rows:', nakashibetsuRows);
+    }
+    
+    const luggageRow = result.rows.find(r => r.plan_name?.includes('荷物'));
+    if (luggageRow) {
+      console.log('[selectDailyReportData] 荷物キープ row:', luggageRow);
+    }
     return result.rows;
   } catch (err) {
     console.error('Error retrieving daily report data:', err);
