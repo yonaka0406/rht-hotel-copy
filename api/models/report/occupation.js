@@ -77,7 +77,7 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
     plan_data AS (
       SELECT
           COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
-          COALESCE(ph.sales_category, pg.sales_category) AS sales_category,
+          COALESCE(rr.sales_category, 'accommodation') AS sales_category,
           COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) AS undecided_nights,
           COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) AS confirmed_nights,
           COUNT(CASE WHEN r.type = 'employee' THEN 1 END) AS employee_nights,
@@ -91,12 +91,18 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
       JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
       LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
       LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+      LEFT JOIN (
+          SELECT reservation_details_id, MIN(sales_category) as sales_category
+          FROM reservation_rates
+          WHERE hotel_id = $1
+          GROUP BY reservation_details_id
+      ) rr ON rd.id = rr.reservation_details_id
       WHERE rd.hotel_id = $1
         AND rd.date BETWEEN $2 AND $3
         AND rd.cancelled IS NULL
       GROUP BY
           COALESCE(ph.name, pg.name, 'プラン未設定'),
-          COALESCE(ph.sales_category, pg.sales_category)
+          COALESCE(rr.sales_category, 'accommodation')
     )
     SELECT * FROM (
         SELECT 
