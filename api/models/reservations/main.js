@@ -12,7 +12,7 @@ const { deleteReservationAddonsByDetailId } = require('./delete');
 const { insertReservationRate, insertAggregatedRates } = require('./insert');
 const { addReservationAddon, selectReservationAddonByDetail } = require('./addons');
 const clientsModels = require('./clients');
-const { calculatePriceFromRates, calculateIsAccommodation } = require('./services/calculationService');
+const { calculatePriceFromRatesService, calculateIsAccommodation } = require('./services/calculationService');
 
 // Helper
 const formatDate = (date) => {

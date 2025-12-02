@@ -6,59 +6,59 @@ const logger = require('../../../config/logger');
  * @param {Boolean} disableRounding - Whether to disable rounding to nearest 100
  * @returns {Number} - Calculated total price
  */
-const calculatePriceFromRates = (rates, disableRounding = false) => {
+const calculatePriceFromRatesService = (rates, disableRounding = false) => {
   if (!rates || rates.length === 0) {
     return 0;
   }
 
-  let baseRateTotal = 0;
-  let groupAPercentageEffect = 0; // For tax_type_id != 1
-  let groupBPercentageEffect = 0; // For tax_type_id == 1
-  let flatFeeTotal = 0;
+  // Step 1: Aggregate rates by adjustment_type and tax_type_id
+  const aggregatedRates = {};
+  rates.forEach((rate) => {
+    const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
+    if (!aggregatedRates[key]) {
+      aggregatedRates[key] = {
+        adjustment_type: rate.adjustment_type,
+        tax_type_id: rate.tax_type_id,
+        tax_rate: rate.tax_rate,
+        adjustment_value: 0,
+      };
+    }
+    aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
+  });
 
-  // Sum up all adjustments by type
-  rates.forEach(rate => {
-    const value = parseFloat(rate.adjustment_value || 0);
-    
+  // Step 2: Calculate total base rate first
+  let totalBaseRate = 0;
+  Object.values(aggregatedRates).forEach((rate) => {
     if (rate.adjustment_type === 'base_rate') {
-      baseRateTotal += value;
-    } else if (rate.adjustment_type === 'percentage') {
-      if (rate.tax_type_id === 1) {
-        // Group B: Direct percentage (e.g., 2.5 for 2.5%)
-        groupBPercentageEffect += value / 100;
-      } else {
-        // Group A: Percentage (e.g., -20 for -20%)
-        groupAPercentageEffect += value / 100;
-      }
-    } else if (rate.adjustment_type === 'flat_fee') {
-      flatFeeTotal += value;
+      totalBaseRate += rate.adjustment_value;
     }
   });
 
-  // Sequential calculation
-  let currentTotal = baseRateTotal;
+  // Step 3: Calculate total price by summing individual rate prices
+  // Percentages are ONLY applied to the base rate, not to running total
+  let totalPrice = 0;
 
-  // 1. Apply Group A Percentage Effect (taxable)
-  currentTotal = currentTotal * (1 + groupAPercentageEffect);
+  Object.values(aggregatedRates).forEach((rate) => {
+    let ratePrice = 0;
 
-  // 2. Conditionally round down to nearest 100 (Japanese pricing convention)
+    if (rate.adjustment_type === 'base_rate') {
+      ratePrice = rate.adjustment_value;
+    } else if (rate.adjustment_type === 'percentage') {
+      ratePrice = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
+    } else if (rate.adjustment_type === 'flat_fee') {
+      ratePrice = rate.adjustment_value;
+    }
+
+    totalPrice += ratePrice;
+  });
+
+  // Round down to nearest 100 yen (Japanese pricing convention)
   if (!disableRounding) {
-    currentTotal = Math.floor(currentTotal / 100) * 100;
+    const finalPrice = Math.floor(totalPrice / 100) * 100;
+    return finalPrice;
+  } else {
+    return totalPrice;
   }
-
-  // 3. Calculate Group B Adjustment (non-taxable, applied after rounding)
-  const groupBAdjustment = currentTotal * groupBPercentageEffect;
-
-  // 4. Add Group B Adjustment and Flat Fee Total (both non-taxable)
-  const beforeFinalFloor = currentTotal + groupBAdjustment + flatFeeTotal;
-
-  // 5. Final floor to ensure no decimal places
-  currentTotal = Math.floor(beforeFinalFloor);
-
-  // 6. Ensure price is not negative
-  currentTotal = Math.max(0, currentTotal);
-
-  return currentTotal;
 };
 
 /**
@@ -88,6 +88,6 @@ const calculateIsAccommodation = (rates, isSystemBlock = false) => {
 };
 
 module.exports = {
-  calculatePriceFromRates,
+  calculatePriceFromRatesService,
   calculateIsAccommodation
 };

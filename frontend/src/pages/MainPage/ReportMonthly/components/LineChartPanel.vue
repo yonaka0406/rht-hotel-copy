@@ -6,6 +6,11 @@
             </template>
             <template #subtitle>
                 <p>{{ computedLineChartTitle }}</p>
+                <div class="flex gap-4 mt-2 text-sm">
+                    <span class="font-semibold">宿泊売上: <span class="text-green-600">{{ totalAccommodationSales.toLocaleString('ja-JP') }}円</span></span>
+                    <span class="font-semibold">その他売上: <span class="text-yellow-600">{{ totalOtherSales.toLocaleString('ja-JP') }}円</span></span>
+                    <span class="font-semibold">合計: <span class="text-blue-600">{{ totalSales.toLocaleString('ja-JP') }}円</span></span>
+                </div>
             </template>
             <template #content>    
                 <div ref="lineChart" class="w-full h-60"></div>                
@@ -16,7 +21,7 @@
 </template>
 
 <script setup>
-import { defineProps, ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { Card, Panel } from 'primevue';
 import * as echarts from 'echarts/core';
 import {
@@ -92,6 +97,38 @@ const computedLineChartTitle = computed(() => {
 
 const yearOfSelectedMonth = computed(() => props.selectedMonth.getFullYear());
 
+// Computed properties for total sales
+const totalAccommodationSales = computed(() => {
+    if (!props.allReservationsData) return 0;
+    
+    const startDateForCalc = props.formatDate(new Date(props.metricsEffectiveStartDate));
+    const endDateForCalc = props.formatDate(new Date(props.metricsEffectiveEndDate));
+    
+    const filteredReservations = props.allReservationsData.filter(res => {
+        const resDate = res.date;
+        return resDate >= startDateForCalc && resDate <= endDateForCalc;
+    });
+    
+    return filteredReservations.reduce((sum, res) => sum + parseFloat(res.accommodation_price || 0), 0);
+});
+
+const totalOtherSales = computed(() => {
+    if (!props.allReservationsData) return 0;
+    
+    const startDateForCalc = props.formatDate(new Date(props.metricsEffectiveStartDate));
+    const endDateForCalc = props.formatDate(new Date(props.metricsEffectiveEndDate));
+    
+    const filteredReservations = props.allReservationsData.filter(res => {
+        const resDate = res.date;
+        return resDate >= startDateForCalc && resDate <= endDateForCalc;
+    });
+    
+    return filteredReservations.reduce((sum, res) => sum + parseFloat(res.other_price || 0), 0);
+});
+
+const totalSales = computed(() => {
+    return totalAccommodationSales.value + totalOtherSales.value;
+});
 const processLineChartData = () => {
     if (!props.allReservationsData || !lineChart.value) {
         initLineChart([], [], [], []);
