@@ -1,5 +1,7 @@
 let getPool = require('../../config/database').getPool;
 const logger = require('../../config/logger');
+const format = require('pg-format');
+const { deleteReservationAddonsByDetailId } = require('./delete');
 
 const addReservationAddon = async (requestId, addon, client = null) => {
   const pool = getPool(requestId);
@@ -80,7 +82,64 @@ const selectReservationAddonByDetail = async (requestId, reservationDetailId, cl
   }
 };
 
+const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id, client = null) => {
+  logger.debug(`[${requestId}] updateReservationDetailAddon called with: id=${id}, hotel_id=${hotel_id}, addons=${JSON.stringify(addons)}, user_id=${user_id}`);
+  if (!Array.isArray(addons)) {
+    addons = [];
+  }
+  const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
+  try {
+    await dbClient.query('BEGIN'); // Start transaction here to ensure atomicity
+
+    // Set session user_id for logging
+    await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, user_id));
+    // Filter out any parking addons from incoming list. 
+    // Existing parking addons are preserved because deleteReservationAddonsByDetailId excludes them.
+    const allAddonsToProcess = addons.filter(addon => addon.addon_type !== 'parking');
+    await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id, dbClient);
+
+
+    const addOnPromises = allAddonsToProcess.map(addon => {
+
+      return addReservationAddon(requestId, {
+        hotel_id: hotel_id,
+        reservation_detail_id: id,
+        addons_global_id: addon.addons_global_id,
+        addons_hotel_id: addon.addons_hotel_id,
+        addon_name: addon.addon_name,
+        addon_type: addon.addon_type, // Preserve addon_type
+        quantity: addon.quantity,
+        price: addon.price,
+        tax_type_id: addon.tax_type_id,
+        tax_rate: addon.tax_rate,
+        created_by: user_id,
+        updated_by: user_id,
+      }, dbClient) // Pass the client here
+    });
+    await Promise.all(addOnPromises);
+
+    await dbClient.query('COMMIT'); // Commit transaction here
+  } catch (err) {
+    await dbClient.query('ROLLBACK'); // Rollback on error
+    logger.error(`[${requestId}] Error updating reservation detail addon for detail ${id}:`, err);
+    throw err;
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
+  }
+};
+
 module.exports = {
   addReservationAddon,
-  selectReservationAddonByDetail
+  selectReservationAddonByDetail,
+  updateReservationDetailAddon
 }
