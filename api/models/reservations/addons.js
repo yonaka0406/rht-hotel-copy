@@ -119,7 +119,7 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
         addon_name: addon.addon_name,
         addon_type: addon.addon_type, // Preserve addon_type
         quantity: addon.quantity,
-        price: addon.price,
+        price: addon.price ?? 0,
         tax_type_id: addon.tax_type_id,
         tax_rate: addon.tax_rate,
         created_by: user_id,
