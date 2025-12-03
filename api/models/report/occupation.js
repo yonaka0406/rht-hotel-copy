@@ -96,15 +96,13 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
       SELECT
           COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
           COALESCE(rr.sales_category, 'accommodation') AS sales_category,
-          COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) AS undecided_nights,
-          COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS confirmed_nights,
+          COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE AND rm.for_sale = TRUE THEN 1 END) AS undecided_nights,
+          COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE AND rm.for_sale = TRUE THEN 1 END) AS confirmed_nights,
           COUNT(CASE WHEN r.type = 'employee' THEN 1 END) AS employee_nights,
           COUNT(CASE WHEN r.status = 'block' AND rm.for_sale = TRUE THEN 1 END) AS blocked_nights,
           COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) = FALSE AND r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) AS non_accommodation_nights,
-          (COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) +
-           COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) +
-           COUNT(CASE WHEN r.type = 'employee' THEN 1 END) +
-           COUNT(CASE WHEN r.status = 'block' AND rm.for_sale = TRUE THEN 1 END)) AS total_occupied_nights,
+          (COUNT(CASE WHEN r.status NOT IN ('cancelled') AND rm.for_sale = TRUE THEN 1 END)
+          + COUNT(CASE WHEN r.type = 'employee' THEN 1 END)) AS total_occupied_nights,
           COUNT(rd.id) AS total_reservation_details_nights
       FROM reservation_details rd
       JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id

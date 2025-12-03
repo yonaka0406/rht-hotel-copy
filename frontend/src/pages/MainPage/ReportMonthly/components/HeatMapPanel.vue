@@ -100,6 +100,9 @@ const heatMapMax = ref(0);
 const heatMapData = ref([]);
 
 const processHeatMapData = () => {
+    // DEBUG LOG: Initial props
+    console.log('[HeatMapPanel] Initial allReservationsData:', props.allReservationsData);
+    
     if (!props.allReservationsData || !heatMap.value) {
         heatMapData.value = [];
         initHeatMap(); // Initialize with empty data if needed
@@ -115,17 +118,27 @@ const processHeatMapData = () => {
         return rDate >= start && rDate <= end;
     });
 
+    // DEBUG LOG: Before occCalcMode filtering
+    console.log('[HeatMapPanel] occCalcMode:', occCalcMode.value);
+    console.log('[HeatMapPanel] relevantReservations (before mode filter):', relevantReservations);
+
     // Apply filtering based on occCalcMode
     if (occCalcMode.value === 'accommodation') {
         relevantReservations = relevantReservations.filter(r => parseFloat(r.accommodation_price || 0) > 0);
     }
             
+    // DEBUG LOG: After occCalcMode filtering
+    console.log('[HeatMapPanel] relevantReservations (after mode filter):', relevantReservations);
+
     if(relevantReservations && relevantReservations.length > 0){
         heatMapMax.value = relevantReservations[0].total_rooms; 
     } else {
         heatMapMax.value = 0;
     }
             
+    // DEBUG LOG: heatMapMax.value
+    console.log('[HeatMapPanel] heatMapMax.value:', heatMapMax.value);
+
     const datePositionMap = {};
     let currentMapDate = start;
     let weekIdx = 0;
@@ -150,11 +163,25 @@ const processHeatMapData = () => {
         const reservationDateISO = props.formatDate(new Date(reservation.date));
         const position = datePositionMap[reservationDateISO];
         if (position) {
+            let displayValue = 0;
+            if (occCalcMode.value === 'accommodation') {
+                displayValue = parseInt(reservation.room_count || 0);
+            } else { // occCalcMode.value === 'all'
+                if (parseFloat(reservation.accommodation_price || 0) > 0) {
+                    displayValue = parseInt(reservation.room_count || 0);
+                } else if (parseFloat(reservation.other_price || 0) > 0) { // Non-accommodation, use people_sum
+                    displayValue = parseInt(reservation.people_sum || 0);
+                }
+            }
             // Data format for heatmap: [weekIndex, dayIndex, value]
-            processedData.push([position.week, position.day, parseInt(reservation.room_count || 0)]);
+            processedData.push([position.week, position.day, displayValue]);
         }
     });
     heatMapData.value = processedData;
+
+    // DEBUG LOG: processedData
+    console.log('[HeatMapPanel] processedData:', processedData);
+    
     initHeatMap();
 };
 const initHeatMap = () => {
