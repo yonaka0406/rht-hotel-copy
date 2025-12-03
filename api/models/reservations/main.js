@@ -1757,6 +1757,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
         }
 
         // 2. Update Addons        
+        logger.debug(`[${requestId}] updateReservationRoomPlan: Calling updateReservationDetailAddon for detail.id=${id} with addons=${JSON.stringify(addons)}`);
         await addonsModels.updateReservationDetailAddon(requestId, id, hotelId, addons || [], userId);
 
       } catch (error) {
@@ -1826,6 +1827,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
       }
 
       // 2. Update Addons
+      logger.debug(`[${requestId}] updateReservationRoomPattern: Calling updateReservationDetailAddon for detail.id=${id} with addons=${JSON.stringify(addons)}`);
       await addonsModels.updateReservationDetailAddon(requestId, id, hotelId, addons, user_id, client);
 
     });

@@ -1,7 +1,6 @@
 let getPool = require('../../config/database').getPool;
 const logger = require('../../config/logger');
 const format = require('pg-format');
-const { deleteReservationAddonsByDetailId } = require('./delete');
 
 const addReservationAddon = async (requestId, addon, client = null) => {
   const pool = getPool(requestId);
@@ -138,8 +137,44 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
   }
 };
 
+const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by, client = null) => {
+  logger.debug(`[${requestId}] deleteReservationAddonsByDetailId called with: reservation_detail_id=${reservation_detail_id}, hotel_id=${hotel_id}, updated_by=${updated_by}`);
+  const pool = getPool(requestId);
+  let dbClient = client;
+  let shouldReleaseClient = false;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
+    shouldReleaseClient = true;
+    // If this function acquired the client, it's responsible for setting the session
+    await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, updated_by));
+  }
+
+  const query = format(`
+    DELETE FROM reservation_addons
+    WHERE reservation_detail_id = %L 
+      AND hotel_id = %L 
+      AND (addon_type IS NULL OR addon_type = '' OR addon_type <> 'parking')
+    RETURNING *;
+  `, reservation_detail_id, hotel_id);
+
+  try {
+    const result = await dbClient.query(query);
+    logger.debug(`[${requestId}] Deleted ${result.rowCount} reservation addons for detail ${reservation_detail_id}.`);
+    return result.rowCount;
+  } catch (err) {
+    logger.error('Error deleting reservation addon:', err);
+    throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
+  }
+};
+
 module.exports = {
   addReservationAddon,
   selectReservationAddonByDetail,
-  updateReservationDetailAddon
+  updateReservationDetailAddon,
+  deleteReservationAddonsByDetailId
 }
