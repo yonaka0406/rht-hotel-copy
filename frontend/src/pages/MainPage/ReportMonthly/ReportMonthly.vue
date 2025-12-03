@@ -282,7 +282,11 @@
         revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
         
         
-        OCC.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round((totalRoomsSold / totalAvailableRoomNightsInPeriod) * 10000) / 100 : 0;
+        // OCC calculation using net capacity from occupation breakdown
+        const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
+        const netAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
+        
+        OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
 
         // Calculate Forecast
         const forecastDataForPeriod = forecastData.value.filter(forecast => {

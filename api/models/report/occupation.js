@@ -75,6 +75,16 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
         (hotel_rooms.total_rooms * date_range.total_days) AS total_bookable_room_nights
       FROM date_range, hotel_rooms
     ),
+    total_blocked_nights AS (
+      SELECT 
+        COUNT(*) AS total_blocked
+      FROM reservation_details rd
+      JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+      WHERE rd.hotel_id = $1
+        AND rd.date BETWEEN $2 AND $3
+        AND rd.cancelled IS NULL
+        AND r.status = 'block'
+    ),
     plan_data AS (
       SELECT
           COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
@@ -117,7 +127,8 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
             non_accommodation_nights,
             total_occupied_nights,
             total_reservation_details_nights,
-            (SELECT total_bookable_room_nights FROM total_bookable_nights) AS total_bookable_room_nights
+            (SELECT total_bookable_room_nights FROM total_bookable_nights) AS total_bookable_room_nights,
+            (SELECT total_bookable_room_nights - total_blocked FROM total_bookable_nights, total_blocked_nights) AS net_available_room_nights
         FROM plan_data
         
         UNION ALL
@@ -132,8 +143,9 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
             0::bigint AS non_accommodation_nights,
             0::bigint AS total_occupied_nights,
             0::bigint AS total_reservation_details_nights,
-            total_bookable_room_nights
-        FROM total_bookable_nights
+            total_bookable_room_nights,
+            (total_bookable_room_nights - total_blocked) AS net_available_room_nights
+        FROM total_bookable_nights, total_blocked_nights
     ) AS union_result
     ORDER BY
         CASE WHEN plan_name = 'Total Available' THEN 'zzz' ELSE plan_name END;

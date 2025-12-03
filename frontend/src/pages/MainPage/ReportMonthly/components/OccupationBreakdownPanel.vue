@@ -49,15 +49,13 @@
                         <Column :footer="occupationBreakdownTotals.total_bookable_room_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
                     </Row>
                     <Row>
-                        <Column footer="確定泊数 / (合計利用可能泊数 - ブロック泊数):" :colspan="5" footerStyle="text-align:right"/>
+                        <Column footer="確定泊数 / 正味利用可能泊数:" :colspan="5" footerStyle="text-align:right"/>
                         <Column :footer="
                             (() => {
                                 const confirmed = confirmedOccupancyNights;
-                                const totalAvailable = occupationBreakdownTotals.total_bookable_room_nights;
-                                const blocked = blockedOccupancyNights;
-                                const denominator = totalAvailable - blocked;
-                                if (denominator <= 0) return 'N/A';
-                                return ((confirmed / denominator) * 100).toFixed(2) + '%';
+                                const netAvailable = occupationBreakdownTotals.net_available_room_nights;
+                                if (netAvailable <= 0) return 'N/A';
+                                return ((confirmed / netAvailable) * 100).toFixed(2) + '%';
                             })()
                         " footerStyle="text-align:right"/>
                     </Row>
@@ -115,9 +113,11 @@ const occupationBreakdownTotals = computed(() => {
     if (!props.occupationBreakdownData) return { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0, total_reservation_details_nights: 0, not_booked_nor_blocked_nights: 0, total_bookable_room_nights: 0 };
 
     let totalBookable = 0;
+    let netAvailable = 0;
     const filteredData = props.occupationBreakdownData.filter(item => {
         if (item.plan_name === 'Total Available') {
             totalBookable = parseInt(item.total_bookable_room_nights || '0');
+            netAvailable = parseInt(item.net_available_room_nights || '0');
             return false; // Exclude this row from the sum
         }
         return true;
@@ -142,6 +142,7 @@ const occupationBreakdownTotals = computed(() => {
     }, { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0, total_reservation_details_nights: 0, not_booked_nor_blocked_nights: 0 });
 
     totals.total_bookable_room_nights = totalBookable;
+    totals.net_available_room_nights = netAvailable;
     return totals;
 });
 
