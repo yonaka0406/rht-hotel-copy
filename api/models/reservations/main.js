@@ -27,8 +27,10 @@ const DEFAULT_CHECK_OUT_TIME = '10:00';
 
 // Function to Select
 
-const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservationId) => {
+const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservationId, dbClient = null) => {
   const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+  const shouldReleaseClient = !dbClient;
   const query = `
     SELECT 
       reservation_details.id,
@@ -47,11 +49,15 @@ const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservat
   const values = [hotelId, roomId, reservationId];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows;
   } catch (err) {
     logger.error('Error fetching room reservation details:', err);
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      client.release();
+    }
   }
 };
 
@@ -1737,7 +1743,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
     // Set session context for auditing/triggers
     await client.query(format(`SET SESSION "my_app.user_id" = %L;`, userId));
 
-    let detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);
+    let detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId, client);
     const validDays = daysOfTheWeek.map(d => d.value);
     // Filter detailsArray to keep only dates that match daysOfTheWeek
     detailsArray = detailsArray.filter(detail => {
@@ -1753,11 +1759,11 @@ const updateReservationRoomPlan = async (requestId, data) => {
       try {
         // 1. Update Plan      
         if (plan) {
-          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId, disableRounding);
+          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId, disableRounding, client);
         }
 
         // 2. Update Addons        
-        await addonsModels.updateReservationDetailAddon(requestId, id, hotelId, addons || [], userId);
+        await addonsModels.updateReservationDetailAddon(requestId, id, hotelId, addons || [], userId, client);
 
       } catch (error) {
         throw error;
@@ -1801,7 +1807,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
     await client.query(setSessionQuery);
 
-    const detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);
+    const detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId, client);
 
     // Update the reservation details with promise
     const updatePromises = detailsArray.map(async (detail) => {
@@ -1811,7 +1817,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
       const dayOfWeek = detailDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
 
       const plan = await getPlanByKey(requestId, hotelId, pattern[dayOfWeek]);
-      const addons = await getAllPlanAddons(requestId, plan.plans_global_id, plan.plans_hotel_id, hotelId);
+      const addons = await getAllPlanAddons(requestId, plan.plans_global_id, plan.plans_hotel_id, hotelId, client);
       if (addons && Array.isArray(addons)) {
         addons.forEach(addon => {
           addon.quantity = plan.plan_type === 'per_person' ? number_of_people : 1;
@@ -2590,7 +2596,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
         const totalPeopleCount = (parseInt(roomDetail.RoomPaxMaleCount, 10) || 0) + (parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0) + (parseInt(roomDetail.RoomChildA70Count, 10) || 0) + (parseInt(roomDetail.RoomChildB50Count, 10) || 0) + (parseInt(roomDetail.RoomChildC30Count, 10) || 0) + (parseInt(roomDetail.RoomChildDNoneCount, 10) || 0);
 
-        const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
+        const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id, internalClient);
         if (addons && Array.isArray(addons)) {
           addons.forEach(addon => {
             // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
@@ -3496,7 +3502,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
         const totalPeopleCount = (parseInt(roomDetail.RoomPaxMaleCount, 10) || 0) + (parseInt(roomDetail.RoomPaxFemaleCount, 10) || 0) + (parseInt(roomDetail.RoomChildA70Count, 10) || 0) + (parseInt(roomDetail.RoomChildB50Count, 10) || 0) + (parseInt(roomDetail.RoomChildC30Count, 10) || 0) + (parseInt(roomDetail.RoomChildDNoneCount, 10) || 0);
 
-        const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
+        const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id, internalClient);
         if (addons && Array.isArray(addons)) {
           addons.forEach(addon => {
             // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
@@ -4145,7 +4151,7 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
               updated_by: userId,
             };
             logger.debug('[copyReservation] Creating new addon:', addonData);
-            await _addReservationAddon(requestId, addonData);
+            await _addReservationAddon(requestId, addonData, client);
           }
         } else {
           logger.debug('[copyReservation] No addons to copy for this detail.');

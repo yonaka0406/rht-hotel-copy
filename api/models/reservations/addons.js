@@ -89,13 +89,17 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
   let dbClient = client;
   let shouldReleaseClient = false;
 
+  const shouldManageTransaction = !client;
+
   if (!dbClient) {
     dbClient = await pool.connect();
     shouldReleaseClient = true;
   }
 
   try {
-    await dbClient.query('BEGIN'); // Start transaction here to ensure atomicity
+    if (shouldManageTransaction) {
+      await dbClient.query('BEGIN'); // Start transaction here to ensure atomicity
+    }
 
     // Set session user_id for logging
     await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, user_id));
@@ -105,9 +109,9 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
     await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id, dbClient);
 
 
-    const addOnPromises = allAddonsToProcess.map(addon => {
-
-      return addReservationAddon(requestId, {
+    const addedAddons = [];
+    for (const addon of allAddonsToProcess) {
+      const newAddon = await addReservationAddon(requestId, {
         hotel_id: hotel_id,
         reservation_detail_id: id,
         addons_global_id: addon.addons_global_id,
@@ -120,13 +124,17 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
         tax_rate: addon.tax_rate,
         created_by: user_id,
         updated_by: user_id,
-      }, dbClient) // Pass the client here
-    });
-    await Promise.all(addOnPromises);
+      }, dbClient); // Pass the client here
+      addedAddons.push(newAddon);
+    }
 
-    await dbClient.query('COMMIT'); // Commit transaction here
+    if (shouldManageTransaction) {
+      await dbClient.query('COMMIT'); // Commit transaction here
+    }
   } catch (err) {
-    await dbClient.query('ROLLBACK'); // Rollback on error
+    if (shouldManageTransaction) {
+      await dbClient.query('ROLLBACK'); // Rollback on error
+    }
     logger.error(`[${requestId}] Error updating reservation detail addon for detail ${id}:`, err);
     throw err;
   } finally {
