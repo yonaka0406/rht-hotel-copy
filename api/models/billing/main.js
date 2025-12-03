@@ -65,7 +65,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
               END
             ) AS addon_price
             ,SUM(
-              CASE WHEN reservation_details.date BETWEEN $2 AND $3 THEN
+              CASE WHEN reservation_details.date BETWEEN $2 AND $3 AND reservation_details.billable = TRUE THEN
                 CASE WHEN reservation_details.plan_type = 'per_room' 
                     THEN reservation_details.price
                     ELSE reservation_details.price * reservation_details.number_of_people 
@@ -73,12 +73,8 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
               ELSE 0 END
             ) AS plan_period_price
             ,SUM(
-              CASE WHEN reservation_details.date BETWEEN $2 AND $3 THEN
-                CASE WHEN reservation_details.billable = TRUE 
-                          AND reservation_details.cancelled IS NULL 
-                    THEN COALESCE(ra.addon_sum,0) 
-                    ELSE 0 
-              END
+              CASE WHEN reservation_details.date BETWEEN $2 AND $3 AND reservation_details.billable = TRUE THEN
+                COALESCE(ra.addon_sum,0)
               ELSE 0 END
             ) AS addon_period_price
           FROM
