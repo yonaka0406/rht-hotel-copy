@@ -58,10 +58,9 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
               END
             ) AS plan_price
             ,SUM(
-              CASE WHEN reservation_details.billable = TRUE 
-                        AND reservation_details.cancelled IS NULL 
-                  THEN COALESCE(ra.addon_sum,0) 
-                  ELSE 0 
+              CASE WHEN reservation_details.billable = TRUE
+                  THEN COALESCE(ra.addon_sum,0)
+                  ELSE 0
               END
             ) AS addon_price
             ,SUM(
