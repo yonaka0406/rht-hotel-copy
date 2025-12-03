@@ -1632,6 +1632,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 };
 
 const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id, client = null) => {
+  logger.debug(`[${requestId}] updateReservationDetailAddon called with: id=${id}, hotel_id=${hotel_id}, addons=${JSON.stringify(addons)}, user_id=${user_id}`);
   if (!Array.isArray(addons)) {
     addons = [];
   }
