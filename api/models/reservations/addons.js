@@ -82,7 +82,6 @@ const selectReservationAddonByDetail = async (requestId, reservationDetailId, cl
 };
 
 const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id, client = null) => {
-  logger.debug(`[${requestId}] updateReservationDetailAddon called with: id=${id}, hotel_id=${hotel_id}, addons=${JSON.stringify(addons)}, user_id=${user_id}`);
   if (!Array.isArray(addons)) {
     addons = [];
   }
@@ -138,7 +137,6 @@ const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, use
 };
 
 const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by, client = null) => {
-  logger.debug(`[${requestId}] deleteReservationAddonsByDetailId called with: reservation_detail_id=${reservation_detail_id}, hotel_id=${hotel_id}, updated_by=${updated_by}`);
   const pool = getPool(requestId);
   let dbClient = client;
   let shouldReleaseClient = false;
@@ -160,7 +158,6 @@ const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_i
 
   try {
     const result = await dbClient.query(query);
-    logger.debug(`[${requestId}] Deleted ${result.rowCount} reservation addons for detail ${reservation_detail_id}.`);
     return result.rowCount;
   } catch (err) {
     logger.error('Error deleting reservation addon:', err);
