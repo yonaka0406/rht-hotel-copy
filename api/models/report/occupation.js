@@ -17,33 +17,38 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
   const formattedDate = date.toISOString().split('T')[0];
 
   const query = `
-    WITH roomTotal AS (
-      SELECT 
-        hotel_id,
-        EXTRACT(DAY FROM (DATE_TRUNC('month', $1::DATE) + INTERVAL '1 month' - INTERVAL '1 day')) AS last_day,
-        COUNT(*) as total_rooms
-      FROM rooms
-      WHERE for_sale = true AND hotel_id = $2
-      GROUP BY hotel_id
+    WITH hotel_monthly_capacity AS (
+      SELECT
+        $2::int AS hotel_id,
+        DATE_TRUNC('month', $1::DATE) AS month_start,
+        EXTRACT(DAY FROM (DATE_TRUNC('month', $1::DATE) + INTERVAL '1 month' - INTERVAL '1 day'))::int AS days_in_month,
+        COUNT(r.id)::int AS total_physical_rooms
+      FROM rooms r
+      WHERE r.hotel_id = $2 AND r.for_sale = TRUE
+      GROUP BY DATE_TRUNC('month', $1::DATE)
+    ),
+    monthly_summary AS (
+      SELECT
+        h.hotel_id,
+        h.month_start,
+        h.days_in_month,
+        h.total_physical_rooms,
+        (h.total_physical_rooms * h.days_in_month)::bigint AS total_capacity_room_nights,
+        COUNT(CASE WHEN res.status = 'block' AND rd.cancelled IS NULL AND rm.for_sale = TRUE THEN rd.id ELSE NULL END)::bigint AS total_blocked_room_nights,
+        COUNT(CASE WHEN res.status NOT IN ('block', 'hold', 'provisory', 'cancelled') AND res.type <> 'employee' AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id ELSE NULL END)::bigint AS total_occupied_room_nights
+      FROM hotel_monthly_capacity h
+      LEFT JOIN reservation_details rd ON rd.hotel_id = h.hotel_id AND DATE_TRUNC('month', rd.date) = h.month_start
+      LEFT JOIN reservations res ON res.id = rd.reservation_id AND res.hotel_id = rd.hotel_id
+      LEFT JOIN rooms rm ON rd.room_id = rm.id
+      WHERE rd.hotel_id = $2
+      GROUP BY h.hotel_id, h.month_start, h.days_in_month, h.total_physical_rooms
     )
     SELECT
-      COUNT(CASE WHEN reservations.status = 'block' THEN NULL ELSE reservation_details.room_id END) as room_count,
-      (roomTotal.total_rooms * roomTotal.last_day) - COUNT(CASE WHEN reservations.status = 'block' AND rooms.for_sale = TRUE then 1 ELSE NULL END) as available_rooms,  
-      COUNT(CASE WHEN reservations.status = 'block' AND rooms.for_sale = TRUE then 1 ELSE NULL END) as blocked_rooms,
-      (roomTotal.total_rooms * roomTotal.last_day) as total_rooms
-    FROM 
-      reservations
-      JOIN reservation_details ON reservation_details.hotel_id = reservations.hotel_id AND reservation_details.reservation_id = reservations.id 
-      JOIN rooms ON reservation_details.room_id = rooms.id
-      JOIN roomTotal ON reservation_details.hotel_id = roomTotal.hotel_id
-    WHERE
-      reservation_details.hotel_id = $2
-      AND DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $1::DATE)
-      AND reservation_details.cancelled IS NULL
-      AND reservations.type <> 'employee'
-      AND reservations.status NOT IN ('hold')
-      AND COALESCE(reservation_details.is_accommodation, TRUE) = TRUE
-    GROUP BY roomTotal.total_rooms, roomTotal.last_day;
+      ms.total_occupied_room_nights AS room_count,
+      (ms.total_capacity_room_nights - ms.total_blocked_room_nights) AS available_rooms,
+      ms.total_blocked_room_nights AS blocked_rooms,
+      ms.total_capacity_room_nights AS total_rooms -- Renamed for clarity, was 'total_rooms'
+    FROM monthly_summary ms;
   `;
 
   const values = [formattedDate, hotelId];
@@ -80,10 +85,12 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
         COUNT(*) AS total_blocked
       FROM reservation_details rd
       JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+      JOIN rooms rm ON rd.room_id = rm.id
       WHERE rd.hotel_id = $1
         AND rd.date BETWEEN $2 AND $3
         AND rd.cancelled IS NULL
         AND r.status = 'block'
+        AND rm.for_sale = TRUE
     ),
     plan_data AS (
       SELECT
