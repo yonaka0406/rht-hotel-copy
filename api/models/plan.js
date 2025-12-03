@@ -91,8 +91,8 @@ const getAllPatternsByHotel = async (requestId, hotel_id) => {
         const result = await pool.query(query, values);    
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotel plans:', err);
-        throw new Error('Database error');
+        console.error('Error retrieving patterns for hotel:', err);
+        throw err;
     }
 };
 
@@ -298,8 +298,8 @@ const updatePlanPattern = async (requestId, id, name, template, user_id) => {
         const result = await pool.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error updating global Plan:', err);
-        throw new Error('Database error');
+        console.error('Error updating plan pattern:', err);
+        throw err;
     }
 };
 
