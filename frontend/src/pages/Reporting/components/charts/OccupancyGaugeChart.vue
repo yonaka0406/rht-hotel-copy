@@ -40,10 +40,14 @@ const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
 
 const chartOptions = computed(() => {
-  const { sold_rooms, total_rooms, fc_sold_rooms, fc_total_rooms } = props.occupancyData;
+  const { sold_rooms, total_rooms, net_total_rooms, fc_sold_rooms, fc_total_rooms, fc_net_total_rooms } = props.occupancyData;
 
-  const totalActualOccupancy = total_rooms > 0 ? sold_rooms / total_rooms : 0;
-  const totalForecastOccupancy = fc_total_rooms > 0 ? fc_sold_rooms / fc_total_rooms : 0;
+  // Use net capacity if available, otherwise fall back to gross capacity
+  const actualTotalRooms = net_total_rooms !== undefined && net_total_rooms !== null ? net_total_rooms : total_rooms;
+  const forecastTotalRooms = fc_net_total_rooms !== undefined && fc_net_total_rooms !== null ? fc_net_total_rooms : fc_total_rooms;
+
+  const totalActualOccupancy = actualTotalRooms > 0 ? sold_rooms / actualTotalRooms : 0;
+  const totalForecastOccupancy = forecastTotalRooms > 0 ? fc_sold_rooms / forecastTotalRooms : 0;
 
   return {
     tooltip: {

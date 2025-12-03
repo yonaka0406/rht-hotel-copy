@@ -465,15 +465,18 @@
         Object.keys(monthlyOccupancyAggregates).sort().forEach(monthKey => {
             const monthData = monthlyOccupancyAggregates[monthKey];
             let totalRoomsSum = 0;
+            let totalGrossRoomsSum = 0;
 
-            // First, calculate total_available_rooms for each individual hotel
+            // First, calculate total_available_rooms_for_month_calc for each individual hotel
             for (const hotelId in monthData) {
                 if (hotelId === '0') continue;
 
                 const hotelData = monthData[hotelId];
                 let total_available_rooms_for_month_calc = 0;
+                let total_gross_rooms_for_month_calc = 0;
                 const fallbackCapacityForHotel = pmsFallbackCapacities.value[hotelId] || 0;
                 const dailyRealRoomsMap = new Map();
+                const dailyGrossRoomsMap = new Map();
                 const hotelPmsDataForMonth = (pmsTotalData.value[hotelId] || []).filter(
                     pmsRecord => pmsRecord.date.startsWith(monthKey)
                 );
@@ -483,6 +486,12 @@
                         const realRooms = parseInt(pmsRecord.total_rooms_real, 10);
                         if (!isNaN(realRooms)) {
                             dailyRealRoomsMap.set(pmsRecord.date, realRooms);
+                        }
+                    }
+                    if (Object.prototype.hasOwnProperty.call(pmsRecord, 'total_rooms') && pmsRecord.total_rooms !== null) {
+                        const grossRooms = parseInt(pmsRecord.total_rooms, 10);
+                        if (!isNaN(grossRooms)) {
+                            dailyGrossRoomsMap.set(pmsRecord.date, grossRooms);
                         }
                     }
                 });
@@ -495,22 +504,28 @@
                 for (let day = 1; day <= daysInCurrentMonth; day++) {
                     const utcDateForDay = new Date(Date.UTC(year, monthJS, day));
                     const currentDateStr = formatDate(utcDateForDay);
-                    total_available_rooms_for_month_calc += dailyRealRoomsMap.get(currentDateStr) || fallbackCapacityForHotel;
+                    
+                    total_available_rooms_for_month_calc += dailyRealRoomsMap.has(currentDateStr) ? dailyRealRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
+                    total_gross_rooms_for_month_calc += dailyGrossRoomsMap.has(currentDateStr) ? dailyGrossRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
                 }
                 
                 hotelData.total_available_rooms_for_month_calc = total_available_rooms_for_month_calc;
+                hotelData.total_gross_rooms_for_month_calc = total_gross_rooms_for_month_calc;
                 totalRoomsSum += total_available_rooms_for_month_calc;
+                totalGrossRoomsSum += total_gross_rooms_for_month_calc;
             }
 
             // Assign the sum to the '0' hotel entry
             if (monthData['0']) {
                 monthData['0'].total_available_rooms_for_month_calc = totalRoomsSum;
+                monthData['0'].total_gross_rooms_for_month_calc = totalGrossRoomsSum;
             }
 
             // Now, create the result array for the month
             for (const hotelId in monthData) {
                 const data = monthData[hotelId];
                 const total_rooms = data.total_available_rooms_for_month_calc || 0;
+                const total_gross_rooms = data.total_gross_rooms_for_month_calc || 0;
                 const occupancyRate = total_rooms > 0 ? (data.sold_rooms / total_rooms) * 100 : 0;
                 
                 let outputHotelId = hotelId === '0' ? 0 : parseInt(hotelId, 10);
@@ -524,6 +539,8 @@
                             hotel_id: outputHotelId,
                             hotel_name: hotelName,
                             total_rooms: total_rooms,
+                            net_total_rooms: total_rooms, 
+                            gross_total_rooms: total_gross_rooms,
                             sold_rooms: data.sold_rooms,
                             occ: parseFloat(occupancyRate.toFixed(2)),
                             not_available_rooms: 0,
