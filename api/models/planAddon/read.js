@@ -7,7 +7,8 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
         SELECT 
             pa.*
             ,COALESCE(ag.name, ah.name) AS addon_name            
-            ,tax_info.name as tax_type            
+            ,tax_info.name as tax_type
+            ,pa.sales_category            
         FROM 
             plan_addons AS pa
                 JOIN
@@ -25,7 +26,7 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
         ORDER BY addon_name ASC
     `;
 
-    try {        
+    try {
         const result = await client.query(query, [
             plans_global_id || null,
             plans_hotel_id || null,

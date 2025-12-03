@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 // GET
 const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) => {
@@ -28,6 +29,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
         r.hotel_id = $1
         AND rd.date BETWEEN $2 AND $3
         AND r.status = 'block'
+        AND rd.cancelled IS NULL
         AND rooms.for_sale = TRUE
       GROUP BY rd.hotel_id, rd.date
     ),
@@ -63,16 +65,14 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
             rd.reservation_id,
             rd.id AS reservation_detail_id,
             rd.number_of_people,
+            COALESCE(rd.is_accommodation, TRUE) AS is_accommodation,
             CASE WHEN rd.cancelled IS NULL THEN FALSE ELSE TRUE END AS cancelled,
-            -- Calculate net plan price
-            COALESCE(
-                CASE
-                    WHEN rd.plan_type = 'per_room' THEN rr.net_price
-                    ELSE rr.net_price * rd.number_of_people
-                END, 0
-            ) AS net_plan_price,
-            -- Calculate net addon price
-            COALESCE(ra.net_price_sum, 0) AS net_addon_price,
+            -- Calculate net plan price split by sales_category
+            COALESCE(rr.accommodation_net_price, 0) AS accommodation_net_plan_price,
+            COALESCE(rr.other_net_price, 0) AS other_net_plan_price,
+            -- Calculate net addon price split by sales_category
+            COALESCE(ra.accommodation_net_price_sum, 0) AS accommodation_net_addon_price,
+            COALESCE(ra.other_net_price_sum, 0) AS other_net_addon_price,
             COALESCE(gender_counts.male_count, 0) AS male_count,
             COALESCE(gender_counts.female_count, 0) AS female_count
         FROM
@@ -80,23 +80,56 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
 		    JOIN
             reservation_details rd ON res.hotel_id = rd.hotel_id AND res.id = rd.reservation_id
         LEFT JOIN (
-            -- Aggregate net prices from reservation_rates for each reservation_detail
+            -- Aggregate net prices from reservation_rates split by sales_category
             SELECT
-                hotel_id,
-                reservation_details_id,
-                SUM(net_price) AS net_price
+                rr.hotel_id,
+                rr.reservation_details_id,
+                rd_inner.plan_type,
+                rd_inner.number_of_people,
+                SUM(
+                    CASE 
+                        WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN
+                            CASE 
+                                WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                                ELSE rr.net_price * rd_inner.number_of_people
+                            END
+                        ELSE 0
+                    END
+                ) AS accommodation_net_price,
+                SUM(
+                    CASE 
+                        WHEN rr.sales_category = 'other' THEN
+                            CASE 
+                                WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                                ELSE rr.net_price * rd_inner.number_of_people
+                            END
+                        ELSE 0
+                    END
+                ) AS other_net_price
             FROM
-                reservation_rates
-            WHERE hotel_id = $1
+                reservation_rates rr
+            JOIN reservation_details rd_inner ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
+            WHERE rr.hotel_id = $1
             GROUP BY
-                hotel_id, reservation_details_id
+                rr.hotel_id, rr.reservation_details_id, rd_inner.plan_type, rd_inner.number_of_people
         ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
         LEFT JOIN (
-            -- Aggregate net prices from reservation_addons for each reservation_detail
+            -- Aggregate net prices from reservation_addons split by sales_category
             SELECT
                 hotel_id,
                 reservation_detail_id,
-                SUM(net_price * quantity) AS net_price_sum
+                SUM(
+                    CASE 
+                        WHEN sales_category = 'accommodation' OR sales_category IS NULL THEN net_price * quantity
+                        ELSE 0
+                    END
+                ) AS accommodation_net_price_sum,
+                SUM(
+                    CASE 
+                        WHEN sales_category = 'other' THEN net_price * quantity
+                        ELSE 0
+                    END
+                ) AS other_net_price_sum
             FROM
                 reservation_addons
             WHERE hotel_id = $1
@@ -130,12 +163,16 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       rt.date,
       rt.total_rooms,
       rt.total_rooms_real,
-      COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.reservation_detail_id END) AS room_count, -- Adjusted room_count
+      COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL 
+                 WHEN rdn.is_accommodation = TRUE THEN rdn.reservation_detail_id 
+                 ELSE NULL END) AS room_count, -- Only count accommodation reservations
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.number_of_people END) AS people_sum, -- Adjusted people_sum      
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.male_count END) AS male_count,
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.female_count END) AS female_count,
       (SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.number_of_people END) - SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.male_count END) - SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.female_count END)) AS unspecified_count,
-      SUM(rdn.net_plan_price + rdn.net_addon_price) AS price -- This will be the pre-tax total revenue
+      SUM(rdn.accommodation_net_plan_price + rdn.accommodation_net_addon_price) AS accommodation_price,
+      SUM(rdn.other_net_plan_price + rdn.other_net_addon_price) AS other_price,
+      SUM(rdn.accommodation_net_plan_price + rdn.accommodation_net_addon_price + rdn.other_net_plan_price + rdn.other_net_addon_price) AS price -- Total price for compatibility
     FROM room_total rt
     LEFT JOIN reservation_details_net_price rdn
       ON rdn.hotel_id = rt.hotel_id AND rdn.date = rt.date
@@ -148,7 +185,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values);    
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
@@ -265,6 +302,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
         ,details.addon_price
         ,(details.plan_price + details.addon_price) AS price
         ,details.payment
+        ,details.plan_sales_category
         ,details.clients_json
         ,details.payers_json
       FROM
@@ -275,6 +313,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
           SELECT 
             reservation_details.hotel_id
             ,reservation_details.reservation_id
+            ,COALESCE(MIN(rr.sales_category), 'accommodation') AS plan_sales_category
             ,rc.clients_json::TEXT AS clients_json
             ,rpc.clients_json::TEXT AS payers_json          
             ,COALESCE(rp.payment,0) as payment          
@@ -298,6 +337,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
             ) AS addon_price
           FROM
             reservation_details 
+              LEFT JOIN reservation_rates rr ON reservation_details.id = rr.reservation_details_id
               LEFT JOIN
             (
               SELECT 
@@ -660,26 +700,63 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     SELECT
       COALESCE(pg.name, ph.name, 'プラン未設定') AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
-      SUM(
-        CASE
-          WHEN rd.plan_type = 'per_room' THEN rd.price
-          ELSE rd.price * rd.number_of_people
-        END
-      ) AS total_sales,
-      SUM(COALESCE(rr.net_price, 0)) AS total_sales_net
+      SUM(COALESCE(rr.accommodation_price, 0)) AS accommodation_sales,
+      SUM(COALESCE(rr.other_price, 0)) AS other_sales,
+      SUM(COALESCE(rr.accommodation_net_price, 0)) AS accommodation_sales_net,
+      SUM(COALESCE(rr.other_net_price, 0)) AS other_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
     LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
     LEFT JOIN (
         SELECT
-            hotel_id,
-            reservation_details_id,
-            SUM(net_price) AS net_price
+            rr.hotel_id,
+            rr.reservation_details_id,
+            SUM(
+                CASE 
+                    WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
+                        CASE 
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.price
+                            ELSE rr.price * rd_inner.number_of_people
+                        END
+                    ELSE 0 
+                END
+            ) AS accommodation_price,
+            SUM(
+                CASE 
+                    WHEN rr.sales_category = 'other' THEN 
+                        CASE 
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.price
+                            ELSE rr.price * rd_inner.number_of_people
+                        END
+                    ELSE 0 
+                END
+            ) AS other_price,
+            SUM(
+                CASE 
+                    WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
+                        CASE 
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                            ELSE rr.net_price * rd_inner.number_of_people
+                        END
+                    ELSE 0 
+                END
+            ) AS accommodation_net_price,
+            SUM(
+                CASE 
+                    WHEN rr.sales_category = 'other' THEN 
+                        CASE 
+                            WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                            ELSE rr.net_price * rd_inner.number_of_people
+                        END
+                    ELSE 0 
+                END
+            ) AS other_net_price
         FROM
-            reservation_rates
+            reservation_rates rr
+        JOIN reservation_details rd_inner ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
         GROUP BY
-            hotel_id, reservation_details_id
+            rr.hotel_id, rr.reservation_details_id, rd_inner.plan_type, rd_inner.number_of_people
     ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
@@ -702,8 +779,10 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         ELSE ra.addon_type
       END || '(' || (ra.tax_rate * 100)::integer || '%)' AS plan_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
-      SUM(ra.price * ra.quantity) AS total_sales,
-      SUM(ra.net_price * ra.quantity) AS total_sales_net
+      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_sales,
+      SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_sales,
+      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_sales_net,
+      SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
@@ -1028,13 +1107,13 @@ const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) =>
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
-  selectCountReservationDetailsAddons,  
+  selectCountReservationDetailsAddons,
   selectReservationListView,
   selectReservationsInventory,
-  selectAllRoomTypesInventory,  
+  selectAllRoomTypesInventory,
   selectActiveReservationsChange,
   selectMonthlyReservationEvolution,
-  selectSalesByPlan,  
+  selectSalesByPlan,
   selectChannelSummary,
-  selectCheckInOutReport,  
+  selectCheckInOutReport,
 };

@@ -56,6 +56,14 @@
                                                     </div>
                                                     <div class="field mt-6">
                                                         <FloatLabel>
+                                                            <Select v-model="newRate.sales_category"
+                                                                :options="salesCategoryOptions" optionLabel="label"
+                                                                optionValue="id" fluid />
+                                                            <label>売上区分</label>
+                                                        </FloatLabel>
+                                                    </div>
+                                                    <div class="field mt-6">
+                                                        <FloatLabel>
                                                             <Select v-model="newRate.tax_type_id" :options="taxTypes"
                                                                 optionLabel="name" optionValue="id" fluid />
                                                             <label>税区分</label>
@@ -78,14 +86,14 @@
                                             <Divider />
                                             <div class="field mt-6">
                                                 <DataTable :value="selectedRates" class="p-datatable-sm datatable-tall-rows">
-                                                    <Column header="料金種類" style="width:30%">
+                                                    <Column header="料金種類" style="width:25%">
                                                         <template #body="slotProps">
                                                             <div>
                                                                 <div class="grid grid-cols-1">
                                                                     <Badge
                                                                         :severity="slotProps.data.adjustment_type === 'percentage' ? 'info' : slotProps.data.adjustment_type === 'flat_fee' ? 'secondary' : ''">
                                                                         {{
-                                                                        defineRateType(slotProps.data.adjustment_type)
+                                                                        getAdjustmentTypeLabel(slotProps.data.adjustment_type)
                                                                         }}
                                                                     </Badge>
                                                                     <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
@@ -102,7 +110,15 @@
                                                             </div>
                                                         </template>
                                                     </Column>
-                                                    <Column header="数値" style="width:30%">
+                                                    <Column header="売上区分" style="width:15%">
+                                                        <template #body="slotProps">
+                                                            <Badge
+                                                                :severity="slotProps.data.sales_category === 'accommodation' ? 'success' : 'warning'">
+                                                                {{ getSalesCategoryLabel(slotProps.data.sales_category) }}
+                                                            </Badge>
+                                                        </template>
+                                                    </Column>
+                                                    <Column header="数値" style="width:25%">
                                                         <template #body="slotProps">
                                                             <InputNumber v-model="slotProps.data.adjustment_value"
                                                                 placeholder="数値を記入"
@@ -110,7 +126,7 @@
                                                                 fluid />
                                                         </template>
                                                     </Column>
-                                                    <Column header="税込金額" style="width:30%">
+                                                    <Column header="税込金額" style="width:25%">
                                                         <template #body="slotProps">
                                                             {{ formatCurrency(slotProps.data.price) }}
                                                         </template>
@@ -145,20 +161,28 @@
                                             <Divider />
                                             <div class="field mt-6">
                                                 <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                                    <Column field="addon_name" header="アドオン名" style="width:40%" />
-                                                    <Column field="quantity" header="数量">
+                                                    <Column field="addon_name" header="アドオン名" style="width:30%" />
+                                                    <Column field="quantity" header="数量" style="width:15%">
                                                         <template #body="slotProps">
                                                             <InputNumber v-model="slotProps.data.quantity" :min="0"
                                                                 placeholder="数量を記入" fluid />
                                                         </template>
                                                     </Column>
-                                                    <Column field="price" header="単価">
+                                                    <Column header="売上区分" style="width:15%">
+                                                        <template #body="slotProps">
+                                                            <Badge
+                                                                :severity="slotProps.data.sales_category === 'accommodation' ? 'success' : 'warning'">
+                                                                {{ getSalesCategoryLabel(slotProps.data.sales_category) }}
+                                                            </Badge>
+                                                        </template>
+                                                    </Column>
+                                                    <Column field="price" header="単価" style="width:30%">
                                                         <template #body="slotProps">
                                                             <InputNumber v-model="slotProps.data.price" :min="0"
                                                                 placeholder="価格を記入" fluid />
                                                         </template>
                                                     </Column>
-                                                    <Column header="操作">
+                                                    <Column header="操作" style="width:10%">
                                                         <template #body="slotProps">
                                                             <Button icon="pi pi-trash"
                                                                 class="p-button-text p-button-danger p-button-sm"
@@ -294,6 +318,7 @@ const selectedPlan = ref(null);
 const newRate = ref({
     tax_type_id: 3,
     adjustment_type: 'base_rate',
+    sales_category: 'accommodation',
     include_in_cancel_fee: true,
 });
 const selectedRates = ref(null);
@@ -305,7 +330,12 @@ const adjustmentTypes = ref([
     { id: 'flat_fee', label: '定額料金' },
 ]);
 
-const defineRateType = (type) => {
+const salesCategoryOptions = ref([
+    { id: 'accommodation', label: '宿泊料金' },
+    { id: 'other', label: 'その他' },
+]);
+
+const getAdjustmentTypeLabel = (type) => {
     if (type === 'base_rate') {
         return '基本料金'
     }
@@ -317,6 +347,15 @@ const defineRateType = (type) => {
     }
     return '未設定'
 };
+const getSalesCategoryLabel = (type) => {
+    if (type === 'accommodation') {
+        return '宿泊料金'
+    }
+    if (type === 'other') {
+        return 'その他'
+    }
+    return '宿泊料金'
+};
 const updateTaxRate = (tax) => {
     const selectedTax = taxTypes.value.find(t => t.id === tax.tax_type_id);
     tax.tax_rate = selectedTax ? selectedTax.percentage : 0;
@@ -325,7 +364,7 @@ const recalculatePrice = (rate) => {
     // Find baseRate
     planTotalRate.value = planTotalRate.value - rate.price;
     let baseRate = selectedRates.value
-        .filter(r => r.adjustment_type === 'base_rate')
+        .filter(r => r.adjustment_type === 'base_rate' && r.sales_category === 'accommodation')
         .reduce((sum, r) => sum + parseFloat(r.adjustment_value), 0);
 
     // Update the price for the changed rate
@@ -342,6 +381,7 @@ const addRate = () => {
 
         selectedRates.value.push({
             adjustment_type: newRate.value.adjustment_type,
+            sales_category: newRate.value.sales_category,
             tax_type_id: newRate.value.tax_type_id,
             tax_rate: selectedTax ? selectedTax.percentage : 0,
             adjustment_value: 0,
@@ -380,7 +420,7 @@ const updatePlanAddOns = async (event) => {
             // Calculate price in rates
             selectedRates.value = await fetchPlanRates(gid, hid, hotel_id, reservationDetail.value.date);
             let baseRate = selectedRates.value
-                .filter(rate => rate.adjustment_type === 'base_rate')
+                .filter(rate => rate.adjustment_type === 'base_rate' && rate.sales_category === 'accommodation')
                 .reduce((sum, rate) => sum + parseFloat(rate.adjustment_value), 0);
             selectedRates.value = selectedRates.value.map(rate => {
                 if (rate.adjustment_type === 'percentage') {

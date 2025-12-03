@@ -46,10 +46,10 @@
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">                        
                         <div class="w-full md:w-1/2">
-                            <div ref="totalChartContainer" style="height: 450px; width: 100%;"></div>
+                            <RevenuePlanVsActualChart :revenueData="singleHotelRevenueChartDataSource[0]" />
                         </div>
                         <div class="w-full md:w-1/2">
-                            <div ref="totalOccupancyChartContainer" style="height: 450px; width: 100%;"></div>
+                            <OccupancyGaugeChart :occupancyData="props.occupancyData[0]" />
                         </div>                        
                     </div>
                 </template> 
@@ -121,19 +121,19 @@
                                     </div>
                                 </template>
                             </Column>
-                            <Column field="period_revenue" header="実績①" sortable style="width: 20%">
+                            <Column field="accommodation_revenue" header="実績①" sortable style="width: 20%">
                                 <template #body="{ data }">
                                     <div class="flex justify-end mr-2"> 
-                                        {{ formatCurrency(data.period_revenue) }}
+                                        {{ formatCurrency(data.accommodation_revenue) }}
                                     </div>
                                 </template>
                             </Column>
                             <Column header="分散" sortable style="width: 30%">
                                 <template #body="{ data }">
                                     <div class="flex justify-end mr-2">                                        
-                                        {{ formatCurrency(data.period_revenue - data.forecast_revenue) }}
-                                        <Badge class="ml-2" :severity="getSeverity((data.period_revenue / data.forecast_revenue) - 1)" size="small">
-                                            {{ formatPercentage((data.period_revenue / data.forecast_revenue) - 1) }}
+                                        {{ formatCurrency(data.accommodation_revenue - data.forecast_revenue) }}
+                                        <Badge class="ml-2" :severity="getSeverity((data.accommodation_revenue / data.forecast_revenue) - 1)" size="small">
+                                            {{ formatPercentage((data.accommodation_revenue / data.forecast_revenue) - 1) }}
                                         </Badge>
                                     </div>
                                 </template>
@@ -217,7 +217,7 @@
 </template>
 <script setup>
     // Vue
-    import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+    import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
     
     // Props
     const props = defineProps({
@@ -231,35 +231,19 @@
         },   
     });
 
+    // Components
+    import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
+    import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
+
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
 
-    // Helper
-    const formatCurrency = (value) => {
-        if (value === null || value === undefined || Number.isNaN(value)) return '- 円'; // Handle NaN
-        return parseFloat(value).toLocaleString('ja-JP') + ' 円';
-    };
-    const formatPercentage = (value) => {
-        if (value === null || value === undefined) return '-';
-        return parseFloat(value).toLocaleString('ja-JP', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
-    const _calculateVariancePercentage = (period, forecast) => {
-        if (forecast === 0 || forecast === null || forecast === undefined) {
-            return (period === 0 || period === null || period === undefined) ? '0.00' : 'N/A'; // Or handle as per requirement, e.g. 100% if period > 0
-        }
-        const variance = ((period - forecast) / forecast) * 100;
-        return variance.toFixed(2);
-    };
-    const formatYenInTenThousands = (value) => {
-        if (value === null || value === undefined) return '-';
-        const valueInMan = value / 10000;        
-        return valueInMan.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '万円';
-    };
-    const formatYenInTenThousandsNoDecimal = (value) => {
-        if (value === null || value === undefined) return '-';
-        const valueInMan = value / 10000;        
-        return valueInMan.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '万円';
-    };
+    // Utilities
+    import { 
+        formatCurrencyForReporting as formatCurrency, 
+        formatPercentage, 
+    } from '@/utils/formatUtils';
+    import { getSeverity as getSeverityUtil } from '@/utils/reportingUtils';
 
     // View selection
     const selectedView = ref('graph'); // Default view
@@ -289,28 +273,30 @@
         // Sums up values from props.revenueData and props.occupancyData.
         // This is useful if parent sends multiple month data for the single selected hotel.
         // For a single month view, it will correctly use the single entry.
-        
+                        
         let total_forecast_revenue = 0;
-        let total_period_revenue = 0;
-        props.revenueData?.forEach(item => {
+        let total_period_accommodation_revenue = 0;
+        props.revenueData?.forEach((item, index) => {            
             total_forecast_revenue += (item.forecast_revenue || 0);
-            total_period_revenue += (item.period_revenue || 0);
+            total_period_accommodation_revenue += (item.accommodation_revenue || 0);
         });
-
+                
         let total_fc_sold_rooms = 0;
         let total_sold_rooms = 0;
         let total_fc_available_rooms = 0;
         let total_available_rooms = 0;
-        props.occupancyData?.forEach(item => {
+        props.occupancyData?.forEach((item, index) => {            
             total_fc_sold_rooms += (item.fc_sold_rooms || 0);
             total_sold_rooms += (item.sold_rooms || 0);
             total_fc_available_rooms += (item.fc_total_rooms || 0); // fc_total_rooms is total available rooms for forecast
             total_available_rooms += (item.total_rooms || 0);    // total_rooms is total available rooms for actual
         });
+        
+        
 
         return {
             total_forecast_revenue,
-            total_period_revenue,
+            total_period_accommodation_revenue,
             total_fc_sold_rooms,
             total_sold_rooms,
             total_fc_available_rooms,
@@ -319,9 +305,9 @@
     });
 
     const actualADR = computed(() => {
-        const { total_period_revenue, total_sold_rooms } = currentHotelAggregateData.value;
+        const { total_period_accommodation_revenue, total_sold_rooms } = currentHotelAggregateData.value;
         if (total_sold_rooms === 0 || total_sold_rooms === null || total_sold_rooms === undefined) return NaN;
-        return Math.round(total_period_revenue / total_sold_rooms);
+        return Math.round(total_period_accommodation_revenue / total_sold_rooms);
     });
 
     const forecastADR = computed(() => {
@@ -331,9 +317,9 @@
     });
 
     const actualRevPAR = computed(() => {
-        const { total_period_revenue, total_available_rooms } = currentHotelAggregateData.value;
+        const { total_period_accommodation_revenue, total_available_rooms } = currentHotelAggregateData.value;
         if (total_available_rooms === 0 || total_available_rooms === null || total_available_rooms === undefined) return NaN;
-        return Math.round(total_period_revenue / total_available_rooms);
+        return Math.round(total_period_accommodation_revenue / total_available_rooms);
     });
 
     const forecastRevPAR = computed(() => {
@@ -343,75 +329,15 @@
     });
 
 
-    // Color scheme    
-    const colorScheme = {
-        // Solid base colors
-        actual: '#C8102E',      // Deep red for actual revenue
-        forecast: '#F2A900',    // Golden yellow for projected revenue
-        variance: '#555555',    // Neutral gray for variance label
-        toForecast: '#5AB1BB',  // Light blue for gap to forecast
 
-        // Gradient for Actual (from dark red to light red)
-        actual_gradient_top: '#A60D25',
-        actual_gradient_middle: '#C8102E',
-        actual_gradient_bottom: '#E94A57',
-
-        // Gradient for Forecast (from golden to soft yellow)
-        forecast_gradient_top: '#D48F00',
-        forecast_gradient_middle: '#F2A900',
-        forecast_gradient_bottom: '#FFE066',
-
-        // Gradient for Variance (negative to positive)
-        variance_gradient_top: '#888888',      // Light gray (low variance)
-        variance_gradient_middle: '#555555',   // Medium gray (baseline)
-        variance_gradient_bottom: '#222222',   // Dark gray (high variance)
-
-        // Gradient for To Forecast
-        toForecast_gradient_top: '#7FC5CC',
-        toForecast_gradient_middle: '#5AB1BB',
-        toForecast_gradient_bottom: '#3C8E93',
-    };
-
-    // ECharts imports
-    import * as echarts from 'echarts/core';
-    import {        
-        TitleComponent,
-        TooltipComponent,
-        GridComponent,
-        LegendComponent,
-        DatasetComponent,
-        TransformComponent,        
-    } from 'echarts/components';    
-    import { BarChart, LineChart, GaugeChart } from 'echarts/charts';    
-    import { CanvasRenderer } from 'echarts/renderers';
-
-    // Register ECharts components
-    echarts.use([        
-        TitleComponent,
-        TooltipComponent,
-        GridComponent,
-        LegendComponent,
-        DatasetComponent,
-        TransformComponent,        
-        BarChart,
-        LineChart,
-        GaugeChart,
-        CanvasRenderer
-    ]);    
+    // ECharts imports    
     const resizeChartHandler = () => {
-        if (selectedView.value === 'graph') {            
-            totalChartInstance.value?.resize();
-            totalOccupancyChartInstance.value?.resize();
+        if (selectedView.value === 'graph') {
+            // Nothing to resize here, as charts are now components
         }
     };
 
     // --- Chart Refs and Instances ---    
-    const totalChartContainer = ref(null);
-    const totalOccupancyChartContainer = ref(null);
-    
-    const totalChartInstance = shallowRef(null);
-    const totalOccupancyChartInstance = shallowRef(null);
-
     // --- Data Computeds for Charts ---
     // Provides the data for the main revenue chart (now for the single hotel)
     const singleHotelRevenueChartDataSource = computed(() => {
@@ -424,243 +350,11 @@
     const hasRevenueDataForChart = computed(() => {
         return singleHotelRevenueChartDataSource.value.length > 0 &&
                (singleHotelRevenueChartDataSource.value[0].total_forecast_revenue !== undefined || 
-                singleHotelRevenueChartDataSource.value[0].total_period_revenue !== undefined);
+                singleHotelRevenueChartDataSource.value[0].total_period_accommodation_revenue !== undefined);
     });
-
-    // --- ECharts Options ---    
-    const totalChartOptions = computed(() => {
-        if (!hasRevenueDataForChart.value) { 
-            return {};
-        }
-
-        // Data comes from currentHotelAggregateData via singleHotelRevenueChartDataSource
-        const { total_forecast_revenue, total_period_revenue } = singleHotelRevenueChartDataSource.value[0];        
-        const varianceAmount = total_period_revenue - total_forecast_revenue;
-    
-        let displayVariancePercent;
-        if (total_forecast_revenue === 0 || total_forecast_revenue === null) {
-        displayVariancePercent = (total_period_revenue === 0 || total_period_revenue === null) ? "0.00%" : "N/A";
-        } else {
-        const percent = (varianceAmount / total_forecast_revenue) * 100;
-            displayVariancePercent = `${percent.toFixed(2)}%`;
-        }
-
-        const variancePositiveColor = '#4CAF50'; // Green for positive variance
-        const varianceNegativeColor = '#F44336'; // Red for negative variance
-
-        return {
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: { type: 'shadow' },
-                formatter: (params) => {
-                const valueParam = params.find(p => p.seriesName === '売上');
-                if (!valueParam || valueParam.value === undefined) { // Check for undefined value from placeholder
-                                // Try to get data from the placeholder if main series has no value (e.g. for base of variance)
-                                const placeholderParam = params.find(p => p.seriesName === 'PlaceholderBase');
-                                if(placeholderParam && valueParam && valueParam.name === '分散'){
-                                        // Special handling for variance tooltip if actual value is on placeholder
-                                } else if (!valueParam) {
-                                    return '';
-                                }
-                                }
-
-                let tooltipText = `${valueParam.name}<br/>`; // X-axis category
-                
-                if (valueParam.name === '分散') {
-                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(varianceAmount)}<br/>`; // Use varianceAmount directly
-                    tooltipText += `率: ${displayVariancePercent}`;
-                } else {
-                                // For '計画売上' and '実績売上', valueParam.value is correct
-                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(valueParam.value)}`;
-                }
-                return tooltipText;
-                }
-            },        
-            grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
-            xAxis: [{
-                type: 'category',
-                data: ['計画売上', '分散', '実績売上'],
-                        splitLine: { show: false },
-                axisLabel: { interval: 0 }
-            }],
-            yAxis: [{
-                type: 'value',
-                name: '金額 (万円)',
-                axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` },
-                splitLine: { show: true } 
-            }],
-            series: [
-                { // Invisible base for stacking
-                    name: 'PlaceholderBase', 
-                    type: 'bar',
-                    stack: 'total',
-                                barWidth: '60%', // Adjust bar width as needed
-                    itemStyle: { borderColor: 'transparent', color: 'transparent' },
-                    emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' }},
-                    data: [
-                        0, // Base for '計画売上' is 0
-                        varianceAmount >= 0 ? total_forecast_revenue : total_period_revenue, // Base for '分散'
-                        0  // Base for '実績売上' is 0
-                    ]
-                },
-                { // Visible bars
-                    name: '売上', 
-                    type: 'bar',
-                    stack: 'total',
-                                barWidth: '60%',
-                    label: {
-                        show: true,
-                        formatter: (params) => {
-                        if (params.name === '分散') {
-                            return displayVariancePercent;
-                        }
-                        return formatYenInTenThousandsNoDecimal(params.value);
-                        }
-                    },
-                    data: [
-                        { // 計画売上
-                        value: total_forecast_revenue,
-                        itemStyle: { color: colorScheme.forecast },
-                        label: { position: 'top' } 
-                        },
-                        { // 分散                
-                            value: Math.abs(varianceAmount),                
-                            itemStyle: { color: varianceAmount >= 0 ? variancePositiveColor : varianceNegativeColor },
-                            label: { position: 'top' }
-                        },
-                        { // 実績売上
-                        value: total_period_revenue,
-                        itemStyle: { color: colorScheme.actual },
-                        label: { position: 'top'}
-                        }
-                    ]
-                }
-            ]
-        };
-    });
-
-    const totalOccupancyChartOptions = computed(() => {        
-        if (!props.occupancyData ) return {};
-
-        const actualSold = props.occupancyData[0].sold_rooms;
-        const actualAvailable = props.occupancyData[0].total_rooms;
-        const forecastSold = props.occupancyData[0].fc_sold_rooms;
-        const forecastAvailable = props.occupancyData[0].fc_total_rooms;
-        
-        const totalActualOccupancy = actualAvailable > 0 ? actualSold / actualAvailable : 0;
-        const totalForecastOccupancy = forecastAvailable > 0 ? forecastSold / forecastAvailable : 0;
-        
-        return {
-            tooltip: {
-                formatter: (params) => {
-                    if (params.seriesName === '実績稼働率') {
-                        return `実績稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
-                    }
-                    return '';
-                }
-            },
-            series: [{
-                type: 'gauge',
-                radius: '90%',
-                center: ['50%', '55%'], 
-                startAngle: 180, 
-                endAngle: 0,     
-                min: 0,
-                max: 1, 
-                splitNumber: 4, 
-                axisLine: {
-                    lineStyle: {
-                        width: 22, 
-                        color: [ 
-                            [1, '#E0E0E0'] 
-                        ]
-                    }
-                },
-                progress: { 
-                    show: true,
-                    width: 22, 
-                    itemStyle: { 
-                        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                            { offset: 0, color: colorScheme.actual_gradient_bottom }, 
-                            { offset: 1, color: colorScheme.actual_gradient_top }    
-                        ])
-                    }
-                },
-                pointer: { show: false }, 
-                axisTick: { show: false },
-                splitLine: { show: false },
-                axisLabel: { 
-                    show: true,
-                    distance: 5, 
-                    formatter: function (value) { return (value * 100).toFixed(0) + '%'; },
-                    fontSize: 10,
-                    color: '#555'
-                },
-                title: { 
-                    offsetCenter: [0, '25%'], 
-                    fontSize: 14,
-                    color: '#333',
-                    fontWeight: 'normal'
-                },
-                detail: { 
-                    width: '70%',
-                    lineHeight: 22,
-                    offsetCenter: [0, '-10%'], 
-                    valueAnimation: true,
-                    formatter: function (value) {
-                        let forecastText = `計画: ${formatPercentage(totalForecastOccupancy)}`;
-                        return `{actual|${formatPercentage(value)}}\n{forecast|${forecastText}}`;
-                    },
-                    rich: {
-                        actual: { fontSize: 24, fontWeight: 'bold', color: colorScheme.actual },
-                        forecast: { fontSize: 13, color: colorScheme.forecast, paddingTop: 8 }
-                    }
-                },
-                data: [{ value: totalActualOccupancy, name: '実績稼働率' }]
-            }]
-        };
-    });
-    
-    // Initialize charts
-    const initOrUpdateChart = (instanceRef, containerRef, options) => {
-        if (containerRef.value) { 
-            if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
-                instanceRef.value = echarts.init(containerRef.value);
-            }
-            instanceRef.value.setOption(options, true); 
-            instanceRef.value.resize();
-        } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
-            instanceRef.value.dispose();
-            instanceRef.value = null; 
-        }
-    };    
-    const refreshAllCharts = () => {
-        if (hasRevenueDataForChart.value) {            
-            initOrUpdateChart(totalChartInstance, totalChartContainer, totalChartOptions.value);
-        } else {            
-            totalChartInstance.value?.dispose(); totalChartInstance.value = null;
-        }  
-        
-        // Occupancy Charts
-        if (props.occupancyData) {            
-            // Total Occupancy Gauge Chart (now in the combined card with revenue)
-            initOrUpdateChart(totalOccupancyChartInstance, totalOccupancyChartContainer, totalOccupancyChartOptions.value);
-        } else {            
-            totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
-        }
-    };
-    const disposeAllCharts = () => {        
-        totalChartInstance.value?.dispose(); totalChartInstance.value = null;totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
-    };
 
     // Table
-    const getSeverity = (value) => {
-        if (value === null || value === undefined || value === -1) return 'secondary';
-        if (value > 0) return 'success';
-        if (value < -0.5) return 'danger';
-        if (value < 0) return 'warn';
-        return 'info';
-    };
+    const getSeverity = (value) => getSeverityUtil(value);
     const exportCSV = (tableType) => {
         let csvString = '';
         let filename = 'data.csv';
@@ -675,19 +369,19 @@
             // If it contains multiple months for that hotel, they will be exported.
             props.revenueData.forEach(row => {
                 const forecastRevenue = row.forecast_revenue || 0;
-                const periodRevenue = row.period_revenue || 0;
-                const varianceAmount = periodRevenue - forecastRevenue;
+                const accommodationRevenue = row.accommodation_revenue || 0;
+                const varianceAmount = accommodationRevenue - forecastRevenue;
                 let variancePercentage = 0;
-                if (forecastRevenue !== 0) variancePercentage = ((periodRevenue / forecastRevenue) - 1) * 100;
-                else if (periodRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
+                if (forecastRevenue !== 0) variancePercentage = ((accommodationRevenue / forecastRevenue) - 1) * 100;
+                else if (accommodationRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
                 
                 const csvRow = [
                     `"${row.hotel_name || ''}"`,
                     `"${row.month || ''}"`,
                     forecastRevenue,
-                    periodRevenue,
+                    accommodationRevenue,
                     varianceAmount,
-                    (forecastRevenue === 0 && periodRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
+                    (forecastRevenue === 0 && accommodationRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
                 ];
                 csvRows.push(csvRow.join(','));
             });
@@ -744,15 +438,9 @@
 
     onMounted(async () => {
         // console.log('RSMHotel: onMounted', props.revenueData, props.occupancyData); // Updated console log prefix
-
-        if (selectedView.value === 'graph') {
-            // Use nextTick to ensure containers are rendered before initializing
-            nextTick(refreshAllCharts);
-        }
         window.addEventListener('resize', resizeChartHandler);
     });
     onBeforeUnmount(() => {
-        disposeAllCharts();
         window.removeEventListener('resize', resizeChartHandler);
     });
 
@@ -760,10 +448,6 @@
     watch(selectedView, async (newView) => {
         if (newView === 'graph') {
             await nextTick(); 
-            disposeAllCharts();            
-            refreshAllCharts();
-        } else {            
-            disposeAllCharts();
         }
     });    
 

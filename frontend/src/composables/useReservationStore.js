@@ -15,8 +15,8 @@ const roomsForIndicator = ref([]);
 const parkingSpotAvailability = ref([]);
 
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId } = useHotelStore();    
-import { isValidDateString } from '@/utils/formatUtils';
+const { selectedHotelId } = useHotelStore();
+import { isValidDateString } from '@/utils/validationUtils';
 
 export function useReservationStore() {
     // Helper
@@ -42,7 +42,7 @@ export function useReservationStore() {
         // console.log('From Reservation Store => getReservationId:',reservationId.value);
         return reservationId.value;
     };
-    const getReservationHotelId = async (reservation_id) => {            
+    const getReservationHotelId = async (reservation_id) => {
         // console.log('From Reservation Store => getReservationHotelId');
         try {
             const authToken = localStorage.getItem('authToken');
@@ -52,7 +52,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             const data = await response.json();
@@ -67,7 +67,7 @@ export function useReservationStore() {
             return null;
         }
     };
-    const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
+    const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {
         // console.log('From Reservation Store => getAvailableDatesForChange');
         try {
             const authToken = localStorage.getItem('authToken');
@@ -77,7 +77,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             const data = await response.json();
@@ -87,9 +87,9 @@ export function useReservationStore() {
             }
 
             return data;
-                
+
         } catch (error) {
-            console.error('Error fetching data:', error);                
+            console.error('Error fetching data:', error);
             return null;
         }
     };
@@ -102,7 +102,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             const data = await response.json();
@@ -112,9 +112,9 @@ export function useReservationStore() {
             }
 
             return data;
-                
+
         } catch (error) {
-            console.error('Error fetching data:', error);                
+            console.error('Error fetching data:', error);
             return null;
         }
     };
@@ -148,9 +148,9 @@ export function useReservationStore() {
     // Set
     const setReservationId = (id) => {
         // console.log('From Reservation Store => setReservationId:',reservationId.value);
-        reservationId.value = id;            
-    };        
-    const setReservationStatus = async (status) => {            
+        reservationId.value = id;
+    };
+    const setReservationStatus = async (status) => {
         // console.log('From Reservation Store => setReservationStatus:',status);
         try {
             setReservationIsUpdating(true);
@@ -204,14 +204,14 @@ export function useReservationStore() {
             console.error('Error updating reservation status:', error);
         }
     };
-    const setReservationType = async (type) => {            
+    const setReservationType = async (type) => {
         // console.log('From Reservation Store => setReservationType:',status);            
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
             // Get the hotel_id for the current reservation
             const hotel_id = await getReservationHotelId(reservationId.value);
-            
+
             // Assuming you have an API endpoint to update the reservation status
             const response = await fetch(`/api/reservation/update/type/${reservationId.value}`, {
                 method: 'PUT',
@@ -241,25 +241,25 @@ export function useReservationStore() {
             // Get the hotel_id for the current reservation
             const hotel_id = await getReservationHotelId(reservationId.value);
             const response = await fetch(`/api/reservation/update/client/${reservationId.value}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ client_id, hotel_id })
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ client_id, hotel_id })
             });
-    
+
             if (!response.ok) {
-            throw new Error('Failed to update reservation client');
+                throw new Error('Failed to update reservation client');
             }
-    
+
             setReservationIsUpdating(false);
-            
+
         } catch (error) {
             console.error('Error updating reservation client:', error);
         }
     };
-    const setReservationPlan = async (detail_id, hotel_id, plan, rates, price, disableRounding) => {            
+    const setReservationPlan = async (detail_id, hotel_id, plan, rates, price, disableRounding) => {
         // console.log('From Reservation Store => setReservationPlan');
         try {
             const authToken = localStorage.getItem('authToken');
@@ -293,7 +293,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
-                },                    
+                },
                 body: JSON.stringify(addons),
             });
 
@@ -330,41 +330,41 @@ export function useReservationStore() {
             console.error('Error updating reservation:', error);
         }
     };
-    const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
+    const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
-            
+
             // Get the hotel_id for the current reservation
             const hotel_id = await getReservationHotelId(id);
-            
+
             const response = await fetch(`/api/reservation/update/calendar/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    hotel_id, 
-                    old_check_in, 
-                    old_check_out, 
-                    new_check_in, 
-                    new_check_out, 
-                    old_room_id, 
-                    new_room_id, 
-                    number_of_people, 
-                    mode 
+                body: JSON.stringify({
+                    hotel_id,
+                    old_check_in,
+                    old_check_out,
+                    new_check_in,
+                    new_check_out,
+                    old_room_id,
+                    new_room_id,
+                    number_of_people,
+                    mode
                 })
             });
-    
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || `HTTP ${response.status}: Failed to update reservation`);
             }
-    
+
             const result = await response.json();
             return result;
-            
+
         } catch (error) {
             console.error('Error updating reservation:', error);
             // Re-throw the error so the frontend can handle it
@@ -394,14 +394,14 @@ export function useReservationStore() {
             }
 
             setReservationIsUpdating(false);
-        } catch(err){
+        } catch (err) {
             console.error('Error updating reservation:', err);
         }
     };
     const setReservationComment = async (reservationId, hotelId, comment) => {
         try {
             setReservationIsUpdating(true);
-            const authToken = localStorage.getItem('authToken');            
+            const authToken = localStorage.getItem('authToken');
 
             const response = await fetch(`/api/reservation/update/comment/${reservationId}`, {
                 method: 'PUT',
@@ -417,7 +417,7 @@ export function useReservationStore() {
             }
 
             setReservationIsUpdating(false);
-        } catch(err){
+        } catch (err) {
             console.error('Error updating reservation:', err);
         }
     };
@@ -427,7 +427,7 @@ export function useReservationStore() {
             //console.log('[setReservationImportantComment] Starting update', { reservationId, hotelId, isImportant });
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
-    
+
             //console.log('[setReservationImportantComment] Sending request to server');
             const response = await fetch(`/api/reservation/update/comment-flag/${reservationId}`, {
                 method: 'PUT',
@@ -435,29 +435,29 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    hotelId, 
-                    has_important_comment: isImportant 
+                body: JSON.stringify({
+                    hotelId,
+                    has_important_comment: isImportant
                 })
             });
-    
+
             //console.log('[setReservationImportantComment] Received response', { 
             //    status: response.status,
             //    statusText: response.statusText
             //});
-    
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('[setReservationImportantComment] Server responded with error:', errorText);
                 throw new Error(`Failed to update important comment status: ${response.status} ${response.statusText}`);
             }
-    
+
             const result = await response.json();
             //console.log('[setReservationImportantComment] Update successful', { result });
-            
+
             setReservationIsUpdating(false);
             return result;
-        } catch(err) {
+        } catch (err) {
             console.error('[setReservationImportantComment] Error in function:', {
                 error: err,
                 errorMessage: err.message,
@@ -471,7 +471,7 @@ export function useReservationStore() {
     const setReservationTime = async (indicator, reservationId, hotelId, time) => {
         try {
             setReservationIsUpdating(true);
-            const authToken = localStorage.getItem('authToken');            
+            const authToken = localStorage.getItem('authToken');
 
             const response = await fetch(`/api/reservation/update/time/${reservationId}`, {
                 method: 'PUT',
@@ -487,21 +487,21 @@ export function useReservationStore() {
             }
 
             setReservationIsUpdating(false);
-        } catch(err){
+        } catch (err) {
             console.error('Error updating reservation:', err);
         }
     };
 
     // Bulk Update
-    const setRoomPlan = async (params) => {        
-        const { 
-            hotel_id: hotelId, 
-            room_id: roomId, 
-            reservation_id: reservationId, 
-            plan, 
-            addons, 
-            daysOfTheWeek, 
-            disableRounding 
+    const setRoomPlan = async (params) => {
+        const {
+            hotel_id: hotelId,
+            room_id: roomId,
+            reservation_id: reservationId,
+            plan,
+            addons,
+            daysOfTheWeek,
+            disableRounding
         } = params;
         //console.log('DEBUGGING setRoomPlan ARGS:', params);
         try {
@@ -519,10 +519,10 @@ export function useReservationStore() {
 
             if (!response.ok) {
                 // Get the error details from the server's response
-                const errorData = await response.json(); 
+                const errorData = await response.json();
                 const error = new Error(errorData.message || 'Failed to update reservation');
                 // Attach the full response to the error object so the caller can use it
-                error.response = { data: errorData }; 
+                error.response = { data: errorData };
                 throw error;
             }
 
@@ -571,12 +571,12 @@ export function useReservationStore() {
                 },
                 body: JSON.stringify(dataToUpdate),
             });
-    
+
             if (!response.ok) {
                 throw new Error('Failed to update room guest number.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error updating room guest number:', error);
             throw error;
@@ -596,22 +596,22 @@ export function useReservationStore() {
                 },
                 body: JSON.stringify(room),
             });
-    
+
             if (!response.ok) {
                 throw new Error('Failed to update room guest number.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error updating room guest number:', error);
             throw error;
         }
-    };  
+    };
 
     // Fetch
     const fetchReservation = async (reservation_id, hotel_id) => {
         // console.log('From Reservation Store => fetchReservation:',reservation_id);
-        reservationId.value = reservation_id;            
+        reservationId.value = reservation_id;
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/info?id=${reservation_id}&hotel_id=${hotel_id}`;
@@ -620,7 +620,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             const data = await response.json();
@@ -642,9 +642,9 @@ export function useReservationStore() {
                     reservation.date = formatDate(new Date(reservation.date));
                 });
             }
-            
-            reservationDetails.value = data;                
-                
+
+            reservationDetails.value = data;
+
         } catch (error) {
             console.error('Error fetching reservation:', error);
             reservationDetails.value = {};
@@ -661,7 +661,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             const data = await response.json();
@@ -685,19 +685,19 @@ export function useReservationStore() {
                     reservation.check_out = formatDate(new Date(reservation.check_out));
                     reservation.date = formatDate(new Date(reservation.date));
                 });
-            }  
-            
+            }
+
             return data;
-                
+
         } catch (error) {
-            console.error('Error fetching reservation:', error);                
+            console.error('Error fetching reservation:', error);
             return null;
-        }            
-    };        
+        }
+    };
     const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
         // console.log('From Reservation Store => fetchAvailableRooms');
         try {
-            const authToken = localStorage.getItem('authToken');            
+            const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/available-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
 
             const response = await fetch(url, {
@@ -705,7 +705,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             if (!response.ok) {
@@ -751,7 +751,7 @@ export function useReservationStore() {
 
         // console.log('From Reservation Store => fetchReservedRooms');
         try {
-            const authToken = localStorage.getItem('authToken');            
+            const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/reserved-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
 
             const response = await fetch(url, {
@@ -759,7 +759,7 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             if (!response.ok) {
@@ -770,15 +770,15 @@ export function useReservationStore() {
 
             const data = await response.json();
 
-            if (data && data.reservedRooms && Array.isArray(data.reservedRooms)) {                    
+            if (data && data.reservedRooms && Array.isArray(data.reservedRooms)) {
                 // Exclude rooms that have a date between startDate and endDate
                 reservedRooms.value = reservedRooms.value.filter(room => {
                     return !isDateBetweenRange(room.date, startDate, endDate); // Assuming room.date is the field to check
                 });
 
                 // Now add the new reserved rooms in the specified date range
-                reservedRooms.value.push(...data.reservedRooms);                    
-            } 
+                reservedRooms.value.push(...data.reservedRooms);
+            }
 
             return response;
 
@@ -791,7 +791,7 @@ export function useReservationStore() {
         if (isHoldListLoading.value) return;
 
         isHoldListLoading.value = true;
-        try{
+        try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/hold-list`;
 
@@ -800,10 +800,10 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
-            if (!response.ok) {                                        
+            if (!response.ok) {
                 reservedRoomsDayView.value = [];
             }
 
@@ -814,7 +814,7 @@ export function useReservationStore() {
 
                 data.reservations.forEach(reservation => {
                     const key = `${reservation.hotel_name}-${reservation.reservation_id}-${reservation.client_name}-${reservation.check_in}-${reservation.check_out}-${reservation.number_of_people}`;
-                    
+
                     if (!groupedReservations[key]) {
                         // Store the first occurrence of each unique combination
                         groupedReservations[key] = {
@@ -872,16 +872,16 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
-            if (!response.ok) {                                        
+            if (!response.ok) {
                 reservedRoomsDayView.value = [];
             }
 
             const data = await response.json();
             reservedRoomsDayView.value = data.reservations || [];
-            
+
             return data;
 
         } catch (error) {
@@ -916,7 +916,7 @@ export function useReservationStore() {
         }
     };
     const fetchReservationPayments = async (hotelId, reservation_id) => {
-        try{
+        try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/payment/list/${hotelId}/${reservation_id}`;
 
@@ -925,11 +925,11 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
-            
+
             const data = await response.json();
-            
+
             return data;
 
         } catch (error) {
@@ -950,13 +950,13 @@ export function useReservationStore() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data),
-            });                
-    
+            });
+
             if (!response.ok) {
                 throw new Error('Failed to add room.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error:', error);
             throw error;
@@ -974,13 +974,13 @@ export function useReservationStore() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data),
-            });                
-    
+            });
+
             if (!response.ok) {
                 throw new Error('Failed to add room.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error:', error);
             throw error;
@@ -998,13 +998,13 @@ export function useReservationStore() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data),
-            });                
-    
+            });
+
             if (!response.ok) {
                 throw new Error('Failed to add room.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error:', error);
             throw error;
@@ -1022,13 +1022,13 @@ export function useReservationStore() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data),
-            });                
-    
+            });
+
             if (!response.ok) {
                 throw new Error('Failed to add room.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error:', error);
             throw error;
@@ -1049,7 +1049,7 @@ export function useReservationStore() {
                     'Content-Type': 'application/json',
                 },
             });
-    
+
             if (response.ok) {
                 setReservationIsUpdating(false);
                 return await response.json();
@@ -1070,9 +1070,9 @@ export function useReservationStore() {
     const deleteReservationRoom = async (id, room) => {
         try {
             //console.log('deleteReservationRoom called with:', { id, room }); // Debug log
-            
+
             setReservationIsUpdating(true);
-            
+
             // Validate inputs
             if (!id) {
                 throw new Error('Reservation ID is required');
@@ -1080,21 +1080,21 @@ export function useReservationStore() {
             if (!room) {
                 throw new Error('Room data is required');
             }
-    
+
             // Check auth token
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
                 throw new Error('No authentication token found');
             }
-    
+
             const url = `/api/reservation/delete/room/${id}`;
-                
+
             // Add timeout and better error handling
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => {                
+            const timeoutId = setTimeout(() => {
                 controller.abort();
             }, 30000); // 30 second timeout
-    
+
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {
@@ -1104,14 +1104,14 @@ export function useReservationStore() {
                 body: JSON.stringify(room),
                 signal: controller.signal
             });
-    
+
             clearTimeout(timeoutId);
-                    
+
             if (!response.ok) {
                 // Try to get error details from response
                 let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                 let errorData = {};
-                
+
                 try {
                     const contentType = response.headers.get('content-type');
                     if (contentType && contentType.includes('application/json')) {
@@ -1124,14 +1124,14 @@ export function useReservationStore() {
                 } catch (parseError) {
                     console.error('Error parsing response:', parseError);
                 }
-    
-                console.error('API Error Details:', { 
-                    status: response.status, 
+
+                console.error('API Error Details:', {
+                    status: response.status,
                     statusText: response.statusText,
                     errorData,
-                    url 
+                    url
                 });
-    
+
                 // Handle specific HTTP status codes
                 if (response.status === 401) {
                     throw new Error('認証が無効です。再ログインしてください。');
@@ -1144,16 +1144,16 @@ export function useReservationStore() {
                 } else if (response.status >= 500) {
                     throw new Error('サーバーエラーが発生しました。しばらく時間をおいてからお試しください。');
                 }
-                
+
                 throw new Error(errorMessage);
             }
-    
+
             // Parse response
             let result;
             try {
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.includes('application/json')) {
-                    result = await response.json();                    
+                    result = await response.json();
                 } else {
                     result = { success: true }; // Some APIs return empty responses on successful deletes
                 }
@@ -1161,9 +1161,9 @@ export function useReservationStore() {
                 console.error('Error parsing success response:', parseError);
                 result = { success: true }; // Assume success if we can't parse response
             }
-    
+
             return result;
-    
+
         } catch (error) {
             console.error('deleteReservationRoom error:', {
                 message: error.message,
@@ -1172,16 +1172,16 @@ export function useReservationStore() {
                 id,
                 room
             });
-    
+
             // Handle specific error types
             if (error.name === 'AbortError') {
                 throw new Error('リクエストがタイムアウトしました。ネットワーク接続を確認してから再試行してください。');
             }
-            
+
             if (error.name === 'TypeError' && error.message.includes('fetch')) {
                 throw new Error('ネットワークエラーが発生しました。接続を確認してください。');
             }
-    
+
             throw error;
         } finally {
             // Always reset updating state
@@ -1198,21 +1198,21 @@ export function useReservationStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
-    
+
             if (!response.ok) {
                 throw new Error('Failed to delete payment from reservation.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error deleting payment from reservation:', error);
             throw error;
         }
     };
 
-    const createHoldReservationCombo = async(header, combo) => {
+    const createHoldReservationCombo = async (header, combo) => {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -1225,12 +1225,12 @@ export function useReservationStore() {
                 },
                 body: JSON.stringify({ header, combo })
             });
-    
+
             if (!response.ok) {
                 throw new Error('Failed to create hold reservation from combo.');
             }
             setReservationIsUpdating(false);
-            return await response.json();                
+            return await response.json();
         } catch (error) {
             console.error('Error creating hold reservation from combo:', error);
             throw error;
@@ -1321,7 +1321,7 @@ export function useReservationStore() {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
-            
+
             const response = await fetch('/api/hotels/multi-block-rooms', {
                 method: 'POST',
                 headers: {
@@ -1450,7 +1450,7 @@ export function useReservationStore() {
                 },
                 body: JSON.stringify({ hotelId, reservationId, detailIds, billable }),
             });
-    
+
             if (!response.ok) {
                 throw new Error('Failed to cancel reservation rooms.');
             }
@@ -1632,13 +1632,13 @@ export function useReservationStore() {
         setReservationTime,
         setRoomPlan,
         setRoomPattern,
-        setRoomGuests,        
-        changeReservationRoomGuestNumber,        
+        setRoomGuests,
+        changeReservationRoomGuestNumber,
         fetchReservation,
         fetchReservationDetail,
         fetchAvailableRooms,
         fetchReservedRooms,
-        fetchMyHoldReservations, 
+        fetchMyHoldReservations,
         fetchFailedOtaReservations,
         fetchReservationsToday,
         fetchReservationPayments,
@@ -1649,7 +1649,7 @@ export function useReservationStore() {
         addBulkReservationPayment,
         deleteHoldReservation,
         deleteReservationRoom,
-        deleteReservationPayment,     
+        deleteReservationPayment,
         createHoldReservationCombo,
         fetchReservationForCopy,
         copyReservation,

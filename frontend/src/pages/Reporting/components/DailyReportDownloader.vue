@@ -83,12 +83,33 @@
                             <Column field="plans_global_id" header="グローバルプランID" class="hidden"></Column>
                             <Column field="plans_hotel_id" header="ホテルプランID" class="hidden"></Column>
                             <Column field="plan_name" header="プラン名"></Column>
-                            <Column field="confirmed_stays" header="確定"></Column>
+                            <Column field="confirmed_stays" header="確定宿泊数"></Column>
+                            <Column field="non_accommodation_stays" header="非宿泊数"></Column>
                             <Column field="pending_stays" header="仮予約"></Column>
                             <Column field="in_talks_stays" header="保留中"></Column>
                             <Column field="cancelled_stays" header="キャンセル"></Column>
                             <Column field="non_billable_cancelled_stays" header="キャンセル(請求対象外)"></Column>
                             <Column field="employee_stays" header="社員"></Column>
+                            <Column field="accommodation_sales" header="宿泊売上" class="hidden">
+                                <template #body="{ data }">
+                                    {{ (data.accommodation_sales || 0).toLocaleString() }}
+                                </template>
+                            </Column>
+                            <Column field="other_sales" header="その他売上" class="hidden">
+                                <template #body="{ data }">
+                                    {{ (data.other_sales || 0).toLocaleString() }}
+                                </template>
+                            </Column>
+                            <Column field="accommodation_sales_cancelled" header="宿泊売上(キャンセル)" class="hidden">
+                                <template #body="{ data }">
+                                    {{ (data.accommodation_sales_cancelled || 0).toLocaleString() }}
+                                </template>
+                            </Column>
+                            <Column field="other_sales_cancelled" header="その他売上(キャンセル)" class="hidden">
+                                <template #body="{ data }">
+                                    {{ (data.other_sales_cancelled || 0).toLocaleString() }}
+                                </template>
+                            </Column>
                             <Column field="created_at" header="作成日時" class="hidden"></Column>
                         </DataTable>
                     </template>
@@ -151,6 +172,34 @@
                                     </div>
                                     <div class="col-span-1">
                                         <Badge v-bind="getBadgeProps(slotProps.data.cancelled_stays_change)"></Badge>
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="宿泊売上" bodyStyle="text-align: right" headerClass="text-center">
+                            <template #body="slotProps">
+                                <div class="grid grid-cols-2">
+                                    <div class="col-span-1">
+                                        {{ (slotProps.data.accommodation_sales_date2 || 0).toLocaleString() }}
+                                        <br /><small>{{ (slotProps.data.accommodation_sales_date1 || 0).toLocaleString()
+                                            }}</small>
+                                    </div>
+                                    <div class="col-span-1">
+                                        <Badge v-bind="getBadgeProps(slotProps.data.accommodation_sales_change || 0)"></Badge>
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="その他売上" bodyStyle="text-align: right" headerClass="text-center">
+                            <template #body="slotProps">
+                                <div class="grid grid-cols-2">
+                                    <div class="col-span-1">
+                                        {{ (slotProps.data.other_sales_date2 || 0).toLocaleString() }}
+                                        <br /><small>{{ (slotProps.data.other_sales_date1 || 0).toLocaleString()
+                                            }}</small>
+                                    </div>
+                                    <div class="col-span-1">
+                                        <Badge v-bind="getBadgeProps(slotProps.data.other_sales_change || 0)"></Badge>
                                     </div>
                                 </div>
                             </template>
@@ -284,6 +333,8 @@ const compareDates = async () => {
                     month: item.month,
                     confirmed_stays: 0,
                     cancelled_stays: 0,
+                    accommodation_sales: 0,
+                    other_sales: 0,
                     total_sales: 0,
                     cancelled_sales: 0,
                 });
@@ -291,6 +342,8 @@ const compareDates = async () => {
             const current = aggregated.get(key);
             current.confirmed_stays += Number(item.confirmed_stays);
             current.cancelled_stays += Number(item.cancelled_stays);
+            current.accommodation_sales += Number(item.accommodation_sales || 0);
+            current.other_sales += Number(item.other_sales || 0);
             current.total_sales += Number(item.normal_sales) + Number(item.cancellation_sales);
             current.cancelled_sales += Number(item.cancellation_sales);
         });
@@ -308,6 +361,8 @@ const compareDates = async () => {
 
         const confirmedStaysChange = item1 ? calculateChange(item2.confirmed_stays, item1.confirmed_stays) : (item2.confirmed_stays !== 0 ? Infinity : 0);
         const cancelledStaysChange = item1 ? calculateChange(item2.cancelled_stays, item1.cancelled_stays) : (item2.cancelled_stays !== 0 ? Infinity : 0);
+        const accommodationSalesChange = item1 ? calculateChange(item2.accommodation_sales, item1.accommodation_sales) : (item2.accommodation_sales !== 0 ? Infinity : 0);
+        const otherSalesChange = item1 ? calculateChange(item2.other_sales, item1.other_sales) : (item2.other_sales !== 0 ? Infinity : 0);
         const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);        
 
         processed.push({
@@ -319,6 +374,12 @@ const compareDates = async () => {
             cancelled_stays_date2: item2.cancelled_stays,
             cancelled_stays_change: cancelledStaysChange,
             cancelled_stays_date1: item1 ? item1.cancelled_stays : 0,
+            accommodation_sales_date2: item2.accommodation_sales,
+            accommodation_sales_change: accommodationSalesChange,
+            accommodation_sales_date1: item1 ? item1.accommodation_sales : 0,
+            other_sales_date2: item2.other_sales,
+            other_sales_change: otherSalesChange,
+            other_sales_date1: item1 ? item1.other_sales : 0,
             total_sales_date2: item2.total_sales,
             total_sales_change: totalSalesChange,
             total_sales_date1: item1 ? item1.total_sales : 0,
@@ -376,7 +437,7 @@ const loadReport = async () => { // Made async to await getDailyReportData
             console.error('Failed to generate daily metrics:', result.error);
         }
     }
-
+                    
     loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
     loadedDate.value = date;
 };

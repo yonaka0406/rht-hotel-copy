@@ -12,6 +12,7 @@ const { selectReservation, selectAvailableRooms, selectAndLockAvailableParkingSp
 const { insertReservationRate, insertAggregatedRates } = require('./insert');
 const addonsModels = require('./addons');
 const clientsModels = require('./clients');
+const { calculatePriceFromRatesService, calculateIsAccommodation } = require('./services/calculationService');
 
 // Helper
 const formatDate = (date) => {
@@ -24,6 +25,9 @@ const formatDate = (date) => {
 // Default times for reservations
 const DEFAULT_CHECK_IN_TIME = '16:00';
 const DEFAULT_CHECK_OUT_TIME = '10:00';
+
+
+
 
 // Function to Select
 
@@ -288,8 +292,8 @@ const addReservationDetail = async (requestId, detail, client = null) => {
 
   const query = `
     INSERT INTO reservation_details (
-      hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by, is_accommodation
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     RETURNING *;
   `;
   const values = [
@@ -304,7 +308,8 @@ const addReservationDetail = async (requestId, detail, client = null) => {
     detail.number_of_people,
     detail.price,
     detail.created_by,
-    detail.updated_by
+    detail.updated_by,
+    (detail.is_accommodation ?? true)
   ];
   //logger.debug('[addReservationDetail] Inserting with values:', values);
 
@@ -359,7 +364,7 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
     const columns = [
       'hotel_id', 'reservation_id', 'date', 'room_id', 'plans_global_id',
       'plans_hotel_id', 'plan_name', 'plan_type', 'number_of_people', 'price',
-      'created_by', 'updated_by'
+      'created_by', 'updated_by', 'is_accommodation'
     ];
     const NUM_COLUMNS = columns.length;
     const POSTGRES_PARAM_LIMIT = 32767;
@@ -376,7 +381,8 @@ const addReservationDetailsBatch = async (requestId, details, client = null) => 
         values.push(
           d.hotel_id, d.reservation_id, d.date, d.room_id,
           d.plans_global_id, d.plans_hotel_id, d.plan_name, d.plan_type,
-          d.number_of_people, d.price, d.created_by, d.updated_by
+          d.number_of_people, d.price, d.created_by, d.updated_by,
+          (d.is_accommodation ?? true)
         );
         return `(${Array.from(
           { length: NUM_COLUMNS },
@@ -466,7 +472,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
 
 const updateBlockToReservation = async (requestId, reservationId, clientId, userId, dbClient = null) => {
   const pool = dbClient || getPool(requestId);
-  
+
   const query = `
     UPDATE reservations
     SET
@@ -507,7 +513,7 @@ const updateReservationMemberCount = async (requestId, reservationId, userId, db
     WHERE r.id = $1
     RETURNING *;
   `;
-  
+
   try {
     const result = await pool.query(query, [reservationId, userId]);
     logger.debug(`[updateReservationMemberCount] Updated reservation ${reservationId}:`, result.rows[0]);
@@ -1151,32 +1157,32 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               AND (date < $4 OR date >= $5)
             RETURNING id, date;
           `;
-          const deleteResult = await client.query(deleteOldQuery, [reservationIdForDetails, hotel_id, old_room_id, new_check_in, new_check_out]);
-          //logger.debug(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
-    
-          // 3. Create all required new dates
-          const newDates = [];
-          let currentDate = new Date(new_check_in);
-          while (currentDate < new Date(new_check_out)) {
-            newDates.push(formatDate(currentDate));
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-    
-          const existingDates = new Set(originalDetailsResult.rows.map(d => formatDate(new Date(d.date))));
-          const datesToCreate = newDates.filter(d => !existingDates.has(d));
-    
-          if (datesToCreate.length > 0) {
-            const template = originalDetailsResult.rows[0] || {
-              plans_global_id: null,
-              plans_hotel_id: null,
-              plan_name: null,
-              plan_type: 'per_room',
-              number_of_people: number_of_people,
-              price: 0,
-              billable: true
-            };
-    
-            const insertDetailsQuery = `
+      const deleteResult = await client.query(deleteOldQuery, [reservationIdForDetails, hotel_id, old_room_id, new_check_in, new_check_out]);
+      //logger.debug(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
+
+      // 3. Create all required new dates
+      const newDates = [];
+      let currentDate = new Date(new_check_in);
+      while (currentDate < new Date(new_check_out)) {
+        newDates.push(formatDate(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      const existingDates = new Set(originalDetailsResult.rows.map(d => formatDate(new Date(d.date))));
+      const datesToCreate = newDates.filter(d => !existingDates.has(d));
+
+      if (datesToCreate.length > 0) {
+        const template = originalDetailsResult.rows[0] || {
+          plans_global_id: null,
+          plans_hotel_id: null,
+          plan_name: null,
+          plan_type: 'per_room',
+          number_of_people: number_of_people,
+          price: 0,
+          billable: true
+        };
+
+        const insertDetailsQuery = `
               INSERT INTO reservation_details ( 
                 hotel_id, reservation_id, date, room_id, 
                 plans_global_id, plans_hotel_id, plan_name, plan_type, 
@@ -1263,11 +1269,13 @@ const updateRoomByCalendar = async (requestId, roomData) => {
                   }
                 }
               }
-              //logger.debug(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
             }
-            // --- MODIFIED LOGIC: END ---
           }
+          //logger.debug(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
         }
+        // --- MODIFIED LOGIC: END ---
+      }
+    }
     // Update reservations table with new check_in and check_out
     //logger.debug(`Updating main reservation record ${newReservationId} with new dates.`);
     const updateReservationQuery = `
@@ -1566,8 +1574,11 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 
   // Use unified price calculation
   let calculatedPrice = 0;
+  let isAccommodation = true; // Default to true as per migration
+
   if (rates && rates.length > 0) {
     calculatedPrice = calculatePriceFromRates(rates, disableRounding);
+    isAccommodation = rates.some(r => r.sales_category === 'accommodation');
 
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
@@ -1576,6 +1587,10 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 
     // Use the calculated price instead of the provided one
     price = calculatedPrice;
+  } else {
+    // If no rates, we can't determine sales_category, so stick to default isAccommodation = true
+    // This is consistent with the migration default for existing records
+    isAccommodation = true;
   }
 
   const updateReservationDetailsQuery = `
@@ -1586,6 +1601,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       ,plan_type = $4
       ,price = $5
       ,updated_by = $6
+      ,is_accommodation = $9
     WHERE hotel_id = $7 AND id = $8::uuid
     RETURNING *;
   `;
@@ -1608,6 +1624,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       user_id,
       hotel_id,
       id,
+      isAccommodation
     ]);
 
     if (rates && rates.length > 0) {
@@ -1904,6 +1921,9 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       // Fetch new rates
       const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, dbClient);
 
+      // Determine if this is accommodation using the calculation service
+      const isAccommodation = calculateIsAccommodation(newrates, false);
+
       // Insert rates using the shared utility function
       await insertAggregatedRates(requestId, newrates, hotel_id, id, user_id, false, dbClient);
 
@@ -1911,10 +1931,10 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       const calculatedPrice = calculatePriceFromRates(newrates, disableRounding);
       const updatePriceQuery = `
         UPDATE reservation_details
-        SET price = $1
+        SET price = $1, is_accommodation = $3
         WHERE id = $2;
       `;
-      await dbClient.query(updatePriceQuery, [calculatedPrice, id]);
+      await dbClient.query(updatePriceQuery, [calculatedPrice, id, isAccommodation]);
     });
 
     // Wait for all updates to complete
@@ -2857,19 +2877,19 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                               updated_by
                           ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', 1, 1)
                       `;
-                      const parkingValues = [
-                          hotel_id,
-                          detail.id,
-                          reservationAddonId,
-                          1, // vehicle_category_id
-                          parkingSpotId,
-                          detail.date
-                      ];
-                      return internalClient.query(parkingQuery, parkingValues);
-                  });
-                  await Promise.all(parkingInsertPromises);
-              }
+              const parkingValues = [
+                hotel_id,
+                detail.id,
+                reservationAddonId,
+                1, // vehicle_category_id
+                parkingSpotId,
+                detail.date
+              ];
+              return internalClient.query(parkingQuery, parkingValues);
+            });
+            await Promise.all(parkingInsertPromises);
           }
+        }
       }
     } catch (parkingError) {
       logger.warn('Failed to assign parking spot during OTA reservation creation. This error is non-critical and the reservation will be created without parking.', {

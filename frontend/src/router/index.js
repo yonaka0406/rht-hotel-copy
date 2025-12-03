@@ -39,7 +39,7 @@ const ReservationList = () => import('@/pages/MainPage/ReservationList.vue');
 const BillingInvoices = () => import('@/pages/MainPage/BillingInvoices.vue');
 const ReceiptsPage = () => import('@/pages/MainPage/ReceiptsPage.vue'); // Added import
 const ReportDaily = () => import('@/pages/MainPage/ReportDaily.vue');
-const ReportMonthly = () => import('@/pages/MainPage/ReportMonthly.vue');
+const ReportMonthly = () => import('@/pages/MainPage/ReportMonthly/ReportMonthly.vue');
 
 const ClientHomePage = () => import('@/pages/CRM/ClientHomePage.vue');
 const ClientDashboard = () => import('@/pages/CRM/ClientDashboard.vue');

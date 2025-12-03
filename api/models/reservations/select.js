@@ -80,7 +80,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
                     'addon_name', ra.addon_name,
                     'addon_type', ra.addon_type,
                     'quantity', ra.quantity,
-                    'price', ra.price
+                    'price', ra.price,
+                    'sales_category', ra.sales_category
                 )
             ) AS addons_json
         FROM reservation_addons ra
@@ -120,7 +121,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
                     'tax_type_id', rr.tax_type_id,
                     'tax_rate', rr.tax_rate,
                     'price', rr.price,
-                    'include_in_cancel_fee', rr.include_in_cancel_fee
+                    'include_in_cancel_fee', rr.include_in_cancel_fee,
+                    'sales_category', rr.sales_category
                 )
             ) AS rates_json
         FROM reservation_rates rr
@@ -135,7 +137,7 @@ const selectReservation = async (requestId, id, hotel_id) => {
   `;
 
   const values = [id, hotel_id];
-  
+
   try {
     const result = await pool.query(query, values);
     return result.rows;
@@ -213,7 +215,8 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
                     'addon_name', ra.addon_name,
                     'addon_type', ra.addon_type,
                     'quantity', ra.quantity,
-                    'price', ra.price
+                    'price', ra.price,
+                    'sales_category', ra.sales_category
                 )
             ) AS addons_json
           FROM reservation_addons ra
@@ -260,7 +263,8 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
                 'tax_type_id', rr.tax_type_id,
                 'tax_rate', rr.tax_rate,
                 'price', rr.price,
-                'include_in_cancel_fee', rr.include_in_cancel_fee                
+                'include_in_cancel_fee', rr.include_in_cancel_fee,
+                'sales_category', rr.sales_category
               )
             ) AS rates_json          
           FROM reservation_rates rr
@@ -613,7 +617,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
       ,a.room_id;
   `;
 
-  const values = [hotelId, date];   
+  const values = [hotelId, date];
 
   try {
     const result = await pool.query(query, values);
@@ -633,7 +637,7 @@ const selectReservationBalance = async (requestId, hotelId, reservationId, endDa
     dbClient = await pool.connect();
     shouldReleaseClient = true;
   }
-  
+
   let dateFilterQuery = '';
   const values = [hotelId, reservationId];
 
@@ -801,7 +805,7 @@ const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut
   } catch (err) {
     logger.error('Error fetching available parking spots:', err);
     throw new Error('Database error');
-  }  
+  }
 };
 
 const selectAndLockAvailableParkingSpot = async (requestId, hotelId, checkIn, checkOut, capacity_units_required, client) => {
@@ -867,8 +871,8 @@ const selectReservationParkingAddons = async (requestId, id, hotelId, client = n
   }
 };
 
-module.exports = {  
-  selectReservation,  
+module.exports = {
+  selectReservation,
   selectReservationDetail,
   selectReservationAddons,
   selectReservationClientIds,

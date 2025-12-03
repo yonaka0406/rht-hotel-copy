@@ -100,6 +100,18 @@ const getExportReservationDetails = async (req, res) => {
                 plan_net_price: isFirstDetailOccurrence
                     ? Math.floor(parseFloat(reservation.plan_net_price) || 0)
                     : null,
+                plan_price_accom: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_price_accom) || 0)
+                    : null,
+                plan_net_price_accom: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_net_price_accom) || 0)
+                    : null,
+                plan_price_other: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_price_other) || 0)
+                    : null,
+                plan_net_price_other: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_net_price_other) || 0)
+                    : null,
                 payments: isFirstOccurrence
                     ? Math.floor(parseFloat(reservation.payments) || 0)
                     : null,
@@ -118,6 +130,20 @@ const getExportReservationDetails = async (req, res) => {
         processedReservations.forEach((reservation) => {
             const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
             const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
+
+            // Calculate split sales amounts
+            const isAddonAccom = !reservation.addon_sales_category || reservation.addon_sales_category === 'accommodation';
+            const addonPriceAccom = isAddonAccom ? Math.floor(parseFloat(reservation.addon_value)) : 0;
+            const addonNetPriceAccom = isAddonAccom ? Math.floor(parseFloat(reservation.addon_net_value)) : 0;
+
+            const isAddonOther = reservation.addon_sales_category === 'other';
+            const addonPriceOther = isAddonOther ? Math.floor(parseFloat(reservation.addon_value)) : 0;
+            const addonNetPriceOther = isAddonOther ? Math.floor(parseFloat(reservation.addon_net_value)) : 0;
+
+            const planPriceAccom = reservation.plan_price_accom || 0;
+            const planNetPriceAccom = reservation.plan_net_price_accom || 0;
+            const planPriceOther = reservation.plan_price_other || 0;
+            const planNetPriceOther = reservation.plan_net_price_other || 0;
 
             // Process each reservation and write to CSV
             // Note on pricing: 
@@ -157,8 +183,11 @@ const getExportReservationDetails = async (req, res) => {
                 アドオン料金: Math.floor(parseFloat(reservation.addon_value)),
                 "アドオン料金(税抜き)": Math.floor(parseFloat(reservation.addon_net_value)),
                 請求対象: reservation.billable ? 'はい' : 'いいえ',                
-                売上高: reservation.billable ? reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) : 0,
-                "売上高(税抜き)": reservation.billable ? reservation.plan_net_price + Math.floor(parseFloat(reservation.addon_net_value)) : 0,
+                宿泊対象: reservation.is_accommodation ? 'はい' : 'いいえ',
+                売上高: reservation.billable ? planPriceAccom + addonPriceAccom : 0,
+                "売上高(税抜き)": reservation.billable ? planNetPriceAccom + addonNetPriceAccom : 0,
+                "売上高(宿泊外)": reservation.billable ? planPriceOther + addonPriceOther : 0,
+                "売上高(宿泊外・税抜き)": reservation.billable ? planNetPriceOther + addonNetPriceOther : 0,
                 支払い: translatePaymentTiming(reservation.payment_timing),
                 予約ID: reservation.reservation_id,
                 予約詳細ID: reservation.id,
@@ -554,6 +583,7 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: '月', key: 'month', width: 15 },
             { header: 'プラン名', key: 'plan_name', width: 30 },
             { header: '確定', key: 'confirmed_stays', width: 10 },
+            { header: '非宿泊数', key: 'non_accommodation_stays', width: 10 },
             { header: '仮予約', key: 'pending_stays', width: 10 },
             { header: '保留中', key: 'in_talks_stays', width: 10 },
             { header: 'キャンセル', key: 'cancelled_stays', width: 10 },
@@ -561,6 +591,10 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: '社員', key: 'employee_stays', width: 10 },
             { header: '通常売上(税込)', key: 'normal_sales', width: 15 },
             { header: 'キャンセル売上(税込)', key: 'cancellation_sales', width: 15 },
+            { header: '宿泊売上(税込)', key: 'accommodation_sales', width: 15 },
+            { header: 'その他売上(税込)', key: 'other_sales', width: 15 },
+            { header: '宿泊売上キャンセル(税込)', key: 'accommodation_sales_cancelled', width: 20 },
+            { header: 'その他売上キャンセル(税込)', key: 'other_sales_cancelled', width: 20 },
             { header: '作成日時', key: 'created_at', width: 20 },
         ];
 
@@ -677,6 +711,7 @@ const getExportDailyReportExcel = async (req, res) => {
                     month: formatDate(row.month),
                     plan_name: row.plan_name,
                     confirmed_stays: parseInt(row.confirmed_stays || 0),
+                    non_accommodation_stays: parseInt(row.non_accommodation_stays || 0),
                     pending_stays: parseInt(row.pending_stays || 0),
                     in_talks_stays: parseInt(row.in_talks_stays || 0),
                     cancelled_stays: parseInt(row.cancelled_stays || 0),
@@ -684,6 +719,10 @@ const getExportDailyReportExcel = async (req, res) => {
                     employee_stays: parseInt(row.employee_stays || 0),
                     normal_sales: parseInt(row.normal_sales || 0),
                     cancellation_sales: parseInt(row.cancellation_sales || 0),
+                    accommodation_sales: parseInt(row.accommodation_sales || 0),
+                    other_sales: parseInt(row.other_sales || 0),
+                    accommodation_sales_cancelled: parseInt(row.accommodation_sales_cancelled || 0),
+                    other_sales_cancelled: parseInt(row.other_sales_cancelled || 0),
                     created_at: formatDateTime(row.created_at),
                 });
             });

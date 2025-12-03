@@ -1,0 +1,246 @@
+<template>
+    <Panel header="稼働率" toggleable :collapsed="false" class="col-span-12">
+        <Card class="flex col-span-12">
+            <template #title>
+
+            </template>                
+            <template #subtitle>
+                <div class="flex justify-between items-center">
+                    <p>曜日毎の予約数ヒートマップ ({{ selectedMonth.getFullYear() }}年 {{ selectedMonth.getMonth() + 1 }}月基点)</p>
+                    <SelectButton v-model="occCalcMode" :options="occOptions" optionLabel="name" optionValue="value" />
+                </div>
+            </template>
+            <template #content>
+                <div ref="heatMap" class="w-full h-96"></div>             
+            </template>
+        </Card> 
+    </Panel>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { Card, Panel, SelectButton } from 'primevue';
+// ...
+const occCalcMode = ref('accommodation'); // Default to accommodation
+const occOptions = ref([
+    { name: '宿泊のみ', value: 'accommodation' },
+    { name: '全て', value: 'all' }
+]);
+import * as echarts from 'echarts/core';
+import {
+    TooltipComponent,
+    GridComponent,
+    VisualMapComponent
+} from 'echarts/components';
+import { HeatmapChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+
+echarts.use([
+    TooltipComponent,
+    GridComponent,
+    VisualMapComponent,
+    HeatmapChart,
+    CanvasRenderer
+]);
+
+const props = defineProps({
+    selectedMonth: {
+        type: Date,
+        required: true
+    },
+    allReservationsData: {
+        type: Array,
+        required: true
+    },
+    heatMapDisplayStartDate: {
+        type: String,
+        required: true
+    },
+    heatMapDisplayEndDate: {
+        type: String,
+        required: true
+    },
+    formatDate: {
+        type: Function,
+        required: true
+    },
+    normalizeDate: {
+        type: Function,
+        required: true
+    },
+    addDaysUTC: {
+        type: Function,
+        required: true
+    }
+});
+
+const heatMap = ref(null);
+let myHeatMap; 
+
+const heatMapAxisX = computed(() => {
+    const start = new Date(props.heatMapDisplayStartDate);
+    const end = new Date(props.heatMapDisplayEndDate);
+    const weekIntervals = [];
+    let current = new Date(start);
+    
+    while (current <= end) {
+        const month = current.getMonth() + 1;
+        const day = current.getDate();
+        weekIntervals.push(`${month}月${day}日の週`);
+        current.setDate(current.getDate() + 7);
+    }
+    
+    return weekIntervals;
+});
+
+const heatMapAxisY = ref([
+    '日', '土', '金', '木', '水', '火', '月'
+]);
+const heatMapMax = ref(0);
+const heatMapData = ref([]);
+
+const processHeatMapData = () => {
+    // DEBUG LOG: Initial props
+    console.log('[HeatMapPanel] Initial allReservationsData:', props.allReservationsData);
+    
+    if (!props.allReservationsData || !heatMap.value) {
+        heatMapData.value = [];
+        initHeatMap(); // Initialize with empty data if needed
+        return;
+    }
+    
+    const start = props.normalizeDate(new Date(props.heatMapDisplayStartDate));
+    const end = props.normalizeDate(new Date(props.heatMapDisplayEndDate));
+           
+    // Filter relevant reservations for the heatmap's specific display window
+    let relevantReservations = props.allReservationsData.filter(r => {
+        const rDate = props.normalizeDate(new Date(r.date));
+        return rDate >= start && rDate <= end;
+    });
+
+    // DEBUG LOG: Before occCalcMode filtering
+    console.log('[HeatMapPanel] occCalcMode:', occCalcMode.value);
+    console.log('[HeatMapPanel] relevantReservations (before mode filter):', relevantReservations);
+
+    // Apply filtering based on occCalcMode
+    if (occCalcMode.value === 'accommodation') {
+        relevantReservations = relevantReservations.filter(r => parseFloat(r.accommodation_price || 0) > 0);
+    }
+            
+    // DEBUG LOG: After occCalcMode filtering
+    console.log('[HeatMapPanel] relevantReservations (after mode filter):', relevantReservations);
+
+    if(relevantReservations && relevantReservations.length > 0){
+        heatMapMax.value = relevantReservations[0].total_rooms; 
+    } else {
+        heatMapMax.value = 0;
+    }
+            
+    // DEBUG LOG: heatMapMax.value
+    console.log('[HeatMapPanel] heatMapMax.value:', heatMapMax.value);
+
+    const datePositionMap = {};
+    let currentMapDate = start;
+    let weekIdx = 0;
+    let dayIdx = 0; // Monday is 6, Sunday is 0 (matching Y-axis)
+
+    while (currentMapDate <= end) {
+        
+        const formattedDate = props.formatDate(new Date(currentMapDate));
+        dayIdx = (7 - currentMapDate.getUTCDay()) % 7;
+
+        datePositionMap[formattedDate] = { week: weekIdx, day: dayIdx };
+        
+        if (currentMapDate.getUTCDay() === 0) {
+            weekIdx++;
+        }
+        
+        currentMapDate = props.addDaysUTC(currentMapDate, 1);
+    }
+    
+    const processedData = [];
+    relevantReservations.forEach(reservation => {
+        const reservationDateISO = props.formatDate(new Date(reservation.date));
+        const position = datePositionMap[reservationDateISO];
+        if (position) {
+            let displayValue = 0;
+            if (occCalcMode.value === 'accommodation') {
+                displayValue = parseInt(reservation.room_count || 0);
+            } else { // occCalcMode.value === 'all'
+                if (parseFloat(reservation.accommodation_price || 0) > 0) {
+                    displayValue = parseInt(reservation.room_count || 0);
+                } else if (parseFloat(reservation.other_price || 0) > 0) { // Non-accommodation, use people_sum
+                    displayValue = parseInt(reservation.people_sum || 0);
+                }
+            }
+            // Data format for heatmap: [weekIndex, dayIndex, value]
+            processedData.push([position.week, position.day, displayValue]);
+        }
+    });
+    heatMapData.value = processedData;
+
+    // DEBUG LOG: processedData
+    console.log('[HeatMapPanel] processedData:', processedData);
+    
+    initHeatMap();
+};
+const initHeatMap = () => {
+    if (!heatMap.value) return;
+    const option = {
+        tooltip: { position: 'top' },
+        grid: { height: '50%', top: '5%', bottom: '5%' },
+        xAxis: {
+            type: 'category',
+            data: heatMapAxisX.value,
+            splitArea: { show: true },
+            axisLabel: { 
+                formatter: function (value) {
+                    return value.split('').join('\n'); // Split each character and add a newline
+                },
+                
+            }
+        },
+        yAxis: { type: 'category', data: heatMapAxisY.value, splitArea: { show: true } },
+        visualMap: {
+            min: 0,
+            max: heatMapMax.value, // Use dynamic max based on hotel capacity or data
+            calculable: true,
+            orient: 'horizontal',
+            left: 'center',
+            bottom: '5%',
+            inRange: {
+                color: ['#FFFFF0', '#FFFACD', '#FFEFD5', '#FFE4B5', '#FFDAB9', '#F08080', '#CD5C5C', '#B22222'] // 8 pale yellow to red gradient colors
+            }
+        },
+        series: [{ 
+            name: '予約数',
+            type: 'heatmap',
+            data: heatMapData.value,
+            label: { show: true, formatter: (params) => params.value[2] > 0 ? params.value[2] : '' }, // Show value if > 0
+            emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+        }]
+    };
+    if (!myHeatMap) {
+        myHeatMap = echarts.init(heatMap.value);
+    }
+    myHeatMap.setOption(option, true); // true to not merge with previous options
+};
+
+const handleResize = () => {
+    if (myHeatMap) myHeatMap.resize();
+};
+
+onMounted(() => {
+    processHeatMapData();
+    window.addEventListener('resize', handleResize);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResize);
+    if (myHeatMap) myHeatMap.dispose();
+});
+
+watch([() => props.allReservationsData, () => props.selectedMonth, () => props.heatMapDisplayStartDate, () => props.heatMapDisplayEndDate, occCalcMode], () => {
+    processHeatMapData();
+}, { deep: true });
+</script>

@@ -349,6 +349,9 @@ const fetchBarChartData = async () => {
     const chartEndDate = formatDate(endDateObjForApi);
 
     const countData = await fetchCountReservation(selectedHotelId.value, chartStartDate, chartEndDate);
+    
+    // DEBUG LOG
+    //console.log('[Dashboard] fetchCountReservation countData:', countData);
 
     // Generate an array of dates from chartStartDate to chartEndDate
     const dateArray = [];
@@ -381,7 +384,12 @@ const fetchBarChartData = async () => {
 
         if (index !== -1) {
             barChartyAxisBar.value[index] = item.room_count;
-            barChartyAxisLine.value[index] = item.total_rooms ? Math.round(item.room_count / item.total_rooms * 10000) / 100 : 0;
+            const calculatedPercentage = item.total_rooms_real ? Math.round(item.room_count / item.total_rooms_real * 10000) / 100 : 0;
+            
+            // DEBUG LOG
+            //console.log(`[Dashboard] Date: ${itemDate}, RoomCount: ${item.room_count}, TotalRooms: ${item.total_rooms}, TotalRoomsReal: ${item.total_rooms_real}, Percentage: ${calculatedPercentage}`);
+
+            barChartyAxisLine.value[index] = calculatedPercentage;
             barChartyAxisMale.value[index] = item.male_count;
             barChartyAxisFemale.value[index] = item.female_count;
             barChartyAxisUnspecified.value[index] = item.unspecified_count;
@@ -803,6 +811,11 @@ const generateBarStackChartOptions = () => ({
     const month_0 = await fetchOccupationByPeriod('month_0', selectedHotelId.value, startDate.value);
     const month_1 = await fetchOccupationByPeriod('month_1', selectedHotelId.value, startDate.value);
     const month_2 = await fetchOccupationByPeriod('month_2', selectedHotelId.value, startDate.value);
+    
+    // DEBUG LOG
+    //console.log('[Dashboard] Gauge Data month_0:', month_0);
+    //console.log('[Dashboard] Gauge Data month_1:', month_1);
+    //console.log('[Dashboard] Gauge Data month_2:', month_2);
 
     if (month_0) {
         const gaugeValue_0 = month_0[0].available_rooms === 0 ? 0 : Math.round(month_0[0].room_count / month_0[0].available_rooms * 10000) / 100;

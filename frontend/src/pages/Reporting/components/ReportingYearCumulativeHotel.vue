@@ -251,33 +251,14 @@
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
 
-    // Helper
-    const formatCurrency = (value) => {
-        if (value === null || value === undefined || Number.isNaN(value)) return '- 円';
-        return parseFloat(value).toLocaleString('ja-JP') + ' 円';
-    };
-    const formatPercentage = (value) => {
-        if (value === null || value === undefined || Number.isNaN(value)) return '-';
-         if (value === Infinity || value === -Infinity) return 'N/A';
-        return parseFloat(value).toLocaleString('ja-JP', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
-    const calculateVariancePercentage = (period, forecast) => {
-        if (forecast === 0 || forecast === null || forecast === undefined) {
-            return (period === 0 || period === null || period === undefined) ? 0 : Infinity; 
-        }
-        const variance = ((period - forecast) / forecast); // Keep as ratio for formatting
-        return variance;
-    };
-    const formatYenInTenThousands = (value) => {
-        if (value === null || value === undefined) return '-';
-        const valueInMan = value / 10000;        
-        return valueInMan.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '万円';
-    };
-    const formatYenInTenThousandsNoDecimal = (value) => {
-        if (value === null || value === undefined) return '-';
-        const valueInMan = value / 10000;        
-        return valueInMan.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '万円';
-    };
+    // Utilities
+    import { 
+        formatCurrencyForReporting as formatCurrency, 
+        formatPercentage, 
+        formatYenInTenThousands, 
+        formatYenInTenThousandsNoDecimal
+    } from '@/utils/formatUtils';
+    import { getSeverity as getSeverityUtil, colorScheme, calculateVariancePercentage } from '@/utils/reportingUtils';
 
     // View selection
     const selectedView = ref('graph'); // Default view
@@ -338,12 +319,14 @@
 
     // Aggregated data for KPIs
     const aggregatedCurrentHotelRevenue = computed(() => {
-        if (!currentHotelRevenueData.value) return { total_forecast_revenue: 0, total_period_revenue: 0 };
+        if (!currentHotelRevenueData.value) return { total_forecast_revenue: 0, total_period_revenue: 0, total_period_accommodation_revenue: 0 };
+        console.log('[ReportingYearCumulativeHotel] currentHotelRevenueData:', currentHotelRevenueData.value);
         return currentHotelRevenueData.value.reduce((acc, item) => {
             acc.total_forecast_revenue += (item.forecast_revenue || 0);
             acc.total_period_revenue += (item.period_revenue || 0);
+            acc.total_period_accommodation_revenue += (item.accommodation_revenue || item.period_revenue || 0);
             return acc;
-        }, { total_forecast_revenue: 0, total_period_revenue: 0 });
+        }, { total_forecast_revenue: 0, total_period_revenue: 0, total_period_accommodation_revenue: 0 });
     });
 
     const aggregatedCurrentHotelOccupancy = computed(() => {
@@ -365,8 +348,9 @@
 
     // KPIs
     const actualADR = computed(() => {
-        const revenue = aggregatedCurrentHotelRevenue.value.total_period_revenue;
+        const revenue = aggregatedCurrentHotelRevenue.value.total_period_accommodation_revenue;
         const soldRooms = aggregatedCurrentHotelOccupancy.value.total_sold_rooms;
+        console.log('[ReportingYearCumulativeHotel] ADR calculation - accommodation_revenue:', revenue, 'sold_rooms:', soldRooms);
         return soldRooms ? Math.round(revenue / soldRooms) : NaN;
     });
     const forecastADR = computed(() => {
@@ -375,7 +359,7 @@
         return soldRooms ? Math.round(revenue / soldRooms) : NaN;
     });
     const actualRevPAR = computed(() => {
-        const revenue = aggregatedCurrentHotelRevenue.value.total_period_revenue;
+        const revenue = aggregatedCurrentHotelRevenue.value.total_period_accommodation_revenue;
         const availableRooms = aggregatedCurrentHotelOccupancy.value.total_available_rooms;
         return availableRooms ? Math.round(revenue / availableRooms) : NaN;
     });
@@ -384,22 +368,6 @@
         const availableRooms = aggregatedCurrentHotelOccupancy.value.total_fc_available_rooms;
         return availableRooms ? Math.round(revenue / availableRooms) : NaN;
     });
-
-
-    // Color scheme    
-    const colorScheme = {
-        actual: '#C8102E', forecast: '#F2A900', variance: '#555555',
-        actual_gradient_top: '#A60D25', 
-        actual_gradient_middle: '#C8102E', 
-        actual_gradient_bottom: '#E94A57',
-        forecast_gradient_top: '#D48F00', 
-        forecast_gradient_middle: '#F2A900', 
-        forecast_gradient_bottom: '#FFE066',
-        variance_gradient_top: '#888888', 
-        variance_gradient_middle: '#555555', 
-        variance_gradient_bottom: '#222222',
-        neutral_gray: '#CCCCCC'
-    };
 
     // ECharts imports
     import * as echarts from 'echarts/core';
@@ -437,8 +405,8 @@
         const variances = months.map(month => {
             const forecast = data.find(d => d.month === month)?.forecast_revenue ?? 0;
             const period = data.find(d => d.month === month)?.period_revenue ?? 0;
-            const varianceRatio = calculateVariancePercentage(period, forecast);
-            return varianceRatio === Infinity || varianceRatio === -Infinity ? 0 : parseFloat(varianceRatio * 100);
+            const varianceStr = calculateVariancePercentage(period, forecast);
+            return varianceStr === 'N/A' ? 0 : parseFloat(varianceStr);
         });
 
         return {
@@ -794,13 +762,7 @@
         totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
     };
 
-    const getSeverity = (value) => {
-        if (value === null || value === undefined || value === Infinity || value === -Infinity || Number.isNaN(value)) return 'secondary';
-        if (value > 0) return 'success';
-        if (value < -0.5) return 'danger'; 
-        if (value < 0) return 'warning'; 
-        return 'info'; 
-    };
+    const getSeverity = getSeverityUtil;
 
     const exportCSV = (tableType) => {
         let csvString = '';
@@ -816,14 +778,14 @@
                 const forecastRevenue = row.forecast_revenue || 0;
                 const periodRevenue = row.period_revenue || 0;
                 const varianceAmount = periodRevenue - forecastRevenue;
-                let variancePercentageRatio = calculateVariancePercentage(periodRevenue, forecastRevenue);
+                let varianceStr = calculateVariancePercentage(periodRevenue, forecastRevenue);
                 
                 const csvRow = [
                     `"${row.month || ''}"`,
                     forecastRevenue,
                     periodRevenue,
                     varianceAmount,
-                    (variancePercentageRatio === Infinity || variancePercentageRatio === -Infinity || Number.isNaN(variancePercentageRatio)) ? "N/A" : (variancePercentageRatio * 100).toFixed(2)
+                    varianceStr
                 ];
                 csvRows.push(csvRow.join(','));
             });
