@@ -1206,24 +1206,24 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               RETURNING id;
             `;
     
-            const insertDetailsValues = [
-              hotel_id,
-              newReservationId,
-              new_room_id,
-              template.plans_global_id,
-              template.plans_hotel_id,
-              template.plan_name,
-              template.plan_type,
-              template.number_of_people,
-              template.price,
-              template.billable,
-              updated_by,
-              datesToCreate
-            ];
+        const insertDetailsValues = [
+          hotel_id,
+          newReservationId,
+          new_room_id,
+          template.plans_global_id,
+          template.plans_hotel_id,
+          template.plan_name,
+          template.plan_type,
+          template.number_of_people,
+          template.price,
+          template.billable,
+          updated_by,
+          datesToCreate
+        ];
     
-            const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
-            const newReservationDetails = insertedDetails.rows;
-            //logger.debug(`Inserted ${newReservationDetails.length} new reservation_details records.`);
+        const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
+        const newReservationDetails = insertedDetails.rows;
+        //logger.debug(`Inserted ${newReservationDetails.length} new reservation_details records.`);
     
             // --- MODIFIED LOGIC: START ---
             // 4. Copy clients/addons to new records using the data fetched earlier
@@ -1271,11 +1271,8 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               }
             }
           }
-          //logger.debug(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
         }
-        // --- MODIFIED LOGIC: END ---
-      }
-    }
+
     // Update reservations table with new check_in and check_out
     //logger.debug(`Updating main reservation record ${newReservationId} with new dates.`);
     const updateReservationQuery = `
