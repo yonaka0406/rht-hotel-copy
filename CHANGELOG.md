@@ -666,7 +666,18 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.2.4] - 2025-12-03
+
+- Fix: Resolved issue where addons were being duplicated when added through the day detail dialog
+- Refactor: Moved addon management logic to a dedicated module for better maintainability
+- Fix: Fixed issue where addons were not being summed to the billable value for cancelled dates in the billing page
+
+---
+
 ## Version History
+- 1.2.4 (2025-12-03) – Fixed addon duplication in day detail dialog and resolved billing calculation issues for cancelled dates. Refactored addon management into a dedicated module for better code organization and maintainability.
+- 1.2.3 (2025-12-01) – Enhanced OTA notifications with failed XML queue, migrated to Playwright for more reliable PDF generation, and introduced receipt versioning with customizable templates. Fixed issues with parking addons during plan changes and improved handling of temporary room blocks.
+- 1.2.2 (2025-11-25) – Added staff room categorization with visual distinction in the calendar and improved room indicator accuracy for check-in/check-out status. Fixed date calculation issues and cleaned up debug logs.
 - 1.2.1 (2025-11-19) – Fixed critical database client pooling inconsistencies affecting rate calculations, restored missing guest and gender details in the room indicator, and improved stay-date logic for checkout detection. Added room-specific stay dates to Guest List Excel export, implemented OTA XML queuing for rate-limit-safe integrations, expanded calendar month navigation, optimized websockets for hotel-specific updates, and refactored the guest list dialog for consistency.
 - 1.2.0 (2025-11-11) – Introduced comprehensive Parking Module with spot blocking for external hotel integration and room swapping capability in the reservation calendar. Fixed memory leaks in plan pattern bulk edit operations, significantly improving performance for large reservation batches.
 - **1.1.31** (2025-11-06) - Fixed room inventory view to exclude 'not for sale' rooms, resolved memory leaks in Puppeteer, improved form validation with reusable utilities, and enhanced UI with custom scrollbar styling for sidebars. Added new tab functionality for reservation details.

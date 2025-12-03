@@ -68,37 +68,6 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
     client.release();
   }
 };
-  
-const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by, client = null) => {
-  const pool = getPool(requestId);
-  let dbClient = client;
-  let shouldReleaseClient = false;
-
-  if (!dbClient) {
-    dbClient = await pool.connect();
-    shouldReleaseClient = true;
-    // If this function acquired the client, it's responsible for setting the session
-    await dbClient.query(format(`SET SESSION "my_app.user_id" = %L;`, updated_by));
-  }
-
-  const query = format(`
-    DELETE FROM reservation_addons
-    WHERE reservation_detail_id = %L AND hotel_id = %L AND addon_type <> 'parking'
-    RETURNING *;
-  `, reservation_detail_id, hotel_id);
-
-  try {
-    const result = await dbClient.query(query);
-    return result.rowCount;
-  } catch (err) {
-    logger.error('Error deleting reservation addon:', err);
-    throw new Error('Database error');
-  } finally {
-    if (shouldReleaseClient) {
-      dbClient.release();
-    }
-  }
-};
 
 const deleteReservationClientsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
   const pool = getPool(requestId);
@@ -288,7 +257,6 @@ const deleteBulkParkingReservations = async (requestId, ids, userId) => {
 
 module.exports = {
     deleteHoldReservationById,
-    deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,
     deleteReservationRoom,
     deleteReservationPayment,

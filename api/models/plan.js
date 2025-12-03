@@ -91,13 +91,13 @@ const getAllPatternsByHotel = async (requestId, hotel_id) => {
         const result = await pool.query(query, values);    
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotel plans:', err);
-        throw new Error('Database error');
+        console.error('Error retrieving patterns for hotel:', err);
+        throw err;
     }
 };
 
 // Return one
-const getPlanByKey = async (requestId, hotel_id, plan_key) => {
+const getPlanByKey = async (requestId, hotel_id, plan_key, client = null) => {
     const defaultResult = {
         plans_global_id: null,
         plans_hotel_id: null,
@@ -121,7 +121,7 @@ const getPlanByKey = async (requestId, hotel_id, plan_key) => {
         // Case 1: Hotel plan exists (parts[1] has value)
         if (parts.length > 1 && parts[1] && !isNaN(parseInt(parts[1]))) {
             const hotelPlanId = parseInt(parts[1]);
-            const hotelPlan = await getHotelPlanById(requestId, hotel_id, hotelPlanId);
+            const hotelPlan = await getHotelPlanById(requestId, hotel_id, hotelPlanId, client);
             
             if (hotelPlan) {
                 return {
@@ -136,7 +136,7 @@ const getPlanByKey = async (requestId, hotel_id, plan_key) => {
         // Case 2: Global plan exists (parts[0] has value)
         if (parts[0] && !isNaN(parseInt(parts[0]))) {
             const globalPlanId = parseInt(parts[0]);
-            const globalPlan = await getGlobalPlanById(requestId, globalPlanId);
+            const globalPlan = await getGlobalPlanById(requestId, globalPlanId, client);
             
             if (globalPlan) {
                 return {
@@ -155,30 +155,42 @@ const getPlanByKey = async (requestId, hotel_id, plan_key) => {
 
     return defaultResult;
 };
-const getGlobalPlanById = async (requestId, id) => {
+const getGlobalPlanById = async (requestId, id, client = null) => {
     const pool = getPool(requestId);
+    const dbClient = client || await pool.connect();
+    const shouldReleaseClient = !client;
     const query = 'SELECT * FROM plans_global WHERE id = $1';
     const values = [id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await dbClient.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error finding global Plan:', err);
         throw new Error('Database error');
+    } finally {
+        if (shouldReleaseClient) {
+            dbClient.release();
+        }
     }
 };
-const getHotelPlanById = async (requestId, hotel_id, id) => {
+const getHotelPlanById = async (requestId, hotel_id, id, client = null) => {
     const pool = getPool(requestId);
+    const dbClient = client || await pool.connect();
+    const shouldReleaseClient = !client;
     const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 AND id = $2';
     const values = [hotel_id, id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await dbClient.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error finding hotel Plan:', err);
         throw new Error('Database error'); 
+    } finally {
+        if (shouldReleaseClient) {
+            dbClient.release();
+        }
     }
 };
 
@@ -286,8 +298,8 @@ const updatePlanPattern = async (requestId, id, name, template, user_id) => {
         const result = await pool.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error updating global Plan:', err);
-        throw new Error('Database error');
+        console.error('Error updating plan pattern:', err);
+        throw err;
     }
 };
 
