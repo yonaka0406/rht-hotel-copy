@@ -731,7 +731,8 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
       FROM
         reservation_details
       WHERE
-        date >= $1 AND date < $2
+        hotel_id = $3
+        AND date >= $1 AND date < $2
         AND room_id IS NOT NULL
         AND cancelled IS NULL
     )
