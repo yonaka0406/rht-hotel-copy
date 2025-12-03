@@ -1116,11 +1116,11 @@ const updateRoomByCalendar = async (requestId, roomData) => {
 
       // Get all original details to preserve plans day by day
       const originalDetailsQuery = `
-            SELECT id, date, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable
-            FROM reservation_details
-            WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
-            ORDER BY date ASC
-          `;
+        SELECT id, date, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable
+        FROM reservation_details
+        WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
+        ORDER BY date ASC
+      `;
       const originalDetailsResult = await client.query(originalDetailsQuery, [reservationIdForDetails, hotel_id, old_room_id]);
       const originalDetailsMap = new Map(originalDetailsResult.rows.map(d => [formatDate(new Date(d.date)), d]));
 
@@ -1129,34 +1129,34 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       let addonsToCopy = [];
 
       const sourceDetailQuery = `
-            SELECT id FROM reservation_details
-            WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
-            ORDER BY date ASC LIMIT 1
-          `;
-          const sourceResult = await client.query(sourceDetailQuery, [reservationIdForDetails, hotel_id, old_room_id]);
+        SELECT id FROM reservation_details
+        WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
+        ORDER BY date ASC LIMIT 1
+      `;
+      const sourceResult = await client.query(sourceDetailQuery, [reservationIdForDetails, hotel_id, old_room_id]);
     
-          if (sourceResult.rows.length > 0) {
-            const sourceDetailId = sourceResult.rows[0].id;
-            //logger.debug(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
+      if (sourceResult.rows.length > 0) {
+        const sourceDetailId = sourceResult.rows[0].id;
+        //logger.debug(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
+
+        const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
+        clientsToCopy = clientsResult.rows;
+        //logger.debug(`Found ${clientsToCopy.length} clients to copy.`);
+
+        addonsToCopy = await addonsModels.selectReservationAddonByDetail(requestId, sourceDetailId, client);
+        //logger.debug(`Found ${addonsToCopy.length} addons to copy.`);
+      }
+      // --- NEW LOGIC: END ---
     
-            const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
-            clientsToCopy = clientsResult.rows;
-            //logger.debug(`Found ${clientsToCopy.length} clients to copy.`);
-    
-            addonsToCopy = await addonsModels.selectReservationAddonByDetail(requestId, sourceDetailId, client);
-            //logger.debug(`Found ${addonsToCopy.length} addons to copy.`);
-          }
-          // --- NEW LOGIC: END ---
-    
-          // 2. Delete old records
-          const deleteOldQuery = `
-            DELETE FROM reservation_details 
-            WHERE reservation_id = $1 
-              AND hotel_id = $2 
-              AND room_id = $3
-              AND (date < $4 OR date >= $5)
-            RETURNING id, date;
-          `;
+      // 2. Delete old records
+      const deleteOldQuery = `
+        DELETE FROM reservation_details 
+        WHERE reservation_id = $1 
+          AND hotel_id = $2 
+          AND room_id = $3
+          AND (date < $4 OR date >= $5)
+        RETURNING id, date;
+      `;
       const deleteResult = await client.query(deleteOldQuery, [reservationIdForDetails, hotel_id, old_room_id, new_check_in, new_check_out]);
       //logger.debug(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
 
@@ -1183,28 +1183,28 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         };
 
         const insertDetailsQuery = `
-              INSERT INTO reservation_details ( 
-                hotel_id, reservation_id, date, room_id, 
-                plans_global_id, plans_hotel_id, plan_name, plan_type, 
-                number_of_people, price, billable, created_by, updated_by
-              )
-              SELECT 
-                $1 as hotel_id,
-                $2::uuid as reservation_id,
-                date_series.date,
-                $3 as room_id,
-                $4 as plans_global_id,
-                $5 as plans_hotel_id, 
-                $6 as plan_name,
-                $7 as plan_type,
-                $8 as number_of_people,
-                $9 as price,
-                $10 as billable,
-                $11 as created_by,
-                $11 as updated_by
-              FROM unnest($12::date[]) as date_series(date)
-              RETURNING id;
-            `;
+          INSERT INTO reservation_details ( 
+            hotel_id, reservation_id, date, room_id, 
+            plans_global_id, plans_hotel_id, plan_name, plan_type, 
+            number_of_people, price, billable, created_by, updated_by
+          )
+          SELECT 
+            $1 as hotel_id,
+            $2::uuid as reservation_id,
+            date_series.date,
+            $3 as room_id,
+            $4 as plans_global_id,
+            $5 as plans_hotel_id, 
+            $6 as plan_name,
+            $7 as plan_type,
+            $8 as number_of_people,
+            $9 as price,
+            $10 as billable,
+            $11 as created_by,
+            $11 as updated_by
+          FROM unnest($12::date[]) as date_series(date)
+          RETURNING id;
+        `;
     
         const insertDetailsValues = [
           hotel_id,
@@ -1225,53 +1225,55 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         const newReservationDetails = insertedDetails.rows;
         //logger.debug(`Inserted ${newReservationDetails.length} new reservation_details records.`);
     
-            // --- MODIFIED LOGIC: START ---
-            // 4. Copy clients/addons to new records using the data fetched earlier
-            if (newReservationDetails.length > 0) {
-              let clientsInserted = 0;
-              let addonsInserted = 0;
-    
-              for (const detail of newReservationDetails) {
-                // Insert clients
-                if (clientsToCopy.length > 0) {
-                  for (const clientRow of clientsToCopy) {
-                    const reservationClient = {
-                      hotel_id: hotel_id,
-                      reservation_details_id: detail.id,
-                      client_id: clientRow.client_id,
-                      created_by: updated_by,
-                      updated_by: updated_by
-                    };
-                    const clientResult = await clientsModels.addReservationClient(requestId, reservationClient, client);
-                    clientsInserted += (clientResult ? 1 : 0); // Assuming addReservationClient returns the inserted row
-                  }
-                }
-    
-                // Insert addons
-                if (addonsToCopy.length > 0) {
-                  for (const addonRow of addonsToCopy) {
-                    const addonToInsert = {
-                      hotel_id: hotel_id,
-                      reservation_detail_id: detail.id,
-                      addons_global_id: addonRow.addons_global_id,
-                      addons_hotel_id: addonRow.addons_hotel_id,
-                      addon_name: addonRow.addon_name,
-                      addon_type: addonRow.addon_type,
-                      quantity: addonRow.quantity,
-                      price: addonRow.price,
-                      tax_type_id: addonRow.tax_type_id,
-                      tax_rate: addonRow.tax_rate,
-                      created_by: updated_by,
-                      updated_by: updated_by,
-                    };
-                    await addonsModels.addReservationAddon(requestId, addonToInsert, client);
-                    addonsInserted += 1; // Assuming addReservationAddon returns a single row
-                  }
-                }
+        // --- MODIFIED LOGIC: START ---
+        // 4. Copy clients/addons to new records using the data fetched earlier
+        if (newReservationDetails.length > 0) {
+          let clientsInserted = 0;
+          let addonsInserted = 0;
+
+          for (const detail of newReservationDetails) {
+            // Insert clients
+            if (clientsToCopy.length > 0) {
+              for (const clientRow of clientsToCopy) {
+                const reservationClient = {
+                  hotel_id: hotel_id,
+                  reservation_details_id: detail.id,
+                  client_id: clientRow.client_id,
+                  created_by: updated_by,
+                  updated_by: updated_by
+                };
+                const clientResult = await clientsModels.addReservationClient(requestId, reservationClient, client);
+                clientsInserted += (clientResult ? 1 : 0); // Assuming addReservationClient returns the inserted row
+              }
+            }
+
+            // Insert addons
+            if (addonsToCopy.length > 0) {
+              for (const addonRow of addonsToCopy) {
+                const addonToInsert = {
+                  hotel_id: hotel_id,
+                  reservation_detail_id: detail.id,
+                  addons_global_id: addonRow.addons_global_id,
+                  addons_hotel_id: addonRow.addons_hotel_id,
+                  addon_name: addonRow.addon_name,
+                  addon_type: addonRow.addon_type,
+                  quantity: addonRow.quantity,
+                  price: addonRow.price,
+                  tax_type_id: addonRow.tax_type_id,
+                  tax_rate: addonRow.tax_rate,
+                  created_by: updated_by,
+                  updated_by: updated_by,
+                };
+                await addonsModels.addReservationAddon(requestId, addonToInsert, client);
+                addonsInserted += 1; // Assuming addReservationAddon returns a single row
               }
             }
           }
+          //logger.debug(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
         }
+        // --- MODIFIED LOGIC: END ---
+      }
+    }
 
     // Update reservations table with new check_in and check_out
     //logger.debug(`Updating main reservation record ${newReservationId} with new dates.`);
