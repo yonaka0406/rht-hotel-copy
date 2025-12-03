@@ -273,11 +273,11 @@
             currentDateIter = addDaysUTC(currentDateIter, 1);
         }
         
-        console.log('[ReportMonthly] RevPAR calculation:', {
-            totalRevenue,
-            totalAvailableRoomNightsInPeriod,
-            revPAR: totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0
-        });
+        //console.log('[ReportMonthly] RevPAR calculation:', {
+        //    totalRevenue,
+        //    totalAvailableRoomNightsInPeriod,
+        //    revPAR: totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0
+        //});
         
         revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
         
