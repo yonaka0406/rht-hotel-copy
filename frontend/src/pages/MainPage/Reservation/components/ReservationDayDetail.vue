@@ -354,7 +354,7 @@ const getSalesCategoryLabel = (type) => {
     if (type === 'other') {
         return 'その他'
     }
-    return '未設定'
+    return '宿泊料金'
 };
 const updateTaxRate = (tax) => {
     const selectedTax = taxTypes.value.find(t => t.id === tax.tax_type_id);
