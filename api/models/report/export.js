@@ -189,6 +189,12 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,body.addon_price      
       ,body.addon_value    
       ,body.addon_net_value
+      ,body.addon_sales_category
+      ,body.is_accommodation
+      ,rates.plan_price_accom
+      ,rates.plan_net_price_accom
+      ,rates.plan_price_other
+      ,rates.plan_net_price_other
       ,body.billable
       ,body.cancelled
       
@@ -258,12 +264,14 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
             END
             ) AS plan_price
           ,ra.addon_name
+          ,ra.sales_category AS addon_sales_category
           ,COALESCE(ra.quantity,0) AS addon_quantity
             ,COALESCE(ra.price,0) AS addon_price
           ,(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) AS addon_value
           ,(COALESCE(ra.quantity,0) * COALESCE(ra.net_price,0)) AS addon_net_value
           ,rd.billable
             ,rd.cancelled
+            ,rd.is_accommodation
         FROM
           reservation_details rd	
           JOIN rooms ON rd.hotel_id = rooms.hotel_id AND rd.room_id = rooms.id
@@ -281,8 +289,12 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           SELECT
               rr.hotel_id,
               rr.reservation_details_id AS id,
-        SUM(rr.price) AS plan_price,
-              SUM(rr.net_price) AS plan_net_price
+              SUM(rr.price) AS plan_price,
+              SUM(rr.net_price) AS plan_net_price,
+              SUM(CASE WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN rr.price ELSE 0 END) AS plan_price_accom,
+              SUM(CASE WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN rr.net_price ELSE 0 END) AS plan_net_price_accom,
+              SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS plan_price_other,
+              SUM(CASE WHEN rr.sales_category = 'other' THEN rr.net_price ELSE 0 END) AS plan_net_price_other
           FROM
               reservation_rates rr JOIN reservation_details rd ON rr.hotel_id = rd.hotel_id AND rr.reservation_details_id = rd.id
       WHERE 

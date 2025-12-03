@@ -100,6 +100,18 @@ const getExportReservationDetails = async (req, res) => {
                 plan_net_price: isFirstDetailOccurrence
                     ? Math.floor(parseFloat(reservation.plan_net_price) || 0)
                     : null,
+                plan_price_accom: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_price_accom) || 0)
+                    : null,
+                plan_net_price_accom: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_net_price_accom) || 0)
+                    : null,
+                plan_price_other: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_price_other) || 0)
+                    : null,
+                plan_net_price_other: isFirstDetailOccurrence
+                    ? Math.floor(parseFloat(reservation.plan_net_price_other) || 0)
+                    : null,
                 payments: isFirstOccurrence
                     ? Math.floor(parseFloat(reservation.payments) || 0)
                     : null,
@@ -118,6 +130,20 @@ const getExportReservationDetails = async (req, res) => {
         processedReservations.forEach((reservation) => {
             const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
             const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
+
+            // Calculate split sales amounts
+            const isAddonAccom = !reservation.addon_sales_category || reservation.addon_sales_category === 'accommodation';
+            const addonPriceAccom = isAddonAccom ? Math.floor(parseFloat(reservation.addon_value)) : 0;
+            const addonNetPriceAccom = isAddonAccom ? Math.floor(parseFloat(reservation.addon_net_value)) : 0;
+
+            const isAddonOther = reservation.addon_sales_category === 'other';
+            const addonPriceOther = isAddonOther ? Math.floor(parseFloat(reservation.addon_value)) : 0;
+            const addonNetPriceOther = isAddonOther ? Math.floor(parseFloat(reservation.addon_net_value)) : 0;
+
+            const planPriceAccom = reservation.plan_price_accom || 0;
+            const planNetPriceAccom = reservation.plan_net_price_accom || 0;
+            const planPriceOther = reservation.plan_price_other || 0;
+            const planNetPriceOther = reservation.plan_net_price_other || 0;
 
             // Process each reservation and write to CSV
             // Note on pricing: 
@@ -157,8 +183,11 @@ const getExportReservationDetails = async (req, res) => {
                 アドオン料金: Math.floor(parseFloat(reservation.addon_value)),
                 "アドオン料金(税抜き)": Math.floor(parseFloat(reservation.addon_net_value)),
                 請求対象: reservation.billable ? 'はい' : 'いいえ',                
-                売上高: reservation.billable ? reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) : 0,
-                "売上高(税抜き)": reservation.billable ? reservation.plan_net_price + Math.floor(parseFloat(reservation.addon_net_value)) : 0,
+                宿泊対象: reservation.is_accommodation ? 'はい' : 'いいえ',
+                売上高: reservation.billable ? planPriceAccom + addonPriceAccom : 0,
+                "売上高(税抜き)": reservation.billable ? planNetPriceAccom + addonNetPriceAccom : 0,
+                "売上高(宿泊外)": reservation.billable ? planPriceOther + addonPriceOther : 0,
+                "売上高(宿泊外・税抜き)": reservation.billable ? planNetPriceOther + addonNetPriceOther : 0,
                 支払い: translatePaymentTiming(reservation.payment_timing),
                 予約ID: reservation.reservation_id,
                 予約詳細ID: reservation.id,
