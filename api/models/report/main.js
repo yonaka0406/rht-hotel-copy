@@ -29,7 +29,6 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
         r.hotel_id = $1
         AND rd.date BETWEEN $2 AND $3
         AND r.status = 'block'
-        AND rooms.for_sale = TRUE
       GROUP BY rd.hotel_id, rd.date
     ),
 

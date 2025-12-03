@@ -511,6 +511,9 @@
                 
                 hotelData.total_available_rooms_for_month_calc = total_available_rooms_for_month_calc;
                 hotelData.total_gross_rooms_for_month_calc = total_gross_rooms_for_month_calc;
+                
+
+
                 totalRoomsSum += total_available_rooms_for_month_calc;
                 totalGrossRoomsSum += total_gross_rooms_for_month_calc;
             }
