@@ -35,7 +35,7 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
         h.total_physical_rooms,
         (h.total_physical_rooms * h.days_in_month)::bigint AS total_capacity_room_nights,
         COUNT(CASE WHEN res.status = 'block' AND rd.cancelled IS NULL AND rm.for_sale = TRUE THEN rd.id ELSE NULL END)::bigint AS total_blocked_room_nights,
-        COUNT(CASE WHEN res.status NOT IN ('block', 'hold', 'provisory', 'cancelled') AND res.type <> 'employee' AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id ELSE NULL END)::bigint AS total_occupied_room_nights
+        COUNT(CASE WHEN res.status NOT IN ('block', 'hold', 'provisory', 'cancelled') AND res.type <> 'employee' AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE AND rm.for_sale = TRUE THEN rd.id ELSE NULL END)::bigint AS total_occupied_room_nights
       FROM hotel_monthly_capacity h
       LEFT JOIN reservation_details rd ON rd.hotel_id = h.hotel_id AND DATE_TRUNC('month', rd.date) = h.month_start
       LEFT JOIN reservations res ON res.id = rd.reservation_id AND res.hotel_id = rd.hotel_id
@@ -99,15 +99,16 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
           COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) AS undecided_nights,
           COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS confirmed_nights,
           COUNT(CASE WHEN r.type = 'employee' THEN 1 END) AS employee_nights,
-          COUNT(CASE WHEN r.status = 'block' THEN 1 END) AS blocked_nights,
+          COUNT(CASE WHEN r.status = 'block' AND rm.for_sale = TRUE THEN 1 END) AS blocked_nights,
           COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) = FALSE AND r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) AS non_accommodation_nights,
           (COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) +
            COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) +
            COUNT(CASE WHEN r.type = 'employee' THEN 1 END) +
-           COUNT(CASE WHEN r.status = 'block' THEN 1 END)) AS total_occupied_nights,
+           COUNT(CASE WHEN r.status = 'block' AND rm.for_sale = TRUE THEN 1 END)) AS total_occupied_nights,
           COUNT(rd.id) AS total_reservation_details_nights
       FROM reservation_details rd
       JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+      JOIN rooms rm ON rd.room_id = rm.id
       LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
       LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
       LEFT JOIN (
