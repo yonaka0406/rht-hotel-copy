@@ -3,6 +3,7 @@ const selectModels = require('./select');
 const insertModels = require('./insert');
 const updateModels = require('./update');
 const deleteModels = require('./delete');
+const detailsModels = require('./details');
 const roomsModels = require('./rooms');
 const splitModels = require('./split');
 const addonsModels = require('./addons');
@@ -14,6 +15,7 @@ module.exports = {
   ...insertModels,
   ...updateModels,
   ...deleteModels,
+  ...detailsModels,
   ...roomsModels,
   ...splitModels,
   ...addonsModels,

@@ -166,6 +166,9 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL 
                  WHEN rdn.is_accommodation = TRUE THEN rdn.reservation_detail_id 
                  ELSE NULL END) AS room_count, -- Only count accommodation reservations
+      COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL 
+                 WHEN rdn.is_accommodation = FALSE THEN rdn.reservation_detail_id 
+                 ELSE NULL END) AS non_accommodation_stays,
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.number_of_people END) AS people_sum, -- Adjusted people_sum      
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.male_count END) AS male_count,
       SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.female_count END) AS female_count,
@@ -185,7 +188,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
   const values = [hotelId, dateStart, dateEnd]
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
