@@ -176,57 +176,15 @@
                     <span class="text-xl font-bold">稼働状況（計画ｘ実績）- {{ currentHotelName }}</span>
                 </template>
                 <template #content>
-                     <div v-if="!currentHotelOccupancyData || currentHotelOccupancyData.length === 0" class="text-center p-4">
-                        データはありません。
-                    </div>
-                    <div v-else class="p-fluid">
-                        <DataTable :value="currentHotelOccupancyData"
-                            responsiveLayout="scroll" 
-                            paginator 
-                            :rows="12"
-                            :rowsPerPageOptions="[12, 24, 36, 48]"
-                            stripedRows
-                            sortMode="multiple"
-                            removableSort
-                        >
-                            <Column field="month" header="月度" sortable style="min-width: 100px; width: 10%"></Column>
-                            <Column field="fc_sold_rooms" header="計画販売室数" sortable style="min-width: 100px; width: 10%">
-                                <template #body="{data}">{{ data.fc_sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
-                            </Column>
-                            <Column field="sold_rooms" header="実績販売室数" sortable style="min-width: 100px; width: 10%">
-                                <template #body="{data}">{{ data.sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
-                            </Column>
-                            <Column header="販売室数差異" sortable style="min-width: 100px; width: 10%">
-                                <template #body="{data}">{{ ( (data.sold_rooms || 0) - (data.fc_sold_rooms || 0) ).toLocaleString('ja-JP') }}</template>
-                            </Column>
-                            <Column field="fc_occ" header="計画稼働率" sortable style="min-width: 100px; width: 10%">
-                                <template #body="{data}">{{ formatPercentage(data.fc_occ / 100) }}</template>
-                            </Column>
-                            <Column field="occ" header="実績稼働率" sortable style="min-width: 100px; width: 10%">
-                                <template #body="{data}">{{ formatPercentage(data.occ / 100) }}</template>
-                            </Column>
-                            <Column header="稼働率差異 (p.p.)" sortable style="min-width: 120px; width: 10%">
-                                 <template #body="{ data }">
-                                    <div class="flex justify-center items-center mr-2">                                        
-                                         <Badge class="ml-2" :severity="getSeverity(((data.occ || 0) - (data.fc_occ || 0))/100)" size="small">
-                                            {{ ((data.occ || 0) - (data.fc_occ || 0)) >= 0 ? '+' : '' }}{{ ((data.occ || 0) - (data.fc_occ || 0)).toFixed(2) }}
-                                        </Badge>
-                                    </div>
-                                </template>
-                            </Column>
-                            <Column field="fc_total_rooms" header="計画総室数" sortable style="min-width: 100px; width: 7.5%">
-                                <template #body="{data}">{{ data.fc_total_rooms?.toLocaleString('ja-JP') || 0 }}</template>
-                            </Column>
-                            <Column field="total_rooms" header="実績総室数" sortable style="min-width: 100px; width: 7.5%">
-                                <template #body="{data}">{{ data.total_rooms?.toLocaleString('ja-JP') || 0 }}</template>
-                            </Column>
-                            <template #paginatorstart>                                
-                            </template>
-                             <template #paginatorend>
-                                <Button type="button" icon="pi pi-download" text @click="exportCSV('occupancy')" />
-                            </template>
-                        </DataTable>
-                    </div>
+                    <OccupancyPlanVsActualTable
+                        :occupancyData="currentHotelOccupancyData"
+                        :occupationBreakdownData="props.occupationBreakdownData"
+                        :showHotelColumn="false"
+                        :showNonAccommodationColumn="false"
+                        :showDetailedCsvButton="false"
+                        :rows="12"
+                        :rowsPerPageOptions="[12, 24, 36, 48]"
+                    />
                 </template>
             </Card>
         </div>
@@ -245,11 +203,16 @@
         occupancyData: {
             type: Array,
             required: true
-        },   
+        },
+        occupationBreakdownData: { // New prop for aggregated occupation breakdown
+            type: Array,
+            default: () => []
+        }
     });
 
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
+    import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 
     // Utilities
     import { 

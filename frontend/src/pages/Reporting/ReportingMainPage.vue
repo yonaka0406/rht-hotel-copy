@@ -71,7 +71,8 @@
                 <ReportingYearCumulativeAllHotels
                     v-else-if="selectedView === 'yearCumulativeAllHotels'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :occupationBreakdownData="occupationBreakdownAllHotels"
                 />
                 <ReportingYearCumulativeHotel
                     v-else-if="selectedView === 'yearCumulativeHotel'"
@@ -110,7 +111,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { fetchCountReservation, fetchForecastData, fetchAccountingData, fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData } = useReportStore();
+    const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown } = useReportStore();
 
     // Primevue
     import { ProgressSpinner } from 'primevue';
@@ -226,6 +227,7 @@
     const pmsTotalData = ref({});
     const forecastTotalData = ref({});
     const accountingTotalData = ref({});
+    const occupationBreakdownAllHotels = ref([]); // New: to store aggregated occupation breakdown data
     // pmsFallbackCapacities was added near the top
 
     const revenueData = computed(() => {
@@ -582,6 +584,7 @@
             selectedReportType.value === 'reservationAnalysis') {
             loading.value = false; 
             pmsTotalData.value = {}; forecastTotalData.value = {}; accountingTotalData.value = {};
+            occupationBreakdownAllHotels.value = []; // Clear occupation breakdown data
             return; 
         }
 
@@ -595,6 +598,7 @@
                     pmsTotalData.value = newPmsTotalData; // Ensure refs are updated even if empty
                     forecastTotalData.value = newForecastTotalData;
                     accountingTotalData.value = newAccountingTotalData;
+                    occupationBreakdownAllHotels.value = [];
                     return;
                 }        if (!firstDayofFetch.value || !lastDayofFetch.value) {
             // console.log('RMP: Date range is not properly set for summary. Skipping data fetch.');
@@ -609,6 +613,9 @@
         const pmsFetchStartDate = formatDate(new Date(yearOfSelectedDate, 0, 1)); // Jan 1st
         const pmsFetchEndDate = formatDate(lastDayofFetch.value); // Original end date is fine
 
+        const startDateFormatted = formatDate(firstDayofFetch.value);
+        const endDateFormatted = formatDate(lastDayofFetch.value);
+
         let currentProcessingHotelId = null;
         pmsFallbackCapacities.value = {}; // Reset for current fetch
 
@@ -617,11 +624,72 @@
             const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
             const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
 
-            const [batchPmsData, batchForecastData, batchAccountingData] = await Promise.all([
+            const [batchPmsData, batchForecastData, batchAccountingData, batchOccupationBreakdownData] = await Promise.all([
                 fetchBatchCountReservation(selectedHotels.value, pmsFetchStartDate, pmsFetchEndDate),
                 fetchBatchForecastData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
-                fetchBatchAccountingData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate)
+                fetchBatchAccountingData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
+                fetchBatchOccupationBreakdown(selectedHotels.value, startDateFormatted, endDateFormatted)
             ]);
+            
+            // Aggregate occupation breakdown data
+            const aggregatedOccupationMap = new Map();
+            let totalBookableRoomNights = 0;
+            let totalNetAvailableRoomNights = 0;
+
+            // Process the results from batchOccupationBreakdownData
+            // The batch API returns an object where keys are hotelIds and values are arrays of occupation breakdown items
+            for (const hotelIdKey in batchOccupationBreakdownData) {
+                const hotelOccupationData = batchOccupationBreakdownData[hotelIdKey];
+                hotelOccupationData.forEach(item => {
+                    // Only process for real hotels, not the aggregated "All Hotels" (id 0) if it were in the batch
+                    if (parseInt(hotelIdKey, 10) !== 0) {
+                        if (item.plan_name === 'Total Available') {
+                            totalBookableRoomNights += parseInt(item.total_bookable_room_nights || '0');
+                            totalNetAvailableRoomNights += parseInt(item.net_available_room_nights || '0');
+                            return; // Skip aggregation for Total Available row itself, aggregate totals separately
+                        }
+
+                        if (!aggregatedOccupationMap.has(item.plan_name)) {
+                            aggregatedOccupationMap.set(item.plan_name, {
+                                plan_name: item.plan_name,
+                                sales_category: item.sales_category,
+                                undecided_nights: 0,
+                                confirmed_nights: 0,
+                                employee_nights: 0,
+                                blocked_nights: 0,
+                                non_accommodation_nights: 0,
+                                total_occupied_nights: 0,
+                                total_reservation_details_nights: 0,
+                            });
+                        }
+                        const aggregatedItem = aggregatedOccupationMap.get(item.plan_name);
+                        aggregatedItem.undecided_nights += parseInt(item.undecided_nights || '0');
+                        aggregatedItem.confirmed_nights += parseInt(item.confirmed_nights || '0');
+                        aggregatedItem.employee_nights += parseInt(item.employee_nights || '0');
+                        aggregatedItem.blocked_nights += parseInt(item.blocked_nights || '0');
+                        aggregatedItem.non_accommodation_nights += parseInt(item.non_accommodation_nights || '0');
+                        aggregatedItem.total_occupied_nights += parseInt(item.total_occupied_nights || '0');
+                        aggregatedItem.total_reservation_details_nights += parseInt(item.total_reservation_details_nights || '0');
+                    }
+                });
+            }
+            
+            // Convert map to array and add the aggregated 'Total Available' row
+            const finalOccupationBreakdown = Array.from(aggregatedOccupationMap.values());
+            finalOccupationBreakdown.push({
+                plan_name: 'Total Available',
+                sales_category: null,
+                undecided_nights: 0,
+                confirmed_nights: 0,
+                employee_nights: 0,
+                blocked_nights: 0,
+                non_accommodation_nights: 0,
+                total_occupied_nights: 0,
+                total_reservation_details_nights: 0,
+                total_bookable_room_nights: totalBookableRoomNights,
+                net_available_room_nights: totalNetAvailableRoomNights,
+            });
+            occupationBreakdownAllHotels.value = finalOccupationBreakdown;
 
             for (const hotelId of selectedHotels.value) {
                 currentProcessingHotelId = hotelId;

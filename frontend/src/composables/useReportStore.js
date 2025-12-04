@@ -233,6 +233,33 @@ export function useReportStore() {
         }
     };
 
+    /**
+     * Batch fetch occupation breakdown data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchOccupationBreakdown = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/occupation-breakdown', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch occupation breakdown data:', error);
+            return {};
+        }
+    };
+
 
     const fetchOccupationByPeriod = async (period, hotelId, refDate) => {
         try {
@@ -861,4 +888,5 @@ export function useReportStore() {
         fetchBatchCountReservation,
         fetchBatchForecastData,
         fetchBatchAccountingData,
+        fetchBatchOccupationBreakdown,
     };}
