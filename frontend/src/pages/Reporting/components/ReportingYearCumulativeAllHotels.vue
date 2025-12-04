@@ -206,6 +206,9 @@
                             <Column header="販売室数差異" sortable style="min-width: 100px; width: 10%">
                                 <template #body="{data}">{{ ( (data.sold_rooms || 0) - (data.fc_sold_rooms || 0) ).toLocaleString('ja-JP') }}</template>
                             </Column>
+                            <Column field="non_accommodation_stays" header="非宿泊数" sortable style="min-width: 100px; width: 10%">
+                                <template #body="{data}">{{ data.non_accommodation_stays?.toLocaleString('ja-JP') || 0 }}</template>
+                            </Column>
                             <Column field="fc_occ" header="計画稼働率" sortable style="min-width: 100px; width: 10%">
                                 <template #body="{data}">{{ formatPercentage(data.fc_occ / 100) }}</template>
                             </Column>
@@ -789,7 +792,7 @@
             filename = '複数施設・年度・稼働率データ.csv';
             const headers = [
                 "施設", "月度", 
-                "計画販売室数", "実績販売室数", "販売室数差異",
+                "計画販売室数", "実績販売室数", "販売室数差異", "非宿泊数",
                 "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)",
                 "計画総室数", "実績総室数"
             ];
@@ -797,6 +800,7 @@
             props.occupancyData.forEach(row => {
                 const fcSold = row.fc_sold_rooms || 0;
                 const sold = row.sold_rooms || 0;
+                const nonAcc = row.non_accommodation_stays || 0;
                 const fcOcc = row.fc_occ || 0;
                 const occ = row.occ || 0;
 
@@ -806,6 +810,7 @@
                     fcSold,
                     sold,
                     sold - fcSold,
+                    nonAcc,
                     fcOcc.toFixed(2),
                     occ.toFixed(2),
                     (occ - fcOcc).toFixed(2),

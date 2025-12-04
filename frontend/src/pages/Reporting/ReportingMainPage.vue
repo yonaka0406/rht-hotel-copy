@@ -371,7 +371,7 @@
             const iterDateForMonthKey = normalizeDate(currentIterMonth);
             const monthKey = formatDateMonth(currentIterMonth);
             monthlyOccupancyAggregates[monthKey] = {};
-            monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
+            monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
             const year = iterDateForMonthKey.getUTCFullYear();
             const monthIndex = iterDateForMonthKey.getUTCMonth();
             const daysInCalendarMonth = getDaysInMonth(year, monthIndex + 1);
@@ -404,7 +404,7 @@
                 if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
                     monthlyOccupancyAggregates[monthKey]['0'].total_rooms += monthlyAvailableRoomDays;
                 }
-                monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
+                monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
             });
             currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
         }
@@ -422,6 +422,12 @@
                             }
                             if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
                                 monthlyOccupancyAggregates[monthKey]['0'].sold_rooms += record.room_count;
+                            }
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey] && typeof record.non_accommodation_stays === 'number') {
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].non_accommodation_stays += record.non_accommodation_stays;
+                            }
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0'] && typeof record.non_accommodation_stays === 'number') {
+                                monthlyOccupancyAggregates[monthKey]['0'].non_accommodation_stays += record.non_accommodation_stays;
                             }
                         }
                         if (record && record.date && typeof record.total_rooms === 'number' && typeof record.total_rooms_real === 'number') {
@@ -545,6 +551,7 @@
                             net_total_rooms: total_rooms, 
                             gross_total_rooms: total_gross_rooms,
                             sold_rooms: data.sold_rooms,
+                            non_accommodation_stays: data.non_accommodation_stays,
                             occ: parseFloat(occupancyRate.toFixed(2)),
                             not_available_rooms: 0,
                             fc_total_rooms: data.fc_total_rooms,
@@ -637,6 +644,7 @@
                         accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
                         other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
                         room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
+                        non_accommodation_stays: item.non_accommodation_stays !== undefined ? Number(item.non_accommodation_stays) : 0,
                         total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                         total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
                     })).filter(item => item.date !== null);
@@ -661,11 +669,11 @@
                         revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,                        
                     })).filter(item => item.date !== null);
                 } else if (rawAccountingData) { newAccountingTotalData[String(hotelId)] = []; }
-                        }
-                        currentProcessingHotelId = null;
-                        pmsTotalData.value = newPmsTotalData;
-                        forecastTotalData.value = newForecastTotalData;
-                        accountingTotalData.value = newAccountingTotalData;        } catch (error) {
+            }
+            currentProcessingHotelId = null;
+            pmsTotalData.value = newPmsTotalData;
+            forecastTotalData.value = newForecastTotalData;
+            accountingTotalData.value = newAccountingTotalData;        } catch (error) {
             console.error(`RMP: Error during summary data fetching (hotel ID ${currentProcessingHotelId || 'N/A'} may have failed):`, error);
             if (currentProcessingHotelId) {
                 const hotelKey = String(currentProcessingHotelId);
@@ -676,9 +684,6 @@
         } finally {
             loading.value = false;
         }
-        //console.log('[ReportingMainPage] Fetched Summary pmsTotalData', pmsTotalData.value);
-        //console.log('[ReportingMainPage] Fetched Summary forecastTotalData', forecastTotalData.value);
-        //console.log('[ReportingMainPage] Fetched Summary accountingTotalData', accountingTotalData.value);
     };
 
     const handleDateChange = async (newDate) => {
