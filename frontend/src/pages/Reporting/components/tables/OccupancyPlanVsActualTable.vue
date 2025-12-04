@@ -71,7 +71,7 @@ const props = defineProps({
         type: Array,
         required: true
     },
-    occupationBreakdownData: {
+    rawOccupationBreakdownData: { // Renamed from occupationBreakdownData
         type: Array,
         default: () => []
     },
@@ -100,9 +100,106 @@ const props = defineProps({
 const getSeverity = (value) => getSeverityUtil(value);
 
 const monthColumnStyle = computed(() => {
-    return props.showHotelColumn 
-        ? 'min-width: 100px; width: 10%' 
+    return props.showHotelColumn
+        ? 'min-width: 100px; width: 10%'
         : 'min-width: 100px; width: 10%';
+});
+
+// Computed property to aggregate raw occupation breakdown data
+const aggregatedOccupationBreakdownData = computed(() => {
+    const aggregatedMap = new Map();
+    let totalBookableRoomNights = 0;
+    let totalNetAvailableRoomNights = 0;
+
+    // Process all items in rawOccupationBreakdownData
+    props.rawOccupationBreakdownData.forEach(item => {
+        // We need to decide if we are aggregating across hotels (showHotelColumn === false)
+        // or aggregating for a specific hotel if showHotelColumn is true and the parent sends filtered data.
+        // For 'ReportingYearCumulativeAllHotels' and 'ReportingSingleMonthAllHotels',
+        // rawOccupationBreakdownData contains data from multiple hotels.
+        // For 'ReportingYearCumulativeHotel' and 'ReportingSingleMonthHotel',
+        // rawOccupationBreakdownData contains data for a single hotel.
+
+        const currentHotelName = item.hotel_name; // Use the hotel_name from the item
+
+        if (item.plan_name === 'Total Available') {
+            totalBookableRoomNights += parseInt(item.total_bookable_room_nights || '0');
+            totalNetAvailableRoomNights += parseInt(item.net_available_room_nights || '0');
+        } else if (item.sales_category !== 'employee' && item.sales_category !== 'block') {
+            // Determine the key for aggregation based on showHotelColumn
+            const mapKey = props.showHotelColumn && currentHotelName
+                ? `${currentHotelName}_${item.plan_name}`
+                : item.plan_name;
+
+            if (!aggregatedMap.has(mapKey)) {
+                aggregatedMap.set(mapKey, {
+                    plan_name: item.plan_name,
+                    sales_category: item.sales_category,
+                    undecided_nights: 0,
+                    confirmed_nights: 0,
+                    employee_nights: 0,
+                    blocked_nights: 0,
+                    non_accommodation_nights: 0,
+                    total_occupied_nights: 0,
+                    total_reservation_details_nights: 0,
+                    hotel_name: props.showHotelColumn ? currentHotelName : undefined // Keep hotel_name if showHotelColumn is true
+                });
+            }
+            const aggregatedItem = aggregatedMap.get(mapKey);
+            aggregatedItem.undecided_nights += parseInt(item.undecided_nights || '0');
+            aggregatedItem.confirmed_nights += parseInt(item.confirmed_nights || '0');
+            aggregatedItem.employee_nights += parseInt(item.employee_nights || '0');
+            aggregatedItem.blocked_nights += parseInt(item.blocked_nights || '0');
+            aggregatedItem.non_accommodation_nights += parseInt(item.non_accommodation_nights || '0');
+            aggregatedItem.total_occupied_nights += parseInt(item.total_occupied_nights || '0');
+            aggregatedItem.total_reservation_details_nights += parseInt(item.total_reservation_details_nights || '0');
+        }
+    });
+
+    const finalData = Array.from(aggregatedMap.values());
+
+    // Calculate Totals for the currently aggregated data
+    const totals = finalData.reduce((acc, item) => {
+        acc.undecided_nights += parseInt(item.undecided_nights || '0');
+        acc.confirmed_nights += parseInt(item.confirmed_nights || '0');
+        acc.employee_nights += parseInt(item.employee_nights || '0');
+        acc.blocked_nights += parseInt(item.blocked_nights || '0');
+        acc.total_occupied_nights += parseInt(item.total_occupied_nights || '0');
+        return acc;
+    }, { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0 });
+
+    finalData.push({
+        plan_name: '合計',
+        sales_category: null,
+        undecided_nights: totals.undecided_nights,
+        confirmed_nights: totals.confirmed_nights,
+        employee_nights: totals.employee_nights,
+        blocked_nights: totals.blocked_nights,
+        non_accommodation_nights: 0, // Not aggregated for totals
+        total_occupied_nights: totals.total_occupied_nights,
+        total_reservation_details_nights: 0, // Not aggregated for totals
+        hotel_name: props.showHotelColumn ? '合計' : undefined
+    });
+
+    // Add total bookable and net available rows
+    if (totalBookableRoomNights > 0 || totalNetAvailableRoomNights > 0) {
+        finalData.push({
+            plan_name: '総販売可能室数',
+            sales_category: null, undecided_nights: '', confirmed_nights: '',
+            employee_nights: '', blocked_nights: '', non_accommodation_nights: '',
+            total_occupied_nights: totalBookableRoomNights, total_reservation_details_nights: '',
+            hotel_name: props.showHotelColumn ? '' : undefined
+        });
+        finalData.push({
+            plan_name: '正味販売可能室数',
+            sales_category: null, undecided_nights: '', confirmed_nights: '',
+            employee_nights: '', blocked_nights: '', non_accommodation_nights: '',
+            total_occupied_nights: totalNetAvailableRoomNights, total_reservation_details_nights: '',
+            hotel_name: props.showHotelColumn ? '' : undefined
+        });
+    }
+
+    return finalData;
 });
 
 const exportCSV = () => {
@@ -112,7 +209,7 @@ const exportCSV = () => {
     }
 
     const hotelName = props.occupancyData[0]?.hotel_name || '施設';
-    const filename = props.showHotelColumn 
+    const filename = props.showHotelColumn
         ? '複数施設・稼働率データ.csv'
         : `${hotelName.replace(/\s+/g, '_')}_稼働率データ.csv`;
 
@@ -121,7 +218,7 @@ const exportCSV = () => {
         : ["月度", "計画販売室数", "実績販売室数", "販売室数差異", "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "実績総室数"];
 
     const csvRows = [headers.join(',')];
-    
+
     props.occupancyData.forEach(row => {
         const fcSold = row.fc_sold_rooms || 0;
         const sold = row.sold_rooms || 0;
@@ -160,74 +257,21 @@ const exportCSV = () => {
 };
 
 const downloadDetailedCSV = () => {
-    if (!props.occupationBreakdownData || props.occupationBreakdownData.length === 0) {
+    if (!aggregatedOccupationBreakdownData.value || aggregatedOccupationBreakdownData.value.length === 0) {
         alert('詳細データがありません');
         return;
     }
 
-    const filteredData = props.occupationBreakdownData.filter(item => 
-        item.plan_name !== 'Total Available' &&
-        item.sales_category !== 'employee' &&
-        item.sales_category !== 'block'
-    );
-
-    // Prepare data
-    const dataToExport = filteredData.map(item => ({
+    // Use aggregatedOccupationBreakdownData directly
+    const dataToExport = aggregatedOccupationBreakdownData.value.map(item => ({
         ...(props.showHotelColumn ? { '施設': item.hotel_name || '' } : {}),
         'プラン名': item.plan_name,
-        '未確定泊数': item.undecided_nights || 0,
-        '確定泊数': item.confirmed_nights || 0,
-        '社員泊数': item.employee_nights || 0,
-        'ブロック泊数': item.blocked_nights || 0,
-        '合計稼働数': item.total_occupied_nights || 0
+        '未確定泊数': item.undecided_nights === 0 ? 0 : item.undecided_nights || '',
+        '確定泊数': item.confirmed_nights === 0 ? 0 : item.confirmed_nights || '',
+        '社員泊数': item.employee_nights === 0 ? 0 : item.employee_nights || '',
+        'ブロック泊数': item.blocked_nights === 0 ? 0 : item.blocked_nights || '',
+        '合計稼働数': item.total_occupied_nights === 0 ? 0 : item.total_occupied_nights || ''
     }));
-
-    // Calculate Totals
-    const totals = filteredData.reduce((acc, item) => {
-        acc.undecided_nights += parseInt(item.undecided_nights || '0');
-        acc.confirmed_nights += parseInt(item.confirmed_nights || '0');
-        acc.employee_nights += parseInt(item.employee_nights || '0');
-        acc.blocked_nights += parseInt(item.blocked_nights || '0');
-        acc.total_occupied_nights += parseInt(item.total_occupied_nights || '0');
-        return acc;
-    }, { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0 });
-
-    // Total Available from raw data
-    const totalAvailableRow = props.occupationBreakdownData.find(row => row.plan_name === 'Total Available');
-    const totalBookable = totalAvailableRow ? parseInt(totalAvailableRow.total_bookable_room_nights || '0') : 0;
-    const netAvailable = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || '0') : 0;
-
-    // Add totals
-    dataToExport.push({
-        ...(props.showHotelColumn ? { '施設': '合計' } : {}),
-        'プラン名': '合計',
-        '未確定泊数': totals.undecided_nights,
-        '確定泊数': totals.confirmed_nights,
-        '社員泊数': totals.employee_nights,
-        'ブロック泊数': totals.blocked_nights,
-        '合計稼働数': totals.total_occupied_nights
-    });
-
-    // Add total bookable and net available
-    dataToExport.push({
-        ...(props.showHotelColumn ? { '施設': '' } : {}),
-        'プラン名': '総販売可能室数',
-        '未確定泊数': '',
-        '確定泊数': '',
-        '社員泊数': '',
-        'ブロック泊数': '',
-        '合計稼働数': totalBookable
-    });
-
-    dataToExport.push({
-        ...(props.showHotelColumn ? { '施設': '' } : {}),
-        'プラン名': '正味販売可能室数',
-        '未確定泊数': '',
-        '確定泊数': '',
-        '社員泊数': '',
-        'ブロック泊数': '',
-        '合計稼働数': netAvailable
-    });
 
     // Use PapaParse to generate CSV
     const csv = Papa.unparse(dataToExport, {
@@ -240,7 +284,7 @@ const downloadDetailedCSV = () => {
     });
 
     const hotelName = props.occupancyData[0]?.hotel_name || '施設';
-    const filename = props.showHotelColumn 
+    const filename = props.showHotelColumn
         ? '複数施設_稼働率詳細.csv'
         : `${hotelName.replace(/\s+/g, '_')}_稼働率詳細.csv`;
 

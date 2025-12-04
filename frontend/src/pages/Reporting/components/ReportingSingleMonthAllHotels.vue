@@ -185,7 +185,7 @@
                 <template #content>
                      <OccupancyPlanVsActualTable
                         :occupancyData="props.occupancyData"
-                        :occupationBreakdownData="props.occupationBreakdownData"
+                        :rawOccupationBreakdownData="props.rawOccupationBreakdownData"
                         :showHotelColumn="true"
                         :showNonAccommodationColumn="true"
                         :showDetailedCsvButton="true"
@@ -211,7 +211,7 @@
             type: Array,
             required: true
         },   
-        occupationBreakdownData: { // New prop for aggregated occupation breakdown
+        rawOccupationBreakdownData: { // Renamed from occupationBreakdownData
             type: Array,
             default: () => []
         }

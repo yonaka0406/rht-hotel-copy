@@ -72,7 +72,7 @@
                     v-else-if="selectedView === 'yearCumulativeAllHotels'"
                     :revenueData="revenueData"
                     :occupancyData="occupancyData"
-                    :occupationBreakdownData="occupationBreakdownAllHotels"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"
                 />
                 <ReportingYearCumulativeHotel
                     v-else-if="selectedView === 'yearCumulativeHotel'"
@@ -631,117 +631,21 @@
                 fetchBatchOccupationBreakdown(selectedHotels.value, startDateFormatted, endDateFormatted)
             ]);
             
-            // Aggregate occupation breakdown data
-            const aggregatedOccupationMap = new Map();
-            let totalBookableRoomNights = 0;
-            let totalNetAvailableRoomNights = 0;
-
             // Process the results from batchOccupationBreakdownData
             // The batch API returns an object where keys are hotelIds and values are arrays of occupation breakdown items
+            let allBreakdownItems = [];
             for (const hotelIdKey in batchOccupationBreakdownData) {
                 const hotelOccupationData = batchOccupationBreakdownData[hotelIdKey];
-                hotelOccupationData.forEach(item => {
-                    // Only process for real hotels, not the aggregated "All Hotels" (id 0) if it were in the batch
-                    if (parseInt(hotelIdKey, 10) !== 0) {
-                        if (item.plan_name === 'Total Available') {
-                            totalBookableRoomNights += parseInt(item.total_bookable_room_nights || '0');
-                            totalNetAvailableRoomNights += parseInt(item.net_available_room_nights || '0');
-                            return; // Skip aggregation for Total Available row itself, aggregate totals separately
-                        }
-
-                        if (!aggregatedOccupationMap.has(item.plan_name)) {
-                            aggregatedOccupationMap.set(item.plan_name, {
-                                plan_name: item.plan_name,
-                                sales_category: item.sales_category,
-                                undecided_nights: 0,
-                                confirmed_nights: 0,
-                                employee_nights: 0,
-                                blocked_nights: 0,
-                                non_accommodation_nights: 0,
-                                total_occupied_nights: 0,
-                                total_reservation_details_nights: 0,
-                            });
-                        }
-                        const aggregatedItem = aggregatedOccupationMap.get(item.plan_name);
-                        aggregatedItem.undecided_nights += parseInt(item.undecided_nights || '0');
-                        aggregatedItem.confirmed_nights += parseInt(item.confirmed_nights || '0');
-                        aggregatedItem.employee_nights += parseInt(item.employee_nights || '0');
-                        aggregatedItem.blocked_nights += parseInt(item.blocked_nights || '0');
-                        aggregatedItem.non_accommodation_nights += parseInt(item.non_accommodation_nights || '0');
-                        aggregatedItem.total_occupied_nights += parseInt(item.total_occupied_nights || '0');
-                        aggregatedItem.total_reservation_details_nights += parseInt(item.total_reservation_details_nights || '0');
-                    }
-                });
+                if (Array.isArray(hotelOccupationData)) {
+                    allBreakdownItems = allBreakdownItems.concat(hotelOccupationData);
+                }
             }
-            
-            // Convert map to array and add the aggregated 'Total Available' row
-            const finalOccupationBreakdown = Array.from(aggregatedOccupationMap.values());
-            finalOccupationBreakdown.push({
-                plan_name: 'Total Available',
-                sales_category: null,
-                undecided_nights: 0,
-                confirmed_nights: 0,
-                employee_nights: 0,
-                blocked_nights: 0,
-                non_accommodation_nights: 0,
-                total_occupied_nights: 0,
-                total_reservation_details_nights: 0,
-                total_bookable_room_nights: totalBookableRoomNights,
-                net_available_room_nights: totalNetAvailableRoomNights,
-            });
-            occupationBreakdownAllHotels.value = finalOccupationBreakdown;
+            occupationBreakdownAllHotels.value = allBreakdownItems;
 
             for (const hotelId of selectedHotels.value) {
                 currentProcessingHotelId = hotelId;
                 
                 // Process PMS Data
-                const rawPmsData = batchPmsData[String(hotelId)] || [];
-                if (Array.isArray(rawPmsData)) {
-                    if (rawPmsData.length > 0 && rawPmsData[0].total_rooms !== undefined) {
-                        pmsFallbackCapacities.value[String(hotelId)] = Number(rawPmsData[0].total_rooms || 0);
-                    } else {
-                        pmsFallbackCapacities.value[String(hotelId)] = 0; // Default if no data or no total_rooms
-                    }
-
-                    const mappedData = rawPmsData.map(item => ({
-                        date: formatDate(normalizeDate(new Date(item.date))),
-                        revenue: item.price !== undefined ? Number(item.price) : 0,
-                        accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
-                        other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
-                        room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
-                        non_accommodation_stays: item.non_accommodation_stays !== undefined ? Number(item.non_accommodation_stays) : 0,
-                        total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
-                        total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
-                    })).filter(item => item.date !== null);
-                    newPmsTotalData[String(hotelId)] = mappedData;
-                } else {
-                     newPmsTotalData[String(hotelId)] = [];
-                     pmsFallbackCapacities.value[String(hotelId)] = 0;
-                }
-
-                // Process Forecast Data
-                const rawForecastData = batchForecastData[String(hotelId)] || [];
-                if (Array.isArray(rawForecastData)) {
-                    newForecastTotalData[String(hotelId)] = rawForecastData.map(item => ({
-                        date: formatDate(normalizeDate(new Date(item.forecast_month))),
-                        revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
-                        total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0,  
-                        room_count: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0,                      
-                    })).filter(item => item.date !== null);
-                } else { 
-                    newForecastTotalData[String(hotelId)] = []; 
-                }
-
-                // Process Accounting Data
-                const rawAccountingData = batchAccountingData[String(hotelId)] || [];
-                if (Array.isArray(rawAccountingData)) {
-                    newAccountingTotalData[String(hotelId)] = rawAccountingData.map(item => ({
-                        date: formatDate(normalizeDate(new Date(item.accounting_month))),
-                        revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,                        
-                    })).filter(item => item.date !== null);
-                } else { 
-                    newAccountingTotalData[String(hotelId)] = []; 
-                }
             }
             currentProcessingHotelId = null;
             pmsTotalData.value = newPmsTotalData;
