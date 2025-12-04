@@ -1,4 +1,71 @@
 let getPool = require('../../config/database').getPool;
+const logger = require('../../config/logger');
+const { selectRatesByDetailsId } = require('./rates');
+const { calculatePriceFromRatesService: calculatePriceFromRates } = require('./services/calculationService');
+
+const selectReservationDetailsById = async (requestId, id, hotelId, dbClient = null) => {
+  const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+  try {
+    const query = `
+      SELECT * FROM reservation_details 
+      WHERE id = $1::UUID AND hotel_id = $2
+    `;
+    const values = [id, hotelId];
+    const result = await client.query(query, values);
+    return result.rows[0]; // Assuming only one detail per ID
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
+  }
+};
+
+const updateDetailsCancelledStatus = async (requestId, id, hotelId, status, updatedBy, billable, price, dbClient = null) => {
+  const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+
+  try {
+    let query = '';
+    let values = [];
+
+    // Standardizing parameter order: $1: billable, $2: updated_by, $3: price, $4: id, $5: hotel_id
+    if (status === 'cancelled') {
+      query = `
+        UPDATE reservation_details
+        SET
+          cancelled = gen_random_uuid(),
+          billable = $1,
+          updated_by = $2,
+          price = $3
+        WHERE id = $4::UUID AND hotel_id = $5
+        RETURNING *;
+      `;
+      values = [billable, updatedBy, price, id, hotelId];
+    } else if (status === 'recovered') {
+      query = `
+        UPDATE reservation_details
+        SET
+          cancelled = NULL,
+          billable = $1,
+          updated_by = $2,
+          price = $3
+        WHERE id = $4::UUID AND hotel_id = $5
+        RETURNING *;
+      `;
+      values = [billable, updatedBy, price, id, hotelId];
+    } else {
+      throw new Error('Invalid status for reservation detail update.');
+    }
+
+    const result = await client.query(query, values);
+    return result.rows[0];
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
+  }
+};
 
 const updateReservationDetailStatus = async (requestId, reservationData) => {
   const pool = getPool(requestId);
@@ -12,9 +79,8 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     await client.query('BEGIN');
 
     // First, get the parent reservation_id from the detail being updated
-    const getReservationIdQuery = 'SELECT reservation_id FROM reservation_details WHERE id = $1::UUID AND hotel_id = $2';
-    const reservationIdResult = await client.query(getReservationIdQuery, [id, hotel_id]);
-    const reservationId = reservationIdResult.rows[0]?.reservation_id;
+    const reservationDetail = await selectReservationDetailsById(requestId, id, hotel_id, client);
+    const reservationId = reservationDetail?.reservation_id;
 
     if (!reservationId) {
       throw new Error('Could not find reservation associated with the detail.');
@@ -29,12 +95,10 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     let detailValues = [];
 
     // Get the current rates for this reservation detail
-    const ratesQuery = `
-      SELECT * FROM reservation_rates 
-      WHERE reservation_details_id = $1 AND hotel_id = $2
-    `;
-    const ratesResult = await client.query(ratesQuery, [id, hotel_id]);
-    const rates = Array.isArray(ratesResult.rows) ? ratesResult.rows : Object.values(ratesResult.rows);
+    const rates = await selectRatesByDetailsId(requestId, id, hotel_id, client);
+
+    logger.debug(`[updateReservationDetailStatus] Processing detail ID: ${id}, Status: ${status}`);
+    logger.debug(`[updateReservationDetailStatus] Fetched rates: ${JSON.stringify(rates)}`);
 
     let ratesToUse = [];
     let calculatedPrice;
@@ -44,48 +108,23 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       ratesToUse = rates.filter(rate => rate.include_in_cancel_fee);
       logger.debug(`[updateReservationDetailStatus] Status is 'cancelled'. Filtered ratesToUse: ${JSON.stringify(ratesToUse)}`);
       calculatedPrice = calculatePriceFromRates(ratesToUse, false);
+      logger.debug(`[updateReservationDetailStatus] Calculated price for cancelled detail: ${calculatedPrice}`);
     } else {
       // When recovering, use all rates for price calculation      
       logger.debug(`[updateReservationDetailStatus] Status is '${status}'. Using all rates: ${JSON.stringify(rates)}`);
       calculatedPrice = calculatePriceFromRates(rates, false);
+      logger.debug(`[updateReservationDetailStatus] Calculated price for recovered/other detail: ${calculatedPrice}`);
     }
-    logger.debug(`[updateReservationDetailStatus] Calculated price for detail ${id}: ${calculatedPrice}`);
+    // logger.debug(`[updateReservationDetailStatus] Calculated price for detail ${id}: ${calculatedPrice}`);
 
     // 1. Update the reservation_details table based on the status
-    if (status === 'cancelled') {
-      detailQuery = `
-        UPDATE reservation_details
-        SET
-          cancelled = gen_random_uuid(),
-          billable = $4,
-          updated_by = $1,
-          price = $5
-        WHERE id = $2::UUID AND hotel_id = $3
-        RETURNING *;
-      `;
-      detailValues = [updated_by, id, hotel_id, billable, calculatedPrice];
-
-    } else if (status === 'recovered') {
+    let finalBillable = billable;
+    if (status === 'recovered') {
       // If the reservation is on hold or provisory, recovering a detail should not make it billable.
-      const isBillable = !(currentReservationStatus === 'provisory' || currentReservationStatus === 'hold');
-      detailQuery = `
-        UPDATE reservation_details
-        SET
-          cancelled = NULL,
-          billable = $1,
-          updated_by = $2,
-          price = $5
-        WHERE id = $3::UUID AND hotel_id = $4
-        RETURNING *;
-      `;
-      detailValues = [isBillable, updated_by, id, hotel_id, calculatedPrice];
-
-    } else {
-      // If the status is not recognized, abort the transaction.
-      throw new Error('Invalid status for reservation detail update.');
+      finalBillable = !(currentReservationStatus === 'provisory' || currentReservationStatus === 'hold');
     }
 
-    const result = await client.query(detailQuery, detailValues);
+    const updatedDetail = await updateDetailsCancelledStatus(requestId, id, hotel_id, status, updated_by, finalBillable, calculatedPrice, client);
 
     // 2. Update the associated reservation_parking records
     let parkingQuery = '';
@@ -159,7 +198,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     // If all queries were successful, commit the transaction
     await client.query('COMMIT');
 
-    return result.rows[0];
+    return updatedDetail;
   } catch (err) {
     // If any query fails, roll back the entire transaction
     await client.query('ROLLBACK');
@@ -172,5 +211,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
 };
 
 module.exports = {  
-  updateReservationDetailStatus
+  selectReservationDetailsById,
+  updateReservationDetailStatus,
+  updateDetailsCancelledStatus,
 }

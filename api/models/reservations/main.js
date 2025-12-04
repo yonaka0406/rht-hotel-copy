@@ -4051,67 +4051,7 @@ const selectFailedOtaReservations = async (requestId) => {
 };
 
 // Shared utility function for consistent price calculation
-const calculatePriceFromRates = (rates, disableRounding = false) => {
-  logger.debug(`[calculatePriceFromRates] Input rates: ${JSON.stringify(rates)}`);
-  logger.debug(`[calculatePriceFromRates] disableRounding: ${disableRounding}`);
-  if (!rates || rates.length === 0) {
-    logger.debug('[calculatePriceFromRates] No rates provided, returning 0.');
-    return 0;
-  }
-
-  // Step 1: Aggregate rates by adjustment_type and tax_type_id
-  const aggregatedRates = {};
-  rates.forEach((rate) => {
-    const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
-    if (!aggregatedRates[key]) {
-      aggregatedRates[key] = {
-        adjustment_type: rate.adjustment_type,
-        tax_type_id: rate.tax_type_id,
-        tax_rate: rate.tax_rate,
-        adjustment_value: 0,
-      };
-    }
-    aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
-  });
-  logger.debug(`[calculatePriceFromRates] Aggregated rates: ${JSON.stringify(aggregatedRates)}`);
-
-  // Step 2: Calculate total base rate first
-  let totalBaseRate = 0;
-  Object.values(aggregatedRates).forEach((rate) => {
-    if (rate.adjustment_type === 'base_rate') {
-      totalBaseRate += rate.adjustment_value;
-    }
-  });
-  logger.debug(`[calculatePriceFromRates] Total base rate: ${totalBaseRate}`);
-
-  // Step 3: Calculate total price by summing individual rate prices (matching original logic)
-  let totalPrice = 0;
-
-  Object.values(aggregatedRates).forEach((rate) => {
-    let ratePrice = 0;
-
-    if (rate.adjustment_type === 'base_rate') {
-      ratePrice = rate.adjustment_value;
-    } else if (rate.adjustment_type === 'percentage') {
-      ratePrice = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
-    } else if (rate.adjustment_type === 'flat_fee') {
-      ratePrice = rate.adjustment_value;
-    }
-
-    totalPrice += ratePrice;
-  });
-  logger.debug(`[calculatePriceFromRates] Total price before rounding: ${totalPrice}`);
-
-  // Round down to nearest 100 yen (Japanese pricing convention)
-  if (!disableRounding) {
-    const finalPrice = Math.floor(totalPrice / 100) * 100;
-    logger.debug(`[calculatePriceFromRates] Final price after rounding: ${finalPrice}`);
-    return finalPrice;
-  } else {
-    logger.debug(`[calculatePriceFromRates] Final price (no rounding): ${totalPrice}`);
-    return totalPrice;
-  }
-};
+const calculatePriceFromRates = calculatePriceFromRatesService;
 
 // Shared utility function for inserting rates with consistent price calculation
 

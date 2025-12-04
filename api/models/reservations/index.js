@@ -8,6 +8,7 @@ const roomsModels = require('./rooms');
 const splitModels = require('./split');
 const addonsModels = require('./addons');
 const clientsModels = require('./clients');
+const ratesModels = require('./rates');
 
 module.exports = {
   ...main,
@@ -20,4 +21,5 @@ module.exports = {
   ...splitModels,
   ...addonsModels,
   ...clientsModels,
+  ...ratesModels,
 };
