@@ -157,17 +157,6 @@ const confirmedOccupancyNights = computed(() => {
         .reduce((sum, item) => sum + parseInt(item.confirmed_nights || '0'), 0);
 });
 
-const blockedOccupancyNights = computed(() => {
-    if (!props.occupationBreakdownData) return 0;
-    return props.occupationBreakdownData
-        .filter(item => 
-            item.plan_name !== 'Total Available' &&
-            item.sales_category !== 'employee' && 
-            item.sales_category !== 'block'     
-        )
-        .reduce((sum, item) => sum + parseInt(item.blocked_nights || '0'), 0);
-});
-
 const filteredOccupationBreakdownData = computed(() => {
     if (!props.occupationBreakdownData) return [];
     return props.occupationBreakdownData.filter(item => 
