@@ -91,6 +91,7 @@ CREATE TABLE plans_rates (
             ELSE NULL
          END
     ) STORED,
+    sales_category TEXT CHECK (sales_category IN ('accommodation', 'other')) DEFAULT 'accommodation',
     condition_type TEXT CHECK (condition_type IN ('no_restriction', 'day_of_week', 'month')) NOT NULL,  -- Type of condition
     condition_value TEXT NULL,  -- The specific condition (e.g., '土曜日', '2024-12-25', etc.)
     date_start DATE NOT NULL, -- Start of the applicable rate
@@ -159,6 +160,7 @@ CREATE TABLE plan_addons (
     tax_type_id INT REFERENCES tax_info(id),
     tax_rate DECIMAL(12,4),
     net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+    sales_category TEXT CHECK (sales_category IN ('accommodation', 'other')) DEFAULT 'accommodation',
     date_start DATE NOT NULL,
     date_end DATE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

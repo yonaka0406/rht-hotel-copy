@@ -61,22 +61,26 @@
                 <ReportingSingleMonthAllHotels
                     v-else-if="selectedView === 'singleMonthAllHotels'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"                
                 />
                 <ReportingSingleMonthHotel
                     v-else-if="selectedView === 'singleMonthHotel'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"                
                 />
                 <ReportingYearCumulativeAllHotels
                     v-else-if="selectedView === 'yearCumulativeAllHotels'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"
                 />
                 <ReportingYearCumulativeHotel
                     v-else-if="selectedView === 'yearCumulativeHotel'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"                
                 />
                 <div v-else-if="selectedReportType === 'monthlySummary' && selectedView === null" class="text-gray-700 dark:text-gray-200 text-center mt-4">
                     <!-- This message shows if selectedReportType is a summary type but selectedView doesn't match any known summary view -->
@@ -110,7 +114,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { fetchCountReservation, fetchForecastData, fetchAccountingData } = useReportStore();
+    const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown } = useReportStore();
 
     // Primevue
     import { ProgressSpinner } from 'primevue';
@@ -226,6 +230,7 @@
     const pmsTotalData = ref({});
     const forecastTotalData = ref({});
     const accountingTotalData = ref({});
+    const occupationBreakdownAllHotels = ref([]); // New: to store aggregated occupation breakdown data
     // pmsFallbackCapacities was added near the top
 
     const revenueData = computed(() => {
@@ -371,7 +376,7 @@
             const iterDateForMonthKey = normalizeDate(currentIterMonth);
             const monthKey = formatDateMonth(currentIterMonth);
             monthlyOccupancyAggregates[monthKey] = {};
-            monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
+            monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
             const year = iterDateForMonthKey.getUTCFullYear();
             const monthIndex = iterDateForMonthKey.getUTCMonth();
             const daysInCalendarMonth = getDaysInMonth(year, monthIndex + 1);
@@ -404,7 +409,7 @@
                 if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
                     monthlyOccupancyAggregates[monthKey]['0'].total_rooms += monthlyAvailableRoomDays;
                 }
-                monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
+                monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
             });
             currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
         }
@@ -422,6 +427,12 @@
                             }
                             if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
                                 monthlyOccupancyAggregates[monthKey]['0'].sold_rooms += record.room_count;
+                            }
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey] && typeof record.non_accommodation_stays === 'number') {
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].non_accommodation_stays += record.non_accommodation_stays;
+                            }
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0'] && typeof record.non_accommodation_stays === 'number') {
+                                monthlyOccupancyAggregates[monthKey]['0'].non_accommodation_stays += record.non_accommodation_stays;
                             }
                         }
                         if (record && record.date && typeof record.total_rooms === 'number' && typeof record.total_rooms_real === 'number') {
@@ -545,6 +556,7 @@
                             net_total_rooms: total_rooms, 
                             gross_total_rooms: total_gross_rooms,
                             sold_rooms: data.sold_rooms,
+                            non_accommodation_stays: data.non_accommodation_stays,
                             occ: parseFloat(occupancyRate.toFixed(2)),
                             not_available_rooms: 0,
                             fc_total_rooms: data.fc_total_rooms,
@@ -575,6 +587,7 @@
             selectedReportType.value === 'reservationAnalysis') {
             loading.value = false; 
             pmsTotalData.value = {}; forecastTotalData.value = {}; accountingTotalData.value = {};
+            occupationBreakdownAllHotels.value = []; // Clear occupation breakdown data
             return; 
         }
 
@@ -588,6 +601,7 @@
                     pmsTotalData.value = newPmsTotalData; // Ensure refs are updated even if empty
                     forecastTotalData.value = newForecastTotalData;
                     accountingTotalData.value = newAccountingTotalData;
+                    occupationBreakdownAllHotels.value = [];
                     return;
                 }        if (!firstDayofFetch.value || !lastDayofFetch.value) {
             // console.log('RMP: Date range is not properly set for summary. Skipping data fetch.');
@@ -602,29 +616,44 @@
         const pmsFetchStartDate = formatDate(new Date(yearOfSelectedDate, 0, 1)); // Jan 1st
         const pmsFetchEndDate = formatDate(lastDayofFetch.value); // Original end date is fine
 
+        const startDateFormatted = formatDate(firstDayofFetch.value);
+        const endDateFormatted = formatDate(lastDayofFetch.value);
+
         let currentProcessingHotelId = null;
         pmsFallbackCapacities.value = {}; // Reset for current fetch
 
         try {
+            // Fetch data in batches
+            const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
+            const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
+
+            const [batchPmsData, batchForecastData, batchAccountingData, batchOccupationBreakdownData] = await Promise.all([
+                fetchBatchCountReservation(selectedHotels.value, pmsFetchStartDate, pmsFetchEndDate),
+                fetchBatchForecastData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
+                fetchBatchAccountingData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
+                fetchBatchOccupationBreakdown(selectedHotels.value, startDateFormatted, endDateFormatted)
+            ]);
+            
+            // Process the results from batchOccupationBreakdownData
+            // The batch API returns an object where keys are hotelIds and values are arrays of occupation breakdown items
+            let allBreakdownItems = [];
+            for (const hotelIdKey in batchOccupationBreakdownData) {
+                const hotelOccupationData = batchOccupationBreakdownData[hotelIdKey];
+                if (Array.isArray(hotelOccupationData)) {
+                    allBreakdownItems = allBreakdownItems.concat(hotelOccupationData);
+                } else if (hotelOccupationData && typeof hotelOccupationData === 'object' && hotelOccupationData.error) {
+                    // If it's an error object, push it directly into the array
+                    allBreakdownItems.push(hotelOccupationData);
+                }
+            }
+            occupationBreakdownAllHotels.value = allBreakdownItems;
+
             for (const hotelId of selectedHotels.value) {
                 currentProcessingHotelId = hotelId;
-                // Fetch PMS data from Jan 1st
-                const rawPmsData = await fetchCountReservation(hotelId, pmsFetchStartDate, pmsFetchEndDate);
-                //console.log('[ReportingMainPage] Raw PMS data sample for hotel', hotelId, ':', rawPmsData?.[0]);
-
-                // Fetch Forecast and Accounting data using original date range (firstDayofFetch to lastDayofFetch)
-                // as these might not need the full year data for their specific calculations.
-                // However, if their logic also needs to align with ReportMonthly's wider view, this might need adjustment too.
-                // For now, focusing on fixing OCC and RevPAR based on PMS data alignment.
-                const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
-                const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
-
-                const [rawForecastData, rawAccountingData] = await Promise.all([
-                    fetchForecastData(hotelId, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
-                    fetchAccountingData(hotelId, forecastAndAccountingStartDate, forecastAndAccountingEndDate)
-                ]);
-
-                if (rawPmsData && Array.isArray(rawPmsData)) {
+                
+                // Process PMS Data
+                const rawPmsData = batchPmsData[String(hotelId)] || [];
+                if (Array.isArray(rawPmsData)) {
                     if (rawPmsData.length > 0 && rawPmsData[0].total_rooms !== undefined) {
                         pmsFallbackCapacities.value[String(hotelId)] = Number(rawPmsData[0].total_rooms || 0);
                     } else {
@@ -637,35 +666,44 @@
                         accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
                         other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
                         room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
+                        non_accommodation_stays: item.non_accommodation_stays !== undefined ? Number(item.non_accommodation_stays) : 0,
                         total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                         total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
                     })).filter(item => item.date !== null);
-                    //console.log('[ReportingMainPage] Mapped PMS data sample for hotel', hotelId, ':', mappedData[0]);
                     newPmsTotalData[String(hotelId)] = mappedData;
                 } else {
                      newPmsTotalData[String(hotelId)] = [];
                      pmsFallbackCapacities.value[String(hotelId)] = 0;
                 }
 
-                if (rawForecastData && Array.isArray(rawForecastData)) {
+                // Process Forecast Data
+                const rawForecastData = batchForecastData[String(hotelId)] || [];
+                if (Array.isArray(rawForecastData)) {
                     newForecastTotalData[String(hotelId)] = rawForecastData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.forecast_month))),
                         revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                         total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0,  
                         room_count: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0,                      
                     })).filter(item => item.date !== null);
-                } else if (rawForecastData) { newForecastTotalData[String(hotelId)] = []; }
-                if (rawAccountingData && Array.isArray(rawAccountingData)) {
+                } else { 
+                    newForecastTotalData[String(hotelId)] = []; 
+                }
+
+                // Process Accounting Data
+                const rawAccountingData = batchAccountingData[String(hotelId)] || [];
+                if (Array.isArray(rawAccountingData)) {
                     newAccountingTotalData[String(hotelId)] = rawAccountingData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.accounting_month))),
                         revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,                        
                     })).filter(item => item.date !== null);
-                } else if (rawAccountingData) { newAccountingTotalData[String(hotelId)] = []; }
-                        }
-                        currentProcessingHotelId = null;
-                        pmsTotalData.value = newPmsTotalData;
-                        forecastTotalData.value = newForecastTotalData;
-                        accountingTotalData.value = newAccountingTotalData;        } catch (error) {
+                } else { 
+                    newAccountingTotalData[String(hotelId)] = []; 
+                }
+            }
+            currentProcessingHotelId = null;
+            pmsTotalData.value = newPmsTotalData;
+            forecastTotalData.value = newForecastTotalData;
+            accountingTotalData.value = newAccountingTotalData;        } catch (error) {
             console.error(`RMP: Error during summary data fetching (hotel ID ${currentProcessingHotelId || 'N/A'} may have failed):`, error);
             if (currentProcessingHotelId) {
                 const hotelKey = String(currentProcessingHotelId);
@@ -676,37 +714,37 @@
         } finally {
             loading.value = false;
         }
-        //console.log('[ReportingMainPage] Fetched Summary pmsTotalData', pmsTotalData.value);
-        //console.log('[ReportingMainPage] Fetched Summary forecastTotalData', forecastTotalData.value);
-        //console.log('[ReportingMainPage] Fetched Summary accountingTotalData', accountingTotalData.value);
     };
 
-    const handleDateChange = async (newDate) => {
+    // Debounce timer
+    let fetchTimeout = null;
+
+    const debouncedFetch = () => {
+        if (fetchTimeout) clearTimeout(fetchTimeout);
+        fetchTimeout = setTimeout(() => {
+            reportTriggerKey.value = Date.now();
+            fetchData();
+        }, 50);
+    };
+
+    const handleDateChange = (newDate) => {
         selectedDate.value = newDate;
-        reportTriggerKey.value = Date.now();
-        await fetchData(); 
+        debouncedFetch();
     };
-    const handlePeriodChange = async (newPeriod) => {
+    const handlePeriodChange = (newPeriod) => {
         period.value = newPeriod;
-        reportTriggerKey.value = Date.now(); 
-        await fetchData(); 
+        debouncedFetch();
     };
-    const handleHotelChange = async (newSelectedHotelIds, hotelsFromMenu) => {
+    const handleHotelChange = (newSelectedHotelIds, hotelsFromMenu) => {
         selectedHotels.value = newSelectedHotelIds;
         allHotels.value = hotelsFromMenu; 
-        reportTriggerKey.value = Date.now(); 
-        // console.log('RMP: allHotels updated by handleHotelChange:', allHotels.value);
-        await fetchData(); 
+        debouncedFetch();
     };
 
     const handleReportTypeChange = (newReportType) => {
         // console.log('RMP: Report type changed to', newReportType);
         selectedReportType.value = newReportType;
-        reportTriggerKey.value = Date.now(); 
-
-        // The check inside fetchData() will determine if it should run for summary data.
-        // For new report types, their own watchers (triggered by reportTriggerKey) will fetch data.
-        fetchData(); 
+        debouncedFetch();
     };
 
     const searchAllHotels = (hotelId) => {

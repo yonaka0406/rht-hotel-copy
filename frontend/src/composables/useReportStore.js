@@ -152,6 +152,115 @@ export function useReportStore() {
         }
     };
 
+    /**
+     * Batch fetch reservation count data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchCountReservation = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/count', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch reservation count data:', error);
+            return {};
+        }
+    };
+
+    /**
+     * Batch fetch forecast data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchForecastData = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/forecast', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch forecast data:', error);
+            return {};
+        }
+    };
+
+    /**
+     * Batch fetch accounting data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchAccountingData = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/accounting', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch accounting data:', error);
+            return {};
+        }
+    };
+
+    /**
+     * Batch fetch occupation breakdown data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchOccupationBreakdown = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/occupation-breakdown', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch occupation breakdown data:', error);
+            return {};
+        }
+    };
+
+
     const fetchOccupationByPeriod = async (period, hotelId, refDate) => {
         try {
             // If API is not available, return limited functionality response
@@ -275,8 +384,8 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyReportExcel = async (startDate, endDate) => {        
-        try {            
+    const downloadDailyReportExcel = async (startDate, endDate) => {
+        try {
             const response = await api.get(`/report/daily/download-excel/${startDate}/${endDate}`, { responseType: 'blob' });
 
             if (!response) { // api.get might return null on auth errors or other issues
@@ -351,7 +460,7 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-} catch { /* Ignore errors during link click, as it's a fallback */ }
+            } catch { /* Ignore errors during link click, as it's a fallback */ }
 
             return { success: true };
 
@@ -505,7 +614,7 @@ export function useReportStore() {
                 const timeoutError = new Error('検索がタイムアウトしました。条件を絞り込んでください。');
                 timeoutError.type = 'timeout';
                 throw timeoutError;
-            } else if (error.message.includes('500') || error.message.includes('server')) {
+            } else if (error.message.includes('500') || error.message.includes('server')) {                
                 const serverError = new Error('サーバーエラーが発生しました。しばらく待ってから再試行してください。');
                 serverError.type = 'server';
                 throw serverError;
@@ -776,5 +885,8 @@ export function useReportStore() {
         fetchForecastDataByPlan,
         fetchAccountingDataByPlan,
         generateDailyMetricsForToday,
-    };
-}
+        fetchBatchCountReservation,
+        fetchBatchForecastData,
+        fetchBatchAccountingData,
+        fetchBatchOccupationBreakdown,
+    };}

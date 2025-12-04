@@ -1,7 +1,8 @@
 const { getPool } = require('../../config/database');
 
-const selectForecastData = async (requestId, hotelId, dateStart, dateEnd) => {
+const selectForecastData = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
   const query = `
     SELECT
       hotel_id,
@@ -15,19 +16,22 @@ const selectForecastData = async (requestId, hotelId, dateStart, dateEnd) => {
       AND forecast_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
     GROUP BY hotel_id, forecast_month
   `;
-  const values = [hotelId, dateStart, dateEnd]
+  const values = [hotelId, dateStart, dateEnd];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) client.release();
   }
 };
 
-const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd) => {
+const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
   const query = `
     SELECT
       hotel_id,
@@ -41,19 +45,22 @@ const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd) => {
       AND accounting_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
     GROUP BY hotel_id, accounting_month
   `;
-  const values = [hotelId, dateStart, dateEnd]
+  const values = [hotelId, dateStart, dateEnd];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) client.release();
   }
 };
 
-const selectForecastDataByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
+const selectForecastDataByPlan = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
   const query = `
     SELECT
       df.hotel_id,
@@ -72,16 +79,19 @@ const selectForecastDataByPlan = async (requestId, hotelId, dateStart, dateEnd) 
   const values = [hotelId, dateStart, dateEnd];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data by plan:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) client.release();
   }
 };
 
-const selectAccountingDataByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
+const selectAccountingDataByPlan = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
   const query = `
     SELECT
       da.hotel_id,
@@ -100,11 +110,13 @@ const selectAccountingDataByPlan = async (requestId, hotelId, dateStart, dateEnd
   const values = [hotelId, dateStart, dateEnd];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data by plan:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) client.release();
   }
 };
 

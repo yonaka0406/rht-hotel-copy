@@ -207,15 +207,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ### Added
 - Reservation: Check-in cancellation. (#043)
+- Production Environment: Global plan hidden. (#034)
+- CRM: Added related companies/related construction tabs. (#039)
+- CRM: Loyal customers. (#040)
 
 ### Fixed
 - Production Environment: Add-ons not reflected. (#033)
 - Production Environment: Calendar scroll not displaying data. (#036)
-
-### Added
-- Production Environment: Global plan hidden. (#034)
-- CRM: Added related companies/related construction tabs. (#039)
-- CRM: Loyal customers. (#040)
 
 ### User Requests
 - Production Environment: Customer name display order changed. (#035)
@@ -671,6 +669,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Fix: Resolved issue where addons were being duplicated when added through the day detail dialog
 - Refactor: Moved addon management logic to a dedicated module for better maintainability
 - Fix: Fixed issue where addons were not being summed to the billable value for cancelled dates in the billing page
+
+---
+
+## [1.3.1] - 2025-12-04
+
+- Refactor: Rewrote the SQL query in selectCountReservation (api/models/report/main.js) to use materialized CTEs for better performance and readability
+- Feature: Added sales category to plan rates to track non-accommodation sales and adjusted occupancy rate calculations accordingly
 
 ---
 
