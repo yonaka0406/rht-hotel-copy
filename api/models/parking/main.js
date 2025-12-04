@@ -5,6 +5,7 @@ const parkingLot = require('./parkingLot');
 const { formatDate } = require('../../utils/reportUtils');
 const logger = require('../../config/logger');
 const { insertReservationDetails } = require('../reservations/details');
+const { insertReservationParking } = require('../reservations/parking');
 
 // Parking Spot
 const getParkingSpots = async (requestId, parking_lot_id) => {
@@ -132,12 +133,17 @@ const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_da
             }, client); // Pass the existing client to ensure it's part of the transaction
             const reservation_details_id = newReservationDetail.id; // Get the generated ID
 
-            const insertParkingQuery = `
-                INSERT INTO reservation_parking (hotel_id, reservation_details_id, reservation_id, parking_spot_id, date, status, comment, created_by, updated_by)
-                VALUES ($1, $2, $3, $4, $5, 'blocked', $6, $7, $7);
-            `;
-            const parkingValues = [hotel_id, reservation_details_id, reservation_id, parking_spot_id, date, comment, user_id];
-            await client.query(insertParkingQuery, parkingValues);
+            await insertReservationParking(requestId, {
+                hotel_id,
+                reservation_details_id,
+                vehicle_category_id: null, // Since this is a blocked spot, no specific vehicle category is known
+                parking_spot_id,
+                date,
+                status: 'blocked',
+                comment,
+                created_by: user_id,
+                updated_by: user_id,
+            }, client); // Pass the existing client to ensure it's part of the transaction
         }
 
         await client.query('COMMIT');
