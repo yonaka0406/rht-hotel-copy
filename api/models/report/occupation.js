@@ -171,7 +171,139 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate,
   }
 };
 
+const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, endDate, dbClient = null) => {
+  const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+
+  const query = `    
+    WITH date_range AS (
+        SELECT 
+            ($3::DATE - $2::DATE + 1) AS total_days
+    ),
+    hotel_rooms AS (
+        SELECT 
+            COUNT(*) as total_rooms
+        FROM rooms
+        WHERE hotel_id = $1 AND for_sale = true
+    ),
+    total_bookable_nights AS (
+        SELECT 
+            date_trunc('month', d)::date AS month,
+            hotel_rooms.total_rooms AS total_rooms,
+            count(*) AS days_in_month,
+            (hotel_rooms.total_rooms * count(*)) AS total_bookable_room_nights
+        FROM generate_series($2::date, $3::date, interval '1 day') d
+        CROSS JOIN hotel_rooms
+        GROUP BY 1, 2
+    ),
+    total_blocked_nights AS (
+        SELECT 
+            date_trunc('month', rd.date)::date AS month,
+            COUNT(*) AS total_blocked
+        FROM reservation_details rd
+        JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+        JOIN rooms rm ON rd.room_id = rm.id AND rd.hotel_id = rm.hotel_id
+        WHERE rd.hotel_id = $1
+          AND rd.date BETWEEN $2 AND $3
+          AND rd.cancelled IS NULL
+          AND r.status = 'block'
+          AND rm.for_sale = TRUE
+        GROUP BY 1
+    ),
+    plan_data AS (
+        SELECT
+            date_trunc('month', rd.date)::date AS month,
+            COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
+            COALESCE(rr.sales_category, 'accommodation') AS sales_category,
+
+            COUNT(CASE WHEN r.status IN ('hold','provisory')
+                      AND r.type <> 'employee'
+                      AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS undecided_nights,
+
+            COUNT(CASE WHEN r.status IN ('confirmed','checked_in','checked_out')
+                      AND r.type <> 'employee'
+                      AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS confirmed_nights,
+
+            COUNT(CASE WHEN r.type = 'employee' THEN 1 END) AS employee_nights,
+
+            COUNT(CASE WHEN r.status = 'block' AND rm.for_sale = TRUE THEN 1 END) AS blocked_nights,
+
+            COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) = FALSE
+                        AND r.status IN ('confirmed','checked_in','checked_out')
+                        AND r.type <> 'employee' THEN 1 END) AS non_accommodation_nights,
+
+            (
+                COUNT(CASE WHEN r.status NOT IN ('cancelled','block') THEN 1 END) +
+                COUNT(CASE WHEN r.status = 'block' AND rm.for_sale = TRUE THEN 1 END)
+            ) AS total_occupied_nights,
+
+            COUNT(rd.id) AS total_reservation_details_nights
+        FROM reservation_details rd
+        JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+        JOIN rooms rm ON rd.room_id = rm.id AND rd.hotel_id = rm.hotel_id
+        LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+        LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+        LEFT JOIN (
+            SELECT reservation_details_id, MIN(sales_category) AS sales_category
+            FROM reservation_rates
+            WHERE hotel_id = $1
+            GROUP BY reservation_details_id
+        ) rr ON rd.id = rr.reservation_details_id
+        WHERE rd.hotel_id = $1
+          AND rd.date BETWEEN $2 AND $3
+          AND rd.cancelled IS NULL
+        GROUP BY 1, 2, 3
+    )
+
+    SELECT *
+    FROM (
+        SELECT
+            pd.month,
+            pd.plan_name,
+            pd.sales_category,
+            pd.undecided_nights,
+            pd.confirmed_nights,
+            pd.employee_nights,
+            pd.blocked_nights,
+            pd.non_accommodation_nights,
+            pd.total_occupied_nights,
+            pd.total_reservation_details_nights,
+            tbn.total_bookable_room_nights,
+            (tbn.total_bookable_room_nights - COALESCE(tbn2.total_blocked,0)) AS net_available_room_nights
+        FROM plan_data pd
+        JOIN total_bookable_nights tbn ON pd.month = tbn.month
+        LEFT JOIN total_blocked_nights tbn2 ON pd.month = tbn2.month
+
+        UNION ALL
+
+        SELECT
+            tbn.month,
+            'Total Available' AS plan_name,
+            NULL AS sales_category,
+            0,0,0,0,0,0,0,
+            tbn.total_bookable_room_nights,
+            (tbn.total_bookable_room_nights - COALESCE(tbn2.total_blocked,0))
+        FROM total_bookable_nights tbn
+        LEFT JOIN total_blocked_nights tbn2 ON tbn.month = tbn2.month
+    ) u
+    ORDER BY month, CASE WHEN plan_name = 'Total Available' THEN 'zzz' ELSE plan_name END;
+
+  `;
+  const values = [hotelId, startDate, endDate];
+
+  try {
+    const result = await client.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in selectOccupationBreakdownByMonth:', err);
+    throw new Error('Database error');
+  } finally {
+    if (!dbClient) client.release();
+  }
+};
+
 module.exports = {
   selectOccupationByPeriod,
   selectOccupationBreakdown,
+  selectOccupationBreakdownByMonth,
 };

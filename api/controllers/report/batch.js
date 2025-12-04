@@ -1,4 +1,4 @@
-const { selectCountReservation, selectForecastData, selectAccountingData, selectOccupationBreakdown } = require('../../models/report');
+const { selectCountReservation, selectForecastData, selectAccountingData, selectOccupationBreakdownByMonth } = require('../../models/report');
 const logger = require('../../config/logger');
 const { validateNumericParam } = require('../../utils/validationUtils');
 const { getPool } = require('../../config/database');
@@ -99,7 +99,7 @@ const getBatchAccountingData = async (req, res) => {
  * Body: { hotelIds: [1, 2, 3], startDate: '2024-01-01', endDate: '2024-12-31' }
  */
 const getBatchOccupationBreakdown = async (req, res) => {
-    return processBatchRequest(req, res, selectOccupationBreakdown, 'getBatchOccupationBreakdown');
+    return processBatchRequest(req, res, selectOccupationBreakdownByMonth, 'getBatchOccupationBreakdown');
 };
 
 module.exports = {
