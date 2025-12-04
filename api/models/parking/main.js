@@ -126,6 +126,7 @@ const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_da
                 reservation_id,
                 date,
                 status: 'blocked',
+                cancelled: (await client.query('SELECT gen_random_uuid() as id')).rows[0].id, // Set cancelled to a random UUID
                 created_by: user_id,
                 updated_by: user_id,
             }, client); // Pass the existing client to ensure it's part of the transaction
