@@ -98,13 +98,16 @@ const deleteParkingSpot = async (requestId, id, client = null) => {
 
 // Block Parking Spot
 const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_date, end_date, comment, user_id }) => {
+    logger.debug(`[blockParkingSpot] Starting blockParkingSpot for requestId: ${requestId}`, { hotel_id, parking_spot_id, start_date, end_date, comment, user_id });
     const pool = getPool(requestId);
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+        logger.debug(`[blockParkingSpot] Transaction began for requestId: ${requestId}`);
 
         const reservationIdResult = await client.query('SELECT gen_random_uuid() as id');
         const mockReservationId = reservationIdResult.rows[0].id;
+        logger.debug(`[blockParkingSpot] Generated mockReservationId: ${mockReservationId} for requestId: ${requestId}`);
 
         const insertReservationQuery = `
             INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, status, comment, created_by, updated_by)
@@ -114,13 +117,16 @@ const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_da
         const reservationValues = [mockReservationId, hotel_id, start_date, end_date, comment, user_id];
         const reservationResult = await client.query(insertReservationQuery, reservationValues);
         const reservation_id = reservationResult.rows[0].id;
+        logger.debug(`[blockParkingSpot] Inserted mock reservation with id: ${reservation_id} for requestId: ${requestId}`);
 
         const dateArray = [];
         for (let dt = new Date(start_date); dt < new Date(end_date); dt.setDate(dt.getDate() + 1)) {
             dateArray.push(new Date(dt));
         }
+        logger.debug(`[blockParkingSpot] Dates to block: ${dateArray.map(d => formatDate(d)).join(', ')} for requestId: ${requestId}`);
 
         for (const date of dateArray) {
+            logger.debug(`[blockParkingSpot] Processing date: ${formatDate(date)} for requestId: ${requestId}`);
             // Insert into reservation_details using the new helper function
             const newReservationDetail = await insertReservationDetails(requestId, {
                 hotel_id,
@@ -133,6 +139,7 @@ const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_da
                 updated_by: user_id,
             }, client); // Pass the existing client to ensure it's part of the transaction
             const reservation_details_id = newReservationDetail.id; // Get the generated ID
+            logger.debug(`[blockParkingSpot] Inserted reservation detail with id: ${reservation_details_id} for date: ${formatDate(date)}, requestId: ${requestId}`);
 
             await insertReservationParking(requestId, {
                 hotel_id,
@@ -145,16 +152,19 @@ const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_da
                 created_by: user_id,
                 updated_by: user_id,
             }, client); // Pass the existing client to ensure it's part of the transaction
+            logger.debug(`[blockParkingSpot] Inserted parking record for reservation detail: ${reservation_details_id}, date: ${formatDate(date)}, requestId: ${requestId}`);
         }
 
         await client.query('COMMIT');
+        logger.debug(`[blockParkingSpot] Transaction committed successfully for requestId: ${requestId}`);
         return { success: true, reservation_id };
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Error blocking parking spot:', error);
+        logger.error(`[blockParkingSpot] Error blocking parking spot for requestId: ${requestId}. Rolling back transaction. Error: ${error.message}`, { error: error.stack });
         throw new Error('Database error');
     } finally {
         client.release();
+        logger.debug(`[blockParkingSpot] Client released for requestId: ${requestId}`);
     }
 };
 
