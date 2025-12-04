@@ -59,6 +59,77 @@ const updateParkingReservationCancelledStatus = async (requestId, reservationId 
   }
 };
 
+const insertReservationParking = async (requestId, parkingData, dbClient = null) => {
+  const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+  const shouldReleaseClient = !dbClient;
+
+  const {
+    hotel_id,
+    reservation_details_id,
+    reservation_addon_id,
+    vehicle_category_id,
+    parking_spot_id,
+    date,
+    status,
+    comment,
+    cancelled,
+    price,
+    created_by,
+    updated_by,
+  } = parkingData;
+
+  const query = `
+    INSERT INTO reservation_parking (
+      hotel_id,
+      reservation_details_id,
+      reservation_addon_id,
+      vehicle_category_id,
+      parking_spot_id,
+      date,
+      status,
+      comment,
+      cancelled,
+      price,
+      created_by,
+      updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    RETURNING *;
+  `;
+
+  const values = [
+    hotel_id,
+    reservation_details_id,
+    reservation_addon_id,
+    vehicle_category_id,
+    parking_spot_id,
+    date,
+    status,
+    comment,
+    cancelled,
+    price,
+    created_by,
+    updated_by,
+  ];
+
+  try {
+    const result = await client.query(query, values);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`[insertReservationParking] Error inserting reservation parking: ${err.message}`, {
+      requestId,
+      parkingData,
+      error: err.stack
+    });
+    throw new Error('Database error during reservation parking insertion.');
+  } finally {
+    if (shouldReleaseClient) {
+      client.release();
+    }
+  }
+};
+
 module.exports = {
   updateParkingReservationCancelledStatus,
+  insertReservationParking,
 };
