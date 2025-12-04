@@ -674,6 +674,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.3.1] - 2025-12-04
+
+- Refactor: Rewrote the SQL query in selectCountReservation (api/models/report/main.js) to use materialized CTEs for better performance and readability
+- Feature: Added sales category to plan rates to track non-accommodation sales and adjusted occupancy rate calculations accordingly
+
+---
+
 ## Version History
 - 1.2.4 (2025-12-03) – Fixed addon duplication in day detail dialog and resolved billing calculation issues for cancelled dates. Refactored addon management into a dedicated module for better code organization and maintainability.
 - 1.2.3 (2025-12-01) – Enhanced OTA notifications with failed XML queue, migrated to Playwright for more reliable PDF generation, and introduced receipt versioning with customizable templates. Fixed issues with parking addons during plan changes and improved handling of temporary room blocks.
