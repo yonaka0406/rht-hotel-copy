@@ -23,6 +23,70 @@ const selectReservationDetailsById = async (requestId, id, hotelId, dbClient = n
   }
 };
 
+const insertReservationDetails = async (requestId, reservationDetailsData, dbClient = null) => {
+  const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+  const shouldReleaseClient = !dbClient;
+
+  const {
+    hotel_id,
+    reservation_id,
+    date,
+    room_id = null,
+    plans_global_id = null,
+    plans_hotel_id = null,
+    plan_name = null,
+    plan_type = 'per_room',
+    number_of_people = 0,
+    price = null,
+    cancelled = null,
+    billable = false,
+    is_accommodation = true,
+    created_by = null,
+    updated_by = null,
+  } = reservationDetailsData;
+
+  const query = `
+    INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, cancelled, billable, is_accommodation, created_by, updated_by) 
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    RETURNING *;
+  `;
+
+  const values = [
+    hotel_id,
+    reservation_id,
+    date,
+    room_id,
+    plans_global_id,
+    plans_hotel_id,
+    plan_name,
+    plan_type,
+    number_of_people,
+    price,
+    cancelled,
+    billable,
+    is_accommodation,
+    created_by,
+    updated_by
+  ];
+
+  try {
+    const result = await client.query(query, values);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`[insertReservationDetails] Error inserting reservation details: ${err.message}`, {
+      requestId,
+      reservationDetailsData,
+      error: err.stack
+    });
+    throw new Error('Database error during reservation details insertion.');
+  } finally {
+    if (shouldReleaseClient) {
+      client.release();
+    }
+  }
+};
+
 const updateDetailsCancelledStatus = async (requestId, id, hotelId, status, updatedBy, billable, price, dbClient = null) => {
   const pool = getPool(requestId);
   const client = dbClient || await pool.connect();
@@ -183,6 +247,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
 
 module.exports = {
   selectReservationDetailsById,
+  insertReservationDetails,
   updateReservationDetailStatus,
   updateDetailsCancelledStatus,
 }
