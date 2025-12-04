@@ -62,7 +62,7 @@
 <script setup>
 import { computed } from 'vue';
 import { DataTable, Column, Badge, Button } from 'primevue';
-import { formatPercentage } from '@/utils/formatUtils';
+import { formatPercentage, formatMonth } from '@/utils/formatUtils';
 import { getSeverity as getSeverityUtil } from '@/utils/reportingUtils';
 import Papa from 'papaparse';
 
@@ -106,27 +106,25 @@ const monthColumnStyle = computed(() => {
 });
 
 // Computed property to aggregate raw occupation breakdown data
-const aggregatedOccupationBreakdownData = computed(() => {
+    const aggregatedOccupationBreakdownData = computed(() => {
     const aggregatedMap = new Map();
     let totalBookableRoomNights = 0;
     let totalNetAvailableRoomNights = 0;
+    let sumOfConfirmedNightsFromOtherPlans = 0; // To sum confirmed nights from all plans except '合計稼働可能'
 
-    // Process all items in rawOccupationBreakdownData
+    let totalAvailableRawItem = null; // Store the raw '合計稼働可能' item if found
+
     props.rawOccupationBreakdownData.forEach(item => {
-        // We need to decide if we are aggregating across hotels (showHotelColumn === false)
-        // or aggregating for a specific hotel if showHotelColumn is true and the parent sends filtered data.
-        // For 'ReportingYearCumulativeAllHotels' and 'ReportingSingleMonthAllHotels',
-        // rawOccupationBreakdownData contains data from multiple hotels.
-        // For 'ReportingYearCumulativeHotel' and 'ReportingSingleMonthHotel',
-        // rawOccupationBreakdownData contains data for a single hotel.
+        const currentHotelName = item.hotel_name;
 
-        const currentHotelName = item.hotel_name; // Use the hotel_name from the item
-
-        if (item.plan_name === 'Total Available') {
+        if (item.plan_name === '合計稼働可能') {
             totalBookableRoomNights += parseInt(item.total_bookable_room_nights || '0');
             totalNetAvailableRoomNights += parseInt(item.net_available_room_nights || '0');
+            totalAvailableRawItem = item; // Store the raw item to build the final '合計稼働可能' item
         } else if (item.sales_category !== 'employee' && item.sales_category !== 'block') {
-            // Determine the key for aggregation based on showHotelColumn
+            // For other regular plans, aggregate and sum confirmed_nights
+            sumOfConfirmedNightsFromOtherPlans += parseInt(item.confirmed_nights || '0');
+
             const mapKey = props.showHotelColumn && currentHotelName
                 ? `${currentHotelName}_${item.plan_name}`
                 : item.plan_name;
@@ -142,7 +140,7 @@ const aggregatedOccupationBreakdownData = computed(() => {
                     non_accommodation_nights: 0,
                     total_occupied_nights: 0,
                     total_reservation_details_nights: 0,
-                    hotel_name: props.showHotelColumn ? currentHotelName : undefined // Keep hotel_name if showHotelColumn is true
+                    hotel_name: props.showHotelColumn ? currentHotelName : undefined
                 });
             }
             const aggregatedItem = aggregatedMap.get(mapKey);
@@ -157,9 +155,9 @@ const aggregatedOccupationBreakdownData = computed(() => {
     });
 
     const finalData = Array.from(aggregatedMap.values());
-
+    
     // Calculate Totals for the currently aggregated data
-    const totals = finalData.reduce((acc, item) => {
+    const totals = finalData.reduce((acc, item) => {        
         acc.undecided_nights += parseInt(item.undecided_nights || '0');
         acc.confirmed_nights += parseInt(item.confirmed_nights || '0');
         acc.employee_nights += parseInt(item.employee_nights || '0');
@@ -214,7 +212,7 @@ const exportCSV = () => {
         : `${hotelName.replace(/\s+/g, '_')}_稼働率データ.csv`;
 
     const headers = props.showHotelColumn
-        ? ["施設", "月度", "計画販売室数", "実績販売室数", "販売室数差異", ...(props.showNonAccommodationColumn ? ["非宿泊数"] : []), "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "実績総室数"]
+        ? ["ホテルID", "施設", "月度", "計画販売室数", "実績販売室数", "販売室数差異", ...(props.showNonAccommodationColumn ? ["非宿泊数"] : []), "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "実績総室数"]
         : ["月度", "計画販売室数", "実績販売室数", "販売室数差異", "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "実績総室数"];
 
     const csvRows = [headers.join(',')];
@@ -226,8 +224,8 @@ const exportCSV = () => {
         const occ = row.occ || 0;
 
         const csvRow = [
-            ...(props.showHotelColumn ? [`"${row.hotel_name || ''}"`] : []),
-            `"${row.month || ''}"`,
+            ...(props.showHotelColumn ? [`"${row.hotel_id || ''}"`, `"${row.hotel_name || ''}"`] : []),
+            `"${formatMonth(row.month) || ''}"`,
             fcSold,
             sold,
             sold - fcSold,
@@ -264,8 +262,8 @@ const downloadDetailedCSV = () => {
 
     // Use rawOccupationBreakdownData directly
     const dataToExport = props.rawOccupationBreakdownData.map(item => ({
-        ...(props.showHotelColumn ? { '施設': item.hotel_name || '' } : {}),
-        '月度': item.month || '',
+        ...(props.showHotelColumn ? { 'ホテルID': item.hotel_id || '', '施設': item.hotel_name || '' } : {}),
+        '月度': formatMonth(item.month) || '',
         'プラン名': item.plan_name,
         '販売区分': (item.sales_category === 'accommodation' ? '宿泊' : (item.sales_category === 'other' ? 'その他' : item.sales_category)) || '', // Localized sales_category
         '未確定泊数': item.undecided_nights === 0 ? 0 : item.undecided_nights || '',

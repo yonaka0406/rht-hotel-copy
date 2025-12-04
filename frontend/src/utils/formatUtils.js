@@ -52,3 +52,12 @@ export const formatYenInTenThousandsNoDecimal = (value) => {
     maximumFractionDigits: 0
   }) + '万円';
 };
+
+// Format month string (e.g., "YYYY-MM" or ISO date string) to Japanese (YYYY年MM月)
+export const formatMonth = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // getMonth() is 0-indexed
+  return `${year}年${month}月`;
+};

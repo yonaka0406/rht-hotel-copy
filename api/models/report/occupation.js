@@ -290,16 +290,32 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
             tbn.month,
             hi.hotel_id,
             hi.hotel_name,
-            'Total Available' AS plan_name,
+            '稼働の合計' AS plan_name,
             NULL AS sales_category,
-            0,0,0,0,0,0,0,
+
+            SUM(pd.undecided_nights) AS undecided_nights,
+            SUM(pd.confirmed_nights) AS confirmed_nights,
+            SUM(pd.employee_nights) AS employee_nights,
+            SUM(pd.blocked_nights) AS blocked_nights,
+            SUM(pd.non_accommodation_nights) AS non_accommodation_nights,
+            SUM(pd.total_occupied_nights) AS total_occupied_nights,
+            SUM(pd.total_reservation_details_nights) AS total_reservation_details_nights,
+
             tbn.total_bookable_room_nights,
-            (tbn.total_bookable_room_nights - COALESCE(tbn2.total_blocked,0))
-        FROM total_bookable_nights tbn
-        LEFT JOIN total_blocked_nights tbn2 ON tbn.month = tbn2.month
+            (tbn.total_bookable_room_nights - COALESCE(tbn2.total_blocked,0)) AS net_available_room_nights
+
+        FROM plan_data pd
+        JOIN total_bookable_nights tbn ON pd.month = tbn.month
+        LEFT JOIN total_blocked_nights tbn2 ON pd.month = tbn2.month
         CROSS JOIN hotel_info hi
+        GROUP BY 
+            tbn.month,
+            hi.hotel_id,
+            hi.hotel_name,
+            tbn.total_bookable_room_nights,
+            COALESCE(tbn2.total_blocked,0)
     ) u
-    ORDER BY month, CASE WHEN plan_name = 'Total Available' THEN 'zzz' ELSE plan_name END;
+    ORDER BY hotel_id, month, CASE WHEN plan_name = '稼働の合計' THEN 'z' ELSE 'a' END, plan_name;
 
   `;
   const values = [hotelId, startDate, endDate];
