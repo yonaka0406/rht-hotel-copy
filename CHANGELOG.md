@@ -207,15 +207,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ### Added
 - Reservation: Check-in cancellation. (#043)
+- Production Environment: Global plan hidden. (#034)
+- CRM: Added related companies/related construction tabs. (#039)
+- CRM: Loyal customers. (#040)
 
 ### Fixed
 - Production Environment: Add-ons not reflected. (#033)
 - Production Environment: Calendar scroll not displaying data. (#036)
-
-### Added
-- Production Environment: Global plan hidden. (#034)
-- CRM: Added related companies/related construction tabs. (#039)
-- CRM: Loyal customers. (#040)
 
 ### User Requests
 - Production Environment: Customer name display order changed. (#035)
