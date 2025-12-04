@@ -63,6 +63,7 @@ CREATE TABLE reservation_details (
     price DECIMAL,
     cancelled UUID DEFAULT NULL,
     billable BOOLEAN DEFAULT FALSE,
+    is_accommodation BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -71,11 +72,6 @@ CREATE TABLE reservation_details (
     FOREIGN KEY (room_id, hotel_id) REFERENCES rooms(id, hotel_id),
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
-
--- Create partial unique index for active reservations
-CREATE UNIQUE INDEX reservation_details_active_unique_idx 
-ON reservation_details (hotel_id, reservation_id, room_id, date)
-WHERE cancelled IS NULL;
 
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
@@ -90,6 +86,7 @@ CREATE TABLE reservation_addons (
     tax_type_id INT REFERENCES tax_info(id),
     tax_rate DECIMAL(12,4),
     net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+    sales_category TEXT CHECK (sales_category IN ('accommodation', 'other')) DEFAULT 'accommodation',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -149,14 +146,14 @@ CREATE TABLE reservation_rates (
    tax_type_id INT REFERENCES tax_info(id),
    tax_rate DECIMAL(12,4),
    price NUMERIC(12,0) NOT NULL,
-   net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,   
+   net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+   sales_category TEXT CHECK (sales_category IN ('accommodation', 'other')) DEFAULT 'accommodation',
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    created_by INT REFERENCES users(id),
    updated_by INT DEFAULT NULL REFERENCES users(id),
    PRIMARY KEY (hotel_id, id),
    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
-
 
 -- Drop existing check constraint
 ALTER TABLE reservation_addons DROP CONSTRAINT reservation_addons_addon_type_check;
@@ -168,8 +165,21 @@ CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other', 'parking'));
 
 
 -- Indexes
--- Indexes
 CREATE INDEX idx_reservations_user_status_checkin ON reservations (created_by, status, check_in);
 CREATE INDEX idx_reservation_details_hotel_date ON reservation_details (hotel_id, date);
 CREATE INDEX idx_reservations_hotel_checkout ON reservations (hotel_id, check_out);
 CREATE INDEX idx_reservations_created_by_status ON reservations (created_by, status);
+
+CREATE INDEX reservation_details_hotel_id_date_only ON reservation_details (hotel_id, date)
+INCLUDE (reservation_id, room_id, billable, cancelled);
+CREATE INDEX reservation_details_cov_idx ON reservation_details (hotel_id, billable, date)
+INCLUDE (reservation_id, room_id, cancelled);
+CREATE UNIQUE INDEX reservation_details_active_unique_idx 
+ON reservation_details (hotel_id, reservation_id, room_id, date)
+WHERE cancelled IS NULL;
+
+CREATE INDEX idx_rates_cov ON reservation_rates (hotel_id, reservation_details_id)
+INCLUDE (sales_category, net_price);
+
+CREATE INDEX idx_addons_cov ON reservation_addons (hotel_id, reservation_detail_id)
+INCLUDE (sales_category, net_price, quantity);

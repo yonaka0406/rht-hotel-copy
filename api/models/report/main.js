@@ -5,6 +5,7 @@ const logger = require('../../config/logger');
 const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);
   const client = dbClient || await pool.connect();
+  /*
   const query = `
     WITH
     -- 0. Dates that actually appear in reservation_details
@@ -25,7 +26,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
       JOIN reservation_details rd
         ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
       JOIN rooms
-        ON rd.room_id = rooms.id
+        ON rd.room_id = rooms.id and rd.hotel_id = rooms.hotel_id
       WHERE
         r.hotel_id = $1
         AND rd.date BETWEEN $2 AND $3
@@ -186,6 +187,251 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
       rt.date, rt.total_rooms, rt.total_rooms_real
     ORDER BY rt.date;
   `;
+  */
+ const query = `
+    WITH
+
+    /* -------------------------------------------------------
+      Base reservation_details filtered early (small set)
+    -------------------------------------------------------- */
+    rd_base AS MATERIALIZED (
+      SELECT
+        rd.id AS reservation_detail_id,
+        rd.reservation_id,
+        rd.hotel_id,
+        rd.date,
+        rd.room_id,
+        rd.number_of_people,
+        COALESCE(rd.is_accommodation, TRUE) AS is_accommodation,
+        (rd.cancelled IS NOT NULL) AS cancelled,
+        rd.billable,
+        rd.plan_type
+      FROM reservation_details rd
+      JOIN reservations r
+        ON r.id = rd.reservation_id
+      AND r.hotel_id = rd.hotel_id
+      WHERE
+            rd.hotel_id = $1
+        AND rd.date BETWEEN $2 AND $3
+        AND rd.billable = TRUE
+        AND r.status NOT IN ('hold','block')
+        AND r.type <> 'employee'
+    ),
+
+    /* -------------------------------------------------------
+      reservation_rates aggregated per reservation_detail
+    -------------------------------------------------------- */
+    rr_agg AS MATERIALIZED (
+      SELECT
+        rr.hotel_id,
+        rr.reservation_details_id AS reservation_detail_id,
+
+        SUM(
+          CASE
+            WHEN rr.sales_category = 'other'
+              THEN CASE WHEN rdb.plan_type = 'per_room'
+                        THEN rr.net_price
+                        ELSE rr.net_price * rdb.number_of_people
+                    END
+            ELSE 0
+          END
+        ) AS other_net_price,
+
+        SUM(
+          CASE
+            WHEN rr.sales_category IN ('accommodation') OR rr.sales_category IS NULL
+              THEN CASE WHEN rdb.plan_type = 'per_room'
+                        THEN rr.net_price
+                        ELSE rr.net_price * rdb.number_of_people
+                  END
+            ELSE 0
+          END
+        ) AS accommodation_net_price
+
+      FROM reservation_rates rr
+      JOIN rd_base rdb
+        ON rr.hotel_id = rdb.hotel_id
+      AND rr.reservation_details_id = rdb.reservation_detail_id
+      AND rr.hotel_id = $1
+      GROUP BY rr.hotel_id, rr.reservation_details_id
+    ),
+
+    /* -------------------------------------------------------
+      reservation_addons aggregated per reservation_detail
+    -------------------------------------------------------- */
+    ra_agg AS MATERIALIZED (
+      SELECT
+        ra.hotel_id,
+        ra.reservation_detail_id,
+
+        SUM(
+          CASE WHEN ra.sales_category = 'other'
+              THEN ra.net_price * ra.quantity
+              ELSE 0
+          END
+        ) AS other_net_price_sum,
+
+        SUM(
+          CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL
+              THEN ra.net_price * ra.quantity
+              ELSE 0
+          END
+        ) AS accommodation_net_price_sum
+
+      FROM reservation_addons ra
+      JOIN rd_base rdb
+        ON ra.hotel_id = rdb.hotel_id
+      AND ra.reservation_detail_id = rdb.reservation_detail_id
+      AND ra.hotel_id = $1
+      GROUP BY ra.hotel_id, ra.reservation_detail_id
+    ),
+
+    /* -------------------------------------------------------
+      client gender aggregated per reservation_detail
+    -------------------------------------------------------- */
+    rc_agg AS MATERIALIZED (
+      SELECT
+        rc.hotel_id,
+        rc.reservation_details_id AS reservation_detail_id,
+        COUNT(CASE WHEN c.gender = 'male' THEN 1 END) AS male_count,
+        COUNT(CASE WHEN c.gender = 'female' THEN 1 END) AS female_count
+      FROM reservation_clients rc
+      JOIN clients c
+        ON c.id = rc.client_id
+      JOIN rd_base rdb
+        ON rc.hotel_id = rdb.hotel_id
+      AND rc.reservation_details_id = rdb.reservation_detail_id
+      AND rc.hotel_id = $1
+      GROUP BY rc.hotel_id, rc.reservation_details_id
+    ),
+
+    /* -------------------------------------------------------
+      Room inventory (very small)
+    -------------------------------------------------------- */
+    room_inventory AS MATERIALIZED (
+      SELECT hotel_id, COUNT(*) AS total_rooms
+      FROM rooms
+      WHERE hotel_id = $1
+        AND for_sale = TRUE
+      GROUP BY hotel_id
+    ),
+
+    /* -------------------------------------------------------
+      Blocked rooms per date, correct join using hotel_id
+    -------------------------------------------------------- */
+    blocked_rooms AS MATERIALIZED (
+      SELECT
+        rd.hotel_id,
+        rd.date,
+        COUNT(*) AS blocked_count
+      FROM reservations r
+      JOIN reservation_details rd
+        ON rd.reservation_id = r.id
+      AND rd.hotel_id = r.hotel_id
+      JOIN rooms rm
+        ON rm.id = rd.room_id
+      AND rm.hotel_id = rd.hotel_id
+      WHERE
+            r.hotel_id = $1
+        AND rd.date BETWEEN $2 AND $3
+        AND r.status = 'block'
+        AND rd.cancelled IS NULL
+        AND rm.for_sale = TRUE
+      GROUP BY rd.hotel_id, rd.date
+    ),
+
+    /* -------------------------------------------------------
+      All dates used by the hotel in this range
+    -------------------------------------------------------- */
+    dates AS MATERIALIZED (
+      SELECT DISTINCT hotel_id, date
+      FROM reservation_details
+      WHERE hotel_id = $1
+        AND date BETWEEN $2 AND $3
+    ),
+
+    /* -------------------------------------------------------
+      Total rooms available per date
+    -------------------------------------------------------- */
+    room_total AS MATERIALIZED (
+      SELECT
+        d.hotel_id,
+        d.date,
+        ri.total_rooms,
+        ri.total_rooms - COALESCE(br.blocked_count, 0) AS total_rooms_real
+      FROM dates d
+      CROSS JOIN room_inventory ri
+      LEFT JOIN blocked_rooms br
+        ON br.hotel_id = d.hotel_id
+      AND br.date = d.date
+    )
+
+    /* -------------------------------------------------------
+      Final aggregation per date
+    -------------------------------------------------------- */
+    SELECT
+      rt.date,
+      rt.total_rooms,
+      rt.total_rooms_real,
+
+      COUNT(
+        CASE WHEN NOT rdb.cancelled AND rdb.is_accommodation
+            THEN rdb.reservation_detail_id END
+      ) AS room_count,
+
+      COUNT(
+        CASE WHEN NOT rdb.cancelled AND NOT rdb.is_accommodation
+            THEN rdb.reservation_detail_id END
+      ) AS non_accommodation_stays,
+
+      SUM(CASE WHEN NOT rdb.cancelled THEN rdb.number_of_people END) AS people_sum,
+
+      SUM(COALESCE(rc.male_count, 0))   AS male_count,
+      SUM(COALESCE(rc.female_count, 0)) AS female_count,
+
+      /* unspecified guests = total - male - female */
+      SUM(CASE WHEN NOT rdb.cancelled THEN rdb.number_of_people END)
+        - SUM(COALESCE(rc.male_count, 0))
+        - SUM(COALESCE(rc.female_count, 0)) AS unspecified_count,
+
+      /* price calculations */
+      SUM(
+        COALESCE(rr.accommodation_net_price, 0)
+        + COALESCE(ra.accommodation_net_price_sum, 0)
+      ) AS accommodation_price,
+
+      SUM(
+        COALESCE(rr.other_net_price, 0)
+        + COALESCE(ra.other_net_price_sum, 0)
+      ) AS other_price,
+
+      SUM(
+        COALESCE(rr.accommodation_net_price, 0)
+        + COALESCE(ra.accommodation_net_price_sum, 0)
+        + COALESCE(rr.other_net_price, 0)
+        + COALESCE(ra.other_net_price_sum, 0)
+      ) AS price
+
+    FROM room_total rt
+    LEFT JOIN rd_base rdb
+      ON rdb.hotel_id = rt.hotel_id
+    AND rdb.date     = rt.date
+    LEFT JOIN rr_agg rr
+      ON rr.hotel_id             = rdb.hotel_id
+    AND rr.reservation_detail_id = rdb.reservation_detail_id
+    LEFT JOIN ra_agg ra
+      ON ra.hotel_id             = rdb.hotel_id
+    AND ra.reservation_detail_id = rdb.reservation_detail_id
+    LEFT JOIN rc_agg rc
+      ON rc.hotel_id             = rdb.hotel_id
+    AND rc.reservation_detail_id = rdb.reservation_detail_id
+
+    GROUP BY
+      rt.date,
+      rt.total_rooms,
+      rt.total_rooms_real
+    ORDER BY rt.date;
+ `;
   const values = [hotelId, dateStart, dateEnd];
 
   try {
