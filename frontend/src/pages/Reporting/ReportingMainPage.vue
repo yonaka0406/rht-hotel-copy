@@ -110,7 +110,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { fetchCountReservation, fetchForecastData, fetchAccountingData } = useReportStore();
+    const { fetchCountReservation, fetchForecastData, fetchAccountingData, fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData } = useReportStore();
 
     // Primevue
     import { ProgressSpinner } from 'primevue';
@@ -613,25 +613,22 @@
         pmsFallbackCapacities.value = {}; // Reset for current fetch
 
         try {
+            // Fetch data in batches
+            const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
+            const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
+
+            const [batchPmsData, batchForecastData, batchAccountingData] = await Promise.all([
+                fetchBatchCountReservation(selectedHotels.value, pmsFetchStartDate, pmsFetchEndDate),
+                fetchBatchForecastData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
+                fetchBatchAccountingData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate)
+            ]);
+
             for (const hotelId of selectedHotels.value) {
                 currentProcessingHotelId = hotelId;
-                // Fetch PMS data from Jan 1st
-                const rawPmsData = await fetchCountReservation(hotelId, pmsFetchStartDate, pmsFetchEndDate);
-                //console.log('[ReportingMainPage] Raw PMS data sample for hotel', hotelId, ':', rawPmsData?.[0]);
-
-                // Fetch Forecast and Accounting data using original date range (firstDayofFetch to lastDayofFetch)
-                // as these might not need the full year data for their specific calculations.
-                // However, if their logic also needs to align with ReportMonthly's wider view, this might need adjustment too.
-                // For now, focusing on fixing OCC and RevPAR based on PMS data alignment.
-                const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
-                const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
-
-                const [rawForecastData, rawAccountingData] = await Promise.all([
-                    fetchForecastData(hotelId, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
-                    fetchAccountingData(hotelId, forecastAndAccountingStartDate, forecastAndAccountingEndDate)
-                ]);
-
-                if (rawPmsData && Array.isArray(rawPmsData)) {
+                
+                // Process PMS Data
+                const rawPmsData = batchPmsData[String(hotelId)] || [];
+                if (Array.isArray(rawPmsData)) {
                     if (rawPmsData.length > 0 && rawPmsData[0].total_rooms !== undefined) {
                         pmsFallbackCapacities.value[String(hotelId)] = Number(rawPmsData[0].total_rooms || 0);
                     } else {
@@ -648,27 +645,35 @@
                         total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                         total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
                     })).filter(item => item.date !== null);
-                    //console.log('[ReportingMainPage] Mapped PMS data sample for hotel', hotelId, ':', mappedData[0]);
                     newPmsTotalData[String(hotelId)] = mappedData;
                 } else {
                      newPmsTotalData[String(hotelId)] = [];
                      pmsFallbackCapacities.value[String(hotelId)] = 0;
                 }
 
-                if (rawForecastData && Array.isArray(rawForecastData)) {
+                // Process Forecast Data
+                const rawForecastData = batchForecastData[String(hotelId)] || [];
+                if (Array.isArray(rawForecastData)) {
                     newForecastTotalData[String(hotelId)] = rawForecastData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.forecast_month))),
                         revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                         total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0,  
                         room_count: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0,                      
                     })).filter(item => item.date !== null);
-                } else if (rawForecastData) { newForecastTotalData[String(hotelId)] = []; }
-                if (rawAccountingData && Array.isArray(rawAccountingData)) {
+                } else { 
+                    newForecastTotalData[String(hotelId)] = []; 
+                }
+
+                // Process Accounting Data
+                const rawAccountingData = batchAccountingData[String(hotelId)] || [];
+                if (Array.isArray(rawAccountingData)) {
                     newAccountingTotalData[String(hotelId)] = rawAccountingData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.accounting_month))),
                         revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,                        
                     })).filter(item => item.date !== null);
-                } else if (rawAccountingData) { newAccountingTotalData[String(hotelId)] = []; }
+                } else { 
+                    newAccountingTotalData[String(hotelId)] = []; 
+                }
             }
             currentProcessingHotelId = null;
             pmsTotalData.value = newPmsTotalData;
