@@ -61,12 +61,14 @@
                 <ReportingSingleMonthAllHotels
                     v-else-if="selectedView === 'singleMonthAllHotels'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"                
                 />
                 <ReportingSingleMonthHotel
                     v-else-if="selectedView === 'singleMonthHotel'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"                
                 />
                 <ReportingYearCumulativeAllHotels
                     v-else-if="selectedView === 'yearCumulativeAllHotels'"
@@ -77,7 +79,8 @@
                 <ReportingYearCumulativeHotel
                     v-else-if="selectedView === 'yearCumulativeHotel'"
                     :revenueData="revenueData"
-                    :occupancyData="occupancyData"                
+                    :occupancyData="occupancyData"
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"                
                 />
                 <div v-else-if="selectedReportType === 'monthlySummary' && selectedView === null" class="text-gray-700 dark:text-gray-200 text-center mt-4">
                     <!-- This message shows if selectedReportType is a summary type but selectedView doesn't match any known summary view -->
