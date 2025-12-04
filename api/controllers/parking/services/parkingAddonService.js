@@ -416,6 +416,7 @@ class ParkingAddonService {
             const assignmentData = {
                 hotel_id: addonData.hotel_id,
                 reservation_id: addonData.reservation_id,
+                reservation_detail_id: reservationDetailId,
                 reservation_addon_id: addonData.addon_id,
                 vehicle_category_id: vehicleCategoryId,
                 parking_spot_id: spotId,

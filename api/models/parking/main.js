@@ -549,6 +549,7 @@ const validateSpotCapacity = async (requestId, spotId, vehicleCategoryId) => {
 
 // Create parking assignment with addon relationship
 const createParkingAssignmentWithAddon = async (requestId, assignmentData) => {
+    logger.debug(`[createParkingAssignmentWithAddon] Creating parking assignment with addon for requestId: ${requestId}`, assignmentData);
     const pool = getPool(requestId);
     const client = await pool.connect();
 
@@ -558,6 +559,7 @@ const createParkingAssignmentWithAddon = async (requestId, assignmentData) => {
         const {
             hotel_id,
             reservation_id,
+            reservation_detail_id,
             reservation_addon_id,
             vehicle_category_id,
             parking_spot_id,
@@ -579,28 +581,21 @@ const createParkingAssignmentWithAddon = async (requestId, assignmentData) => {
 
         // Create parking assignment for each date
         for (const date of dates) {
-            const query = `
-                INSERT INTO reservation_parking (
-                    hotel_id,
-                    reservation_details_id,
-                    reservation_addon_id,
-                    vehicle_category_id,
-                    parking_spot_id,
-                    date,
-                    status
-                ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')
-                RETURNING *
-            `;
-            const values = [
+            const parkingData = {
                 hotel_id,
-                reservation_id,
+                reservation_details_id: reservation_detail_id,
                 reservation_addon_id,
                 vehicle_category_id,
                 parking_spot_id,
-                date
-            ];
-            const result = await client.query(query, values);
-            insertedAssignments.push(result.rows[0]);
+                date,
+                status: 'confirmed',
+                comment,
+                price,
+                created_by,
+                updated_by,
+            };
+            const result = await insertReservationParking(requestId, parkingData, client);
+            insertedAssignments.push(result);
         }
 
         await client.query('COMMIT');
