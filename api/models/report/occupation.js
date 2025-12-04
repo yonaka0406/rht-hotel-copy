@@ -180,6 +180,13 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
         SELECT 
             ($3::DATE - $2::DATE + 1) AS total_days
     ),
+    hotel_info AS (
+      SELECT 
+        id AS hotel_id,
+        name AS hotel_name
+      FROM hotels
+      WHERE id = $1
+    ),
     hotel_rooms AS (
         SELECT 
             COUNT(*) as total_rooms
@@ -259,6 +266,8 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
     FROM (
         SELECT
             pd.month,
+            hi.hotel_id,
+            hi.hotel_name,
             pd.plan_name,
             pd.sales_category,
             pd.undecided_nights,
@@ -273,11 +282,14 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
         FROM plan_data pd
         JOIN total_bookable_nights tbn ON pd.month = tbn.month
         LEFT JOIN total_blocked_nights tbn2 ON pd.month = tbn2.month
+        CROSS JOIN hotel_info hi
 
         UNION ALL
 
         SELECT
             tbn.month,
+            hi.hotel_id,
+            hi.hotel_name,
             'Total Available' AS plan_name,
             NULL AS sales_category,
             0,0,0,0,0,0,0,
@@ -285,6 +297,7 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
             (tbn.total_bookable_room_nights - COALESCE(tbn2.total_blocked,0))
         FROM total_bookable_nights tbn
         LEFT JOIN total_blocked_nights tbn2 ON tbn.month = tbn2.month
+        CROSS JOIN hotel_info hi
     ) u
     ORDER BY month, CASE WHEN plan_name = 'Total Available' THEN 'zzz' ELSE plan_name END;
 
