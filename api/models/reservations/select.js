@@ -1,6 +1,24 @@
 let getPool = require('../../config/database').getPool;
 const logger = require('../../config/logger');
 
+const selectReservationById = async (requestId, id, hotelId, dbClient = null) => {
+  const pool = getPool(requestId);
+  const executor = dbClient || pool;
+  const query = `
+    SELECT * FROM reservations
+    WHERE id = $1::UUID AND hotel_id = $2
+  `;
+  const values = [id, hotelId];
+
+  try {
+    const result = await executor.query(query, values);
+    return result.rows[0]; // Assuming ID is unique, return the first row
+  } catch (err) {
+    logger.error(`Error fetching reservation by ID ${id}:`, err);
+    throw new Error('Database error');
+  }
+};
+
 const selectReservation = async (requestId, id, hotel_id) => {
   const pool = getPool(requestId);
   const { validate: uuidValidate } = require('uuid');
@@ -873,6 +891,7 @@ const selectReservationParkingAddons = async (requestId, id, hotelId, client = n
 };
 
 module.exports = {
+  selectReservationById,
   selectReservation,
   selectReservationDetail,
   selectReservationAddons,

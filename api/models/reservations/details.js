@@ -1,7 +1,9 @@
 let getPool = require('../../config/database').getPool;
 const logger = require('../../config/logger');
 const { selectRatesByDetailsId } = require('./rates');
+const { selectReservationById } = require('./select');
 const { calculatePriceFromRatesService: calculatePriceFromRates } = require('./services/calculationService');
+const { updateParkingReservationCancelledStatus } = require('./parking');
 
 const selectReservationDetailsById = async (requestId, id, hotelId, dbClient = null) => {
   const pool = getPool(requestId);
@@ -87,12 +89,8 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     }
 
     // Get the current status of the main reservation to determine billable status on recovery
-    const getReservationStatusQuery = 'SELECT status FROM reservations WHERE id = $1::UUID AND hotel_id = $2';
-    const reservationStatusResult = await client.query(getReservationStatusQuery, [reservationId, hotel_id]);
-    const currentReservationStatus = reservationStatusResult.rows[0]?.status;
-
-    let detailQuery = '';
-    let detailValues = [];
+    const mainReservation = await selectReservationById(requestId, reservationId, hotel_id, client);
+    const currentReservationStatus = mainReservation?.status;
 
     // Get the current rates for this reservation detail
     const rates = await selectRatesByDetailsId(requestId, id, hotel_id, client);
@@ -106,16 +104,15 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     if (status === 'cancelled') {
       // When cancelling, only include rates that are flagged to be included.
       ratesToUse = rates.filter(rate => rate.include_in_cancel_fee);
-      logger.debug(`[updateReservationDetailStatus] Status is 'cancelled'. Filtered ratesToUse: ${JSON.stringify(ratesToUse)}`);
       calculatedPrice = calculatePriceFromRates(ratesToUse, false);
+      logger.debug(`[updateReservationDetailStatus] Status is 'cancelled'. Filtered ratesToUse: ${JSON.stringify(ratesToUse)}`);
       logger.debug(`[updateReservationDetailStatus] Calculated price for cancelled detail: ${calculatedPrice}`);
     } else {
       // When recovering, use all rates for price calculation      
-      logger.debug(`[updateReservationDetailStatus] Status is '${status}'. Using all rates: ${JSON.stringify(rates)}`);
       calculatedPrice = calculatePriceFromRates(rates, false);
+      logger.debug(`[updateReservationDetailStatus] Status is '${status}'. Using all rates: ${JSON.stringify(rates)}`);
       logger.debug(`[updateReservationDetailStatus] Calculated price for recovered/other detail: ${calculatedPrice}`);
     }
-    // logger.debug(`[updateReservationDetailStatus] Calculated price for detail ${id}: ${calculatedPrice}`);
 
     // 1. Update the reservation_details table based on the status
     let finalBillable = billable;
@@ -127,33 +124,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     const updatedDetail = await updateDetailsCancelledStatus(requestId, id, hotel_id, status, updated_by, finalBillable, calculatedPrice, client);
 
     // 2. Update the associated reservation_parking records
-    let parkingQuery = '';
-    const parkingValues = [updated_by, id, hotel_id];
-
-    if (status === 'cancelled') {
-      // Cancel any associated parking reservations
-      parkingQuery = `
-        UPDATE reservation_parking
-        SET
-          cancelled = gen_random_uuid(),
-          updated_by = $1
-        WHERE reservation_details_id = $2::UUID AND hotel_id = $3;
-      `;
-    } else if (status === 'recovered') {
-      // "Recover" any associated parking reservations by removing the cancelled flag
-      parkingQuery = `
-        UPDATE reservation_parking
-        SET
-          cancelled = NULL,
-          updated_by = $1
-        WHERE reservation_details_id = $2::UUID AND hotel_id = $3;
-      `;
-    }
-
-    // Only execute the parking query if it was set
-    if (parkingQuery) {
-      await client.query(parkingQuery, parkingValues);
-    }
+    await updateParkingReservationCancelledStatus(requestId, null, id, hotel_id, status, updated_by, client);
 
     // 3. Check remaining details and update the main reservation accordingly
     const remainingDetailsQuery = `
@@ -210,7 +181,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
   }
 };
 
-module.exports = {  
+module.exports = {
   selectReservationDetailsById,
   updateReservationDetailStatus,
   updateDetailsCancelledStatus,

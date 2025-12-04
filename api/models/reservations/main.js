@@ -13,6 +13,7 @@ const { insertReservationRate, insertAggregatedRates } = require('./insert');
 const addonsModels = require('./addons');
 const clientsModels = require('./clients');
 const { calculatePriceFromRatesService, calculateIsAccommodation } = require('./services/calculationService');
+const { updateParkingReservationCancelledStatus } = require('./parking');
 
 // Helper
 const formatDate = (date) => {
@@ -626,17 +627,7 @@ const updateReservationStatus = async (requestId, reservationData) => {
       await client.query(updateDetailsQuery, detailValues);
 
       // Also cancel any associated parking reservations by finding them through reservation_details
-      const updateParkingQuery = `
-        UPDATE reservation_parking
-        SET
-          cancelled = gen_random_uuid(),
-          updated_by = $1
-        WHERE reservation_details_id IN (
-          SELECT id FROM reservation_details WHERE reservation_id = $2::UUID AND hotel_id = $3
-        );
-      `;
-      const parkingValues = [updated_by, id, hotel_id];
-      await client.query(updateParkingQuery, parkingValues);
+      await updateParkingReservationCancelledStatus(requestId, id, null, hotel_id, 'cancelled', updated_by, client);
 
     } else if (resStatus === 'confirmed') {
       // For confirmed reservations, ensure details are not cancelled and are billable
@@ -652,17 +643,7 @@ const updateReservationStatus = async (requestId, reservationData) => {
       await client.query(updateDetailsQuery, detailValues);
 
       // Also "recover" any associated parking reservations by removing the cancelled flag
-      const updateParkingQuery = `
-        UPDATE reservation_parking
-        SET
-          cancelled = NULL,
-          updated_by = $1
-        WHERE reservation_details_id IN (
-          SELECT id FROM reservation_details WHERE reservation_id = $2::UUID AND hotel_id = $3
-        );
-      `;
-      const parkingValues = [updated_by, id, hotel_id];
-      await client.query(updateParkingQuery, parkingValues);
+      await updateParkingReservationCancelledStatus(requestId, id, null, hotel_id, 'recovered', updated_by, client);
 
     } else if (resStatus === 'provisory') {
       // For provisory reservations, ensure details are not billable

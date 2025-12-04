@@ -1,0 +1,64 @@
+let getPool = require('../../config/database').getPool;
+const logger = require('../../config/logger');
+
+const updateParkingReservationCancelledStatus = async (requestId, reservationId = null, reservationDetailsId = null, hotelId, status, updatedBy, dbClient = null) => {
+  const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+  try {
+    let query = '';
+    let values = [];
+    let whereClause = '';
+
+    if (reservationId) {
+      // If reservationId is provided, update all parking reservations associated with that main reservation
+      values = [updatedBy, reservationId, hotelId];
+      whereClause = `
+        WHERE reservation_details_id IN (
+          SELECT id FROM reservation_details WHERE reservation_id = $2::UUID AND hotel_id = $3
+        ) AND hotel_id = $3
+      `;
+      logger.debug(`[updateParkingReservationCancelledStatus] Updating parking for all details of reservation_id: ${reservationId}`);
+    } else {
+      // Otherwise, update only the parking for the specific reservationDetailsId
+      values = [updatedBy, reservationDetailsId, hotelId];
+      whereClause = `
+        WHERE reservation_details_id = $2::UUID AND hotel_id = $3
+      `;
+      logger.debug(`[updateParkingReservationCancelledStatus] Updating parking for reservation_details_id: ${reservationDetailsId}`);
+    }
+
+
+    if (status === 'cancelled') {
+      query = `
+        UPDATE reservation_parking
+        SET
+          cancelled = gen_random_uuid(),
+          updated_by = $1
+        ${whereClause};
+      `;
+    } else if (status === 'recovered') {
+      query = `
+        UPDATE reservation_parking
+        SET
+          cancelled = NULL,
+          updated_by = $1
+        ${whereClause};
+      `;
+    } else {
+      logger.warn(`[updateParkingReservationCancelledStatus] Invalid status '${status}' for parking update for reservation_details_id: ${reservationDetailsId}. No action taken.`);
+      return; // No action needed for other statuses
+    }
+
+    if (query) {
+      await client.query(query, values);
+    }
+  } finally {
+    if (!dbClient) {
+      client.release();
+    }
+  }
+};
+
+module.exports = {
+  updateParkingReservationCancelledStatus,
+};
