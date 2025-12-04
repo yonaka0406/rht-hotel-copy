@@ -181,7 +181,7 @@
                         :rawOccupationBreakdownData="props.rawOccupationBreakdownData"
                         :showHotelColumn="false"
                         :showNonAccommodationColumn="false"
-                        :showDetailedCsvButton="false"
+                        :showDetailedCsvButton="true"
                         :rows="12"
                         :rowsPerPageOptions="[12, 24, 36, 48]"
                     />
