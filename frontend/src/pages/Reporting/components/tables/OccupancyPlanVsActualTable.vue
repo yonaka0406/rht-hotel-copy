@@ -257,20 +257,25 @@ const exportCSV = () => {
 };
 
 const downloadDetailedCSV = () => {
-    if (!aggregatedOccupationBreakdownData.value || aggregatedOccupationBreakdownData.value.length === 0) {
+    if (!props.rawOccupationBreakdownData || props.rawOccupationBreakdownData.length === 0) {
         alert('詳細データがありません');
         return;
     }
 
-    // Use aggregatedOccupationBreakdownData directly
-    const dataToExport = aggregatedOccupationBreakdownData.value.map(item => ({
+    // Use rawOccupationBreakdownData directly
+    const dataToExport = props.rawOccupationBreakdownData.map(item => ({
         ...(props.showHotelColumn ? { '施設': item.hotel_name || '' } : {}),
+        '月度': item.month || '',
         'プラン名': item.plan_name,
+        '販売区分': (item.sales_category === 'accommodation' ? '宿泊' : (item.sales_category === 'other' ? 'その他' : item.sales_category)) || '', // Localized sales_category
         '未確定泊数': item.undecided_nights === 0 ? 0 : item.undecided_nights || '',
         '確定泊数': item.confirmed_nights === 0 ? 0 : item.confirmed_nights || '',
         '社員泊数': item.employee_nights === 0 ? 0 : item.employee_nights || '',
         'ブロック泊数': item.blocked_nights === 0 ? 0 : item.blocked_nights || '',
-        '合計稼働数': item.total_occupied_nights === 0 ? 0 : item.total_occupied_nights || ''
+        '非宿泊数': item.non_accommodation_nights === 0 ? 0 : item.non_accommodation_nights || '',
+        '合計稼働数': item.total_occupied_nights === 0 ? 0 : item.total_occupied_nights || '',
+        '総販売可能室数': item.total_bookable_room_nights || '',
+        '正味販売可能室数': item.net_available_room_nights || ''
     }));
 
     // Use PapaParse to generate CSV
