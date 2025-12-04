@@ -62,8 +62,10 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
   }
 };
 
-const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate) => {
+const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate, dbClient = null) => {
   const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+
   const query = `
     WITH date_range AS (
       SELECT 
@@ -159,11 +161,13 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
   const values = [hotelId, startDate, endDate];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error in selectOccupationBreakdown:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) client.release();
   }
 };
 
