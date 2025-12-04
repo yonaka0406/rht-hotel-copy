@@ -386,8 +386,8 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
 
       SUM(CASE WHEN NOT rdb.cancelled THEN rdb.number_of_people END) AS people_sum,
 
-      SUM(COALESCE(rc.male_count, 0))   AS male_count,
-      SUM(COALESCE(rc.female_count, 0)) AS female_count,
+      SUM(CASE WHEN NOT rdb.cancelled THEN COALESCE(rc.male_count, 0) ELSE 0 END)   AS male_count,
+      SUM(CASE WHEN NOT rdb.cancelled THEN COALESCE(rc.female_count, 0) ELSE 0 END) AS female_count,
 
       /* unspecified guests = total - male - female */
       SUM(CASE WHEN NOT rdb.cancelled THEN rdb.number_of_people END)

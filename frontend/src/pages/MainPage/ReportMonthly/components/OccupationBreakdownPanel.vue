@@ -110,7 +110,7 @@ const occupationBreakdownChart = ref(null);
 let myOccupationBreakdownChart = null;
 
 const occupationBreakdownTotals = computed(() => {
-    if (!props.occupationBreakdownData) return { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0, total_reservation_details_nights: 0, not_booked_nor_blocked_nights: 0, total_bookable_room_nights: 0 };
+    if (!props.occupationBreakdownData) return { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0, total_reservation_details_nights: 0, not_booked_nor_blocked_nights: 0, total_bookable_room_nights: 0, net_available_room_nights: 0 };
 
     let totalBookable = 0;
     let netAvailable = 0;

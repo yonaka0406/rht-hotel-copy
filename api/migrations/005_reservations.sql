@@ -1,6 +1,6 @@
 CREATE TABLE payment_types (
     id SERIAL PRIMARY KEY,
-    hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel
+    hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE DEFAULT NULL, -- Reservation's hotel
     name TEXT NOT NULL,
     description TEXT,
     transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount')) NOT NULL DEFAULT 'cash',
@@ -70,7 +70,7 @@ CREATE TABLE reservation_details (
 
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
+    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     reservation_detail_id UUID NOT NULL,
     addons_global_id INT REFERENCES addons_global(id),
     addons_hotel_id INT,
@@ -92,7 +92,7 @@ CREATE TABLE reservation_addons (
 
 CREATE TABLE reservation_clients (
     id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
+    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
     reservation_details_id UUID NOT NULL, -- Reference to reservation_details table
     client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -108,7 +108,7 @@ CREATE TABLE reservation_clients (
 
 CREATE TABLE reservation_payments (
     id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
+    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
     reservation_id UUID NOT NULL, -- Reference to reservations table
     date DATE NOT NULL,
     room_id INT,
@@ -133,7 +133,7 @@ CREATE TABLE reservation_payments (
 
 CREATE TABLE reservation_rates (
    id UUID DEFAULT gen_random_uuid(),
-   hotel_id INT NOT NULL REFERENCES hotels(id),
+   hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
    reservation_details_id UUID NOT NULL,
    adjustment_type TEXT CHECK (adjustment_type IN ('base_rate', 'percentage', 'flat_fee')) DEFAULT 'base_rate',
    adjustment_value DECIMAL(10, 2) NOT NULL,
