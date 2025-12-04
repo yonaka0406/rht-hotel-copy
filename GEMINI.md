@@ -71,7 +71,7 @@ Update documentation when you:
     - `read.js`: Contains only `SELECT` queries that do not alter data.
     - `write.js`: Contains `INSERT`, `UPDATE`, and `DELETE` operations.
     - `index.js`: Imports from `read.js` and `write.js` and exports a single, aggregated module. This prevents breaking changes in controllers.
-  - **Transactions:** For operations requiring both a write and a subsequent read within the same transaction (e.g., creating a record and then fetching it), the read function must be designed to accept an optional database client. The write function will manage the transaction and pass its client to the read function.
+  - **Transactions:** For operations requiring both a write and a subsequent read within the same transaction (e.g., creating a record and then fetching it), the read function must be designed to accept an optional database client. The write function will manage the transaction and pass its client to the read function. This pattern should be applied to *all* model functions in the `/api` directory to ensure they can be seamlessly integrated into transactional flows and to optimize database request handling.
     ```javascript
     // In read.js - note the optional dbClient parameter
     const findById = async (requestId, id, dbClient = null) => {
