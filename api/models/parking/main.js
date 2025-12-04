@@ -4,6 +4,7 @@ const vehicle = require('./vehicle');
 const parkingLot = require('./parkingLot');
 const { formatDate } = require('../../utils/reportUtils');
 const logger = require('../../config/logger');
+const { insertReservationDetails } = require('../reservations/details');
 
 // Parking Spot
 const getParkingSpots = async (requestId, parking_lot_id) => {
@@ -119,11 +120,22 @@ const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_da
         }
 
         for (const date of dateArray) {
+            // Insert into reservation_details using the new helper function
+            const newReservationDetail = await insertReservationDetails(requestId, {
+                hotel_id,
+                reservation_id,
+                date,
+                status: 'blocked',
+                created_by: user_id,
+                updated_by: user_id,
+            }, client); // Pass the existing client to ensure it's part of the transaction
+            const reservation_details_id = newReservationDetail.id; // Get the generated ID
+
             const insertParkingQuery = `
-                INSERT INTO reservation_parking (hotel_id, reservation_id, parking_spot_id, date, status, comment, created_by, updated_by)
-                VALUES ($1, $2, $3, $4, 'blocked', $5, $6, $6);
+                INSERT INTO reservation_parking (hotel_id, reservation_details_id, reservation_id, parking_spot_id, date, status, comment, created_by, updated_by)
+                VALUES ($1, $2, $3, $4, $5, 'blocked', $6, $7, $7);
             `;
-            const parkingValues = [hotel_id, reservation_id, parking_spot_id, date, comment, user_id];
+            const parkingValues = [hotel_id, reservation_details_id, reservation_id, parking_spot_id, date, comment, user_id];
             await client.query(insertParkingQuery, parkingValues);
         }
 
