@@ -27,10 +27,7 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
 
         // Validate each hotel ID
         for (const hotelId of hotelIds) {
-            const validationError = validateNumericParam(hotelId, 'hotelId');
-            if (validationError) {
-                return res.status(400).json({ error: validationError });
-            }
+            validateNumericParam(hotelId, 'hotelId');
         }
 
         const pool = getPool(req.requestId);
@@ -58,7 +55,9 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
         }
     } catch (err) {
         logger.error(`[${operationName}] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
-        res.status(500).json({ error: 'Internal server error' });
+        const statusCode = err.statusCode || 500;
+        const errorMessage = statusCode === 500 ? 'Internal server error' : err.message;
+        res.status(statusCode).json({ error: errorMessage });
     }
 };
 
