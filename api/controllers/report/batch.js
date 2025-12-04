@@ -43,11 +43,9 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
 
             // Use single client for all queries sequentially
             for (const hotelId of hotelIds) {
-                logger.debug(`[${operationName}] Fetching data for hotel ${hotelId}. Request ID: ${req.requestId}`);
                 try {
                     const data = await dataFetcher(req.requestId, hotelId, startDate, endDate, client);
                     results[hotelId] = data || [];
-                    logger.debug(`[${operationName}] Successfully fetched data for hotel ${hotelId}. Request ID: ${req.requestId}`);
                 } catch (err) {
                     logger.error(`[${operationName}] Failed for hotel ${hotelId}, Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
                     errors[hotelId] = err.message;
