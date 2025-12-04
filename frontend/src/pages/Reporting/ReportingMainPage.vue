@@ -641,6 +641,9 @@
                 const hotelOccupationData = batchOccupationBreakdownData[hotelIdKey];
                 if (Array.isArray(hotelOccupationData)) {
                     allBreakdownItems = allBreakdownItems.concat(hotelOccupationData);
+                } else if (hotelOccupationData && typeof hotelOccupationData === 'object' && hotelOccupationData.error) {
+                    // If it's an error object, push it directly into the array
+                    allBreakdownItems.push(hotelOccupationData);
                 }
             }
             occupationBreakdownAllHotels.value = allBreakdownItems;
