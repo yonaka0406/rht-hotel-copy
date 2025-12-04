@@ -676,6 +676,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 - Refactor: Rewrote the SQL query in selectCountReservation (api/models/report/main.js) to use materialized CTEs for better performance and readability
 - Feature: Added sales category to plan rates to track non-accommodation sales and adjusted occupancy rate calculations accordingly
+- Feature: Enhanced Reporting module with the ability to download occupation data breakdown for detailed analysis
 
 ---
 
