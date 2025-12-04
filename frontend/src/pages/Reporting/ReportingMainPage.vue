@@ -691,32 +691,35 @@
         }
     };
 
-    const handleDateChange = async (newDate) => {
+    // Debounce timer
+    let fetchTimeout = null;
+
+    const debouncedFetch = () => {
+        if (fetchTimeout) clearTimeout(fetchTimeout);
+        fetchTimeout = setTimeout(() => {
+            reportTriggerKey.value = Date.now();
+            fetchData();
+        }, 50);
+    };
+
+    const handleDateChange = (newDate) => {
         selectedDate.value = newDate;
-        reportTriggerKey.value = Date.now();
-        await fetchData(); 
+        debouncedFetch();
     };
-    const handlePeriodChange = async (newPeriod) => {
+    const handlePeriodChange = (newPeriod) => {
         period.value = newPeriod;
-        reportTriggerKey.value = Date.now(); 
-        await fetchData(); 
+        debouncedFetch();
     };
-    const handleHotelChange = async (newSelectedHotelIds, hotelsFromMenu) => {
+    const handleHotelChange = (newSelectedHotelIds, hotelsFromMenu) => {
         selectedHotels.value = newSelectedHotelIds;
         allHotels.value = hotelsFromMenu; 
-        reportTriggerKey.value = Date.now(); 
-        // console.log('RMP: allHotels updated by handleHotelChange:', allHotels.value);
-        await fetchData(); 
+        debouncedFetch();
     };
 
     const handleReportTypeChange = (newReportType) => {
         // console.log('RMP: Report type changed to', newReportType);
         selectedReportType.value = newReportType;
-        reportTriggerKey.value = Date.now(); 
-
-        // The check inside fetchData() will determine if it should run for summary data.
-        // For new report types, their own watchers (triggered by reportTriggerKey) will fetch data.
-        fetchData(); 
+        debouncedFetch();
     };
 
     const searchAllHotels = (hotelId) => {

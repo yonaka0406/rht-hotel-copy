@@ -14,14 +14,17 @@ const { getPool } = require('../../config/database');
  */
 const processBatchRequest = async (req, res, dataFetcher, operationName) => {
     const { hotelIds, startDate, endDate } = req.body;
+    logger.debug(`[${operationName}] Received batch request. Request ID: ${req.requestId}, Hotels: ${hotelIds}, Dates: ${startDate} to ${endDate}`);
 
     try {
         // Validate input
         if (!Array.isArray(hotelIds) || hotelIds.length === 0) {
+            logger.debug(`[${operationName}] Validation error: 'hotelIds' must be a non-empty array. Request ID: ${req.requestId}`);
             return res.status(400).json({ error: 'hotelIds must be a non-empty array' });
         }
 
         if (!startDate || !endDate) {
+            logger.debug(`[${operationName}] Validation error: 'startDate' and 'endDate' are required. Request ID: ${req.requestId}`);
             return res.status(400).json({ error: 'startDate and endDate are required' });
         }
 
@@ -32,6 +35,7 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
 
         const pool = getPool(req.requestId);
         const client = await pool.connect();
+        logger.debug(`[${operationName}] Database client connected. Request ID: ${req.requestId}`);
 
         try {
             const results = {};
@@ -39,9 +43,11 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
 
             // Use single client for all queries sequentially
             for (const hotelId of hotelIds) {
+                logger.debug(`[${operationName}] Fetching data for hotel ${hotelId}. Request ID: ${req.requestId}`);
                 try {
                     const data = await dataFetcher(req.requestId, hotelId, startDate, endDate, client);
                     results[hotelId] = data || [];
+                    logger.debug(`[${operationName}] Successfully fetched data for hotel ${hotelId}. Request ID: ${req.requestId}`);
                 } catch (err) {
                     logger.error(`[${operationName}] Failed for hotel ${hotelId}, Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
                     errors[hotelId] = err.message;
@@ -52,6 +58,7 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
         } finally {
             client.release();
+            logger.debug(`[${operationName}] Database client released. Request ID: ${req.requestId}`);
         }
     } catch (err) {
         logger.error(`[${operationName}] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
