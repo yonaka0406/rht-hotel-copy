@@ -41,11 +41,6 @@ CREATE TABLE reservations (
     PRIMARY KEY (hotel_id, id)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservations
-ADD COLUMN payment_timing TEXT CHECK (payment_timing IN ('not_set', 'prepaid', 'on-site', 'postpaid')) NOT NULL DEFAULT 'not_set';
-ALTER TABLE reservations 
-ADD COLUMN has_important_comment BOOLEAN NOT NULL DEFAULT false;
-
 -- Update the comment to include information about the new column
 COMMENT ON COLUMN reservations.has_important_comment IS 'Flag indicating if this reservation has an important comment that requires attention';
 
@@ -154,9 +149,6 @@ CREATE TABLE reservation_rates (
    PRIMARY KEY (hotel_id, id),
    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
-
--- Drop existing check constraint
-ALTER TABLE reservation_addons DROP CONSTRAINT reservation_addons_addon_type_check;
 
 -- Add new check constraint including 'parking'
 ALTER TABLE reservation_addons
