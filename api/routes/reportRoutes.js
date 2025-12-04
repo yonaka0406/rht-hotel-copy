@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getForecastDataByPlan, getAccountingDataByPlan,
     getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory,
-    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown, 
-    getChannelSummary, getCheckInOutReport, getDailyReportData, getAvailableMetricDates, generateDailyMetrics, getExportDailyReportExcel } = require('../controllers/report');const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
+    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown,
+    getChannelSummary, getCheckInOutReport, getDailyReportData, getAvailableMetricDates, generateDailyMetrics, getExportDailyReportExcel,
+    getBatchCountReservation, getBatchForecastData, getBatchAccountingData } = require('../controllers/report'); const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
 // Existing routes
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
@@ -38,5 +39,10 @@ router.get('/report/sales-by-plan/:hid/:sdate/:edate', authMiddleware, getSalesB
 router.get('/report/occupation-breakdown/:hid/:sdate/:edate', authMiddleware, getOccupationBreakdown);
 router.post('/report/channel-summary', authMiddleware, getChannelSummary);
 router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, getCheckInOutReport);
+
+// Batch endpoints for optimized multi-hotel queries
+router.post('/report/batch/count', authMiddleware, getBatchCountReservation);
+router.post('/report/batch/forecast', authMiddleware, getBatchForecastData);
+router.post('/report/batch/accounting', authMiddleware, getBatchAccountingData);
 
 module.exports = router;

@@ -152,6 +152,88 @@ export function useReportStore() {
         }
     };
 
+    /**
+     * Batch fetch reservation count data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchCountReservation = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/count', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch reservation count data:', error);
+            return {};
+        }
+    };
+
+    /**
+     * Batch fetch forecast data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchForecastData = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/forecast', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch forecast data:', error);
+            return {};
+        }
+    };
+
+    /**
+     * Batch fetch accounting data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchAccountingData = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/accounting', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch accounting data:', error);
+            return {};
+        }
+    };
+
+
     const fetchOccupationByPeriod = async (period, hotelId, refDate) => {
         try {
             // If API is not available, return limited functionality response
@@ -275,8 +357,8 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyReportExcel = async (startDate, endDate) => {        
-        try {            
+    const downloadDailyReportExcel = async (startDate, endDate) => {
+        try {
             const response = await api.get(`/report/daily/download-excel/${startDate}/${endDate}`, { responseType: 'blob' });
 
             if (!response) { // api.get might return null on auth errors or other issues
@@ -307,7 +389,7 @@ export function useReportStore() {
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポートエラー:", error);
+            console.error("エクスポ�Eトエラー:", error);
             console.error('Export failed:', error.message);
             throw error;
         }
@@ -351,12 +433,12 @@ export function useReportStore() {
                 }
 
                 document.body.removeChild(link);
-} catch { /* Ignore errors during link click, as it's a fallback */ }
+            } catch { /* Ignore errors during link click, as it's a fallback */ }
 
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポートエラー:", error);
+            console.error("エクスポ�Eトエラー:", error);
             // Just log the error without trying to use toast
             console.error('Export failed:', error.message);
             throw error;
@@ -404,7 +486,7 @@ export function useReportStore() {
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポートエラー:", error);
+            console.error("エクスポ�Eトエラー:", error);
             // Just log the error without trying to use toast
             console.error('Export failed:', error.message);
             throw error;
@@ -457,7 +539,7 @@ export function useReportStore() {
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポートエラー:", error);
+            console.error("エクスポ�Eトエラー:", error);
             // Just log the error without trying to use toast
             console.error('Export failed:', error.message);
             throw error;
@@ -502,11 +584,11 @@ export function useReportStore() {
 
             // Add specific error handling for search timeouts and server errors
             if (error.message.includes('timeout') || error.message.includes('408') || error.message.includes('504')) {
-                const timeoutError = new Error('検索がタイムアウトしました。条件を絞り込んでください。');
+                const timeoutError = new Error('検索がタイムアウトしました。条件を絞り込んでください、E);
                 timeoutError.type = 'timeout';
                 throw timeoutError;
             } else if (error.message.includes('500') || error.message.includes('server')) {
-                const serverError = new Error('サーバーエラーが発生しました。しばらく待ってから再試行してください。');
+                const serverError = new Error('サーバ�Eエラーが発生しました。しばらく征E��てから再試行してください、E);
                 serverError.type = 'server';
                 throw serverError;
             }
@@ -574,7 +656,7 @@ export function useReportStore() {
             // Handle different actions
             if (action === 'delete' && searchData.searchId) {
                 data = await api.del(`${endpoint}/${searchData.searchId}`);
-                return { success: true, message: '検索を削除しました。' };
+                return { success: true, message: '検索を削除しました、E };
             } else if (action === 'load' && searchData.searchId) {
                 data = await api.get(`${endpoint}/${searchData.searchId}`);
                 return {
@@ -587,14 +669,14 @@ export function useReportStore() {
                 data = await api.put(`${endpoint}/${searchData.searchId}`, updateData);
                 return {
                     success: true,
-                    message: '検索を更新しました。',
+                    message: '検索を更新しました、E,
                     savedSearch: data.savedSearch
                 };
             } else if (action === 'save') {
                 data = await api.post(endpoint, { ...searchData });
                 return {
                     success: true,
-                    message: '検索を保存しました。',
+                    message: '検索を保存しました、E,
                     savedSearch: data.savedSearch
                 };
             }
@@ -606,15 +688,15 @@ export function useReportStore() {
 
             // Add specific error handling for common issues
             if (error.message.includes('404')) {
-                const notFoundError = new Error('保存された検索が見つかりません。');
+                const notFoundError = new Error('保存された検索が見つかりません、E);
                 notFoundError.type = 'validation';
                 throw notFoundError;
             } else if (error.message.includes('409')) {
-                const conflictError = new Error('同じ名前の検索が既に存在します。');
+                const conflictError = new Error('同じ名前の検索が既に存在します、E);
                 conflictError.type = 'validation';
                 throw conflictError;
             } else if (error.message.includes('400')) {
-                const validationError = new Error('検索データが無効です。');
+                const validationError = new Error('検索チE�Eタが無効です、E);
                 validationError.type = 'validation';
                 throw validationError;
             }
@@ -623,7 +705,7 @@ export function useReportStore() {
             if (!error.type) {
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
                     error.type = 'network';
-                    error.message = 'ネットワーク接続を確認してください。';
+                    error.message = 'ネットワーク接続を確認してください、E;
                 } else {
                     error.type = 'unknown';
                 }
@@ -775,6 +857,5 @@ export function useReportStore() {
         fetchBookerTypeBreakdown,
         fetchForecastDataByPlan,
         fetchAccountingDataByPlan,
-        generateDailyMetricsForToday,
-    };
+        generateDailyMetricsForToday,`r`n        fetchBatchCountReservation,`r`n        fetchBatchForecastData,`r`n        fetchBatchAccountingData,`r`n    };
 }
