@@ -4,7 +4,7 @@ const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, 
     getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory,
     getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown,
     getChannelSummary, getCheckInOutReport, getDailyReportData, getAvailableMetricDates, generateDailyMetrics, getExportDailyReportExcel,
-    getBatchCountReservation, getBatchForecastData, getBatchAccountingData } = require('../controllers/report'); const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
+    getBatchCountReservation, getBatchForecastData, getBatchAccountingData, getBatchOccupationBreakdown } = require('../controllers/report'); const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
 // Existing routes
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
@@ -44,5 +44,6 @@ router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, getCheckInO
 router.post('/report/batch/count', authMiddleware, getBatchCountReservation);
 router.post('/report/batch/forecast', authMiddleware, getBatchForecastData);
 router.post('/report/batch/accounting', authMiddleware, getBatchAccountingData);
+router.post('/report/batch/occupation-breakdown', authMiddleware, getBatchOccupationBreakdown);
 
 module.exports = router;

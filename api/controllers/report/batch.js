@@ -1,4 +1,4 @@
-const { selectCountReservation, selectForecastData, selectAccountingData } = require('../../models/report');
+const { selectCountReservation, selectForecastData, selectAccountingData, fetchOccupationBreakdown } = require('../../models/report');
 const logger = require('../../config/logger');
 const { validateNumericParam } = require('../../utils/validationUtils');
 const { getPool } = require('../../config/database');
@@ -95,8 +95,18 @@ const getBatchAccountingData = async (req, res) => {
     return processBatchRequest(req, res, selectAccountingData, 'getBatchAccountingData');
 };
 
+/**
+ * Batch endpoint to fetch occupation breakdown data for multiple hotels
+ * POST /report/batch/occupation-breakdown
+ * Body: { hotelIds: [1, 2, 3], startDate: '2024-01-01', endDate: '2024-12-31' }
+ */
+const getBatchOccupationBreakdown = async (req, res) => {
+    return processBatchRequest(req, res, fetchOccupationBreakdown, 'getBatchOccupationBreakdown');
+};
+
 module.exports = {
     getBatchCountReservation,
     getBatchForecastData,
-    getBatchAccountingData
+    getBatchAccountingData,
+    getBatchOccupationBreakdown
 };
