@@ -2,8 +2,9 @@ const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
 
 // GET
-const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) => {
+const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
   const query = `
     WITH
     -- 0. Dates that actually appear in reservation_details
@@ -185,14 +186,16 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       rt.date, rt.total_rooms, rt.total_rooms_real
     ORDER BY rt.date;
   `;
-  const values = [hotelId, dateStart, dateEnd]
+  const values = [hotelId, dateStart, dateEnd];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
     throw new Error('Database error');
+  } finally {
+    if (!dbClient) client.release();
   }
 };
 
