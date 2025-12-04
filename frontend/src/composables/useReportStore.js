@@ -389,7 +389,7 @@ export function useReportStore() {
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポ�Eトエラー:", error);
+            console.error("エクスポートエラー:", error);
             console.error('Export failed:', error.message);
             throw error;
         }
@@ -438,7 +438,7 @@ export function useReportStore() {
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポ�Eトエラー:", error);
+            console.error("エクスポートエラー:", error);
             // Just log the error without trying to use toast
             console.error('Export failed:', error.message);
             throw error;
@@ -486,7 +486,7 @@ export function useReportStore() {
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポ�Eトエラー:", error);
+            console.error("エクスポートエラー:", error);
             // Just log the error without trying to use toast
             console.error('Export failed:', error.message);
             throw error;
@@ -539,7 +539,7 @@ export function useReportStore() {
             return { success: true };
 
         } catch (error) {
-            console.error("エクスポ�Eトエラー:", error);
+            console.error("エクスポートエラー:", error);
             // Just log the error without trying to use toast
             console.error('Export failed:', error.message);
             throw error;
@@ -584,11 +584,11 @@ export function useReportStore() {
 
             // Add specific error handling for search timeouts and server errors
             if (error.message.includes('timeout') || error.message.includes('408') || error.message.includes('504')) {
-                const timeoutError = new Error('検索がタイムアウトしました。条件を絞り込んでください、E);
+                const timeoutError = new Error('検索がタイムアウトしました。条件を絞り込んでください。');
                 timeoutError.type = 'timeout';
                 throw timeoutError;
-            } else if (error.message.includes('500') || error.message.includes('server')) {
-                const serverError = new Error('サーバ�Eエラーが発生しました。しばらく征E��てから再試行してください、E);
+            } else if (error.message.includes('500') || error.message.includes('server')) {                
+                const serverError = new Error('サーバーエラーが発生しました。しばらく待ってから再試行してください。');
                 serverError.type = 'server';
                 throw serverError;
             }
@@ -656,7 +656,7 @@ export function useReportStore() {
             // Handle different actions
             if (action === 'delete' && searchData.searchId) {
                 data = await api.del(`${endpoint}/${searchData.searchId}`);
-                return { success: true, message: '検索を削除しました、E };
+                return { success: true, message: '検索を削除しました。' };
             } else if (action === 'load' && searchData.searchId) {
                 data = await api.get(`${endpoint}/${searchData.searchId}`);
                 return {
@@ -669,14 +669,14 @@ export function useReportStore() {
                 data = await api.put(`${endpoint}/${searchData.searchId}`, updateData);
                 return {
                     success: true,
-                    message: '検索を更新しました、E,
+                    message: '検索を更新しました。',
                     savedSearch: data.savedSearch
                 };
             } else if (action === 'save') {
                 data = await api.post(endpoint, { ...searchData });
                 return {
                     success: true,
-                    message: '検索を保存しました、E,
+                    message: '検索を保存しました。',
                     savedSearch: data.savedSearch
                 };
             }
@@ -688,15 +688,15 @@ export function useReportStore() {
 
             // Add specific error handling for common issues
             if (error.message.includes('404')) {
-                const notFoundError = new Error('保存された検索が見つかりません、E);
+                const notFoundError = new Error('保存された検索が見つかりません。');
                 notFoundError.type = 'validation';
                 throw notFoundError;
             } else if (error.message.includes('409')) {
-                const conflictError = new Error('同じ名前の検索が既に存在します、E);
+                const conflictError = new Error('同じ名前の検索が既に存在します。');
                 conflictError.type = 'validation';
                 throw conflictError;
             } else if (error.message.includes('400')) {
-                const validationError = new Error('検索チE�Eタが無効です、E);
+                const validationError = new Error('検索データが無効です。');
                 validationError.type = 'validation';
                 throw validationError;
             }
@@ -705,7 +705,7 @@ export function useReportStore() {
             if (!error.type) {
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
                     error.type = 'network';
-                    error.message = 'ネットワーク接続を確認してください、E;
+                    error.message = 'ネットワーク接続を確認してください。';
                 } else {
                     error.type = 'unknown';
                 }
@@ -857,5 +857,8 @@ export function useReportStore() {
         fetchBookerTypeBreakdown,
         fetchForecastDataByPlan,
         fetchAccountingDataByPlan,
-        generateDailyMetricsForToday,`r`n        fetchBatchCountReservation,`r`n        fetchBatchForecastData,`r`n        fetchBatchAccountingData,`r`n    };
-}
+        generateDailyMetricsForToday,
+        fetchBatchCountReservation,
+        fetchBatchForecastData,
+        fetchBatchAccountingData,
+    };}
