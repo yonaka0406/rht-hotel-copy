@@ -97,60 +97,68 @@ const selectHotelPlanById = async (requestId, hotel_id, id, client = null) => {
     }
 };
 
-const selectAllHotelsPlans = async (requestId) => {
-    const pool = getPool(requestId);
+const selectAllHotelsPlans = async (requestId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = 'SELECT * FROM plans_hotel ORDER BY hotel_id ASC, name ASC';    
 
     try {
-        const result = await pool.query(query);
+        const result = await client.query(query);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving hotels plans:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
-const selectHotelPlans = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
+const selectHotelPlans = async (requestId, hotel_id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 ORDER BY name ASC';
     const values = [hotel_id];
 
     try {
-        const result = await pool.query(query, values);    
+        const result = await client.query(query, values);    
         return result.rows;
     } catch (err) {
         console.error('Error retrieving hotel plans:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
-const selectAvailablePlansByHotel = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
+const selectAvailablePlansByHotel = async (requestId, hotel_id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `SELECT * FROM get_available_plans_for_hotel($1)
 ORDER BY plan_type, name;`;
     const values = [hotel_id];
 
     try {
-        const result = await pool.query(query, values);    
+        const result = await client.query(query, values);    
         return result.rows;
     } catch (err) {
         console.error('Error retrieving hotel plans:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const selectAllHotelPatterns = async (requestId) => {
-    const pool = getPool(requestId);
+const selectAllHotelPatterns = async (requestId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `SELECT *, 'hotel' as template_type FROM plan_templates WHERE hotel_id IS NOT NULL ORDER BY name ASC`;
     
     try {
-        const result = await pool.query(query);
+        const result = await client.query(query);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving global patterns:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
-const selectPatternsByHotel = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
+const selectPatternsByHotel = async (requestId, hotel_id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `        
         SELECT *, 'global' as template_type FROM plan_templates WHERE hotel_id IS NULL
         UNION ALL
@@ -160,19 +168,21 @@ const selectPatternsByHotel = async (requestId, hotel_id) => {
     const values = [hotel_id];
 
     try {
-        const result = await pool.query(query, values);    
+        const result = await client.query(query, values);    
         return result.rows;
     } catch (err) {
         console.error('Error retrieving patterns for hotel:', err);
         throw err;
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
 
 
 
-const insertHotelPlan = async (requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by) => {
-    const pool = getPool(requestId);
+const insertHotelPlan = async (requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         INSERT INTO plans_hotel (hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -181,15 +191,17 @@ const insertHotelPlan = async (requestId, hotel_id, plans_global_id, name, descr
     const values = [hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error adding hotel Plan:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
-const insertPlanPattern = async (requestId, hotel_id, name, template, user_id) => {
-    const pool = getPool(requestId);
+const insertPlanPattern = async (requestId, hotel_id, name, template, user_id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         INSERT INTO plan_templates (hotel_id, name, template, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $4)
@@ -198,16 +210,18 @@ const insertPlanPattern = async (requestId, hotel_id, name, template, user_id) =
     const values = [hotel_id, name, template, user_id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error adding global pattern:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
-const updateHotelPlan = async (requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by) => {
-    const pool = getPool(requestId);
+const updateHotelPlan = async (requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         UPDATE plans_hotel
         SET plans_global_id = $1, name = $2, description = $3, plan_type = $4, color = $5, updated_by = $6
@@ -217,15 +231,17 @@ const updateHotelPlan = async (requestId, id, hotel_id, plans_global_id, name, d
     const values = [plans_global_id, name, description, plan_type, color, updated_by, hotel_id, id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error updating hotel Plan:', err);
         throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
     }
 };
-const updatePlanPattern = async (requestId, id, name, template, user_id) => {    
-    const pool = getPool(requestId);
+const updatePlanPattern = async (requestId, id, name, template, user_id, dbClient = null) => {    
+    const client = dbClient || await getPool(requestId).connect();
     const query = `
         UPDATE plan_templates
         SET name = $1, template = $2, updated_by = $3
@@ -235,11 +251,13 @@ const updatePlanPattern = async (requestId, id, name, template, user_id) => {
     const values = [name, template, user_id, id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
         console.error('Error updating plan pattern:', err);
         throw err;
+    } finally {
+        if (!dbClient) client.release();
     }
 };
 
