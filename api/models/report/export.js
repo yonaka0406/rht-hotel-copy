@@ -637,7 +637,7 @@ const selectExportAccommodationTax = async (requestId, hotelId, dateStart, dateE
       AND rd.date BETWEEN $2 AND $3
       AND rd.cancelled IS NULL
       AND rd.billable = TRUE
-      AND r.status NOT IN ('hold', 'block', 'cancelled')
+      AND r.status IN ('confirmed', 'checked_in', 'checked_out')
       AND r.type <> 'employee'
     GROUP BY rd.date, h.formal_name
     ORDER BY rd.date
