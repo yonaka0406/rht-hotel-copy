@@ -169,8 +169,8 @@ const editPlanPattern = async (req, res) => {
         const newData = await planModels.editPlanPattern(req.requestId, id, name, template, user_id);
         res.json(newData);
     } catch (err) {
-        console.error('Error edit global pattern:', err);
-        res.status(500).json({ error: 'Failed to edit global pattern' });
+        console.error('Error editing plan pattern:', err);
+        res.status(500).json({ error: 'Failed to edit plan pattern' });
     }
 };
 

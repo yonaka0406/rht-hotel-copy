@@ -271,18 +271,18 @@ onMounted(async () => {
     // Filter the selected room            
     selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id === props.room_id);
 
-    drawerHeader.value = selectedRoom.value.name + '：' + selectedRoom.value.room_number + '号室 ' + selectedRoom.value.room_type_name;
-    maxNumberOfPeople.value = selectedRoom.value.room_capacity;
-
     if (!selectedRoom.value || !selectedRoom.value.id) {
         toast.add({
             severity: 'error',
             summary: 'エラー',
-            detail: '部屋情報が見つかりません。',
+            detail: '部屋IDが見つかりません。',
             life: 3000
         });
         return;
     }
+
+    drawerHeader.value = selectedRoom.value.name + '：' + selectedRoom.value.room_number + '号室 ' + selectedRoom.value.room_type_name;
+    maxNumberOfPeople.value = selectedRoom.value.room_capacity;
 
     const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
 

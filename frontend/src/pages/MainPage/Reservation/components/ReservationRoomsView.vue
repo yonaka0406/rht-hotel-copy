@@ -1528,7 +1528,7 @@ const handleTabChange = async (newTabValue) => {
     }
     // Period change
     if (tabsRoomEditDialog.value === 4) {
-        const hotelId = editReservationDetails.value[0].hotel_id;
+        const hotelId = editReservationDetails.value?.[0]?.hotel_id;
         if (!hotelId) {
             toast.add({
                 severity: 'error',

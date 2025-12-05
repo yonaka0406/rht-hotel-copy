@@ -151,7 +151,7 @@ const selectAllHotelPatterns = async (requestId, dbClient = null) => {
         const result = await client.query(query);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving global patterns:', err);
+        console.error('Error retrieving hotel patterns:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -213,7 +213,7 @@ const insertPlanPattern = async (requestId, hotel_id, name, template, user_id, d
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error adding global pattern:', err);
+        console.error('Error inserting plan template:', { hotel_id, name, error: err });
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();

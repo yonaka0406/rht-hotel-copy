@@ -149,8 +149,8 @@ const getExportReservationDetails = async (req, res) => {
             // Note on pricing: 
             // - plan_price comes from reservation_details (sometimes rounded to nearest 100, what client pays)
             // - plan_net_price comes from reservation_rates (actual net value based on gross value before rounding)
-            // This discrepancy means the net value of sales and plan calculations may not be accurate
-            // due to rounding differences between what's charged and what's recorded in the system
+            // - This discrepancy means the net value of sales and plan calculations may not be accurate
+            // - due to rounding differences between what's charged and what's recorded in the system
             csvStream.write({
                 ホテルID: reservation.hotel_id,
                 ホテル名称: reservation.formal_name,
@@ -647,14 +647,14 @@ const getExportDailyReportExcel = async (req, res) => {
 
         // Write Summary Table for date1
         let currentRow = 1;
-        currentRow = writeSummaryTable(summarySheet, `売上サマリー (${date1})`, aggregatedData1, allMonths, currentRow);
+        currentRow = writeSummaryTable(summarySheet, `売上サマリー(${date1})`, aggregatedData1, allMonths, currentRow);
 
         // Write Summary Table for date2
         if (date1 !== date2) {
             currentRow = writeSummaryTable(summarySheet, `売上サマリー (${date2})`, aggregatedData2, allMonths, currentRow);
 
             // Write Difference Table
-            summarySheet.getCell(`A${currentRow}`).value = `差分 (${date2} - ${date1})`;
+            summarySheet.getCell(`A${currentRow}`).value = `差分(${date2} - ${date1})`;
             summarySheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
             currentRow++;
 
@@ -725,18 +725,47 @@ const getExportDailyReportExcel = async (req, res) => {
                     other_sales_cancelled: parseInt(row.other_sales_cancelled || 0),
                     created_at: formatDateTime(row.created_at),
                 });
-                const workbook = createAccommodationTaxWorkbook(result, startDate, endDate);
+            });
+        }
 
-                res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-                res.setHeader("Content-Disposition", `attachment; filename = accommodation_tax_report_${startDate}_${endDate}.xlsx`);
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename=daily_report_${date1}_${date2}.xlsx`);
 
-                await workbook.xlsx.write(res);
-                res.end();
-            } catch (err) {
-                console.error("Error generating Accommodation Tax Excel:", err);
-                res.status(500).send("Error generating Accommodation Tax Excel");
-            }
-        };
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error("Error generating daily report Excel:", err);
+        res.status(500).send("Error generating daily report Excel");
+    }
+};
+
+const { createAccommodationTaxWorkbook } = require('../../models/report/services/accommodationTaxExcel');
+
+const getExportAccommodationTax = async (req, res) => {
+    const hotelId = req.params.hid;
+    const startDate = req.params.sdate;
+    const endDate = req.params.edate;
+
+    try {
+        const result = await reportModel.selectExportAccommodationTax(req.requestId, hotelId, startDate, endDate);
+
+        if (!result || result.length === 0) {
+            return res.status(404).send("No data available for the given dates.");
+        }
+
+        const workbook = createAccommodationTaxWorkbook(result, startDate, endDate);
+
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename=accommodation_tax_report_${startDate}_${endDate}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error("Error generating Accommodation Tax Excel:", err);
+        res.status(500).send("Error generating Accommodation Tax Excel");
+    }
+};
 
 module.exports = {
     getExportReservationList,
