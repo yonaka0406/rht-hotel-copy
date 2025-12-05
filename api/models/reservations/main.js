@@ -2613,7 +2613,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               addon_name: addon.addon_name,
               addon_type: addon.addon_type, // Assuming addon.addon_type exists in the input
               quantity: addon.quantity,
-              price: addon.price,
+              price: 0,
               tax_type_id: addon.tax_type_id || 3,
               tax_rate: addon.tax_rate || 0.1,
               created_by: 1,
@@ -3522,7 +3522,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               addon_name: addon.addon_name,
               addon_type: addon.addon_type, // Assuming addon.addon_type exists in the input
               quantity: addon.quantity,
-              price: addon.price,
+              price: 0,
               tax_type_id: addon.tax_type_id || 3,
               tax_rate: addon.tax_rate || 0.1,
               created_by: 1,
