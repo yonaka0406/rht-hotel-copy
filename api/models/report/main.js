@@ -79,7 +79,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
             COALESCE(gender_counts.female_count, 0) AS female_count
         FROM
             reservations res
-		    JOIN
+        JOIN
             reservation_details rd ON res.hotel_id = rd.hotel_id AND res.id = rd.reservation_id
         LEFT JOIN (
             -- Aggregate net prices from reservation_rates split by sales_category
@@ -156,8 +156,8 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         WHERE
             rd.billable = TRUE 
             AND rd.hotel_id = $1 AND rd.date BETWEEN $2 AND $3
-			      AND res.status NOT IN('hold','block')
-			      AND res.type <> 'employee'           
+            AND res.status NOT IN('hold','block')
+            AND res.type <> 'employee'           
     )
 
     -- 4. Main Query (using calculated net prices)
@@ -188,7 +188,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
     ORDER BY rt.date;
   `;
   */
- const query = `
+  const query = `
     WITH
 
     /* -------------------------------------------------------
@@ -962,18 +962,17 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
     LEFT JOIN (
         SELECT
-            rr.hotel_id,
-            rr.reservation_details_id,
-            SUM(
-                CASE 
-                    WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
-                        CASE 
-                            WHEN rd_inner.plan_type = 'per_room' THEN rr.price
-                            ELSE rr.price * rd_inner.number_of_people
-                        END
-                    ELSE 0 
-                END
-            ) AS accommodation_price,
+            rd_inner.hotel_id,
+            rd_inner.id AS reservation_details_id,
+            -- Use actual price from reservation_details only when is_accommodation is true (edited values)
+            CASE 
+                WHEN rd_inner.is_accommodation = TRUE THEN 
+                    CASE 
+                        WHEN rd_inner.plan_type = 'per_room' THEN rd_inner.price
+                        ELSE rd_inner.price * rd_inner.number_of_people
+                    END
+                ELSE 0
+            END AS accommodation_price,
             SUM(
                 CASE 
                     WHEN rr.sales_category = 'other' THEN 
@@ -984,14 +983,19 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
                     ELSE 0 
                 END
             ) AS other_price,
+            -- Use net_price from reservation_rates (calculated from the edited gross price)
             SUM(
                 CASE 
-                    WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
+                    WHEN rd_inner.is_accommodation = TRUE THEN 
                         CASE 
-                            WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                            ELSE rr.net_price * rd_inner.number_of_people
+                            WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
+                                CASE 
+                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                                    ELSE rr.net_price * rd_inner.number_of_people
+                                END
+                            ELSE 0 
                         END
-                    ELSE 0 
+                    ELSE 0
                 END
             ) AS accommodation_net_price,
             SUM(
@@ -1005,10 +1009,10 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
                 END
             ) AS other_net_price
         FROM
-            reservation_rates rr
-        JOIN reservation_details rd_inner ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
+            reservation_details rd_inner
+        LEFT JOIN reservation_rates rr ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
         GROUP BY
-            rr.hotel_id, rr.reservation_details_id, rd_inner.plan_type, rd_inner.number_of_people
+            rd_inner.hotel_id, rd_inner.id, rd_inner.plan_type, rd_inner.number_of_people, rd_inner.is_accommodation, rd_inner.price
     ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
