@@ -14,7 +14,7 @@ async function handleCreateProject(req, res) {
         console.warn(`[${requestId}] Invalid project creation attempt: Project data is missing or empty.`);
         return res.status(400).json({ message: 'Bad Request: Project data is required.' });
     }
-    
+
     // Basic validation for project_name as it's a NOT NULL field
     if (!projectData.project_name) {
         console.warn(`[${requestId}] Invalid project creation attempt: Project name is missing.`);
@@ -23,7 +23,7 @@ async function handleCreateProject(req, res) {
 
     try {
         //console.log(`[${requestId}] Processing create project request for user: ${userId}`);
-        const newProject = await projectsModel.createProject(requestId, projectData, userId);
+        const newProject = await projectsModel.insertProject(requestId, projectData, userId);
         //console.log(`[${requestId}] Project created successfully with ID: ${newProject.id}`);
         res.status(201).json(newProject);
     } catch (error) {
@@ -46,8 +46,8 @@ async function handleGetClientProjects(req, res) {
 
     try {
         //console.log(`[${requestId}] Processing get projects for client ID: ${clientId}`);
-        const projects = await projectsModel.getProjectsByClientId(requestId, clientId);
-                        
+        const projects = await projectsModel.selectProjectsByClientId(requestId, clientId);
+
         //console.log(`[${requestId}] Successfully fetched ${projects.length} projects for client ID: ${clientId}`);
         res.status(200).json(projects);
     } catch (error) {
@@ -58,11 +58,11 @@ async function handleGetClientProjects(req, res) {
 
 async function handleGetAllProjects(req, res) {
     const { requestId } = req;
-    const { 
-        page = 1, 
-        limit = 10, 
-        searchTerm = '',         
-        specificSpecializedWorkApplicable 
+    const {
+        page = 1,
+        limit = 10,
+        searchTerm = '',
+        specificSpecializedWorkApplicable
     } = req.query;
 
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
@@ -72,15 +72,15 @@ async function handleGetAllProjects(req, res) {
     const filters = {};
     if (specificSpecializedWorkApplicable !== undefined) {
         filters.specificSpecializedWorkApplicable = (specificSpecializedWorkApplicable === 'true');
-    }    
+    }
 
     try {
         //console.log(`[${requestId}] Processing get all projects request. Page: ${page}, Limit: ${parsedLimit}, Offset: ${offset}, SearchTerm: '${searchTerm}', Filters: ${JSON.stringify(filters)}`);
-        const result = await projectsModel.getAllProjects(requestId, { 
-            limit: parsedLimit, 
-            offset, 
-            searchTerm, 
-            filters 
+        const result = await projectsModel.selectAllProjects(requestId, {
+            limit: parsedLimit,
+            offset,
+            searchTerm,
+            filters
         });
 
         res.status(200).json({
@@ -132,10 +132,10 @@ const handleUpdateProject = async (req, res) => {
     if (!projectData || Object.keys(projectData).length === 0) {
         return res.status(400).json({ message: 'Bad Request: Project data is required for update.' });
     }
-     // Basic validation for project_name if it's part of the update and required
-     if (projectData.hasOwnProperty('project_name') && !projectData.project_name) {
-         return res.status(400).json({ message: 'Bad Request: Project name cannot be empty if provided for update.' });
-     }
+    // Basic validation for project_name if it's part of the update and required
+    if (projectData.hasOwnProperty('project_name') && !projectData.project_name) {
+        return res.status(400).json({ message: 'Bad Request: Project name cannot be empty if provided for update.' });
+    }
 
     try {
         const updatedProject = await projectsModel.updateProject(requestId, projectId, projectData, userId);
