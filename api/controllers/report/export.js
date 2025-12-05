@@ -176,13 +176,13 @@ const getExportReservationDetails = async (req, res) => {
                 プラン名: reservation.plan_name,
                 プランタイプ: translatePlanType(reservation.plan_type),
                 プラン料金: reservation.plan_price,
-                "プラン料金(税抜き)": reservation.plan_net_price,                
+                "プラン料金(税抜き)": reservation.plan_net_price,
                 アドオン名: reservation.addon_name,
                 アドオン数量: reservation.addon_quantity,
                 アドオン単価: reservation.addon_price,
                 アドオン料金: Math.floor(parseFloat(reservation.addon_value)),
                 "アドオン料金(税抜き)": Math.floor(parseFloat(reservation.addon_net_value)),
-                請求対象: reservation.billable ? 'はい' : 'いいえ',                
+                請求対象: reservation.billable ? 'はい' : 'いいえ',
                 宿泊対象: reservation.is_accommodation ? 'はい' : 'いいえ',
                 売上高: reservation.billable ? planPriceAccom + addonPriceAccom : 0,
                 "売上高(税抜き)": reservation.billable ? planNetPriceAccom + addonNetPriceAccom : 0,
@@ -740,6 +740,74 @@ const getExportDailyReportExcel = async (req, res) => {
     }
 };
 
+const getExportAccommodationTax = async (req, res) => {
+    const hotelId = req.params.hid;
+    const startDate = req.params.sdate;
+    const endDate = req.params.edate;
+
+    try {
+        const result = await reportModel.selectExportAccommodationTax(req.requestId, hotelId, startDate, endDate);
+
+        if (!result || result.length === 0) {
+            return res.status(404).send("No data available for the given dates.");
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('宿泊税レポート');
+
+        // Define columns
+        worksheet.columns = [
+            { header: '日付', key: 'date', width: 15 },
+            { header: '宿泊数', key: 'accommodation_count', width: 10 },
+            { header: '非宿泊数', key: 'non_accommodation_count', width: 10 },
+            { header: 'プラン料金(宿泊)', key: 'plan_price_accom', width: 15 },
+            { header: 'プラン料金(その他)', key: 'plan_price_other', width: 15 },
+            { header: 'アドオン料金(宿泊)', key: 'addon_price_accom', width: 15 },
+            { header: 'アドオン料金(その他)', key: 'addon_price_other', width: 15 },
+            { header: '合計', key: 'total_price', width: 15 },
+        ];
+
+        // Style header
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).alignment = { horizontal: 'center' };
+
+        // Add rows
+        result.forEach(row => {
+            const planPriceAccom = parseInt(row.plan_price_accom || 0);
+            const planPriceOther = parseInt(row.plan_price_other || 0);
+            const addonPriceAccom = parseInt(row.addon_price_accom || 0);
+            const addonPriceOther = parseInt(row.addon_price_other || 0);
+            const total = planPriceAccom + planPriceOther + addonPriceAccom + addonPriceOther;
+
+            worksheet.addRow({
+                date: formatDate(new Date(row.date)),
+                accommodation_count: parseInt(row.accommodation_count || 0),
+                non_accommodation_count: parseInt(row.non_accommodation_count || 0),
+                plan_price_accom: planPriceAccom,
+                plan_price_other: planPriceOther,
+                addon_price_accom: addonPriceAccom,
+                addon_price_other: addonPriceOther,
+                total_price: total
+            });
+        });
+
+        // Format currency columns
+        ['D', 'E', 'F', 'G', 'H'].forEach(col => {
+            worksheet.getColumn(col).numFmt = '#,##0';
+        });
+
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename=accommodation_tax_report_${startDate}_${endDate}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error("Error generating Accommodation Tax Excel:", err);
+        res.status(500).send("Error generating Accommodation Tax Excel");
+    }
+};
+
 module.exports = {
     getExportReservationList,
     getExportReservationDetails,
@@ -749,4 +817,5 @@ module.exports = {
     getAvailableMetricDates,
     generateDailyMetrics,
     getExportDailyReportExcel,
+    getExportAccommodationTax,
 };

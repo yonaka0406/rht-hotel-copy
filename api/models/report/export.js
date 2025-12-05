@@ -530,7 +530,7 @@ const calculateAndSaveDailyMetrics = async (requestId) => {
 
       const result = await client.query(query, [metricDate, lastDate, hotelId]);
       console.log(`[calculateAndSaveDailyMetrics] Hotel ${hotelId}: Inserted ${result.rowCount} rows (metricDate: ${metricDate}, lastDate: ${lastDate})`);
-            
+
     }
 
     await client.query('COMMIT');
@@ -600,10 +600,53 @@ const selectDailyReportData = async (requestId, metricDate) => {
   const values = [metricDate];
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving daily report data:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectExportAccommodationTax = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      rd.date,
+      COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as accommodation_count,
+      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as non_accommodation_count,
+      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN 
+          (CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END)
+          ELSE 0 END) as plan_price_accom,
+      SUM(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN 
+          (CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END)
+          ELSE 0 END) as plan_price_other,
+      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN COALESCE(ra_sum.price, 0) ELSE 0 END) as addon_price_accom,
+      SUM(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN COALESCE(ra_sum.price, 0) ELSE 0 END) as addon_price_other
+    FROM reservation_details rd
+    JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+    LEFT JOIN (
+      SELECT reservation_detail_id, SUM(price * quantity) as price
+      FROM reservation_addons
+      WHERE hotel_id = $1
+      GROUP BY reservation_detail_id
+    ) ra_sum ON rd.id = ra_sum.reservation_detail_id
+    WHERE rd.hotel_id = $1
+      AND rd.date BETWEEN $2 AND $3
+      AND rd.cancelled IS NULL
+      AND rd.billable = TRUE
+      AND r.status NOT IN ('hold', 'block', 'cancelled')
+      AND r.type <> 'employee'
+    GROUP BY rd.date
+    ORDER BY rd.date
+  `;
+  const values = [hotelId, dateStart, dateEnd];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving accommodation tax data:', err);
     throw new Error('Database error');
   }
 };
@@ -615,4 +658,5 @@ module.exports = {
   calculateAndSaveDailyMetrics,
   selectDailyReportData,
   getAvailableMetricDates,
+  selectExportAccommodationTax,
 };

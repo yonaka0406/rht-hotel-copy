@@ -573,6 +573,50 @@ export function useReportStore() {
         }
     };
 
+    const exportAccommodationTax = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, export functionality limited');
+                throw new Error('API not available, export functionality limited');
+            }
+
+            const response = await fetch(`/api/report/download/accommodation-tax/${hotelId}/${startDate}/${endDate}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch Excel");
+            }
+
+            const blob = await response.blob();
+            const dlURL = window.URL.createObjectURL(blob);
+
+            try {
+                const link = document.createElement("a");
+                link.href = dlURL;
+                link.setAttribute("download", `accommodation_tax_${startDate}_${endDate}.xlsx`);
+                document.body.appendChild(link);
+
+                if (typeof link.click === 'function') {
+                    link.click();
+                }
+
+                document.body.removeChild(link);
+            } catch { }
+
+            return { success: true };
+
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            console.error('Export failed:', error.message);
+            throw error;
+        }
+    };
+
     // Search-specific API methods
     const searchReservations = async (hotelId, searchParams) => {
         const { query, filters = [], fuzzy = false, phoneticSearch = true } = searchParams;
@@ -614,7 +658,7 @@ export function useReportStore() {
                 const timeoutError = new Error('検索がタイムアウトしました。条件を絞り込んでください。');
                 timeoutError.type = 'timeout';
                 throw timeoutError;
-            } else if (error.message.includes('500') || error.message.includes('server')) {                
+            } else if (error.message.includes('500') || error.message.includes('server')) {
                 const serverError = new Error('サーバーエラーが発生しました。しばらく待ってから再試行してください。');
                 serverError.type = 'server';
                 throw serverError;
@@ -869,6 +913,7 @@ export function useReportStore() {
         exportReservationList,
         exportReservationDetails,
         exportMealCount,
+        exportAccommodationTax,
         fetchActiveReservationsChange,
         fetchMonthlyReservationEvolution,
         searchReservations,
@@ -889,4 +934,5 @@ export function useReportStore() {
         fetchBatchForecastData,
         fetchBatchAccountingData,
         fetchBatchOccupationBreakdown,
-    };}
+    };
+}

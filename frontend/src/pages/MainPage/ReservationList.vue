@@ -270,7 +270,7 @@ import { FilterMatchMode } from '@primevue/core/api';
 
 // Stores
 import { useReportStore } from '@/composables/useReportStore';
-const { reservationList, fetchReservationListView, exportReservationList, exportReservationDetails, exportMealCount } = useReportStore();
+const { reservationList, fetchReservationListView, exportReservationList, exportReservationDetails, exportMealCount, exportAccommodationTax } = useReportStore();
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -576,6 +576,7 @@ const openDrawer = (event) => {
 const exportOptions = ref([
     { label: "予約の詳細をエクスポート", icon: "pi pi-file", command: () => splitButtonExportReservationDetails() },
     { label: "食事件数をエクスポート", icon: "pi pi-file-excel", command: () => splitButtonExportMealCount() },
+    { label: "宿泊税レポート", icon: "pi pi-file-excel", command: () => splitButtonExportAccommodationTax() },
 ]);
 const splitButtonExportReservations = async () => {
     try {
@@ -605,6 +606,15 @@ const splitButtonExportMealCount = async () => {
             return;
         }
         toast.add({ severity: "success", summary: "成功", detail: "食事件数をエクスポートしました", life: 3000 });
+    } catch (error) {
+        console.error("エクスポートエラー:", error);
+        toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
+    }
+};
+const splitButtonExportAccommodationTax = async () => {
+    try {
+        await exportAccommodationTax(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
+        toast.add({ severity: "success", summary: "成功", detail: "宿泊税レポートをエクスポートしました", life: 3000 });
     } catch (error) {
         console.error("エクスポートエラー:", error);
         toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
