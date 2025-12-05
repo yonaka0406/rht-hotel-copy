@@ -1,10 +1,9 @@
-const { getAllGlobalPlans, getAllHotelsPlans, getAllHotelPlans, getAllPlansByHotel, getAllPatternsByHotel, getAllGlobalPatterns, getAllHotelPatterns, 
-    newGlobalPlan, newHotelPlan, newPlanPattern, updateGlobalPlan, updateHotelPlan, updatePlanPattern } = require('../models/plan');
+const planModels = require('../../models/plan');
 
 // GET
 const getGlobalPlans = async (req, res) => {
     try {
-        const Plans = await getAllGlobalPlans(req.requestId);
+        const Plans = await planModels.selectGlobalPlans(req.requestId);
         res.json(Plans);
     } catch (error) {
         console.error('Error getting global Plans:', error);
@@ -13,7 +12,7 @@ const getGlobalPlans = async (req, res) => {
 };
 const getHotelsPlans = async (req, res) => {
     try {
-        const Plans = await getAllHotelsPlans(req.requestId);
+        const Plans = await planModels.selectAllHotelsPlans(req.requestId);
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel Plans:', error);
@@ -28,7 +27,7 @@ const getHotelPlans = async (req, res) => {
     }
 
     try {
-        const Plans = await getAllHotelPlans(req.requestId, hotel_id);
+        const Plans = await planModels.selectHotelPlans(req.requestId, hotel_id);
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel Plans:', error);
@@ -43,7 +42,7 @@ const fetchAllHotelPlans = async (req, res) => {
     }
 
     try {
-        const Plans = await getAllPlansByHotel(req.requestId, hotel_id);
+        const Plans = await planModels.selectAvailablePlansByHotel(req.requestId, hotel_id);
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel Plans:', error);
@@ -53,7 +52,7 @@ const fetchAllHotelPlans = async (req, res) => {
 
 const getGlobalPatterns = async (req, res) => {
     try {
-        const patterns = await getAllGlobalPatterns(req.requestId);
+        const patterns = await planModels.selectGlobalPatterns(req.requestId);
         res.json(patterns);
     } catch (error) {
         console.error('Error getting global patterns:', error);
@@ -62,7 +61,7 @@ const getGlobalPatterns = async (req, res) => {
 };
 const getHotelPatterns = async (req, res) => {
     try {
-        const patterns = await getAllHotelPatterns(req.requestId);
+        const patterns = await planModels.selectAllHotelPatterns(req.requestId);
         res.json(patterns);
     } catch (error) {
         console.error('Error getting hotel patterns:', error);
@@ -77,7 +76,7 @@ const fetchAllHotelPatterns = async (req, res) => {
     }
 
     try {
-        const Plans = await getAllPatternsByHotel(req.requestId, hotel_id);
+        const Plans = await planModels.selectPatternsByHotel(req.requestId, hotel_id);
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel patterns:', error);
@@ -95,7 +94,7 @@ const createGlobalPlan = async (req, res) => {
     const color = '#' + colorHEX;
 
     try {
-        const newPlan = await newGlobalPlan(req.requestId, name, description, plan_type, color, created_by, updated_by);
+        const newPlan = await planModels.insertGlobalPlan(req.requestId, name, description, plan_type, color, created_by, updated_by);
         res.json(newPlan);
     } catch (err) {
         console.error('Error creating global Plan:', err);
@@ -110,7 +109,7 @@ const createHotelPlan = async (req, res) => {
     const color = '#' + colorHEX;
 
     try {
-        const newPlan = await newHotelPlan(req.requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by);
+        const newPlan = await planModels.insertHotelPlan(req.requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by);
         res.json(newPlan);
     } catch (err) {
         console.error('Error creating hotel Plan:', err);
@@ -122,7 +121,7 @@ const createPlanPattern = async (req, res) => {
     const user_id = req.user.id;    
 
     try {
-        const newData = await newPlanPattern(req.requestId, hotel_id, name, template, user_id);
+        const newData = await planModels.insertPlanPattern(req.requestId, hotel_id, name, template, user_id);
         res.json(newData);
     } catch (err) {
         console.error('Error creating plan pattern:', err);
@@ -139,7 +138,7 @@ const editGlobalPlan = async (req, res) => {
     const color = '#' + colorHEX;
 
     try {
-        const updatedPlan = await updateGlobalPlan(req.requestId, id, name, description, plan_type, color, updated_by);
+        const updatedPlan = await planModels.updateGlobalPlan(req.requestId, id, name, description, plan_type, color, updated_by);
         res.json(updatedPlan);
     } catch (err) {
         console.error('Error updating global Plan:', err);
@@ -154,7 +153,7 @@ const editHotelPlan = async (req, res) => {
     const color = '#' + colorHEX;
 
     try {
-        const updatedPlan = await updateHotelPlan(req.requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by);
+        const updatedPlan = await planModels.updateHotelPlan(req.requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by);
         res.json(updatedPlan);
     } catch (err) {
         console.error('Error updating hotel Plan:', err);
@@ -167,7 +166,7 @@ const editPlanPattern = async (req, res) => {
     const user_id = req.user.id;    
 
     try {
-        const newData = await updatePlanPattern(req.requestId, id, name, template, user_id);
+        const newData = await planModels.editPlanPattern(req.requestId, id, name, template, user_id);
         res.json(newData);
     } catch (err) {
         console.error('Error edit global pattern:', err);

@@ -1662,10 +1662,10 @@ Need to add a staff room flag to the rooms table to visually distinguish staff r
 - **Description**: Pattern-based plan application is not working as expected in the production environment. Some patterns completely remove all plans from the reservation, while others only apply one of the selected plans from the pattern instead of all of them.
 - **Environment**: Production
 - **Root Cause**: 
-  - The [getPlanByKey] function in [api/models/plan.js] had logical issues in handling plan keys
+  - The [selectPlanByKey] function in [api/models/plan.js] had logical issues in handling plan keys
   - The function wasn't properly extracting and validating both global and hotel plan IDs from the pattern key
 - **Solution**:
-  - Fixed the logic in [getPlanByKey] to correctly parse and validate plan keys
+  - Fixed the logic in [selectPlanByKey] to correctly parse and validate plan keys
   - Added proper error handling and debug logging
   - Ensured all code paths properly define and use variables
   - Fixed plan key parsing and validation logic

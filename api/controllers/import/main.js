@@ -1,6 +1,6 @@
 const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData, insertAccountingData, getPrefilledData } = require('../../models/import');
 const { getAllHotels } = require('../../models/hotel');
-const { getAllGlobalPlans } = require('../../models/plan');
+const planModels = require('../../models/plan');
 const validationUtils = require('../../utils/validationUtils');
 const csvGenerator = require('./services/csvGenerator');
 const { format } = require('fast-csv');
@@ -40,7 +40,7 @@ async function getPrefilledTemplate(req, res) {
     // Fetch prefilled data from the database
     const prefilledData = await getPrefilledData(req.requestId, validatedType, formattedMonth1, formattedMonth2);
     const hotels = await getAllHotels(req.requestId);
-    const plans = await getAllGlobalPlans(req.requestId);
+    const plans = await planModels.selectGlobalPlans(req.requestId);
     plans.unshift({ id: null, name: 'プランなし' }); // Add a 'No Plan' option
 
     if (validatedType === 'forecast') {
