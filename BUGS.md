@@ -7,23 +7,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### December 1, 2025
 
-#### 宿泊税 (Accommodation Tax) Report Download
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: User Request
-- **Description**:
-  - Add functionality to download 宿泊税 (Accommodation Tax) reports directly from the 予約一覧 (Reservation List) page
-  - The report should include all necessary tax information for the selected reservations
-- **Requested Changes**:
-  1. Add a download button for the 宿泊税 report in the 予約一覧 page
-  2. Include relevant tax details in the report (e.g., guest names, stay dates, room rates, tax amounts)
-  3. Support date range filtering for the report
-  4. Generate the report in Excel format for easy processing
-- **Technical Notes**:
-  - Ensure the report includes all required fields for tax filing
-  - Consider adding a print-friendly format option
-  - Include validation to ensure all required data is present before generating the report
-
 #### Monthly Report Tax Value Issue
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
@@ -43,34 +26,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding a toggle to switch between tax-included and tax-excluded views if needed
   - Verify that all monetary values in the report are consistently using the same tax treatment
   - Ensure the fix doesn't affect other reports or modules
-
-### November 28, 2025
-
-#### Wehub Dashboard Metrics Adjustment
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: User Request
-- **Description**: 
-  - On the Wehub dashboard, the following metrics should exclude on-hold (キープ) reservations:
-    - 稼働率 (Occupancy Rate)
-    - 売上 (Revenue)
-    - ADR (Average Daily Rate)
-    - RevPAR (Revenue Per Available Room)
-  - However, the system should still track and display the total revenue from on-hold reservations separately
-  - Add a flag to the plan to distinguish between accommodation sales and non-accommodation sales
-- **Requested Changes**:
-  1. Modify dashboard calculations to exclude on-hold reservations from the main metrics
-  2. Add a separate section or indicator showing the total revenue from on-hold reservations
-  3. Ensure the data remains accurate and consistent across all reports
-  4. Add a flag to the plan to identify accommodation vs non-accommodation sales
-- **Technical Notes**:
-  - Review and update the database queries that calculate these metrics
-  - Add a new field or status indicator for on-hold reservations
-  - Add a new boolean flag `is_accommodation_sales` to the plan table (default: true)
-  - Update all relevant queries to filter by this flag when calculating metrics
-  - Changes should be effective from January 2026 onwards
-  - Ensure the changes don't affect historical data reporting
-  - Add appropriate tooltips or help text to explain the metrics
 
 ### November 27, 2025
 

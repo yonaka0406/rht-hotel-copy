@@ -680,6 +680,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.3.1] - 2025-12-05
+
+- Feature: Added 宿泊税 (Accommodation Tax) Report Download functionality
+
+---
+
 ## Version History
 - **1.3.0** (2025-12-04) - Enhanced reporting with sales categories and materialized CTEs for better performance. Fixed addon duplication and billing calculation issues.
 - **1.2.4** (2025-12-03) - Fixed addon duplication in day detail dialog and resolved billing calculation issues for cancelled dates. Refactored addon management into a dedicated module for better code organization and maintainability.
