@@ -35,7 +35,7 @@ const ReservationEdit = () => import('@/pages/MainPage/Reservation/ReservationEd
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
 const StaticCalendar = () => import('@/pages/MainPage/StaticCalendar/StaticCalendar.vue');
 const ParkingCalendar = () => import('@/pages/MainPage/ParkingCalendar/ParkingCalendar.vue');
-const ReservationList = () => import('@/pages/MainPage/ReservationList.vue');
+const ReservationList = () => import('@/pages/MainPage/ReservationList/ReservationList.vue');
 const BillingInvoices = () => import('@/pages/MainPage/BillingInvoices.vue');
 const ReceiptsPage = () => import('@/pages/MainPage/ReceiptsPage.vue'); // Added import
 const ReportDaily = () => import('@/pages/MainPage/ReportDaily.vue');
@@ -56,7 +56,8 @@ const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue'
 const AboutPage = () => import('@/pages/About/AboutPage.vue');
 
 const routes = [
-  {path: '/',
+  {
+    path: '/',
     name: 'MainPage',
     component: MainPage,
     children: [
@@ -74,17 +75,20 @@ const routes = [
       { path: '/report/monthly', name: 'ReportMonthly', component: ReportMonthly },
     ],
     meta: { requiresAuth: true },
-  },  
-  {path: '/login',
+  },
+  {
+    path: '/login',
     name: 'Login',
     component: Login,
   },
-  {path: '/forgot-password',
+  {
+    path: '/forgot-password',
     name: 'ForgotPassword',
     component: ForgotPassword,
   },
-  {path: '/reset-password',
-    name: 'ResetPassword',    
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
     component: ResetPassword,
   },
   {
@@ -92,7 +96,8 @@ const routes = [
     name: 'AuthCallback',
     component: AuthCallback,
   },
-  {path: '/admin',
+  {
+    path: '/admin',
     component: AdminPanel,
     children: [
       { path: 'users', component: ManageUsers },
@@ -114,26 +119,28 @@ const routes = [
     ],
     meta: { requiresAuth: true },
   },
-  {path: '/crm',
+  {
+    path: '/crm',
     component: ClientHomePage,
     children: [
       { path: 'dashboard', component: ClientDashboard },
       { path: 'clients/all', component: ClientList },
       { path: 'clients/duplicates', component: ClientDuplicates },
-      { path: 'clients/edit/:clientId', name: 'ClientEdit', component: ClientEdit, props: true },      
+      { path: 'clients/edit/:clientId', name: 'ClientEdit', component: ClientEdit, props: true },
       { path: 'groups/all', component: ClientGroupList },
       { path: 'groups/edit/:groupId', name: 'ClientGroupEdit', component: ClientGroupEdit, props: true },
       { path: 'sales/interactions', name: 'SalesInteractions', component: SalesInteractions },
-      { 
-        path: 'sales/projects', 
-        name: 'ProjectListAll', 
+      {
+        path: 'sales/projects',
+        name: 'ProjectListAll',
         component: SalesProjectList,
         meta: { title: 'PJ・工事一覧' }
       },
     ],
     meta: { requiresAuth: true },
   },
-  {path: '/reporting',
+  {
+    path: '/reporting',
     component: ReportingMainPage,
     children: [],
     meta: { requiresAuth: true },
@@ -161,9 +168,9 @@ const routes = [
   // Catch-all 404 route
   {
     path: '/:pathMatch(.*)*',
-    name: 'NotFound',    
+    name: 'NotFound',
     component: NotFound,
-  },  
+  },
 ];
 
 const router = createRouter({
@@ -183,10 +190,10 @@ router.beforeEach((to, from, next) => {
   if (isAuthenticated && to.name === 'Login') {
     return next({ name: 'RoomIndicator' });
   }
-  
+
   // Redirect to RoomIndicator if path is '/'
   if (to.path === '/') {
-      return next({ name: 'RoomIndicator' });  
+    return next({ name: 'RoomIndicator' });
   }
 
   const verifyToken = async (url) => {
@@ -207,13 +214,13 @@ router.beforeEach((to, from, next) => {
           // Specific handling for insufficient permissions
           if (data.error && data.error.includes('Insufficient permissions')) {
             next({ name: 'MainPage' });
-            return false;          
+            return false;
           }
 
           // Only clear token on authentication errors (401, 403)
           if (response.status === 401 || response.status === 403) {
             console.log('Authentication error, clearing token');
-            localStorage.removeItem('authToken');        
+            localStorage.removeItem('authToken');
             next({ name: 'Login' });
           } else {
             // For other errors, log but don't log out the user
@@ -230,13 +237,13 @@ router.beforeEach((to, from, next) => {
       }
 
       return true;
-    } catch (error) {      
+    } catch (error) {
       console.error('Network/request error during token verification:', {
         name: error.name,
         message: error.message,
         ...(import.meta.env.DEV ? { stack: error.stack } : {})
       });
-      
+
       // Don't log out on network errors, just continue
       // The user might be offline or the server might be temporarily unavailable
       next();
