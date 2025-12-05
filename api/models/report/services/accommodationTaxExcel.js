@@ -5,6 +5,9 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('宿泊税レポート');
 
+    // Hide grid lines
+    worksheet.views = [{ showGridLines: false }];
+
     // 1. Merged Header (A1:H1)
     worksheet.mergeCells('A1:H1');
     const titleCell = worksheet.getCell('A1');
@@ -31,7 +34,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
 
     const taxRateValueCell = worksheet.getCell('B3');
     taxRateValueCell.value = null; // User can input this
-    taxRateValueCell.numFmt = '0%';
+    taxRateValueCell.numFmt = '0.00%';
     taxRateValueCell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
@@ -100,6 +103,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
     ];
 
     // 5. Add Data Rows (Starting from Row 6)
+    let lastDataRowIndex = 5;
     data.forEach((row, index) => {
         const planPriceAccom = parseInt(row.plan_price_accom || 0);
         const planPriceOther = parseInt(row.plan_price_other || 0);
@@ -107,6 +111,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
         const addonPriceOther = parseInt(row.addon_price_other || 0);
         const total = planPriceAccom + planPriceOther + addonPriceAccom + addonPriceOther;
         const rowIndex = 6 + index;
+        lastDataRowIndex = rowIndex;
 
         // Formula: IF(B3<>"", ROUNDDOWN(D{row}*B3, 0), IF(D3<>"", ROUNDDOWN(B{row}*D3, 0), 0))
         // D{row} is Plan Price Accom (Column D)
@@ -127,14 +132,63 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
         });
     });
 
+    // 6. Add Total Row
+    const totalRowIndex = lastDataRowIndex + 1;
+    const totalRow = worksheet.getRow(totalRowIndex);
+    totalRow.getCell('A').value = '合計';
+    totalRow.getCell('B').value = { formula: `SUM(B6:B${lastDataRowIndex})` };
+    totalRow.getCell('C').value = { formula: `SUM(C6:C${lastDataRowIndex})` };
+    totalRow.getCell('D').value = { formula: `SUM(D6:D${lastDataRowIndex})` };
+    totalRow.getCell('E').value = { formula: `SUM(E6:E${lastDataRowIndex})` };
+    totalRow.getCell('F').value = { formula: `SUM(F6:F${lastDataRowIndex})` };
+    totalRow.getCell('G').value = { formula: `SUM(G6:G${lastDataRowIndex})` };
+    totalRow.getCell('H').value = { formula: `SUM(H6:H${lastDataRowIndex})` };
+    totalRow.getCell('J').value = { formula: `SUM(J6:J${lastDataRowIndex})` };
+
+    totalRow.font = { bold: true };
+    totalRow.eachCell((cell) => {
+        if (cell.col !== 9) { // Skip column I (empty)
+            cell.border = { top: { style: 'thin' } };
+        }
+    });
+
+
     // Format currency columns (D, E, F, G, H, J)
-    // Rows start from 6 to end
-    const lastRow = worksheet.lastRow.number;
-    for (let i = 6; i <= lastRow; i++) {
+    // Rows start from 6 to totalRowIndex
+    for (let i = 6; i <= totalRowIndex; i++) {
         ['D', 'E', 'F', 'G', 'H', 'J'].forEach(col => {
             worksheet.getCell(`${col}${i}`).numFmt = '#,##0';
         });
     }
+
+    // 7. Autofit Columns
+    worksheet.columns.forEach((column) => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+            // Skip header rows (1-4) for width calculation to avoid skewing by title
+            if (cell.row <= 4) return;
+
+            let cellValue = '';
+            if (cell.value && typeof cell.value === 'object' && cell.value.formula) {
+                // Estimate formula result length (rough guess)
+                cellValue = '00000000';
+            } else {
+                cellValue = cell.value ? cell.value.toString() : '';
+            }
+
+            // Handle Japanese characters (roughly 2x width)
+            let length = 0;
+            for (let i = 0; i < cellValue.length; i++) {
+                const code = cellValue.charCodeAt(i);
+                // Simple check for full-width chars
+                if (code > 255) length += 2;
+                else length += 1;
+            }
+
+            maxLength = Math.max(maxLength, length);
+        });
+        column.width = Math.min(Math.max(maxLength + 2, 12), 50);
+    });
 
     return workbook;
 };
