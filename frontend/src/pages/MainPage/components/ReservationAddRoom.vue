@@ -274,6 +274,16 @@ onMounted(async () => {
     drawerHeader.value = selectedRoom.value.name + '：' + selectedRoom.value.room_number + '号室 ' + selectedRoom.value.room_type_name;
     maxNumberOfPeople.value = selectedRoom.value.room_capacity;
 
+    if (!selectedRoom.value || !selectedRoom.value.id) {
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: 'ホテルIDが見つかりません。',
+            life: 3000
+        });
+        return;
+    }
+
     const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
 
     if (datesResult && datesResult.earliestCheckIn) {

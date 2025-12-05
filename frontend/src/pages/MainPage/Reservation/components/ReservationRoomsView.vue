@@ -1529,6 +1529,15 @@ const handleTabChange = async (newTabValue) => {
     // Period change
     if (tabsRoomEditDialog.value === 4) {
         const hotelId = editReservationDetails.value[0].hotel_id;
+        if (!hotelId) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: 'ホテルIDが見つかりません。',
+                life: 3000
+            });
+            return;
+        }
         const roomId = selectedGroup.value.room_id;
         newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
         newCheckOut.value = new Date(editReservationDetails.value[0].check_out);

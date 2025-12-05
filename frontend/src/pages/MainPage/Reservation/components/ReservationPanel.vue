@@ -1257,6 +1257,15 @@ const handleTabChange = async (newTabValue) => {
         roomsAvailableChanges.value = [];
         selectedRoomsForChange.value = [];
         const hotelId = reservationInfo.value.hotel_id;
+        if (!hotelId) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: 'ホテルIDが見つかりません。',
+                life: 3000
+            });
+            return;
+        }
         newCheckIn.value = new Date(reservationInfo.value.check_in);
         newCheckOut.value = new Date(reservationInfo.value.check_out);
 
