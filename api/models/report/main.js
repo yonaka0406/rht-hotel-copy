@@ -973,16 +973,15 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
                     END
                 ELSE 0
             END AS accommodation_price,
-            SUM(
-                CASE 
-                    WHEN rr.sales_category = 'other' THEN 
-                        CASE 
-                            WHEN rd_inner.plan_type = 'per_room' THEN rr.price
-                            ELSE rr.price * rd_inner.number_of_people
-                        END
-                    ELSE 0 
-                END
-            ) AS other_price,
+            -- Use actual price from reservation_details for other sales when is_accommodation is false
+            CASE 
+                WHEN rd_inner.is_accommodation = FALSE THEN 
+                    CASE 
+                        WHEN rd_inner.plan_type = 'per_room' THEN rd_inner.price
+                        ELSE rd_inner.price * rd_inner.number_of_people
+                    END
+                ELSE 0
+            END AS other_price,
             -- Use net_price from reservation_rates (calculated from the edited gross price)
             SUM(
                 CASE 
@@ -998,14 +997,19 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
                     ELSE 0
                 END
             ) AS accommodation_net_price,
+            -- Use net_price from reservation_rates for other sales when is_accommodation is false
             SUM(
                 CASE 
-                    WHEN rr.sales_category = 'other' THEN 
+                    WHEN rd_inner.is_accommodation = FALSE THEN 
                         CASE 
-                            WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                            ELSE rr.net_price * rd_inner.number_of_people
+                            WHEN rr.sales_category = 'other' OR rr.sales_category IS NULL THEN 
+                                CASE 
+                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
+                                    ELSE rr.net_price * rd_inner.number_of_people
+                                END
+                            ELSE 0 
                         END
-                    ELSE 0 
+                    ELSE 0
                 END
             ) AS other_net_price
         FROM
