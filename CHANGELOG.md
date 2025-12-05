@@ -659,16 +659,16 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Enhanced OTA notifications with failed XML queue and combined data display
 - Feature: Migrated from Puppeteer to Playwright for PDF generation, improving reliability and performance
 - Feature: Added versioning system for receipts with customizable templates, allowing for better tracking and management of receipt formats
-- Fix: Resolved issue where parking addons were being erased when changing reservation plans
-- Fix: Fixed issue where temporary blocked rooms were not saving the correct number of people when converted to reservations
+- Bugfix: Resolved issue where parking addons were being erased when changing reservation plans
+- Bugfix: Fixed issue where temporary blocked rooms were not saving the correct number of people when converted to reservations
 
 ---
 
 ## [1.2.4] - 2025-12-03
 
-- Fix: Resolved issue where addons were being duplicated when added through the day detail dialog
+- Bugfix: Resolved issue where addons were being duplicated when added through the day detail dialog
 - Refactor: Moved addon management logic to a dedicated module for better maintainability
-- Fix: Fixed issue where addons were not being summed to the billable value for cancelled dates in the billing page
+- Bugfix: Fixed issue where addons were not being summed to the billable value for cancelled dates in the billing page
 
 ---
 
@@ -678,11 +678,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added sales category to plan rates to track non-accommodation sales and adjusted occupancy rate calculations accordingly
 - Feature: Enhanced Reporting module with the ability to download occupation data breakdown for detailed analysis
 
+
 ---
 
 ## [1.3.1] - 2025-12-05
 
 - Feature: Added 宿泊税 (Accommodation Tax) Report Download functionality
+- Bugfix: Prevented double-counting addon prices in OTA reservations by setting addon prices to 0 in addOTAReservation and editOTAReservation to avoid inflating the total reservation price, as OTA source prices are final
 
 ---
 
