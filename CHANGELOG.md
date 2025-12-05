@@ -672,7 +672,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## [1.3.1] - 2025-12-04
+## [1.3.0] - 2025-12-04
 
 - Refactor: Rewrote the SQL query in selectCountReservation (api/models/report/main.js) to use materialized CTEs for better performance and readability
 - Feature: Added sales category to plan rates to track non-accommodation sales and adjusted occupancy rate calculations accordingly
@@ -681,11 +681,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## Version History
-- 1.2.4 (2025-12-03) – Fixed addon duplication in day detail dialog and resolved billing calculation issues for cancelled dates. Refactored addon management into a dedicated module for better code organization and maintainability.
-- 1.2.3 (2025-12-01) – Enhanced OTA notifications with failed XML queue, migrated to Playwright for more reliable PDF generation, and introduced receipt versioning with customizable templates. Fixed issues with parking addons during plan changes and improved handling of temporary room blocks.
-- 1.2.2 (2025-11-25) – Added staff room categorization with visual distinction in the calendar and improved room indicator accuracy for check-in/check-out status. Fixed date calculation issues and cleaned up debug logs.
-- 1.2.1 (2025-11-19) – Fixed critical database client pooling inconsistencies affecting rate calculations, restored missing guest and gender details in the room indicator, and improved stay-date logic for checkout detection. Added room-specific stay dates to Guest List Excel export, implemented OTA XML queuing for rate-limit-safe integrations, expanded calendar month navigation, optimized websockets for hotel-specific updates, and refactored the guest list dialog for consistency.
-- 1.2.0 (2025-11-11) – Introduced comprehensive Parking Module with spot blocking for external hotel integration and room swapping capability in the reservation calendar. Fixed memory leaks in plan pattern bulk edit operations, significantly improving performance for large reservation batches.
+- **1.3.0** (2025-12-04) - Enhanced reporting with sales categories and materialized CTEs for better performance. Fixed addon duplication and billing calculation issues.
+- **1.2.4** (2025-12-03) - Fixed addon duplication in day detail dialog and resolved billing calculation issues for cancelled dates. Refactored addon management into a dedicated module for better code organization and maintainability.
+- **1.2.3** (2025-12-01) – Enhanced OTA notifications with failed XML queue, migrated to Playwright for more reliable PDF generation, and introduced receipt versioning with customizable templates. Fixed issues with parking addons during plan changes and improved handling of temporary room blocks.
+- **1.2.2** (2025-11-25) – Added staff room categorization with visual distinction in the calendar and improved room indicator accuracy for check-in/check-out status. Fixed date calculation issues and cleaned up debug logs.
+- **1.2.1** (2025-11-19) – Fixed critical database client pooling inconsistencies affecting rate calculations, restored missing guest and gender details in the room indicator, and improved stay-date logic for checkout detection. Added room-specific stay dates to Guest List Excel export, implemented OTA XML queuing for rate-limit-safe integrations, expanded calendar month navigation, optimized websockets for hotel-specific updates, and refactored the guest list dialog for consistency.
+- **1.2.0** (2025-11-11) – Introduced comprehensive Parking Module with spot blocking for external hotel integration and room swapping capability in the reservation calendar. Fixed memory leaks in plan pattern bulk edit operations, significantly improving performance for large reservation batches.
 - **1.1.31** (2025-11-06) - Fixed room inventory view to exclude 'not for sale' rooms, resolved memory leaks in Puppeteer, improved form validation with reusable utilities, and enhanced UI with custom scrollbar styling for sidebars. Added new tab functionality for reservation details.
 - **1.1.30** (2025-11-05) - Implemented reservation splitting while maintaining related data and history. Fixed invoice display for reservations spanning multiple months and ensured consistent date formatting between frontend and backend for billing periods.
 - **1.1.29** (2025-10-31) - Enhanced reservation management with cancellation type controls and client list exports. Improved OTA booking visualization, fixed payment calculations for cancelled dates, and resolved invoice ID generation for shared reservations. Added reliable Google Sheets API authentication.

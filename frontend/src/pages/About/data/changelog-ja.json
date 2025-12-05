@@ -637,6 +637,19 @@
         { "type": "refactor", "description": "アドオン管理ロジックを専用モジュールに移動し、メンテナンス性を向上させました。" },        
         { "type": "bugfix", "description": "請求ページでキャンセルされた日付のアドオンが請求可能額に加算されない問題を修正しました。" }
       ]
+    },
+    {
+      "version": "1.3.0",
+      "date": "2025-12-04",
+      "changes": [
+        { "type": "feature", "description": "レポート：プランレートに売上カテゴリを追加し、宿泊以外の売上を個別に追跡できるようにしました。" },
+        { "type": "feature", "description": "レポート：宿泊データの詳細な分析のためのデータをダウンロードする機能を追加しました。" },
+        { "type": "improvement", "description": "パフォーマンス：selectCountReservationのSQLクエリをマテリアライズドCTEを使用して再構築し、パフォーマンスと可読性を向上させました。" },
+        { "type": "improvement", "description": "計算：宿泊以外の売上カテゴリを考慮して稼働率計算を調整しました。" },
+        { "type": "bugfix", "description": "日別詳細ダイアログでのアドオン重複追加の問題を修正しました。" },
+        { "type": "bugfix", "description": "キャンセルされた日付の請求計算に関する問題を修正しました。" },
+        { "type": "refactor", "description": "アドオン管理を専用モジュールにリファクタリングし、コードの整理と保守性を向上させました。" }
+      ]
     }
   ],
   "backlog": [
