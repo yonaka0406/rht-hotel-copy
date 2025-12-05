@@ -1,79 +1,5 @@
 const { getPool } = require('../../config/database');
 
-// Return all
-
-const selectAllHotelsPlans = async (requestId) => {
-    const pool = getPool(requestId);
-    const query = 'SELECT * FROM plans_hotel ORDER BY hotel_id ASC, name ASC';    
-
-    try {
-        const result = await pool.query(query);
-        return result.rows;
-    } catch (err) {
-        console.error('Error retrieving hotels plans:', err);
-        throw new Error('Database error');
-    }
-};
-const selectHotelPlans = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
-    const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 ORDER BY name ASC';
-    const values = [hotel_id];
-
-    try {
-        const result = await pool.query(query, values);    
-        return result.rows;
-    } catch (err) {
-        console.error('Error retrieving hotel plans:', err);
-        throw new Error('Database error');
-    }
-};
-const selectAvailablePlansByHotel = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
-    const query = `SELECT * FROM get_available_plans_for_hotel($1)
-ORDER BY plan_type, name;`;
-    const values = [hotel_id];
-
-    try {
-        const result = await pool.query(query, values);    
-        return result.rows;
-    } catch (err) {
-        console.error('Error retrieving hotel plans:', err);
-        throw new Error('Database error');
-    }
-};
-
-const selectAllHotelPatterns = async (requestId) => {
-    const pool = getPool(requestId);
-    const query = `SELECT *, 'hotel' as template_type FROM plan_templates WHERE hotel_id IS NOT NULL ORDER BY name ASC`;
-    
-    try {
-        const result = await pool.query(query);
-        return result.rows;
-    } catch (err) {
-        console.error('Error retrieving global patterns:', err);
-        throw new Error('Database error');
-    }
-};
-const selectPatternsByHotel = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
-    const query = `        
-        SELECT *, 'global' as template_type FROM plan_templates WHERE hotel_id IS NULL
-        UNION ALL
-        SELECT *, 'hotel' as template_type FROM plan_templates WHERE hotel_id = $1
-        ORDER BY hotel_id, name            
-    `;
-    const values = [hotel_id];
-
-    try {
-        const result = await pool.query(query, values);    
-        return result.rows;
-    } catch (err) {
-        console.error('Error retrieving patterns for hotel:', err);
-        throw err;
-    }
-};
-
-// Return one
 const selectPlanByKey = async (requestId, hotel_id, plan_key, client = null) => {
     const defaultResult = {
         plans_global_id: null,
@@ -171,24 +97,80 @@ const selectHotelPlanById = async (requestId, hotel_id, id, client = null) => {
     }
 };
 
-// Add entry
-const insertGlobalPlan = async (requestId, name, description, plan_type, color, created_by, updated_by) => {
+const selectAllHotelsPlans = async (requestId) => {
     const pool = getPool(requestId);
-    const query = `
-        INSERT INTO plans_global (name, description, plan_type, color, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *;
-    `;
-    const values = [name, description, plan_type, color, created_by, updated_by];
+    const query = 'SELECT * FROM plans_hotel ORDER BY hotel_id ASC, name ASC';    
 
     try {
-        const result = await pool.query(query, values);
-        return result.rows[0];
+        const result = await pool.query(query);
+        return result.rows;
     } catch (err) {
-        console.error('Error adding global Plan:', err);
+        console.error('Error retrieving hotels plans:', err);
         throw new Error('Database error');
     }
 };
+const selectHotelPlans = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
+    const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 ORDER BY name ASC';
+    const values = [hotel_id];
+
+    try {
+        const result = await pool.query(query, values);    
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving hotel plans:', err);
+        throw new Error('Database error');
+    }
+};
+const selectAvailablePlansByHotel = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
+    const query = `SELECT * FROM get_available_plans_for_hotel($1)
+ORDER BY plan_type, name;`;
+    const values = [hotel_id];
+
+    try {
+        const result = await pool.query(query, values);    
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving hotel plans:', err);
+        throw new Error('Database error');
+    }
+};
+
+const selectAllHotelPatterns = async (requestId) => {
+    const pool = getPool(requestId);
+    const query = `SELECT *, 'hotel' as template_type FROM plan_templates WHERE hotel_id IS NOT NULL ORDER BY name ASC`;
+    
+    try {
+        const result = await pool.query(query);
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving global patterns:', err);
+        throw new Error('Database error');
+    }
+};
+const selectPatternsByHotel = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
+    const query = `        
+        SELECT *, 'global' as template_type FROM plan_templates WHERE hotel_id IS NULL
+        UNION ALL
+        SELECT *, 'hotel' as template_type FROM plan_templates WHERE hotel_id = $1
+        ORDER BY hotel_id, name            
+    `;
+    const values = [hotel_id];
+
+    try {
+        const result = await pool.query(query, values);    
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving patterns for hotel:', err);
+        throw err;
+    }
+};
+
+
+
+
 const insertHotelPlan = async (requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by) => {
     const pool = getPool(requestId);
     const query = `
@@ -224,25 +206,6 @@ const insertPlanPattern = async (requestId, hotel_id, name, template, user_id) =
     }
 };
 
-// Update entry
-const updateGlobalPlan = async (requestId, id, name, description, plan_type, color, updated_by) => {    
-    const pool = getPool(requestId);
-    const query = `
-        UPDATE plans_global
-        SET name = $1, description = $2, plan_type = $3, color = $4, updated_by = $5
-        WHERE id = $6
-        RETURNING *;
-    `;
-    const values = [name, description, plan_type, color, updated_by, id];
-
-    try {
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    } catch (err) {
-        console.error('Error updating global Plan:', err);
-        throw new Error('Database error');
-    }
-};
 const updateHotelPlan = async (requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by) => {
     const pool = getPool(requestId);
     const query = `
@@ -281,18 +244,16 @@ const updatePlanPattern = async (requestId, id, name, template, user_id) => {
 };
 
 module.exports = {
+    selectPlanByKey,
+    selectGlobalPlanById,
+    selectHotelPlanById,
     selectAllHotelsPlans,
     selectHotelPlans,
     selectAvailablePlansByHotel,
     selectAllHotelPatterns,
     selectPatternsByHotel,
-    selectPlanByKey,
-    selectGlobalPlanById,
-    selectHotelPlanById,
-    insertGlobalPlan,
     insertHotelPlan,
     insertPlanPattern,
-    updateGlobalPlan,
     updateHotelPlan,
     updatePlanPattern,
 };

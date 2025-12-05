@@ -278,7 +278,7 @@ onMounted(async () => {
         toast.add({
             severity: 'error',
             summary: 'エラー',
-            detail: 'ホテルIDが見つかりません。',
+            detail: '部屋情報が見つかりません。',
             life: 3000
         });
         return;
