@@ -1,6 +1,6 @@
 const { getPool } = require('../../config/database');
 const billingModel = require('../../models/billing');
-const { getUsersByID } = require('../../models/user');
+const usersModel = require('../../models/user');
 const { getBrowser, resetBrowser } = require('../../services/playwrightService');
 const { generateNewInvoiceNumber, generateInvoiceHTML } = require('./services/invoiceService');
 
@@ -85,7 +85,7 @@ const generateInvoice = async (req, res) => {
 
     await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
-    const userInfo = await getUsersByID(req.requestId, userId);
+    const userInfo = await usersModel.selectUserByID(req.requestId, userId);
 
     // Get browser instance from the service
     browser = await getBrowser();
@@ -157,7 +157,7 @@ const generateInvoiceExcel = async (req, res) => {
       invoiceData.invoice_number = generateNewInvoiceNumber(maxInvoiceNumData, hotelId, invoiceData.date);
     }
 
-    const userInfo = await getUsersByID(req.requestId, userId);
+    const userInfo = await usersModel.selectUserByID(req.requestId, userId);
     await billingModel.updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
     const mainTemplatePath = path.join(__dirname, '../../components/請求書テンプレート.xlsx');

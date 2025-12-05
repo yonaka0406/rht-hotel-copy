@@ -5,7 +5,7 @@ const { generateToken } = require('../utils/jwtUtils');
 const { sendResetEmail, sendAdminResetEmail } = require('../utils/emailUtils');
 const sessionService = require('../services/sessionService');
 
-const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle, updateUserGoogleTokens } = require('../models/user');
+const usersModel = require('../models/user');
 const { getEnvironment } = require('../config/database'); // Added import
 
 const { OAuth2Client } = require('google-auth-library');
@@ -17,9 +17,9 @@ const crypto = require('crypto');
 let envFrontend;
 
 if (process.env.NODE_ENV === 'production') {
-  envFrontend = process.env.PROD_FRONTEND_URL  
+  envFrontend = process.env.PROD_FRONTEND_URL
 } else {
-  envFrontend = process.env.FRONTEND_URL  
+  envFrontend = process.env.FRONTEND_URL
 }
 
 // Initialize Google Auth Client
@@ -49,7 +49,7 @@ const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await findUserByEmail(req.requestId, email);
+    const user = await usersModel.selectUserByEmail(req.requestId, email);
     if (!user) {
       const specificError = 'User not found';
       logger.warn('Login attempt for non-existent user', { email, ip: req.ip, specificError });
@@ -118,7 +118,7 @@ const forgot = async (req, res) => {
 
   try {
     logger.debug('Attempting to find user by email', { email, requestId: req.requestId });
-    const user = await findUserByEmail(req.requestId, email); // Assuming findUserByEmail also uses requestId for logging/tracing
+    const user = await usersModel.selectUserByEmail(req.requestId, email); // Assuming selectUserByEmail also uses requestId for logging/tracing
 
     if (!user) {
       const specificError = 'ユーザー見つかりません。'; // User not found
@@ -135,9 +135,9 @@ const forgot = async (req, res) => {
     // Log right before sending the email
     logger.debug(`Value of user.email before calling sendResetEmail: [${user.email}]`, { userId: user.id, requestId: req.requestId });
     if (!user.email) {
-        logger.error('CRITICAL: user.email is undefined or empty before calling sendResetEmail!', { userObject: user, requestId: req.requestId });
-        // You might want to return an error here to prevent calling sendResetEmail with no recipient
-        return res.status(500).json({ error: 'Internal server error: user email is missing.' });
+      logger.error('CRITICAL: user.email is undefined or empty before calling sendResetEmail!', { userObject: user, requestId: req.requestId });
+      // You might want to return an error here to prevent calling sendResetEmail with no recipient
+      return res.status(500).json({ error: 'Internal server error: user email is missing.' });
     }
     logger.debug('Attempting to send password reset email', { recipientEmail: user.email, userId: user.id, requestId: req.requestId });
     await sendResetEmail(user.email, resetToken);
@@ -149,14 +149,14 @@ const forgot = async (req, res) => {
     const specificError = 'Error occurred while sending the password reset email.';
     // Ensure all relevant details are logged, especially if err.code or err.command exists (like from Nodemailer)
     logger.error('Forgot password process error', {
-        error: err.message,
-        stack: err.stack,
-        code: err.code, // Log Nodemailer specific error codes if present
-        command: err.command, // Log Nodemailer specific commands if present
-        email,
-        ip: req.ip,
-        specificError,
-        requestId: req.requestId
+      error: err.message,
+      stack: err.stack,
+      code: err.code, // Log Nodemailer specific error codes if present
+      command: err.command, // Log Nodemailer specific commands if present
+      email,
+      ip: req.ip,
+      specificError,
+      requestId: req.requestId
     });
     res.status(500).json({ error: isProduction ? 'Error processing request. Please try again later.' : specificError + (isProduction ? '' : ` (${err.message})`) });
   }
@@ -207,7 +207,7 @@ const reset = async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
     const email = decoded.email;
-    const user = await findUserByEmail(req.requestId, email);
+    const user = await usersModel.selectUserByEmail(req.requestId, email);
 
     if (!user) {
       const specificError = 'Invalid or expired token (user not found for token email)';
@@ -217,16 +217,16 @@ const reset = async (req, res) => {
 
     const updated_by = user.id;
     const hashedPassword = await bcrypt.hash(password, 10);
-    await updatePasswordHash(req.requestId, email, hashedPassword, updated_by);
+    await usersModel.updatePasswordHash(req.requestId, email, hashedPassword, updated_by);
 
     logger.info('Password reset successfully', { userId: user.id, email, ip: req.ip });
     res.json({ message: 'パスワードが正常にリセットされました。' });
   } catch (error) {
     let specificError = 'Error occurred while resetting password';
     if (error.name === 'TokenExpiredError') {
-        specificError = 'Password reset token has expired.';
+      specificError = 'Password reset token has expired.';
     } else if (error.name === 'JsonWebTokenError') {
-        specificError = 'Password reset token is invalid.';
+      specificError = 'Password reset token is invalid.';
     }
     logger.error('Error resetting password', { error: error.message, stack: error.stack, errorName: error.name, tokenUsed: !!token, ip: req.ip, specificError });
     res.status(500).json({ error: isProduction ? 'Password reset failed. Please try again or request a new link.' : specificError });
@@ -364,13 +364,13 @@ const googleCallback = async (req, res) => {
     const userEmail = payload.email;
     const userName = payload.name;
 
-    let user = await findUserByProviderId(req.requestId, 'google', googleUserId);
+    let user = await usersModel.selectUserByProviderId(req.requestId, 'google', googleUserId);
 
     if (!user) {
-      const existingUserByEmail = await findUserByEmail(req.requestId, userEmail);
+      const existingUserByEmail = await selectUserByEmail(req.requestId, userEmail);
       if (existingUserByEmail) {
         if (existingUserByEmail.auth_provider === 'local' || existingUserByEmail.auth_provider === null) {
-          user = await linkGoogleAccount(req.requestId, existingUserByEmail.id, googleUserId);
+          user = await usersModel.linkGoogleAccount(req.requestId, existingUserByEmail.id, googleUserId);
           logger.info(`Linked existing local user to Google ID.`, { userId: existingUserByEmail.id, email: userEmail, googleUserId, ip: req.ip });
         } else if (existingUserByEmail.auth_provider === 'google' && existingUserByEmail.provider_user_id !== googleUserId) {
           const specificError = 'This email is associated with a different Google account. Please sign in with the original Google account or contact support.';
@@ -381,11 +381,11 @@ const googleCallback = async (req, res) => {
           logger.debug(`User found by email, already linked or with other provider.`, { userId: user.id, email: userEmail, ip: req.ip });
         }
       } else {
-        user = await createUserWithGoogle(req.requestId, googleUserId, userEmail, userName);
+        user = await usersModel.insertUserWithGoogle(req.requestId, googleUserId, userEmail, userName);
         logger.info(`Created new user with Google ID.`, { userId: user.id, email: userEmail, googleUserId, ip: req.ip });
       }
     } else {
-        logger.debug(`User found by Google provider ID.`, { userId: user.id, email: userEmail, googleUserId, ip: req.ip });
+      logger.debug(`User found by Google provider ID.`, { userId: user.id, email: userEmail, googleUserId, ip: req.ip });
     }
 
     if (!user) {
@@ -397,7 +397,7 @@ const googleCallback = async (req, res) => {
     // Persist the tokens
     if (user && user.id && tokens.access_token) {
       try {
-        await updateUserGoogleTokens(
+        await usersModel.updateUserGoogleTokens(
           req.requestId,
           user.id,
           tokens.access_token,
@@ -436,16 +436,16 @@ const googleCallback = async (req, res) => {
   } catch (error) {
     let specificError = 'Authentication processing failed.';
     if (error.isAxiosError && error.response && error.response.data) {
-        specificError = `Google API error: ${error.response.data.error_description || error.response.data.error || 'Unknown Google API error'}`;
-        logger.error('Google API Error Details:', { data: error.response.data, ip: req.ip });
+      specificError = `Google API error: ${error.response.data.error_description || error.response.data.error || 'Unknown Google API error'}`;
+      logger.error('Google API Error Details:', { data: error.response.data, ip: req.ip });
     } else if (error.message && (error.message.includes("Invalid token signature") || error.message.includes("Token used too late"))) {
-        specificError = `Google ID token validation failed: ${error.message}`;
+      specificError = `Google ID token validation failed: ${error.message}`;
     } else if (error.message) {
-        specificError = error.message;
+      specificError = error.message;
     }
-    
+
     logger.error('Error during Google OAuth callback processing:', { errorMessage: error.message, stack: error.stack, isAxiosError: !!error.isAxiosError, ip: req.ip, specificError });
-    
+
     const status = (error.message && (error.message.includes("Invalid token signature") || error.message.includes("Token used too late"))) ? 401 : 500;
     return res.status(status).json({ error: isProduction ? 'Authentication failed. Please try again.' : specificError });
   }

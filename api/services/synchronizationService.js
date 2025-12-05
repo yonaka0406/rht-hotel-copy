@@ -1,5 +1,5 @@
-const { getUsersByID, updateUserCalendarSettings } = require('../models/user');
-const { getActionById, insertAction, updateAction } = require('../models/crm');
+const usersModel = require('../models/user');
+const crmModel = require('../models/crm');
 const googleCalendarUtils = require('../utils/googleCalendarUtils');
 const defaultLogger = require('../config/logger');
 
@@ -19,7 +19,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
 
     let user;
     try {
-        const userArr = await getUsersByID(requestId, userId);
+        const userArr = await usersModel.selectUserByID(requestId, userId);
         if (!userArr || userArr.length === 0) {
             logger.warn('User not found. Aborting sync.');
             return { success: false, message: 'User not found.' };
@@ -27,7 +27,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
         user = userArr[0];
     } catch (dbError) {
         logger.error('Failed to fetch user details for sync.', { error: dbError.message, stack: dbError.stack });
-        throw dbError; 
+        throw dbError;
     }
 
     if (!user.google_calendar_id) {
@@ -35,9 +35,9 @@ async function syncCalendarFromGoogle(requestId, userId) {
         return { success: false, message: 'ユーザーのカレンダー設定が見つかりません。GoogleカレンダーIDが設定されているか確認してください。(User calendar configuration not found. Please ensure a Google Calendar ID is set.)' };
     }
     const calendarIdForSync = user.google_calendar_id;
-    
+
     const lastSyncTimeISO = user.last_successful_google_sync ? new Date(user.last_successful_google_sync).toISOString() : null;
-    
+
     logger.info(`Fetching Google Calendar events for calendar: ${calendarIdForSync}. Syncing events updated since: ${lastSyncTimeISO || 'beginning of time'}.`);
 
     let googleEvents;
@@ -53,7 +53,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
         logger.info('No new or updated Google Calendar events to sync.');
         // Still update last sync time, as we successfully checked.
         try {
-            await updateUserCalendarSettings(requestId, userId, { last_successful_google_sync: new Date().toISOString() });
+            await usersModel.updateUserCalendarSettings(requestId, userId, { last_successful_google_sync: new Date().toISOString() });
             logger.info('Successfully updated last_successful_google_sync timestamp after no new events.');
         } catch (error) {
             logger.error('Failed to update last_successful_google_sync timestamp after no new events.', { error: error.message });
@@ -72,22 +72,22 @@ async function syncCalendarFromGoogle(requestId, userId) {
             const pmsEventClientId = gEvent.extendedProperties?.private?.crmClientId; // May be undefined
 
             if (gEvent.status === 'cancelled' && crmActionId) {
-                const existingAction = await getActionById(requestId, crmActionId);
+                const existingAction = await crmModel.getActionById(requestId, crmActionId);
                 if (existingAction && existingAction.status !== 'cancelled') {
-                    const updateFields = { 
-                        status: 'cancelled', 
+                    const updateFields = {
+                        status: 'cancelled',
                         // Pass necessary GCal fields to avoid them being nulled by updateAction if not explicitly set
                         google_calendar_event_id: gEvent.id,
                         google_calendar_html_link: gEvent.htmlLink,
                         synced_with_google_calendar: true
                     };
-                    await updateAction(requestId, crmActionId, updateFields, userId);
+                    await crmModel.updateAction(requestId, crmActionId, updateFields, userId);
                     logger.info(`CRM Action ${crmActionId} cancelled due to Google event ${gEvent.id} cancellation.`);
                     actionsUpdated++;
                 }
                 continue; // Move to next event after handling cancellation
             }
-            
+
             // Skip further processing for other cancelled events not matching above (e.g. gEvent created in GCal and then cancelled there)
             if (gEvent.status === 'cancelled') {
                 logger.info(`Skipping cancelled Google event ${gEvent.id} as it's not linked to a CRM action or already processed.`);
@@ -96,7 +96,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
 
 
             if (crmActionId) { // Event originated from CRM
-                const existingAction = await getActionById(requestId, crmActionId);
+                const existingAction = await crmModel.getActionById(requestId, crmActionId);
                 if (existingAction) {
                     // Compare gEvent.updated with a sync timestamp on CRM action if available, or crm_action.updated_at
                     // For simplicity, assume GCal is master if event is more recent.
@@ -112,7 +112,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
                             google_calendar_html_link: gEvent.htmlLink,
                             synced_with_google_calendar: true,
                         };
-                        await updateAction(requestId, crmActionId, actionFieldsToUpdate, userId);
+                        await crmModel.updateAction(requestId, crmActionId, actionFieldsToUpdate, userId);
                         logger.info(`Updated CRM action ${crmActionId} from Google event ${gEvent.id}.`);
                         actionsUpdated++;
                     }
@@ -122,13 +122,13 @@ async function syncCalendarFromGoogle(requestId, userId) {
                 }
             } else { // Event originated in Google Calendar
                 // Basic client ID handling. This needs to be robust in a real app.
-                let clientIdToUse = pmsEventClientId; 
+                let clientIdToUse = pmsEventClientId;
                 if (!clientIdToUse) {
                     // TODO: Implement a way to find or create a default client for unlinked Google events
                     // For now, we might skip or assign to a generic client if that exists.
                     logger.warn(`Google event ${gEvent.id} has no crmClientId. Cannot create CRM action without a client. Skipping.`);
                     actionsFailed++;
-                    continue; 
+                    continue;
                 }
 
                 const newActionFields = {
@@ -144,7 +144,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
                     google_calendar_html_link: gEvent.htmlLink,
                     synced_with_google_calendar: true,
                 };
-                await insertAction(requestId, newActionFields, userId);
+                await crmModel.insertAction(requestId, newActionFields, userId);
                 logger.info(`Created new CRM action from Google event ${gEvent.id}.`);
                 actionsCreated++;
             }
@@ -156,7 +156,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
 
     try {
         const newSyncTimestamp = new Date().toISOString();
-        await updateUserCalendarSettings(requestId, userId, { last_successful_google_sync: newSyncTimestamp });
+        await usersModel.updateUserCalendarSettings(requestId, userId, { last_successful_google_sync: newSyncTimestamp });
         logger.info(`Successfully updated last_successful_google_sync to ${newSyncTimestamp}.`);
     } catch (error) {
         logger.error('Failed to update last_successful_google_sync timestamp after processing events.', { error: error.message });
@@ -164,12 +164,12 @@ async function syncCalendarFromGoogle(requestId, userId) {
     }
 
     logger.info('Google Calendar to PMS sync process completed.');
-    return { 
-        success: true, 
-        message: '同期処理完了', 
-        actionsCreated, 
-        actionsUpdated, 
-        actionsFailed 
+    return {
+        success: true,
+        message: '同期処理完了',
+        actionsCreated,
+        actionsUpdated,
+        actionsFailed
     };
 }
 

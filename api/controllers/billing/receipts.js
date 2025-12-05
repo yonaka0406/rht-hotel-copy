@@ -1,6 +1,6 @@
 const { getPool } = require('../../config/database');
 const billingModel = require('../../models/billing');
-const { getUsersByID } = require('../../models/user');
+const usersModel = require('../../models/user');
 const { getHotelByID } = require('../../models/hotel');
 
 const { getBrowser, resetBrowser } = require('../../services/playwrightService');
@@ -37,7 +37,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
     try {
         await client.query('BEGIN');
-        const userInfo = await getUsersByID(req.requestId, userId, client);
+        const userInfo = await usersModel.selectUserByID(req.requestId, userId, client);
         if (!userInfo || userInfo.length === 0) {
             return res.status(404).json({ error: 'User info not found' });
         }
