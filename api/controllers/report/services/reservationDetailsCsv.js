@@ -60,10 +60,8 @@ const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
         const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
 
         // Calculate sales amounts
-        // Use plan_price and addon_value (from reservation_details - edited values) when is_accommodation is true
-        // Use plan_price_accom/other (from reservation_rates - raw values) for split calculations
+        // Use plan_price from reservation_details (edited values)
         const planPrice = reservation.plan_price || 0;
-        const planNetPrice = reservation.plan_net_price || 0;
         const addonValue = Math.floor(parseFloat(reservation.addon_value) || 0);
         const addonNetValue = Math.floor(parseFloat(reservation.addon_net_value) || 0);
 
@@ -76,9 +74,8 @@ const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
         const addonPriceOther = isAddonOther ? addonValue : 0;
         const addonNetPriceOther = isAddonOther ? addonNetValue : 0;
 
-        const planPriceAccom = reservation.plan_price_accom || 0;
+        // Net price from reservation_rates (split by sales_category)
         const planNetPriceAccom = reservation.plan_net_price_accom || 0;
-        const planPriceOther = reservation.plan_price_other || 0;
         const planNetPriceOther = reservation.plan_net_price_other || 0;
 
         // Process each reservation and write to CSV
@@ -112,7 +109,7 @@ const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
             プラン名: reservation.plan_name,
             プランタイプ: translatePlanType(reservation.plan_type),
             プラン料金: reservation.plan_price,
-            "プラン料金(税抜き)": reservation.plan_net_price,
+            "プラン料金(税抜き)": reservation.plan_net_price_accom + reservation.plan_net_price_other,
             アドオン名: reservation.addon_name,
             アドオン数量: reservation.addon_quantity,
             アドオン単価: reservation.addon_price,
@@ -120,10 +117,10 @@ const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
             "アドオン料金(税抜き)": Math.floor(parseFloat(reservation.addon_net_value)),
             請求対象: reservation.billable ? 'はい' : 'いいえ',
             宿泊対象: reservation.is_accommodation ? 'はい' : 'いいえ',
-            売上高: reservation.billable ? (reservation.is_accommodation ? planPrice + addonValue : planPriceAccom + addonPriceAccom) : 0,
-            "売上高(税抜き)": reservation.billable ? (reservation.is_accommodation ? planNetPrice + addonNetValue : planNetPriceAccom + addonNetPriceAccom) : 0,
-            "売上高(宿泊外)": reservation.billable ? planPriceOther + addonPriceOther : 0,
-            "売上高(宿泊外・税抜き)": reservation.billable ? planNetPriceOther + addonNetPriceOther : 0,
+            売上高: reservation.billable ? (reservation.is_accommodation ? planPrice + addonValue : 0) : 0,
+            "売上高(税抜き)": reservation.billable ? (reservation.is_accommodation ? planNetPriceAccom + addonNetPriceAccom : 0) : 0,
+            "売上高(宿泊外)": reservation.billable ? (reservation.is_accommodation ? 0 : planPrice + addonValue) : 0,
+            "売上高(宿泊外・税抜き)": reservation.billable ? (reservation.is_accommodation ? 0 : planNetPriceOther + addonNetPriceOther) : 0,
             支払い: translatePaymentTiming(reservation.payment_timing),
             予約ID: reservation.reservation_id,
             予約詳細ID: reservation.id,
