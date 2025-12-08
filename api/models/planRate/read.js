@@ -82,7 +82,8 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
             include_in_cancel_fee, sales_category, comment
         FROM plans_rates
         WHERE 
-            plans_hotel_id = $1 AND hotel_id = $2
+            plans_hotel_id IS NOT DISTINCT FROM $1 
+            AND hotel_id = $2
         ORDER BY adjustment_type ASC, condition_type DESC, date_start ASC, hotel_id, plans_hotel_id
     `;
 
@@ -266,8 +267,8 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
 
         return filteredRates;
     } catch (err) {
-        console.error('Error calculating price:', err);
-        throw new Error('Database error');
+        console.error(`[Request ${requestId}] Error retrieving plan rates for hotel ${hotel_id}, plan ${plans_hotel_id} on ${date}:`, err);
+        throw new Error(`Failed to retrieve plan rates: ${err.message}`);
     } finally {
         if (releaseClient) {
             client.release();
