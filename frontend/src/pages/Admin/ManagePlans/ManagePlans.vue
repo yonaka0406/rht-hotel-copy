@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-      <Panel header="プラン" class="mb-4">
+      <Panel :header="`プラン (${selectedHotelName})`" class="mb-4">
         <div class="mb-4 mt-6">
           <FloatLabel>
             <Select
@@ -88,7 +88,7 @@
       </Panel>
 
       
-        <ManagePlansPatterns :selectedHotelId="selectedHotelId" />
+        <ManagePlansPatterns :selectedHotelId="selectedHotelId" :selectedHotelName="selectedHotelName" />
       
 
       <AddHotelPlanDialog
@@ -119,7 +119,7 @@
   
 <script setup>
   // Vue
-  import { ref, onMounted, watch } from 'vue';
+  import { ref, onMounted, watch, computed } from 'vue';
 
   import ManagePlansRates from './components/ManagePlansRates.vue';
   import ManagePlansPatterns from './components/ManagePlansPatterns.vue';
@@ -151,6 +151,11 @@ import Badge from 'primevue/badge';
   const hotelPlans = ref([]); 
   const loading = ref(false);
   const selectedHotelId = ref(null); // Renamed from currentHotelId
+
+  const selectedHotelName = computed(() => {
+    const hotel = hotels.value.find(h => h.id === selectedHotelId.value);
+    return hotel ? hotel.name : 'ホテル選択';
+  });
 
   const sb_options = ref([
     { label: '部屋', value: 'per_room' },

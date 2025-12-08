@@ -1,5 +1,5 @@
 <template>
-    <Panel header="プランパターン">
+    <Panel :header="`プランパターン (${props.selectedHotelName})`">
 
         <div class="flex justify-end mb-2">
             <Button @click="showHotelDialog = true"
@@ -56,6 +56,10 @@
         selectedHotelId: {
             type: [Number, null], 
             required: true,
+        },
+        selectedHotelName: {
+            type: String,
+            default: 'ホテル選択'
         }
     });
     // Primevue
