@@ -73,6 +73,14 @@
 import { ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { usePlansStore } from '@/composables/usePlansStore';
+import Dialog from 'primevue/dialog';
+import FloatLabel from 'primevue/floatlabel';
+import InputText from 'primevue/inputtext';
+import ColorPicker from 'primevue/colorpicker';
+import Select from 'primevue/select';
+import SelectButton from 'primevue/selectbutton';
+import Textarea from 'primevue/textarea';
+import Button from 'primevue/button';
 
 const props = defineProps({
   visible: Boolean,

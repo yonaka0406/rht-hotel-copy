@@ -88,7 +88,7 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, fetchHotels } = useHotelStore();
     import { usePlansStore } from '@/composables/usePlansStore';
-    const { patterns, fetchPatternsForHotel, /*createPlanPattern, updatePlanPattern,*/ fetchPlansForHotel } = usePlansStore();
+    const { patterns, plans, fetchPatternsForHotel, /*createPlanPattern, updatePlanPattern,*/ fetchPlansForHotel } = usePlansStore();
     // Internal state for selected hotel, synced with prop
     const selectedHotelIdInternal = ref(props.selectedHotelId);
     const allHotelPatterns = ref([]);
