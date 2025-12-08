@@ -30,6 +30,12 @@
 import { ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { usePlansStore } from '@/composables/usePlansStore';
+import Dialog from 'primevue/dialog';
+import FloatLabel from 'primevue/floatlabel';
+import Select from 'primevue/select';
+import Button from 'primevue/button';
+import Panel from 'primevue/panel'; // Added for debugging
+import Column from 'primevue/column'; // Added for debugging
 
 const props = defineProps({
     visible: Boolean,
