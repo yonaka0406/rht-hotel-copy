@@ -25,7 +25,7 @@ CREATE TABLE plan_templates (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (hotel_id, name)
 );
-
+/*
 CREATE TABLE plans_global (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -45,7 +45,7 @@ VALUES
     ('2食', '', 1),
     ('3食', '', 1),
     ('荷物キープ', '', 1);
-
+*/
 CREATE TABLE plans_hotel (
     id SERIAL,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -60,7 +60,7 @@ CREATE TABLE plans_hotel (
     PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
-
+/*
 -- Table to explicitly hide a global plan for a specific hotel.
 CREATE TABLE hotel_plan_exclusions (
     id SERIAL PRIMARY KEY,
@@ -73,7 +73,7 @@ CREATE TABLE hotel_plan_exclusions (
 
 -- Create an index for faster lookups.
 CREATE INDEX idx_hotel_plan_exclusions_hotel_id_global_plan_id ON hotel_plan_exclusions (hotel_id, global_plan_id);
-
+*/
 CREATE TABLE plans_rates (
     id SERIAL PRIMARY KEY,
     hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- hotel, NULL for global adjustments
@@ -105,7 +105,7 @@ CREATE TABLE plans_rates (
         (plans_global_id IS NULL AND plans_hotel_id IS NOT NULL)
     )
 );
-
+/*
 CREATE TABLE addons_global (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -128,7 +128,7 @@ VALUES
     ('夕食', '', 0, 3, 0.1, 1),
     ('駐車場', '', 0, 3, 0.1, 1),
     ('お弁当', '', 0, 3, 0.1, 1);
-
+*/
 CREATE TABLE addons_hotel (
     id SERIAL,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
