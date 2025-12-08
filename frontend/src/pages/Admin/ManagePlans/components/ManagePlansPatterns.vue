@@ -63,16 +63,7 @@
 <script setup>
     // Vue
     import { ref, computed, watch, onMounted  } from 'vue';
-    
-    const props = defineProps({
-        selectedHotelId: {
-            type: String, 
-            required: true,
-        }
-    });
-    // Vue
-    import { ref, computed, watch, onMounted  } from 'vue';
-    
+        
     const props = defineProps({
         selectedHotelId: {
             type: String, 
@@ -82,10 +73,14 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { DataTable, Column,
-        FloatLabel, InputText, Select, Button, Badge, Panel
-     } from 'primevue'
-
+    import DataTable from 'primevue/datatable';
+    import Column from 'primevue/column';
+    import FloatLabel from 'primevue/floatlabel';
+    import InputText from 'primevue/inputtext';
+    import Select from 'primevue/select';
+    import Button from 'primevue/button';
+    import Badge from 'primevue/badge';
+    import Panel from 'primevue/panel';
     import AddHotelPatternDialog from './dialogs/AddHotelPatternDialog.vue';
     import EditHotelPatternDialog from './dialogs/EditHotelPatternDialog.vue';
 
