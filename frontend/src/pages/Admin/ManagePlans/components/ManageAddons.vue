@@ -6,10 +6,10 @@
         @update:value="onTabChange"
       >
         <TabList>
-          <Tab value="0">
+          <Tab :value="0">
             <i class="pi pi-globe"></i> グローバル
           </Tab>
-          <Tab value="1">
+          <Tab :value="1">
             <i class="pi pi-building"></i> ホテル
           </Tab>
           <Tab 
@@ -20,7 +20,7 @@
           </Tab>
         </TabList>
         <TabPanels>
-          <TabPanel value="0">
+          <TabPanel :value="0">
             <div class="flex justify-end mb-2">
               <Button                
                 @click="showGlobalDialog = true"
@@ -68,7 +68,7 @@
               </Column>
             </DataTable> 
           </TabPanel>
-          <TabPanel value="1">
+          <TabPanel :value="1">
             <DataTable :value="hotels">
               <Column field="name" header="名称"></Column>
               <Column>
@@ -457,6 +457,20 @@
   import { useSettingsStore } from '@/composables/useSettingsStore';
   const { taxTypes, fetchTaxTypes } = useSettingsStore();
 
+  const defaultTaxTypeId = computed(() => {
+    // Attempt to find '標準税率' (Standard Tax Rate)
+    const standardTaxType = taxTypes.value.find(type => type.name === '標準税率');
+    if (standardTaxType) {
+      return standardTaxType.id;
+    }
+    // Fallback to the first available tax type if '標準税率' is not found
+    if (taxTypes.value.length > 0) {
+      return taxTypes.value[0].id;
+    }
+    // Final fallback to the hardcoded value if no tax types are available
+    return 3; 
+  });
+
   // Helper
   const formatCurrency = (value) => {
     if (value == null) return '';
@@ -498,10 +512,21 @@
   const globalNetPrice = computed(() => {
     const targetAddon = showEditGlobalDialog.value ? editGlobalAddon.value : newGlobalAddon.value;
 
-    if (!targetAddon.price || !globalTaxRate.value) return 0;   
+    if (targetAddon.price === null || targetAddon.price === undefined || targetAddon.price === '') {
+      return 0;
+    }
     const price = Number(targetAddon.price);
     const taxRate = Number(globalTaxRate.value);
-    return Math.floor(price / (1 + taxRate));
+
+    if (isNaN(price)) {
+      return 0;
+    }
+
+    if (taxRate === 0) {
+      return price;
+    } else {
+      return Math.floor(price / (1 + taxRate));
+    }
   });
   const newGlobalAddonReset = () => {
     newGlobalAddon.value = { 
@@ -518,7 +543,7 @@
       name: '', 
       description: '',
       addon_type: 'other',
-      tax_type_id: 3,            
+      tax_type_id: defaultTaxTypeId.value,            
       price: 0,
       visible: true
     };
@@ -586,7 +611,7 @@
         toast.add({ 
           severity: 'error', 
           summary: 'エラー',
-          detail: '雄一アドオン名はを使ってください。', life: 3000 
+          detail: '唯一アドオン名はを使ってください。', life: 3000 
         });
         return;
       }
@@ -638,10 +663,21 @@
   const hotelNetPrice = computed(() => {
     const targetAddon = showEditHotelDialog.value ? editHotelAddon.value : newHotelAddon.value;
 
-    if (!targetAddon.price || !hotelTaxRate.value) return 0;   
+    if (targetAddon.price === null || targetAddon.price === undefined || targetAddon.price === '') {
+      return 0;
+    }
     const price = Number(targetAddon.price);
     const taxRate = Number(hotelTaxRate.value);
-    return Math.floor(price / (1 + taxRate));
+
+    if (isNaN(price)) {
+      return 0;
+    }
+
+    if (taxRate === 0) {
+      return price;
+    } else {
+      return Math.floor(price / (1 + taxRate));
+    }
   });
   const newHotelAddonReset = () => {
     newHotelAddon.value = { 
@@ -715,7 +751,7 @@
       }
       showEditHotelDialog.value = false;
       editHotelAddonReset();
-      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオンが更新されました。', life: 3000 });    
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオンが更新されました。', life: 3000 });        
     } catch (err) {
       console.error('ホテルアドオンの更新エラー:', err);
       toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルアドオンの更新に失敗しました', life: 3000 });
@@ -758,7 +794,7 @@
       hotelAddons.value.push(data);
       showHotelDialog.value = false;
       newHotelAddonReset();
-      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオンが追加されました。', life: 3000 });
     } catch (err) {
       console.error('ホテルアドオンの保存エラー:', err);
       toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルアドオンの保存に失敗しました', life: 3000 });
