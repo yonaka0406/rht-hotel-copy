@@ -165,7 +165,9 @@ const saveHotelPlan = async () => {
   }
 
   try {
-    await createHotelPlan(newHotelPlan.value);
+    const planData = { ...newHotelPlan.value, color: `#${newHotelPlan.value.colorHEX}` };
+    delete planData.colorHEX; // Remove colorHEX as 'color' is sent instead
+    await createHotelPlan(planData);
     emit('planAdded');
     emit('update:visible', false);
     toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン追加されました。', life: 3000 });

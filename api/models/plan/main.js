@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 
 const selectHotelPlanById = async (requestId, hotel_id, id, client = null) => {
@@ -12,7 +13,7 @@ const selectHotelPlanById = async (requestId, hotel_id, id, client = null) => {
         const result = await dbClient.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error finding hotel Plan:', err);
+        logger.error('Error finding hotel Plan:', err);
         throw new Error('Database error');
     } finally {
         if (shouldReleaseClient) {
@@ -29,7 +30,7 @@ const selectAllHotelsPlans = async (requestId, dbClient = null) => {
         const result = await client.query(query);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotels plans:', err);
+        logger.error('Error retrieving hotels plans:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -44,7 +45,7 @@ const selectHotelPlans = async (requestId, hotel_id, dbClient = null) => {
         const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotel plans:', err);
+        logger.error('Error retrieving hotel plans:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -63,7 +64,7 @@ const selectAvailablePlansByHotel = async (requestId, hotel_id, target_date = nu
         const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotel plans:', err);
+        logger.error('Error retrieving hotel plans:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -81,7 +82,7 @@ const selectAvailablePlansByHotelPeriod = async (requestId, hotel_id, start_date
         const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotel plans by period:', err);
+        logger.error('Error retrieving hotel plans by period:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -95,7 +96,7 @@ const selectAllHotelPatterns = async (requestId, dbClient = null) => {
         const result = await client.query(query);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving hotel patterns:', err);
+        logger.error('Error retrieving hotel patterns:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -115,7 +116,7 @@ const selectPatternsByHotel = async (requestId, hotel_id, dbClient = null) => {
         const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving patterns for hotel:', err);
+        logger.error('Error retrieving patterns for hotel:', err);
         throw err;
     } finally {
         if (!dbClient) client.release();
@@ -142,11 +143,12 @@ const insertHotelPlan = async (requestId, hotel_id, plan_type_category_id, plan_
         created_by, updated_by
     ];
 
+    logger.debug(`[DB] insertHotelPlan values:`, values);
     try {
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error adding hotel Plan:', err);
+        logger.error('Error adding hotel Plan:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -165,7 +167,7 @@ const insertPlanPattern = async (requestId, hotel_id, name, template, user_id, d
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error inserting plan template:', { hotel_id, name, error: err });
+        logger.error('Error inserting plan template:', { hotel_id, name, error: err });
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -186,7 +188,7 @@ const updateHotelPlan = async (requestId, id, hotel_id, plan_type_category_id, p
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error updating hotel Plan:', err);
+        logger.error('Error updating hotel Plan:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
@@ -206,7 +208,7 @@ const updatePlanPattern = async (requestId, id, name, template, user_id, dbClien
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        console.error('Error updating plan pattern:', err);
+        logger.error('Error updating plan pattern:', err);
         throw err;
     } finally {
         if (!dbClient) client.release();
