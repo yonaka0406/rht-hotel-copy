@@ -1,0 +1,136 @@
+<template>
+    <Dialog header="ホテルプラン編集" :visible="visible" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
+      <div class="grid grid-cols-2 gap-2 pt-6">
+        <div class="col-span-1 mb-6">
+          <FloatLabel>
+            <InputText v-model="editHotelPlan.name" fluid />
+            <label>名称</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-1 mb-6">
+          <div class="flex grid-cols-2 justify-center items-center">
+            <FloatLabel>
+              <InputText v-model="editHotelPlan.colorHEX" fluid />
+              <label>プラン表示HEX</label>
+            </FloatLabel>
+            <ColorPicker v-model="editHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
+          </div>
+        </div>
+        <div class="col-span-2">
+          <div class="p-float-label flex align-items-center gap-2">
+            <span class="inline-block align-middle font-bold">請求種類：</span>
+            <SelectButton
+              v-model="editHotelPlan.plan_type"
+              :options="sb_options"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </div>
+        </div>
+        <div class="col-span-1 pt-6">
+          <FloatLabel>
+              <Select
+                  v-model="editHotelPlan.plan_type_category_id"
+                  :options="planTypeCategories"
+                  optionLabel="name"
+                  optionValue="id"
+                  placeholder="タイプカテゴリーを選択"
+                  class="w-full"
+                  showClear
+              />
+              <label>タイプカテゴリー</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-1 pt-6">
+          <FloatLabel>
+              <Select
+                  v-model="editHotelPlan.plan_package_category_id"
+                  :options="planPackageCategories"
+                  optionLabel="name"
+                  optionValue="id"
+                  placeholder="パッケージカテゴリーを選択"
+                  class="w-full"
+                  showClear
+              />
+              <label>パッケージカテゴリー</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-2 pt-6 mb-2">
+          <FloatLabel>
+            <Textarea v-model="editHotelPlan.description" fluid />
+            <label>詳細</label>
+          </FloatLabel>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="保存" icon="pi pi-check" @click="updateHotel" class="p-button-success p-button-text p-button-sm" />
+        <Button label="閉じる" icon="pi pi-times" @click="$emit('update:visible', false)" class="p-button-danger p-button-text p-button-sm" text />
+      </template>
+    </Dialog>
+</template>
+
+<script setup>
+import { ref, watch } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import { usePlansStore } from '@/composables/usePlansStore';
+
+const props = defineProps({
+  visible: Boolean,
+  selectedHotelId: Number,
+  planTypeCategories: Array,
+  planPackageCategories: Array,
+  sb_options: Array,
+  hotelPlans: Array, // For duplicate check
+  initialEditHotelPlan: Object, // The plan to edit
+});
+
+const emit = defineEmits(['update:visible', 'planUpdated']);
+
+const toast = useToast();
+const { updateHotelPlan } = usePlansStore();
+
+const editHotelPlan = ref({});
+
+watch(() => props.visible, (newVal) => {
+  if (newVal && props.initialEditHotelPlan) {
+    editHotelPlan.value = { ...props.initialEditHotelPlan };
+  }
+}, { immediate: true });
+
+const updateHotel = async () => {
+  editHotelPlan.value.hotel_id = props.selectedHotelId;
+  
+  // Filter out the current id from hotelPlans
+  const filteredPlans = props.hotelPlans.filter(plan => plan.id !== editHotelPlan.value.id);
+
+  // Check for duplicate keys
+  const PlanSet = new Set();
+  const newPlanKey = `${editHotelPlan.value.name}-${editHotelPlan.value.hotel_id}`;
+  for (const plan of filteredPlans) {
+    const planKey = `${plan.name}-${plan.hotel_id}`;
+    PlanSet.add(planKey);              
+    if (PlanSet.has(newPlanKey)) {
+      toast.add({ 
+        severity: 'error', 
+        summary: 'エラー',
+        detail: '選択したホテルに対してプラン名はユニークである必要があります。', life: 3000
+      });
+      return;
+    }
+  }
+
+  try {
+    await updateHotelPlan(editHotelPlan.value.id, editHotelPlan.value);
+    emit('planUpdated');
+    emit('update:visible', false);
+    toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン更新されました。', life: 3000 });
+  } catch (err) {
+    console.error('ホテルプランの更新エラー:', err);
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルプランの更新に失敗しました', life: 3000 });
+  }
+};
+</script>
+
+<style scoped>
+/* Add any scoped styles here if needed */
+</style>
