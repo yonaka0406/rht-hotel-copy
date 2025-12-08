@@ -260,11 +260,11 @@ import Badge from 'primevue/badge';
       await fetchPlansForHotel(newVal);
 
       // Enhance hotelPlans with category names
-      hotelPlans.value = plans.value.map(plan => ({
-        ...plan,
-        plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
-                            plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
-                        }));
-                        loading.value = false;
+            hotelPlans.value = plans.value.map(plan => ({
+              ...plan,
+              id: plan.plan_id, // Map plan_id to id for DataTable dataKey
+              plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
+              plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
+            }));                        loading.value = false;
                       }  });
 </script>
