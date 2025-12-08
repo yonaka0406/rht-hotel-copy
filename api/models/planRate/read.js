@@ -219,7 +219,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         //console.log(`[${timestamp}] DEBUG - Final calculated price:`, currentTotal);
         return currentTotal;
     } catch (err) {
-        console.error('Error calculating price:', err);
+        console.error('Error retrieving rates for the day:', err);
         throw new Error('Database error');
     } finally {
         if (releaseClient) {

@@ -47,7 +47,7 @@ const createPlansRate = async (requestId, plansRate) => {
         return result.rows[0];
     } catch (err) {
         console.error('Error creating plan rate:', err);
-        throw new Error('Database error');
+        throw err;
     }
 };
 

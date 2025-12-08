@@ -6,7 +6,7 @@ const getHotelPatterns = async (req, res) => {
         res.json(patterns);
     } catch (error) {
         console.error('Error getting hotel patterns:', error);
-        res.status(500).json({ error: 'Failed to retrieve hotel patterns' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 const fetchAllHotelPatterns = async (req, res) => {
@@ -21,7 +21,7 @@ const fetchAllHotelPatterns = async (req, res) => {
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel patterns:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
