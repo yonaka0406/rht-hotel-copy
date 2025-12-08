@@ -621,7 +621,7 @@
             required: true,
         }
     });
-    import ManagePlansAddons from './ManagePlansAddons.vue';
+    import ManagePlansAddons from './ManageAddons.vue';
 
     // Primevue
     import { useToast } from 'primevue/usetoast';    

@@ -1,0 +1,113 @@
+<template>
+    <Dialog header="ホテルパターン追加" :visible="visible" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
+        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
+            <div v-for="day in daysOfWeek" :key="day.value" class="mt-4">
+                <div>
+                    <span>{{ day.label }}</span>
+                </div>
+                <div>
+                    <FloatLabel>
+                        <Select
+                            v-model="dayPlanSelections[day.value]"
+                            :options="hotelPlans"
+                            optionLabel="name"
+                            optionValue="id"
+                            class="w-full"
+                        />
+                        <label class="font-semibold mb-1 block"></label>
+                    </FloatLabel>
+                </div>
+            </div>
+        </div>
+        <template #footer>
+            <Button label="保存" icon="pi pi-check" @click="saveHotelPattern" class="p-button-success p-button-text p-button-sm" />
+            <Button label="閉じる" icon="pi pi-times" @click="$emit('update:visible', false)" class="p-button-danger p-button-text p-button-sm" text />
+        </template>
+    </Dialog>
+</template>
+
+<script setup>
+import { ref, watch } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import { usePlansStore } from '@/composables/usePlansStore';
+
+const props = defineProps({
+    visible: Boolean,
+    selectedHotelId: String,
+    hotelPlans: Array,
+    allHotelPatterns: Array, // For duplicate check
+    daysOfWeek: Array,
+});
+
+const emit = defineEmits(['update:visible', 'patternAdded']);
+
+const toast = useToast();
+const { createPlanPattern } = usePlansStore();
+
+const newHotelPattern = ref({
+    hotel_id: null,
+    name: '',
+    template: {}
+});
+
+const dayPlanSelections = ref({});
+
+watch(() => props.visible, (newVal) => {
+    if (newVal) {
+        newHotelPattern.value = {
+            hotel_id: props.selectedHotelId,
+            name: '',
+            template: {}
+        };
+        // Initialize dayPlanSelections
+        dayPlanSelections.value = {};
+        for (const day of props.daysOfWeek) {
+            dayPlanSelections.value[day.value] = null;
+        }
+    }
+}, { immediate: true });
+
+const saveHotelPattern = async () => {
+    // Validation
+    if (!newHotelPattern.value.name?.trim()) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '名称記入してください。', life: 3000 });
+        return;
+    }
+    const isDuplicate = props.allHotelPatterns.some(pattern =>
+        pattern.hotel_id === props.selectedHotelId &&
+        pattern.name.trim().toLowerCase() === newHotelPattern.value.name.trim().toLowerCase()
+    );
+    if (isDuplicate) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '名称重複不可能', life: 3000 });
+        return;
+    }
+
+    const template = {};
+    for (const day of props.daysOfWeek) {
+        const planId = dayPlanSelections.value[day.value];
+        if (!planId) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: `全曜日にプランを設定してください (${day.label})。`, life: 3000 });
+            return;
+        }
+        template[day.value] = {
+            plan_id: planId,
+        };
+    }
+
+    newHotelPattern.value.template = template;
+
+    try {
+        await createPlanPattern(newHotelPattern.value);
+        emit('patternAdded');
+        emit('update:visible', false);
+        toast.add({ severity: 'success', summary: '成功', detail: 'パターン追加成功', life: 3000 });
+    } catch (error) {
+        console.error('パターン保存エラー:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: 'パターン保存失敗', life: 3000 });
+    }
+};
+</script>
+
+<style scoped>
+/* Add any scoped styles here if needed */
+</style>
