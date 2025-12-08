@@ -164,6 +164,7 @@ const saveHotelPlan = async () => {
     return;
   }
 
+  console.log('AddHotelPlanDialog.vue: newHotelPlan.value.colorHEX before planData construction', newHotelPlan.value.colorHEX); // Debug log
   try {
     const planData = { ...newHotelPlan.value, color: `#${newHotelPlan.value.colorHEX}` };
     delete planData.colorHEX; // Remove colorHEX as 'color' is sent instead

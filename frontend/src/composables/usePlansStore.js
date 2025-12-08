@@ -227,7 +227,7 @@ export function usePlansStore() {
     };
 
     // Plan Display Order
-    const updatePlanDisplayOrder = async (hotelId, planId, newDisplayOrder) => {
+    const updatePlansOrderBulk = async (hotelId, plans) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/reorder/hotel/${hotelId}`, {
@@ -236,7 +236,7 @@ export function usePlansStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ planId, newDisplayOrder }),
+                body: JSON.stringify(plans), // Send the entire array
             });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -465,7 +465,7 @@ export function usePlansStore() {
         fetchPlanPackageCategories,
         createPlanPackageCategory,
         updatePlanPackageCategory,
-        updatePlanDisplayOrder,
+        updatePlansOrderBulk,
         copyPlanToHotel,
         bulkCopyPlansToHotel,
         fetchPlanAddons,

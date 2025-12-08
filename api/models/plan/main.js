@@ -215,6 +215,34 @@ const updatePlanPattern = async (requestId, id, name, template, user_id, dbClien
     }
 };
 
+const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const shouldReleaseClient = !client;
+
+    try {
+        await client.query('BEGIN');
+        for (const plan of plans) {
+            const query = `
+                UPDATE plans_hotel
+                SET display_order = $1, updated_by = $2
+                WHERE hotel_id = $3 AND id = $4
+            `;
+            const values = [plan.display_order, updated_by, hotelId, plan.id];
+            await client.query(query, values);
+        }
+        await client.query('COMMIT');
+        return { success: true };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error updating plan display order in bulk:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldReleaseClient) {
+            client.release();
+        }
+    }
+};
+
 module.exports = {
     selectHotelPlanById,
     selectAllHotelsPlans,
@@ -227,4 +255,5 @@ module.exports = {
     insertPlanPattern,
     updateHotelPlan,
     updatePlanPattern,
+    updatePlansOrderBulk,
 };

@@ -132,7 +132,7 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { hotels, fetchHotels } = useHotelStore();
   import { usePlansStore } from '@/composables/usePlansStore';
-  const { plans, fetchPlansForHotel, createHotelPlan, updateHotelPlan, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();  
+  const { plans, fetchPlansForHotel, createHotelPlan, updateHotelPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();  
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
@@ -199,17 +199,17 @@ import Badge from 'primevue/badge';
 
   const onRowReorder = async (event) => {
     hotelPlans.value = event.value;
-    for (let i = 0; i < hotelPlans.value.length; i++) {
-      const planToUpdate = { ...hotelPlans.value[i] }; // Create a copy
-      planToUpdate.display_order = i;
-      try {
-        await updateHotelPlan(planToUpdate.id, planToUpdate); // Send the full updated object
-      } catch (err) {
-        console.error('プランの表示順序の更新エラー:', err);
-        toast.add({ severity: 'error', summary: 'エラー', detail: 'プランの表示順序の更新に失敗しました', life: 3000 });
-      }
+    const plansWithNewOrder = hotelPlans.value.map((plan, index) => ({
+      ...plan,
+      display_order: index,
+    }));
+    try {
+      await updatePlansOrderBulk(selectedHotelId.value, plansWithNewOrder);
+      toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
+    } catch (err) {
+      console.error('プランの表示順序の更新エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'プランの表示順序の更新に失敗しました', life: 3000 });
     }
-    toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
   };
       
   // Rates

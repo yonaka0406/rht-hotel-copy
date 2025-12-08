@@ -50,7 +50,7 @@ const createHotelPlan = async (req, res) => {
         name,
         description,
         plan_type,
-        colorHEX,
+        color: receivedColor, // Destructure 'color' and rename to avoid shadowing
         display_order,
         is_active,
         available_from,
@@ -59,7 +59,11 @@ const createHotelPlan = async (req, res) => {
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
-    const color = '#' + colorHEX;
+    // Ensure color has a '#' prefix
+    let color = receivedColor;
+    if (color && !color.startsWith('#')) {
+        color = '#' + color;
+    }
 
     try {
         const newPlan = await planModels.insertHotelPlan(
@@ -94,7 +98,7 @@ const editHotelPlan = async (req, res) => {
         name,
         description,
         plan_type,
-        colorHEX,
+        color: receivedColor, // Destructure 'color' and rename to avoid shadowing
         display_order,
         is_active,
         available_from,
@@ -102,7 +106,11 @@ const editHotelPlan = async (req, res) => {
     } = req.body;
     const updated_by = req.user.id;
 
-    const color = '#' + colorHEX;
+    // Ensure color has a '#' prefix
+    let color = receivedColor;
+    if (color && !color.startsWith('#')) {
+        color = '#' + color;
+    }
 
     try {
         const updatedPlan = await planModels.updateHotelPlan(
@@ -128,34 +136,19 @@ const editHotelPlan = async (req, res) => {
     }
 };
 
-const updatePlanDisplayOrder = async (req, res) => {
+const updatePlansOrderBulk = async (req, res) => {
     const { hotelId } = req.params;
-    const { planId, newDisplayOrder } = req.body;
+    const plans = req.body;
     const updated_by = req.user.id;
 
     try {
-        const existingPlan = await planModels.selectHotelPlanById(req.requestId, hotelId, planId);
-        if (!existingPlan) {
-            return res.status(404).json({ error: 'Plan not found.' });
-        }
-
-        const updatedPlan = await planModels.updateHotelPlan(
+        const updatedPlans = await planModels.updatePlansOrderBulk(
             req.requestId,
-            planId,
             hotelId,
-            existingPlan.plan_type_category_id,
-            existingPlan.plan_package_category_id,
-            existingPlan.name,
-            existingPlan.description,
-            existingPlan.plan_type,
-            existingPlan.color,
-            newDisplayOrder, // New value
-            existingPlan.is_active,
-            existingPlan.available_from,
-            existingPlan.available_until,
+            plans,
             updated_by
         );
-        res.json(updatedPlan);
+        res.json(updatedPlans);
     } catch (error) {
         console.error('Error updating plan display order:', error);
         res.status(500).json({ error: error.message });
@@ -168,5 +161,5 @@ module.exports = {
     fetchAllHotelPlans,
     createHotelPlan,
     editHotelPlan,
-    updatePlanDisplayOrder,
+    updatePlansOrderBulk,
 };
