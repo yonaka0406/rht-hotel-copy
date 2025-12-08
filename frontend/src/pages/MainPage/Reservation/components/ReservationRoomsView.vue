@@ -514,7 +514,7 @@ const { setRoomPlan, setRoomPattern, setRoomGuests, availableRooms, fetchAvailab
 import { useCRMStore } from '@/composables/useCRMStore';
 const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
+const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate, fetchPlanRates, fetchPatternsForHotel, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 import { useParkingStore } from '@/composables/useParkingStore';
@@ -528,7 +528,7 @@ const formatCurrency = (value) => {
 };
 const allHavePlan = (group) => {
     return group.details.every(
-        (detail) => detail.plans_global_id || detail.plans_hotel_id
+        (detail) => detail.plans_hotel_id
     );
 };
 const allPeopleCountMatch = (group) => {
@@ -612,7 +612,7 @@ const matchingGroupDetails = (details) => {
             ...item,
             price: formatCurrency(item.price),
             display_date: formatDateWithDay(item.date),
-            plan_color: getPlanColor(item.plans_global_id, item.plans_hotel_id),
+            plan_color: getPlanColor(item.plans_hotel_id),
         }));
     }
 
@@ -640,7 +640,7 @@ const matchingGroupDetails = (details) => {
                                 ...dtl,
                                 price: formatCurrency(dtl.price),
                                 display_date: formatDateWithDay(dtl.date),
-                                plan_color: getPlanColor(dtl.plans_global_id, dtl.plans_hotel_id),
+                                plan_color: getPlanColor(dtl.plans_hotel_id),
                                 isDifferentRoom: true,
                             });
                             return [dtl];
@@ -704,13 +704,8 @@ const rowStyle = (data) => {
         return { backgroundColor: '#ededf9' };
     }
 };
-const getPlanColor = (plans_global_id, plans_hotel_id) => {
-    const possibleKeys = [
-        `${plans_global_id ?? ''}h${plans_hotel_id ?? ''}`,
-        `${plans_global_id ?? ''}h`,
-        `h${plans_hotel_id ?? ''}`,
-    ];
-    const plan = plans.value.find(p => possibleKeys.includes(p.plan_key));
+const getPlanColor = (plans_hotel_id) => {
+    const plan = plans.value.find(p => p.id === plans_hotel_id);
     return plan?.color || "#8f8d8d";
 };
 
@@ -805,7 +800,7 @@ const updatePattern = async () => {
         // Populate dayPlanSelections based on template
         for (const day of daysOfWeek) {
             const templateEntry = selectedPatternDetails.value.template?.[day.value];
-            if (templateEntry && templateEntry.plan_key && plans.value.some(plan => plan.plan_key === templateEntry.plan_key)) {
+            if (templateEntry && templateEntry.plan_key && plans.value.some(plan => plan.id === templateEntry.plan_key)) {
                 dayPlanSelections.value[day.value] = templateEntry.plan_key;
             } else {
                 dayPlanSelections.value[day.value] = null;
@@ -813,22 +808,21 @@ const updatePattern = async () => {
         }
     }
 };
-const updatePlanAddOns = async () => {
+    const updatePlanAddOns = async () => {
     if (selectedPlan.value) {
-        const gid = selectedPlan.value?.plans_global_id ?? 0;
+        // const gid = selectedPlan.value?.plans_global_id ?? 0; // Deprecated
         const hid = selectedPlan.value?.plans_hotel_id ?? 0;
         const hotel_id = reservationInfo.value.hotel_id ?? 0;
 
         try {
             // Fetch add-ons from the store
-            await fetchPlanAddons(gid, hid, hotel_id);
+            await fetchPlanAddons(hid, hotel_id);
         } catch (error) {
             console.error('Failed to fetch plan add-ons:', error);
             addons.value = [];
         }
     }
-};
-const generateAddonPreview = () => {
+};const generateAddonPreview = () => {
     // Check
     if (!selectedAddonOption.value) {
         toast.add({ severity: 'warn', summary: '警告', detail: 'アドオン選択されていません。', life: 3000 });

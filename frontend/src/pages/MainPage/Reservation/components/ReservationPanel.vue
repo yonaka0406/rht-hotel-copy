@@ -559,7 +559,7 @@ const { setReservationType, setReservationStatus, setRoomPlan, setRoomPattern,
     fetchAvailableRooms, getAvailableDatesForChange, setReservationRoomsPeriod,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
+const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel, fetchPlanTypeCategories, fetchPlanPackageCategories, updatePlanDisplayOrder, copyPlanToHotel, bulkCopyPlansToHotel } = usePlansStore();
 
 const reservationTypeSelected = ref(null);
 const reservationTypeOptions = computed(() => {
@@ -741,7 +741,7 @@ const groupedRooms = computed(() => {
 });
 const allHavePlan = (group) => {
     return group.details.every(
-        (detail) => detail.plans_global_id || detail.plans_hotel_id
+        (detail) => detail.plans_hotel_id
     );
 };
 const allRoomsHavePlan = computed(() => {
@@ -1341,7 +1341,7 @@ const updatePattern = async () => {
         // Populate dayPlanSelections based on template
         for (const day of daysOfWeek) {
             const templateEntry = selectedPatternDetails.value.template?.[day.value];
-            if (templateEntry && templateEntry.plan_key && plans.value.some(plan => plan.plan_key === templateEntry.plan_key)) {
+            if (templateEntry && templateEntry.plan_key && plans.value.some(plan => plan.id === templateEntry.plan_key)) {
                 dayPlanSelections.value[day.value] = templateEntry.plan_key;
             } else {
                 dayPlanSelections.value[day.value] = null;
@@ -1351,13 +1351,13 @@ const updatePattern = async () => {
 };
 const updatePlanAddOns = async () => {
     if (selectedPlan.value) {
-        const gid = selectedPlan.value?.plans_global_id ?? 0;
+        // const gid = selectedPlan.value?.plans_global_id ?? 0; // Deprecated
         const hid = selectedPlan.value?.plans_hotel_id ?? 0;
         const hotel_id = reservationInfo.value.hotel_id ?? 0;
 
         try {
             // Fetch add-ons from the store
-            await fetchPlanAddons(gid, hid, hotel_id);
+            await fetchPlanAddons(hid, hotel_id);
         } catch (error) {
             console.error('Failed to fetch plan add-ons:', error);
             addons.value = [];

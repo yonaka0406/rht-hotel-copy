@@ -15,6 +15,9 @@
         >
             <Column v-if="showHotelColumn" field="hotel_name" header="施設" frozen sortable style="min-width: 150px; width: 15%"></Column>
             <Column field="month" header="月度" sortable :style="monthColumnStyle"></Column>
+            <Column field="plan_name" header="プラン" sortable style="min-width: 150px; width: 15%"></Column>
+            <Column field="category" header="カテゴリー" sortable style="min-width: 100px; width: 10%"></Column>
+            <Column field="category" header="カテゴリー" sortable style="min-width: 100px; width: 10%"></Column>
             <Column field="fc_sold_rooms" header="計画販売室数" sortable style="min-width: 100px; width: 10%">
                 <template #body="{data}">{{ data.fc_sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
             </Column>
@@ -126,13 +129,14 @@ const monthColumnStyle = computed(() => {
             sumOfConfirmedNightsFromOtherPlans += parseInt(item.confirmed_nights || '0');
 
             const mapKey = props.showHotelColumn && currentHotelName
-                ? `${currentHotelName}_${item.plan_name}`
-                : item.plan_name;
+                ? `${currentHotelName}_${item.plan_name}_${item.category}`
+                : `${item.plan_name}_${item.category}`;
 
             if (!aggregatedMap.has(mapKey)) {
                 aggregatedMap.set(mapKey, {
                     plan_name: item.plan_name,
                     sales_category: item.sales_category,
+                    category: item.category, // Include category
                     undecided_nights: 0,
                     confirmed_nights: 0,
                     employee_nights: 0,
@@ -265,6 +269,7 @@ const downloadDetailedCSV = () => {
         ...(props.showHotelColumn ? { 'ホテルID': item.hotel_id || '', '施設': item.hotel_name || '' } : {}),
         '月度': formatMonth(item.month) || '',
         'プラン名': item.plan_name,
+        'カテゴリー': item.category, // New category field
         '販売区分': (item.sales_category === 'accommodation' ? '宿泊' : (item.sales_category === 'other' ? 'その他' : item.sales_category)) || '', // Localized sales_category
         '未確定泊数': item.undecided_nights === 0 ? 0 : item.undecided_nights || '',
         '確定泊数': item.confirmed_nights === 0 ? 0 : item.confirmed_nights || '',

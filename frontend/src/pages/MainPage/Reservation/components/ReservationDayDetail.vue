@@ -294,7 +294,7 @@ import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, Float
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom, setReservationDetailStatus } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate, fetchPlanRates } = usePlansStore();
+const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate, fetchPlanRates, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
 import { useSettingsStore } from '@/composables/useSettingsStore';
 const { taxTypes, fetchTaxTypes } = useSettingsStore();
 
@@ -404,21 +404,21 @@ const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
 const updatePlanAddOns = async (event) => {
     // console.log('Selected Plan:', event.value);           
-    const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);
+    const selectedPlanObject = plans.value.find(plan => plan.id === selectedPlan.value);
 
     // console.log('selectedPlanObject',selectedPlanObject)
     if (selectedPlan.value) {
-        const gid = selectedPlanObject.plans_global_id ?? 0;
+        // const gid = selectedPlanObject.plans_global_id ?? 0; // Deprecated
         const hid = selectedPlanObject.plans_hotel_id ?? 0;
         const hotel_id = props.reservation_details.hotel_id ?? 0;
 
         try {
-            await fetchPlanAddons(gid, hid, hotel_id);
-            planTotalRate.value = await fetchPlanRate(gid, hid, hotel_id, reservationDetail.value.date);
+            await fetchPlanAddons(hid, hotel_id);
+            planTotalRate.value = await fetchPlanRate(hid, hotel_id, reservationDetail.value.date);
             reservationDetail.value.plan_total_price = planTotalRate.value;
 
             // Calculate price in rates
-            selectedRates.value = await fetchPlanRates(gid, hid, hotel_id, reservationDetail.value.date);
+            selectedRates.value = await fetchPlanRates(hid, hotel_id, reservationDetail.value.date);
             let baseRate = selectedRates.value
                 .filter(rate => rate.adjustment_type === 'base_rate' && rate.sales_category === 'accommodation')
                 .reduce((sum, rate) => sum + parseFloat(rate.adjustment_value), 0);
@@ -431,13 +431,11 @@ const updatePlanAddOns = async (event) => {
                 return rate;
             });
 
-            const gidFixed = gid === 0 ? null : gid;
+            // const gidFixed = gid === 0 ? null : gid; // Deprecated
             const hidFixed = hid === 0 ? null : hid;
-            const selectedPlan = plans.value.find(plan =>
-                plan.plans_global_id === gidFixed && plan.plans_hotel_id === hidFixed
-            );
-            planBillType.value = selectedPlan ? selectedPlan.plan_type : null;
-            planBillType.value = selectedPlan.value === 'per_person'
+            const selectedPlanFromPlansStore = plans.value.find(plan => plan.id === hidFixed);
+            planBillType.value = selectedPlanFromPlansStore ? selectedPlanFromPlansStore.plan_type : null;
+            planBillType.value = selectedPlanFromPlansStore?.plan_type === 'per_person'
                 ? '人数あたり'
                 : '部屋あたり';
 
@@ -456,13 +454,13 @@ const generateAddonPreview = () => {
 
     // console.log('selectedAddonOption in select:', selectedAddonOption.value);
 
-    const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);
-    const isHotelAddon = foundAddon.id.startsWith('H');
+    const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
+    const isHotelAddon = foundAddon.id.toString().startsWith('H'); // id can be number or string "H"+number
     // console.log('selectedAddon:',selectedAddon.value);
     // console.log('selectedAddonOption:', selectedAddonOption.value);            
     selectedAddon.value.push({
         addons_global_id: isHotelAddon ? null : foundAddon.id,
-        addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
+        addons_hotel_id: isHotelAddon ? parseInt(foundAddon.id.toString().substring(1), 10) : null,
         hotel_id: foundAddon.hotel_id,
         addon_name: foundAddon.addon_name,
         price: foundAddon.price,
@@ -483,22 +481,11 @@ const savePlan = async () => {
     try {
         //console.log('savePlan:', selectedRates.value);
 
-        const plan_key = selectedPlan.value;
-        let plans_global_id = 0;
-        let plans_hotel_id = 0;
-        let plan_name = '';
-        let plan_type = '';
+        const plan_id = selectedPlan.value;
         let selectedPlanObject = null;
 
-        if (plan_key) {
-            const [global, hotel] = plan_key.split('h').map(Number);
-            plans_global_id = global || 0;
-            plans_hotel_id = hotel || 0;
-            selectedPlanObject = plans.value.find(plan => plan.plan_key === plan_key);
-            if (selectedPlanObject) {
-                plan_name = selectedPlanObject.name;
-                plan_type = selectedPlanObject.plan_type;
-            }
+        if (plan_id) {
+            selectedPlanObject = plans.value.find(plan => plan.id === plan_id);
         }
 
         const price = planTotalRate.value || 0;
@@ -623,7 +610,7 @@ onMounted(async () => {
 
     // Header
     drawerHeader.value = props.reservation_details.date + '：' + props.reservation_details.room_number + '号室 ' + props.reservation_details.room_type_name;
-    selectedPlan.value = (props.reservation_details.plans_global_id ?? '') + 'h' + (props.reservation_details.plans_hotel_id ?? '');
+    selectedPlan.value = props.reservation_details.plans_hotel_id;
 
     await fetchTaxTypes();
     // Current Plan
