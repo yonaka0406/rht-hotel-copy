@@ -54,6 +54,12 @@
               <label>パッケージカテゴリー</label>
           </FloatLabel>
         </div>
+        <div class="col-span-1 pt-6">
+          <FloatLabel>
+              <InputNumber v-model="editHotelPlan.display_order" class="w-full" />
+              <label>表示順</label>
+          </FloatLabel>
+        </div>
         <div class="col-span-2 pt-6 mb-2">
           <FloatLabel>
             <Textarea v-model="editHotelPlan.description" fluid />
@@ -80,6 +86,7 @@ import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import Textarea from 'primevue/textarea';
 import Button from 'primevue/button';
+import InputNumber from 'primevue/inputnumber';
 
 const props = defineProps({
   visible: Boolean,
@@ -92,7 +99,7 @@ const props = defineProps({
   initialEditHotelPlan: Object, // The plan to edit
 });
 
-const emit = defineEmits(['update:visible', 'planUpdated']);
+const emit = defineEmits(['update:visible', 'planUpdated', 'orderChanged']);
 
 const toast = useToast();
 const { updateHotelPlan } = usePlansStore();
@@ -145,6 +152,13 @@ const updateHotel = async () => {
   }
   if (!editHotelPlan.value.plan_package_category_id) {
     toast.add({ severity: 'error', summary: 'エラー', detail: 'パッケージカテゴリーを選択してください。', life: 3000 });
+    return;
+  }
+
+  // Check if display_order has changed
+  if (editHotelPlan.value.display_order !== props.initialEditHotelPlan.display_order) {
+    emit('orderChanged', editHotelPlan.value);
+    emit('update:visible', false);
     return;
   }
 

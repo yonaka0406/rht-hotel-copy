@@ -715,7 +715,7 @@
       }
       showEditHotelDialog.value = false;
       editHotelAddonReset();
-      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオンが更新されました。', life: 3000 });    
     } catch (err) {
       console.error('ホテルアドオンの更新エラー:', err);
       toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルアドオンの更新に失敗しました', life: 3000 });

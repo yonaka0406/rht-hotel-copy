@@ -106,6 +106,7 @@
         :visible="showEditHotelDialog"
         @update:visible="showEditHotelDialog = $event"
         @planUpdated="onPlanModified"
+        @orderChanged="handleOrderChange"
         :selectedHotelId="selectedHotelId"
         :selectedHotelName="selectedHotelName"
         :planTypeCategories="planTypeCategories"
