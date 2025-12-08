@@ -66,7 +66,7 @@
         
     const props = defineProps({
         selectedHotelId: {
-            type: String, 
+            type: Number, 
             required: true,
         }
     });

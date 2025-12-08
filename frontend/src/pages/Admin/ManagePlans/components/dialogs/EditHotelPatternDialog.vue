@@ -46,7 +46,7 @@ import Column from 'primevue/column';
 
 const props = defineProps({
     visible: Boolean,
-    selectedHotelId: String,
+    selectedHotelId: Number,
     hotelPlans: Array,
     allHotelPatterns: Array, // For duplicate check
     initialEditHotelPattern: Object, // The pattern to edit

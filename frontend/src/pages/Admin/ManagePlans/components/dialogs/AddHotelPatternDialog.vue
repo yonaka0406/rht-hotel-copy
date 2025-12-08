@@ -39,7 +39,7 @@ import Column from 'primevue/column'; // Added for debugging
 
 const props = defineProps({
     visible: Boolean,
-    selectedHotelId: String,
+    selectedHotelId: Number,
     hotelPlans: Array,
     allHotelPatterns: Array, // For duplicate check
     daysOfWeek: Array,
