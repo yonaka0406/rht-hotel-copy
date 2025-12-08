@@ -612,6 +612,7 @@
 <script setup>
     // Vue
     import { ref, watch, computed, onMounted } from 'vue';
+    import { formatDate } from '@/utils/dateUtils';
     const props = defineProps({
         plan: {
             type: Object,
@@ -864,15 +865,7 @@
             return;
         }
 
-        // Conversion from Datetime to Date
-        const formatDate = (date) => {
-            if (!date) return null;
-            const d = new Date(date);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
+        // Using formatDate utility from dateUtils
         const formattedAdjustment = {
             ...newAdjustment.value,
             date_start: formatDate(newAdjustment.value.date_start),
@@ -963,15 +956,7 @@
             return;
         }
 
-        // Conversion from Datetime to Date
-        const formatDate = (date) => {
-            if (!date) return null;
-            const d = new Date(date);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
+        // Using formatDate utility from dateUtils
 
         const formattedAdjustment = {
             ...editAdjustment.value,
@@ -1203,14 +1188,7 @@
     });    
             
     const fetchRates = async () => {
-        // Helper function to format the date
-        const formatDate = (date) => {
-            if (!date) return null; // Handle null values
-            const d = new Date(date);
-            const yy = String(d.getFullYear()); 
-            const mm = String(d.getMonth() + 1).padStart(2, '0'); // Month (01-12)
-            const dd = String(d.getDate()).padStart(2, '0'); // Day (01-31)
-            return `${yy}-${mm}-${dd}`;
+        // Using formatDate utility from dateUtils
         };
 
         try {
