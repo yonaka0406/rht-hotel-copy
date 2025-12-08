@@ -1,7 +1,7 @@
 let getPool = require('../../config/database').getPool;
 const format = require('pg-format');
 const { toFullWidthKana, processNameString } = require('../clients');
-const { selectPlanByKey } = require('../plan');
+const { selectHotelPlanById } = require('../plan');
 const { getAllPlanAddons } = require('../planAddon');
 const planRateModel = require('../planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
@@ -1642,7 +1642,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
       const detailDate = new Date(date);
       const dayOfWeek = detailDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
 
-      const plan = await selectPlanByKey(requestId, hotelId, pattern[dayOfWeek]);
+      const plan = await selectHotelPlanById(requestId, hotelId, pattern[dayOfWeek], client);
       const addons = await getAllPlanAddons(requestId, plan.plans_global_id, plan.plans_hotel_id, hotelId, client);
       if (addons && Array.isArray(addons)) {
         addons.forEach(addon => {

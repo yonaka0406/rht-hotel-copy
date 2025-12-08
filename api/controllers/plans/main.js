@@ -2,15 +2,6 @@ const planModels = require('../../models/plan');
 const planCategoriesModel = require('../../models/plan/categories');
 
 // GET
-const getGlobalPlans = async (req, res) => {
-    try {
-        const Plans = await planModels.selectGlobalPlans(req.requestId);
-        res.json(Plans);
-    } catch (error) {
-        console.error('Error getting global Plans:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
 const getHotelsPlans = async (req, res) => {
     try {
         const Plans = await planModels.selectAllHotelsPlans(req.requestId);
@@ -51,15 +42,6 @@ const fetchAllHotelPlans = async (req, res) => {
     }
 };
 
-const getGlobalPatterns = async (req, res) => {
-    try {
-        const patterns = await planModels.selectGlobalPatterns(req.requestId);
-        res.json(patterns);
-    } catch (error) {
-        console.error('Error getting global patterns:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
 const getHotelPatterns = async (req, res) => {
     try {
         const patterns = await planModels.selectAllHotelPatterns(req.requestId);
@@ -240,18 +222,18 @@ const createGlobalPlan = async (req, res) => {
     }
 };
 const createHotelPlan = async (req, res) => {
-    const { 
-        hotel_id, 
-        plan_type_category_id, 
-        plan_package_category_id, 
-        name, 
-        description, 
-        plan_type, 
-        colorHEX, 
-        display_order, 
-        is_active, 
-        available_from, 
-        available_until 
+    const {
+        hotel_id,
+        plan_type_category_id,
+        plan_package_category_id,
+        name,
+        description,
+        plan_type,
+        colorHEX,
+        display_order,
+        is_active,
+        available_from,
+        available_until
     } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
@@ -260,19 +242,19 @@ const createHotelPlan = async (req, res) => {
 
     try {
         const newPlan = await planModels.insertHotelPlan(
-            req.requestId, 
-            hotel_id, 
-            plan_type_category_id, 
-            plan_package_category_id, 
-            name, 
-            description, 
-            plan_type, 
-            color, 
-            display_order, 
-            is_active, 
-            available_from, 
-            available_until, 
-            created_by, 
+            req.requestId,
+            hotel_id,
+            plan_type_category_id,
+            plan_package_category_id,
+            name,
+            description,
+            plan_type,
+            color,
+            display_order,
+            is_active,
+            available_from,
+            available_until,
+            created_by,
             updated_by
         );
         res.json(newPlan);
@@ -283,7 +265,7 @@ const createHotelPlan = async (req, res) => {
 };
 const createPlanPattern = async (req, res) => {
     const { hotel_id, name, template } = req.body;
-    const user_id = req.user.id;    
+    const user_id = req.user.id;
 
     try {
         const newData = await planModels.insertPlanPattern(req.requestId, hotel_id, name, template, user_id);
@@ -295,7 +277,7 @@ const createPlanPattern = async (req, res) => {
 };
 
 // PUT
-const editGlobalPlan = async (req, res) => {    
+const editGlobalPlan = async (req, res) => {
     const { id } = req.params;
     const { name, description, plan_type, colorHEX } = req.body;
     const updated_by = req.user.id;
@@ -312,18 +294,18 @@ const editGlobalPlan = async (req, res) => {
 };
 const editHotelPlan = async (req, res) => {
     const { id } = req.params;
-    const { 
-        hotel_id, 
-        plan_type_category_id, 
-        plan_package_category_id, 
-        name, 
-        description, 
-        plan_type, 
-        colorHEX, 
-        display_order, 
-        is_active, 
-        available_from, 
-        available_until 
+    const {
+        hotel_id,
+        plan_type_category_id,
+        plan_package_category_id,
+        name,
+        description,
+        plan_type,
+        colorHEX,
+        display_order,
+        is_active,
+        available_from,
+        available_until
     } = req.body;
     const updated_by = req.user.id;
 
@@ -331,19 +313,19 @@ const editHotelPlan = async (req, res) => {
 
     try {
         const updatedPlan = await planModels.updateHotelPlan(
-            req.requestId, 
-            id, 
-            hotel_id, 
-            plan_type_category_id, 
-            plan_package_category_id, 
-            name, 
-            description, 
-            plan_type, 
-            color, 
-            display_order, 
-            is_active, 
-            available_from, 
-            available_until, 
+            req.requestId,
+            id,
+            hotel_id,
+            plan_type_category_id,
+            plan_package_category_id,
+            name,
+            description,
+            plan_type,
+            color,
+            display_order,
+            is_active,
+            available_from,
+            available_until,
             updated_by
         );
         res.json(updatedPlan);
@@ -355,7 +337,7 @@ const editHotelPlan = async (req, res) => {
 const editPlanPattern = async (req, res) => {
     const { id } = req.params;
     const { name, template } = req.body;
-    const user_id = req.user.id;    
+    const user_id = req.user.id;
 
     try {
         const newData = await planModels.editPlanPattern(req.requestId, id, name, template, user_id);
