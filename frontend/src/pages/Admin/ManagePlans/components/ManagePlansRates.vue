@@ -337,7 +337,8 @@
                         optionValue="value"
                         fluid
                         required />
-                    </FloatLabel>
+                        <label>調整タイプ</label>
+                    </FloatLabel>                
                 </div>
                 <div class="col-span-2">
                     <FloatLabel>
@@ -711,8 +712,8 @@
     const filteredAddonSum = computed(() => {
         return addons.value.reduce((sum, addon) => sum + (addon.price || 0), 0);
     });
-    const handleFilteredAddons = (addons) => {
-        addons.value = addons;
+    const handleFilteredAddons = (newAddons) => {
+        addons.value = newAddons;
     };
     const allRates = ref([]);
 
@@ -915,6 +916,12 @@
             });
         } catch (error) {
             console.error('調整保存エラー:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '料金の保存中にエラーが発生しました。',
+                life: 3000
+            });
         }
     };
     const updateAdjustment = async () => {
