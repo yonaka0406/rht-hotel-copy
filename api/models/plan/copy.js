@@ -26,6 +26,10 @@ const copyPlanToHotel = async (requestId, sourcePlanId, sourceHotelId, targetHot
         const newPlanResult = await client.query(insertPlanQuery, [
             targetHotelId, options.newName, options.userId, sourcePlanId, sourceHotelId
         ]);
+
+        if (newPlanResult.rows.length === 0) {
+            throw new Error('Failed to create new plan or source plan not found.');
+        }
         const newPlanId = newPlanResult.rows[0].id;
 
         // 2. Optionally copy rates

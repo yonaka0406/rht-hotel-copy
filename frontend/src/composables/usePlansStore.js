@@ -7,26 +7,7 @@ const patterns = ref([]);
 export function usePlansStore() {
 
     // Plans
-    const fetchPlansGlobal = async () => {        
-        try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/global`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-            
-            plans.value = await response.json();
-            plans.value = plans.value.map(plan => ({
-                ...plan,
-                plan_key: (plan.id ?? '') + 'h'
-            }));
-        } catch (error) {
-            console.error('Failed to fetch global plans', error);
-        }
-    };
+
     const fetchPlansHotel = async () => {        
         try {
             const authToken = localStorage.getItem('authToken');
@@ -41,7 +22,7 @@ export function usePlansStore() {
             plans.value = await response.json();
             plans.value = plans.value.map(plan => ({
                 ...plan,
-                plan_key: (plan.plans_global_id ?? '') + 'h' + (plan.id ?? '')
+                plan_key: (plan.id ?? '')
             }));
         } catch (error) {
             console.error('Failed to fetch global plans', error);
@@ -65,46 +46,8 @@ export function usePlansStore() {
             console.error('Failed to fetch hotel plans', error);
         }
     };
-    const createGlobalPlan = async (data) => {        
-        try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch('/api/plans/global', {
-                method: 'POST',
-                headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            return result;
-        } catch (error) {
-            console.error('Failed to fetch hotel plans', error);
-        }
-    };
-    const updateGlobalPlan = async (id, data) => {        
-        try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/global/${id}`, {
-                method: 'PUT',
-                headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            return result;
-        } catch (error) {
-            console.error('Failed to fetch hotel plans', error);
-        }
-    };
+
+
     const createHotelPlan = async (data) => {        
         try {
             const authToken = localStorage.getItem('authToken');
@@ -146,11 +89,211 @@ export function usePlansStore() {
         }
     };
 
-    // Addons
-    const fetchPlanAddons = async (gid, hid, hotel_id) => {
+    // Plan Type Categories
+    const fetchPlanTypeCategories = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/${gid}/${hid}/${hotel_id}/addons`, {
+            const response = await fetch('/api/plans/categories/type', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to fetch plan type categories', error);
+            throw error;
+        }
+    };
+
+    const createPlanTypeCategory = async (data) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/categories/type', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to create plan type category', error);
+            throw error;
+        }
+    };
+
+    const updatePlanTypeCategory = async (id, data) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/categories/type/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to update plan type category', error);
+            throw error;
+        }
+    };
+
+    // Plan Package Categories
+    const fetchPlanPackageCategories = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/categories/package', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to fetch plan package categories', error);
+            throw error;
+        }
+    };
+
+    const createPlanPackageCategory = async (data) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/categories/package', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to create plan package category', error);
+            throw error;
+        }
+    };
+
+    const updatePlanPackageCategory = async (id, data) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/categories/package/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to update plan package category', error);
+            throw error;
+        }
+    };
+
+    // Plan Display Order
+    const updatePlanDisplayOrder = async (hotelId, planId, newDisplayOrder) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/reorder/hotel/${hotelId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ planId, newDisplayOrder }),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to update plan display order', error);
+            throw error;
+        }
+    };
+
+    // Plan Copy Between Hotels
+    const copyPlanToHotel = async (sourcePlanId, sourceHotelId, targetHotelId, options) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/copy', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sourcePlanId, sourceHotelId, targetHotelId, options }),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to copy plan to hotel', error);
+            throw error;
+        }
+    };
+
+    const bulkCopyPlansToHotel = async (sourcePlanIds, sourceHotelId, targetHotelId, options) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/bulk-copy', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sourcePlanIds, sourceHotelId, targetHotelId, options }),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to bulk copy plans to hotel', error);
+            throw error;
+        }
+    };
+
+    // Addons
+    const fetchPlanAddons = async (hid, hotel_id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/${hid}/${hotel_id}/addons`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -189,10 +332,10 @@ export function usePlansStore() {
     };
 
     // Rates
-    const fetchPlanRate = async (gid, hid, hotel_id, date) => {
+    const fetchPlanRate = async (hid, hotel_id, date) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plan/rate/${gid}/${hid}/${hotel_id}/${date}`, {
+            const response = await fetch(`/api/plan/rate/${hid}/${hotel_id}/${date}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -208,10 +351,10 @@ export function usePlansStore() {
             console.error('Failed to fetch plan rate', error);
         }
     };
-    const fetchPlanRates = async (gid, hid, hotel_id, date) => {
+    const fetchPlanRates = async (hid, hotel_id, date) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plan/rate-detail/${gid}/${hid}/${hotel_id}/${date}`, {
+            const response = await fetch(`/api/plan/rate-detail/${hid}/${hotel_id}/${date}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -228,22 +371,7 @@ export function usePlansStore() {
     };
 
     // Patterns
-    const fetchGlobalPatterns = async () => {        
-        try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/patterns/global`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-            
-            patterns.value = await response.json();
-        } catch (error) {
-            console.error('Failed to fetch global patterns', error);
-        }
-    };
+
     const fetchHotelPatterns = async () => {        
         try {
             const authToken = localStorage.getItem('authToken');
@@ -322,20 +450,25 @@ export function usePlansStore() {
         plans,
         addons,
         patterns,
-        fetchPlansGlobal,
         fetchPlansHotel,
         fetchPlansForHotel,
-        createGlobalPlan,
-        updateGlobalPlan,
         createHotelPlan,
         updateHotelPlan,
+        fetchPlanTypeCategories,
+        createPlanTypeCategory,
+        updatePlanTypeCategory,
+        fetchPlanPackageCategories,
+        createPlanPackageCategory,
+        updatePlanPackageCategory,
+        updatePlanDisplayOrder,
+        copyPlanToHotel,
+        bulkCopyPlansToHotel,
         fetchPlanAddons,
         fetchAllAddons,
         fetchPlanRate,
         fetchPlanRates,
-        fetchGlobalPatterns,
-        fetchHotelPatterns,
-        fetchPatternsForHotel,
+        fetchHotelPatterns, // This now handles hotel patterns
+        fetchPatternsForHotel, // This still handles hotel patterns, fetchAllHotelPatterns from backend
         createPlanPattern,
         updatePlanPattern,
     };

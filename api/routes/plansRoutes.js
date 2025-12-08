@@ -16,23 +16,22 @@ router.put('/plans/reorder/hotel/:hotel_id', authMiddleware_manageDB, plansContr
 router.get('/plans/all/:hotel_id', authMiddleware, plansControllers.fetchAllHotelPlans);
 
 // Plan Rates routes
-router.get('/plans/:gid/:hid/:hotel_id/rates', authMiddleware, plansRateController.getPlanRates);
+router.get('/plans/:hid/:hotel_id/rates', authMiddleware, plansRateController.getPlanRates);
 router.get('/plans/rates/:id', authMiddleware, plansRateController.getPlanRate);
-router.get('/plan/rate/:gid/:hid/:hotel_id/:date', authMiddleware, plansRateController.getPlanRateByDay);
-router.get('/plan/rate-detail/:gid/:hid/:hotel_id/:date', authMiddleware, plansRateController.getPlanRatesByDay);
+router.get('/plan/rate/:hid/:hotel_id/:date', authMiddleware, plansRateController.getPlanRateByDay);
+router.get('/plan/rate-detail/:hid/:hotel_id/:date', authMiddleware, plansRateController.getPlanRatesByDay);
 router.post('/plans/:planId/rates', authMiddleware_manageDB, plansRateController.createNewPlanRate);
 router.put('/plans/rates/:id', authMiddleware_manageDB, plansRateController.updateExistingPlanRate);
 //router.delete('/plans/rates/:id', authMiddleware_manageDB, plansRateController.deletePlanRate);
 
 // Plan Addons routes
-router.get('/plans/:gid/:hid/:hotel_id/addons', authMiddleware, plansAddonController.getPlanAddons);
+router.get('/plans/:hid/:hotel_id/addons', authMiddleware, plansAddonController.getPlanAddons);
 router.get('/plans/addons/:id', authMiddleware, plansAddonController.getPlanAddon);
 router.post('/plans/addons', authMiddleware_manageDB, plansAddonController.createNewPlanAddon);
 router.put('/plans/addons/:id', authMiddleware_manageDB, plansAddonController.updateExistingPlanAddon);
 //router.delete('/plans/addons/:id', authMiddleware_manageDB, plansAddonController.deleteExistingPlanAddon);
 
 // Plan Patterns routes
-router.get('/plans/patterns/global', authMiddleware, plansControllers.getGlobalPatterns);
 router.get('/plans/patterns/hotel', authMiddleware, plansControllers.getHotelPatterns);
 router.get('/plans/patterns/all/:hotel_id', authMiddleware, plansControllers.fetchAllHotelPatterns);
 router.post('/plans/patterns', authMiddleware_manageDB, plansControllers.createPlanPattern);
