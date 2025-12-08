@@ -42,7 +42,6 @@ export function usePlansStore() {
             });
             
             const data = await response.json();
-            console.log('usePlansStore.js: Data from API for fetchPlansForHotel', data);
             plans.value = data;
             // console.log('Fetch plans from Store:',plans.value);
             
