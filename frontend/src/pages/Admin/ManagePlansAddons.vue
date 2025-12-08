@@ -283,7 +283,6 @@
         
     // Plan   
     const planInfo = ref({
-        plans_global_id: props.plan.plans_global_id,
         plans_hotel_id: props.plan.plans_hotel_id,
         hotel_id: props.plan.hotel_id,
         date: props.plan.date,
@@ -307,7 +306,6 @@
     const newAddonReset = () => {
         newAddon.value = { 
             hotel_id: null,
-            plans_global_id: null,
             plans_hotel_id: null,
             addons_id: null, 
             addon_type: null,
@@ -340,7 +338,6 @@
     };
     const openAddonDialog = async() => {
 
-        newAddon.value.plans_global_id = props.plan.plans_global_id;
         newAddon.value.plans_hotel_id = props.plan.plans_hotel_id;
         newAddon.value.hotel_id = props.plan.hotel_id;
         
@@ -552,7 +549,7 @@
 
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/${planInfo.value.plans_global_id}/${planInfo.value.plans_hotel_id}/${planInfo.value.hotel_id}/addons`, {
+            const response = await fetch(`/api/plans/${planInfo.value.plans_hotel_id}/${planInfo.value.hotel_id}/addons`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,

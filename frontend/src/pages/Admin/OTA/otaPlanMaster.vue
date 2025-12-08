@@ -16,7 +16,7 @@
                                 v-model="slotProps.data.plan_key" 
                                 :options="plans"
                                 optionLabel="name" 
-                                optionValue="plan_key" 
+                                optionValue="id" 
                             >                            
                             </Select>
                         </template>                        
@@ -61,13 +61,14 @@
         const filteredData = data.filter(item => Number.isInteger(item.plangroupcode * 1));
                 
         const updatedFilteredData = filteredData.map(item => {
-            const matchingPlan = plans.value.find(plan => plan.plan_key === item.plan_key);
+            // Find plan by its ID (from the updated Select v-model)
+            const matchingPlan = plans.value.find(plan => plan.id === item.plan_key);
 
             return {
                 ...item,
-                plans_global_id: matchingPlan?.plans_global_id || null,
-                plans_hotel_id: matchingPlan?.plans_hotel_id || null,
-                plan_key: matchingPlan?.plan_key || item.plan_key || null, // keep original if not found
+                plans_global_id: null, // Always null as global plans are deprecated
+                plans_hotel_id: matchingPlan?.id || null,
+                plan_key: matchingPlan?.id || null, // Keep plan_key for now, but value is plan.id
             };
         });
         

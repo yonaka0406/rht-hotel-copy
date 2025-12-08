@@ -615,6 +615,10 @@
         plan: {
             type: Object,
             required: true,
+        },
+        selectedHotelId: {
+            type: String, // Assuming hotel IDs are strings (UUIDs)
+            required: true,
         }
     });
     import ManagePlansAddons from './ManagePlansAddons.vue';
@@ -696,9 +700,8 @@
     // Panel    
     const selectedDate = ref(new Date().toISOString().split('T')[0]);
     const planId = ref({                
-        plans_global_id: props.plan.context === 'global' ? props.plan.id : 0,
-        plans_hotel_id: props.plan.context === 'hotel' ? props.plan.id : 0,
-        hotel_id: props.plan.context === 'hotel' ? props.plan.hotel_id : 0, 
+        plans_hotel_id: props.plan.id,
+        hotel_id: props.selectedHotelId, 
         date: selectedDate,
     });
     const addons = ref([]);
@@ -723,7 +726,6 @@
     const newAdjustmentReset = () => {
         newAdjustment.value = {
             hotel_id: null,
-            plans_global_id: null,
             plans_hotel_id: null,
             adjustment_type: 'base_rate',
             adjustment_value: 0,
@@ -741,7 +743,6 @@
     const editAdjustmentReset = () => {
         editAdjustment.value = {
             hotel_id: null,
-            plans_global_id: null,
             plans_hotel_id: null,
             adjustment_type: 'base_rate',
             adjustment_value: 0,
@@ -777,14 +778,8 @@
         }
     };
     const openAdjustmentDialog = () => {
-        if (props.plan.context === 'global') {
-            newAdjustment.value.plans_global_id = props.plan.id;
-            newAdjustment.value.plans_hotel_id = null;
-        } else if (props.plan.context === 'hotel') {
-            newAdjustment.value.plans_global_id = null;
-            newAdjustment.value.plans_hotel_id = props.plan.id;
-            newAdjustment.value.hotel_id = props.plan.hotel_id;
-        }
+        newAdjustment.value.plans_hotel_id = props.plan.id;
+        newAdjustment.value.hotel_id = props.plan.hotel_id;
         showAdjustmentDialog.value = true;
     };
     const openEditAdjustmentDialog = (adjustmentData) => {
@@ -903,7 +898,6 @@
             showAdjustmentDialog.value = false;
             newAdjustment.value = {
                 hotel_id: null,
-                plans_global_id: null,
                 plans_hotel_id: null,
                 adjustment_type: 'base_rate',
                 adjustment_value: 0,
@@ -999,7 +993,6 @@
             showEditAdjustmentDialog.value = false; // Close the dialog
             editAdjustment.value = {
                 hotel_id: null,
-                plans_global_id: null,
                 plans_hotel_id: null,
                 adjustment_type: 'base_rate',
                 adjustment_value: 0,
@@ -1215,7 +1208,7 @@
 
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/${planId.value.plans_global_id}/${planId.value.plans_hotel_id}/${planId.value.hotel_id}/rates`, {
+            const response = await fetch(`/api/plans/${planId.value.plans_hotel_id}/hotels/${planId.value.hotel_id}/rates`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -1284,6 +1277,13 @@
     watch(selectedEditConditions, (newVal) => {
         // console.log('[watch selectedEditConditions] newVal:', newVal);
         editAdjustment.value.condition_value = newVal;
+    });
+
+    watch(() => props.selectedHotelId, async (newVal, oldVal) => {
+        if (newVal && newVal !== oldVal) {
+            planId.value.hotel_id = newVal;
+            await fetchRates();
+        }
     });
 
     const totalPriceForSelectedDay = computed(() => {
