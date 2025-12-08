@@ -117,9 +117,11 @@
   // Vue
   import { ref, onMounted } from 'vue';
 
-  import ManagePlansRates from '../ManagePlansRates.vue';
-  import ManagePlansPatterns from '@/pages/Admin/ManagePlans/components/ManagePlansPatterns.vue';
-  import CopyPlansDialog from './components/CopyPlansDialog.vue';
+  import ManagePlansRates from './components/ManagePlansRates.vue';
+  import ManagePlansPatterns from './components/ManagePlansPatterns.vue';
+  import CopyPlansDialog from './components/dialogs/CopyPlansDialog.vue';
+  import AddHotelPlanDialog from './components/dialogs/AddHotelPlanDialog.vue';
+  import EditHotelPlanDialog from './components/dialogs/EditHotelPlanDialog.vue';
 
   // Stores
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -129,22 +131,7 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import ManagePlansRates from '../ManagePlansRates.vue';
-  import ManagePlansPatterns from '@/pages/Admin/ManagePlans/components/ManagePlansPatterns.vue';
-  import CopyPlansDialog from './components/CopyPlansDialog.vue';
-  import AddHotelPlanDialog from './components/dialogs/AddHotelPlanDialog.vue';
-  import EditHotelPlanDialog from './components/dialogs/EditHotelPlanDialog.vue';
-
-  // Stores
-  import { useHotelStore } from '@/composables/useHotelStore';
-  const { hotels, fetchHotels } = useHotelStore();
-  import { usePlansStore } from '@/composables/usePlansStore';
-  const { plans, fetchPlansHotel, /*createHotelPlan, updateHotelPlan,*/ fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();  
-  // Primevue
-  import { useToast } from 'primevue/usetoast';
-  const toast = useToast();
-  import { Panel, DataTable, Column,
-    FloatLabel, InputText, ColorPicker, Textarea, Select, SelectButton, Button } from 'primevue'  
+  import { Panel, DataTable, Column, FloatLabel, Select, Button } from 'primevue'  
 
   // Helper
   const isEmptyObject = (obj) => {
