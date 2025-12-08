@@ -3,7 +3,7 @@ const router = express.Router();
 const plansControllers = require('../controllers/plans');
 const plansRateController = require('../controllers/plansRateController');
 const plansAddonController = require('../controllers/plansAddonController');
-const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
+const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 // Hotel-specific Plans routes
 router.get('/plans/hotel', authMiddleware, plansControllers.getHotelsPlans);
@@ -48,6 +48,5 @@ router.put('/plans/categories/package/:id', authMiddleware_manageDB, plansContro
 // Plan Copy Between Hotels
 router.post('/plans/copy', authMiddleware_manageDB, plansControllers.copyPlanToHotel);
 router.post('/plans/bulk-copy', authMiddleware_manageDB, plansControllers.bulkCopyPlansToHotel);
-
 
 module.exports = router;
