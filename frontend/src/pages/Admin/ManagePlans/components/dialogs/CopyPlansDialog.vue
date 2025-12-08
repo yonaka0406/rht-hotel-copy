@@ -147,8 +147,8 @@ const checkConflicts = () => {
     }
 
     plansToCopy.value.forEach(plan => {
-        const nameToCheck = plan.newName.trim() || plan.name;
-        plan.conflict = targetHotelPlans.value.some(targetPlan => targetPlan.name === nameToCheck);
+        const nameToCheck = plan.newName.trim() || plan.plan_name; // Use plan.plan_name
+        plan.conflict = targetHotelPlans.value.some(targetPlan => targetPlan.plan_name === nameToCheck); // Use targetPlan.plan_name
     });
 };
 
@@ -170,7 +170,7 @@ const executeCopy = async () => {
         for (const plan of selectedPlans.value) {
             const newPlanData = {
                 hotel_id: targetHotelId.value,
-                name: plan.newName.trim() || plan.name,
+                name: plan.newName.trim() || plan.plan_name, // Use plan.plan_name here
                 description: plan.description,
                 plan_type: plan.plan_type,
                 colorHEX: plan.color, // Assuming color is stored in plan.color
