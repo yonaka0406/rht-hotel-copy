@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-      <Panel header="プラン">
+      <Panel header="プラン" class="mb-4">
         <div class="mb-4 mt-6">
           <FloatLabel>
             <Select
@@ -43,9 +43,14 @@
                       </div>
                     </template>
                   </Column>
-                  <Column field="description" header="詳細" style="width: 20%"></Column>
-                  <Column field="plan_type_category_name" header="タイプカテゴリー" style="width: 15%"></Column>
-                  <Column field="plan_package_category_name" header="パッケージカテゴリー" style="width: 15%"></Column>                  
+
+                  <Column header="カテゴリー" style="width: 15%">
+                    <template #body="slotProps">
+                      {{ console.log('ManagePlans.vue: Category slotProps.data', slotProps.data) }}
+                      <Badge :value="slotProps.data.plan_type_category_name" severity="primary" class="mr-2"></Badge>
+                      <Badge :value="slotProps.data.plan_package_category_name" severity="secondary"></Badge>
+                    </template>
+                  </Column>                  
                   <Column headerClass="text-center" style="width: 10%">
                     <template #header>
                       <span class="font-bold text-center w-full block">操作</span>
@@ -83,9 +88,9 @@
               </div>
       </Panel>
 
-      <Panel header="プランパターン" class="mt-4">
+      
         <ManagePlansPatterns :selectedHotelId="selectedHotelId" />
-      </Panel>
+      
 
       <AddHotelPlanDialog
         :visible="showHotelDialog"
