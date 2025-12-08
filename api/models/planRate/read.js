@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+const { getPool } = require('../../config/database');
 
 // Helper function to validate conditions
 const isValidCondition = (row, date) => {
@@ -82,14 +82,12 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
             include_in_cancel_fee, sales_category, comment
         FROM plans_rates
         WHERE 
-            (plans_global_id = $1 AND plans_hotel_id IS NULL) OR 
-            (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL)
-        ORDER BY adjustment_type ASC, condition_type DESC, date_start ASC, plans_global_id, hotel_id, plans_hotel_id
+            plans_hotel_id = $1 AND hotel_id = $2
+        ORDER BY adjustment_type ASC, condition_type DESC, date_start ASC, hotel_id, plans_hotel_id
     `;
 
     try {
         const result = await pool.query(query, [
-            plans_global_id || null,
             plans_hotel_id || null,
             hotel_id || null,
         ]);
@@ -132,15 +130,13 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         FROM plans_rates
         WHERE 
             (
-                $4 BETWEEN date_start AND COALESCE(date_end, $4)  -- Date is within the range
-                OR ($4 >= date_start AND date_end IS NULL)  -- Date is after the start date and no end date
+                $3 BETWEEN date_start AND COALESCE(date_end, $3)  -- Date is within the range
+                OR ($3 >= date_start AND date_end IS NULL)  -- Date is after the start date and no end date
             )
-            AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
-            OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
+            AND plans_hotel_id = $1 AND hotel_id = $2
         GROUP BY condition_type, adjustment_type, condition_value, tax_type_id
     `;
     const values = [
-        plans_global_id || null,
         plans_hotel_id || null,
         hotel_id,
         date,
@@ -249,16 +245,14 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
         FROM plans_rates
         WHERE
             (
-                $4 BETWEEN date_start AND COALESCE(date_end, $4)
-                OR ($4 >= date_start AND date_end IS NULL)
+                $3 BETWEEN date_start AND COALESCE(date_end, $3)
+                OR ($3 >= date_start AND date_end IS NULL)
             )
-            AND ((plans_global_id = $1 AND plans_hotel_id IS NULL)
-            OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
+            AND plans_hotel_id = $1 AND hotel_id = $2
         GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate, include_in_cancel_fee, sales_category
         ORDER BY adjustment_type
     `;
     const values = [
-        plans_global_id || null,
         plans_hotel_id || null,
         hotel_id,
         date,
@@ -281,141 +275,9 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
     }
 };
 
-// Create a new plans_rate
-const createPlansRate = async (requestId, plansRate) => {
-    const pool = getPool(requestId);
-    const query = `
-        INSERT INTO plans_rates (
-            hotel_id, 
-            plans_global_id, 
-            plans_hotel_id, 
-            adjustment_type, 
-            adjustment_value, 
-            tax_type_id,
-            tax_rate,
-            condition_type, 
-            condition_value, 
-            date_start, 
-            date_end, 
-            created_by,
-            updated_by,
-            include_in_cancel_fee,
-            sales_category,
-            comment
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-        RETURNING *
-    `;
-
-    const values = [
-        plansRate.hotel_id,
-        plansRate.plans_global_id,
-        plansRate.plans_hotel_id,
-        plansRate.adjustment_type,
-        plansRate.adjustment_value,
-        plansRate.tax_type_id,
-        plansRate.tax_rate,
-        plansRate.condition_type,
-        plansRate.condition_value,
-        plansRate.date_start,
-        plansRate.date_end,
-        plansRate.created_by,
-        plansRate.updated_by,
-        plansRate.include_in_cancel_fee || false,
-        plansRate.sales_category || 'accommodation',
-        plansRate.comment
-    ];
-
-    try {
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    } catch (err) {
-        console.error('Error creating plan rate:', err);
-        throw new Error('Database error');
-    }
-};
-
-// Update an existing plans_rate
-const updatePlansRate = async (requestId, id, plansRate) => {
-    const pool = getPool(requestId);
-    const query = `
-        UPDATE plans_rates
-        SET 
-            hotel_id = $1,
-            plans_global_id = $2,
-            plans_hotel_id = $3,
-            adjustment_type = $4,
-            adjustment_value = $5,
-            tax_type_id = $6,
-            tax_rate = $7,
-            condition_type = $8,
-            condition_value = $9,
-            date_start = $10,
-            date_end = $11,
-            updated_by = $12,
-            include_in_cancel_fee = $13,
-            sales_category = $14,
-            comment = $15
-        WHERE id = $16
-        RETURNING *
-    `;
-
-    const values = [
-        plansRate.hotel_id,
-        plansRate.plans_global_id,
-        plansRate.plans_hotel_id,
-        plansRate.adjustment_type,
-        plansRate.adjustment_value,
-        plansRate.tax_type_id,
-        plansRate.tax_rate,
-        plansRate.condition_type,
-        plansRate.condition_value,
-        plansRate.date_start,
-        plansRate.date_end,
-        plansRate.updated_by,
-        plansRate.include_in_cancel_fee || false,
-        plansRate.sales_category || 'accommodation',
-        plansRate.comment,
-        id
-    ];
-
-    try {
-        const result = await pool.query(query, values);
-        if (result.rows.length === 0) {
-            throw new Error('Plan rate not found');
-        }
-        return result.rows[0];
-    } catch (err) {
-        console.error(`Error updating plan rate with ID ${id}:`, err);
-        throw err;
-    }
-};
-
-// Delete a plans_rate by ID
-const deletePlansRate = async (requestId, id) => {
-    const pool = getPool(requestId);
-    const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
-
-    try {
-        const result = await pool.query(query, [id]);
-        if (result.rows.length === 0) {
-            throw new Error('Plan rate not found');
-        }
-        return result.rows[0];
-    } catch (err) {
-        console.error(`Error deleting plan rate with ID ${id}:`, err);
-        throw err;
-    }
-};
-
-
-
 module.exports = {
     getAllPlansRates,
     getPlansRateById,
     getPriceForReservation,
     getRatesForTheDay,
-    createPlansRate,
-    updatePlansRate,
-    deletePlansRate,
-
 };

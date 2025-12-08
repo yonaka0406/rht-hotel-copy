@@ -5,16 +5,12 @@ const plansRateController = require('../controllers/plansRateController');
 const plansAddonController = require('../controllers/plansAddonController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
-// Global Plans routes
-router.get('/plans/global', authMiddleware, plansControllers.getGlobalPlans);
-router.post('/plans/global', authMiddleware_manageDB, plansControllers.createGlobalPlan);
-router.put('/plans/global/:id', authMiddleware_manageDB, plansControllers.editGlobalPlan);
-
 // Hotel-specific Plans routes
 router.get('/plans/hotel', authMiddleware, plansControllers.getHotelsPlans);
 router.get('/plans/hotel/:hotel_id', authMiddleware, plansControllers.getHotelPlans);
 router.post('/plans/hotel', authMiddleware_manageDB, plansControllers.createHotelPlan);
 router.put('/plans/hotel/:id', authMiddleware_manageDB, plansControllers.editHotelPlan);
+router.put('/plans/reorder/hotel/:hotel_id', authMiddleware_manageDB, plansControllers.updatePlanDisplayOrder);
 
 // Available Plans routes
 router.get('/plans/all/:hotel_id', authMiddleware, plansControllers.fetchAllHotelPlans);
@@ -41,6 +37,18 @@ router.get('/plans/patterns/hotel', authMiddleware, plansControllers.getHotelPat
 router.get('/plans/patterns/all/:hotel_id', authMiddleware, plansControllers.fetchAllHotelPatterns);
 router.post('/plans/patterns', authMiddleware_manageDB, plansControllers.createPlanPattern);
 router.put('/plans/patterns/:id', authMiddleware_manageDB, plansControllers.editPlanPattern);
+
+// Plan Category routes
+router.get('/plans/categories/type', authMiddleware, plansControllers.getTypeCategories);
+router.post('/plans/categories/type', authMiddleware_manageDB, plansControllers.createTypeCategory);
+router.put('/plans/categories/type/:id', authMiddleware_manageDB, plansControllers.updateTypeCategory);
+router.get('/plans/categories/package', authMiddleware, plansControllers.getPackageCategories);
+router.post('/plans/categories/package', authMiddleware_manageDB, plansControllers.createPackageCategory);
+router.put('/plans/categories/package/:id', authMiddleware_manageDB, plansControllers.updatePackageCategory);
+
+// Plan Copy Between Hotels
+router.post('/plans/copy', authMiddleware_manageDB, plansControllers.copyPlanToHotel);
+router.post('/plans/bulk-copy', authMiddleware_manageDB, plansControllers.bulkCopyPlansToHotel);
 
 
 module.exports = router;

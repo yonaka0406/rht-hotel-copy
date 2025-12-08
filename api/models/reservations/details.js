@@ -33,7 +33,6 @@ const insertReservationDetails = async (requestId, reservationDetailsData, dbCli
     reservation_id,
     date,
     room_id = null,
-    plans_global_id = null,
     plans_hotel_id = null,
     plan_name = null,
     plan_type = 'per_room',
@@ -57,7 +56,7 @@ const insertReservationDetails = async (requestId, reservationDetailsData, dbCli
     reservation_id,
     date,
     room_id,
-    plans_global_id,
+    null, // plans_global_id forced to NULL
     plans_hotel_id,
     plan_name,
     plan_type,

@@ -3,7 +3,7 @@ const format = require('pg-format');
 const { toFullWidthKana, processNameString } = require('../clients');
 const { selectPlanByKey } = require('../plan');
 const { getAllPlanAddons } = require('../planAddon');
-const { getPriceForReservation, getRatesForTheDay } = require('../planRate');
+const planRateModel = require('../planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../../ota/xmlModel');
 const logger = require('../../config/logger');
 
@@ -1203,7 +1203,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     // Update the reservation details with promise    
     const dtlUpdatePromises = detailsArray.map(async ({ id, operation_mode, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       let newPrice = 0;
-      newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)), false, client);
+      newPrice = await planRateModel.getPriceForReservation(requestId, null, plans_hotel_id, hotel_id, formatDate(new Date(date)), false, client);
       // logger.debug('newPrice calculated:',newPrice);
 
       const dtlUpdateQuery = `
@@ -1710,7 +1710,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       const formattedDate = formatDate(new Date(date));
       // Fetch new price
-      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, disableRounding, dbClient);
+      const newPrice = await planRateModel.getPriceForReservation(requestId, null, plans_hotel_id, hotel_id, formattedDate, disableRounding, dbClient);
 
       // Update reservation_details
       const dtlUpdateQuery = `
@@ -1728,7 +1728,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
       await dbClient.query(deleteRatesQuery, [id]);
 
       // Fetch new rates
-      const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate, dbClient);
+      const newrates = await planRateModel.getRatesForTheDay(requestId, null, plans_hotel_id, hotel_id, formattedDate, dbClient);
 
       // Determine if this is accommodation using the calculation service
       const isAccommodation = calculateIsAccommodation(newrates, false);

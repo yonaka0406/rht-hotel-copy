@@ -1,4 +1,5 @@
 const planModels = require('../../models/plan');
+const planCategoriesModel = require('../../models/plan/categories');
 
 // GET
 const getGlobalPlans = async (req, res) => {
@@ -84,6 +85,143 @@ const fetchAllHotelPatterns = async (req, res) => {
     }
 };
 
+// Plan Type Categories
+const getTypeCategories = async (req, res) => {
+    try {
+        const categories = await planCategoriesModel.selectAllPlanTypeCategories(req.requestId);
+        res.json(categories);
+    } catch (error) {
+        console.error('Error getting plan type categories:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const createTypeCategory = async (req, res) => {
+    const { name, description, color, display_order } = req.body;
+    const created_by = req.user.id;
+
+    try {
+        const newCategory = await planCategoriesModel.insertPlanTypeCategory(req.requestId, name, description, color, display_order, created_by);
+        res.status(201).json(newCategory);
+    } catch (error) {
+        console.error('Error creating plan type category:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const updateTypeCategory = async (req, res) => {
+    const { id } = req.params;
+    const { name, description, color, display_order } = req.body;
+    const updated_by = req.user.id;
+
+    try {
+        const updatedCategory = await planCategoriesModel.updatePlanTypeCategory(req.requestId, id, name, description, color, display_order, updated_by);
+        res.json(updatedCategory);
+    } catch (error) {
+        console.error('Error updating plan type category:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Plan Package Categories
+const getPackageCategories = async (req, res) => {
+    try {
+        const categories = await planCategoriesModel.selectAllPlanPackageCategories(req.requestId);
+        res.json(categories);
+    } catch (error) {
+        console.error('Error getting plan package categories:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const createPackageCategory = async (req, res) => {
+    const { name, description, color, display_order } = req.body;
+    const created_by = req.user.id;
+
+    try {
+        const newCategory = await planCategoriesModel.insertPlanPackageCategory(req.requestId, name, description, color, display_order, created_by);
+        res.status(201).json(newCategory);
+    } catch (error) {
+        console.error('Error creating plan package category:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const updatePackageCategory = async (req, res) => {
+    const { id } = req.params;
+    const { name, description, color, display_order } = req.body;
+    const updated_by = req.user.id;
+
+    try {
+        const updatedCategory = await planCategoriesModel.updatePlanPackageCategory(req.requestId, id, name, description, color, display_order, updated_by);
+        res.json(updatedCategory);
+    } catch (error) {
+        console.error('Error updating plan package category:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Plan Display Order
+const updatePlanDisplayOrder = async (req, res) => {
+    const { hotelId } = req.params;
+    const { planId, newDisplayOrder } = req.body;
+    const updated_by = req.user.id;
+
+    try {
+        const existingPlan = await planModels.selectHotelPlanById(req.requestId, hotelId, planId);
+        if (!existingPlan) {
+            return res.status(404).json({ error: 'Plan not found.' });
+        }
+
+        const updatedPlan = await planModels.updateHotelPlan(
+            req.requestId,
+            planId,
+            hotelId,
+            existingPlan.plan_type_category_id,
+            existingPlan.plan_package_category_id,
+            existingPlan.name,
+            existingPlan.description,
+            existingPlan.plan_type,
+            existingPlan.color,
+            newDisplayOrder, // New value
+            existingPlan.is_active,
+            existingPlan.available_from,
+            existingPlan.available_until,
+            updated_by
+        );
+        res.json(updatedPlan);
+    } catch (error) {
+        console.error('Error updating plan display order:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Plan Copy Between Hotels
+const copyPlanToHotel = async (req, res) => {
+    const { sourcePlanId, sourceHotelId, targetHotelId, options } = req.body;
+    const userId = req.user.id;
+
+    try {
+        const newPlan = await planModels.copyPlanToHotel(req.requestId, sourcePlanId, sourceHotelId, targetHotelId, { ...options, userId });
+        res.status(201).json(newPlan);
+    } catch (error) {
+        console.error('Error copying plan to hotel:', error);
+        res.status(500).json({ error: 'Failed to copy plan to hotel' });
+    }
+};
+
+const bulkCopyPlansToHotel = async (req, res) => {
+    const { sourcePlanIds, sourceHotelId, targetHotelId, options } = req.body;
+    const userId = req.user.id;
+
+    try {
+        const copiedPlans = await planModels.bulkCopyPlansToHotel(req.requestId, sourcePlanIds, sourceHotelId, targetHotelId, { ...options, userId });
+        res.status(201).json(copiedPlans);
+    } catch (error) {
+        console.error('Error bulk copying plans to hotel:', error);
+        res.status(500).json({ error: 'Failed to bulk copy plans to hotel' });
+    }
+};
 
 // POST
 const createGlobalPlan = async (req, res) => {
@@ -102,14 +240,41 @@ const createGlobalPlan = async (req, res) => {
     }
 };
 const createHotelPlan = async (req, res) => {
-    const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
+    const { 
+        hotel_id, 
+        plan_type_category_id, 
+        plan_package_category_id, 
+        name, 
+        description, 
+        plan_type, 
+        colorHEX, 
+        display_order, 
+        is_active, 
+        available_from, 
+        available_until 
+    } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
     const color = '#' + colorHEX;
 
     try {
-        const newPlan = await planModels.insertHotelPlan(req.requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by);
+        const newPlan = await planModels.insertHotelPlan(
+            req.requestId, 
+            hotel_id, 
+            plan_type_category_id, 
+            plan_package_category_id, 
+            name, 
+            description, 
+            plan_type, 
+            color, 
+            display_order, 
+            is_active, 
+            available_from, 
+            available_until, 
+            created_by, 
+            updated_by
+        );
         res.json(newPlan);
     } catch (err) {
         console.error('Error creating hotel Plan:', err);
@@ -147,13 +312,40 @@ const editGlobalPlan = async (req, res) => {
 };
 const editHotelPlan = async (req, res) => {
     const { id } = req.params;
-    const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
+    const { 
+        hotel_id, 
+        plan_type_category_id, 
+        plan_package_category_id, 
+        name, 
+        description, 
+        plan_type, 
+        colorHEX, 
+        display_order, 
+        is_active, 
+        available_from, 
+        available_until 
+    } = req.body;
     const updated_by = req.user.id;
 
     const color = '#' + colorHEX;
 
     try {
-        const updatedPlan = await planModels.updateHotelPlan(req.requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by);
+        const updatedPlan = await planModels.updateHotelPlan(
+            req.requestId, 
+            id, 
+            hotel_id, 
+            plan_type_category_id, 
+            plan_package_category_id, 
+            name, 
+            description, 
+            plan_type, 
+            color, 
+            display_order, 
+            is_active, 
+            available_from, 
+            available_until, 
+            updated_by
+        );
         res.json(updatedPlan);
     } catch (err) {
         console.error('Error updating hotel Plan:', err);
@@ -188,4 +380,13 @@ module.exports = {
     editGlobalPlan,
     editHotelPlan,
     editPlanPattern,
+    getTypeCategories,
+    createTypeCategory,
+    updateTypeCategory,
+    getPackageCategories,
+    createPackageCategory,
+    updatePackageCategory,
+    updatePlanDisplayOrder,
+    copyPlanToHotel,
+    bulkCopyPlansToHotel,
 };
