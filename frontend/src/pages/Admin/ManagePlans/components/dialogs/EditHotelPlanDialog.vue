@@ -1,9 +1,9 @@
 <template>
-    <Dialog header="ホテルプラン編集" :visible="visible" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
+    <Dialog :header="`ホテルプラン編集 (${props.selectedHotelName})`" :visible="visible" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
       <div class="grid grid-cols-2 gap-2 pt-6">
         <div class="col-span-1 mb-6">
           <FloatLabel>
-            <InputText v-model="editHotelPlan.name" fluid />
+            <InputText v-model="editHotelPlan.plan_name" fluid />
             <label>名称</label>
           </FloatLabel>
         </div>
@@ -15,6 +15,7 @@
             </FloatLabel>
             <ColorPicker v-model="editHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
           </div>
+          <small class="text-gray-500">カテゴリー色: <span :style="{ color: selectedTypeCategoryColor }">{{ selectedTypeCategoryColor }}</span></small>
         </div>
         <div class="col-span-2">
           <div class="p-float-label flex align-items-center gap-2">
@@ -36,7 +37,6 @@
                   optionValue="id"
                   placeholder="タイプカテゴリーを選択"
                   class="w-full"
-                  showClear
               />
               <label>タイプカテゴリー</label>
           </FloatLabel>
@@ -50,7 +50,6 @@
                   optionValue="id"
                   placeholder="パッケージカテゴリーを選択"
                   class="w-full"
-                  showClear
               />
               <label>パッケージカテゴリー</label>
           </FloatLabel>
@@ -70,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { usePlansStore } from '@/composables/usePlansStore';
 import Dialog from 'primevue/dialog';
@@ -85,6 +84,7 @@ import Button from 'primevue/button';
 const props = defineProps({
   visible: Boolean,
   selectedHotelId: Number,
+  selectedHotelName: String, // Add this line
   planTypeCategories: Array,
   planPackageCategories: Array,
   sb_options: Array,
@@ -99,9 +99,23 @@ const { updateHotelPlan } = usePlansStore();
 
 const editHotelPlan = ref({});
 
+const selectedTypeCategoryColor = computed(() => {
+  const category = props.planTypeCategories.find(cat => cat.id === editHotelPlan.value.plan_type_category_id);
+  return category ? category.color : 'カテゴリー色なし';
+});
+
 watch(() => props.visible, (newVal) => {
+  console.log('EditHotelPlanDialog.vue: props.visible changed', newVal); // Log visible prop
   if (newVal && props.initialEditHotelPlan) {
-    editHotelPlan.value = { ...props.initialEditHotelPlan };
+    const initialData = props.initialEditHotelPlan;
+    editHotelPlan.value = {
+      ...initialData,
+      colorHEX: initialData.color ? initialData.color.replace('#', '') : '',
+      plan_type_category_id: props.planTypeCategories.find(cat => cat.name === initialData.type_category)?.id || null,
+      plan_package_category_id: props.planPackageCategories.find(cat => cat.name === initialData.package_category)?.id || null,
+    };
+    console.log('EditHotelPlanDialog.vue: initialEditHotelPlan', props.initialEditHotelPlan); // Log initial data
+    console.log('EditHotelPlanDialog.vue: editHotelPlan after population', editHotelPlan.value); // Log populated data
   }
 }, { immediate: true });
 
@@ -125,6 +139,16 @@ const updateHotel = async () => {
       });
       return;
     }
+  }
+
+  // Validation for required category IDs
+  if (!editHotelPlan.value.plan_type_category_id) {
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'タイプカテゴリーを選択してください。', life: 3000 });
+    return;
+  }
+  if (!editHotelPlan.value.plan_package_category_id) {
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'パッケージカテゴリーを選択してください。', life: 3000 });
+    return;
   }
 
   try {

@@ -107,6 +107,7 @@
         @update:visible="showEditHotelDialog = $event"
         @planUpdated="onPlanModified"
         :selectedHotelId="selectedHotelId"
+        :selectedHotelName="selectedHotelName"
         :planTypeCategories="planTypeCategories"
         :planPackageCategories="planPackageCategories"
         :sb_options="sb_options"
@@ -183,6 +184,7 @@ import Badge from 'primevue/badge';
   const showHotelDialog = ref(false);
   const showEditHotelDialog = ref(false);
   const openEditHotelDialog = async (data) => {
+    console.log('ManagePlans.vue: Data passed to openEditHotelDialog', data);
     editHotelPlan.value = { 
       ...data
       ,colorHEX: data.color.replace('#', '')

@@ -15,6 +15,7 @@
             </FloatLabel>
             <ColorPicker v-model="newHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
           </div>
+          <small class="text-gray-500">カテゴリー色: <span :style="{ color: selectedTypeCategoryColor }">{{ selectedTypeCategoryColor }}</span></small>
         </div>
         <div class="col-span-2">
           <div class="p-float-label flex align-items-center gap-2">
@@ -36,7 +37,6 @@
                   optionValue="id"
                   placeholder="タイプカテゴリーを選択"
                   class="w-full"
-                  showClear
               />
               <label>タイプカテゴリー</label>
           </FloatLabel>
@@ -50,7 +50,6 @@
                   optionValue="id"
                   placeholder="パッケージカテゴリーを選択"
                   class="w-full"
-                  showClear
               />
               <label>パッケージカテゴリー</label>
           </FloatLabel>
@@ -70,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { usePlansStore } from '@/composables/usePlansStore';
 import Dialog from 'primevue/dialog';
@@ -110,6 +109,11 @@ const newHotelPlan = ref({
   available_until: null,
 });
 
+const selectedTypeCategoryColor = computed(() => {
+  const category = props.planTypeCategories.find(cat => cat.id === newHotelPlan.value.plan_type_category_id);
+  return category ? category.color : 'カテゴリー色なし';
+});
+
 watch(() => props.visible, (newVal) => {
   if (newVal) {
     // Reset form when dialog opens
@@ -147,6 +151,16 @@ const saveHotelPlan = async () => {
       summary: 'エラー',
       detail: '選択したホテルに対してプラン名はユニークである必要があります。', life: 3000
     });
+    return;
+  }
+
+  // Validation for required category IDs
+  if (!newHotelPlan.value.plan_type_category_id) {
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'タイプカテゴリーを選択してください。', life: 3000 });
+    return;
+  }
+  if (!newHotelPlan.value.plan_package_category_id) {
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'パッケージカテゴリーを選択してください。', life: 3000 });
     return;
   }
 
