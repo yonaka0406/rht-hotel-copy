@@ -1,7 +1,7 @@
 <template>
     <Dialog header="プランコピー" :visible="visible" :modal="true" :style="{ width: '80vw' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div class="col-span-1">
+            <div class="col-span-1 mt-6">
                 <FloatLabel>
                     <Select
                         v-model="sourceHotelId"
@@ -15,7 +15,7 @@
                     <label>コピー元ホテル</label>
                 </FloatLabel>
             </div>
-            <div class="col-span-1">
+            <div class="col-span-1 mt-6">
                 <FloatLabel>
                     <Select
                         v-model="targetHotelId"
@@ -33,9 +33,10 @@
 
         <DataTable :value="plansToCopy" dataKey="id" :rowHover="true" v-model:selection="selectedPlans" class="p-datatable-sm">
             <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-            <Column field="name" header="プラン名" style="width: 20%">
+            <Column field="plan_name" header="プラン名" style="width: 20%">
                 <template #body="{ data }">
-                    <span :class="{ 'line-through text-400': data.conflict }">{{ data.name }}</span>
+                    {{ console.log('CopyPlansDialog.vue: Plan Name Column data', data) }}
+                    <span :class="{ 'line-through text-400': data.conflict }">{{ data.plan_name }}</span>
                 </template>
             </Column>
             <Column header="新しいプラン名 (任意)" style="width: 25%">
@@ -56,7 +57,7 @@
             </Column>
             <Column header="競合" style="width: 10%">
                 <template #body="{ data }">
-                    <Badge v-if="data.conflict" value="競合あり" severity="danger"></Badge>
+                    <Badge v-if="data.conflict" value="類似" severity="danger"></Badge>
                 </template>
             </Column>
         </DataTable>
@@ -86,7 +87,7 @@ const props = defineProps({
 
 const toast = useToast();
 const { hotels, fetchHotels } = useHotelStore();
-const { fetchPlansHotel, createHotelPlan } = usePlansStore();
+const { fetchPlansForHotel, createHotelPlan } = usePlansStore();
 
 const sourceHotelId = ref(null);
 const targetHotelId = ref(null);
@@ -115,7 +116,7 @@ const resetForm = () => {
 
 const onSourceHotelChange = async () => {
     if (sourceHotelId.value) {
-        sourcePlans.value = await fetchPlansHotel(sourceHotelId.value);
+        sourcePlans.value = await fetchPlansForHotel(sourceHotelId.value);
         plansToCopy.value = sourcePlans.value.map(plan => ({
             ...plan,
             newName: '', // For optional renaming
@@ -132,7 +133,7 @@ const onSourceHotelChange = async () => {
 
 const onTargetHotelChange = async () => {
     if (targetHotelId.value) {
-        targetHotelPlans.value = await fetchPlansHotel(targetHotelId.value);
+        targetHotelPlans.value = await fetchPlansForHotel(targetHotelId.value);
         checkConflicts();
     } else {
         targetHotelPlans.value = [];

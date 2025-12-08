@@ -105,7 +105,6 @@ const selectedTypeCategoryColor = computed(() => {
 });
 
 watch(() => props.visible, (newVal) => {
-  console.log('EditHotelPlanDialog.vue: props.visible changed', newVal); // Log visible prop
   if (newVal && props.initialEditHotelPlan) {
     const initialData = props.initialEditHotelPlan;
     editHotelPlan.value = {
@@ -114,8 +113,6 @@ watch(() => props.visible, (newVal) => {
       plan_type_category_id: props.planTypeCategories.find(cat => cat.name === initialData.type_category)?.id || null,
       plan_package_category_id: props.planPackageCategories.find(cat => cat.name === initialData.package_category)?.id || null,
     };
-    console.log('EditHotelPlanDialog.vue: initialEditHotelPlan', props.initialEditHotelPlan); // Log initial data
-    console.log('EditHotelPlanDialog.vue: editHotelPlan after population', editHotelPlan.value); // Log populated data
   }
 }, { immediate: true });
 

@@ -184,7 +184,6 @@ import Badge from 'primevue/badge';
   const showHotelDialog = ref(false);
   const showEditHotelDialog = ref(false);
   const openEditHotelDialog = async (data) => {
-    console.log('ManagePlans.vue: Data passed to openEditHotelDialog', data);
     editHotelPlan.value = { 
       ...data
       ,colorHEX: data.color.replace('#', '')
