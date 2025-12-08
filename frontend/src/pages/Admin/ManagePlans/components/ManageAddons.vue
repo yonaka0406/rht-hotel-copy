@@ -533,7 +533,7 @@
       name: '', 
       description: '',
       addon_type: 'other',
-      tax_type_id: 3,    
+      tax_type_id: defaultTaxTypeId.value,    
       price: 0 
     };
   };
@@ -685,7 +685,7 @@
       name: '', 
       description: '',
       addon_type: 'other',
-      tax_type_id: 3,
+      tax_type_id: defaultTaxTypeId.value,
       price: 0, 
       addons_global_id: null 
     };
@@ -698,7 +698,7 @@
       name: '', 
       description: '',
       addon_type: 'other',
-      tax_type_id: 3,
+      tax_type_id: defaultTaxTypeId.value,
       price: 0,
       visible: true
     };
