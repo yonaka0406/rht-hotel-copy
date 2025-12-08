@@ -31,8 +31,8 @@
                 </div> 
                 <DataTable :value="hotelPlans" editMode="row" dataKey="id" @rowReorder="onRowReorder">
                   <Column :rowReorder="true" headerStyle="width: 3rem" :reorderableColumn="false" />
-                  <Column field="plan_name" header="名称" style="width: 20%"></Column>
-                  <Column field="plan_type" headerClass="text-center" style="width: 10%">
+                  <Column field="plan_name" header="名称"></Column>
+                  <Column field="plan_type" headerClass="text-center">
                     <template #header>
                       <span class="font-bold text-center w-full block">プランタイプ</span>
                     </template>
@@ -44,14 +44,13 @@
                     </template>
                   </Column>
 
-                  <Column header="カテゴリー" style="width: 15%">
+                  <Column header="カテゴリー">
                     <template #body="slotProps">
-                      {{ console.log('ManagePlans.vue: Category slotProps.data', slotProps.data) }}
-                      <Badge :value="slotProps.data.plan_type_category_name" severity="primary" class="mr-2"></Badge>
-                      <Badge :value="slotProps.data.plan_package_category_name" severity="secondary"></Badge>
+                      <Badge :value="slotProps.data.type_category" severity="primary" class="mr-2"></Badge>
+                      <Badge :value="slotProps.data.package_category" severity="secondary"></Badge>
                     </template>
                   </Column>                  
-                  <Column headerClass="text-center" style="width: 10%">
+                  <Column headerClass="text-center">
                     <template #header>
                       <span class="font-bold text-center w-full block">操作</span>
                     </template>
@@ -141,7 +140,8 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import FloatLabel from 'primevue/floatlabel';
 import Select from 'primevue/select';
-import Button from 'primevue/button';  
+import Button from 'primevue/button';
+import Badge from 'primevue/badge';  
 
   // Helper
   const isEmptyObject = (obj) => {
