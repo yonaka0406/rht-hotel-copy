@@ -31,7 +31,12 @@
                 </div> 
                 <DataTable :value="hotelPlans" editMode="row" dataKey="id" @rowReorder="onRowReorder">
                   <Column :rowReorder="true" headerStyle="width: 3rem" :reorderableColumn="false" />
-                  <Column field="name" header="名称" style="width: 20%"></Column>
+                  <Column field="name" header="名称" style="width: 20%">
+                    <template #body="slotProps">
+                      {{ console.log('ManagePlans.vue: Column name slotProps.data', slotProps.data) }}
+                      {{ slotProps.data.name }}
+                    </template>
+                  </Column>
                   <Column field="plan_type" headerClass="text-center" style="width: 10%">
                     <template #header>
                       <span class="font-bold text-center w-full block">プランタイプ</span>
@@ -246,14 +251,15 @@ import Button from 'primevue/button';
     if (newVal) {
       loading.value = true;
       await fetchPlansForHotel(newVal);
+      console.log('ManagePlans.vue: plans.value after fetch', plans.value);
 
       // Enhance hotelPlans with category names
       hotelPlans.value = plans.value.map(plan => ({
         ...plan,
         plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
-        plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
-      }));
-      loading.value = false;
-    }
-  });
+                  plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
+              }));
+              console.log('ManagePlans.vue: hotelPlans.value after mapping', hotelPlans.value);
+              loading.value = false;
+            }  });
 </script>
