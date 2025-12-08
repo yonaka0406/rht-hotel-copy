@@ -30,7 +30,7 @@
                   ></Button>
                 </div> 
                 <DataTable :value="hotelPlans" editMode="row" dataKey="id" @rowReorder="onRowReorder">
-                  <Column rowReorder="true" headerStyle="width: 3rem" :reorderableColumn="false" />
+                  <Column :rowReorder="true" headerStyle="width: 3rem" :reorderableColumn="false" />
                   <Column field="name" header="名称" style="width: 20%"></Column>
                   <Column field="plan_type" headerClass="text-center" style="width: 10%">
                     <template #header>
