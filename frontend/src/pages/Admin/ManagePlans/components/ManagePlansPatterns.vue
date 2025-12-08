@@ -1,18 +1,6 @@
 <template>
     <Panel header="プランパターン">
-        <div class="mb-4">
-            <FloatLabel>
-                <Select
-                    v-model="selectedHotelIdInternal"
-                    :options="hotels"
-                    optionLabel="name"
-                    optionValue="id"
-                    placeholder="ホテルを選択"
-                    class="w-full"
-                />
-                <label>ホテル選択</label>
-            </FloatLabel>
-        </div>
+
         <div class="flex justify-end mb-2">
             <Button @click="showHotelDialog = true"
                 icon="pi pi-plus"
@@ -43,7 +31,7 @@
         :visible="showHotelDialog"
         @update:visible="showHotelDialog = $event"
         @patternAdded="onPatternModified"
-        :selectedHotelId="selectedHotelIdInternal"
+        :selectedHotelId="props.selectedHotelId"
         :hotelPlans="hotelPlans"
         :allHotelPatterns="allHotelPatterns"
         :daysOfWeek="daysOfWeek"
@@ -53,7 +41,7 @@
         :visible="showEditHotelDialog"
         @update:visible="showEditHotelDialog = $event"
         @patternUpdated="onPatternModified"
-        :selectedHotelId="selectedHotelIdInternal"
+        :selectedHotelId="props.selectedHotelId"
         :hotelPlans="hotelPlans"
         :allHotelPatterns="allHotelPatterns"
         :initialEditHotelPattern="editHotelPattern"
@@ -85,19 +73,15 @@
     import EditHotelPatternDialog from './dialogs/EditHotelPatternDialog.vue';
 
     // Stores
-    import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, fetchHotels } = useHotelStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { patterns, plans, fetchPatternsForHotel, /*createPlanPattern, updatePlanPattern,*/ fetchPlansForHotel } = usePlansStore();
-    // Internal state for selected hotel, synced with prop
-    const selectedHotelIdInternal = ref(props.selectedHotelId);
     const allHotelPatterns = ref([]);
     const hotelPatterns = computed(() => {
-        if (!selectedHotelIdInternal.value) { // Use selectedHotelIdInternal here
+        if (!props.selectedHotelId) { // Use props.selectedHotelId here
             return [];
         }
         // Filter hotel patterns based on selected hotel
-        return allHotelPatterns.value.filter(pattern => pattern.hotel_id === selectedHotelIdInternal.value);
+        return allHotelPatterns.value.filter(pattern => pattern.hotel_id === props.selectedHotelId);
     });
     const hotelPlans = ref([]);
     const editHotelPattern = ref(null);
@@ -116,8 +100,8 @@
     };
     
     const onPatternModified = async () => {
-        if (selectedHotelIdInternal.value) {
-            await fetchPatternsForHotel(selectedHotelIdInternal.value);
+        if (props.selectedHotelId) {
+            await fetchPatternsForHotel(props.selectedHotelId);
             allHotelPatterns.value = patterns.value;
         }
     };
@@ -133,14 +117,13 @@
     ];
 
     onMounted(async () => {
-        await fetchHotels();
+        // Removed fetchHotels call
     });
 
-    watch(() => props.selectedHotelId, (newVal) => {
-        selectedHotelIdInternal.value = newVal;
-    });
+    // Removed watch on props.selectedHotelId for selectedHotelIdInternal
+    // Removed watch on selectedHotelIdInternal
 
-    watch(selectedHotelIdInternal, async (newVal, oldVal) => {
+    watch(() => props.selectedHotelId, async (newVal, oldVal) => {
         if (newVal && newVal !== oldVal) {
             await fetchPatternsForHotel(newVal);
             allHotelPatterns.value = patterns.value;

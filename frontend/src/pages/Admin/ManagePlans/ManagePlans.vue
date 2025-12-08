@@ -1,7 +1,7 @@
 <template>
     <div class="p-4">
       <Panel header="プラン">
-        <div class="mb-4">
+        <div class="mb-4 mt-6">
           <FloatLabel>
             <Select
               v-model="selectedHotelId"
@@ -127,7 +127,7 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { hotels, fetchHotels } = useHotelStore();
   import { usePlansStore } from '@/composables/usePlansStore';
-  const { plans, fetchPlansHotel, createHotelPlan, updateHotelPlan, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();  
+  const { plans, fetchPlansForHotel, createHotelPlan, updateHotelPlan, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();  
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
@@ -180,10 +180,9 @@ import Button from 'primevue/button';
     showEditHotelDialog.value = true;
   };
 
-  const onPlanModified = async () => {
-    if (selectedHotelId.value) {
-      await fetchPlansHotel(selectedHotelId.value);
-      hotelPlans.value = plans.value;
+      const onPlanModified = async () => {
+        if (selectedHotelId.value) {
+          await fetchPlansForHotel(selectedHotelId.value);      hotelPlans.value = plans.value;
     }
   };
 
@@ -246,7 +245,7 @@ import Button from 'primevue/button';
   watch(selectedHotelId, async (newVal) => {
     if (newVal) {
       loading.value = true;
-      await fetchPlansHotel(newVal);
+      await fetchPlansForHotel(newVal);
 
       // Enhance hotelPlans with category names
       hotelPlans.value = plans.value.map(plan => ({

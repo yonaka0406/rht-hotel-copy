@@ -8,7 +8,7 @@ export function usePlansStore() {
 
     // Plans
 
-    const fetchPlansHotel = async () => {        
+    const fetchAllPlans = async () => {        
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/hotel`, {
@@ -24,8 +24,10 @@ export function usePlansStore() {
                 ...plan,
                 plan_key: (plan.id ?? '')
             }));
+            return plans.value; // Return the fetched plans
         } catch (error) {
             console.error('Failed to fetch global plans', error);
+            return [];
         }
     };
     const fetchPlansForHotel = async (hotel_id) => {
@@ -450,7 +452,7 @@ export function usePlansStore() {
         plans,
         addons,
         patterns,
-        fetchPlansHotel,
+        fetchAllPlans,
         fetchPlansForHotel,
         createHotelPlan,
         updateHotelPlan,
