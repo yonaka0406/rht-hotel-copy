@@ -206,11 +206,19 @@ import Badge from 'primevue/badge';
     }));
     try {
       await updatePlansOrderBulk(selectedHotelId.value, plansWithNewOrder);
-      toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
-    } catch (err) {
-      console.error('プランの表示順序の更新エラー:', err);
-      toast.add({ severity: 'error', summary: 'エラー', detail: 'プランの表示順序の更新に失敗しました', life: 3000 });
+    toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
     }
+  };
+
+  const handleOrderChange = (updatedPlan) => {
+    const plans = [...hotelPlans.value];
+    const oldIndex = plans.findIndex(p => p.id === updatedPlan.id);
+    if (oldIndex > -1) {
+      plans.splice(oldIndex, 1);
+    }
+    plans.splice(updatedPlan.display_order, 0, updatedPlan);
+    
+    onRowReorder({ value: plans });
   };
       
   // Rates
@@ -234,7 +242,7 @@ import Badge from 'primevue/badge';
   const onPlanCopied = async () => {
     // Refresh plans after copy operation
     if (selectedHotelId.value) {
-      await fetchPlansHotel(selectedHotelId.value);
+      await fetchPlansForHotel(selectedHotelId.value);
       hotelPlans.value = plans.value;
     }
   };
