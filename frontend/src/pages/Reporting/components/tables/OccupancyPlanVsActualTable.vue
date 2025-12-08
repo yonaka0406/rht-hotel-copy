@@ -17,7 +17,6 @@
             <Column field="month" header="月度" sortable :style="monthColumnStyle"></Column>
             <Column field="plan_name" header="プラン" sortable style="min-width: 150px; width: 15%"></Column>
             <Column field="category" header="カテゴリー" sortable style="min-width: 100px; width: 10%"></Column>
-            <Column field="category" header="カテゴリー" sortable style="min-width: 100px; width: 10%"></Column>
             <Column field="fc_sold_rooms" header="計画販売室数" sortable style="min-width: 100px; width: 10%">
                 <template #body="{data}">{{ data.fc_sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
             </Column>

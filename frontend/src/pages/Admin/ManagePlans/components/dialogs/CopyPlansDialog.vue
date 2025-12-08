@@ -1,5 +1,5 @@
 <template>
-    <Dialog header="プランコピー" v-model:visible="visible" :modal="true" :style="{ width: '80vw' }" class="p-fluid" :closable="true">
+    <Dialog header="プランコピー" :visible="visible" :modal="true" :style="{ width: '80vw' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div class="col-span-1">
                 <FloatLabel>
