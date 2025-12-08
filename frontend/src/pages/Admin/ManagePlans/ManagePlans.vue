@@ -131,7 +131,12 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import { Panel, DataTable, Column, FloatLabel, Select, Button } from 'primevue'  
+import Panel from 'primevue/panel';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import FloatLabel from 'primevue/floatlabel';
+import Select from 'primevue/select';
+import Button from 'primevue/button';  
 
   // Helper
   const isEmptyObject = (obj) => {
