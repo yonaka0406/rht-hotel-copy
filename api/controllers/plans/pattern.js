@@ -1,0 +1,60 @@
+const planModels = require('../../models/plan');
+
+const getHotelPatterns = async (req, res) => {
+    try {
+        const patterns = await planModels.selectAllHotelPatterns(req.requestId);
+        res.json(patterns);
+    } catch (error) {
+        console.error('Error getting hotel patterns:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+const fetchAllHotelPatterns = async (req, res) => {
+    const hotel_id = parseInt(req.params.hotel_id);
+
+    if (!hotel_id) {
+        return res.status(400).json({ error: 'Hotel ID is required' });
+    }
+
+    try {
+        const Plans = await planModels.selectPatternsByHotel(req.requestId, hotel_id);
+        res.json(Plans);
+    } catch (error) {
+        console.error('Error getting hotel patterns:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const createPlanPattern = async (req, res) => {
+    const { hotel_id, name, template } = req.body;
+    const user_id = req.user.id;    
+
+    try {
+        const newData = await planModels.insertPlanPattern(req.requestId, hotel_id, name, template, user_id);
+        res.json(newData);
+    } catch (err) {
+        console.error('Error creating plan pattern:', err);
+        res.status(500).json({ error: 'Failed to create plan pattern' });
+    }
+};
+
+const editPlanPattern = async (req, res) => {
+    const { id } = req.params;
+    const { name, template } = req.body;
+    const user_id = req.user.id;    
+
+    try {
+        const newData = await planModels.editPlanPattern(req.requestId, id, name, template, user_id);
+        res.json(newData);
+    } catch (err) {
+        console.error('Error editing plan pattern:', err);
+        res.status(500).json({ error: 'Failed to edit plan pattern' });
+    }
+};
+
+module.exports = {
+    getHotelPatterns,
+    fetchAllHotelPatterns,
+    createPlanPattern,
+    editPlanPattern,
+};
