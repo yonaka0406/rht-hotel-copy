@@ -21,14 +21,12 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
             addons_hotel AS ah
                 ON pa.addons_hotel_id = ah.id
         WHERE
-            (pa.plans_global_id = $1 AND pa.plans_hotel_id IS NULL) OR             
-            (pa.plans_hotel_id = $2 AND pa.hotel_id = $3 AND pa.plans_global_id IS NULL)
+            pa.plans_hotel_id = $1 AND pa.hotel_id = $2
         ORDER BY addon_name ASC
     `;
 
     try {
         const result = await client.query(query, [
-            plans_global_id || null,
             plans_hotel_id || null,
             hotel_id || null,
         ]);

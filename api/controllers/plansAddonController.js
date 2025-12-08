@@ -2,12 +2,12 @@ const { getAllPlanAddons, createPlanAddon, updatePlanAddon, deletePlanAddon, get
 
 // GET all plan addons
 const getPlanAddons = async (req, res) => {
-    const plans_global_id = req.params.gid;
+    // const plans_global_id = req.params.gid; // Deprecated
     const plans_hotel_id = req.params.hid;
     const hotel_id = req.params.hotel_id;
 
     try {
-        const addons = await getAllPlanAddons(req.requestId, plans_global_id, plans_hotel_id, hotel_id);
+        const addons = await getAllPlanAddons(req.requestId, null, plans_hotel_id, hotel_id);
         res.json(addons);
     } catch (error) {
         console.error('Error getting plan addons:', error);
@@ -54,7 +54,7 @@ const updateExistingPlanAddon = async (req, res) => {
 
         const planAddon = {
             hotel_id: req.body.hotel_id ?? existingAddon.hotel_id,
-            plans_global_id: req.body.plans_global_id ?? existingAddon.plans_global_id,
+            // plans_global_id: req.body.plans_global_id ?? existingAddon.plans_global_id, // Deprecated
             plans_hotel_id: req.body.plans_hotel_id ?? existingAddon.plans_hotel_id,
             addons_global_id: req.body.addons_global_id ?? existingAddon.addons_global_id,
             addons_hotel_id: req.body.addons_hotel_id ?? existingAddon.addons_hotel_id,

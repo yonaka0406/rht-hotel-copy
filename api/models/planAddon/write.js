@@ -11,7 +11,6 @@ const createPlanAddon = async (requestId, planAddon, dbClient = null) => {
         }
 
         let hotel_id = null;
-        let plans_global_id = null;
         let plans_hotel_id = null;
         let addons_hotel_id = null;
         let addons_global_id = null;
@@ -24,12 +23,6 @@ const createPlanAddon = async (requestId, planAddon, dbClient = null) => {
             }
         } else {
             console.error('Invalid addons_id:', planAddon.addons_id);
-        }
-
-        if (planAddon.plans_global_id === 0 || !planAddon.plans_global_id) {
-            plans_global_id = null;
-        } else {
-            plans_global_id = planAddon.plans_global_id;
         }
 
         if (planAddon.plans_hotel_id === 0 || !planAddon.plans_hotel_id) {
@@ -47,7 +40,6 @@ const createPlanAddon = async (requestId, planAddon, dbClient = null) => {
         const query = `
             INSERT INTO plan_addons (
                 hotel_id, 
-                plans_global_id, 
                 plans_hotel_id, 
                 addons_global_id, 
                 addons_hotel_id, 
@@ -60,13 +52,12 @@ const createPlanAddon = async (requestId, planAddon, dbClient = null) => {
                 created_by,
                 updated_by,
                 sales_category
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING *
         `;
 
         const values = [
             hotel_id,
-            plans_global_id,
             plans_hotel_id,
             addons_global_id,
             addons_hotel_id,
@@ -114,22 +105,20 @@ const updatePlanAddon = async (requestId, id, planAddon, dbClient = null) => {
             UPDATE plan_addons
             SET 
                 hotel_id = $1,
-                plans_global_id = $2,
-                plans_hotel_id = $3,
-                addons_global_id = $4,
-                addons_hotel_id = $5,
-                price = $6,
-                date_start = $7,
-                date_end = $8,
-                updated_by = $9,
-                sales_category = $10
-            WHERE id = $11
+                plans_hotel_id = $2,
+                addons_global_id = $3,
+                addons_hotel_id = $4,
+                price = $5,
+                date_start = $6,
+                date_end = $7,
+                updated_by = $8,
+                sales_category = $9
+            WHERE id = $10
             RETURNING *
         `;
 
         const values = [
             planAddon.hotel_id,
-            planAddon.plans_global_id,
             planAddon.plans_hotel_id,
             planAddon.addons_global_id,
             planAddon.addons_hotel_id,

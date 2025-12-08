@@ -12,7 +12,7 @@ const {
   updatePaymentTiming, updateReservationRoomsPeriod, splitReservation, selectReservationAddonByDetail,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
-const { getPriceForReservation } = require('../models/planRate');
+const planRateModel = require('../models/planRate');
 const logger = require('../config/logger');
 const { getPool } = require('../config/database');
 const { validateNumericParam, validateDateStringParam } = require('../utils/validationUtils');
@@ -898,21 +898,14 @@ const editReservationDetail = async (req, res) => {
       existingReservation[0].plans_hotel_id !== plans_hotel_id
     ) {
       planChange = true;
-      const newPrice = await getPriceForReservation(req.requestId,
-        plans_global_id,
-        plans_hotel_id,
-        hotel_id,
-        formatDate(existingReservation[0].date),
-        disableRounding,
-        client
-      );
+const calculatedPrice = await planRateModel.getPriceForReservation(req.requestId, null, plans_hotel_id, hotel_id, formatDate(existingReservation[0].date), disableRounding, client);
 
-      if (newPrice !== undefined) {
-        calcPrice.value = newPrice;
-        //console.log('Calculated newPrice:', newPrice);
+      if (calculatedPrice !== undefined) {
+        calcPrice.value = calculatedPrice;
+        //console.log('Calculated calculatedPrice:', calculatedPrice);
       } else {
-        // Handle the case where newPrice is undefined (fallback value)
-        // console.log('Error: newPrice is undefined. Falling back to default value.');
+        // Handle the case where calculatedPrice is undefined (fallback value)
+        // console.log('Error: calculatedPrice is undefined. Falling back to default value.');
         calcPrice.value = 0;  // You can set a default fallback value if needed
       }
     }
