@@ -206,7 +206,9 @@ import Badge from 'primevue/badge';
     }));
     try {
       await updatePlansOrderBulk(selectedHotelId.value, plansWithNewOrder);
-    toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
+    } catch (error) {
+      toast.add({ severity: 'error', summary: '失敗', detail: 'プランの表示順序の更新に失敗しました。', life: 3000 });
     }
   };
 
