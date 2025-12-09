@@ -182,7 +182,7 @@ const updateHotelPlan = async (requestId, id, hotel_id, plan_type_category_id, p
         WHERE hotel_id = $12 AND id = $13
         RETURNING *;
     `;
-    const values = [plan_type_category_id, plan_package_category_id, name, description, plan_type, color, display_order, is_active, available_from, available_until, updated_by, hotel_id, id];
+    const values = [plan_type_category_id || null, plan_package_category_id || null, name, description, plan_type, color, display_order, is_active, available_from, available_until, updated_by, hotel_id, id];
 
     try {
         const result = await client.query(query, values);
