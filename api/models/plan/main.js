@@ -51,14 +51,14 @@ const selectHotelPlans = async (requestId, hotel_id, dbClient = null) => {
         if (!dbClient) client.release();
     }
 };
-const selectAvailablePlansByHotel = async (requestId, hotel_id, target_date = null, dbClient = null) => {
+const selectAvailablePlansByHotel = async (requestId, hotel_id, target_date = null, includeInactive = false, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
     // Default to current date if not provided
     const date = target_date || new Date().toLocaleDateString('en-CA');
 
-    const query = `SELECT * FROM get_available_plans_with_rates_and_addons($1, $2::date, NULL)
+    const query = `SELECT * FROM get_available_plans_with_rates_and_addons($1, $2::date, NULL, $3)
                    ORDER BY display_order, plan_id;`;
-    const values = [hotel_id, date];
+    const values = [hotel_id, date, includeInactive];
 
     try {
         const result = await client.query(query, values);
@@ -71,12 +71,12 @@ const selectAvailablePlansByHotel = async (requestId, hotel_id, target_date = nu
     }
 };
 
-const selectAvailablePlansByHotelPeriod = async (requestId, hotel_id, start_date, end_date, dbClient = null) => {
+const selectAvailablePlansByHotelPeriod = async (requestId, hotel_id, start_date, end_date, includeInactive = false, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
 
-    const query = `SELECT * FROM get_available_plans_with_rates_and_addons($1, $2::date, $3::date)
+    const query = `SELECT * FROM get_available_plans_with_rates_and_addons($1, $2::date, $3::date, $4)
                    ORDER BY display_order, plan_id;`;
-    const values = [hotel_id, start_date, end_date];
+    const values = [hotel_id, start_date, end_date, includeInactive];
 
     try {
         const result = await client.query(query, values);

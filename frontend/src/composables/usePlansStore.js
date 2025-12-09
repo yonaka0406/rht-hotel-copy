@@ -30,25 +30,30 @@ export function usePlansStore() {
             return [];
         }
     };
-    const fetchPlansForHotel = async (hotel_id) => {
+    const fetchPlansForHotel = async (hotel_id, includeInactive = false) => { // Added parameter
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/all/${hotel_id}`, {
+            const url = `/api/plans/all/${hotel_id}`;
+            const queryParams = new URLSearchParams();
+            if (includeInactive) {
+                queryParams.append('includeInactive', 'true');
+            }
+            const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+
+            const response = await fetch(fullUrl, { // Use fullUrl
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
             });
-            
+
             const data = await response.json();
             plans.value = data;
-            // console.log('Fetch plans from Store:',plans.value);
-            return plans.value; // Return the fetched plans
-            
+            return plans.value;
         } catch (error) {
             console.error('Failed to fetch hotel plans', error);
-            return []; // Return an empty array on error
+            return [];
         }
     };
 

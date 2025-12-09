@@ -14,82 +14,34 @@
             <label>ホテル選択</label>
           </FloatLabel>
         </div>
-              <div id="hotelTabPanel" v-show="!showHotelRatePanel">
-                <div class="flex justify-end mb-2">
-                  <Button                
-                    @click="showHotelDialog = true"
-                    icon="pi pi-plus"
-                    label="プラン追加"
-                    class="p-button-right"
-                  ></Button>
-                  <Button                
-                    @click="openCopyPlansDialog"
-                    icon="pi pi-copy"
-                    label="プランコピー"
-                    class="p-button-right ml-2"
-                  ></Button>
-                </div> 
-                <DataTable :value="hotelPlans" editMode="row" dataKey="id" @rowReorder="onRowReorder">
-                  <Column :rowReorder="true" headerStyle="width: 3rem" :reorderableColumn="false" />
-                  <Column field="plan_name" header="名称"></Column>
-                  <Column field="plan_type" headerClass="text-center">
-                    <template #header>
-                      <span class="font-bold text-center w-full block">プランタイプ</span>
-                    </template>
-                    <template #body="slotProps">
-                      <div class="flex items-center justify-center">  
-                        <i v-if="slotProps.data.plan_type === 'per_person'" class="pi pi-id-card" style="color: darkgoldenrod;" v-tooltip="'1人あたり'"></i>
-                        <i v-if="slotProps.data.plan_type === 'per_room'" class="pi pi-shop" style="color: brown;" v-tooltip="'部屋あたり'"></i>                      
-                      </div>
-                    </template>
-                  </Column>
+        
+        <!-- Extracted Plans Table Component -->
+        <ManageHotelPlansTable
+            :hotelPlans="hotelPlans"
+            :showHotelRatePanel="showHotelRatePanel"
+            :selectedHotelId="selectedHotelId"
+            @openAddPlanDialog="showHotelDialog = true"
+            @openCopyPlansDialog="showCopyPlansDialog = true"
+            @openEditPlanDialog="openEditHotelDialog"
+            @switchEditHotelPlanRate="switchEditHotelPlanRate"
+            @orderChanged="handleOrderChange"
+        />
 
-                  <Column header="カテゴリー">
-                    <template #body="slotProps">
-                      <Badge :value="slotProps.data.type_category" severity="primary" class="mr-2"></Badge>
-                      <Badge :value="slotProps.data.package_category" severity="secondary"></Badge>
-                    </template>
-                  </Column>                  
-                  <Column headerClass="text-center">
-                    <template #header>
-                      <span class="font-bold text-center w-full block">操作</span>
-                    </template>
-                    <template #body="slotProps">
-                      <div class="flex items-center justify-center"> 
-                        <Button 
-                          icon="pi pi-pencil" 
-                          class="p-button-text p-button-sm" 
-                          @click="openEditHotelDialog(slotProps.data)"
-                          v-tooltip="'プラン編集'"
-                        />
-                        <Button 
-                          icon="pi pi-dollar" 
-                          class="p-button-text p-button-sm" 
-                          @click="switchEditHotelPlanRate(slotProps.data)"
-                          v-tooltip="'料金編集'"
-                        />
-                      </div>
-                    </template>
-                  </Column>
-                </DataTable>
-              </div>
-              <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
-                <div class="grid xs:grid-cols-1 grid-cols-3 gap-2">
-                  <div class="flex justify-start mb-2">
+        <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
+            <div class="grid xs:grid-cols-1 grid-cols-3 gap-2">
+                <div class="flex justify-start mb-2">
                     <Button @click="switchEditHotelPlanRate({})" icon="pi pi-arrow-left" label="前へ" class="p-button-secondary mb-2" />
-                  </div>
-                  <div class="flex justify-start mb-2">
-                    <span class="font-bold text-lg">{{ selectedPlan.name }}</span>
-                  </div>                  
                 </div>
-                                
-                <ManagePlansRates :plan="selectedPlan" :selectedHotelId="selectedHotelId" v-if="showHotelRatePanel" />
-              </div>
+                <div class="flex justify-start mb-2">
+                    <span class="font-bold text-lg">{{ selectedPlan.name }}</span>
+                </div>
+            </div>
+
+            <ManagePlansRates :plan="selectedPlan" :selectedHotelId="selectedHotelId" v-if="showHotelRatePanel" />
+        </div>
       </Panel>
 
-      
-        <ManagePlansPatterns :selectedHotelId="selectedHotelId" :selectedHotelName="selectedHotelName" />
-      
+      <ManagePlansPatterns :selectedHotelId="selectedHotelId" :selectedHotelName="selectedHotelName" />
 
       <AddHotelPlanDialog
         :visible="showHotelDialog"
@@ -128,6 +80,7 @@
   import CopyPlansDialog from './components/dialogs/CopyPlansDialog.vue';
   import AddHotelPlanDialog from './components/dialogs/AddHotelPlanDialog.vue';
   import EditHotelPlanDialog from './components/dialogs/EditHotelPlanDialog.vue';
+  import ManageHotelPlansTable from './components/ManageHotelPlansTable.vue';
 
   // Stores
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -137,13 +90,10 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-import Panel from 'primevue/panel';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import FloatLabel from 'primevue/floatlabel';
-import Select from 'primevue/select';
-import Button from 'primevue/button';
-import Badge from 'primevue/badge';  
+  import Panel from 'primevue/panel';
+  import FloatLabel from 'primevue/floatlabel';
+  import Select from 'primevue/select';
+  import Button from 'primevue/button';
 
   // Helper
   const isEmptyObject = (obj) => {
@@ -175,8 +125,8 @@ import Badge from 'primevue/badge';
     description: '',
     plan_type: 'per_room',
     colorHEX: 'D3D3D3',
-    plan_type_category_id: null, // New field
-    plan_package_category_id: null, // New field
+    plan_type_category_id: null,
+    plan_package_category_id: null,
     display_order: 0,
     is_active: true,
     available_from: null,
@@ -192,14 +142,15 @@ import Badge from 'primevue/badge';
     showEditHotelDialog.value = true;
   };
 
-      const onPlanModified = async () => {
-        if (selectedHotelId.value) {
-          await fetchPlansForHotel(selectedHotelId.value);      hotelPlans.value = plans.value;
+  const onPlanModified = async () => {
+    if (selectedHotelId.value) {
+      await fetchPlansForHotel(selectedHotelId.value, true);      
+      hotelPlans.value = plans.value;
     }
   };
-
+  
   const onRowReorder = async (event) => {
-    hotelPlans.value = event.value;
+    hotelPlans.value = event.value; // The reordered list from DataTable
     const plansWithNewOrder = hotelPlans.value.map((plan, index) => ({
       ...plan,
       display_order: index,
@@ -212,27 +163,31 @@ import Badge from 'primevue/badge';
     }
   };
 
-  const handleOrderChange = (updatedPlan) => {
-    const plans = [...hotelPlans.value];
-    const oldIndex = plans.findIndex(p => p.id === updatedPlan.id);
-    if (oldIndex > -1) {
-      plans.splice(oldIndex, 1);
+  const handleOrderChange = async (updatedPlansArray) => { // This will now receive the reordered array from child component
+    // Assuming updatedPlansArray is the new ordered array of plans from the child DataTable
+    hotelPlans.value = updatedPlansArray; // Update parent's hotelPlans
+    const plansWithNewOrder = hotelPlans.value.map((plan, index) => ({
+      ...plan,
+      display_order: index,
+    }));
+    try {
+      await updatePlansOrderBulk(selectedHotelId.value, plansWithNewOrder);
+      toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
+    } catch (error) {
+      toast.add({ severity: 'error', summary: '失敗', detail: 'プランの表示順序の更新に失敗しました。', life: 3000 });
     }
-    plans.splice(updatedPlan.display_order, 0, updatedPlan);
-    
-    onRowReorder({ value: plans });
   };
       
   // Rates
   const showHotelRatePanel = ref(false);
   const selectedPlan = ref({});
-  const switchEditHotelPlanRate = (plan) => { // Removed context parameter
+  const switchEditHotelPlanRate = (plan) => {
     if (plan === null || isEmptyObject(plan)) {
       showHotelRatePanel.value = false;
       selectedPlan.value = {};
     } else {
       showHotelRatePanel.value = true;          
-      selectedPlan.value = { ...plan }; // Removed context from selectedPlan
+      selectedPlan.value = { ...plan };
     }
   };
 
@@ -244,7 +199,7 @@ import Badge from 'primevue/badge';
   const onPlanCopied = async () => {
     // Refresh plans after copy operation
     if (selectedHotelId.value) {
-      await fetchPlansForHotel(selectedHotelId.value);
+      await fetchPlansForHotel(selectedHotelId.value, true);
       hotelPlans.value = plans.value;
     }
   };
@@ -252,22 +207,27 @@ import Badge from 'primevue/badge';
   onMounted(async () => {
     loading.value = true;
 
-    await fetchHotels();
-    planTypeCategories.value = await fetchPlanTypeCategories();
-    planPackageCategories.value = await fetchPlanPackageCategories();
+    try {
+        await fetchHotels();
+        planTypeCategories.value = await fetchPlanTypeCategories();
+        planPackageCategories.value = await fetchPlanPackageCategories();
 
-    if (hotels.value.length > 0) {
-      selectedHotelId.value = hotels.value[0].id; // Initialize selectedHotelId
+        if (hotels.value.length > 0) {
+            selectedHotelId.value = hotels.value[0].id; // Initialize selectedHotelId
+        }
+    } catch (error) {
+        console.error('Error in ManagePlans mounted hook:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '初期データの読み込みに失敗しました。', life: 5000 });
+    } finally {
+        loading.value = false;
     }
-
-    loading.value = false;
   });
 
   // Watcher for selectedHotelId
   watch(selectedHotelId, async (newVal) => {
     if (newVal) {
       loading.value = true;
-      await fetchPlansForHotel(newVal);
+      await fetchPlansForHotel(newVal, true);
 
       // Enhance hotelPlans with category names
             hotelPlans.value = plans.value.map(plan => ({

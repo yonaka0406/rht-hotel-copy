@@ -28,13 +28,14 @@ const getHotelPlans = async (req, res) => {
 
 const fetchAllHotelPlans = async (req, res) => {
     const hotel_id = parseInt(req.params.hotel_id);
+    const includeInactive = req.query.includeInactive === 'true'; // Get from query param
 
     if (!hotel_id) {
         return res.status(400).json({ error: 'Hotel ID is required' });
     }
 
     try {
-        const Plans = await planModels.selectAvailablePlansByHotel(req.requestId, hotel_id);
+        const Plans = await planModels.selectAvailablePlansByHotel(req.requestId, hotel_id, null, includeInactive);
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel Plans:', error);
