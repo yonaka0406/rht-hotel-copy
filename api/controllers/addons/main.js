@@ -1,4 +1,10 @@
-const { getAllGlobalAddons, getAllHotelsAddons, getAddons, getAllHotelAddons, newGlobalAddon, newHotelAddon, updateGlobalAddon, updateHotelAddon } = require('../../models/addons');
+const { 
+    getAddons, 
+    getAllHotelsAddons, 
+    getAddonsByHotelId, 
+    newHotelAddon, 
+    updateHotelAddon 
+} = require('../../models/addons');
 
 // GET
 const getAllAddons = async (req, res) => {
@@ -8,17 +14,7 @@ const getAllAddons = async (req, res) => {
         const addons = await getAddons(req.requestId, hotel_id);
         res.json(addons);
     } catch (error) {
-        console.error('Error getting global addons:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
-
-const getGlobalAddons = async (req, res) => {
-    try {
-        const addons = await getAllGlobalAddons(req.requestId);
-        res.json(addons);
-    } catch (error) {
-        console.error('Error getting global addons:', error);
+        console.error('Error getting addons:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -28,7 +24,7 @@ const getHotelsAddons = async (req, res) => {
         const addons = await getAllHotelsAddons(req.requestId);
         res.json(addons);
     } catch (error) {
-        console.error('Error getting hotel addons:', error);
+        console.error('Error getting all hotels addons:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -41,7 +37,8 @@ const getHotelAddons = async (req, res) => {
     }
 
     try {
-        const addons = await getAllHotelAddons(req.requestId, hotel_id);
+        // Corrected to call the renamed function
+        const addons = await getAddonsByHotelId(req.requestId, hotel_id);
         res.json(addons);
     } catch (error) {
         console.error('Error getting hotel addons:', error);
@@ -50,28 +47,14 @@ const getHotelAddons = async (req, res) => {
 };
 
 // POST
-const createGlobalAddon = async (req, res) => {
-    const { name, description, addon_type, price, tax_type_id, tax_rate } = req.body;
-    const created_by = req.user.id;
-    const updated_by = req.user.id;
-
-    try {
-        const newAddon = await newGlobalAddon(req.requestId, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by);
-        res.json(newAddon);
-    } catch (err) {
-        console.error('Error creating global addon:', err);
-        res.status(500).json({ error: 'Failed to create global addon' });
-    }
-};
-
 const createHotelAddon = async (req, res) => {
-    const { hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate } = req.body;
+    const { hotel_id, addon_category_id, name, description, price, tax_type_id, tax_rate } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
     try {
-        const newAddon = await newHotelAddon(req.requestId, hotel_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by, addons_global_id);
-        res.json(newAddon);
+        const newAddon = await newHotelAddon(req.requestId, hotel_id, addon_category_id, name, description, price, tax_type_id, tax_rate, created_by, updated_by);
+        res.status(201).json(newAddon);
     } catch (err) {
         console.error('Error creating hotel addon:', err);
         res.status(500).json({ error: 'Failed to create hotel addon' });
@@ -79,27 +62,17 @@ const createHotelAddon = async (req, res) => {
 };
 
 // PUT
-const editGlobalAddon = async (req, res) => {
-    const { id } = req.params;
-    const { name, description, addon_type, price, tax_type_id, tax_rate, visible } = req.body;
-    const updated_by = req.user.id;
-
-    try {
-        const updatedAddon = await updateGlobalAddon(req.requestId, id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by);
-        res.json(updatedAddon);
-    } catch (err) {
-        console.error('Error updating global addon:', err);
-        res.status(500).json({ error: 'Failed to update global addon' });
-    }
-};
-
 const editHotelAddon = async (req, res) => {
     const { id } = req.params;
-    const { hotel_id, addons_global_id, name, description, price, visible } = req.body;
+    const { hotel_id, addon_category_id, name, description, price, tax_type_id, tax_rate, visible } = req.body;
     const updated_by = req.user.id;
 
+    if (!hotel_id) {
+        return res.status(400).json({ error: 'Hotel ID is required for this operation' });
+    }
+
     try {
-        const updatedAddon = await updateHotelAddon(req.requestId, id, hotel_id, addons_global_id, name, description, price, visible, updated_by);
+        const updatedAddon = await updateHotelAddon(req.requestId, id, hotel_id, addon_category_id, name, description, price, tax_type_id, tax_rate, visible, updated_by);
         res.json(updatedAddon);
     } catch (err) {
         console.error('Error updating hotel addon:', err);
@@ -109,11 +82,8 @@ const editHotelAddon = async (req, res) => {
 
 module.exports = {
     getAllAddons,
-    getGlobalAddons,
     getHotelsAddons,
     getHotelAddons,
-    createGlobalAddon,
     createHotelAddon,
-    editGlobalAddon,
     editHotelAddon,
 };
