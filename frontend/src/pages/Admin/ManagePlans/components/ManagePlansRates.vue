@@ -1168,7 +1168,7 @@
     const fetchRates = async () => {        
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/${planId.value.plans_hotel_id}/hotels/${planId.value.hotel_id}/rates`, {
+            const response = await fetch(`/api/plans/${planId.value.plans_hotel_id}/${planId.value.hotel_id}/rates`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
