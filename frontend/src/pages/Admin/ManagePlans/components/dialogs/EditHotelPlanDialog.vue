@@ -142,6 +142,34 @@ watch(() => props.visible, (newVal) => {
   }
 }, { immediate: true });
 
+// Watcher for automatic date adjustment
+watch([() => editHotelPlan.value.available_from, () => editHotelPlan.value.available_until], ([newFrom, newUntil], [oldFrom, oldUntil]) => {
+  const fromDate = newFrom ? new Date(newFrom) : null;
+  const untilDate = newUntil ? new Date(newUntil) : null;
+
+  if (fromDate && untilDate && fromDate > untilDate) {
+    // Determine which date was changed to decide which one to adjust
+    // If newFrom is different from oldFrom, assume available_from was changed
+    if (newFrom && newFrom !== oldFrom) {
+      // available_from was changed and is now after available_until
+      // Adjust available_until to be available_from + 1 day
+      const newUntilDate = new Date(fromDate);
+      newUntilDate.setDate(newUntilDate.getDate() + 1);
+      editHotelPlan.value.available_until = newUntilDate;
+      toast.add({ severity: 'info', summary: '自動調整', detail: '利用可能日 (終了)は利用可能日 (開始)の翌日に自動調整されました。', life: 3000 });
+    }
+    // If newUntil is different from oldUntil, assume available_until was changed
+    else if (newUntil && newUntil !== oldUntil) {
+      // available_until was changed and is now before available_from
+      // Adjust available_from to be available_until - 1 day
+      const newFromDate = new Date(untilDate);
+      newFromDate.setDate(newFromDate.getDate() - 1);
+      editHotelPlan.value.available_from = newFromDate;
+      toast.add({ severity: 'info', summary: '自動調整', detail: '利用可能日 (開始)は利用可能日 (終了)の前日に自動調整されました。', life: 3000 });
+    }
+  }
+});
+
 const updateHotel = async () => {
   editHotelPlan.value.hotel_id = props.selectedHotelId;
   
@@ -178,6 +206,15 @@ const updateHotel = async () => {
   if (editHotelPlan.value.plan_id === undefined || editHotelPlan.value.plan_id === null) {
     toast.add({ severity: 'error', summary: 'エラー', detail: '編集対象のプランIDが見つかりません。', life: 3000 });
     console.error('Error: Plan ID is undefined or null when trying to update hotel plan.');
+    return;
+  }
+
+  // Date validation: available_from must not be after available_until
+  const fromDate = editHotelPlan.value.available_from ? new Date(editHotelPlan.value.available_from) : null;
+  const untilDate = editHotelPlan.value.available_until ? new Date(editHotelPlan.value.available_until) : null;
+
+  if (fromDate && untilDate && fromDate > untilDate) {
+    toast.add({ severity: 'error', summary: 'エラー', detail: '利用可能日 (開始)は利用可能日 (終了)より前に設定してください。', life: 3000 });
     return;
   }
 
