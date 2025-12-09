@@ -95,10 +95,10 @@ const editHotelPlan = async (req, res) => {
         hotel_id,
         plan_type_category_id,
         plan_package_category_id,
-        name,
+        plan_name,
         description,
         plan_type,
-        color: receivedColor, // Destructure 'color' and rename to avoid shadowing
+        color: receivedColor,
         display_order,
         is_active,
         available_from,
@@ -110,6 +110,14 @@ const editHotelPlan = async (req, res) => {
     let color = receivedColor;
     if (color && !color.startsWith('#')) {
         color = '#' + color;
+    }
+
+    // Map plan_name to name for consistency with model function
+    const name = plan_name;
+
+    // Ensure name is not empty or null
+    if (name === undefined || name === null || (typeof name === 'string' && name.trim() === '')) {
+        return res.status(400).json({ error: 'Plan name cannot be empty.' });
     }
 
     try {

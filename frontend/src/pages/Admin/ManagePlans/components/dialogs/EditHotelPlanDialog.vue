@@ -155,6 +155,13 @@ const updateHotel = async () => {
     return;
   }
 
+  // Check if plan ID is valid
+  if (editHotelPlan.value.id === undefined || editHotelPlan.value.id === null) {
+    toast.add({ severity: 'error', summary: 'エラー', detail: '編集対象のプランIDが見つかりません。', life: 3000 });
+    console.error('Error: Plan ID is undefined or null when trying to update hotel plan.');
+    return;
+  }
+
   // Check if display_order has changed
   if (editHotelPlan.value.display_order !== props.initialEditHotelPlan.display_order) {
     emit('orderChanged', editHotelPlan.value);
