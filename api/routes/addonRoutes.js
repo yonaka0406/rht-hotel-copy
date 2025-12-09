@@ -1,20 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { getAllAddons, getGlobalAddons, getHotelsAddons, getHotelAddons, createGlobalAddon,
-    createHotelAddon, editGlobalAddon, editHotelAddon } = require('../controllers/addons');
+const { getAllAddons, getHotelsAddons, getHotelAddons, createHotelAddon, editHotelAddon } = require('../controllers/addons');
 const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
-// All
+// All addons for a specific hotel (used in frontend for plan creation/editing)
 router.get('/addons/all/:hotel_id', authMiddleware, getAllAddons);
 
-// Global addons routes
-router.get('/addons/global', authMiddleware, getGlobalAddons);
-router.post('/addons/global', authMiddleware_manageDB, createGlobalAddon);
-router.put('/addons/global/:id', authMiddleware_manageDB, editGlobalAddon);
-
-// Hotel-specific addons routes
+// All addons for all hotels (used in admin panel to manage hotel addons)
 router.get('/addons/hotel', authMiddleware, getHotelsAddons);
-router.get('/addons/hotel/:hotel_id', authMiddleware, getHotelAddons);
+router.get('/addons/hotel/:hotel_id', authMiddleware, getHotelAddons); // Specific hotel addons
+
+// Hotel-specific addon creation and update
 router.post('/addons/hotel', authMiddleware_manageDB, createHotelAddon);
 router.put('/addons/hotel/:id', authMiddleware_manageDB, editHotelAddon);
 
