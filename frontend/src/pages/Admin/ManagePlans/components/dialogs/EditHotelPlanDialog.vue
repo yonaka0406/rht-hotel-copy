@@ -60,6 +60,22 @@
               <label>表示順</label>
           </FloatLabel>
         </div>
+        <div class="col-span-1 flex items-center pt-6">
+            <Checkbox v-model="editHotelPlan.is_active" inputId="isActive" :binary="true" />
+            <label for="isActive" class="ml-2">有効</label>
+        </div>
+        <div class="col-span-1 pt-6">
+            <FloatLabel>
+                <DatePicker v-model="editHotelPlan.available_from" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                <label>利用可能日 (開始)</label>
+            </FloatLabel>
+        </div>
+        <div class="col-span-1 pt-6">
+            <FloatLabel>
+                <DatePicker v-model="editHotelPlan.available_until" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                <label>利用可能日 (終了)</label>
+            </FloatLabel>
+        </div>
         <div class="col-span-2 pt-6 mb-2">
           <FloatLabel>
             <Textarea v-model="editHotelPlan.description" fluid />
@@ -87,6 +103,8 @@ import SelectButton from 'primevue/selectbutton';
 import Textarea from 'primevue/textarea';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
+import Checkbox from 'primevue/checkbox'; // Added import
+import DatePicker from 'primevue/datepicker'; // Added import
 
 const props = defineProps({
   visible: Boolean,
@@ -114,6 +132,7 @@ const selectedTypeCategoryColor = computed(() => {
 watch(() => props.visible, (newVal) => {
   if (newVal && props.initialEditHotelPlan) {
     const initialData = props.initialEditHotelPlan;
+    console.log('EditHotelPlanDialog: Initializing with data:', initialData, 'ID:', initialData.id); // Added console.log
     editHotelPlan.value = {
       ...initialData,
       colorHEX: initialData.color ? initialData.color.replace('#', '') : '',
@@ -126,8 +145,8 @@ watch(() => props.visible, (newVal) => {
 const updateHotel = async () => {
   editHotelPlan.value.hotel_id = props.selectedHotelId;
   
-  // Filter out the current id from hotelPlans
-  const filteredPlans = props.hotelPlans.filter(plan => plan.id !== editHotelPlan.value.id);
+  // Filter out the current plan_id from hotelPlans for duplicate check
+  const filteredPlans = props.hotelPlans.filter(plan => plan.plan_id !== editHotelPlan.value.plan_id);
 
   // Check for duplicate keys
   const PlanSet = new Set();
@@ -155,8 +174,8 @@ const updateHotel = async () => {
     return;
   }
 
-  // Check if plan ID is valid
-  if (editHotelPlan.value.id === undefined || editHotelPlan.value.id === null) {
+  // Check if plan ID is valid, using plan_id consistently
+  if (editHotelPlan.value.plan_id === undefined || editHotelPlan.value.plan_id === null) {
     toast.add({ severity: 'error', summary: 'エラー', detail: '編集対象のプランIDが見つかりません。', life: 3000 });
     console.error('Error: Plan ID is undefined or null when trying to update hotel plan.');
     return;
@@ -170,7 +189,8 @@ const updateHotel = async () => {
   }
 
   try {
-    await updateHotelPlan(editHotelPlan.value.id, editHotelPlan.value);
+    // Pass plan_id to the updateHotelPlan action
+    await updateHotelPlan(editHotelPlan.value.plan_id, editHotelPlan.value);
     emit('planUpdated');
     emit('update:visible', false);
     toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン更新されました。', life: 3000 });

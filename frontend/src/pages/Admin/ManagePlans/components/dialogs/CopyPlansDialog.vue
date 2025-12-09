@@ -41,7 +41,7 @@
             </Column>
             <Column header="新しいプラン名 (任意)" style="width: 25%">
                 <template #body="{ data }">
-                    <InputText v-model="data.newName" :placeholder="data.name" class="w-full" :disabled="!selectedPlans.includes(data)"/>
+                    <InputText v-model="data.newName" :placeholder="data.plan_name" class="w-full" :disabled="!selectedPlans.includes(data)"/>                
                 </template>
             </Column>
             <Column header="オプション" style="width: 45%">

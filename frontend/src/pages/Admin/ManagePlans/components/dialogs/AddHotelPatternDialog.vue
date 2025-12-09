@@ -1,5 +1,13 @@
 <template>
     <Dialog header="ホテルパターン追加" :visible="visible" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
+        <div class="grid grid-cols-1 gap-2 pt-6">
+            <div class="col-span-1 mb-6">
+                <FloatLabel>
+                    <InputText v-model="newHotelPattern.name" fluid />
+                    <label>パターン名</label>
+                </FloatLabel>
+            </div>
+        </div>
         <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
             <div v-for="day in daysOfWeek" :key="day.value" class="mt-4">
                 <div>
@@ -34,6 +42,7 @@ import Dialog from 'primevue/dialog';
 import FloatLabel from 'primevue/floatlabel';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
+import InputText from 'primevue/inputtext'; // Added import
 import Panel from 'primevue/panel'; // Added for debugging
 import Column from 'primevue/column'; // Added for debugging
 

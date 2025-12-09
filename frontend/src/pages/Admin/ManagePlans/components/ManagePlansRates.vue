@@ -780,10 +780,13 @@
         }
     };
     const openAdjustmentDialog = () => {
+        if (!newAdjustment.value) {
+            newAdjustmentReset();
+        }
         newAdjustment.value.plans_hotel_id = props.plan.id;
         newAdjustment.value.hotel_id = props.plan.hotel_id;
         showAdjustmentDialog.value = true;
-    };
+    };    
     const openEditAdjustmentDialog = (adjustmentData) => {
         // console.log('[openEditAdjustmentDialog] adjustmentData:', adjustmentData);
         editAdjustment.value = { 
@@ -887,19 +890,10 @@
             if (!response.ok) {
                 throw new Error('調整の保存に失敗しました');
             } 
-
             fetchRates();
             showAdjustmentDialog.value = false;
-            newAdjustment.value = {
-                hotel_id: null,
-                plans_hotel_id: null,
-                adjustment_type: 'base_rate',
-                adjustment_value: 0,
-                condition_type: 'no_restriction',
-                condition_value: [],
-                date_start: null,
-                date_end: null,
-            };
+            
+            newAdjustmentReset();
 
             toast.add({
                 severity: 'success',
@@ -981,26 +975,10 @@
                 throw new Error('調整の更新に失敗しました');
             }
 
-            fetchRates(); // Refresh the rates
-            showEditAdjustmentDialog.value = false; // Close the dialog
-            editAdjustment.value = {
-                hotel_id: null,
-                plans_hotel_id: null,
-                adjustment_type: 'base_rate',
-                adjustment_value: 0,
-                condition_type: 'no_restriction',
-                condition_value: [],
-                date_start: null,
-                date_end: null,
-                id: null // Reset the ID after updating
-            };
-
-            toast.add({
-                severity: 'success',
-                summary: '成功',
-                detail: '料金更新成功',
-                life: 3000
-            });
+            fetchRates();
+            showEditAdjustmentDialog.value = false;            
+            editAdjustmentReset();           
+            
         } catch (error) {
             console.error('調整更新エラー:', error);
             toast.add({

@@ -54,6 +54,18 @@
               <label>パッケージカテゴリー</label>
           </FloatLabel>
         </div>
+        <div class="col-span-1 pt-6">
+            <FloatLabel>
+                <DatePicker v-model="newHotelPlan.available_from" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                <label>利用可能日 (開始)</label>
+            </FloatLabel>
+        </div>
+        <div class="col-span-1 pt-6">
+            <FloatLabel>
+                <DatePicker v-model="newHotelPlan.available_until" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                <label>利用可能日 (終了)</label>
+            </FloatLabel>
+        </div>
         <div class="col-span-2 pt-6 mb-2">
           <FloatLabel>
             <Textarea v-model="newHotelPlan.description" fluid />
@@ -80,6 +92,7 @@ import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import Textarea from 'primevue/textarea';
 import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker'; // Added import
 
 const props = defineProps({
   visible: Boolean,
