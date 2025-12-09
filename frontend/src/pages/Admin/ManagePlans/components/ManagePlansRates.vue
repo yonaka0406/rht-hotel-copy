@@ -619,11 +619,11 @@
             required: true,
         },
         selectedHotelId: {
-            type: String, // Assuming hotel IDs are strings (UUIDs)
+            type: Number, // Changed from String to Number
             required: true,
         }
     });
-    import ManagePlansAddons from './ManageAddons.vue';
+    import ManagePlansAddons from './ManagePlansAddons.vue';
 
     // Primevue
     import { useToast } from 'primevue/usetoast';    

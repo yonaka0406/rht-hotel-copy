@@ -1,7 +1,7 @@
 <template>
     <div class="p-4">
       <Panel :header="`プラン (${selectedHotelName})`" class="mb-4">
-        <div class="mb-4 mt-6">
+        <div class="mb-4 mt-6" v-if="!showHotelRatePanel">
           <FloatLabel>
             <Select
               v-model="selectedHotelId"
@@ -25,6 +25,7 @@
             @openEditPlanDialog="openEditHotelDialog"
             @switchEditHotelPlanRate="switchEditHotelPlanRate"
             @orderChanged="handleOrderChange"
+            v-if="!showHotelRatePanel"
         />
 
         <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
@@ -41,7 +42,11 @@
         </div>
       </Panel>
 
-      <ManagePlansPatterns :selectedHotelId="selectedHotelId" :selectedHotelName="selectedHotelName" />
+      <ManagePlansPatterns 
+        :selectedHotelId="selectedHotelId" 
+        :selectedHotelName="selectedHotelName"
+        v-if="!showHotelRatePanel"
+      />
 
       <AddHotelPlanDialog
         :visible="showHotelDialog"
