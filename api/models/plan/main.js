@@ -178,11 +178,11 @@ const updateHotelPlan = async (requestId, id, hotel_id, plan_type_category_id, p
     const client = dbClient || await getPool(requestId).connect();
     const query = `
         UPDATE plans_hotel
-        SET plan_type_category_id = $1, plan_package_category_id = $2, name = $3, description = $4, plan_type = $5, color = $6, display_order = $7, is_active = $8, available_from = $9, available_until = $10, updated_by = $11
-        WHERE hotel_id = $12 AND id = $13
+        SET plan_type_category_id = $1, plan_package_category_id = $2, name = $3, description = $4, plan_type = $5, color = $6, is_active = $7, available_from = $8, available_until = $9, updated_by = $10
+        WHERE hotel_id = $11 AND id = $12
         RETURNING *;
     `;
-    const values = [plan_type_category_id || null, plan_package_category_id || null, name, description, plan_type, color, display_order, is_active, available_from, available_until, updated_by, hotel_id, id];
+    const values = [plan_type_category_id || null, plan_package_category_id || null, name, description, plan_type, color, is_active, available_from, available_until, updated_by, hotel_id, id];
 
     try {
         const result = await client.query(query, values);
@@ -219,21 +219,32 @@ const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbCli
     const client = dbClient || await getPool(requestId).connect();
     const shouldReleaseClient = !client;
 
+    logger.debug(`[DB] updatePlansOrderBulk: requestId=${requestId}, hotelId=${hotelId}, plansCount=${plans.length}, updated_by=${updated_by}`);
+    logger.debug(`[DB] updatePlansOrderBulk: plans =`, plans);
+
     try {
         await client.query('BEGIN');
+        logger.debug('[DB] updatePlansOrderBulk: Transaction BEGIN');
+
         for (const plan of plans) {
             const query = `
                 UPDATE plans_hotel
                 SET display_order = $1, updated_by = $2
                 WHERE hotel_id = $3 AND id = $4
             `;
+            // Note: plan.id from frontend is mapped from plan_id. In DB, it's just 'id'.
             const values = [plan.display_order, updated_by, hotelId, plan.id];
-            await client.query(query, values);
+            logger.debug(`[DB] updatePlansOrderBulk: Executing UPDATE for plan.id=${plan.id} with display_order=${plan.display_order}`);
+            logger.debug(`[DB] updatePlansOrderBulk: Query: ${query}, Values: ${values}`);
+            const updateResult = await client.query(query, values);
+            logger.debug(`[DB] updatePlansOrderBulk: Update result for plan.id=${plan.id}: rowsAffected=${updateResult.rowCount}`);
         }
         await client.query('COMMIT');
+        logger.debug('[DB] updatePlansOrderBulk: Transaction COMMIT');
         return { success: true };
     } catch (err) {
         await client.query('ROLLBACK');
+        logger.error('[DB] updatePlansOrderBulk: Transaction ROLLBACK due to error:', err);
         console.error('Error updating plan display order in bulk:', err);
         throw new Error('Database error');
     } finally {

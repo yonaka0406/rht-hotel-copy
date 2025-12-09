@@ -146,14 +146,19 @@ const editHotelPlan = async (req, res) => {
 };
 
 const updatePlansOrderBulk = async (req, res) => {
-    const { hotelId } = req.params;
-    const plans = req.body;
+    const { hotel_id } = req.params; // Correctly extract hotel_id from req.params
+    let plans = req.body; // Incoming plans data
     const updated_by = req.user.id;
+
+    // Ensure plans is an array, convert from object if necessary (happens with some body-parser setups)
+    if (!Array.isArray(plans)) {
+        plans = Object.values(plans);
+    }
 
     try {
         const updatedPlans = await planModels.updatePlansOrderBulk(
             req.requestId,
-            hotelId,
+            parseInt(hotel_id), // Ensure hotel_id is an integer
             plans,
             updated_by
         );

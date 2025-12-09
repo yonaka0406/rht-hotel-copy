@@ -146,6 +146,7 @@
     if (selectedHotelId.value) {
       await fetchPlansForHotel(selectedHotelId.value, true);      
       hotelPlans.value = plans.value;
+      await reindexPlans(); // Reindex after plans are modified (full sort)
     }
   };
   
@@ -164,14 +165,47 @@
   };
 
   const handleOrderChange = async (updatedPlansArray) => { // This will now receive the reordered array from child component
+    console.log('handleOrderChange: updatedPlansArray type:', typeof updatedPlansArray, 'value:', updatedPlansArray); // Debug log
+    if (!Array.isArray(updatedPlansArray)) {
+        console.error('handleOrderChange: updatedPlansArray is not an array!', updatedPlansArray);
+        toast.add({ severity: 'error', summary: 'エラー', detail: 'プランの順序更新に失敗しました: 無効なデータを受信しました。', life: 3000 });
+        return;
+    }
     // Assuming updatedPlansArray is the new ordered array of plans from the child DataTable
     hotelPlans.value = updatedPlansArray; // Update parent's hotelPlans
-    const plansWithNewOrder = hotelPlans.value.map((plan, index) => ({
+    await reindexPlans(true); // Call reindexing logic, preserving current order
+  };
+
+  // New function to reindex plans and update them in bulk
+  const reindexPlans = async (preserveCurrentOrder = false) => { // Added parameter
+    let plansToReindex = [...hotelPlans.value]; // Start with current plans
+
+    if (!preserveCurrentOrder) {
+      // Separate active and inactive plans
+      const active = plansToReindex.filter(plan => plan.is_active);
+      const inactive = plansToReindex.filter(plan => !plan.is_active);
+
+      // Sort active plans by their current display_order or name if order is same
+      active.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || a.plan_name.localeCompare(b.plan_name));
+      // Sort inactive plans by their current display_order or name
+      inactive.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || a.plan_name.localeCompare(b.plan_name));
+
+      plansToReindex = [...active, ...inactive];
+    }
+    
+    // Combine and re-assign display_order sequentially based on plansToReindex
+    const reindexedPlans = plansToReindex.map((plan, index) => ({
       ...plan,
       display_order: index,
     }));
+    
+    // Update local state and then send to backend
+    hotelPlans.value = reindexedPlans;
+
+    console.log('reindexPlans: Sending to backend:', reindexedPlans); // Add this log
+
     try {
-      await updatePlansOrderBulk(selectedHotelId.value, plansWithNewOrder);
+      await updatePlansOrderBulk(selectedHotelId.value, reindexedPlans);
       toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
     } catch (error) {
       toast.add({ severity: 'error', summary: '失敗', detail: 'プランの表示順序の更新に失敗しました。', life: 3000 });
@@ -201,6 +235,7 @@
     if (selectedHotelId.value) {
       await fetchPlansForHotel(selectedHotelId.value, true);
       hotelPlans.value = plans.value;
+      await reindexPlans(); // Reindex after plans are copied (full sort)
     }
   };
 

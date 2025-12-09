@@ -132,7 +132,7 @@ const selectedTypeCategoryColor = computed(() => {
 watch(() => props.visible, (newVal) => {
   if (newVal && props.initialEditHotelPlan) {
     const initialData = props.initialEditHotelPlan;
-    console.log('EditHotelPlanDialog: Initializing with data:', initialData, 'ID:', initialData.id); // Added console.log
+    console.log('EditHotelPlanDialog: Initializing with data:', initialData, 'ID:', initialData.id);
     editHotelPlan.value = {
       ...initialData,
       colorHEX: initialData.color ? initialData.color.replace('#', '') : '',
@@ -178,13 +178,6 @@ const updateHotel = async () => {
   if (editHotelPlan.value.plan_id === undefined || editHotelPlan.value.plan_id === null) {
     toast.add({ severity: 'error', summary: 'エラー', detail: '編集対象のプランIDが見つかりません。', life: 3000 });
     console.error('Error: Plan ID is undefined or null when trying to update hotel plan.');
-    return;
-  }
-
-  // Check if display_order has changed
-  if (editHotelPlan.value.display_order !== props.initialEditHotelPlan.display_order) {
-    emit('orderChanged', editHotelPlan.value);
-    emit('update:visible', false);
     return;
   }
 
