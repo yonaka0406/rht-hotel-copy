@@ -1187,10 +1187,7 @@
             });
     });    
             
-    const fetchRates = async () => {
-        // Using formatDate utility from dateUtils
-        };
-
+    const fetchRates = async () => {        
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/${planId.value.plans_hotel_id}/hotels/${planId.value.hotel_id}/rates`, {
