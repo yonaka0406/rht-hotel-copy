@@ -48,7 +48,7 @@ const getCountReservationDetails = async (req, res) => {
         if (!mergedData[date]) {
             mergedData[date] = {};
         }
-        if (!mergedData[date].plans) { // Use your plan_key here, e.g., mergedData[date][plan_key] = []
+        if (!mergedData[date].plans) {
             mergedData[date].plans = [];
         }
         mergedData[date].plans.push(item);
@@ -60,7 +60,7 @@ const getCountReservationDetails = async (req, res) => {
         if (!mergedData[date]) {
             mergedData[date] = {};
         }
-        if (!mergedData[date].addons) { // Use your addon_key here, e.g., mergedData[date][addon_key] = []
+        if (!mergedData[date].addons) {
             mergedData[date].addons = [];
         }
         mergedData[date].addons.push(item);

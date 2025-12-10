@@ -104,13 +104,12 @@ const getPlansForBookingEngine = async (requestId, hotelId) => {
     SELECT 
       p.plans_global_id,
       p.plans_hotel_id,
-      p.plan_key,
-      p.name,
+      p.plan_name as name,
       p.description,
       p.plan_type,
       p.color
-    FROM get_available_plans_for_hotel($1) p
-    ORDER BY p.plan_type, p.name
+    FROM get_available_plans_with_rates_and_addons($1, CURRENT_DATE, NULL, false) p
+    ORDER BY p.plan_type, p.plan_name
   `;
   const values = [hotelId];
 

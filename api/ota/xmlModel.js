@@ -384,19 +384,17 @@ const insertTLPlanMaster = async (requestId, data) => {
         await client.query('BEGIN');
 
         // Delete existing records for the hotel_id
-        await pool.query('DELETE FROM sc_tl_plans WHERE hotel_id = $1', [data[0].hotel_id]);
+        await client.query('DELETE FROM sc_tl_plans WHERE hotel_id = $1', [data[0].hotel_id]);
 
         // Insert the new records
         const results = [];
         for (const item of data) {
             const result = await client.query(
-                `INSERT INTO sc_tl_plans(hotel_id, plans_global_id, plans_hotel_id, plan_key, planGroupCode, planGroupName) 
-                VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
+                `INSERT INTO sc_tl_plans(hotel_id, plans_hotel_id, planGroupCode, planGroupName) 
+                VALUES($1, $2, $3, $4) RETURNING *`,
                 [
                     item.hotel_id,
-                    item.plans_global_id,
                     item.plans_hotel_id,
-                    item.plan_key,
                     item.plangroupcode,
                     item.plangroupname,                    
                 ]

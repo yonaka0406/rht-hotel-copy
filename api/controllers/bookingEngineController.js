@@ -106,7 +106,6 @@ const getPlansForBookingEngine = async (req, res) => {
     const formattedPlans = plans.map(plan => ({
       global_plan_id: plan.plans_global_id,
       hotel_plan_id: plan.plans_hotel_id,
-      plan_key: plan.plan_key,
       name: plan.name,
       description: plan.description,
       plan_type: plan.plan_type,

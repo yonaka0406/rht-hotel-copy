@@ -20,10 +20,6 @@ export function usePlansStore() {
             });
             
             plans.value = await response.json();
-            plans.value = plans.value.map(plan => ({
-                ...plan,
-                plan_key: (plan.id ?? '')
-            }));
             return plans.value; // Return the fetched plans
         } catch (error) {
             console.error('Failed to fetch global plans', error);
