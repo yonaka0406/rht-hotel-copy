@@ -98,226 +98,35 @@
             <Accordion value="0">
                 <AccordionPanel value="0">
                     <AccordionHeader>現在の条件</AccordionHeader>
-                    <AccordionContent>                        
-                        <DataTable :value="filteredCurrentConditions">
-                            <Column field="date_start" header="開始" style="min-width: 150px;"></Column>
-                            <Column field="date_end" header="終了" style="min-width: 150px;"></Column>    
-                            <Column header="料金" style="min-width: 180px;">
-                                <template #body="slotProps">
-                                    <div v-if="slotProps.data.adjustment_type !== 'percentage'">
-                                        {{ formatNumber(slotProps.data.adjustment_value, 'currency') }}
-                                    </div>
-                                    <div v-else>
-                                        {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'base_rate'">
-                                        <Badge value="基本料金"
-                                            severity="secondary">
-                                        </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
-                                        <Badge value="定額料金"
-                                            severity="info">
-                                        </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="パーセント"
-                                            severity="warn">
-                                        </Badge>
-                                    </div>
-                                    <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
-                                        value="キャンセル料対象"
-                                        severity="danger"
-                                        class="ml-1">
-                                    </Badge>
-                                    <Badge :value="formatSalesCategory(slotProps.data.sales_category)" 
-                                           :severity="slotProps.data.sales_category === 'other' ? 'warn' : 'success'" 
-                                           class="ml-1">
-                                    </Badge>
-                                    
-                                </template>
-                            </Column>
-                            <Column header="条件" style="min-width: 200px;">
-                                <template #body="slotProps">
-                                    <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
-                                        <Badge 
-                                            v-for="(day, index) in daysOfWeek"
-                                            :key="index"
-                                            :value="day.label"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.value.toLowerCase())}"
-                                            class="p-m-1"
-                                        />
-                                    </div>
-                                    <div v-else-if="slotProps.data.condition_type === 'month'">                                        
-                                        <Badge 
-                                            v-for="(month, index) in months" 
-                                            :key="index"
-                                            :value="month.label"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.value.toLowerCase())}"
-                                            class="p-m-1"
-                                        />
-                                    </div>
-                                </template>
-                            </Column>
-                            <Column header="操作">
-                                <template #body="slotProps">
-                                    <Button 
-                                        icon="pi pi-pencil"
-                                        class="p-button-text p-button-sm"
-                                        @click="openEditAdjustmentDialog(slotProps.data)"
-                                    />                                  
-                                </template>
-                            </Column>
-                        </DataTable>
+                    <AccordionContent>
+                        <RatesDataTable
+                            :rates="filteredCurrentConditions"
+                            :daysOfWeek="daysOfWeek"
+                            :months="months"
+                            @editAdjustment="openEditAdjustmentDialog"
+                        />
                     </AccordionContent>
                 </AccordionPanel>
                 <AccordionPanel value="1">
                     <AccordionHeader>将来の条件</AccordionHeader>
                     <AccordionContent>
-                        <DataTable :value="filteredFutureConditions">
-                            <Column field="date_start" header="開始" style="min-width: 150px;"></Column>
-                            <Column field="date_end" header="終了" style="min-width: 150px;"></Column>    
-                            <Column header="料金" style="min-width: 180px;">
-                                <template #body="slotProps">
-                                    <div v-if="slotProps.data.adjustment_type !== 'percentage'">
-                                        {{ formatNumber(slotProps.data.adjustment_value, 'currency') }}
-                                    </div>
-                                    <div v-else>
-                                        {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'base_rate'">
-                                        <Badge value="基本料金"
-                                            severity="secondary">
-                                        </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
-                                        <Badge value="定額料金"
-                                            severity="info">
-                                        </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="パーセント"
-                                            severity="warn">
-                                        </Badge>
-                                    </div>
-                                    <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
-                                        value="キャンセル料対象"
-                                        severity="danger"
-                                        class="ml-1">
-                                    </Badge>
-                                    <Badge :value="formatSalesCategory(slotProps.data.sales_category)" 
-                                           :severity="slotProps.data.sales_category === 'other' ? 'warn' : 'success'" 
-                                           class="ml-1">
-                                    </Badge>
-                                    
-                                </template>
-                            </Column>
-                            <Column header="条件" style="min-width: 200px;">
-                                <template #body="slotProps">
-                                    <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
-                                        <Badge 
-                                            v-for="(day, index) in daysOfWeek"
-                                            :key="index"
-                                            :value="day.label"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.value.toLowerCase())}"
-                                            class="p-m-1"
-                                        />
-                                    </div>
-                                    <div v-else-if="slotProps.data.condition_type === 'month'">                                        
-                                        <Badge 
-                                            v-for="(month, index) in months" 
-                                            :key="index"
-                                            :value="month.label"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.value.toLowerCase())}"
-                                            class="p-m-1"
-                                        />
-                                    </div>
-                                </template>
-                            </Column>
-                            <Column header="操作">
-                                <template #body="slotProps">
-                                    <Button 
-                                        icon="pi pi-pencil"
-                                        class="p-button-text p-button-sm"
-                                        @click="openEditAdjustmentDialog(slotProps.data)"
-                                    />                                  
-                                </template>
-                            </Column>    
-                        </DataTable>
+                        <RatesDataTable
+                            :rates="filteredFutureConditions"
+                            :daysOfWeek="daysOfWeek"
+                            :months="months"
+                            @editAdjustment="openEditAdjustmentDialog"
+                        />
                     </AccordionContent>
                 </AccordionPanel>
                 <AccordionPanel value="2">
                     <AccordionHeader>過去の条件</AccordionHeader>
-                    <AccordionContent>                        
-                        <DataTable :value="filteredPastConditions">
-                            <Column field="date_start" header="開始" style="min-width: 150px;"></Column>
-                            <Column field="date_end" header="終了" style="min-width: 150px;"></Column>    
-                            <Column header="料金" style="min-width: 180px;">
-                                <template #body="slotProps">
-                                    <div v-if="slotProps.data.adjustment_type !== 'percentage'">
-                                        {{ formatNumber(slotProps.data.adjustment_value, 'currency') }}
-                                    </div>
-                                    <div v-else>
-                                        {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'base_rate'">
-                                        <Badge value="基本料金"
-                                            severity="secondary">
-                                        </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
-                                        <Badge value="定額料金"
-                                            severity="info">
-                                        </Badge>
-                                    </div>
-                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="パーセント"
-                                            severity="warn">
-                                        </Badge>
-                                    </div>
-                                    <Badge v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
-                                        value="キャンセル料対象"
-                                        severity="danger"
-                                        class="ml-1">
-                                    </Badge>
-                                    <Badge :value="formatSalesCategory(slotProps.data.sales_category)" 
-                                           :severity="slotProps.data.sales_category === 'other' ? 'warn' : 'success'" 
-                                           class="ml-1">
-                                    </Badge>
-                                </template>
-                            </Column>
-                            <Column header="条件" style="min-width: 200px;">
-                                <template #body="slotProps">
-                                    <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
-                                        <Badge 
-                                            v-for="(day, index) in daysOfWeek"
-                                            :key="index"
-                                            :value="day.label"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.value.toLowerCase())}"
-                                            class="p-m-1"
-                                        />
-                                    </div>
-                                    <div v-else-if="slotProps.data.condition_type === 'month'">                                        
-                                        <Badge 
-                                            v-for="(month, index) in months" 
-                                            :key="index"
-                                            :value="month.label"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.value.toLowerCase())}"
-                                            class="p-m-1"
-                                        />
-                                    </div>
-                                </template>
-                            </Column>   
-                            <Column header="操作">
-                                <template #body="slotProps">
-                                    <Button 
-                                        icon="pi pi-pencil"
-                                        class="p-button-text p-button-sm"
-                                        @click="openEditAdjustmentDialog(slotProps.data)"
-                                    />                                  
-                                </template>
-                            </Column>                     
-                        </DataTable>
+                    <AccordionContent>
+                        <RatesDataTable
+                            :rates="filteredPastConditions"
+                            :daysOfWeek="daysOfWeek"
+                            :months="months"
+                            @editAdjustment="openEditAdjustmentDialog"
+                        />
                     </AccordionContent>
                 </AccordionPanel>
             </Accordion>
@@ -613,6 +422,7 @@
     // Vue
     import { ref, watch, computed, onMounted } from 'vue';
     import { formatDate } from '@/utils/dateUtils';
+    import { formatNumber } from '@/utils/numberUtils';
     const props = defineProps({
         plan: {
             type: Object,
@@ -624,6 +434,7 @@
         }
     });
     import ManagePlansAddons from './ManagePlansAddons.vue';
+import RatesDataTable from './tables/RatesDataTable.vue';
 
     // Primevue
     import { useToast } from 'primevue/usetoast';    
@@ -637,27 +448,6 @@
     const { taxTypes, fetchTaxTypes } = useSettingsStore();
 
      // Helper
-    const formatNumber = (value, style) => {
-        let thisValue = value;
-        if(!thisValue){
-            thisValue = 0;
-        } 
-        if(style === 'currency'){
-            return new Intl.NumberFormat('ja-JP', {
-                style: 'currency',
-                currency: 'JPY',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(thisValue);
-        }
-        if(style === 'decimal'){
-            return new Intl.NumberFormat('ja-JP', {
-                style: 'decimal',
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2
-            }).format(thisValue);
-        }                
-    };
 
     // Options
     const daysOfWeek = [
@@ -1345,22 +1135,6 @@
             }
         }
         return [val];
-    };
-
-    const formatSalesCategory = (categories) => {
-        if (!Array.isArray(categories)) {
-            categories = [categories];
-        }
-        return categories.map(category => {
-            switch (category) {
-                case 'accommodation':
-                    return '宿泊';
-                case 'other':
-                    return 'その他';
-                default:
-                    return category;
-            }
-        }).join(', ');
     };
  
 </script>
