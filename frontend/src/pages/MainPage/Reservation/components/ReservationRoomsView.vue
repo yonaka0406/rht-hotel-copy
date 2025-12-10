@@ -140,7 +140,7 @@
                                         <div class="col-span-4 mr-2">
                                             <FloatLabel>
                                                 <Select v-model="selectedPlan" id="bulk-plan" :options="plans"
-                                                    optionLabel="name" showClear fluid @change="updatePlanAddOns" />
+                                                    optionLabel="plan_name" showClear fluid @change="updatePlanAddOns" />
                                                 <label for="bulk-plan">プラン選択</label>
                                             </FloatLabel>
                                         </div>
@@ -194,7 +194,7 @@
                                             <div class="mt-4 mr-2">
                                                 <FloatLabel>
                                                     <Select v-model="dayPlanSelections[day.value]" :options="plans"
-                                                        optionLabel="name" optionValue="plan_key" class="w-full" />
+                                                        optionLabel="plan_name" optionValue="plan_id" class="w-full" />
                                                     <label class="font-semibold mb-1 block">{{ day.label }}</label>
                                                 </FloatLabel>
                                             </div>
@@ -800,8 +800,8 @@ const updatePattern = async () => {
         // Populate dayPlanSelections based on template
         for (const day of daysOfWeek) {
             const templateEntry = selectedPatternDetails.value.template?.[day.value];
-            if (templateEntry && templateEntry.plan_key && plans.value.some(plan => plan.id === templateEntry.plan_key)) {
-                dayPlanSelections.value[day.value] = templateEntry.plan_key;
+            if (templateEntry && templateEntry.plans_hotel_id && plans.value.some(plan => plan.plan_id === templateEntry.plans_hotel_id)) {
+                dayPlanSelections.value[day.value] = templateEntry.plans_hotel_id;
             } else {
                 dayPlanSelections.value[day.value] = null;
             }
@@ -1678,10 +1678,10 @@ const openGuestListDialog = async (group, isGroup = false) => {
             const roomAssignedPlanKeys = [...new Set(roomGroup.details.map(d => {
                 //console.log('Debug (RView): Original d.plan_name:', d.plan_name);
                 const matchingPlan = plans.value.find(plan => {
-                    //console.log(`Debug (RView): Checking if "${d.plan_name}" includes "${plan.name}": ${d.plan_name.includes(plan.name)}`);
-                    return d.plan_name.includes(plan.name);
+                    //console.log(`Debug (RView): Checking if "${d.plan_name}" includes "${plan.plan_name}": ${d.plan_name.includes(plan.plan_name)}`);
+                    return d.plan_name.includes(plan.plan_name);
                 });
-                const mappedKey = matchingPlan ? matchingPlan.plan_key : d.plan_name;
+                const mappedKey = matchingPlan ? matchingPlan.plan_name : d.plan_name;
                 //console.log(`Debug (RView): Mapped "${d.plan_name}" to "${mappedKey}"`);
                 return mappedKey; // Fallback to name if key not found
             }).filter(Boolean))];
@@ -1713,7 +1713,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
                 hotel_name: reservationInfo.value.hotel_name,
                 number_of_people: roomDetail.number_of_people,
                 payment_total: roomPaymentTotal,
-                all_plan_names_list: plans.value.map(p => p.name).join(','),
+                all_plan_names_list: plans.value.map(p => p.plan_name).join(','),
                 // Additional room-specific data
                 room_type: roomGroup.room_type,
                 capacity: roomDetail.capacity,
@@ -1741,10 +1741,10 @@ const openGuestListDialog = async (group, isGroup = false) => {
         const assignedPlanKeys = [...new Set(group.details.map(d => {
             //console.log('Debug (RView): Original d.plan_name:', d.plan_name);
             const matchingPlan = plans.value.find(plan => {
-                //console.log(`Debug (RView): Checking if "${d.plan_name}" includes "${plan.name}": ${d.plan_name.includes(plan.name)}`);
-                return d.plan_name.includes(plan.name);
+                //console.log(`Debug (RView): Checking if "${d.plan_name}" includes "${plan.plan_name}": ${d.plan_name.includes(plan.plan_name)}`);
+                return d.plan_name.includes(plan.plan_name);
             });
-            const mappedKey = matchingPlan ? matchingPlan.plan_key : d.plan_name;
+            const mappedKey = matchingPlan ? matchingPlan.plan_name : d.plan_name;
             //console.log(`Debug (RView): Mapped "${d.plan_name}" to "${mappedKey}"`);
             return mappedKey; // Fallback to name if key not found
         }).filter(Boolean))];

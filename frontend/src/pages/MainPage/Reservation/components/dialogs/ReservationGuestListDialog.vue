@@ -86,8 +86,8 @@
                     <div class="grid-item label">プラン</div>
                     <div class="grid-item col-span-3 flex-wrap">
                         <div v-for="plan in allPlans" :key="plan.id" class="flex items-center mr-4">
-                            <Checkbox v-model="selectedPlans" :inputId="'plan_' + plan.id" :value="plan.plan_key"></Checkbox>
-                            <label :for="'plan_' + plan.id" class="ml-2"> {{ plan.name }} </label>
+                            <Checkbox v-model="selectedPlans" :inputId="'plan_' + plan.id" :value="plan.plan_name"></Checkbox>
+                            <label :for="'plan_' + plan.id" class="ml-2"> {{ plan.plan_name }} </label>
                         </div>
                     </div>
                 </template>
@@ -119,8 +119,8 @@
                     <div class="grid-item label">プラン</div>
                     <div class="grid-item col-span-3 flex-wrap">
                         <div v-for="plan in allPlans" :key="plan.id" class="flex items-center mr-4">
-                            <Checkbox v-model="guestFields.selected_plans.value" :inputId="'guest_plan_' + index + '_' + plan.id" :value="plan.name"></Checkbox>
-                            <label :for="'guest_plan_' + index + '_' + plan.id" class="ml-2"> {{ plan.name }} </label>
+                            <Checkbox v-model="guestFields.selected_plans.value" :inputId="'guest_plan_' + index + '_' + plan.id" :value="plan.plan_name"></Checkbox>
+                            <label :for="'guest_plan_' + index + '_' + plan.id" class="ml-2"> {{ plan.plan_name }} </label>
                         </div>
                     </div>
                     
@@ -392,12 +392,12 @@ const generatePDF = async () => {
     }
     guestData.smoking_preference = smokingOption.value;
     guestData.payment_option = paymentOption.value;
-    const planNames = selectedPlans.value.map(planKey => {
-        const plan = props.allPlans.find(p => p.plan_key === planKey);
-        return plan ? plan.name : planKey;
+    const planNames = selectedPlans.value.map(planName => {
+        const plan = props.allPlans.find(p => p.plan_name === planName);
+        return plan ? plan.plan_name : planName;
     });
     guestData.plan_names_list = planNames.join(', ');
-    guestData.all_plan_names_list = props.allPlans.map(p => p.name).join(',');
+    guestData.all_plan_names_list = props.allPlans.map(p => p.plan_name).join(',');
     guestData.parking_lot_names_list = selectedParkingLots.value.join(', ');
     
     // Handle hotel_name for both single and group reservations

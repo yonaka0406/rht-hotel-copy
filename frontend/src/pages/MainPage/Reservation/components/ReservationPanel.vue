@@ -241,7 +241,7 @@
                                         <div class="col-span-4 mr-2">
                                             <FloatLabel>
                                                 <Select id="bulk-plan" v-model="selectedPlan" :options="plans"
-                                                    optionLabel="name" showClear fluid @change="updatePlanAddOns" />
+                                                    optionLabel="plan_name" showClear fluid @change="updatePlanAddOns" />
                                                 <label for="bulk-plan">プラン選択</label>
                                             </FloatLabel>
                                         </div>
@@ -295,7 +295,7 @@
                                             <div class="mt-4 mr-2">
                                                 <FloatLabel>
                                                     <Select v-model="dayPlanSelections[day.value]" :options="plans"
-                                                        optionLabel="name" optionValue="plan_key" class="w-full" />
+                                                        optionLabel="plan_name" optionValue="plan_id" class="w-full" />
                                                     <label class="font-semibold mb-1 block">{{ day.label }}</label>
                                                 </FloatLabel>
                                             </div>
@@ -1341,8 +1341,8 @@ const updatePattern = async () => {
         // Populate dayPlanSelections based on template
         for (const day of daysOfWeek) {
             const templateEntry = selectedPatternDetails.value.template?.[day.value];
-            if (templateEntry && templateEntry.plan_key && plans.value.some(plan => plan.id === templateEntry.plan_key)) {
-                dayPlanSelections.value[day.value] = templateEntry.plan_key;
+            if (templateEntry && templateEntry.plans_hotel_id && plans.value.some(plan => plan.plan_id === templateEntry.plans_hotel_id)) {
+                dayPlanSelections.value[day.value] = templateEntry.plans_hotel_id;
             } else {
                 dayPlanSelections.value[day.value] = null;
             }

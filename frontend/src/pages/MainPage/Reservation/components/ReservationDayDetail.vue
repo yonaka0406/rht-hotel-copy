@@ -22,8 +22,8 @@
                                         <template #content>
                                             <div class="field mt-8">
                                                 <FloatLabel>
-                                                    <Select v-model="selectedPlan" :options="plans" optionLabel="name"
-                                                        optionValue="plan_key" fluid @change="updatePlanAddOns" />
+                                                    <Select v-model="selectedPlan" :options="plans" optionLabel="plan_name"
+                                                        optionValue="plan_id" fluid @change="updatePlanAddOns" />
                                                     <label>プラン選択</label>
                                                 </FloatLabel>
                                             </div>
