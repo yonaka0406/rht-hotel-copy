@@ -13,7 +13,7 @@
                     <Column header="PMSプラン紐づけ">
                         <template #body="slotProps">
                             <Select
-                                v-model="slotProps.data.plan_key" 
+                                v-model="slotProps.data.plans_hotel_id" 
                                 :options="plans"
                                 optionLabel="name" 
                                 optionValue="id" 
@@ -68,7 +68,6 @@
                 ...item,
                 plans_global_id: null, // Always null as global plans are deprecated
                 plans_hotel_id: matchingPlan?.id || null,
-                plan_key: matchingPlan?.id || null, // Keep plan_key for now, but value is plan.id
             };
         });
         

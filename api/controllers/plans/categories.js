@@ -7,7 +7,13 @@ const getTypeCategories = async (req, res) => {
         res.json(categories);
     } catch (error) {
         console.error('Error getting plan type categories:', error);
-        res.status(500).json({ error: error.message });
+        if (error.name === 'ValidationError' || error.statusCode === 400) {
+            return res.status(400).json({ error: 'Bad Request' });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Not Found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
@@ -27,7 +33,13 @@ const createTypeCategory = async (req, res) => {
         res.status(201).json(newCategory);
     } catch (error) {
         console.error('Error creating plan type category:', error);
-        res.status(500).json({ error: error.message });
+        if (error.name === 'ValidationError' || error.statusCode === 400) {
+            return res.status(400).json({ error: 'Bad Request' });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Not Found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
@@ -51,7 +63,13 @@ const updateTypeCategory = async (req, res) => {
         res.json(updatedCategory);
     } catch (error) {
         console.error('Error updating plan type category:', error);
-        res.status(500).json({ error: error.message });
+        if (error.name === 'ValidationError' || error.statusCode === 400) {
+            return res.status(400).json({ error: 'Bad Request' });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Not Found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
@@ -62,7 +80,13 @@ const getPackageCategories = async (req, res) => {
         res.json(categories);
     } catch (error) {
         console.error('Error getting plan package categories:', error);
-        res.status(500).json({ error: error.message });
+        if (error.name === 'ValidationError' || error.statusCode === 400) {
+            return res.status(400).json({ error: 'Bad Request' });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Not Found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
@@ -75,7 +99,13 @@ const createPackageCategory = async (req, res) => {
         res.status(201).json(newCategory);
     } catch (error) {
         console.error('Error creating plan package category:', error);
-        res.status(500).json({ error: error.message });
+        if (error.name === 'ValidationError' || error.statusCode === 400) {
+            return res.status(400).json({ error: 'Bad Request' });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Not Found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
@@ -97,7 +127,13 @@ const updatePackageCategory = async (req, res) => {
         res.json(updatedCategory);
     } catch (error) {
         console.error('Error updating plan package category:', error);
-        res.status(500).json({ error: error.message });
+        if (error.name === 'ValidationError' || error.statusCode === 400) {
+            return res.status(400).json({ error: 'Bad Request' });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Not Found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 

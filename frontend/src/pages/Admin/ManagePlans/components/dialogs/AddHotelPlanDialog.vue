@@ -177,8 +177,14 @@ watch([() => newHotelPlan.value.available_from, () => newHotelPlan.value.availab
 const saveHotelPlan = async () => {
   newHotelPlan.value.hotel_id = props.selectedHotelId;            
 
+  const trimmedPlanName = newHotelPlan.value.name?.trim();
+  if (!trimmedPlanName) {
+      toast.add({ severity: 'error', summary: 'エラー', detail: '名称を記入してください。', life: 3000 });
+      return;
+  }
+
   const PlanSet = new Set();
-  const newPlanKey = `${newHotelPlan.value.name}-${newHotelPlan.value.hotel_id}`;
+  const newPlanKey = `${trimmedPlanName}-${newHotelPlan.value.hotel_id}`;
   if (props.hotelPlans) {
     for (const plan of props.hotelPlans) {
       const planKey = `${plan.name}-${plan.hotel_id}`;

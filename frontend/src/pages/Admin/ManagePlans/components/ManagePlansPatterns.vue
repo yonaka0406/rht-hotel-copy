@@ -28,6 +28,7 @@
         </DataTable>
     </Panel>
     <AddHotelPatternDialog
+        v-if="showHotelDialog && hotelPlans.length > 0"
         :visible="showHotelDialog"
         @update:visible="showHotelDialog = $event"
         @patternAdded="onPatternModified"
@@ -38,6 +39,7 @@
     />
 
     <EditHotelPatternDialog
+        v-if="showEditHotelDialog && hotelPlans.length > 0"
         :visible="showEditHotelDialog"
         @update:visible="showEditHotelDialog = $event"
         @patternUpdated="onPatternModified"
@@ -54,8 +56,9 @@
         
     const props = defineProps({
         selectedHotelId: {
-            type: [Number, null], 
-            required: true,
+            type: Number,
+            required: false,
+            default: null,
         },
         selectedHotelName: {
             type: String,
