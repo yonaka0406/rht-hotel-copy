@@ -69,7 +69,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import Badge from 'primevue/badge';
-import { formatNumber } from '@/utils/numberUtils';
+import { formatNumber } from '@/utils/formatUtils';
 
 const props = defineProps({
     rates: {

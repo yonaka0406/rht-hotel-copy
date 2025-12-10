@@ -422,7 +422,7 @@
     // Vue
     import { ref, watch, computed, onMounted } from 'vue';
     import { formatDate } from '@/utils/dateUtils';
-    import { formatNumber } from '@/utils/numberUtils';
+    import { formatNumber } from '@/utils/formatUtils';
     const props = defineProps({
         plan: {
             type: Object,
