@@ -67,7 +67,7 @@ const editPlanPattern = async (req, res) => {
     }
 
     try {
-        const newData = await planModels.editPlanPattern(req.requestId, id, name, template, user_id);
+        const newData = await planModels.updatePlanPattern(req.requestId, id, name, template, user_id);
         res.json(newData);
     } catch (err) {
         console.error('Error editing plan pattern:', err);

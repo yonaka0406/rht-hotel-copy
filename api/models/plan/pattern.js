@@ -68,10 +68,13 @@ const updatePlanPattern = async (requestId, id, name, template, user_id, dbClien
 
     try {
         const result = await client.query(query, values);
+        if (result.rows.length === 0) {
+            return null;
+        }
         return result.rows[0];
     } catch (err) {
-        console.error('Error updating plan pattern:', err);
-        throw err;
+        console.error(`[${requestId}] Error updating plan pattern id=${id}:`, err);
+        throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();
     }
