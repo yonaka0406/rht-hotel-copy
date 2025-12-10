@@ -976,6 +976,12 @@
             }
 
             fetchRates();
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '料金を更新しました。',
+                life: 3000
+            });
             showEditAdjustmentDialog.value = false;            
             editAdjustmentReset();           
             

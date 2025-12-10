@@ -43,8 +43,6 @@ import FloatLabel from 'primevue/floatlabel';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext'; // Added import
-import Panel from 'primevue/panel'; // Added for debugging
-import Column from 'primevue/column'; // Added for debugging
 
 const props = defineProps({
     visible: Boolean,
@@ -88,7 +86,7 @@ const saveHotelPattern = async () => {
         toast.add({ severity: 'error', summary: 'エラー', detail: '名称記入してください。', life: 3000 });
         return;
     }
-    const isDuplicate = props.allHotelPatterns.some(pattern =>
+    const isDuplicate = props.allHotelPatterns?.some(pattern =>
         pattern.hotel_id === props.selectedHotelId &&
         pattern.name.trim().toLowerCase() === newHotelPattern.value.name.trim().toLowerCase()
     );
