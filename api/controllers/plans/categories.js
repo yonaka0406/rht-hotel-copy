@@ -15,6 +15,13 @@ const createTypeCategory = async (req, res) => {
     const { name, description, color, display_order } = req.body;
     const created_by = req.user.id;
 
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'Invalid or missing name' });
+    }
+
     try {
         const newCategory = await planCategoriesModel.insertPlanTypeCategory(req.requestId, name, description, color, display_order, created_by);
         res.status(201).json(newCategory);
@@ -28,6 +35,16 @@ const updateTypeCategory = async (req, res) => {
     const { id } = req.params;
     const { name, description, color, display_order } = req.body;
     const updated_by = req.user.id;
+    
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid category ID' });
+    }
+    if (name !== undefined && typeof name !== 'string') {
+        return res.status(400).json({ error: 'Invalid name' });
+    }
 
     try {
         const updatedCategory = await planCategoriesModel.updatePlanTypeCategory(req.requestId, id, name, description, color, display_order, updated_by);
@@ -65,6 +82,14 @@ const createPackageCategory = async (req, res) => {
 const updatePackageCategory = async (req, res) => {
     const { id } = req.params;
     const { name, description, color, display_order } = req.body;
+
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'Invalid or missing name' });
+    }
+
     const updated_by = req.user.id;
 
     try {
