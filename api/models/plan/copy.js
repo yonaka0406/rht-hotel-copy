@@ -1,9 +1,13 @@
 const { getPool } = require('../../config/database');
 
-const copyPlanToHotel = async (requestId, sourcePlanId, sourceHotelId, targetHotelId, options = {}) => {
-    const client = await getPool(requestId).connect();
+const copyPlanToHotel = async (requestId, sourcePlanId, sourceHotelId, targetHotelId, options = {}, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const shouldReleaseClient = !dbClient;
+
     try {
-        await client.query('BEGIN');
+        if (shouldReleaseClient) {
+            await client.query('BEGIN');
+        }
 
         // 1. Copy the plan record
         const insertPlanQuery = `
@@ -74,14 +78,20 @@ const copyPlanToHotel = async (requestId, sourcePlanId, sourceHotelId, targetHot
             ]);
         }
 
-        await client.query('COMMIT');
+        if (shouldReleaseClient) {
+            await client.query('COMMIT');
+        }
         return { id: newPlanId, hotel_id: targetHotelId };
     } catch (e) {
-        await client.query('ROLLBACK');
+        if (shouldReleaseClient) {
+            await client.query('ROLLBACK');
+        }
         console.error('Error copying plan to hotel:', e);
         throw new Error('Database error during plan copy operation');
     } finally {
-        client.release();
+        if (shouldReleaseClient) {
+            client.release();
+        }
     }
 };
 

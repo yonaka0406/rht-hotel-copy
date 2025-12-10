@@ -172,24 +172,26 @@ watch([() => editHotelPlan.value.available_from, () => editHotelPlan.value.avail
 
 const updateHotel = async () => {
   editHotelPlan.value.hotel_id = props.selectedHotelId;
-  
-  // Filter out the current plan_id from hotelPlans for duplicate check
-  const filteredPlans = props.hotelPlans.filter(plan => plan.plan_id !== editHotelPlan.value.plan_id);
 
-  // Check for duplicate keys
-  const PlanSet = new Set();
-  const newPlanKey = `${editHotelPlan.value.name}-${editHotelPlan.value.hotel_id}`;
-  for (const plan of filteredPlans) {
-    const planKey = `${plan.name}-${plan.hotel_id}`;
-    PlanSet.add(planKey);              
-    if (PlanSet.has(newPlanKey)) {
-      toast.add({ 
-        severity: 'error', 
-        summary: 'エラー',
-        detail: '選択したホテルに対してプラン名はユニークである必要があります。', life: 3000
+  const trimmedPlanName = editHotelPlan.value.plan_name?.trim();
+  if (!trimmedPlanName) {
+      toast.add({ severity: 'error', summary: 'エラー', detail: '名称を記入してください。', life: 3000 });
+      return;
+  }
+
+  const isDuplicate = (props.hotelPlans || []).some(plan =>
+    plan.id !== editHotelPlan.value.id &&
+    plan.plan_name.trim().toLowerCase() === trimmedPlanName.toLowerCase()
+  );
+
+  if (isDuplicate) {
+      toast.add({
+          severity: 'error',
+          summary: 'エラー',
+          detail: '選択したホテルに対してプラン名はユニークである必要があります。',
+          life: 3000
       });
       return;
-    }
   }
 
   // Validation for required category IDs

@@ -23,6 +23,7 @@ const selectPlanTypeCategoryById = async (requestId, id, dbClient = null) => {
 
     try {
         const result = await client.query(query, [id]);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error retrieving plan type category:', err);
@@ -38,6 +39,7 @@ const selectPlanTypeCategoryByName = async (requestId, name, dbClient = null) =>
 
     try {
         const result = await client.query(query, [name]);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error retrieving plan type category by name:', err);
@@ -58,6 +60,7 @@ const insertPlanTypeCategory = async (requestId, name, description, color, displ
 
     try {
         const result = await client.query(query, values);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error inserting plan type category:', err);
@@ -79,6 +82,7 @@ const updatePlanTypeCategory = async (requestId, id, name, description, color, d
 
     try {
         const result = await client.query(query, values);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error updating plan type category:', err);
@@ -94,6 +98,7 @@ const deletePlanTypeCategory = async (requestId, id, dbClient = null) => {
 
     try {
         const result = await client.query(query, [id]);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error deleting plan type category:', err);
@@ -127,6 +132,7 @@ const selectPlanPackageCategoryById = async (requestId, id, dbClient = null) => 
 
     try {
         const result = await client.query(query, [id]);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error retrieving plan package category:', err);
@@ -142,6 +148,7 @@ const selectPlanPackageCategoryByName = async (requestId, name, dbClient = null)
 
     try {
         const result = await client.query(query, [name]);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error retrieving plan package category by name:', err);
@@ -162,6 +169,7 @@ const insertPlanPackageCategory = async (requestId, name, description, color, di
 
     try {
         const result = await client.query(query, values);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error inserting plan package category:', err);
@@ -183,6 +191,7 @@ const updatePlanPackageCategory = async (requestId, id, name, description, color
 
     try {
         const result = await client.query(query, values);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error updating plan package category:', err);
@@ -198,6 +207,7 @@ const deletePlanPackageCategory = async (requestId, id, dbClient = null) => {
 
     try {
         const result = await client.query(query, [id]);
+        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error deleting plan package category:', err);

@@ -178,11 +178,11 @@ const updateHotelPlan = async (requestId, id, hotel_id, plan_type_category_id, p
     const client = dbClient || await getPool(requestId).connect();
     const query = `
         UPDATE plans_hotel
-        SET plan_type_category_id = $1, plan_package_category_id = $2, name = $3, description = $4, plan_type = $5, color = $6, is_active = $7, available_from = $8, available_until = $9, updated_by = $10
-        WHERE hotel_id = $11 AND id = $12
+        SET plan_type_category_id = $1, plan_package_category_id = $2, name = $3, description = $4, plan_type = $5, color = $6, display_order = $7, is_active = $8, available_from = $9, available_until = $10, updated_by = $11
+        WHERE hotel_id = $12 AND id = $13
         RETURNING *;
     `;
-    const values = [plan_type_category_id || null, plan_package_category_id || null, name, description, plan_type, color, is_active, available_from, available_until, updated_by, hotel_id, id];
+    const values = [plan_type_category_id || null, plan_package_category_id || null, name, description, plan_type, color, display_order, is_active, available_from, available_until, updated_by, hotel_id, id];
 
     try {
         const result = await client.query(query, values);
@@ -217,7 +217,7 @@ const updatePlanPattern = async (requestId, id, name, template, user_id, dbClien
 
 const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const shouldReleaseClient = !client;
+    const shouldReleaseClient = !dbClient;
 
     logger.debug(`[DB] updatePlansOrderBulk: requestId=${requestId}, hotelId=${hotelId}, plansCount=${plans.length}, updated_by=${updated_by}`);
     logger.debug(`[DB] updatePlansOrderBulk: plans =`, plans);
@@ -245,7 +245,6 @@ const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbCli
     } catch (err) {
         await client.query('ROLLBACK');
         logger.error('[DB] updatePlansOrderBulk: Transaction ROLLBACK due to error:', err);
-        console.error('Error updating plan display order in bulk:', err);
         throw new Error('Database error');
     } finally {
         if (shouldReleaseClient) {

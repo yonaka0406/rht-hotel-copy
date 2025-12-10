@@ -452,15 +452,16 @@ const generateAddonPreview = () => {
         return
     }
 
-    // console.log('selectedAddonOption in select:', selectedAddonOption.value);
-
     const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
-    const isHotelAddon = foundAddon.id.toString().startsWith('H'); // id can be number or string "H"+number
-    // console.log('selectedAddon:',selectedAddon.value);
-    // console.log('selectedAddonOption:', selectedAddonOption.value);            
+
+    if (!foundAddon) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: 'アドオンが見つかりません。', life: 3000 });
+        return;
+    }
+
     selectedAddon.value.push({
-        addons_global_id: isHotelAddon ? null : foundAddon.id,
-        addons_hotel_id: isHotelAddon ? parseInt(foundAddon.id.toString().substring(1), 10) : null,
+        addons_global_id: null, // Global addons are deprecated
+        addons_hotel_id: foundAddon.id, // All addons are now hotel addons
         hotel_id: foundAddon.hotel_id,
         addon_name: foundAddon.addon_name,
         price: foundAddon.price,

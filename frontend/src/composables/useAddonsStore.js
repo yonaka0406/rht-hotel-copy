@@ -40,6 +40,7 @@ export function useAddonsStore() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      hotelAddons.value = data;
       return data;
     } catch (error) {
       console.error('Failed to fetch addons for hotel', error);

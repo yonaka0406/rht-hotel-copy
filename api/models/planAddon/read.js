@@ -2,6 +2,11 @@ const { getPool } = require('../../config/database');
 
 // Return all plan_addons
 const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hotel_id, dbClient = null) => {
+    // Input validation
+    if (plans_hotel_id === null && hotel_id === null) {
+        throw new Error('Either plans_hotel_id or hotel_id must be provided.');
+    }
+
     const client = dbClient || await getPool(requestId).connect();
     const query = `        
         SELECT 
@@ -27,8 +32,8 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
 
     try {
         const result = await client.query(query, [
-            plans_hotel_id || null,
-            hotel_id || null,
+            plans_hotel_id ?? null,
+            hotel_id ?? null,
         ]);
         return result.rows;
     } catch (err) {
