@@ -15,8 +15,8 @@
                             <Select
                                 v-model="slotProps.data.plans_hotel_id" 
                                 :options="plans"
-                                optionLabel="name" 
-                                optionValue="id" 
+                                optionLabel="plan_name" 
+                                optionValue="plan_id" 
                             >                            
                             </Select>
                         </template>                        
@@ -61,13 +61,11 @@
         const filteredData = data.filter(item => Number.isInteger(item.plangroupcode * 1));
                 
         const updatedFilteredData = filteredData.map(item => {
-            // Find plan by its ID (from the updated Select v-model)
-            const matchingPlan = plans.value.find(plan => plan.id === item.plan_key);
-
+            // The plans_hotel_id is already set by the Select v-model, no need to find matching plan
             return {
                 ...item,
                 plans_global_id: null, // Always null as global plans are deprecated
-                plans_hotel_id: matchingPlan?.id || null,
+                plans_hotel_id: item.plans_hotel_id || null,
             };
         });
         
@@ -102,10 +100,10 @@
         if (tlPlanMaster.value && planMaster.value) {
             planMaster.value.forEach((plan) => {
                 const matchingTLPlan = tlPlanMaster.value.find(
-                    (tlPlan) => tlPlan.rmtypecode === plan.rmtypecode && tlPlan.netrmtypegroupcode === plan.netrmtypegroupcode
+                    (tlPlan) => tlPlan.plangroupcode === plan.plangroupcode
                 );
                 if (matchingTLPlan) {
-                    plan.room_type_id = matchingTLPlan.room_type_id;
+                    plan.plans_hotel_id = matchingTLPlan.plans_hotel_id;
                 }
             });            
         }

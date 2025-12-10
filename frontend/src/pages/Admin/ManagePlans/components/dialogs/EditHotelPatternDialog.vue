@@ -16,8 +16,8 @@
                         <Select
                             v-model="dayPlanSelections[day.value]"
                             :options="hotelPlans"
-                            optionLabel="name"
-                            optionValue="id"
+                            optionLabel="plan_name"
+                            optionValue="plan_id"
                             class="w-full"
                         />
                         <label class="font-semibold mb-1 block"></label>
@@ -53,6 +53,16 @@ const props = defineProps({
     daysOfWeek: Array,
 });
 
+// Debug props on component mount
+console.log('EditHotelPatternDialog - Component mounted with props:', {
+    visible: props.visible,
+    selectedHotelId: props.selectedHotelId,
+    hotelPlans: props.hotelPlans,
+    allHotelPatterns: props.allHotelPatterns,
+    initialEditHotelPattern: props.initialEditHotelPattern,
+    daysOfWeek: props.daysOfWeek
+});
+
 const emit = defineEmits(['update:visible', 'patternUpdated']);
 
 const toast = useToast();
@@ -61,19 +71,49 @@ const { updatePlanPattern } = usePlansStore();
 const editHotelPattern = ref({});
 const dayPlanSelections = ref({});
 
+// Watch for changes to initialEditHotelPattern
+watch(() => props.initialEditHotelPattern, (newVal) => {
+    console.log('EditHotelPatternDialog - initialEditHotelPattern changed:', newVal);
+}, { deep: true });
+
+// Watch for changes to hotelPlans
+watch(() => props.hotelPlans, (newVal) => {
+    console.log('EditHotelPatternDialog - hotelPlans changed:', newVal);
+    if (newVal && newVal.length > 0) {
+        console.log('EditHotelPatternDialog - First hotelPlan structure:', newVal[0]);
+        console.log('EditHotelPatternDialog - Available properties:', Object.keys(newVal[0]));
+    }
+}, { deep: true });
+
 watch(() => props.visible, (newVal) => {
+    console.log('EditHotelPatternDialog - visible changed:', newVal);
+    console.log('EditHotelPatternDialog - initialEditHotelPattern:', props.initialEditHotelPattern);
+    console.log('EditHotelPatternDialog - hotelPlans:', props.hotelPlans);
+    console.log('EditHotelPatternDialog - daysOfWeek:', props.daysOfWeek);
+    
     if (newVal && props.initialEditHotelPattern) {
+        console.log('EditHotelPatternDialog - Setting up edit data...');
         editHotelPattern.value = { ...props.initialEditHotelPattern };
+        console.log('EditHotelPatternDialog - editHotelPattern set to:', editHotelPattern.value);
+        
         // Populate dayPlanSelections based on initialEditHotelPattern's template
         dayPlanSelections.value = {};
+        console.log('EditHotelPatternDialog - Processing template:', editHotelPattern.value.template);
+        
         for (const day of props.daysOfWeek) {
             const templateEntry = editHotelPattern.value.template?.[day.value];
-            if (templateEntry && templateEntry.plan_id) {
-                dayPlanSelections.value[day.value] = templateEntry.plan_id;
+            console.log(`EditHotelPatternDialog - Day ${day.value} (${day.label}) template entry:`, templateEntry);
+            
+            if (templateEntry && templateEntry.plans_hotel_id) {
+                dayPlanSelections.value[day.value] = templateEntry.plans_hotel_id;
+                console.log(`EditHotelPatternDialog - Set ${day.value} to plans_hotel_id:`, templateEntry.plans_hotel_id);
             } else {
                 dayPlanSelections.value[day.value] = null;
+                console.log(`EditHotelPatternDialog - Set ${day.value} to null (no template entry or plans_hotel_id)`);
             }
         }
+        
+        console.log('EditHotelPatternDialog - Final dayPlanSelections:', dayPlanSelections.value);
     }
 }, { immediate: true });
 
@@ -101,14 +141,17 @@ const updateHotelPattern = async () => {
             return;
         }
         template[day.value] = {
-            plan_id: planId,
+            plans_hotel_id: planId,
         };
     }
 
     editHotelPattern.value.template = template;
 
     try {
-        await updatePlanPattern(editHotelPattern.value.id, editHotelPattern.value);
+        await updatePlanPattern(editHotelPattern.value.id, {
+            name: editHotelPattern.value.name,
+            template: JSON.stringify(template)
+        });
         emit('patternUpdated');
         emit('update:visible', false);
         toast.add({ severity: 'success', summary: '成功', detail: 'パターン編集成功', life: 3000 });

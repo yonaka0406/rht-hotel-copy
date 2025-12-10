@@ -16,10 +16,11 @@
                 <div>
                     <FloatLabel>
                         <Select
+                            v-if="hotelPlans && hotelPlans.length > 0"
                             v-model="dayPlanSelections[day.value]"
                             :options="hotelPlans"
-                            optionLabel="name"
-                            optionValue="id"
+                            optionLabel="plan_name"
+                            optionValue="plan_id"
                             class="w-full"
                         />
                         <label class="font-semibold mb-1 block"></label>
@@ -103,14 +104,16 @@ const saveHotelPattern = async () => {
             return;
         }
         template[day.value] = {
-            plan_id: planId,
+            plans_hotel_id: planId,
         };
     }
 
-    newHotelPattern.value.template = template;
-
     try {
-        await createPlanPattern(newHotelPattern.value);
+        await createPlanPattern({
+            hotel_id: newHotelPattern.value.hotel_id,
+            name: newHotelPattern.value.name,
+            template: JSON.stringify(template)
+        });
         emit('patternAdded');
         emit('update:visible', false);
         toast.add({ severity: 'success', summary: '成功', detail: 'パターン追加成功', life: 3000 });

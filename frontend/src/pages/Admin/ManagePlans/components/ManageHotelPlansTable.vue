@@ -45,6 +45,7 @@
                     <template #body="slotProps">
                         <PlanActions
                             :planData="slotProps.data"
+                            :ButtonComponent="Button"
                             @openEditPlanDialog="emit('openEditPlanDialog', $event)"
                             @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)"
                         />
@@ -76,6 +77,7 @@
                     <template #body="slotProps">
                         <PlanActions
                             :planData="slotProps.data"
+                            :ButtonComponent="Button"
                             @openEditPlanDialog="emit('openEditPlanDialog', $event)"
                             @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)"
                         />
@@ -92,6 +94,7 @@ import { ref, computed } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
+import Badge from 'primevue/badge';
 
 // Local component for Plan Type Column Content
 const PlanTypeColumnContent = {
@@ -108,6 +111,9 @@ const PlanTypeColumnContent = {
 
 // Local component for Plan Category Badges
 const PlanCategoryBadges = {
+  components: {
+    Badge
+  },
   props: {
     typeCategory: String,
     packageCategory: String,
@@ -124,17 +130,18 @@ const PlanCategoryBadges = {
 const PlanActions = {
   props: {
     planData: Object,
+    ButtonComponent: Object, // Accept Button as a prop
   },
   emits: ['openEditPlanDialog', 'switchEditHotelPlanRate'],
   template: `
     <div class="flex items-center justify-center">
-      <Button
+      <component :is="ButtonComponent"
         icon="pi pi-pencil"
         class="p-button-text p-button-sm"
         @click="$emit('openEditPlanDialog', planData)"
         v-tooltip="'プラン編集'"
       />
-      <Button
+      <component :is="ButtonComponent"
         icon="pi pi-dollar"
         class="p-button-text p-button-sm"
         @click="$emit('switchEditHotelPlanRate', planData)"

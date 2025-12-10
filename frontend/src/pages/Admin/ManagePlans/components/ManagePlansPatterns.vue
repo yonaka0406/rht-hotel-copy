@@ -100,10 +100,17 @@
         return allHotelPatterns.value.filter(pattern => pattern.hotel_id === hotel_id).length;
     };
     const openEditHotelPattern = async (data) => {
+        console.log('ManagePlansPatterns - openEditHotelPattern called with data:', data);
+        console.log('ManagePlansPatterns - Current hotelPlans:', hotelPlans.value);
+        console.log('ManagePlansPatterns - Current daysOfWeek:', daysOfWeek);
+        
         editHotelPattern.value = { 
             ...data            
         };
+        console.log('ManagePlansPatterns - editHotelPattern set to:', editHotelPattern.value);
+        
         showEditHotelDialog.value = true;
+        console.log('ManagePlansPatterns - showEditHotelDialog set to true');
     };
     
     const onPatternModified = async () => {
