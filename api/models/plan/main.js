@@ -154,25 +154,7 @@ const insertHotelPlan = async (requestId, hotel_id, plan_type_category_id, plan_
         if (!dbClient) client.release();
     }
 };
-const insertPlanPattern = async (requestId, hotel_id, name, template, user_id, dbClient = null) => {
-    const client = dbClient || await getPool(requestId).connect();
-    const query = `
-        INSERT INTO plan_templates (hotel_id, name, template, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $4)
-        RETURNING *;
-    `;
-    const values = [hotel_id, name, template, user_id];
 
-    try {
-        const result = await client.query(query, values);
-        return result.rows[0];
-    } catch (err) {
-        logger.error('Error inserting plan template:', { hotel_id, name, error: err });
-        throw new Error('Database error');
-    } finally {
-        if (!dbClient) client.release();
-    }
-};
 
 const updateHotelPlan = async (requestId, id, hotel_id, plan_type_category_id, plan_package_category_id, name, description, plan_type, color, display_order, is_active, available_from, available_until, updated_by, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
@@ -194,26 +176,7 @@ const updateHotelPlan = async (requestId, id, hotel_id, plan_type_category_id, p
         if (!dbClient) client.release();
     }
 };
-const updatePlanPattern = async (requestId, id, name, template, user_id, dbClient = null) => {
-    const client = dbClient || await getPool(requestId).connect();
-    const query = `
-        UPDATE plan_templates
-        SET name = $1, template = $2, updated_by = $3
-        WHERE id = $4
-        RETURNING *;
-    `;
-    const values = [name, template, user_id, id];
 
-    try {
-        const result = await client.query(query, values);
-        return result.rows[0];
-    } catch (err) {
-        logger.error('Error updating plan pattern:', err);
-        throw err;
-    } finally {
-        if (!dbClient) client.release();
-    }
-};
 
 const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
@@ -262,8 +225,8 @@ module.exports = {
     selectAllHotelPatterns,
     selectPatternsByHotel,
     insertHotelPlan,
-    insertPlanPattern,
+
     updateHotelPlan,
-    updatePlanPattern,
+
     updatePlansOrderBulk,
 };
