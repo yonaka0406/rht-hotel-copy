@@ -29,17 +29,13 @@
                     <span class="font-bold text-center w-full block">プランタイプ</span>
                     </template>
                     <template #body="slotProps">
-                    <div class="flex items-center justify-center">
-                        <i v-if="slotProps.data.plan_type === 'per_person'" class="pi pi-id-card" style="color: darkgoldenrod;" v-tooltip="'1人あたり'"></i>
-                        <i v-if="slotProps.data.plan_type === 'per_room'" class="pi pi-shop" style="color: brown;" v-tooltip="'部屋あたり'"></i>
-                    </div>
+                        <PlanTypeColumnContent :planType="slotProps.data.plan_type" />
                     </template>
                 </Column>
 
                 <Column header="カテゴリー">
                     <template #body="slotProps">
-                    <Badge :value="slotProps.data.type_category" severity="primary" class="mr-2"></Badge>
-                    <Badge :value="slotProps.data.package_category" severity="secondary"></Badge>
+                        <PlanCategoryBadges :typeCategory="slotProps.data.type_category" :packageCategory="slotProps.data.package_category" />
                     </template>
                 </Column>
                 <Column headerClass="text-center">
@@ -47,20 +43,11 @@
                     <span class="font-bold text-center w-full block">操作</span>
                     </template>
                     <template #body="slotProps">
-                    <div class="flex items-center justify-center">
-                        <Button
-                        icon="pi pi-pencil"
-                        class="p-button-text p-button-sm"
-                        @click="$emit('openEditPlanDialog', slotProps.data)"
-                        v-tooltip="'プラン編集'"
+                        <PlanActions
+                            :planData="slotProps.data"
+                            @openEditPlanDialog="emit('openEditPlanDialog', $event)"
+                            @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)"
                         />
-                        <Button
-                        icon="pi pi-dollar"
-                        class="p-button-text p-button-sm"
-                        @click="$emit('switchEditHotelPlanRate', slotProps.data)"
-                        v-tooltip="'料金編集'"
-                        />
-                    </div>
                     </template>
                 </Column>
             </DataTable>
@@ -73,17 +60,13 @@
                     <span class="font-bold text-center w-full block">プランタイプ</span>
                     </template>
                     <template #body="slotProps">
-                    <div class="flex items-center justify-center">
-                        <i v-if="slotProps.data.plan_type === 'per_person'" class="pi pi-id-card" style="color: darkgoldenrod;" v-tooltip="'1人あたり'"></i>
-                        <i v-if="slotProps.data.plan_type === 'per_room'" class="pi pi-shop" style="color: brown;" v-tooltip="'部屋あたり'"></i>
-                    </div>
+                        <PlanTypeColumnContent :planType="slotProps.data.plan_type" />
                     </template>
                 </Column>
 
                 <Column header="カテゴリー">
                     <template #body="slotProps">
-                    <Badge :value="slotProps.data.type_category" severity="primary" class="mr-2"></Badge>
-                    <Badge :value="slotProps.data.package_category" severity="secondary"></Badge>
+                        <PlanCategoryBadges :typeCategory="slotProps.data.type_category" :packageCategory="slotProps.data.package_category" />
                     </template>
                 </Column>
                 <Column headerClass="text-center">
@@ -91,20 +74,11 @@
                     <span class="font-bold text-center w-full block">操作</span>
                     </template>
                     <template #body="slotProps">
-                    <div class="flex items-center justify-center">
-                        <Button
-                        icon="pi pi-pencil"
-                        class="p-button-text p-button-sm"
-                        @click="$emit('openEditPlanDialog', slotProps.data)"
-                        v-tooltip="'プラン編集'"
+                        <PlanActions
+                            :planData="slotProps.data"
+                            @openEditPlanDialog="emit('openEditPlanDialog', $event)"
+                            @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)"
                         />
-                        <Button
-                        icon="pi pi-dollar"
-                        class="p-button-text p-button-sm"
-                        @click="$emit('switchEditHotelPlanRate', slotProps.data)"
-                        v-tooltip="'料金編集'"
-                        />
-                    </div>
                     </template>
                 </Column>
             </DataTable>
@@ -118,7 +92,57 @@ import { ref, computed } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
-import Badge from 'primevue/badge';
+
+// Local component for Plan Type Column Content
+const PlanTypeColumnContent = {
+  props: {
+    planType: String,
+  },
+  template: `
+    <div class="flex items-center justify-center">
+      <i v-if="planType === 'per_person'" class="pi pi-id-card" style="color: darkgoldenrod;" v-tooltip="'1人あたり'"></i>
+      <i v-if="planType === 'per_room'" class="pi pi-shop" style="color: brown;" v-tooltip="'部屋あたり'"></i>
+    </div>
+  `,
+};
+
+// Local component for Plan Category Badges
+const PlanCategoryBadges = {
+  props: {
+    typeCategory: String,
+    packageCategory: String,
+  },
+  template: `
+    <div>
+      <Badge :value="typeCategory" severity="primary" class="mr-2"></Badge>
+      <Badge :value="packageCategory" severity="secondary"></Badge>
+    </div>
+  `,
+};
+
+// Local component for Plan Actions
+const PlanActions = {
+  props: {
+    planData: Object,
+  },
+  emits: ['openEditPlanDialog', 'switchEditHotelPlanRate'],
+  template: `
+    <div class="flex items-center justify-center">
+      <Button
+        icon="pi pi-pencil"
+        class="p-button-text p-button-sm"
+        @click="$emit('openEditPlanDialog', planData)"
+        v-tooltip="'プラン編集'"
+      />
+      <Button
+        icon="pi pi-dollar"
+        class="p-button-text p-button-sm"
+        @click="$emit('switchEditHotelPlanRate', planData)"
+        v-tooltip="'料金編集'"
+      />
+    </div>
+  `,
+};
 
 const props = defineProps({
   hotelPlans: Array,
