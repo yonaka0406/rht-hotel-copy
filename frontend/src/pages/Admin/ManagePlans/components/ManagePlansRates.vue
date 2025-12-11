@@ -424,6 +424,7 @@
     import { formatDate } from '@/utils/dateUtils';
     import { formatNumber } from '@/utils/formatUtils';
     import { daysOfWeek, months } from '@/utils/dateUtils';
+    import { adjustmentTypes, conditionTypes } from '@/utils/planUtils';
     const props = defineProps({
         plan: {
             type: Object,
@@ -447,18 +448,6 @@ import RatesDataTable from './tables/RatesDataTable.vue';
     // Stores
     import { useSettingsStore } from '@/composables/useSettingsStore';
     const { taxTypes, fetchTaxTypes } = useSettingsStore();
-
-     // Helper
-    const adjustmentTypes = [
-        { label: '基本料金', value: 'base_rate' },
-        { label: 'パーセント', value: 'percentage' },
-        { label: '定額料金', value: 'flat_fee' },
-    ];
-    const conditionTypes = [
-        { label: '条件なし', value: 'no_restriction' },
-        { label: '曜日毎', value: 'day_of_week' },
-        { label: '月毎', value: 'month' },
-    ];
 
     const sales_category_options = ref([
         { label: '宿泊', value: 'accommodation' },
