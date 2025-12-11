@@ -2,10 +2,19 @@
   <div class="p-4">
     <Panel header="ホテル編集">
       <DataTable :value="hotels" class="p-datatable-sm" responsiveLayout="scroll">
-        <Column field="formal_name" header="正式名称"></Column>
-        <Column field="name" header="名称"></Column>
-        <Column field="email" header="メールアドレス"></Column>
-        <Column field="phone_number" header="電話番号"></Column>
+        <Column field="sort_order" header="表示順" sortable></Column>
+        <Column field="formal_name" header="正式名称" sortable></Column>
+        <Column field="name" header="名称" sortable></Column>
+        <Column field="non_staff_room_count" header="部屋数" sortable>
+          <template #body="slotProps">
+            <div class="flex flex-col items-center">
+              <Badge :value="'通常: ' + slotProps.data.non_staff_room_count" severity="info" class="mb-1"></Badge>
+              <Badge :value="'スタッフ: ' + slotProps.data.staff_room_count"
+                :severity="slotProps.data.staff_room_count === 0 ? 'contrast' : 'secondary'"
+              ></Badge>
+            </div>
+          </template>
+        </Column>
         <Column header="操作">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" class="p-button-text p-button-sm" @click="selectHotelData(slotProps.data)"
@@ -102,7 +111,7 @@ const { hotels, fetchHotels } = useHotelStore();
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
-import { Panel, Dialog, DataTable, Column, Textarea, InputText, Button } from 'primevue';
+import { Panel, Dialog, DataTable, Column, Textarea, InputText, Button, Badge } from 'primevue';
 
 // Components
 import ManageHotelEditDialog from './components/ManageHotelEditDialog.vue';
