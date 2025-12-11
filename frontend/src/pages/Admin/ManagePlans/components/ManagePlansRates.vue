@@ -423,6 +423,7 @@
     import { ref, watch, computed, onMounted } from 'vue';
     import { formatDate } from '@/utils/dateUtils';
     import { formatNumber } from '@/utils/formatUtils';
+    import { daysOfWeek, months } from '@/utils/dateUtils';
     const props = defineProps({
         plan: {
             type: Object,
@@ -448,31 +449,6 @@ import RatesDataTable from './tables/RatesDataTable.vue';
     const { taxTypes, fetchTaxTypes } = useSettingsStore();
 
      // Helper
-
-    // Options
-    const daysOfWeek = [
-        { label: '月曜日', value: 'mon' },
-        { label: '火曜日', value: 'tue' },
-        { label: '水曜日', value: 'wed' },
-        { label: '木曜日', value: 'thu' },
-        { label: '金曜日', value: 'fri' },
-        { label: '土曜日', value: 'sat' },
-        { label: '日曜日', value: 'sun' }
-    ];
-    const months = [
-        { label: '１月', value: 'january' },
-        { label: '２月', value: 'february' },
-        { label: '３月', value: 'march' },
-        { label: '４月', value: 'april' },
-        { label: '５月', value: 'may' },
-        { label: '６月', value: 'june' },
-        { label: '７月', value: 'july' },
-        { label: '８月', value: 'august' },
-        { label: '９月', value: 'september' },
-        { label: '１０月', value: 'october' },
-        { label: '１１月', value: 'november' },
-        { label: '１２月', value: 'december' }
-    ];
     const adjustmentTypes = [
         { label: '基本料金', value: 'base_rate' },
         { label: 'パーセント', value: 'percentage' },

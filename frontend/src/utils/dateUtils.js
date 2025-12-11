@@ -1,3 +1,28 @@
+export const daysOfWeek = [
+    { label: '月曜日', value: 'mon' },
+    { label: '火曜日', value: 'tue' },
+    { label: '水曜日', value: 'wed' },
+    { label: '木曜日', value: 'thu' },
+    { label: '金曜日', value: 'fri' },
+    { label: '土曜日', value: 'sat' },
+    { label: '日曜日', value: 'sun' },
+];
+
+export const months = [
+    { label: '１月', value: 'january' },
+    { label: '２月', value: 'february' },
+    { label: '３月', value: 'march' },
+    { label: '４月', value: 'april' },
+    { label: '５月', value: 'may' },
+    { label: '６月', value: 'june' },
+    { label: '７月', value: 'july' },
+    { label: '８月', value: 'august' },
+    { label: '９月', value: 'september' },
+    { label: '１０月', value: 'october' },
+    { label: '１１月', value: 'november' },
+    { label: '１２月', value: 'december' }
+];
+
 export const formatTime = (time) => {
   if (!time) return "";
   const date = new Date(`1970-01-01T${time}`);

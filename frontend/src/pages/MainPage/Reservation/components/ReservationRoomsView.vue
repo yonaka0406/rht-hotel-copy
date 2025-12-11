@@ -520,6 +520,7 @@ const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { parkingLots, fetchParkingLots, fetchParkingReservations } = useParkingStore();
 
+import { daysOfWeek } from '@/utils/dateUtils';
 // Helper
 
 const formatCurrency = (value) => {
@@ -773,15 +774,6 @@ const selectedGroup = ref(null);
 
 // Tab Apply Plan
 const isPatternInput = ref(false);
-const daysOfWeek = [
-    { label: '月曜日', value: 'mon' },
-    { label: '火曜日', value: 'tue' },
-    { label: '水曜日', value: 'wed' },
-    { label: '木曜日', value: 'thu' },
-    { label: '金曜日', value: 'fri' },
-    { label: '土曜日', value: 'sat' },
-    { label: '日曜日', value: 'sun' },
-];
 const dayPlanSelections = ref({ mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null });
 const selectedDays = ref(daysOfWeek);
 const selectedPlan = ref(null);
