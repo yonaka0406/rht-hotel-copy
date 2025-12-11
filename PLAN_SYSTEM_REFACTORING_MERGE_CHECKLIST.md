@@ -30,28 +30,50 @@
 #### Phase 3: Clean Up Legacy References
 - [ ] **Migration 026**: Remove deprecated `plan_key` and `plans_global_id` from `sc_tl_plans`
 - [ ] **Migration 027**: Drop deprecated `get_available_plans_for_hotel` function
-- [ ] **Migration 028**: Update pattern templates to use `plans_hotel_id` instead of `plan_key`
+- [ ] **Migration 028**: Update pattern templates to use `plans_hotel_id` instead of `plan_key` AND create missing hotel plans for templates
 
 ### 3. Create Missing Hotel Plans
-Before migrating historical data, ensure all plans used in reservations exist as hotel-specific plans:
+Before migrating historical data, ensure all plans used in reservations AND pattern templates exist as hotel-specific plans:
 
 ```sql
 -- Check for plans referenced in reservations but missing in plans_hotel
 SELECT DISTINCT 
     rd.hotel_id,
     rd.plans_global_id,
-    pg.name as plan_name
+    pg.name as plan_name,
+    'reservation' as source
 FROM reservation_details rd
 JOIN plans_global pg ON rd.plans_global_id = pg.id
 WHERE NOT EXISTS (
     SELECT 1 FROM plans_hotel ph 
     WHERE ph.hotel_id = rd.hotel_id 
     AND ph.plans_global_id = rd.plans_global_id
-);
+)
+
+UNION
+
+-- Check for plans referenced in pattern templates but missing in plans_hotel
+SELECT DISTINCT
+    pt.hotel_id,
+    (day_value->>'plans_global_id')::int as plans_global_id,
+    pg.name as plan_name,
+    'pattern_template' as source
+FROM plan_templates pt,
+     jsonb_each(pt.template) AS t(day_key, day_value)
+JOIN plans_global pg ON pg.id = (day_value->>'plans_global_id')::int
+WHERE day_value ? 'plans_global_id'
+  AND (day_value->>'plans_global_id')::int IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM plans_hotel ph 
+      WHERE ph.hotel_id = pt.hotel_id 
+        AND ph.plans_global_id = (day_value->>'plans_global_id')::int
+  );
 ```
 
 - [ ] Create missing hotel plans for each hotel that references global plans in reservations
+- [ ] Create missing hotel plans for each hotel that references global plans in pattern templates
 - [ ] Verify all hotels have the necessary plan categories assigned
+- [ ] **CRITICAL**: Migration 028 now automatically creates missing hotel plans for pattern templates
 
 ### 4. Historical Data Migration
 - [ ] Update `reservation_details` to use `plans_hotel_id` instead of `plans_global_id`
@@ -201,6 +223,28 @@ WHERE addon_category_id IS NULL;
 -- Check plan-addon relationships
 SELECT COUNT(*) FROM plan_addons 
 WHERE addons_hotel_id IS NULL;
+
+-- Verify all pattern templates have valid plans_hotel_id references
+SELECT pt.hotel_id, day_key, day_value
+FROM plan_templates pt,
+     jsonb_each(pt.template) AS t(day_key, day_value)
+WHERE day_value ? 'plans_hotel_id'
+  AND NOT EXISTS (
+      SELECT 1 FROM plans_hotel ph 
+      WHERE ph.id = (day_value->>'plans_hotel_id')::int
+        AND ph.hotel_id = pt.hotel_id
+  );
+
+-- Verify no orphaned global plan references in templates
+SELECT pt.hotel_id, day_key, day_value
+FROM plan_templates pt,
+     jsonb_each(pt.template) AS t(day_key, day_value)
+WHERE day_value ? 'plans_global_id'
+  AND NOT EXISTS (
+      SELECT 1 FROM plans_hotel ph 
+      WHERE ph.hotel_id = pt.hotel_id 
+        AND ph.plans_global_id = (day_value->>'plans_global_id')::int
+  );
 ```
 
 ## Testing Checklist
