@@ -61,7 +61,6 @@ const selectReservation = async (requestId, id, hotel_id) => {
       rm.has_wet_area,
       rm.capacity,
       rm.floor,      
-      rd.plans_global_id,
       rd.plans_hotel_id,
       rd.plan_type,
       rd.plan_name,
@@ -93,7 +92,6 @@ const selectReservation = async (requestId, id, hotel_id) => {
             JSON_AGG(
                 JSON_BUILD_OBJECT(
                     'addon_id', ra.id,
-                    'addons_global_id', ra.addons_global_id,
                     'addons_hotel_id', ra.addons_hotel_id,
                     'addon_name', ra.addon_name,
                     'addon_type', ra.addon_type,
@@ -193,7 +191,6 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
       rooms.has_wet_area,
       rooms.capacity,
       rooms.floor,      
-      reservation_details.plans_global_id,
       reservation_details.plans_hotel_id,
       reservation_details.plan_type,
       reservation_details.plan_name,
@@ -228,7 +225,6 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
             JSON_AGG(
                 JSON_BUILD_OBJECT(
                     'addon_id', ra.id,
-                    'addons_global_id', ra.addons_global_id,
                     'addons_hotel_id', ra.addons_hotel_id,
                     'addon_name', ra.addon_name,
                     'addon_type', ra.addon_type,
@@ -469,10 +465,9 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       ,rooms.room_number
       ,rooms.smoking
       ,rooms.has_wet_area
-      ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
-      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
-	    ,COALESCE(plans_hotel.color, plans_global.color) AS plan_color
+      ,plans_hotel.name AS plan_name
+	    ,plans_hotel.color AS plan_color
       ,reservation_details.number_of_people
       ,reservation_details.price
 
@@ -482,7 +477,6 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       JOIN room_types ON room_types.id = rooms.room_type_id AND room_types.hotel_id = rooms.hotel_id
       JOIN reservations ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id
       LEFT JOIN clients ON clients.id = reservations.reservation_client_id
-      LEFT JOIN plans_global ON reservation_details.plans_global_id = plans_global.id
       LEFT JOIN plans_hotel ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
       LEFT JOIN reservation_guests rg ON rg.reservation_details_id = reservation_details.id AND rg.hotel_id = reservation_details.hotel_id
     WHERE
@@ -534,11 +528,10 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
           ,room_types.name as room_type_name
           ,reservation_details.number_of_people
           ,reservation_details.price
-          ,reservation_details.plans_global_id
           ,reservation_details.plans_hotel_id
-          ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
+          ,COALESCE(plans_hotel.name) as plan_name
           ,reservation_details.plan_type
-          ,COALESCE(plans_hotel.color, plans_global.color) as plan_color
+          ,COALESCE(plans_hotel.color) as plan_color
           ,rc.clients_json::TEXT
           ,reservation_details.cancelled
     
@@ -576,8 +569,6 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
               ) rc ON rc.reservation_details_id = reservation_details.id
             LEFT JOIN plans_hotel 
             ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
-            LEFT JOIN plans_global 
-            ON plans_global.id = reservation_details.plans_global_id
       
         WHERE
           reservations.hotel_id = $1 
@@ -599,11 +590,10 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
 	  	    ,JSON_AGG(
 		        JSON_BUILD_OBJECT(
 			        'date', rd.date,
-			        'plans_global_id', rd.plans_global_id,
       		    'plans_hotel_id', rd.plans_hotel_id,
-			        'plan_name', COALESCE(ph.name, pg.name),
+			        'plan_name', COALESCE(ph.name),
       		    'plan_type', rd.plan_type,
-      		    'plan_color', COALESCE(ph.color, pg.color)
+      		    'plan_color', COALESCE(ph.color)
 		        ) ORDER BY rd.date
 		      ) AS details
 	      FROM 
@@ -611,8 +601,6 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
           reservation_details rd
           LEFT JOIN plans_hotel ph
             ON ph.hotel_id = rd.hotel_id AND ph.id = rd.plans_hotel_id
-          LEFT JOIN plans_global pg
-            ON pg.id = rd.plans_global_id
 		  
     	  WHERE	      	
           r.id IN (

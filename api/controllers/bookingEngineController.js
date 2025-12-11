@@ -104,7 +104,6 @@ const getPlansForBookingEngine = async (req, res) => {
     
     // Format response according to booking engine expectations
     const formattedPlans = plans.map(plan => ({
-      global_plan_id: plan.plans_global_id,
       hotel_plan_id: plan.plans_hotel_id,
       name: plan.name,
       description: plan.description,

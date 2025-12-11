@@ -71,11 +71,11 @@ const isValidCondition = (row, date) => {
 let actualIsValidCondition = isValidCondition;
 
 // Return all plans_rates
-const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
+const getAllPlansRates = async (requestId, plans_hotel_id, hotel_id) => {
     const pool = getPool(requestId);
     const query = `
         SELECT 
-            id, hotel_id, plans_global_id, plans_hotel_id, 
+            id, hotel_id, plans_hotel_id, 
             adjustment_type, adjustment_value, tax_type_id, tax_rate, 
             condition_type, condition_value, date_start, date_end, 
             created_at, created_by, updated_by, 
@@ -102,7 +102,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
     const pool = getPool(requestId);
-    const query = 'SELECT id, hotel_id, plans_global_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, sales_category, comment FROM plans_rates WHERE id = $1';
+    const query = 'SELECT id, hotel_id, plans_hotel_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, condition_type, condition_value, date_start, date_end, created_at, created_by, updated_by, include_in_cancel_fee, sales_category, comment FROM plans_rates WHERE id = $1';
 
     try {
         const result = await pool.query(query, [id]);
@@ -116,7 +116,7 @@ const getPlansRateById = async (requestId, id) => {
     }
 };
 
-const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, disableRounding = false, dbClient = null) => {
+const getPriceForReservation = async (requestId, plans_hotel_id, hotel_id, date, disableRounding = false, dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const releaseClient = !dbClient;
@@ -228,7 +228,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         }
     }
 };
-const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date, dbClient = null) => {
+const getRatesForTheDay = async (requestId, plans_hotel_id, hotel_id, date, dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect(); // Use provided client or get from pool
     const releaseClient = !dbClient; // Only release if we acquired it

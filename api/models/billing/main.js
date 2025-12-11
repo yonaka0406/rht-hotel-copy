@@ -217,8 +217,28 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,COALESCE(details.date, 0) as stays_count
       -- The subquery for reservation details needed to be filtered by month.
       ,(
-        SELECT json_agg(rd)
+        SELECT json_agg(jsonb_build_object(
+            'id', rd.id,
+            'hotel_id', rd.hotel_id,
+            'reservation_id', rd.reservation_id,
+            'date', rd.date,
+            'room_id', rd.room_id,
+            'plans_hotel_id', rd.plans_hotel_id,
+            'plan_name', rd.plan_name,
+            'plan_type', rd.plan_type,
+            'number_of_people', rd.number_of_people,
+            'price', rd.price,
+            'cancelled', rd.cancelled,
+            'billable', rd.billable,
+            'is_accommodation', rd.is_accommodation,
+            'created_at', rd.created_at,
+            'created_by', rd.created_by,
+            'updated_by', rd.updated_by,
+            'plan_type_category_id', ph.plan_type_category_id,
+            'plan_package_category_id', ph.plan_package_category_id
+        ))
         FROM reservation_details rd
+        LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
         WHERE rd.hotel_id = reservations.hotel_id
           AND rd.reservation_id = reservations.id
           AND rd.room_id = reservation_payments.room_id

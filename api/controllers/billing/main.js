@@ -252,11 +252,11 @@ const generateInvoiceExcel = async (req, res) => {
       const todaysDetails = filteredDailyDetails.filter(d => d.date.startsWith(dateString));
 
       const planData = {
-        4: { count: 0, price: 0 },
-        3: { count: 0, price: 0 },
+        1: { count: 0, price: 0 }, // Assuming 1,2,3,4 map to specific plan type categories
         2: { count: 0, price: 0 },
-        1: { count: 0, price: 0 },
-        5: { price: 0 }
+        3: { count: 0, price: 0 },
+        4: { count: 0, price: 0 },
+        5: { price: 0 } // For plans not falling into 1-4, or for total
       };
       let cancelledCount = 0;
 
@@ -264,11 +264,13 @@ const generateInvoiceExcel = async (req, res) => {
         if (detail.cancelled && detail.billable) {
           cancelledCount++;
         } else if (!detail.cancelled) {
-          if (planData[detail.plans_global_id]) {
-            if (planData[detail.plans_global_id].hasOwnProperty('count')) {
-              planData[detail.plans_global_id].count++;
-            }
-            planData[detail.plans_global_id].price += detail.price;
+          const planTypeId = detail.plan_type_category_id; // Use plan_type_category_id
+          if (planTypeId && planData[planTypeId] && planData[planTypeId].hasOwnProperty('count')) {
+            planData[planTypeId].count++;
+            planData[planTypeId].price += detail.price;
+          } else {
+            // Handle plans that don't fit into categories 1-4, or other charges
+            planData[5].price += detail.price; // Aggregate under 'other' or a general total
           }
         }
       });

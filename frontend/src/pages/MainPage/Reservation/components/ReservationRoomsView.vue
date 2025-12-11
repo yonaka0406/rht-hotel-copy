@@ -628,7 +628,7 @@ const matchingGroupDetails = (details) => {
                     ...dtl,
                     price: formatCurrency(dtl.price),
                     display_date: formatDateWithDay(dtl.date),
-                    plan_color: getPlanColor(dtl.plans_global_id, dtl.plans_hotel_id),
+                    plan_color: getPlanColor(dtl.plans_hotel_id),
                 });
             } else {
                 for (let detailClients of detailReservationClients) {
@@ -705,7 +705,7 @@ const rowStyle = (data) => {
     }
 };
 const getPlanColor = (plans_hotel_id) => {
-    const plan = plans.value.find(p => p.id === plans_hotel_id);
+    const plan = plans.value.find(p => p.plan_id === plans_hotel_id);
     return plan?.color || "#8f8d8d";
 };
 
@@ -809,8 +809,7 @@ const updatePattern = async () => {
     }
 };
     const updatePlanAddOns = async () => {
-    if (selectedPlan.value) {
-        // const gid = selectedPlan.value?.plans_global_id ?? 0; // Deprecated
+    if (selectedPlan.value) {        
         const hid = selectedPlan.value?.plans_hotel_id ?? 0;
         const hotel_id = reservationInfo.value.hotel_id ?? 0;
 
@@ -834,12 +833,14 @@ const updatePattern = async () => {
     const foundAddon = addonOptions.value.find(addon =>
         addon.id === selectedAddonOption.value && addon.addon_type !== 'parking'
     );
-    if (!foundAddon) return;
+    if (!foundAddon) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '選択されたアドオンが見つかりません。', life: 3000 });
+        return;
+    }
 
     const isHotelAddon = foundAddon.id.startsWith('H');
     selectedAddon.value.push({
-        addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,
-        addons_hotel_id: isHotelAddon ? foundAddon.addons_hotel_id : null,
+        addons_hotel_id: foundAddon.id,
         hotel_id: foundAddon.hotel_id,
         addon_name: foundAddon.addon_name,
         price: foundAddon.price,

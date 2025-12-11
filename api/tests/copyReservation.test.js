@@ -146,7 +146,7 @@ const mockOriginalReservation = [
 const reservationsModel = require('../models/reservations');
 
 (async () => {
-  // Track calls to addReservationHold, addReservationDetail, addReservationAddon
+  // Track calls to addReservationHold, insertReservationDetails, addReservationAddon
   let newReservationId = 999;
   let detailIdCounter = 2000;
   let addonCalls = [];
@@ -156,8 +156,8 @@ const reservationsModel = require('../models/reservations');
     assert.strictEqual(data.status, undefined, 'addReservationHold does not set status');
     return { id: newReservationId, ...data };
   };
-  const mockAddReservationDetail = async (requestId, detail) => {
-    assert.strictEqual(detail.reservation_id, newReservationId, 'addReservationDetail uses new reservation id');
+  const mockInsertReservationDetails = async (requestId, detail) => {
+    assert.strictEqual(detail.reservation_id, newReservationId, 'insertReservationDetails uses new reservation id');
     // Assert that at least one of plans_global_id or plans_hotel_id is present if either is set (not both null)
     if (detail.plans_global_id !== null || detail.plans_hotel_id !== null) {
       assert.ok(
@@ -193,7 +193,7 @@ const reservationsModel = require('../models/reservations');
     {
       selectReservation: async () => mockOriginalReservation,
       addReservationHold: mockAddReservationHold,
-      addReservationDetail: mockAddReservationDetail,
+      insertReservationDetails: mockInsertReservationDetails,
       addReservationAddon: mockAddReservationAddon
     }
   );
@@ -203,7 +203,7 @@ const reservationsModel = require('../models/reservations');
   assert.strictEqual(result.status, undefined, 'New reservation status is not set (should default to hold)');
   assert.strictEqual(result.reservation_client_id, new_client_id, 'Client id is updated');
 
-  // Check that addReservationDetail was called for each mapped room
+  // Check that insertReservationDetails was called for each mapped room
   assert.ok(addonCalls.length >= 2, 'Addons were copied for each detail');
   const breakfastAddon = addonCalls.find(a => a.addon_name === 'Breakfast');
   assert.ok(breakfastAddon, 'Breakfast addon copied');

@@ -1,7 +1,7 @@
 const { getPool } = require('../../config/database');
 
 // Return all plan_addons
-const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hotel_id, dbClient = null) => {
+const getAllPlanAddons = async (requestId, plans_hotel_id, hotel_id, dbClient = null) => {
     // Input validation
     if (plans_hotel_id === null && hotel_id === null) {
         throw new Error('Either plans_hotel_id or hotel_id must be provided.');
@@ -11,7 +11,7 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
     const query = `        
         SELECT 
             pa.*
-            ,COALESCE(ag.name, ah.name) AS addon_name            
+            ,ah.name AS addon_name            
             ,tax_info.name as tax_type
             ,pa.sales_category            
         FROM 
@@ -19,9 +19,6 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
                 JOIN
             tax_info
                 ON pa.tax_type_id = tax_info.id
-                LEFT OUTER JOIN
-            addons_global AS ag
-                ON pa.addons_global_id = ag.id
                 LEFT OUTER JOIN
             addons_hotel AS ah
                 ON pa.addons_hotel_id = ah.id

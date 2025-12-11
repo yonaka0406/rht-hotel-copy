@@ -256,7 +256,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
             ,room_types.name AS room_type_name
           ,rd.number_of_people
             ,rd.plan_type
-          ,COALESCE(ph.name, pg.name) AS plan_name
+          ,ph.name AS plan_name
           ,(CASE 
             WHEN rd.plan_type = 'per_room' 
             THEN rd.price
@@ -277,7 +277,6 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           JOIN rooms ON rd.hotel_id = rooms.hotel_id AND rd.room_id = rooms.id
           JOIN room_types  ON rooms.hotel_id = room_types.hotel_id AND rooms.room_type_id = room_types.id
           LEFT JOIN plans_hotel ph ON ph.hotel_id = rd.hotel_id AND ph.id = rd.plans_hotel_id
-            LEFT JOIN plans_global pg ON pg.id = rd.plans_global_id
           LEFT JOIN reservation_addons ra ON rd.hotel_id = ra.hotel_id AND rd.id = ra.reservation_detail_id
         WHERE 
           rd.hotel_id = $1

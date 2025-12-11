@@ -450,16 +450,14 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
   const query = `
     SELECT 
       reservation_details.date
-      ,COALESCE(reservation_details.plans_global_id::TEXT, '') || 'h' || COALESCE(reservation_details.plans_hotel_id::TEXT, '') AS key
-      ,COALESCE(plans_global.name, plans_hotel.name, '未設定') AS name
+      ,reservation_details.plans_hotel_id::TEXT AS key
+      ,COALESCE(plans_hotel.name, '未設定') AS name
       ,reservation_details.plan_type
       ,SUM(CASE WHEN reservation_details.plan_type = 'per_room' THEN 1
         ELSE reservation_details.number_of_people END) AS quantity
     FROM
       reservations
       ,reservation_details        
-      LEFT JOIN plans_global
-        ON plans_global.id = reservation_details.plans_global_id
       LEFT JOIN plans_hotel
         ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
     WHERE
@@ -472,9 +470,7 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
       AND reservation_details.hotel_id = reservations.hotel_id
     GROUP BY
       reservation_details.date
-      ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
-      ,plans_global.name
       ,plans_hotel.name
       ,reservation_details.plan_type
     ORDER BY 1, 2  

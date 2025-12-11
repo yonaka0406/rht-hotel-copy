@@ -102,8 +102,7 @@ const getPlansForBookingEngine = async (requestId, hotelId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT 
-      p.plans_global_id,
-      p.plans_hotel_id,
+      p.plan_id AS plans_hotel_id,
       p.plan_name as name,
       p.description,
       p.plan_type,
