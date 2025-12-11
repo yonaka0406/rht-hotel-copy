@@ -1,4 +1,5 @@
 const { getPool } = require('../config/database');
+const { insertReservationDetails } = require('./reservations/details');
 
 // Helper
 const transliterateKanaToRomaji = async (kanaString) => {  
@@ -203,38 +204,24 @@ const insertYadomasterDetails = async (requestId, details) => {
     try {
         await client.query('BEGIN');
 
-        const valuePlaceholders = [];
-        const values = [];
-        let valueIndex = 1;
-
         for (const detail of details) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
-            values.push(
-                parseInt(detail.hotel_id, 10),
-                detail.id,
-                detail.reservation_id,
-                detail.date,
-                detail.room_id,
-                detail.number_of_people,
-                detail.plans_global_id,
-                detail.plans_hotel_id,
-                detail.plan_name,
-                detail.price,
-                detail.cancelled,
-                detail.billable,
-                detail.created_by,
-            );
+            const detailData = {
+                hotel_id: parseInt(detail.hotel_id, 10),
+                reservation_id: detail.reservation_id,
+                date: detail.date,
+                room_id: detail.room_id,
+                plans_hotel_id: detail.plans_hotel_id,
+                plan_name: detail.plan_name,
+                plan_type: detail.plan_type, // Assuming plan_type is available
+                number_of_people: detail.number_of_people,
+                price: detail.price,
+                cancelled: detail.cancelled,
+                billable: detail.billable,
+                created_by: detail.created_by,
+                updated_by: detail.created_by // Assuming updated_by is same as created_by for imports
+            };
+            await insertReservationDetails(requestId, detailData, client);
         }
-
-        const query = `
-            INSERT INTO reservation_details (
-                hotel_id, id, reservation_id, date, room_id, 
-                number_of_people, plans_global_id, plans_hotel_id, plan_name, price, cancelled, 
-                billable, created_by
-            ) VALUES ${valuePlaceholders.join(', ')}            
-        `;
-
-        await client.query(query, values);
 
         await client.query('COMMIT');
         return { success: true, count: details.length };

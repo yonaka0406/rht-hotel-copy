@@ -1,7 +1,7 @@
 const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
-  selectRoomsForIndicator, selectFailedOtaReservations, selectParkingSpotAvailability, getHotelIdByReservationId, addReservationHold, addReservationDetail,
-  addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPaymentWithInvoice, insertBulkReservationPayment,
+  selectRoomsForIndicator, selectFailedOtaReservations, selectParkingSpotAvailability, getHotelIdByReservationId, addReservationHold,
+  addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPaymentWithInvoice, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime,
   updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest,
   updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom,
@@ -13,6 +13,7 @@ const {
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const planRateModel = require('../models/planRate');
+const { insertReservationDetails, insertReservationDetailsBatch } = require('../models/reservations/details');
 const logger = require('../config/logger');
 const { getPool } = require('../config/database');
 const { validateNumericParam, validateDateStringParam } = require('../utils/validationUtils');
@@ -436,7 +437,7 @@ const createReservationHold = async (req, res) => {
     }
 
     // --- Step 5: Batch insert reservation details ---
-    const createdReservationDetails = await addReservationDetailsBatch(req.requestId, reservationDetails, client);
+    const createdReservationDetails = await insertReservationDetailsBatch(req.requestId, reservationDetails, client);
 
     await client.query('COMMIT');
     res.status(201).json({ reservation: newReservation });
@@ -577,7 +578,7 @@ const createHoldReservationCombo = async (req, res) => {
     }
 
     // --- Step 5: Batch insert reservation details ---
-    const createdReservationDetails = await addReservationDetailsBatch(req.requestId, reservationDetails, client);
+    const createdReservationDetails = await insertReservationDetailsBatch(req.requestId, reservationDetails, client);
 
     await client.query('COMMIT');
 
@@ -634,16 +635,16 @@ const createReservationDetails = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationDetail = await addReservationDetail(req.requestId, reservationData, client);
+    const newReservationDetail = await insertReservationDetails(req.requestId, reservationData, client);
 
     if (!newReservationDetail || !newReservationDetail.id) {
-      logger.error('Failed to create reservation detail: Invalid response from addReservationDetail.', {
+      logger.error('Failed to create reservation detail: Invalid response from insertReservationDetails.', {
         requestId: req.requestId,
         reservationData: reservationData,
         newReservationDetail: newReservationDetail // Include the actual response for debugging
       });
       await client.query('ROLLBACK');
-      return res.status(500).json({ error: 'Failed to create reservation detail: Invalid response from addReservationDetail.' });
+      return res.status(500).json({ error: 'Failed to create reservation detail: Invalid response from insertReservationDetails.' });
     }
 
     // console.log('newReservationDetail:', newReservationDetail);

@@ -86,6 +86,83 @@ const insertReservationDetails = async (requestId, reservationDetailsData, dbCli
   }
 };
 
+const insertReservationDetailsBatch = async (requestId, details, dbClient = null) => {
+  const pool = getPool(requestId);
+  let shouldReleaseClient = false;
+  let client = dbClient;
+
+  if (!dbClient) {
+    client = await pool.connect();
+    shouldReleaseClient = true;
+  }
+
+  try {
+    if (shouldReleaseClient) {
+      await client.query('BEGIN');
+    }
+
+    const columns = [
+      'hotel_id', 'reservation_id', 'date', 'room_id', 'plans_global_id',
+      'plans_hotel_id', 'plan_name', 'plan_type', 'number_of_people', 'price',
+      'created_by', 'updated_by', 'is_accommodation'
+    ];
+    const NUM_COLUMNS = columns.length;
+    const POSTGRES_PARAM_LIMIT = 32767;
+    const BATCH_SIZE = Math.floor(POSTGRES_PARAM_LIMIT / NUM_COLUMNS);
+
+    const allCreatedDetails = [];
+
+    for (let i = 0; i < details.length; i += BATCH_SIZE) {
+      const batch = details.slice(i, i + BATCH_SIZE);
+
+      const values = [];
+      const placeholders = batch.map((d, j) => {
+        const offset = j * NUM_COLUMNS;
+        values.push(
+          d.hotel_id, d.reservation_id, d.date, d.room_id,
+          null, // Force plans_global_id to NULL for consistency
+          d.plans_hotel_id, d.plan_name, d.plan_type,
+          d.number_of_people, d.price, d.created_by, d.updated_by,
+          (d.is_accommodation ?? true)
+        );
+        return `(${Array.from(
+          { length: NUM_COLUMNS },
+          (_, k) => `$${offset + k + 1}`
+        ).join(', ')})`;
+      }).join(', ');
+
+      const query = `
+        INSERT INTO reservation_details (${columns.join(', ')})
+        VALUES ${placeholders}
+        RETURNING *;
+      `;
+
+      const result = await client.query(query, values);
+      allCreatedDetails.push(...result.rows);
+    }
+
+    if (shouldReleaseClient) {
+      await client.query('COMMIT');
+    }
+
+    return allCreatedDetails;
+  } catch (err) {
+    if (shouldReleaseClient) {
+      await client.query('ROLLBACK');
+    }
+    logger.error(`[insertReservationDetailsBatch] Error inserting batch reservation details: ${err.message}`, {
+      requestId,
+      batchSize: details.length,
+      error: err.stack
+    });
+    throw new Error('Database error during batch reservation details insertion.');
+  } finally {
+    if (shouldReleaseClient) {
+      client.release();
+    }
+  }
+};
+
 const updateDetailsCancelledStatus = async (requestId, id, hotelId, status, updatedBy, billable, price, dbClient = null) => {
   const pool = getPool(requestId);
   const client = dbClient || await pool.connect();
@@ -247,6 +324,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
 module.exports = {
   selectReservationDetailsById,
   insertReservationDetails,
+  insertReservationDetailsBatch,
   updateReservationDetailStatus,
   updateDetailsCancelledStatus,
 }

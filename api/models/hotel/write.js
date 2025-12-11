@@ -1,6 +1,7 @@
 const { getPool } = require('../../config/database');
 const format = require('pg-format');
 const logger = require('../../config/logger');
+const { insertReservationDetails } = require('../reservations/details');
 
 const createHotel = async (requestId, hotelData, userId) => {
   const pool = getPool(requestId);
@@ -429,19 +430,23 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
         // Insert reservation details for each day, using the single mockReservationId
         // blockRoomsByRoomType creates temp blocks (temporary holds), so is_accommodation = TRUE
         for (const date of dateArray) {
-          await client.query(
-            `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, is_accommodation, created_by, updated_by)
-             VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7)`,
-            [
-              hotel_id,
-              mockReservationId,
-              date,
-              room.id,
-              peopleForRoom,
-              userId,
-              userId,
-            ]
-          );
+          const detailData = {
+            hotel_id: hotel_id,
+            reservation_id: mockReservationId,
+            date: date,
+            room_id: room.id,
+            number_of_people: peopleForRoom,
+            is_accommodation: true, // Temp blocks are temporary holds
+            created_by: userId,
+            updated_by: userId,
+            // plans_hotel_id, plan_name, plan_type, price can be null for block
+            plans_hotel_id: null,
+            plan_name: 'ブロック', // Default name for a block
+            plan_type: 'per_room', // Default type for a block
+            price: 0, // No price for a block
+            billable: false, // Blocked rooms are not billable
+          };
+          await insertReservationDetails(requestId, detailData, client);
         }
         blockedRoomIds.push(room.id);
       }

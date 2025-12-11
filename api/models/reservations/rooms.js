@@ -4,6 +4,7 @@ const { formatDate } = require('../../utils/reportUtils');
 const logger = require('../../config/logger');
 const { addReservationAddon } = require('./addons');
 const clientsModels = require('./clients');
+const { insertReservationDetails } = require('./details');
 
 const updateReservationRoomsPeriod = async (requestId, { originalReservationId, hotelId, newCheckIn, newCheckOut, roomIds, userId, allRoomsSelected }) => {
   //console.log('--- Starting updateReservationRoomsPeriod ---');
@@ -173,16 +174,22 @@ const updateReservationRoomsPeriod = async (requestId, { originalReservationId, 
 
             // Insert new details for dates that are in the new range but not in the old
             for (const date of datesToCreate) {
-                const insertDetailQuery = `
-                    INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, created_by, updated_by)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id;
-                `;
-                const newDetailResult = await client.query(insertDetailQuery, [
-                    hotelId, newReservationId, date, roomId,
-                    templateDetail.plans_global_id, templateDetail.plans_hotel_id, templateDetail.plan_name, templateDetail.plan_type,
-                    templateDetail.number_of_people, templateDetail.price, templateDetail.billable, userId, userId
-                ]);
-                const newDetailId = newDetailResult.rows[0].id;
+                const newDetailData = {
+                    hotel_id: hotelId,
+                    reservation_id: newReservationId,
+                    date: date,
+                    room_id: roomId,
+                    plans_hotel_id: templateDetail.plans_hotel_id,
+                    plan_name: templateDetail.plan_name,
+                    plan_type: templateDetail.plan_type,
+                    number_of_people: templateDetail.number_of_people,
+                    price: templateDetail.price,
+                    billable: templateDetail.billable,
+                    created_by: userId,
+                    updated_by: userId,
+                };
+                const newDetail = await insertReservationDetails(requestId, newDetailData, client);
+                const newDetailId = newDetail.id;
 
                 // Copy clients and addons to the new detail
                 if (clientsToCopy.length > 0) {
@@ -356,11 +363,10 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
         JSON_AGG(
           JSON_BUILD_OBJECT(
             'date', rd_inner.date,
-            'plans_global_id', rd_inner.plans_global_id,
             'plans_hotel_id', rd_inner.plans_hotel_id,
-            'plan_name', COALESCE(ph.name, pg.name),
+            'plan_name', COALESCE(ph.name),
             'plan_type', rd_inner.plan_type,
-            'plan_color', COALESCE(ph.color, pg.color),
+            'plan_color', COALESCE(ph.color),
             'cancelled', rd_inner.cancelled
           ) ORDER BY rd_inner.date
         ) AS details,
@@ -368,7 +374,6 @@ const selectRoomsForIndicator = async (requestId, hotelId, date) => {
       FROM
         reservation_details rd_inner
         LEFT JOIN plans_hotel ph ON ph.hotel_id = rd_inner.hotel_id AND ph.id = rd_inner.plans_hotel_id
-        LEFT JOIN plans_global pg ON pg.id = rd_inner.plans_global_id
       JOIN AllRelevantRoomsForDate ard ON rd_inner.reservation_id = ard.reservation_id AND rd_inner.room_id = ard.room_id
       WHERE rd_inner.hotel_id = $1
       GROUP BY

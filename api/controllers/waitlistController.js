@@ -10,6 +10,7 @@ const { getHotelByID } = require('../models/hotel'); // To check if hotel exists
 const { getRoomTypeById } = require('../models/hotel'); // To check if room type exists
 const logger = require('../config/logger');
 const { getPool } = require('../config/database');
+const { insertReservationDetails } = require('../models/reservations/details');
 
 const waitlistController = {
     /**
@@ -273,7 +274,6 @@ const waitlistController = {
             // Import reservation creation functions
             const { 
                 addReservationHold, 
-                addReservationDetail, 
                 selectAvailableRooms,
                 updateReservationComment
             } = require('../models/reservations');
@@ -372,7 +372,7 @@ const waitlistController = {
 
             // Add reservation details to the database
             for (const detail of reservationDetails) {
-                await addReservationDetail(requestId, detail, client);
+                await insertReservationDetails(requestId, detail, client);
             }
 
             // Add waitlist notes to reservation comments if they exist
