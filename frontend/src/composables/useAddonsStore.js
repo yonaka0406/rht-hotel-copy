@@ -1,8 +1,31 @@
 import { ref } from 'vue';
 
 const hotelAddons = ref([]);
+const addonCategories = ref([]);
 
 export function useAddonsStore() {
+  // Fetch addon categories
+  const fetchAddonCategories = async () => {
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch('/api/addons/categories', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      addonCategories.value = await response.json();
+      return addonCategories.value;
+    } catch (error) {
+      console.error('Failed to fetch addon categories', error);
+      throw error;
+    }
+  };
+
   // Fetch all hotel addons
   const fetchHotelAddons = async () => {
     try {
@@ -127,6 +150,8 @@ export function useAddonsStore() {
     fetchAddonsForHotel,
     createHotelAddon,
     updateHotelAddon,
-    deleteHotelAddon
+    deleteHotelAddon,
+    addonCategories,
+    fetchAddonCategories
   };
 }

@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { getAllAddons, getHotelsAddons, getHotelAddons, createHotelAddon, editHotelAddon } = require('../controllers/addons');
+const { getAllAddons, getHotelsAddons, getHotelAddons, createHotelAddon, editHotelAddon, getAddonCategories } = require('../controllers/addons');
 const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
+
+// Addon Categories
+router.get('/addons/categories', authMiddleware, getAddonCategories);
 
 // All addons for a specific hotel (used in frontend for plan creation/editing)
 router.get('/addons/all/:hotel_id', authMiddleware, getAllAddons);

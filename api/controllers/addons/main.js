@@ -3,10 +3,21 @@ const {
     getAllHotelsAddons, 
     getAddonsByHotelId, 
     newHotelAddon, 
-    updateHotelAddon 
+    updateHotelAddon,
+    getAllAddonCategories
 } = require('../../models/addons');
 
 // GET
+const getAddonCategories = async (req, res) => {
+    try {
+        const categories = await getAllAddonCategories(req.requestId);
+        res.json(categories);
+    } catch (error) {
+        console.error('Error getting addon categories:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 const getAllAddons = async (req, res) => {
     const hotel_id = parseInt(req.params.hotel_id);
     
@@ -86,4 +97,5 @@ module.exports = {
     getHotelAddons,
     createHotelAddon,
     editHotelAddon,
+    getAddonCategories
 };

@@ -5,7 +5,7 @@ const logger = require('../../config/logger');
 
 const getAllHotelsAddons = async (requestId, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const query = 'SELECT * FROM addons_hotel ORDER BY hotel_id ASC, visible DESC, name ASC';    
+    const query = 'SELECT * FROM addons_hotel ORDER BY hotel_id ASC, visible DESC, name ASC';
 
     try {
         const result = await client.query(query);
@@ -26,7 +26,7 @@ const getAddons = async (requestId, hotel_id, dbClient = null) => {
         // To get all addons for all hotels, use getAllHotelsAddons.
         // This function is intended for a specific hotel context.
         logger.warn('getAddons called without hotel_id. Returning empty array.');
-        return []; 
+        return [];
     }
 
     const query = `
@@ -71,11 +71,42 @@ const getAddons = async (requestId, hotel_id, dbClient = null) => {
 };
 const getAddonsByHotelId = async (requestId, hotel_id, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const query = 'SELECT * FROM addons_hotel WHERE hotel_id = $1 ORDER BY visible DESC, name ASC';
+    const query = `
+        SELECT
+            ah.hotel_id,
+            ah.id,
+            ah.name,
+            ah.description,
+            ah.price,
+            ah.tax_type_id,
+            ti.name AS tax_type,
+            ah.tax_rate,
+            ah.net_price,
+            ah.visible,
+            ah.display_order,
+            ah.addon_category_id,
+            ac.name AS addon_category_name,
+            ac.addon_type,
+            ac.color AS addon_category_color,
+            ah.created_at,
+            ah.created_by,
+            ah.updated_by,
+            ah.is_active
+        FROM
+            addons_hotel ah
+        LEFT JOIN
+            tax_info ti ON ah.tax_type_id = ti.id
+        LEFT JOIN
+            addon_categories ac ON ah.addon_category_id = ac.id
+        WHERE
+            ah.hotel_id = $1
+        ORDER BY
+            ah.visible DESC, ah.display_order ASC, ah.name ASC;
+    `;
     const values = [hotel_id];
 
     try {
-        const result = await client.query(query, values);    
+        const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
         logger.error('Error retrieving hotel addons:', err);
@@ -94,8 +125,8 @@ const getHotelAddonById = async (requestId, hotel_id, id, dbClient = null) => {
         const result = await client.query(query, values);
         return result.rows[0];
     } catch (err) {
-        logger.error('Error finding hotel addon:', err); 
-        throw new Error(`Failed to find hotel addon: ${err.message}`, { cause: err });    
+        logger.error('Error finding hotel addon:', err);
+        throw new Error(`Failed to find hotel addon: ${err.message}`, { cause: err });
     } finally {
         if (!dbClient) client.release();
     }
@@ -130,10 +161,26 @@ const updateHotelAddon = async (requestId, id, hotel_id, addon_category_id, name
     }
 };
 
+const getAllAddonCategories = async (requestId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const query = 'SELECT id, name, addon_type, color, display_order FROM addon_categories ORDER BY display_order ASC';
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error retrieving addon categories:', err);
+        throw new Error(`Failed to retrieve addon categories: ${err.message}`, { cause: err });
+    } finally {
+        if (!dbClient) client.release();
+    }
+};
+
 module.exports = {
     getAllHotelsAddons,
     getAddons,
     getAddonsByHotelId,
     getHotelAddonById,
-    updateHotelAddon
+    updateHotelAddon,
+    getAllAddonCategories
 };

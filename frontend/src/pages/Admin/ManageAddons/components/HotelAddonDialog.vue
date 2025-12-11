@@ -18,7 +18,7 @@
       <div class="col-span-1 mb-6">
         <FloatLabel>
           <Select
-            v-model="localAddon.addon_type"
+            v-model="localAddon.addon_category_id"
             :options="addonTypes"
             optionLabel="name"
             optionValue="id"
@@ -131,7 +131,7 @@ const localAddon = ref({
   hotel_id: null,
   name: '',
   description: '',
-  addon_type: 'other',
+  addon_category_id: 5,
   tax_type_id: props.defaultTaxTypeId,
   price: 0,
   visible: true
@@ -143,7 +143,7 @@ const resetAddon = () => {
     hotel_id: null,
     name: '',
     description: '',
-    addon_type: 'other',
+    addon_category_id: 5,
     tax_type_id: props.defaultTaxTypeId,
     price: 0,
     visible: true

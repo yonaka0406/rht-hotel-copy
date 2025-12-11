@@ -22,7 +22,7 @@
         />
       </div>
 
-      <DataTable :value="filteredHotelAddons" :loading="loading">
+      <DataTable :value="hotelAddons" :loading="loading">
         <Column field="name" header="名称"></Column>
         <Column field="price">
           <template #header>
@@ -32,7 +32,19 @@
             <span>{{formatCurrency(slotProps.data.price)}}</span>
           </template>
         </Column>
-        <Column field="description" header="詳細"></Column>
+        <Column field="tax_type_id">
+          <template #header>
+            <span class="font-bold">税率</span>
+          </template>
+          <template #body="slotProps">
+            <span>{{ getTaxRatePercentage(slotProps.data.tax_type_id) }}%</span>
+          </template>
+        </Column>
+        <Column field="type" header="アドオン区分">
+          <template #body="slotProps">
+            <Badge :value="getAddonTypeName(slotProps.data.addon_category_id)" severity="secondary"></Badge>
+          </template>
+        </Column>
         <Column field="visible">
           <template #header>
             <span class="font-bold">ステータス</span>
@@ -66,7 +78,7 @@
       v-model:visible="showAddonDialog"
       :addon="currentAddon"
       :is-edit="isEditMode"
-      :addon-types="addonTypes"
+      :addon-types="addonCategories"
       :tax-types="taxTypes"
       :default-tax-type-id="defaultTaxTypeId"
       @save="handleSaveAddon"
@@ -76,12 +88,12 @@
 
 <script setup>
   // Vue
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, watch } from 'vue';
 
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import { Panel, DataTable, Column, Button, Select } from 'primevue';
+  import { Panel, DataTable, Column, Button, Select, Badge } from 'primevue';
 
   // Components
   import HotelAddonDialog from './components/HotelAddonDialog.vue';
@@ -92,7 +104,7 @@
   import { useSettingsStore } from '@/composables/useSettingsStore';
   const { taxTypes, fetchTaxTypes } = useSettingsStore();
   import { useAddonsStore } from '@/composables/useAddonsStore';
-  const { hotelAddons, fetchHotelAddons, createHotelAddon, updateHotelAddon } = useAddonsStore();
+  const { hotelAddons, fetchAddonsForHotel, createHotelAddon, updateHotelAddon, addonCategories, fetchAddonCategories } = useAddonsStore();
 
   const defaultTaxTypeId = computed(() => {
     // Guard against null or undefined taxTypes
@@ -115,29 +127,24 @@
     if (value == null) return '';
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
   };
+  const getAddonTypeName = (id) => {
+    const addonCategory = addonCategories.value.find(cat => cat.id === id);
+    return addonCategory ? addonCategory.name : id;
+  };
+  const getTaxRatePercentage = (taxTypeId) => {
+    const taxType = taxTypes.value.find(t => t.id === taxTypeId);
+    return taxType ? taxType.percentage * 100 : 0; // Assuming percentage is stored as a decimal (e.g., 0.1 for 10%)
+  };
 
   // State
   const loading = ref(false);
   const error = ref(null);
-  const addonTypes = ([
-    {name: '朝食', id: 'breakfast'},
-    {name: '昼食', id: 'lunch'},
-    {name: '夕食', id: 'dinner'},
-    {name: 'その他', id: 'other'}
-  ]);  
 
   // Hotel Addons
   const selectedHotel = ref(null);
   const showAddonDialog = ref(false);
   const isEditMode = ref(false);
   const currentAddon = ref(null);
-
-  const filteredHotelAddons = computed(() => {
-    if (selectedHotel.value) {
-      return hotelAddons.value.filter(addon => addon.hotel_id === selectedHotel.value.id);
-    }
-    return [];
-  });
 
   const openNewAddonDialog = () => {
     currentAddon.value = null;
@@ -215,13 +222,31 @@
     try {
       await fetchHotels(); 
       await fetchTaxTypes();
-      await fetchHotelAddons();
+      await fetchAddonCategories();
+      // fetchHotelAddons() is removed as addons will be fetched based on selectedHotel
     } catch (err) {
       console.error('初期化エラー:', err);
       error.value = err.message || '初期化に失敗しました';
     } finally {
       loading.value = false;
     }
+  });
+          
+  // Watcher for selectedHotel
+  watch(selectedHotel, async (newVal) => {
+      if (newVal && newVal.id) {
+          loading.value = true;
+          try {
+              await fetchAddonsForHotel(newVal.id);
+          } catch (err) {
+              console.error('Failed to fetch addons for selected hotel:', err);
+              error.value = err.message || '選択したホテルのアドオンの取得に失敗しました';
+          } finally {
+              loading.value = false;
+          }
+      } else {
+          hotelAddons.value = []; // Clear addons if no hotel is selected
+      }
   });
           
 </script>
