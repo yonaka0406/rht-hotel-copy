@@ -31,11 +31,10 @@
             </div>
         </div>
 
-        <DataTable :value="plansToCopy" dataKey="id" :rowHover="true" v-model:selection="selectedPlans" class="p-datatable-sm">
+        <DataTable :value="plansToCopy" :dataKey="getDataKey" :rowHover="true" v-model:selection="selectedPlans" class="p-datatable-sm">
             <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
             <Column field="plan_name" header="プラン名" style="width: 20%">
                 <template #body="{ data }">
-                    {{ console.log('CopyPlansDialog.vue: Plan Name Column data', data) }}
                     <span :class="{ 'line-through text-400': data.conflict }">{{ data.plan_name }}</span>
                 </template>
             </Column>
@@ -47,11 +46,11 @@
             <Column header="オプション" style="width: 45%">
                 <template #body="{ data }">
                     <div class="flex items-center gap-2">
-                        <Checkbox v-model="data.copyRates" inputId="copyRates" :binary="true" :disabled="!selectedPlans.includes(data)"/>
-                        <label for="copyRates" class="mr-4">料金もコピー</label>
+                        <Checkbox v-model="data.copyRates" :inputId="'copyRates_' + data.id" :binary="true" :disabled="!selectedPlans.includes(data)"/>
+                        <label :for="'copyRates_' + data.id" class="mr-4">料金もコピー</label>
 
-                        <Checkbox v-model="data.copyAddons" inputId="copyAddons" :binary="true" :disabled="!selectedPlans.includes(data)"/>
-                        <label for="copyAddons">アドオンもコピー</label>
+                        <Checkbox v-model="data.copyAddons" :inputId="'copyAddons_' + data.id" :binary="true" :disabled="!selectedPlans.includes(data)"/>
+                        <label :for="'copyAddons_' + data.id">アドオンもコピー</label>
                     </div>
                 </template>
             </Column>
@@ -87,7 +86,7 @@ const props = defineProps({
 
 const toast = useToast();
 const { hotels, fetchHotels } = useHotelStore();
-const { fetchPlansForHotel, createHotelPlan } = usePlansStore();
+const { fetchPlansForHotel, createHotelPlan, bulkCopyPlansToHotel } = usePlansStore();
 
 const sourceHotelId = ref(null);
 const targetHotelId = ref(null);
@@ -97,6 +96,12 @@ const selectedPlans = ref([]); // Plans selected for copying
 
 // Computed property to filter target hotel's existing plans for conflict detection
 const targetHotelPlans = ref([]);
+
+// Function to get unique data key for each row
+const getDataKey = (data) => {
+    // Use the uniqueId we create for each plan
+    return data.uniqueId || data.id || `${data.hotel_id}_${data.plan_name}`;
+};
 
 const canExecuteCopy = computed(() => selectedPlans.value.length > 0 && targetHotelId.value !== null);
 
@@ -117,17 +122,20 @@ const resetForm = () => {
 const onSourceHotelChange = async () => {
     if (sourceHotelId.value) {
         sourcePlans.value = await fetchPlansForHotel(sourceHotelId.value);
-        plansToCopy.value = sourcePlans.value.map(plan => ({
+        plansToCopy.value = sourcePlans.value.map((plan, index) => ({
             ...plan,
+            uniqueId: `${plan.id || index}_${sourceHotelId.value}`, // Ensure unique ID
             newName: '', // For optional renaming
             copyRates: true,
             copyAddons: true,
             conflict: false // Initial conflict status
         }));
+        selectedPlans.value = []; // Clear previous selections
         checkConflicts();
     } else {
         sourcePlans.value = [];
         plansToCopy.value = [];
+        selectedPlans.value = [];
     }
 };
 
@@ -146,9 +154,29 @@ const checkConflicts = () => {
         return;
     }
 
+    // Get all names that will be used (including custom names)
+    const usedNames = new Set();
+    
     plansToCopy.value.forEach(plan => {
-        const nameToCheck = plan.newName.trim() || plan.plan_name; // Use plan.plan_name
-        plan.conflict = targetHotelPlans.value.some(targetPlan => targetPlan.plan_name === nameToCheck); // Use targetPlan.plan_name
+        const nameToCheck = plan.newName?.trim() || plan.plan_name || plan.name;
+        
+        // Check against existing plans in target hotel
+        const existsInTarget = targetHotelPlans.value.some(targetPlan => 
+            (targetPlan.plan_name || targetPlan.name) === nameToCheck
+        );
+        
+        // Check against other plans being copied (duplicate names within selection)
+        const duplicateInSelection = usedNames.has(nameToCheck);
+        
+        plan.conflict = existsInTarget || duplicateInSelection;
+        usedNames.add(nameToCheck);
+        
+        console.log('Conflict check for plan:', {
+            planName: nameToCheck,
+            existsInTarget,
+            duplicateInSelection,
+            conflict: plan.conflict
+        });
     });
 };
 
@@ -158,46 +186,88 @@ const executeCopy = async () => {
         return;
     }
 
-    // Filter out plans with conflicts if not handled
+    // Check for conflicts and warn user
     const conflictedPlans = selectedPlans.value.filter(plan => plan.conflict);
     if (conflictedPlans.length > 0) {
-        toast.add({ severity: 'error', summary: 'エラー', detail: '競合のあるプランはコピーできません。新しい名前を付けてください。', life: 5000 });
-        return;
+        const conflictNames = conflictedPlans.map(p => p.plan_name || p.name).join(', ');
+        toast.add({ 
+            severity: 'warn', 
+            summary: '名前の競合', 
+            detail: `以下のプランは名前が重複しているため、自動的に番号が付加されます: ${conflictNames}`, 
+            life: 7000 
+        });
+        // Don't return - let the backend handle the conflict resolution
     }
 
-    // Logic to call API to copy plans
+    // Use the dedicated bulk copy API instead of creating plans individually
     try {
-        for (const plan of selectedPlans.value) {
-            const newPlanData = {
-                hotel_id: targetHotelId.value,
-                name: plan.newName.trim() || plan.plan_name, // Use plan.plan_name here
-                description: plan.description,
-                plan_type: plan.plan_type,
-                colorHEX: plan.color, // Assuming color is stored in plan.color
-                category: plan.category, // Assuming category is available
-                // Add any other relevant plan fields
-            };
+        console.log('Starting plan copy operation', {
+            selectedPlans: selectedPlans.value.length,
+            sourceHotelId: sourceHotelId.value,
+            targetHotelId: targetHotelId.value,
+            selectedPlansData: selectedPlans.value
+        });
 
-            // Call API to create new plan
-            const createdPlan = await createHotelPlan(newPlanData);
+        // Prepare the data for bulk copy - check multiple possible ID fields
+        const sourcePlanIds = selectedPlans.value.map(plan => {
+            const planId = plan.id || plan.plan_id || plan.plans_hotel_id;
+            console.log('Plan ID extraction:', { plan, extractedId: planId });
+            return planId;
+        });
+        const copyOptions = {
+            copyRates: selectedPlans.value.some(plan => plan.copyRates),
+            copyAddons: selectedPlans.value.some(plan => plan.copyAddons),
+            // Handle individual plan names if they have custom names
+            planNames: selectedPlans.value.reduce((acc, plan) => {
+                if (plan.newName && plan.newName.trim()) {
+                    acc[plan.id] = plan.newName.trim();
+                }
+                return acc;
+            }, {})
+        };
 
-            // If rates/addons need to be copied, this would involve more API calls
-            // For now, just creating the plan
-            if (plan.copyRates) {
-                // Logic to copy rates (requires API for rate copying)
-                // await copyRatesApi(plan.id, createdPlan.id);
-            }
-            if (plan.copyAddons) {
-                // Logic to copy addons (requires API for addon copying)
-                // await copyAddonsApi(plan.id, createdPlan.id);
-            }
+        // Validate that we have valid plan IDs
+        const validPlanIds = sourcePlanIds.filter(id => id != null && id !== undefined);
+        if (validPlanIds.length === 0) {
+            throw new Error('選択されたプランに有効なIDが見つかりません。');
         }
-        toast.add({ severity: 'success', summary: '成功', detail: '選択されたプランがコピーされました。', life: 3000 });
+        if (validPlanIds.length !== sourcePlanIds.length) {
+            console.warn('Some plans had invalid IDs:', { sourcePlanIds, validPlanIds });
+        }
+
+        console.log('Calling bulkCopyPlansToHotel with:', {
+            sourcePlanIds: validPlanIds,
+            sourceHotelId: sourceHotelId.value,
+            targetHotelId: targetHotelId.value,
+            copyOptions
+        });
+
+        // Call the dedicated bulk copy API
+        const copiedPlans = await bulkCopyPlansToHotel(
+            validPlanIds,
+            sourceHotelId.value,
+            targetHotelId.value,
+            copyOptions
+        );
+
+        console.log('Plans copied successfully:', copiedPlans);
+        
+        toast.add({ 
+            severity: 'success', 
+            summary: '成功', 
+            detail: `${copiedPlans.length}個のプランがコピーされました。`, 
+            life: 3000 
+        });
         emit('planCopied'); // Notify parent component that plans have been copied
         closeDialog();
     } catch (error) {
         console.error('プランのコピー中にエラーが発生しました:', error);
-        toast.add({ severity: 'error', summary: 'エラー', detail: 'プランのコピー中にエラーが発生しました。', life: 5000 });
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: `プランのコピー中にエラーが発生しました: ${error.message}`, 
+            life: 5000 
+        });
     }
 };
 
@@ -210,6 +280,11 @@ watch(props, (newProps) => {
         resetForm();
     }
 });
+
+// Watch for selection changes to debug
+watch(selectedPlans, (newSelection) => {
+    console.log('Selected plans changed:', newSelection.length, newSelection.map(p => p.plan_name));
+}, { deep: true });
 
 watch([sourceHotelId, targetHotelId, plansToCopy], checkConflicts, { deep: true });
 </script>

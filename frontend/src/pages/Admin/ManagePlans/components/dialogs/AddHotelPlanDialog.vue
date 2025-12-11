@@ -183,16 +183,11 @@ const saveHotelPlan = async () => {
       return;
   }
 
-  const PlanSet = new Set();
-  const newPlanKey = `${trimmedPlanName}-${newHotelPlan.value.hotel_id}`;
-  if (props.hotelPlans) {
-    for (const plan of props.hotelPlans) {
-      const planKey = `${plan.name}-${plan.hotel_id}`;
-      PlanSet.add(planKey);              
-    }
-  }
+  const isDuplicate = (props.hotelPlans || []).some(plan =>
+    plan.plan_name.trim().toLowerCase() === trimmedPlanName.toLowerCase()
+  );
   
-  if (PlanSet.has(newPlanKey)) {
+  if (isDuplicate) {
     toast.add({ 
       severity: 'error', 
       summary: 'エラー',

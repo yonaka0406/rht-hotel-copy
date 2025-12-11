@@ -440,7 +440,7 @@ import RatesDataTable from './tables/RatesDataTable.vue';
     import { useToast } from 'primevue/usetoast';    
     const toast = useToast();
     import { Card, Dialog, FloatLabel, DatePicker, InputNumber, MultiSelect, Select, Button,
-        Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Badge, Checkbox, Textarea
+        Accordion, AccordionPanel, AccordionHeader, AccordionContent, Badge, Checkbox, Textarea
      } from 'primevue';
 
     // Stores
@@ -488,6 +488,12 @@ import RatesDataTable from './tables/RatesDataTable.vue';
         { label: '宿泊', value: 'accommodation' },
         { label: 'その他', value: 'other' },
     ]);
+
+    const formatSalesCategory = (value) => {
+        const option = sales_category_options.value.find(opt => opt.value === value);
+        return option ? option.label : value;
+    };
+
 
     // Panel    
     const selectedDate = ref(new Date().toISOString().split('T')[0]);
