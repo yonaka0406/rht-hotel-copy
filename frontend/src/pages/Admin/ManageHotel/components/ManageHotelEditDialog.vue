@@ -152,16 +152,7 @@
       </template>
     </Card>
 
-    <Divider />
 
-    <Card>
-      <template #title>
-        プラン表示設定
-      </template>
-      <template #content>
-        <PlanVisibilitySettings :hotelId="localSelectedHotel.id" v-if="localSelectedHotel && localSelectedHotel.id" />
-      </template>
-    </Card>
 
     <template #footer>
       <Button label="保存" icon="pi pi-check" @click="saveHotel" class="p-button-success p-button-text p-button-sm" />
@@ -177,7 +168,6 @@ import { ref, reactive, watch } from 'vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useToast } from 'primevue/usetoast';
 import { Dialog, Card, DataTable, Column, FloatLabel, InputText, InputNumber, DatePicker, InputMask, Button, Divider } from 'primevue';
-import PlanVisibilitySettings from './PlanVisibilitySettings.vue';
 
 const props = defineProps({
   visible: Boolean,

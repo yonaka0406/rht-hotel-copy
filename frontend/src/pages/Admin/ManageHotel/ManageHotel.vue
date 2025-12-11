@@ -4,8 +4,6 @@
       <DataTable :value="hotels" class="p-datatable-sm" responsiveLayout="scroll">
         <Column field="formal_name" header="正式名称"></Column>
         <Column field="name" header="名称"></Column>
-        <Column field="email" header="メールアドレス"></Column>
-        <Column field="phone_number" header="電話番号"></Column>
         <Column header="操作">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" class="p-button-text p-button-sm" @click="selectHotelData(slotProps.data)"
