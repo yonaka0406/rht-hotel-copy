@@ -25,6 +25,12 @@ export const months = [
 
 export const formatTime = (time) => {
   if (!time) return "";
+  // Check if time is already a Date object
+  if (time instanceof Date) {
+      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // If time is a string
   const date = new Date(`1970-01-01T${time}`);
   if (isNaN(date.getTime())) {
     return ''; // Return empty string for invalid times

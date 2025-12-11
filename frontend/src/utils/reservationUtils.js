@@ -31,11 +31,13 @@ export function translateStatus(status) {
 export const reservationTypeOptions = [
     { label: '通常予約', value: 'default' },
     { label: '社員', value: 'employee' },
+    { label: 'OTA', value: 'ota' },
+    { label: '自社WEB', value: 'web' },
 ];
 
 export function translateType(type) {
     switch (type) {
-        case 'default': return '通常';
+        case 'default': return '通常予約';
         case 'employee': return '社員';
         case 'ota': return 'OTA';
         case 'web': return '自社ウェブ';
