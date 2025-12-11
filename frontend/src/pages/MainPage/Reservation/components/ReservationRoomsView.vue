@@ -1491,15 +1491,7 @@ const closeRoomEditDialog = () => {
     selectedGroup.value = null;
     selectedPlan.value = null;
 
-    selectedDays.value = [
-        { label: '月曜日', value: 'mon' },
-        { label: '火曜日', value: 'tue' },
-        { label: '水曜日', value: 'wed' },
-        { label: '木曜日', value: 'thu' },
-        { label: '金曜日', value: 'fri' },
-        { label: '土曜日', value: 'sat' },
-        { label: '日曜日', value: 'sun' },
-    ];
+    selectedDays.value = daysOfWeek;
 
     addons.value = [];
     targetRoom.value = null;
