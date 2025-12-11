@@ -7,8 +7,9 @@
       </div>
 
       <div class="lg:col-span-3 flex lg:justify-center items-start">
-        <div class="w-full lg:max-w-md p-1">          
-          <DatePicker v-model="selectedDate" inline dateFormat="yy-mm-dd" :selectOtherMonths="true" class="w-full custom-datepicker-inline rounded-md dark:bg-gray-800" />
+        <div class="w-full lg:max-w-md p-1">
+          <DatePicker v-model="selectedDate" inline dateFormat="yy-mm-dd" :selectOtherMonths="true"
+            class="w-full custom-datepicker-inline rounded-md dark:bg-gray-800" />
         </div>
       </div>
 
@@ -18,139 +19,115 @@
       読み込みは完了しましたが、利用可能なデータがありません。
     </div>
 
-    <RoomGroupPanel
-      v-if="selectedHotelId"
-      :isLoading="isLoading"
-      :roomGroups="roomGroups"
-      :openNewReservation="openNewReservation"
-      :openEditReservation="openEditReservation"
-      :getClientName="getClientName"
-      :translatePaymentTiming="translatePaymentTiming"
-      :formatTime="formatTime"
-      :formatDate="formatDate"
-      :planSummary="planSummary"
-      :getPlanDaysTooltip="getPlanDaysTooltip"
-      :selectedDate="selectedDate"
-      :selectedHotelId="selectedHotelId"
-    />  </div>
+    <RoomGroupPanel v-if="selectedHotelId" :isLoading="isLoading" :roomGroups="roomGroups"
+      :openNewReservation="openNewReservation" :openEditReservation="openEditReservation" :getClientName="getClientName"
+      :translateReservationPaymentTiming="translateReservationPaymentTiming" :formatTime="formatTime"
+      :formatDate="formatDate" :planSummary="planSummary" :getPlanDaysTooltip="getPlanDaysTooltip"
+      :selectedDate="selectedDate" :selectedHotelId="selectedHotelId" />
+  </div>
 
-    <ReservationDrawer
-      v-if="selectedHotelId"
-      ref="reservationDrawerRef"
-      :selectedDate="selectedDate"
-      :selectedHotelId="selectedHotelId"
-      :formatDate="formatDate"
-      @reservation-updated="handleReservationUpdated"
-    />
+  <ReservationDrawer v-if="selectedHotelId" ref="reservationDrawerRef" :selectedDate="selectedDate"
+    :selectedHotelId="selectedHotelId" :formatDate="formatDate" @reservation-updated="handleReservationUpdated" />
 
 </template>
 
 <script setup>
-  // Vue
-  import { ref, watch, onMounted } from 'vue';
-  
+// Vue
+import { ref, watch, onMounted } from 'vue';
 
-  import RoomGroupPanel from './components/RoomGroupPanel.vue';
-  import SummaryMetricsPanel from './components/SummaryMetricsPanel.vue';
-  import ReservationDrawer from './components/ReservationDrawer.vue';
+import RoomGroupPanel from './components/RoomGroupPanel.vue';
+import SummaryMetricsPanel from './components/SummaryMetricsPanel.vue';
+import ReservationDrawer from './components/ReservationDrawer.vue';
+
+// Primevue
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
+import DatePicker from 'primevue/datepicker';
+
+//Stores
+import { useHotelStore } from '@/composables/useHotelStore';
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+
+import { useClientDisplay } from './composables/useClientDisplay';
+const { getClientName } = useClientDisplay();
+
+import { formatDate, formatTime } from '@/utils/dateUtils';
+import { translateReservationPaymentTiming } from '@/utils/reservationUtils';
+import { useRoomCategorization } from './composables/useRoomCategorization';
+import { usePlanSummary } from './composables/usePlanSummary';
+import { useReservationActions } from './composables/useReservationActions';
 
 
+const isLoading = ref(false);
+const hasLoadedRooms = ref(false); // New ref to track if rooms have been loaded
 
-  // Primevue
-  import { useToast } from 'primevue/usetoast';
-  const toast = useToast();  
-  import DatePicker from 'primevue/datepicker';
-  
-  //Stores
-  import { useHotelStore } from '@/composables/useHotelStore';
-  const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
-  
+onMounted(async () => {
+  isLoading.value = true;
+  try {
+    await fetchHotels(); // Fetch all hotels and set selectedHotelId
 
-  
-  import { useClientDisplay } from './composables/useClientDisplay';
-  const { getClientName } = useClientDisplay();
-
-
-
-  import { formatDate, formatTime } from '@/utils/dateUtils';
-  import { translatePaymentTiming } from '@/utils/reservationUtils';
-  import { useRoomCategorization } from './composables/useRoomCategorization';
-  import { usePlanSummary } from './composables/usePlanSummary';
-  import { useReservationActions } from './composables/useReservationActions';
-      
-
-  const isLoading = ref(false);
-  const hasLoadedRooms = ref(false); // New ref to track if rooms have been loaded
-
-  onMounted(async () => {
-    isLoading.value = true;
-    try {
-      await fetchHotels(); // Fetch all hotels and set selectedHotelId
-
-      // Retry mechanism for fetchHotel if selectedHotelRooms is empty
-      let retries = 3;
-      let lastError = null;
-      while (retries > 0 && !selectedHotelRooms.value?.length) {
-        if (selectedHotelId.value) {
-          try {
-            await fetchHotel(); // Fetch rooms for the selected hotel
-          } catch (error) {
-            console.error(`Attempt ${4 - retries} failed to fetch hotel rooms:`, error);
-            lastError = error;
-          }
-        }
-        retries--;
-        if (retries > 0 && (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0)) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+    // Retry mechanism for fetchHotel if selectedHotelRooms is empty
+    let retries = 3;
+    let lastError = null;
+    while (retries > 0 && !selectedHotelRooms.value?.length) {
+      if (selectedHotelId.value) {
+        try {
+          await fetchHotel(); // Fetch rooms for the selected hotel
+        } catch (error) {
+          console.error(`Attempt ${4 - retries} failed to fetch hotel rooms:`, error);
+          lastError = error;
         }
       }
-
-      if (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0) {
-        if (lastError) {
-          throw lastError; // Re-throw the last error if rooms are still empty after retries
-        } else {
-          // If no specific error but rooms are empty, throw a generic error
-          throw new Error('Failed to load hotel rooms after multiple attempts.');
-        }
-      }
-
-    } catch (error) {
-      console.error('Failed to load hotel data:', error);
-      toast.add({
-        severity: 'error',
-        summary: 'エラー',
-        detail: 'ホテルデータの読み込みに失敗しました。ページを更新してください。',
-        life: 5000
-      });
-    } finally {
-      isLoading.value = false;
-      // Display warning toast only after loading has finished and if no rooms were loaded
-      if (!hasLoadedRooms.value) {
-        toast.add({
-          severity: 'warn',
-          summary: '警告',
-          detail: '空室データの読み込みに時間がかかっています。',
-          life: 5000
-        });
+      retries--;
+      if (retries > 0 && (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0)) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
       }
     }
-  });
 
-  // Watch for selectedHotelRooms to update hasLoadedRooms
-  watch(selectedHotelRooms, (newValue) => {
-    hasLoadedRooms.value = Boolean(newValue?.length);
-  }, { immediate: true }); // Immediate to check initial value
+    if (!selectedHotelRooms.value || selectedHotelRooms.value.length === 0) {
+      if (lastError) {
+        throw lastError; // Re-throw the last error if rooms are still empty after retries
+      } else {
+        // If no specific error but rooms are empty, throw a generic error
+        throw new Error('Failed to load hotel rooms after multiple attempts.');
+      }
+    }
 
-  const { reservationDrawerRef, selectedDate, handleReservationUpdated, openNewReservation, openEditReservation } = useReservationActions();
+  } catch (error) {
+    console.error('Failed to load hotel data:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: 'ホテルデータの読み込みに失敗しました。ページを更新してください。',
+      life: 5000
+    });
+  } finally {
+    isLoading.value = false;
+    // Display warning toast only after loading has finished and if no rooms were loaded
+    if (!hasLoadedRooms.value) {
+      toast.add({
+        severity: 'warn',
+        summary: '警告',
+        detail: '空室データの読み込みに時間がかかっています。',
+        life: 5000
+      });
+    }
+  }
+});
 
-  const { roomGroups } = useRoomCategorization(selectedDate);
-  const { planSummary, getPlanDaysTooltip } = usePlanSummary(selectedDate);
+// Watch for selectedHotelRooms to update hasLoadedRooms
+watch(selectedHotelRooms, (newValue) => {
+  hasLoadedRooms.value = Boolean(newValue?.length);
+}, { immediate: true }); // Immediate to check initial value
 
-  // Computed
+const { reservationDrawerRef, selectedDate, handleReservationUpdated, openNewReservation, openEditReservation } = useReservationActions();
+
+const { roomGroups } = useRoomCategorization(selectedDate);
+const { planSummary, getPlanDaysTooltip } = usePlanSummary(selectedDate);
+
+// Computed
 
 
 </script>
 
-<style scoped> 
-  
-</style>
+<style scoped></style>

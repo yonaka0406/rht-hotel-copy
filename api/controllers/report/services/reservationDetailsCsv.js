@@ -1,5 +1,5 @@
 const { format } = require("@fast-csv/format");
-const { formatDate, translateStatus, translateType, translatePlanType, translatePaymentTiming } = require('../../../utils/reportUtils');
+const { formatDate, translateStatus, translateType, translatePlanType, translateReservationPaymentTiming } = require('../../../utils/reportUtils');
 
 const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
     // Edit totals
@@ -121,7 +121,7 @@ const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
             "売上高(税抜き)": reservation.billable ? (reservation.is_accommodation ? planNetPriceAccom + addonNetPriceAccom : 0) : 0,
             "売上高(宿泊外)": reservation.billable ? (reservation.is_accommodation ? 0 : planPrice + addonValue) : 0,
             "売上高(宿泊外・税抜き)": reservation.billable ? (reservation.is_accommodation ? 0 : planNetPriceOther + addonNetPriceOther) : 0,
-            支払い: translatePaymentTiming(reservation.payment_timing),
+            支払い: translateReservationPaymentTiming(reservation.payment_timing),
             予約ID: reservation.reservation_id,
             予約詳細ID: reservation.id,
             詳細キャンセル: reservation.cancelled ? 'キャンセル' : '',

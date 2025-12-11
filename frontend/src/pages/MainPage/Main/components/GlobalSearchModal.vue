@@ -1,16 +1,6 @@
 <template>
-  <Dialog
-    :visible="visible"
-    modal
-    :style="{ width: '600px' }"
-    :header="false"
-    :closable="true"
-    :dismissableMask="true"
-    @hide="onHide"
-    @update:visible="$emit('update:visible', $event)"
-    @show="onDialogShow"
-    class="global-search-modal"
-  >
+  <Dialog :visible="visible" modal :style="{ width: '600px' }" :header="false" :closable="true" :dismissableMask="true"
+    @hide="onHide" @update:visible="$emit('update:visible', $event)" @show="onDialogShow" class="global-search-modal">
     <template #header>
       <div class="flex items-center gap-2">
         <i class="pi pi-search"></i>
@@ -20,20 +10,10 @@
 
     <!-- Apply v-focustrap to the modal content -->
     <div class="search-container" v-focustrap>
-      <ReservationSearchBar
-        ref="searchBarRef"
-        v-model="searchQuery"
-        :suggestions="searchSuggestions"
-        :is-searching="isSearching"
-        :active-filters="activeFilters"
-        :search-results-count="searchResultsCount"
-        @search="performSearch"
-        @clear="clearSearch"
-        @suggestion-selected="onSuggestionSelected"
-        @remove-filter="removeFilter"
-        @clear-filters="clearAllFilters"
-        @close-modal="handleCloseModal"
-      />
+      <ReservationSearchBar ref="searchBarRef" v-model="searchQuery" :suggestions="searchSuggestions"
+        :is-searching="isSearching" :active-filters="activeFilters" :search-results-count="searchResultsCount"
+        @search="performSearch" @clear="clearSearch" @suggestion-selected="onSuggestionSelected"
+        @remove-filter="removeFilter" @clear-filters="clearAllFilters" @close-modal="handleCloseModal" />
 
       <div v-if="searchResults.length > 0" class="search-results">
         <div class="search-results-header">
@@ -42,18 +22,13 @@
         </div>
 
         <div class="search-results-list">
-          <div
-            v-for="(reservation, index) in searchResults"
-            :key="reservation.reservation_id"
-            class="search-result-item"
-            :class="{ 'selected': selectedResultIndex === index }"
-            @click="selectReservation(reservation)"
-            @mouseenter="selectedResultIndex = index"
-          >
+          <div v-for="(reservation, index) in searchResults" :key="reservation.reservation_id"
+            class="search-result-item" :class="{ 'selected': selectedResultIndex === index }"
+            @click="selectReservation(reservation)" @mouseenter="selectedResultIndex = index">
             <div class="result-header">
               <span class="result-id">{{ reservation.reservation_id }}</span>
               <span class="result-status" :class="getStatusClass(reservation.status)">
-translateStatus(reservation.status)
+                translateReservationStatus(reservation.status)
               </span>
             </div>
 
@@ -79,11 +54,7 @@ translateStatus(reservation.status)
         </div>
 
         <div v-if="searchResults.length > 5" class="search-results-footer">
-          <Button
-            label="すべての結果を表示"
-            class="p-button-text"
-            @click="showAllResults"
-          />
+          <Button label="すべての結果を表示" class="p-button-text" @click="showAllResults" />
         </div>
       </div>
 
@@ -127,7 +98,7 @@ import ReservationSearchBar from '@/components/ReservationSearchBar.vue';
 import { useReservationSearch } from '@/composables/useReservationSearch';
 import { usePhoneticSearch } from '@/composables/usePhoneticSearch';
 import accessibilityService from '@/services/AccessibilityService';
-import { translateStatus } from '@/utils/reservationUtils';
+import { translateReservationStatus } from '@/utils/reservationUtils';
 
 const props = defineProps({
   visible: {
@@ -239,7 +210,7 @@ const announceSelectedResult = () => {
   if (selectedResultIndex.value >= 0 && selectedResultIndex.value < searchResults.value.length) {
     const reservation = searchResults.value[selectedResultIndex.value];
     accessibilityService.announce(
-      `${selectedResultIndex.value + 1}/${searchResults.value.length}: ${reservation.client_name}, ${translateStatus(reservation.status)}, ${formatDate(reservation.check_in)}から${formatDate(reservation.check_out)}まで`,
+      `${selectedResultIndex.value + 1}/${searchResults.value.length}: ${reservation.client_name}, ${translateReservationStatus(reservation.status)}, ${formatDate(reservation.check_in)}から${formatDate(reservation.check_out)}まで`,
       'polite'
     );
   }

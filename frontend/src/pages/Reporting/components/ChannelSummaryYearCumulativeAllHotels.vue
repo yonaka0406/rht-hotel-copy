@@ -1,4 +1,3 @@
-
 <template>
     <div class="p-4">
         <h3 class="text-xl font-semibold mb-4">予約分析（年間累計）</h3>
@@ -18,28 +17,36 @@
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
                 <Card v-if="scatterPlotSeriesData.length > 0">
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別チャネル分布</div></template>
+                    <template #header>
+                        <div class="flex-1 text-center font-bold">ホテル別チャネル分布</div>
+                    </template>
                     <template #content>
                         <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
 
                 <Card class="mt-4" v-if="paymentTimingChartData.hotels.length > 0">
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別支払タイミング分布</div></template>
+                    <template #header>
+                        <div class="flex-1 text-center font-bold">ホテル別支払タイミング分布</div>
+                    </template>
                     <template #content>
                         <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
 
                 <Card class="mt-4" v-if="bookerTypeChartData.hotels.length > 0">
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別予約者区分</div></template>
+                    <template #header>
+                        <div class="flex-1 text-center font-bold">ホテル別予約者区分</div>
+                    </template>
                     <template #content>
                         <div ref="bookerTypeChartContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
 
                 <Card class="mt-4" v-if="lengthOfStayChartData.length > 0">
-                    <template #header><div class="flex-1 text-center font-bold">ホテル別滞在日数</div></template>
+                    <template #header>
+                        <div class="flex-1 text-center font-bold">ホテル別滞在日数</div>
+                    </template>
                     <template #content>
                         <div ref="lengthOfStayChartContainer" style="width: 100%; height: 500px;"></div>
                     </template>
@@ -47,14 +54,20 @@
             </div>
             <div v-else-if="selectedView === 'table'">
                 <Card>
-                    <template #header><div class="flex-1 text-center font-bold">チャネルサマリーデータ</div></template>
+                    <template #header>
+                        <div class="flex-1 text-center font-bold">チャネルサマリーデータ</div>
+                    </template>
                     <template #content>
                         <DataTable :value="chartData" responsiveLayout="scroll">
                             <Column field="hotel_name" sortable align="center">
-                                <template #header><div class="flex-1 text-center font-bold">ホテル名</div></template>
+                                <template #header>
+                                    <div class="flex-1 text-center font-bold">ホテル名</div>
+                                </template>
                             </Column>
                             <Column field="reserved_dates" sortable align="center">
-                                <template #header><div class="flex-1 text-center font-bold">宿泊数</div></template>
+                                <template #header>
+                                    <div class="flex-1 text-center font-bold">宿泊数</div>
+                                </template>
                                 <template #body="slotProps">
                                     <div class="flex justify-center">
                                         {{ parseInt(slotProps.data.reserved_dates).toLocaleString('ja-JP') }}
@@ -62,7 +75,9 @@
                                 </template>
                             </Column>
                             <Column field="web_percentage" sortable align="center">
-                                <template #header><div class="flex-1 text-center font-bold">WEB/OTA予約率 (%)</div></template>
+                                <template #header>
+                                    <div class="flex-1 text-center font-bold">WEB/OTA予約率 (%)</div>
+                                </template>
                                 <template #body="slotProps">
                                     <div class="flex justify-center">
                                         {{ parseFloat(slotProps.data.web_percentage).toFixed(1) }}%
@@ -70,7 +85,9 @@
                                 </template>
                             </Column>
                             <Column field="direct_percentage" sortable align="center">
-                                <template #header><div class="flex-1 text-center font-bold">直予約率 (%)</div></template>
+                                <template #header>
+                                    <div class="flex-1 text-center font-bold">直予約率 (%)</div>
+                                </template>
                                 <template #body="slotProps">
                                     <div class="flex justify-center">
                                         {{ parseFloat(slotProps.data.direct_percentage).toFixed(1) }}%
@@ -78,11 +95,14 @@
                                 </template>
                             </Column>
                             <Column field="payment_timing" sortable align="center">
-                                <template #header><div class="flex-1 text-center font-bold">支払タイミング</div></template>
+                                <template #header>
+                                    <div class="flex-1 text-center font-bold">支払タイミング</div>
+                                </template>
                                 <template #body="slotProps">
                                     <div class="text-right">
                                         <div v-for="(value, key) in slotProps.data.payment_timing" :key="key">
-                                            {{ translatePaymentTiming(key) }}: {{ Math.round(value).toLocaleString('ja-JP') }} 泊
+                                            {{ translateReservationPaymentTiming(key) }}: {{
+                                                Math.round(value).toLocaleString('ja-JP') }} 泊
                                             <Tag v-if="paymentTimingChartData.hotelTotals[slotProps.data.hotel_name] > 0"
                                                 :value="`${(value / paymentTimingChartData.hotelTotals[slotProps.data.hotel_name] * 100).toFixed(1)}%`"
                                                 severity="info" class="ml-2" />
@@ -163,7 +183,7 @@ const bookerTypeChartInstance = shallowRef(null);
 const lengthOfStayChartContainer = ref(null);
 const lengthOfStayChartInstance = shallowRef(null);
 
-const translatePaymentTiming = (timing) => {
+const translateReservationPaymentTiming = (timing) => {
     const map = {
         'not_set': '未設定',
         'prepaid': '事前決済',
@@ -173,7 +193,7 @@ const translatePaymentTiming = (timing) => {
     return map[timing] || timing;
 };
 
-const reverseTranslatePaymentTiming = (translatedTiming) => {
+const reversetranslateReservationPaymentTiming = (translatedTiming) => {
     const map = {
         '未設定': 'not_set',
         '事前決済': 'prepaid',
@@ -232,7 +252,7 @@ const paymentTimingChartData = computed(() => {
 
     const series = paymentTimings.map(timing => {
         return {
-            name: translatePaymentTiming(timing),
+            name: translateReservationPaymentTiming(timing),
             type: 'bar',
             stack: 'total', // Re-added stack: 'total' for stacking
             label: {
@@ -271,24 +291,24 @@ const paymentTimingChartOptions = computed(() => ({
         axisPointer: {
             type: 'shadow'
         },
-                formatter: function (params) {
-                    let tooltipContent = params[0].name + '<br/>'; // Hotel Name
-                    const hotelName = params[0].name;
-                    const hotelData = chartData.value.find(item => item.hotel_name === hotelName);
+        formatter: function (params) {
+            let tooltipContent = params[0].name + '<br/>'; // Hotel Name
+            const hotelName = params[0].name;
+            const hotelData = chartData.value.find(item => item.hotel_name === hotelName);
 
-                    params.forEach(function (item) {
-                        const translatedTiming = item.seriesName; // e.g., "現地決済"
-                        const timingKey = reverseTranslatePaymentTiming(translatedTiming); // e.g., "on-site"
-                        const rawValue = hotelData?.payment_timing?.[timingKey] || 0;
-                        const percentage = item.value; // This is the percentage
+            params.forEach(function (item) {
+                const translatedTiming = item.seriesName; // e.g., "現地決済"
+                const timingKey = reversetranslateReservationPaymentTiming(translatedTiming); // e.g., "on-site"
+                const rawValue = hotelData?.payment_timing?.[timingKey] || 0;
+                const percentage = item.value; // This is the percentage
 
-                        tooltipContent += item.marker + translatedTiming + ': ' + Math.round(rawValue) + ' 泊 (' + percentage.toFixed(1) + '%)<br/>';
-                    });
-                    return tooltipContent;
-                }
+                tooltipContent += item.marker + translatedTiming + ': ' + Math.round(rawValue) + ' 泊 (' + percentage.toFixed(1) + '%)<br/>';
+            });
+            return tooltipContent;
+        }
     },
     legend: {
-        data: paymentTimingChartData.value.paymentTimings.map(translatePaymentTiming),
+        data: paymentTimingChartData.value.paymentTimings.map(translateReservationPaymentTiming),
         bottom: 0
     },
     grid: {
@@ -324,7 +344,7 @@ const bookerTypeChartData = computed(() => {
         };
     }
 
-    const filteredBookerTypeData = bookerTypeData.value.filter(hotelData => 
+    const filteredBookerTypeData = bookerTypeData.value.filter(hotelData =>
         hotelData.data && hotelData.data.some(d => d.room_nights > 0)
     );
 
@@ -449,7 +469,7 @@ const lengthOfStayChartData = computed(() => {
     if (!lengthOfStayData.value || lengthOfStayData.value.length === 0) {
         return [];
     }
-    const filteredLengthOfStayData = lengthOfStayData.value.filter(hotelData => 
+    const filteredLengthOfStayData = lengthOfStayData.value.filter(hotelData =>
         hotelData.data && hotelData.data.some(d => (Number(d.number_of_nights) || 0) > 0 || (Number(d.number_of_people) || 0) > 0)
     );
 
@@ -513,10 +533,10 @@ const lengthOfStayChartOptions = computed(() => ({
 }));
 
 const fetchReportData = async () => {
-    
+
     if (!props.selectedHotels || props.selectedHotels.length === 0) {
         chartData.value = [];
-        error.value = 'ホテルが選択されていません。';    
+        error.value = 'ホテルが選択されていません。';
         return;
     }
     loading.value = true;
@@ -526,7 +546,7 @@ const fetchReportData = async () => {
         const month = props.selectedDate.getMonth();
         const startDate = formatDate(new Date(year, 0, 1)); // January 1st of the selected year
         const endDate = formatDate(new Date(year, month + 1, 0)); // Last day of the selected month        
-        const summaryData = await fetchChannelSummary(props.selectedHotels, startDate, endDate);        
+        const summaryData = await fetchChannelSummary(props.selectedHotels, startDate, endDate);
         chartData.value = summaryData;
 
         const bookerTypePromises = props.selectedHotels.map(hotelId => fetchBookerTypeBreakdown(hotelId, startDate, endDate));
@@ -571,7 +591,7 @@ const fetchReportData = async () => {
     } catch (err) {
         error.value = err.message || 'データの取得中にエラーが発生しました。';
     } finally {
-        loading.value = false;        
+        loading.value = false;
     }
 };
 
@@ -589,7 +609,7 @@ const scatterPlotSeriesData = computed(() => {
 const chartOptions = ref({
     xAxis: {
         name: 'WEB/OTA予約率 (%)',
-        type: 'value',        
+        type: 'value',
         axisLabel: {
             formatter: '{value} %'
         }
@@ -627,7 +647,7 @@ const chartOptions = ref({
     }]
 });
 
-watch(scatterPlotSeriesData, (newData) => {    
+watch(scatterPlotSeriesData, (newData) => {
     chartOptions.value = {
         ...chartOptions.value,
         series: [{
@@ -712,7 +732,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart);
 });
 
-watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], () => {    
+watch(() => [props.selectedHotels, props.triggerFetch, props.selectedDate], () => {
     fetchReportData();
 }, { deep: true });
 

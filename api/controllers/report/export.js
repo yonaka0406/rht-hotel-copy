@@ -5,7 +5,7 @@ const ExcelJS = require("exceljs");
 const { createAccommodationTaxWorkbook } = require('./services/accommodationTaxExcel');
 const { generateReservationDetailsCsv } = require('./services/reservationDetailsCsv');
 
-const { formatDate, formatDateTime, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
+const { formatDate, formatDateTime, translateStatus, translateReservationPaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
 
 const getExportReservationList = async (req, res) => {
     const hotelId = req.params.hid;
@@ -53,7 +53,7 @@ const getExportReservationList = async (req, res) => {
                 残高: Math.floor(parseFloat(reservation.price)) - Math.floor(parseFloat(reservation.payment)),
                 宿泊者: clientNames,
                 支払者: payerNames,
-                支払い: translatePaymentTiming(reservation.payment_timing),
+                支払い: translateReservationPaymentTiming(reservation.payment_timing),
                 予約ID: reservation.id,
                 備考: reservation.comment || '',
             });

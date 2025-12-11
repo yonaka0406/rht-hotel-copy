@@ -124,8 +124,6 @@
             </Fieldset>
         </div>
 
-
-
         <div class="field flex flex-col col-span-2">
             <Divider />
         </div>
@@ -140,7 +138,7 @@
         <div class="field flex flex-col">
             <div class="items-center flex">
                 <span class="font-bold">支払い：</span>
-                <SelectButton v-model="paymentTimingSelected" :options="paymentTimingOptions"
+                <SelectButton v-model="paymentTimingSelected" :options="reservationPaymentTimingOptions"
                     optionLabel="label" optionValue="value" @change="updatePaymentTiming"
                     :disabled="reservationStatus === 'キャンセル'" />
             </div>
@@ -201,15 +199,10 @@
         v-model:isSubmitting="isSubmitting"
     />
 
-    <!-- Change Client Dialog -->
-    <Dialog v-model:visible="visibleClientChangeDialog" :header="'顧客変更'" :closable="true" :modal="true"
-        :style="{ width: '60vw' }">
-        <ReservationClientEdit v-if="selectedClient" :client_id="selectedClient" />
-        <template #footer>
-            <Button label="閉じる" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
-                @click="closeChangeClientDialog" :loading="isSubmitting" :disabled="isSubmitting" />
-        </template>
-    </Dialog>
+    <ChangeClientDialog
+        v-model="visibleClientChangeDialog"
+        :client_id="selectedClient"
+    />
 
     <ReservationAddRoomDialog
         :reservation_details="reservation_details"
@@ -451,11 +444,10 @@
         </template>
     </Dialog>
 
-    <!-- Reservation Edit History -->
-    <Dialog v-model:visible="historyDialogVisible" header="編集履歴" :modal="true" :dismissableMask="true"
-        :style="{ width: '80vw', 'max-height': '80vh', 'overflow-y': 'auto' }">
-        <ReservationHistory v-if="props.reservation_id" :reservation_id="props.reservation_id" />
-    </Dialog>
+    <ReservationHistoryDialog
+        :reservation_id="props.reservation_id"
+        v-model:visible="historyDialogVisible"
+    />
 
     <ReservationCopyDialog
         :reservation_id="props.reservation_id"
@@ -500,9 +492,9 @@ import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 import { validate as uuidValidate } from 'uuid';
+import { reservationTypeOptions, reservationPaymentTimingOptions, translateReservationStatus, translateReservationType, translateReservationPaymentTiming } from '@/utils/reservationUtils';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
-import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
-import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
 import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
 
 import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
@@ -511,6 +503,8 @@ import ReservationAnnounceDialog from '@/pages/MainPage/Reservation/components/d
 import ReservationCancelDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCancelDialog.vue';
 import ReservationSplitDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationSplitDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
+import ReservationHistoryDialog from './dialogs/ReservationHistoryDialog.vue';
+import ChangeClientDialog from './dialogs/ChangeClientDialog.vue';
 
 import ReservationCommentDialog from './dialogs/ReservationCommentDialog.vue';
 
@@ -518,7 +512,6 @@ import ReservationCommentDialog from './dialogs/ReservationCommentDialog.vue';
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
-// Assign unique group names to each confirm instance
 const confirm = useConfirm();
 import {
     Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message, Fieldset
@@ -562,22 +555,7 @@ import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 
 const reservationTypeSelected = ref(null);
-const reservationTypeOptions = computed(() => {
-    return [
-        { label: '通常予約', value: 'default' },
-        { label: '社員', value: 'employee' },
-    ];
-});
-
 const paymentTimingSelected = ref(null);
-const paymentTimingOptions = computed(() => {
-    return [
-        { label: '未設定', value: 'not_set' },
-        { label: '事前決済', value: 'prepaid' },
-        { label: '現地決済', value: 'on-site' },
-        { label: '後払い', value: 'postpaid' },
-    ];
-});
 
 const isSubmitting = ref(false);
 
@@ -633,24 +611,7 @@ const toggleImportantComment = async () => {
     }
 };
 
-// Helper
-const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
-const formatTime = (time) => {
-    if (!time) return "";
-    // Check if time is already a Date object
-    if (time instanceof Date) {
-        return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
 
-    // If time is a string
-    const date = new Date(`1970-01-01T${time}`);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
 
 const hasRoomChange = (group) => {
     if (!group || !group.details || group.details.length === 0) return false;
@@ -687,40 +648,8 @@ const hasRoomChange = (group) => {
 
 // Computed
 const reservationInfo = computed(() => props.reservation_details?.[0]);
-const reservationStatus = computed(() => {
-    switch (reservationInfo.value.status) {
-        case 'hold':
-            return '保留中';
-        case 'provisory':
-            return '仮予約';
-        case 'confirmed':
-            return '確定';
-        case 'checked_in':
-            return 'チェックイン';
-        case 'checked_out':
-            return 'チェックアウト';
-        case 'cancelled':
-            return 'キャンセル';
-        case 'block':
-            return '予約不可';
-        default:
-            return '不明';
-    }
-});
-const reservationType = computed(() => {
-    switch (reservationInfo.value.type) {
-        case 'default':
-            return '通常予約';
-        case 'employee':
-            return '社員';
-        case 'ota':
-            return 'OTA';
-        case 'web':
-            return '自社WEB';
-        default:
-            return '不明';
-    }
-});
+const reservationStatus = computed(() => reservationInfo.value ? translateReservationStatus(reservationInfo.value.status) : '不明');
+const reservationType = computed(() => reservationInfo.value ? translateReservationType(reservationInfo.value.type) : '不明');
 const checkInTime = ref(null);
 const checkOutTime = ref(null);
 const groupedRooms = computed(() => {

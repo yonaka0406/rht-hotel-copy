@@ -1,7 +1,7 @@
 const formatDate = (date) => {
   if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error("Invalid Date object:", date);
-      throw new Error("The provided input is not a valid Date object:");
+    console.error("Invalid Date object:", date);
+    throw new Error("The provided input is not a valid Date object:");
   }
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -11,8 +11,8 @@ const formatDate = (date) => {
 
 const formatDateTime = (date) => {
   if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error("Invalid Date object:", date);
-      throw new Error("The provided input is not a valid Date object:");
+    console.error("Invalid Date object:", date);
+    throw new Error("The provided input is not a valid Date object:");
   }
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -44,7 +44,7 @@ const translateStatus = (status) => {
   }
 };
 
-const translatePaymentTiming = (timing) => {
+const translateReservationPaymentTiming = (timing) => {
   switch (timing) {
     case 'not_set':
       return '未設定';
@@ -60,7 +60,7 @@ const translatePaymentTiming = (timing) => {
 };
 
 const translateType = (type) => {
-  switch (type) {    
+  switch (type) {
     case 'default':
       return '通常';
     case 'employee':
@@ -68,18 +68,18 @@ const translateType = (type) => {
     case 'ota':
       return 'OTA';
     case 'web':
-      return '自社ウェブ';    
+      return '自社ウェブ';
     default:
       return '不明';
   }
 };
 
 const translatePlanType = (type) => {
-  switch (type) {    
+  switch (type) {
     case 'per_person':
       return '一人当たり';
     case 'per_room':
-      return '部屋当たり';    
+      return '部屋当たり';
     default:
       return '不明';
   }
@@ -98,7 +98,7 @@ module.exports = {
   formatDate,
   formatDateTime,
   translateStatus,
-  translatePaymentTiming,
+  translateReservationPaymentTiming,
   translateType,
   translatePlanType,
   translateMealType,

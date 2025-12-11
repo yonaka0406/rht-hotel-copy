@@ -49,7 +49,7 @@ const props = defineProps({
         type: Array,
         required: true
     },
-    translatePaymentTiming: {
+    translateReservationPaymentTiming: {
         type: Function,
         required: true
     }
@@ -224,7 +224,7 @@ const initPaymentTimingChart = () => {
 
     const chartData = paymentData.map(item => ({
         value: item.count,
-        name: props.translatePaymentTiming(item.paymentTiming)
+        name: props.translateReservationPaymentTiming(item.paymentTiming)
     }));
 
     const option = {
