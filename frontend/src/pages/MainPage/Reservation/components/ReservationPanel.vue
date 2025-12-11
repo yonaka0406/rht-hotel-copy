@@ -200,7 +200,7 @@
     />
 
     <ChangeClientDialog
-        v-model:visible="visibleClientChangeDialog"
+        v-model="visibleClientChangeDialog"
         :client_id="selectedClient"
     />
 

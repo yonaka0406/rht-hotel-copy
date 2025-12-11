@@ -10,10 +10,11 @@ const getHotelPatterns = async (req, res) => {
     }
 };
 const fetchAllHotelPatterns = async (req, res) => {
-    const hotel_id = parseInt(req.params.hotel_id);
+const hotel_id_str = req.params.hotel_id;
+    const hotel_id = Number(hotel_id_str);
 
-    if (!hotel_id) {
-        return res.status(400).json({ error: 'Hotel ID is required' });
+    if (!Number.isInteger(hotel_id)) {
+        return res.status(400).json({ error: 'Hotel ID must be a valid integer' });
     }
 
     try {
