@@ -41,8 +41,6 @@ import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
-import Panel from 'primevue/panel';
-import Column from 'primevue/column';
 
 const props = defineProps({
     visible: Boolean,

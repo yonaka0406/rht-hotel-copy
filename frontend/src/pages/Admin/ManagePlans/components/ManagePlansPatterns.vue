@@ -1,6 +1,5 @@
 <template>
     <Panel :header="`プランパターン (${props.selectedHotelName})`">
-
         <div class="flex justify-end mb-2">
             <Button @click="showHotelDialog = true"
                 icon="pi pi-plus"
@@ -69,12 +68,8 @@
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import DataTable from 'primevue/datatable';
-    import Column from 'primevue/column';
-    import FloatLabel from 'primevue/floatlabel';
-    import InputText from 'primevue/inputtext';
-    import Select from 'primevue/select';
-    import Button from 'primevue/button';
-    import Badge from 'primevue/badge';
+    import Column from 'primevue/column';    
+    import Button from 'primevue/button';    
     import Panel from 'primevue/panel';
     import AddHotelPatternDialog from './dialogs/AddHotelPatternDialog.vue';
     import EditHotelPatternDialog from './dialogs/EditHotelPatternDialog.vue';
@@ -117,6 +112,7 @@
         if (props.selectedHotelId) {
             await fetchPatternsForHotel(props.selectedHotelId);
             allHotelPatterns.value = patterns.value;
+            toast.add({ severity: 'success', summary: '成功', detail: 'パターンが更新されました。', life: 3000 });
         }
     };
 
