@@ -38,7 +38,7 @@
         </Column>
         <Column field="status" header="ステータス" sortable filter filterField="status" :showFilterMatchModes="false" :showFilterMenu="false">
           <template #body="slotProps">
-            {{ translateStatus(slotProps.data.status) }}
+            {{ translateReservationStatus(slotProps.data.status) }}
           </template>
           <template #filter="{ filterModel, filterCallback }">
             <Select v-model="filterModel.value" :options="uniqueStatuses" optionLabel="label" optionValue="value" placeholder="全て" class="p-column-filter" :showClear="true" @change="filterCallback()"></Select>
@@ -49,7 +49,7 @@
         <Column field="number_of_people" header="人数" hidden></Column>
         <Column field="type" header="タイプ" hidden>
           <template #body="slotProps">
-            {{ translateType(slotProps.data.type) }}
+            {{ translateReservationType(slotProps.data.type) }}
           </template>
         </Column>
         <Column field="insert" header="作成" sortable filter filterField="insert" :showFilterMatchModes="false" :showFilterMenu="false">
@@ -99,7 +99,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 
 import { formatDate } from '@/utils/dateUtils';
 import { useSystemLogs } from '@/composables/useSystemLogs';
-import { translateStatus, translateType } from '@/utils/reservationUtils';
+import { translateReservationStatus, translateReservationType } from '@/utils/reservationUtils';
 
 // Primevue
 import DatePicker from 'primevue/datepicker';
@@ -160,7 +160,7 @@ const uniqueStatuses = computed(() => {
       statuses.add(log.status);
     }  });
   // Map raw status values to translated ones for display in the filter dropdown
-  return Array.from(statuses).map(s => ({ label: translateStatus(s), value: s })).sort((a, b) => a.label.localeCompare(b.label));
+  return Array.from(statuses).map(s => ({ label: translateReservationStatus(s), value: s })).sort((a, b) => a.label.localeCompare(b.label));
 });
 
 const booleanFilterOptions = ref([

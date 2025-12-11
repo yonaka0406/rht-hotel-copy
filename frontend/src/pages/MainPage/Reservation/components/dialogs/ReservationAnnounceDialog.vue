@@ -59,7 +59,7 @@ import { useToast } from 'primevue/usetoast';
 import {
     Dialog, Button, Fieldset, DataTable, Column
 } from 'primevue';
-import { translatePaymentTiming, translateType } from '@/utils/reservationUtils';
+import { translateReservationPaymentTiming, translateReservationType } from '@/utils/reservationUtils';
 
 const toast = useToast();
 
@@ -160,7 +160,7 @@ const generateSlackMessage = () => {
     const checkInDate = info.check_in ? formatDate(new Date(info.check_in)) : '';
     const checkOutDate = info.check_out ? formatDate(new Date(info.check_out)) : '';
     const totalOnSitePayment = calculateTotalOnSitePayment(props.reservation_payments);
-    const translatedPaymentTiming = translatePaymentTiming(info.payment_timing);
+    const translatedPaymentTiming = translateReservationPaymentTiming(info.payment_timing);
     let paymentDetails = info.payment_timing === 'on-site' ? `${translatedPaymentTiming} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : translatedPaymentTiming;
     let guestNames = '';
     if (props.allReservationClients && props.allReservationClients.length > 0) {
@@ -289,11 +289,11 @@ const parkingDetails = computed(() => {
 const paymentDetailsDisplay = computed(() => {
     const info = props.reservationInfo;
     const totalOnSitePayment = calculateTotalOnSitePayment(props.reservation_payments);
-    const translatedPaymentTiming = translatePaymentTiming(info.payment_timing);
+    const translatedPaymentTiming = translateReservationPaymentTiming(info.payment_timing);
     return info.payment_timing === 'on-site' ? `${translatedPaymentTiming} ${totalOnSitePayment > 0 ? `¥${totalOnSitePayment.toLocaleString()}` : ''}` : translatedPaymentTiming;
 });
 
-const translatedReservationType = computed(() => translateType(props.reservationInfo.type));
+const translatedReservationType = computed(() => translateReservationType(props.reservationInfo.type));
 
 const roomDetailsForDisplay = computed(() => {
     const detailsByDate = {};

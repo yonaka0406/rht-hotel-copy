@@ -249,7 +249,7 @@ const { setRoomPlan, setRoomPattern, fetchAvailableRooms, getAvailableDatesForCh
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchAllAddons, fetchPatternsForHotel, fetchPlanAddons } = usePlansStore(); // fetchPlanAddons needed
 
-import { daysOfWeek } from '@/utils/dateUtils';
+import { daysOfWeek, formatDate } from '@/utils/dateUtils';
 const props = defineProps({
     visible: Boolean,
     reservation_id: {
@@ -298,13 +298,7 @@ const newCheckOut = ref(null);
 const roomsAvailableChanges = ref([]);
 const selectedRoomsForChange = ref([]);
 
-// Helper function needed from parent
-const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
+
 
 const handleTabChange = async (newTabValue) => {
     tabsReservationBulkEditDialog.value = newTabValue * 1;

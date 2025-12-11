@@ -145,10 +145,10 @@
                     </Column>
                     <Column field="status" header="ステータス" :sortable="true" style="min-width:120px">
                         <template #body="{data}">
-                            <Tag :value="translateStatus(data.status, data.due_date)" :severity="getStatusSeverity(data.status, data.due_date)" />
+                            <Tag :value="translateActionStatus(data.status, data.due_date)" :severity="getStatusSeverity(data.status, data.due_date)" />
                         </template>
                         <template #filter="{filterModel,filterCallback}">
-                            <Select v-model="filterModel.value" @change="filterCallback()" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="ステータスを選択" class="p-column-filter" />
+                            <Select v-model="filterModel.value" @change="filterCallback()" :options="actionStatusOptions" optionLabel="label" optionValue="value" placeholder="ステータスを選択" class="p-column-filter" />
                         </template>
                     </Column>
                     <Column header="Google" headerStyle="width: 5rem; text-align: center" bodyStyle="text-align: center;">
@@ -222,7 +222,7 @@
             </Column>
             <Column field="status" header="ステータス" :sortable="true">
                 <template #body="{data}">
-                    <Tag :value="translateStatus(data.status, data.due_date)" :severity="getStatusSeverity(data.status, data.due_date)" />
+                    <Tag :value="translateActionStatus(data.status, data.due_date)" :severity="getStatusSeverity(data.status, data.due_date)" />
                 </template>
             </Column>
             <Column field="assigned_to_name" header="担当者" :sortable="true"></Column>
@@ -253,7 +253,7 @@
       :allClients="clients"
       :clientsIsLoading="clientsIsLoading"
       :actionTypeOptions="actionTypeOptions"
-      :statusOptions="statusOptions"
+      :actionStatusOptions="actionStatusOptions"
       :userOptions="users"
       @save-action="handleSaveAction"
       @close-dialog="closeActionFormDialog"
@@ -334,7 +334,7 @@ const actionTypeTranslations = {
     'note': 'メモ',
     'other': 'その他'
 };
-const statusTranslations = {
+const actionStatusTranslations = {
     'pending': '保留中',
     'scheduled': '予定',
     'completed': '完了',
@@ -347,8 +347,8 @@ const statusTranslations = {
 const actionTypeOptions = ref(
     Object.entries(actionTypeTranslations).map(([value, label]) => ({ label, value }))
 );
-const statusOptions = ref(
-    Object.entries(statusTranslations)
+const actionStatusOptions = ref(
+    Object.entries(actionStatusTranslations)
         .filter(([value, _label]) => value !== 'needs_follow_up') // Filter out 'needs_follow_up' from selectable options
         .map(([value, label]) => ({ label, value }))
 );
@@ -368,9 +368,9 @@ const getEffectiveStatus = (action, due_date) => {
 
 // Helper functions for translation (Kept in parent as used by DataTable)
 const translateActionType = (typeKey) => actionTypeTranslations[typeKey] || typeKey;
-const translateStatus = (status, due_date) => {
+const translateActionStatus = (status, due_date) => {
     const eStatus = getEffectiveStatus(status, due_date);
-    return statusTranslations[eStatus] || status;
+    return actionStatusTranslations[eStatus] || status;
 };
 
 const goToEditClientPage = (clientId) => {

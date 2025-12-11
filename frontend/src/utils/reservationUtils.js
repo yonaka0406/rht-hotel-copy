@@ -1,21 +1,26 @@
-export const translatePaymentTiming = (timing) => {
-  switch (timing) {
-      case 'not_set': return '未設定';
-      case 'prepaid': return '事前決済';
-      case 'on-site': return '現地決済';
-      case 'postpaid': return '後払い';
-      default: return '';
-  }
-};
-
-export const paymentTimingOptions = [
+export const reservationPaymentTimingOptions = [
     { label: '未設定', value: 'not_set' },
     { label: '事前決済', value: 'prepaid' },
     { label: '現地決済', value: 'on-site' },
     { label: '後払い', value: 'postpaid' },
 ];
 
-export function translateStatus(status) {
+export function translateReservationPaymentTiming(timing) {
+    const option = reservationPaymentTimingOptions.find(opt => opt.value === timing);
+    return option ? option.label : timing;
+}
+
+export const reservationStatusOptions = [
+    { label: '保留中', value: 'hold' },
+    { label: '仮予約', value: 'provisory' },
+    { label: '確定', value: 'confirmed' },
+    { label: 'チェックイン', value: 'checked_in' },
+    { label: 'チェックアウト', value: 'checked_out' },
+    { label: 'キャンセル', value: 'cancelled' },
+    { label: '予約不可', value: 'block' },
+];
+
+export function translateReservationStatus(status) {
     switch (status) {
         case 'hold': return '保留中';
         case 'provisory': return '仮予約';
@@ -35,12 +40,7 @@ export const reservationTypeOptions = [
     { label: '自社WEB', value: 'web' },
 ];
 
-export function translateType(type) {
-    switch (type) {
-        case 'default': return '通常予約';
-        case 'employee': return '社員';
-        case 'ota': return 'OTA';
-        case 'web': return '自社ウェブ';
-        default: return type;
-    }
+export function translateReservationType(type) {
+    const option = reservationTypeOptions.find(opt => opt.value === type);
+    return option ? option.label : type;
 }

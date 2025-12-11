@@ -138,7 +138,7 @@
         <div class="field flex flex-col">
             <div class="items-center flex">
                 <span class="font-bold">支払い：</span>
-                <SelectButton v-model="paymentTimingSelected" :options="paymentTimingOptions"
+                <SelectButton v-model="paymentTimingSelected" :options="reservationPaymentTimingOptions"
                     optionLabel="label" optionValue="value" @change="updatePaymentTiming"
                     :disabled="reservationStatus === 'キャンセル'" />
             </div>
@@ -199,15 +199,10 @@
         v-model:isSubmitting="isSubmitting"
     />
 
-    <!-- Change Client Dialog -->
-    <Dialog v-model:visible="visibleClientChangeDialog" :header="'顧客変更'" :closable="true" :modal="true"
-        :style="{ width: '60vw' }">
-        <ReservationClientEdit v-if="selectedClient" :client_id="selectedClient" />
-        <template #footer>
-            <Button label="閉じる" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
-                @click="closeChangeClientDialog" :loading="isSubmitting" :disabled="isSubmitting" />
-        </template>
-    </Dialog>
+    <ChangeClientDialog
+        v-model:visible="visibleClientChangeDialog"
+        :client_id="selectedClient"
+    />
 
     <ReservationAddRoomDialog
         :reservation_details="reservation_details"
@@ -276,10 +271,9 @@ import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 import { validate as uuidValidate } from 'uuid';
-import { reservationTypeOptions, paymentTimingOptions, translateStatus, translateType } from '@/utils/reservationUtils';
+import { reservationTypeOptions, reservationPaymentTimingOptions, translateReservationStatus, translateReservationType, translateReservationPaymentTiming } from '@/utils/reservationUtils';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 
-import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
 import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
 
 import CancellationCalculatorDialog from '@/pages/MainPage/Reservation/components/dialogs/CancellationCalculatorDialog.vue';
@@ -290,6 +284,7 @@ import ReservationSplitDialog from '@/pages/MainPage/Reservation/components/dial
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 import ReservationEditDialog from './dialogs/ReservationEditDialog.vue';
 import ReservationHistoryDialog from './dialogs/ReservationHistoryDialog.vue';
+import ChangeClientDialog from './dialogs/ChangeClientDialog.vue';
 
 import ReservationCommentDialog from './dialogs/ReservationCommentDialog.vue';
 
@@ -431,8 +426,8 @@ const hasRoomChange = (group) => {
 
 // Computed
 const reservationInfo = computed(() => props.reservation_details?.[0]);
-const reservationStatus = computed(() => reservationInfo.value ? translateStatus(reservationInfo.value.status) : '不明');
-const reservationType = computed(() => reservationInfo.value ? translateType(reservationInfo.value.type) : '不明');
+const reservationStatus = computed(() => reservationInfo.value ? translateReservationStatus(reservationInfo.value.status) : '不明');
+const reservationType = computed(() => reservationInfo.value ? translateReservationType(reservationInfo.value.type) : '不明');
 const checkInTime = ref(null);
 const checkOutTime = ref(null);
 const groupedRooms = computed(() => {

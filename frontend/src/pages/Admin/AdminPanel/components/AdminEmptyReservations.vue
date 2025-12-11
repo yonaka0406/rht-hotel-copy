@@ -28,12 +28,12 @@
                 <Column field="number_of_nights" header="泊数"></Column>
                 <Column header="ステータス">
                     <template #body="slotProps">
-                        {{ translateStatus(slotProps.data.status) }}
+                        {{ translateReservationStatus(slotProps.data.status) }}
                     </template>
                 </Column>
                 <Column header="タイプ">
                     <template #body="slotProps">
-                        {{ translateType(slotProps.data.type) }}
+                        {{ translateReservationType(slotProps.data.type) }}
                     </template>
                 </Column>
                 <Column header="アクション">
@@ -74,7 +74,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 import ToggleButton from 'primevue/togglebutton';
 import { useValidationStore } from '@/composables/useValidationStore';
 import { formatDate } from '@/utils/dateUtils';
-import { translateStatus, translateType } from '@/utils/reservationUtils';
+import { translateReservationStatus, translateReservationType } from '@/utils/reservationUtils';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';

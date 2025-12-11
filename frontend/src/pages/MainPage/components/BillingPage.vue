@@ -41,7 +41,7 @@
                                                     translatePreference(group.billing_preference) }}</Badge>
                                             <Badge v-if="group.invoice_number" severity="contrast" class="mr-2">{{
                                                 group.invoice_number }}</Badge>
-                                            <Badge severity="secondary" class="mr-2">{{ translateStatus(group.status) }}
+                                            <Badge severity="secondary" class="mr-2">{{ translateBillingStatus(group.status) }}
                                             </Badge>
                                             <Button icon="pi pi-pencil" label="編集" class="p-button-sm"
                                                 @click="openInvoiceDialog(group)" />
@@ -186,7 +186,7 @@ const formatDate = (date) => {
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 };
-const translateStatus = (status) => {
+const translateBillingStatus = (status) => {
     const statusMap = {
         "draft": "下書き",
         "sent": "送信済み",

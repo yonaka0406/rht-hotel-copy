@@ -25,7 +25,7 @@
     const { fetchClient } = useClientStore();
     import { useUserStore } from '@/composables/useUserStore';
     const { getUserById } = useUserStore();
-    import { translateStatus, translateType, translatePaymentTiming } from '@/utils/reservationUtils';
+    import { translateReservationStatus, translateReservationType, translateReservationPaymentTiming } from '@/utils/reservationUtils';
 
     // Primevue
     import { Panel, Timeline, ProgressSpinner } from 'primevue';
@@ -101,16 +101,16 @@
     };
     const getValue = (key, value) => {
         if (key === 'status') {
-            return translateStatus(value);
+            return translateReservationStatus(value);
         }
         if (key === 'type') {
-            return translateType(value);
+            return translateReservationType(value);
         }
         if (key === 'reservation_client_id') {
             return value;
         }
         if (key === 'payment_timing') {
-            return translatePaymentTiming(value);
+            return translateReservationPaymentTiming(value);
         }
 
         if (key === 'number_of_people') {

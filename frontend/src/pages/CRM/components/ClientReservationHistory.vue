@@ -122,6 +122,7 @@
     const { client_actions, fetchClientActions, addAction, editAction, removeAction } = useCRMStore();
     import { useUserStore } from '@/composables/useUserStore';
     const { users, logged_user, fetchUsers, fetchUser } = useUserStore();
+    import { translateReservationStatus } from '@/utils/reservationUtils';
 
     // Primevue
     import { Panel, DataTable, Column, Tag, SelectButton, Button, Menu } from 'primevue';
@@ -169,17 +170,7 @@
         'ota': 'OTA予約',
         'web': 'ウェブ予約',
     };
-    const reservationStatusTranslations = {
-        'hold': '保留',
-        'provisory': '仮予約',
-        'confirmed': '確定',
-        'checked_in': 'チェックイン済み',
-        'checked_out': 'チェックアウト済み',
-        'cancelled': 'キャンセル済み',
-        'block': 'ブロック',
-    };
-
-    // Options for dialog (Passed to dialog)
+        // Options for dialog (Passed to dialog)
     const actionTypeOptions = computed(() =>
         Object.entries(actionTypeTranslations).map(([value, label]) => ({ label, value }))
     );
@@ -223,7 +214,7 @@
             const eStatus = getEffectiveActionStatus(status, dueDate);
             return statusTranslations[eStatus] || status;
         } else { // dataType === 'reservation'
-            return reservationStatusTranslations[status] || status;
+            return translateReservationStatus(status);
         }
     };
 
