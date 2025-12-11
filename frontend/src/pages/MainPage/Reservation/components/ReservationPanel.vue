@@ -275,10 +275,11 @@
 
 <script setup>
 // Vue
-import { ref, watch, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 import { validate as uuidValidate } from 'uuid';
+import { reservationTypeOptions, paymentTimingOptions } from '@/utils/reservationUtils';
 
 import ReservationClientEdit from '@/pages/MainPage/Reservation/components/ReservationClientEdit.vue';
 import ReservationHistory from '@/pages/MainPage/Reservation/components/ReservationHistory.vue';
@@ -301,7 +302,7 @@ import { useConfirm } from "primevue/useconfirm";
 // Assign unique group names to each confirm instance
 const confirm = useConfirm();
 import {
-    Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton, Checkbox, Message, Fieldset
+    Dialog, InputText, Textarea, DatePicker, SelectButton, Button, Badge, Divider, ConfirmDialog, SplitButton, Message, Fieldset
 } from 'primevue';
 
 const commentDialogVisible = ref(false);
@@ -337,29 +338,12 @@ const props = defineProps({
 
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { setReservationType, setReservationStatus, setRoomPlan, setRoomPattern,
-    fetchAvailableRooms, getAvailableDatesForChange, setReservationRoomsPeriod,
+const { setReservationType, setReservationStatus,  
+    getAvailableDatesForChange, 
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
-import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel, fetchPlanTypeCategories, fetchPlanPackageCategories, updatePlanDisplayOrder, copyPlanToHotel, bulkCopyPlansToHotel } = usePlansStore();
 
 const reservationTypeSelected = ref(null);
-const reservationTypeOptions = computed(() => {
-    return [
-        { label: '通常予約', value: 'default' },
-        { label: '社員', value: 'employee' },
-    ];
-});
-
 const paymentTimingSelected = ref(null);
-const paymentTimingOptions = computed(() => {
-    return [
-        { label: '未設定', value: 'not_set' },
-        { label: '事前決済', value: 'prepaid' },
-        { label: '現地決済', value: 'on-site' },
-        { label: '後払い', value: 'postpaid' },
-    ];
-});
 
 const isSubmitting = ref(false);
 
@@ -610,50 +594,6 @@ const cancellationFeeMessage = computed(() => {
 const numberOfNights = ref(0);
 const numberOfNightsTotal = ref(0);
 
-const computedMinCheckIn = computed(() => {
-    let minDate = null;
-    const newSelectedRooms = selectedRoomsForChange.value;
-
-    if (newSelectedRooms.length > 0) {
-        const selectedChanges = roomsAvailableChanges.value.filter(change => newSelectedRooms.includes(change.roomId));
-
-        selectedChanges.forEach(change => {
-            if (change.results.earliestCheckIn) {
-                const earliestCheckInDate = new Date(change.results.earliestCheckIn);
-                if (!minDate || earliestCheckInDate > minDate) {
-                    minDate = earliestCheckInDate;
-                }
-            }
-        });
-    }
-    return minDate;
-});
-
-const computedMaxCheckOut = computed(() => {
-    let maxDate = null;
-    const newSelectedRooms = selectedRoomsForChange.value;
-
-    if (newSelectedRooms.length > 0) {
-        const selectedChanges = roomsAvailableChanges.value.filter(change => newSelectedRooms.includes(change.roomId));
-
-        selectedChanges.forEach(change => {
-            if (change.results.latestCheckOut) {
-                const latestCheckOutDate = new Date(change.results.latestCheckOut);
-                if (!maxDate || latestCheckOutDate < maxDate) {
-                    maxDate = latestCheckOutDate;
-                }
-            }
-        });
-    }
-    return maxDate;
-});
-
-const areAllRoomsSelectedComputed = computed(() => {
-    const roomIdsToChange = selectedRoomsForChange.value;
-    const allOriginalRoomIds = groupedRooms.value.map(group => group.room_id);
-    return roomIdsToChange.length === allOriginalRoomIds.length && roomIdsToChange.every(id => allOriginalRoomIds.includes(id));
-});
-
 // Reservation Type
 const updateReservationType = async (event) => {
 
@@ -886,7 +826,6 @@ const handleCancel = () => {
     });
 };
 
-
 const revertCheckout = () => {
     confirm.require({
         group: 'revertCheckout',
@@ -980,8 +919,6 @@ const goToNewReservation = async () => {
     await router.push({ name: 'ReservationsNew' });
 };
 
-
-
 // Dialog: Change Client
 const visibleClientChangeDialog = ref(false);
 const selectedClient = ref(null);
@@ -1006,13 +943,11 @@ const closeReservationBulkEditDialog = () => {
     visibleReservationBulkEditDialog.value = false;
 };
 
-
 // Dialog: History
 const historyDialogVisible = ref(false);
 const showHistoryDialog = () => {
     historyDialogVisible.value = true;
 };
-
 const showCancellationCalculator = ref(false);
 const showCopyDialog = ref(false);
 const showSplitDialog = ref(false);
@@ -1066,4 +1001,5 @@ onMounted(async () => {
     // Initialize localCommentInput with the current comment from reservationInfo
     localCommentInput.value = reservationInfo.value.comment;
 });
+
 </script>

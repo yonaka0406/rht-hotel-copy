@@ -8,6 +8,13 @@ export const translatePaymentTiming = (timing) => {
   }
 };
 
+export const paymentTimingOptions = [
+    { label: '未設定', value: 'not_set' },
+    { label: '事前決済', value: 'prepaid' },
+    { label: '現地決済', value: 'on-site' },
+    { label: '後払い', value: 'postpaid' },
+];
+
 export function translateStatus(status) {
     switch (status) {
         case 'hold': return '保留中';
@@ -20,6 +27,11 @@ export function translateStatus(status) {
         default: return status;
     }
 }
+
+export const reservationTypeOptions = [
+    { label: '通常予約', value: 'default' },
+    { label: '社員', value: 'employee' },
+];
 
 export function translateType(type) {
     switch (type) {
