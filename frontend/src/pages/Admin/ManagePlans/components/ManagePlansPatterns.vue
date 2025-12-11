@@ -89,11 +89,6 @@
     const editHotelPattern = ref(null);
     const showHotelDialog = ref(false);
     const showEditHotelDialog = ref(false);
-    const getPatternCount = (hotel_id) => {
-        // console.log('getPatternCount hotel_id:', hotel_id);
-        // console.log('getPatternCount allHotelPatterns:', allHotelPatterns.value);
-        return allHotelPatterns.value.filter(pattern => pattern.hotel_id === hotel_id).length;
-    };
     const openEditHotelPattern = async (data) => {
         console.log('ManagePlansPatterns - openEditHotelPattern called with data:', data);
         console.log('ManagePlansPatterns - Current hotelPlans:', hotelPlans.value);
