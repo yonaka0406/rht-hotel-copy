@@ -149,7 +149,7 @@
                                                 <div class="field col-span-3 mt-8">
                                                     <FloatLabel>
                                                         <Select v-model="selectedAddonOption" :options="addonOptions"
-                                                            optionLabel="addon_name" showClear fluid />
+                                                            optionLabel="addon_name" optionValue="id" showClear fluid />
                                                         <label>アドオン選択</label>
                                                     </FloatLabel>
                                                 </div>
