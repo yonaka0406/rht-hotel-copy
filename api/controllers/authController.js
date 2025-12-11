@@ -367,7 +367,7 @@ const googleCallback = async (req, res) => {
     let user = await usersModel.selectUserByProviderId(req.requestId, 'google', googleUserId);
 
     if (!user) {
-      const existingUserByEmail = await selectUserByEmail(req.requestId, userEmail);
+      const existingUserByEmail = await usersModel.selectUserByEmail(req.requestId, userEmail);
       if (existingUserByEmail) {
         if (existingUserByEmail.auth_provider === 'local' || existingUserByEmail.auth_provider === null) {
           user = await usersModel.linkGoogleAccount(req.requestId, existingUserByEmail.id, googleUserId);
