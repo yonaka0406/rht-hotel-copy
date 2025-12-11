@@ -5,10 +5,24 @@ const logger = require('../../config/logger');
 const getAllHotels = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT 
-      hotels.* 
-    FROM hotels 
-    ORDER BY sort_order ASC, id ASC
+    SELECT
+        h.*,
+        COALESCE(room_counts.non_staff_room_count, 0)::integer AS non_staff_room_count,
+        COALESCE(room_counts.staff_room_count, 0)::integer AS staff_room_count
+    FROM
+        hotels h
+    LEFT JOIN (
+        SELECT
+            hotel_id,
+            SUM(CASE WHEN is_staff_room = FALSE THEN 1 ELSE 0 END) AS non_staff_room_count,
+            SUM(CASE WHEN is_staff_room = TRUE THEN 1 ELSE 0 END) AS staff_room_count
+        FROM
+            rooms
+        GROUP BY
+            hotel_id
+    ) AS room_counts ON h.id = room_counts.hotel_id
+    ORDER BY
+        h.sort_order ASC, h.id ASC
   `;
 
   try {
