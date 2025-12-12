@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
+    <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 print-container">
         <header>
             <ReportingTopMenu
                 :selectedDate="selectedDate"
@@ -13,7 +13,7 @@
             />
         </header>
         
-        <main class="flex-1 overflow-auto p-6">
+        <main class="flex-1 overflow-auto p-6 print-main">
             <DailyReportDownloader
                 v-if="selectedReportType === 'dailyReport'"
             />
@@ -89,7 +89,7 @@
             </div>
         </main>
 
-        <footer class="bg-black dark:bg-gray-950 text-white dark:text-gray-300 p-4 text-center text-sm">
+        <footer class="bg-black dark:bg-gray-950 text-white dark:text-gray-300 p-4 text-center text-sm print-footer">
             レッドホーストラスト株式会社
         </footer>
     </div>
@@ -771,5 +771,19 @@
     });
 </script>
 <style scoped>
- 
+@media print {
+    .print-container {
+        height: auto !important; /* Override h-screen */
+        display: block !important; /* Ensure flex context doesn't interfere with block flow */
+    }
+
+    .print-main {
+        overflow: visible !important; /* Allow content to flow */
+        flex: none !important; /* Prevent flex-1 from constraining height */
+    }
+    .print-footer {
+        position: static !important; /* Ensure footer flows with content */
+        page-break-before: auto; /* Allow page break before footer if needed */
+    }
+}
 </style>
