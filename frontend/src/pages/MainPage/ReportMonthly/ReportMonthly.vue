@@ -65,11 +65,8 @@ const viewOptions = ref([
 ]);
 
 
-// --- Date Computations ---
-function formatDate(date) {
-    date.setHours(date.getHours() + 9); // JST adjustment        
-    return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
-};
+import { formatDate } from '@/utils/dateUtils';
+
 const normalizeDate = (date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 function addDaysUTC(date, days) {
     const newDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -357,12 +354,25 @@ const fetchDataAndProcess = async () => {
 
         // Assign reservation list data
         if (reservationListViewResult && Array.isArray(reservationListViewResult)) {
-            // Ensure clients_json and payers_json are parsed if they are strings
-            reservationListData.value = reservationListViewResult.map(res => ({
-                ...res,
-                clients_json: typeof res.clients_json === 'string' ? JSON.parse(res.clients_json) : res.clients_json,
-                payers_json: typeof res.payers_json === 'string' ? JSON.parse(res.payers_json) : res.payers_json
-            }));
+            reservationListData.value = reservationListViewResult.map(res => {
+                const safeParse = (jsonString, fieldName) => {
+                    if (typeof jsonString === 'string') {
+                        try {
+                            return JSON.parse(jsonString);
+                        } catch (e) {
+                            console.error(`Error parsing JSON for ${fieldName} in reservation ID ${res.reservation_id || 'unknown'}:`, e);
+                            return null; // or jsonString if you prefer to keep the original malformed string
+                        }
+                    }
+                    return jsonString; // Already an object or null/undefined
+                };
+
+                return {
+                    ...res,
+                    clients_json: safeParse(res.clients_json, 'clients_json'),
+                    payers_json: safeParse(res.payers_json, 'payers_json')
+                };
+            });
         } else {
             reservationListData.value = [];
         }
@@ -374,6 +384,15 @@ const fetchDataAndProcess = async () => {
     } catch (error) {
         console.error("Error fetching reservation data:", error);
         allReservationsData.value = []; // Clear data on error
+        forecastData.value = [];
+        accountingData.value = [];
+        salesByPlan.value = [];
+        occupationBreakdownData.value = [];
+        bookingSourceData.value = [];
+        paymentTimingData.value = [];
+        bookerTypeBreakdownData.value = [];
+        forecastDataByPlan.value = [];
+        reservationListData.value = [];
     }
 
     // Process data for all components        

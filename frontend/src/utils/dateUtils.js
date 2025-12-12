@@ -23,6 +23,17 @@ export const months = [
   { label: '１２月', value: 'december' }
 ];
 
+export const formatDate = (date) => {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    console.error("Invalid Date object:", date);
+    throw new Error("The provided input is not a valid Date object:");
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const formatTime = (time) => {
   if (!time) return "";
   // Check if time is already a Date object
