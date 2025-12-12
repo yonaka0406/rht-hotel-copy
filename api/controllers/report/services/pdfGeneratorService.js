@@ -30,7 +30,9 @@ const generatePdfReport = async (reqBody, requestId) => {
             htmlContent += `<div class="section-title">収益データ</div>`;
             htmlContent += `<table><thead><tr><th>ホテル名</th><th>月度</th><th>計画売上</th><th>実績売上</th></tr></thead><tbody>`;
             revenueData.forEach(item => {
-                htmlContent += `<tr><td>${item.hotel_name}</td><td>${item.month}</td><td>${item.forecast_revenue.toLocaleString()}</td><td>${item.accommodation_revenue.toLocaleString()}</td></tr>`;
+                const forecastRev = typeof item.forecast_revenue === 'number' ? item.forecast_revenue.toLocaleString() : 'N/A';
+                const accommodationRev = typeof item.accommodation_revenue === 'number' ? item.accommodation_revenue.toLocaleString() : 'N/A';
+                htmlContent += `<tr><td>${item.hotel_name}</td><td>${item.month}</td><td>${forecastRev}</td><td>${accommodationRev}</td></tr>`;
             });
             htmlContent += `</tbody></table>`;
         } else {

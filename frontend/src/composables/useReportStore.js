@@ -893,14 +893,33 @@ export function useReportStore() {
         }
     };
 
-    const generatePdfReport = async (selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames) => {
+    const generatePdfReport = async (reportType, { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }) => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, PDF generation limited');
                 throw new Error('API not available, PDF generation limited');
             }
 
-            const response = await api.post('/report/generate-pdf', {
+            let url = '';
+            // Dynamically construct the URL based on reportType
+            switch (reportType) {
+                case 'singleMonthSingleHotel':
+                    url = '/report/pdf/single-month/single-hotel';
+                    break;
+                case 'singleMonthMultipleHotels':
+                    url = '/report/pdf/single-month/multiple-hotels';
+                    break;
+                case 'cumulativeSingleHotel':
+                    url = '/report/pdf/cumulative/single-hotel';
+                    break;
+                case 'cumulativeMultipleHotels':
+                    url = '/report/pdf/cumulative/multiple-hotels';
+                    break;
+                default:
+                    throw new Error('Invalid report type provided for PDF generation.');
+            }
+
+            const response = await api.post(url, {
                 selectedView,
                 revenueData,
                 occupancyData,

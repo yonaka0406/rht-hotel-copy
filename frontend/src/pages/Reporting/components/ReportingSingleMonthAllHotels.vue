@@ -446,12 +446,15 @@ const { generatePdfReport: generatePdfReportApi } = useReportStore();
 const downloadPdf = async () => {
     try {
         const responseBlob = await generatePdfReportApi(
-            selectedView.value,
-            props.revenueData,
-            props.occupancyData,
-            periodMaxDate.value,
-            allHotelNames.value,
-            // Add other necessary data for the backend to generate the report
+            'singleMonthMultipleHotels', // Specific report type for this component
+            {
+                selectedView: selectedView.value,
+                revenueData: props.revenueData,
+                occupancyData: props.occupancyData,
+                periodMaxDate: periodMaxDate.value,
+                allHotelNames: allHotelNames.value,
+                // Add other necessary data for the backend to generate the report
+            }
         );
 
         // Create a blob URL and trigger download
