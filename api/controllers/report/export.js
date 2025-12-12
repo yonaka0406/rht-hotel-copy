@@ -1,10 +1,10 @@
 const reportModel = require('../../models/report');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
-const { chromium } = require('playwright');
 
 const { createAccommodationTaxWorkbook } = require('./services/accommodationTaxExcel');
 const { generateReservationDetailsCsv } = require('./services/reservationDetailsCsv');
+const { generatePdfReport: generatePdfServiceReport } = require('./services/pdfGeneratorService'); // <--- Import the service function
 
 const { formatDate, formatDateTime, translateStatus, translateReservationPaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
 
