@@ -1,7 +1,5 @@
-const formatDate = (date) => {
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
     console.error("Invalid Date object:", date);
-    throw new Error("The provided input is not a valid Date object:");
+    throw new Error(`The provided input is not a valid Date object: ${String(date)}`);
   }
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -9,10 +7,8 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatDateTime = (date) => {
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
     console.error("Invalid Date object:", date);
-    throw new Error("The provided input is not a valid Date object:");
+    throw new Error(`The provided input is not a valid Date object: ${String(date)}`);
   }
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
