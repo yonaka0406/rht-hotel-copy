@@ -2,6 +2,7 @@
     <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 print-container">
         <header>
             <ReportingTopMenu
+                class="no-print"
                 :selectedDate="selectedDate"
                 :period="period"
                 :selectedHotels="selectedHotels"
@@ -784,6 +785,9 @@
     .print-footer {
         position: static !important; /* Ensure footer flows with content */
         page-break-before: auto; /* Allow page break before footer if needed */
+    }
+    .no-print {
+        display: none !important;
     }
 }
 </style>

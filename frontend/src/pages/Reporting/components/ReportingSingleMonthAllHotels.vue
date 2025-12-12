@@ -68,7 +68,7 @@
                         <div class="w-full md:w-1/2 mb-4 md:mb-0">
                             <h6 class="text-center">施設別 売上合計（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
-                            <div v-else ref="allHotelsRevenueChartContainer"
+                            <div v-else ref="allHotelsRevenueChartContainer" class="print-chart-container"
                                 :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
                         </div>
                         <div class="w-full md:w-1/2">
@@ -351,6 +351,10 @@ const allHotelsChartHeight = computed(() => {
     return Math.max(minHeight, calculatedHeight);
 });
 
+const allHotelsChartPrintHeight = computed(() => {
+    return 500; // Fixed height for printing
+});
+
 
 
 // --- ECharts Options ---    
@@ -557,6 +561,9 @@ watch(() => props.occupancyData, () => {
 @media print {
     .print-avoid-break {
         page-break-inside: avoid !important;
+    }
+    .print-chart-container {
+        height: v-bind(allHotelsChartPrintHeight) + 'px' !important;
     }
 }
 </style>
