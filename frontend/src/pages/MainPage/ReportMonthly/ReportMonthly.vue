@@ -37,8 +37,7 @@
 // Vue
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 
-// Primevue
-import { Card, DataTable, Column, ColumnGroup, Row, Panel } from 'primevue';
+
 
 // Components
 import ReportSelectionCard from './components/ReportSelectionCard.vue';
