@@ -40,12 +40,26 @@ const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
 
 const chartOptions = computed(() => {
-  const { sold_rooms, total_rooms, net_total_rooms, fc_sold_rooms, fc_total_rooms, fc_net_total_rooms } = props.occupancyData;
+  const {
+    total_sold_rooms = 0,
+    total_available_rooms = 0,
+    total_fc_sold_rooms = 0,
+    total_fc_available_rooms = 0,
+  } = props.occupancyData;
 
-  // Use net capacity if available, otherwise fall back to gross capacity
+  // Map to expected names with defaults
+  const sold_rooms = total_sold_rooms;
+  const total_rooms = total_available_rooms;
+  const net_total_rooms = undefined; // Still undefined as it's not from aggregateHotelZeroData
+  const fc_sold_rooms = total_fc_sold_rooms;
+  const fc_total_rooms = total_fc_available_rooms;
+  const fc_net_total_rooms = undefined; // Still undefined as it's not from aggregateHotelZeroData
+
+  // Use net capacity if available, otherwise fall back to gross capacity (now with defaults)
   const actualTotalRooms = net_total_rooms !== undefined && net_total_rooms !== null ? net_total_rooms : total_rooms;
   const forecastTotalRooms = fc_net_total_rooms !== undefined && fc_net_total_rooms !== null ? fc_net_total_rooms : fc_total_rooms;
 
+  // Guard against division by zero
   const totalActualOccupancy = actualTotalRooms > 0 ? sold_rooms / actualTotalRooms : 0;
   const totalForecastOccupancy = forecastTotalRooms > 0 ? fc_sold_rooms / forecastTotalRooms : 0;
 

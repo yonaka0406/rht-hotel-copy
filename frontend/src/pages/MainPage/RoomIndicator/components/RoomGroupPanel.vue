@@ -5,10 +5,10 @@
         <div class="flex-grow"></div> <!-- Left spacer -->
         <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">予定表</h2>
         <div class="flex-grow flex justify-end"> <!-- Right spacer and button container -->
-          
+
           <Button v-if="checkInClientsCount > 0" label="宿泊者名簿を作成" icon="pi pi-file-excel" severity="info"
             @click="createGuestList" :loading="isGenerating" />
-            
+
         </div>
       </div>
     </template>
@@ -18,11 +18,8 @@
       </div>
     </div>
     <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div v-for="group in filteredRoomGroups" 
-           :key="group.title" 
-           class="col-span-1 lg:col-span-1">
-        <div
-          :class="`p-2 rounded-lg ${group.color} ${group.darkColor}`">
+      <div v-for="group in filteredRoomGroups" :key="group.title" class="col-span-1 lg:col-span-1">
+        <div :class="`p-2 rounded-lg ${group.color} ${group.darkColor}`">
           <Card class="p-2 dark:bg-gray-700 dark:border-gray-600">
             <template #header>
               <h3 :class="`text-lg rounded-lg font-semibold mb-2 ${group.color} ${group.darkColor} dark:text-white`">{{
@@ -64,7 +61,7 @@
                   <!-- Rest of your existing room card content -->
                   <div class="flex items-center justify-between">
                     <span class="font-semibold dark:text-white">{{ room.room_number + '：' + room.room_type_name
-                      }}</span>
+                    }}</span>
                     <div class="flex items-center">
                       <div v-if="room.number_of_people" class="flex items-center mr-2">
                         <div class="flex items-center dark:text-gray-200">
@@ -111,7 +108,7 @@
                       </div>
                     </div>
                     <p v-if="room.payment_timing === 'on-site'" class="mb-2 text-emerald-500"><i
-                        class="pi pi-wallet mr-1"></i>{{ translatePaymentTiming(room.payment_timing) }}</p>
+                        class="pi pi-wallet mr-1"></i>{{ translateReservationPaymentTiming(room.payment_timing) }}</p>
                     <div v-else class="mb-2"></div>
                   </div>
                   <div v-else @click="openNewReservation(room)" class="dark:text-gray-200">
@@ -128,7 +125,8 @@
                       </span>
 
                       <div v-if="room.plan_name">
-                        <div v-for="(planData, planName) in planSummary[room.reservation_id]?.[room.room_number]" :key="planName" class="mb-1">
+                        <div v-for="(planData, planName) in planSummary[room.reservation_id]?.[room.room_number]"
+                          :key="planName" class="mb-1">
                           <Button type="button" :label="`${planName}`" :badge="`${planData.count}`"
                             badgeSeverity="secondary" variant="outlined" :style="{
                               backgroundColor: `${planData.color}40`,
@@ -154,7 +152,8 @@
                   </div>
                   <div v-else>
                     <div v-if="room.plan_name">
-                      <div v-for="(planData, planName) in planSummary[room.reservation_id]?.[room.room_number]" :key="planName" class="mb-1">
+                      <div v-for="(planData, planName) in planSummary[room.reservation_id]?.[room.room_number]"
+                        :key="planName" class="mb-1">
                         <Button type="button" :label="`${planName}`" :badge="`${planData.count}`"
                           badgeSeverity="secondary" variant="outlined" :style="{
                             backgroundColor: `${planData.color}40`,
@@ -209,7 +208,7 @@ const props = defineProps({
     type: Function,
     required: true,
   },
-  translatePaymentTiming: {
+  translateReservationPaymentTiming: {
     type: Function,
     required: true,
   },
@@ -244,11 +243,11 @@ const filteredRoomGroups = computed(() => {
   return props.roomGroups.filter(group => {
     const isSpecial = specialTitles.includes(group.title);
     const rooms = group.rooms || [];
-    
+
     if (isSpecial) {
       return rooms.length > 0;
     }
-    
+
     return true;
   });
 });

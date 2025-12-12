@@ -1,4 +1,3 @@
-
 <template>
     <div class="p-4">
         <h3 class="text-xl font-semibold mb-4">予約分析（年間累計）</h3>
@@ -17,45 +16,47 @@
         </div>
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
-            <Panel header="予約チャンネルと支払タイミング" toggleable :collapsed="false">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                        <template #title>予約チャンネル内訳 (泊数ベース)</template>
-                        <template #content>
-                            <div ref="bookingSourceChart" class="w-full h-60"></div>
-                        </template>
-                    </Card>
-                    <Card>
-                        <template #title>支払タイミング内訳 (泊数ベース)</template>
-                        <template #content>
-                            <div ref="paymentTimingChart" class="w-full h-60"></div>
-                        </template>
-                    </Card>
-                </div>
-            </Panel>
+                <Panel header="予約チャンネルと支払タイミング" toggleable :collapsed="false">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card>
+                            <template #title>予約チャンネル内訳 (泊数ベース)</template>
+                            <template #content>
+                                <div ref="bookingSourceChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                        <Card>
+                            <template #title>支払タイミング内訳 (泊数ベース)</template>
+                            <template #content>
+                                <div ref="paymentTimingChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                    </div>
+                </Panel>
 
-            <Panel header="予約者属性と滞在日数" toggleable :collapsed="false" class="mt-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                        <template #title>予約者区分 (泊数ベース)</template>
-                        <template #content>
-                            <div ref="bookerTypeChart" class="w-full h-60"></div>
-                        </template>
-                    </Card>
-                    <Card>
-                        <template #title>滞在日数</template>
-                        <template #content>
-                            <div ref="averageLengthOfStayChart" class="w-full h-60"></div>
-                        </template>
-                    </Card>
-                </div>
-            </Panel>
+                <Panel header="予約者属性と滞在日数" toggleable :collapsed="false" class="mt-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card>
+                            <template #title>予約者区分 (泊数ベース)</template>
+                            <template #content>
+                                <div ref="bookerTypeChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                        <Card>
+                            <template #title>滞在日数</template>
+                            <template #content>
+                                <div ref="averageLengthOfStayChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                    </div>
+                </Panel>
             </div>
             <div v-else-if="selectedView === 'table'">
                 <Panel header="テーブル表示" toggleable :collapsed="false" class="col-span-12">
                     <div class="grid grid-cols-12 gap-4">
                         <Card class="col-span-12 md:col-span-6">
-                            <template #header><div class="flex-1 text-center font-bold">予約チャンネル内訳 (泊数ベース)</div></template>
+                            <template #header>
+                                <div class="flex-1 text-center font-bold">予約チャンネル内訳 (泊数ベース)</div>
+                            </template>
                             <template #content>
                                 <DataTable :value="bookingSourceData" responsiveLayout="scroll">
                                     <template #footer>
@@ -64,20 +65,28 @@
                                         </div>
                                     </template>
                                     <Column field="type" bodyStyle="text-align:center" headerStyle="text-align:center">
-                                        <template #header><div class="flex-1 text-center font-bold">タイプ</div></template>
+                                        <template #header>
+                                            <div class="flex-1 text-center font-bold">タイプ</div>
+                                        </template>
                                         <template #body="slotProps">
                                             {{ translateBookingSourceType(slotProps.data.type) }}
                                         </template>
                                     </Column>
                                     <Column field="agent" bodyStyle="text-align:center" headerStyle="text-align:center">
-                                        <template #header><div class="flex-1 text-center font-bold">エージェント</div></template>
+                                        <template #header>
+                                            <div class="flex-1 text-center font-bold">エージェント</div>
+                                        </template>
                                     </Column>
-                                    <Column field="room_nights" bodyStyle="text-align:center" headerStyle="text-align:center">
-                                        <template #header><div class="flex-1 text-center font-bold">泊数</div></template>
+                                    <Column field="room_nights" bodyStyle="text-align:center"
+                                        headerStyle="text-align:center">
+                                        <template #header>
+                                            <div class="flex-1 text-center font-bold">泊数</div>
+                                        </template>
                                         <template #body="slotProps">
                                             <div class="flex items-center justify-end gap-2">
                                                 <span>{{ slotProps.data.room_nights.toLocaleString('ja-JP') }}</span>
-                                                <Tag :value="`${slotProps.data.percentage.toFixed(1)}%`" severity="info" />
+                                                <Tag :value="`${slotProps.data.percentage.toFixed(1)}%`"
+                                                    severity="info" />
                                             </div>
                                         </template>
                                     </Column>
@@ -85,7 +94,9 @@
                             </template>
                         </Card>
                         <Card class="col-span-12 md:col-span-6">
-                            <template #header><div class="flex-1 text-center font-bold">支払タイミング内訳 (泊数ベース)</div></template>
+                            <template #header>
+                                <div class="flex-1 text-center font-bold">支払タイミング内訳 (泊数ベース)</div>
+                            </template>
                             <template #content>
                                 <DataTable :value="paymentTimingData" responsiveLayout="scroll">
                                     <template #footer>
@@ -93,18 +104,24 @@
                                             合計: {{ totalPaymentTimingCount.toLocaleString('ja-JP') }} 泊
                                         </div>
                                     </template>
-                                    <Column field="paymentTiming" bodyStyle="text-align:center" headerStyle="text-align:center">
-                                        <template #header><div class="flex-1 text-center font-bold">支払タイミング</div></template>
+                                    <Column field="paymentTiming" bodyStyle="text-align:center"
+                                        headerStyle="text-align:center">
+                                        <template #header>
+                                            <div class="flex-1 text-center font-bold">支払タイミング</div>
+                                        </template>
                                         <template #body="slotProps">
-                                            {{ translatePaymentTiming(slotProps.data.paymentTiming) }}
+                                            {{ translateReservationPaymentTiming(slotProps.data.paymentTiming) }}
                                         </template>
                                     </Column>
                                     <Column field="count" style="text-align:center">
-                                        <template #header><div class="flex-1 text-center font-bold">泊数</div></template>
+                                        <template #header>
+                                            <div class="flex-1 text-center font-bold">泊数</div>
+                                        </template>
                                         <template #body="slotProps">
                                             <div class="flex items-center justify-end gap-2">
                                                 <span>{{ slotProps.data.count.toLocaleString('ja-JP') }}</span>
-                                                <Tag :value="`${slotProps.data.percentage.toFixed(1)}%`" severity="info" />
+                                                <Tag :value="`${slotProps.data.percentage.toFixed(1)}%`"
+                                                    severity="info" />
                                             </div>
                                         </template>
                                     </Column>
@@ -118,7 +135,7 @@
         <div v-else class="text-gray-500">
             データがありません。
         </div>
-        
+
     </div>
 </template>
 
@@ -193,7 +210,7 @@ const averageLengthOfStayData = ref([]);
 const averageNights = ref(0);
 const averagePeople = ref(0);
 
-const translatePaymentTiming = (timing) => {
+const translateReservationPaymentTiming = (timing) => {
     const map = {
         'not_set': '未設定',
         'prepaid': '事前決済',
@@ -397,7 +414,7 @@ const processAverageLengthOfStayData = (reservationListData) => {
 
 const initAverageLengthOfStayChart = () => {
     if (!averageLengthOfStayChart.value) return;
-    if(myAverageLengthOfStayChart) {
+    if (myAverageLengthOfStayChart) {
         myAverageLengthOfStayChart.dispose();
     }
     myAverageLengthOfStayChart = echarts.init(averageLengthOfStayChart.value);
@@ -545,7 +562,7 @@ const initBookingSourceChart = () => {
             type: 'treemap',
             data: data,
             radius: [0, '100%'],
-            center: ['50%', '50%'],                                           
+            center: ['50%', '50%'],
             label: {
                 formatter: (params) => {
                     // This formatter will now apply to lower levels
@@ -637,7 +654,7 @@ const initPaymentTimingChart = () => {
 
     const chartData = paymentData.map(item => ({
         value: item.count,
-        name: translatePaymentTiming(item.paymentTiming)
+        name: translateReservationPaymentTiming(item.paymentTiming)
     }));
 
     const option = {
@@ -737,7 +754,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart);
 });
 
-watch(() => [props.hotelId, props.triggerFetch, props.selectedDate], async () => {    
+watch(() => [props.hotelId, props.triggerFetch, props.selectedDate], async () => {
     await fetchReportData();
     if (selectedView.value === 'graph') {
         refreshAllCharts();

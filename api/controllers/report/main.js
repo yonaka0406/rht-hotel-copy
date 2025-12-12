@@ -1,25 +1,25 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, 
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod,
   selectReservationListView, selectForecastData, selectAccountingData, selectForecastDataByPlan, selectAccountingDataByPlan,
-  selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle, 
+  selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle,
   selectActiveReservationsChange,
   selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport } = require('../../models/report');
 const { authorize, appendDataToSheet, createSheet } = require('../../utils/googleUtils');
 
 const logger = require('../../config/logger');
 
-const { formatDate, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
+const { formatDate, translateStatus, translateReservationPaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
 
 const getCountReservation = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
-  
-  try {    
-    const data = await selectCountReservation(req.requestId, hotelId, startDate, endDate);    
-    
+
+  try {
+    const data = await selectCountReservation(req.requestId, hotelId, startDate, endDate);
+
     if (!data || data.length === 0) {
       return res.status(200).json([]);
-    }  
+    }
 
     res.json(data);
   } catch (err) {
@@ -31,11 +31,11 @@ const getCountReservationDetails = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
-  
-  try {    
+
+  try {
     const planData = await selectCountReservationDetailsPlans(req.requestId, hotelId, startDate, endDate);
-    const addonData = await selectCountReservationDetailsAddons(req.requestId, hotelId, startDate, endDate);     
-    
+    const addonData = await selectCountReservationDetailsAddons(req.requestId, hotelId, startDate, endDate);
+
     if ((!planData && !addonData) || (planData.length === 0 && addonData.length === 0)) {
       return res.json({});
     }
@@ -75,17 +75,17 @@ const getCountReservationDetails = async (req, res) => {
 const getOccupationByPeriod = async (req, res) => {
   const period = req.params.period;
   const hotelId = req.params.hid;
-  const refDate = req.params.rdate;  
-  
-  try {    
+  const refDate = req.params.rdate;
+
+  try {
     const data = await selectOccupationByPeriod(req.requestId, period, hotelId, refDate);
-    
-    if (!data || data.length === 0) {      
+
+    if (!data || data.length === 0) {
       return res.json([{
         room_count: 0,
-        available_rooms: 0,        
+        available_rooms: 0,
       }]);
-    } 
+    }
 
     res.json(data);
   } catch (err) {
@@ -99,13 +99,13 @@ const getReservationListView = async (req, res) => {
   const endDate = req.params.edate;
   const searchType = req.params.search_type;
 
-  try {    
-    const data = await selectReservationListView(req.requestId, hotelId, startDate, endDate, searchType);    
-    
+  try {
+    const data = await selectReservationListView(req.requestId, hotelId, startDate, endDate, searchType);
+
     // Return empty array with 200 status
     if (!data || data.length === 0) {
       return res.json([]);
-    } 
+    }
 
     res.json(data);
   } catch (err) {
@@ -118,14 +118,14 @@ const getForecastData = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
-  
-  try {    
-    const data = await selectForecastData(req.requestId, hotelId, startDate, endDate);    
-    
+
+  try {
+    const data = await selectForecastData(req.requestId, hotelId, startDate, endDate);
+
     // Return empty array with 200 status if no data found
     if (!data || data.length === 0) {
       return res.status(200).json([]);
-    }  
+    }
 
     res.json(data);
   } catch (err) {
@@ -179,13 +179,13 @@ const getReservationsInventory = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
-  
+
   try {
-    const data = await selectReservationsInventory(req.requestId, hotelId, startDate, endDate); 
+    const data = await selectReservationsInventory(req.requestId, hotelId, startDate, endDate);
 
     if (!data || data.length === 0) {
       return res.status(200).json([]);
-    }  
+    }
 
     res.json(data);
   } catch (err) {
@@ -197,13 +197,13 @@ const getAllInventory = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
-  
-  try {    
-    const data = await selectAllRoomTypesInventory(req.requestId, hotelId, startDate, endDate);    
-    
+
+  try {
+    const data = await selectAllRoomTypesInventory(req.requestId, hotelId, startDate, endDate);
+
     if (!data || data.length === 0) {
       return res.status(200).json([]);
-    }  
+    }
 
     res.json(data);
   } catch (err) {
@@ -220,9 +220,9 @@ const getReservationsForGoogle = async (req, res) => {
 
   logger.warn(`[getReservationsForGoogle] Received request for sheetId: ${sheetId}, hotelId: ${hotelId}, startDate: ${startDate}, endDate: ${endDate}`, { requestId: req.requestId });
 
-  try {    
-    const dataToAppend = await selectReservationsForGoogle(req.requestId, hotelId, startDate, endDate);    
-    
+  try {
+    const dataToAppend = await selectReservationsForGoogle(req.requestId, hotelId, startDate, endDate);
+
     logger.warn(`[getReservationsForGoogle] Data fetched from model. Rows: ${dataToAppend ? dataToAppend.length : 0}`, { requestId: req.requestId });
 
     if (!dataToAppend || dataToAppend.length === 0) {
@@ -232,22 +232,22 @@ const getReservationsForGoogle = async (req, res) => {
 
     const formattedData = formatDataForSheet(dataToAppend);
     logger.warn(`[getReservationsForGoogle] Data formatted. Rows: ${formattedData.length}`, { requestId: req.requestId });
-    
+
     const sheetName = `H_${hotelId}`;
 
     await appendDataToSheet(sheetId, sheetName, formattedData);
 
     logger.warn(`[getReservationsForGoogle] Successfully appended data to sheetId: ${sheetId}, sheetName: ${sheetName}`, { requestId: req.requestId });
-    res.json({success: 'Sheet update request made'});
+    res.json({ success: 'Sheet update request made' });
   } catch (err) {
     logger.error(`[getReservationsForGoogle] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack, sheetId, hotelId, startDate, endDate });
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-const formatDataForSheet = (reservations) => {    
+const formatDataForSheet = (reservations) => {
   // Format each reservation as an array in the same order as headers
   const rows = reservations.map(reservation => {
-    let displayCell = '';    
+    let displayCell = '';
     if (reservation.status === "hold") {
       displayCell += "㋭｜";
     } else if (reservation.status === "provisory") {
@@ -282,7 +282,7 @@ const formatDataForSheet = (reservations) => {
       displayCell
     ];
   });
-  
+
   // Return data rows
   return [...rows];
 };
@@ -356,38 +356,38 @@ const formatParkingDataForSheet = (reservations) => {
   return [...rows];
 };
 
-const createNewGoogleSheet =  async (req, res) => {
-    const { title } = req.query;
-    const context = { operation: 'createNewSheet', title };
-    
-    if (!title) {
-        logger.warn('Missing required parameter: title', context);
-        return res.status(400).json({ 
-            success: false, 
-            message: 'Title is required' 
-        });
-    }
+const createNewGoogleSheet = async (req, res) => {
+  const { title } = req.query;
+  const context = { operation: 'createNewSheet', title };
 
-    try {
-        const authClient = await authorize();
-        const spreadsheetId = await createSheet(authClient, title);
-        
-        logger.info('Successfully created new sheet', { ...context, spreadsheetId });
-        return res.status(200).json({ 
-            success: true, 
-            data: { 
-                spreadsheetId,
-                spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
-            } 
-        });
-    } catch (error) {
-        logger.error(`[createNewGoogleSheet] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack, ...context });
-        return res.status(500).json({ 
-            success: false, 
-            message: 'Failed to create spreadsheet',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
+  if (!title) {
+    logger.warn('Missing required parameter: title', context);
+    return res.status(400).json({
+      success: false,
+      message: 'Title is required'
+    });
+  }
+
+  try {
+    const authClient = await authorize();
+    const spreadsheetId = await createSheet(authClient, title);
+
+    logger.info('Successfully created new sheet', { ...context, spreadsheetId });
+    return res.status(200).json({
+      success: true,
+      data: {
+        spreadsheetId,
+        spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
+      }
+    });
+  } catch (error) {
+    logger.error(`[createNewGoogleSheet] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack, ...context });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create spreadsheet',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 
 const getActiveReservationsChange = async (req, res) => {
@@ -398,7 +398,7 @@ const getActiveReservationsChange = async (req, res) => {
 
     if (!data || data.length === 0) {
       return res.status(200).json([]);
-    }  
+    }
 
     res.json(data);
   } catch (err) {
@@ -429,7 +429,7 @@ const getMonthlyReservationEvolution = async (req, res) => {
     else {
       res.status(500).json({ error: 'Internal server error' });
     }
-  }  
+  }
 };
 
 const getSalesByPlan = async (req, res) => {
@@ -502,18 +502,18 @@ const getCheckInOutReport = async (req, res) => {
   }
 };
 
-module.exports = { 
+module.exports = {
   getCountReservation,
   getCountReservationDetails,
   getOccupationByPeriod,
   getReservationListView,
-  getForecastData, 
-  getAccountingData,  
+  getForecastData,
+  getAccountingData,
   getReservationsInventory,
   getAllInventory,
   getReservationsForGoogle,
   getParkingReservationsForGoogle,
-  createNewGoogleSheet,  
+  createNewGoogleSheet,
   getActiveReservationsChange,
   getMonthlyReservationEvolution,
   getSalesByPlan,

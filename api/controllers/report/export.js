@@ -4,8 +4,9 @@ const ExcelJS = require("exceljs");
 
 const { createAccommodationTaxWorkbook } = require('./services/accommodationTaxExcel');
 const { generateReservationDetailsCsv } = require('./services/reservationDetailsCsv');
+const { generatePdfReport: generatePdfServiceReport } = require('./services/pdfGeneratorService'); // <--- Import the service function
 
-const { formatDate, formatDateTime, translateStatus, translatePaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
+const { formatDate, formatDateTime, translateStatus, translateReservationPaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
 
 const getExportReservationList = async (req, res) => {
     const hotelId = req.params.hid;
@@ -53,7 +54,7 @@ const getExportReservationList = async (req, res) => {
                 残高: Math.floor(parseFloat(reservation.price)) - Math.floor(parseFloat(reservation.payment)),
                 宿泊者: clientNames,
                 支払者: payerNames,
-                支払い: translatePaymentTiming(reservation.payment_timing),
+                支払い: translateReservationPaymentTiming(reservation.payment_timing),
                 予約ID: reservation.id,
                 備考: reservation.comment || '',
             });
@@ -648,6 +649,79 @@ const getExportAccommodationTax = async (req, res) => {
     }
 };
 
+const handleGeneratePdfReport = async (req, res) => {
+    const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames, reportType } = req.body;
+    const requestId = req.requestId; // Assuming requestId is available from middleware
+
+    try {
+        const pdfBuffer = await generatePdfServiceReport(reportType, { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }, requestId);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="monthly_summary_report_${reportType}_${requestId}.pdf"`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error(`[${requestId}] Error generating PDF report for type ${reportType}:`, error);
+        res.status(500).json({ message: 'Failed to generate PDF report', error: error.message });
+    }
+};
+
+const generateSingleMonthSingleHotelPdf = async (req, res) => {
+    const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames } = req.body;
+    const requestId = req.requestId;
+    try {
+        const pdfBuffer = await generatePdfServiceReport('singleMonthSingleHotel', { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }, requestId);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="monthly_summary_report_single_hotel_${requestId}.pdf"`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error(`[${requestId}] Error generating single month single hotel PDF report:`, error);
+        res.status(500).json({ message: 'Failed to generate PDF report', error: error.message });
+    }
+};
+
+const generateSingleMonthMultipleHotelsPdf = async (req, res) => {
+    const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames } = req.body;
+    const requestId = req.requestId;
+    try {
+        const pdfBuffer = await generatePdfServiceReport('singleMonthMultipleHotels', { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }, requestId);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="monthly_summary_report_multiple_hotels_${requestId}.pdf"`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error(`[${requestId}] Error generating single month multiple hotels PDF report:`, error);
+        res.status(500).json({ message: 'Failed to generate PDF report', error: error.message });
+    }
+};
+
+const generateCumulativeSingleHotelPdf = async (req, res) => {
+    const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames } = req.body;
+    const requestId = req.requestId;
+    try {
+        const pdfBuffer = await generatePdfServiceReport('cumulativeSingleHotel', { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }, requestId);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="cumulative_summary_report_single_hotel_${requestId}.pdf"`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error(`[${requestId}] Error generating cumulative single hotel PDF report:`, error);
+        res.status(500).json({ message: 'Failed to generate PDF report', error: error.message });
+    }
+};
+
+const generateCumulativeMultipleHotelsPdf = async (req, res) => {
+    const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames } = req.body;
+    const requestId = req.requestId;
+    try {
+        const pdfBuffer = await generatePdfServiceReport('cumulativeMultipleHotels', { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }, requestId);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="cumulative_summary_report_multiple_hotels_${requestId}.pdf"`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error(`[${requestId}] Error generating cumulative multiple hotels PDF report:`, error);
+        res.status(500).json({ message: 'Failed to generate PDF report', error: error.message });
+    }
+};
+
+
 module.exports = {
     getExportReservationList,
     getExportReservationDetails,
@@ -658,4 +732,8 @@ module.exports = {
     generateDailyMetrics,
     getExportDailyReportExcel,
     getExportAccommodationTax,
+    generateSingleMonthSingleHotelPdf,
+    generateSingleMonthMultipleHotelsPdf,
+    generateCumulativeSingleHotelPdf,
+    generateCumulativeMultipleHotelsPdf,
 };

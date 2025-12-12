@@ -5,7 +5,8 @@
             <Fieldset legend="予約概要" class="mb-4">
                 <div class="grid grid-cols-2 gap-2">
                     <div class="col-span-2"><strong>予約者名:</strong> {{ reservationInfo.client_name }}</div>
-                    <div class="col-span-2"><strong>宿泊期間:</strong> {{ formattedCheckInDate }} ({{ formattedCheckInTime }}) - {{ formattedCheckOutDate }}</div>
+                    <div class="col-span-2"><strong>宿泊期間:</strong> {{ formattedCheckInDate }} ({{ formattedCheckInTime
+                        }}) - {{ formattedCheckOutDate }}</div>
                     <div><strong>TEL:</strong> {{ reservationInfo.client_phone || '' }}</div>
                     <div><strong>FAX:</strong> {{ reservationInfo.client_fax || '' }}</div>
                     <div class="col-span-2"><strong>宿泊者:</strong>
@@ -19,11 +20,11 @@
                         <template v-else>{{ reservationInfo.client_name }}</template>
                     </div>
                     <div><strong>人数:</strong> {{ reservationInfo.reservation_number_of_people }}名</div>
-                                        <div><strong>部屋数: </strong>
-                                            <template v-if="smokingRoomsCount > 0">喫煙 {{ smokingRoomsCount }}室</template>
-                                            <template v-if="smokingRoomsCount > 0 && nonSmokingRoomsCount > 0"> / </template>
-                                            <template v-if="nonSmokingRoomsCount > 0">禁煙 {{ nonSmokingRoomsCount }}室</template>
-                                        </div>
+                    <div><strong>部屋数: </strong>
+                        <template v-if="smokingRoomsCount > 0">喫煙 {{ smokingRoomsCount }}室</template>
+                        <template v-if="smokingRoomsCount > 0 && nonSmokingRoomsCount > 0"> / </template>
+                        <template v-if="nonSmokingRoomsCount > 0">禁煙 {{ nonSmokingRoomsCount }}室</template>
+                    </div>
                     <div><strong>プラン:</strong> {{ weekdayPlanNamesList }}</div>
                     <div v-if="weekendPlanNamesList"><strong>土日:</strong> {{ weekendPlanNamesList }}</div>
                     <div><strong>駐車場:</strong> {{ parkingDetails }}</div>
@@ -173,7 +174,7 @@ const generateSlackMessage = () => {
     message += `TEL/FAX： ${clientPhone} / ${clientFax}\n`;
     message += `予約担当者： ${info.responsible_person_name || '未設定'}\n`;
     message += `宿泊期間： ${checkInDate} (${getJapaneseWeekday(info.check_in)}) (${formatTime(info.check_in_time)}) - ${checkOutDate} (${getJapaneseWeekday(info.check_out)})\n`;
-    
+
     message += `人数： ${info.reservation_number_of_people}名\n`;
     message += `宿泊者： ${guestNames}\n`;
 
@@ -186,7 +187,7 @@ const generateSlackMessage = () => {
     }
     message += `駐車場： ${parkingDetails.value}\n`;
     message += `清算方法： ${paymentDetails}\n`;
-    
+
     message += `予約経路： 未設定\n`;
     message += `現場： ${info.site_name || '未設定'}\n`;
     message += `📝備考：${info.comment || 'キャンセルポリシー説明済'}`;

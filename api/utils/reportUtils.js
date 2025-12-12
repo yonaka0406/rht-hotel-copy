@@ -1,7 +1,7 @@
 const formatDate = (date) => {
   if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error("Invalid Date object:", date);
-      throw new Error("The provided input is not a valid Date object:");
+    console.error("Invalid Date object:", date);
+    throw new Error(`The provided input is not a valid Date object: ${String(date)}`);
   }
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -11,8 +11,8 @@ const formatDate = (date) => {
 
 const formatDateTime = (date) => {
   if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error("Invalid Date object:", date);
-      throw new Error("The provided input is not a valid Date object:");
+    console.error("Invalid Date object:", date);
+    throw new Error(`The provided input is not a valid Date object: ${String(date)}`);
   }
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -23,7 +23,7 @@ const formatDateTime = (date) => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
-const translateStatus = (status) => {
+const translateReservationStatus = (status) => {
   switch (status) {
     case 'hold':
       return '保留中';
@@ -44,7 +44,7 @@ const translateStatus = (status) => {
   }
 };
 
-const translatePaymentTiming = (timing) => {
+const translateReservationPaymentTiming = (timing) => {
   switch (timing) {
     case 'not_set':
       return '未設定';
@@ -59,8 +59,8 @@ const translatePaymentTiming = (timing) => {
   }
 };
 
-const translateType = (type) => {
-  switch (type) {    
+const translateReservationType = (type) => {
+  switch (type) {
     case 'default':
       return '通常';
     case 'employee':
@@ -68,18 +68,18 @@ const translateType = (type) => {
     case 'ota':
       return 'OTA';
     case 'web':
-      return '自社ウェブ';    
+      return '自社ウェブ';
     default:
       return '不明';
   }
 };
 
 const translatePlanType = (type) => {
-  switch (type) {    
+  switch (type) {
     case 'per_person':
       return '一人当たり';
     case 'per_room':
-      return '部屋当たり';    
+      return '部屋当たり';
     default:
       return '不明';
   }
@@ -97,9 +97,9 @@ const translateMealType = (type) => {
 module.exports = {
   formatDate,
   formatDateTime,
-  translateStatus,
-  translatePaymentTiming,
-  translateType,
+  translateReservationStatus,
+  translateReservationPaymentTiming,
+  translateReservationType,
   translatePlanType,
   translateMealType,
 };

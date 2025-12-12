@@ -27,7 +27,10 @@ export const formatTime = (time) => {
   if (!time) return "";
   // Check if time is already a Date object
   if (time instanceof Date) {
-      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (isNaN(time.getTime())) {
+      return ''; // Return empty string for invalid Date objects
+    }
+    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   // If time is a string

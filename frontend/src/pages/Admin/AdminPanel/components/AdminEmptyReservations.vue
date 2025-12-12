@@ -1,7 +1,8 @@
 <template>
     <div class="admin-empty-reservations">
         <div v-if="loading" class="flex justify-center items-center py-4">
-            <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+            <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="var(--surface-ground)"
+                animationDuration=".5s" aria-label="Custom ProgressSpinner" />
         </div>
         <div v-else-if="error" class="text-center py-4 text-red-500">エラー: {{ error.message }}</div>
         <div v-else-if="emptyReservations.length === 0" class="text-center py-4">空の予約は見つかりませんでした。</div>
@@ -10,12 +11,8 @@
                 tableStyle="min-width: 50rem">
                 <Column header="予約ID">
                     <template #body="slotProps">
-                        <Button
-                            label="表示"
-                            icon="pi pi-external-link"
-                            class="p-button-sm p-button-text"
-                            @click="openReservationEdit(slotProps.data.reservation_id)"
-                        />
+                        <Button label="表示" icon="pi pi-external-link" class="p-button-sm p-button-text"
+                            @click="openReservationEdit(slotProps.data.reservation_id)" />
                     </template>
                 </Column>
                 <Column field="hotel_name" header="ホテル名"></Column>
@@ -39,24 +36,14 @@
                 <Column header="アクション">
                     <template #body="slotProps">
                         <div class="flex gap-2">
-                            <ToggleButton
-                                :modelValue="unlockedReservations.has(slotProps.data.reservation_id)"
-                                :onIcon="'pi pi-lock-open'"
-                                :offIcon="'pi pi-lock'"
-                                onLabel=""
-                                offLabel=""
+                            <ToggleButton :modelValue="unlockedReservations.has(slotProps.data.reservation_id)"
+                                :onIcon="'pi pi-lock-open'" :offIcon="'pi pi-lock'" onLabel="" offLabel=""
                                 :class="unlockedReservations.has(slotProps.data.reservation_id) ? 'p-button-success' : 'p-button-secondary'"
                                 @change="toggleDeleteUnlock(slotProps.data.reservation_id)"
-                                v-tooltip.top="'削除ボタンを有効にするには選択してください'"
-                            />
-                            <Button
-                                icon="pi pi-trash"
-                                severity="danger"
-                                text
-                                rounded
+                                v-tooltip.top="'削除ボタンを有効にするには選択してください'" />
+                            <Button icon="pi pi-trash" severity="danger" text rounded
                                 :disabled="!unlockedReservations.has(slotProps.data.reservation_id)"
-                                @click="confirmDeleteReservation($event, slotProps.data.reservation_id)"
-                            />
+                                @click="confirmDeleteReservation($event, slotProps.data.reservation_id)" />
                         </div>
                     </template>
                 </Column>

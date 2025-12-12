@@ -770,6 +770,3 @@
         // However, ReportingTopMenu was modified to emit all values on its mount.
     });
 </script>
-<style scoped>
- 
-</style>
