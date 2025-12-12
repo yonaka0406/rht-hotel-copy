@@ -893,7 +893,7 @@ export function useReportStore() {
         }
     };
 
-    const generatePdfReport = async (reportType, { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }) => {
+    const generatePdfReport = async (reportType, requestData) => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, PDF generation limited');
@@ -919,13 +919,7 @@ export function useReportStore() {
                     throw new Error('Invalid report type provided for PDF generation.');
             }
 
-            const response = await api.post(url, {
-                selectedView,
-                revenueData,
-                occupancyData,
-                periodMaxDate,
-                allHotelNames,
-            }, {
+            const response = await api.post(url, requestData, {
                 responseType: 'blob' // Important: receive response as a binary blob
             });
 

@@ -459,16 +459,51 @@ const downloadPdf = async () => {
     isDownloadingPdf.value = true;
     
     try {
+        const pdfRequestData = {
+            selectedView: selectedView.value,
+            periodMaxDate: periodMaxDate.value,
+            allHotelNames: allHotelNames.value,
+            // Pass KPI data
+            kpiData: {
+                actualADR: actualADR.value,
+                forecastADR: forecastADR.value,
+                actualRevPAR: actualRevPAR.value,
+                forecastRevPAR: forecastRevPAR.value
+            },
+            // Pass chart data for the specific charts needed
+            chartData: {
+                // Data for RevenuePlanVsActualChart and OccupancyGaugeChart
+                aggregateData: aggregateHotelZeroData.value,
+                // Data for all hotels charts
+                allHotelsRevenueData: allHotelsRevenueChartData.value,
+                allHotelsOccupancyData: props.occupancyData.filter(item => item.hotel_id !== 0)
+            },
+            // Chart options for the all hotels revenue chart
+            allHotelsRevenueChartOptions: hasAllHotelsRevenueData.value ? allHotelsRevenueChartOptions.value : null
+        };
+        
+        console.log('PDF Request Data:', pdfRequestData);
+        console.log('Debug - Props data:', {
+            revenueDataLength: props.revenueData ? props.revenueData.length : 0,
+            occupancyDataLength: props.occupancyData ? props.occupancyData.length : 0,
+            revenueDataSample: props.revenueData ? props.revenueData.slice(0, 2) : null,
+            occupancyDataSample: props.occupancyData ? props.occupancyData.slice(0, 2) : null
+        });
+        console.log('Debug - Individual data values:', {
+            actualADR: actualADR.value,
+            forecastADR: forecastADR.value,
+            actualRevPAR: actualRevPAR.value,
+            forecastRevPAR: forecastRevPAR.value,
+            aggregateHotelZeroData: aggregateHotelZeroData.value,
+            allHotelsRevenueChartData: allHotelsRevenueChartData.value,
+            occupancyDataFiltered: props.occupancyData.filter(item => item.hotel_id !== 0),
+            hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
+            allHotelsRevenueChartOptions: allHotelsRevenueChartOptions.value
+        });
+        
         const responseBlob = await generatePdfReportApi(
             'singleMonthMultipleHotels', // Specific report type for this component
-            {
-                selectedView: selectedView.value,
-                revenueData: props.revenueData,
-                occupancyData: props.occupancyData,
-                periodMaxDate: periodMaxDate.value,
-                allHotelNames: allHotelNames.value,
-                // Add other necessary data for the backend to generate the report
-            }
+            pdfRequestData
         );
 
         // Create a blob URL and trigger download
