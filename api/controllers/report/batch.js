@@ -1,4 +1,4 @@
-const { selectCountReservation, selectForecastData, selectAccountingData, selectOccupationBreakdownByMonth } = require('../../models/report');
+const { selectCountReservation, selectForecastData, selectAccountingData, selectOccupationBreakdownByMonth, selectBatchReservationListView } = require('../../models/report');
 const logger = require('../../config/logger');
 const { validateNumericParam } = require('../../utils/validationUtils');
 const { getPool } = require('../../config/database');
@@ -102,9 +102,25 @@ const getBatchOccupationBreakdown = async (req, res) => {
     return processBatchRequest(req, res, selectOccupationBreakdownByMonth, 'getBatchOccupationBreakdown');
 };
 
+const getBatchReservationListView = async (req, res) => {
+  const { hotelIds, startDate, endDate, searchType } = req.body;
+
+  try {
+    const data = await selectBatchReservationListView(req.requestId, hotelIds, startDate, endDate, searchType);
+    if (!data || data.length === 0) {
+      return res.status(200).json([]);
+    }
+    res.json(data);
+  } catch (err) {
+    logger.error(`[getBatchReservationListView] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
     getBatchCountReservation,
     getBatchForecastData,
     getBatchAccountingData,
-    getBatchOccupationBreakdown
+    getBatchOccupationBreakdown,
+    getBatchReservationListView,
 };

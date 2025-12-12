@@ -2,7 +2,14 @@
     <div>
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
-            <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2" @click="downloadPdf" />
+            <Button 
+                icon="pi pi-file-pdf" 
+                label="PDFをダウンロード" 
+                class="p-button-secondary ml-2" 
+                @click="downloadPdf" 
+                :loading="isDownloadingPdf"
+                :disabled="isDownloadingPdf"
+            />
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -177,6 +184,9 @@ const viewOptions = ref([
     { label: 'グラフ', value: 'graph' },
     { label: 'テーブル', value: 'table' }
 ]);
+
+// PDF download loading state
+const isDownloadingPdf = ref(false);
 
 // Computed property to get all unique hotel names from revenueData    
 const allHotelNames = computed(() => {
@@ -444,6 +454,10 @@ const disposeAllCharts = () => {
 const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
 const downloadPdf = async () => {
+    if (isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
+    
+    isDownloadingPdf.value = true;
+    
     try {
         const responseBlob = await generatePdfReportApi(
             'singleMonthMultipleHotels', // Specific report type for this component
@@ -471,6 +485,8 @@ const downloadPdf = async () => {
     } catch (error) {
         console.error('Error generating PDF:', error);
         // Optionally show a toast notification for error
+    } finally {
+        isDownloadingPdf.value = false;
     }
 };
 

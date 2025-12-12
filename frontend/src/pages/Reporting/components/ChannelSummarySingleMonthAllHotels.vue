@@ -122,7 +122,6 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, shallowRef, nextTick, computed } from 'vue';
 import { useReportStore } from '@/composables/useReportStore';
 import ProgressSpinner from 'primevue/progressspinner';
 import Card from 'primevue/card';
@@ -168,7 +167,7 @@ const viewOptions = ref([
     { label: 'テーブル', value: 'table' }
 ]);
 
-const { fetchChannelSummary, fetchBookerTypeBreakdown, fetchReservationListView } = useReportStore();
+const { fetchChannelSummary, fetchBookerTypeBreakdown, fetchBatchReservationListView } = useReportStore();
 const chartData = ref([]);
 const bookerTypeData = ref([]);
 const lengthOfStayData = ref([]);
@@ -550,10 +549,12 @@ const fetchReportData = async () => {
         chartData.value = summaryData;
 
         const bookerTypePromises = props.selectedHotels.map(hotelId => fetchBookerTypeBreakdown(hotelId, startDate, endDate));
-        const lengthOfStayPromises = props.selectedHotels.map(hotelId => fetchReservationListView(hotelId, startDate, endDate));
 
-        const bookerTypeResults = await Promise.all(bookerTypePromises);
-        const lengthOfStayResults = await Promise.all(lengthOfStayPromises);
+        const [bookerTypeResults, batchLengthOfStayData] = await Promise.all([
+            Promise.all(bookerTypePromises),
+            fetchBatchReservationListView(props.selectedHotels, startDate, endDate, 'stay_period')
+        ]);
+
 
         // Process and store booker type data
         const processedBookerTypeData = [];
@@ -574,17 +575,28 @@ const fetchReportData = async () => {
 
         // Process and store length of stay data
         const processedLengthOfStayData = [];
+        const lengthOfStayByHotel = {};
+
+        // Group batch results by hotel_id
+        if (Array.isArray(batchLengthOfStayData)) {
+            batchLengthOfStayData.forEach(reservation => {
+                if (!lengthOfStayByHotel[reservation.hotel_id]) {
+                    lengthOfStayByHotel[reservation.hotel_id] = [];
+                }
+                lengthOfStayByHotel[reservation.hotel_id].push(reservation);
+            });
+        }
+
         for (let i = 0; i < props.selectedHotels.length; i++) {
             const hotelId = props.selectedHotels[i];
-            const hotelData = lengthOfStayResults[i];
+            const hotelData = lengthOfStayByHotel[hotelId] || [];
             const hotelName = summaryData.find(d => d.hotel_id === hotelId)?.hotel_name || `Hotel ${hotelId}`;
-            if (hotelData) {
-                processedLengthOfStayData.push({
-                    hotelId,
-                    hotelName,
-                    data: hotelData
-                });
-            }
+            
+            processedLengthOfStayData.push({
+                hotelId,
+                hotelName,
+                data: hotelData
+            });
         }
         lengthOfStayData.value = processedLengthOfStayData;
 

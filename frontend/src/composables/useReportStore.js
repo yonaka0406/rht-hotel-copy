@@ -930,14 +930,50 @@ export function useReportStore() {
             });
 
             return response; // This will be the blob
-
         } catch (error) {
             console.error('Failed to generate PDF report:', error);
             throw error;
         }
     };
+    
+    /**
+     * Batch fetch reservation list data for multiple hotels.
+     * @param {Array<number>} hotelIds - Array of hotel IDs.
+     * @param {string} startDate - Start date in YYYY-MM-DD format.
+     * @param {string} endDate - End date in YYYY-MM-DD format.
+     * @param {string} searchType - Type of search (e.g., 'stay_period', 'check_in').
+     * @returns {Array<Object>} A flat array of reservation list items.
+     */
+    const fetchBatchReservationListView = async (hotelIds, startDate, endDate, searchType = 'stay_period') => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return [];
+            }
 
-    // ... (existing functions)
+            const data = await api.post('/report/batch/res-list', {
+                hotelIds,
+                startDate,
+                endDate,
+                searchType
+            });
+
+            // Convert clients_json and payers_json fields from string to JSON
+            if (Array.isArray(data)) {
+                return data.map(reservation => ({
+                    ...reservation,
+                    clients_json: reservation.clients_json ? JSON.parse(reservation.clients_json) : [],
+                    payers_json: reservation.payers_json ? JSON.parse(reservation.payers_json) : []
+                }));
+            } else {
+                console.warn('Batch reservation list data is not an array:', data);
+                return [];
+            }
+        } catch (error) {
+            console.error('Failed to fetch batch reservation list data:', error);
+            throw error;
+        }
+    };
 
     return {
         reservationList,
@@ -951,7 +987,7 @@ export function useReportStore() {
         fetchCountReservation,
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
-        fetchReservationListView,
+        fetchReservationListView, // Keep old one for now if still used elsewhere
         fetchForecastData,
         fetchAccountingData,
         exportReservationList,
@@ -978,6 +1014,7 @@ export function useReportStore() {
         fetchBatchForecastData,
         fetchBatchAccountingData,
         fetchBatchOccupationBreakdown,
-        generatePdfReport, // Add to the return object
+        generatePdfReport,
+        fetchBatchReservationListView, // Add new batch function
     };
 }

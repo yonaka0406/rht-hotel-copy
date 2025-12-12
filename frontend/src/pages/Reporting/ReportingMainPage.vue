@@ -114,12 +114,15 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown } = useReportStore();
+    const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchBatchReservationListView } = useReportStore();
 
     // Primevue
     import { ProgressSpinner } from 'primevue';
 
     const pmsFallbackCapacities = ref({}); // To store fallback capacities per hotel
+
+    // --- State for initial data loading control ---
+    const isInitialized = ref(false); // Flag to control initial data fetch
 
     // -- Helper Functions --
     function formatDate(date) {
@@ -231,6 +234,7 @@
     const forecastTotalData = ref({});
     const accountingTotalData = ref({});
     const occupationBreakdownAllHotels = ref([]); // New: to store aggregated occupation breakdown data
+    const reservationListViewData = ref({}); // New: to store batched reservation list view data
     // pmsFallbackCapacities was added near the top
 
     const revenueData = computed(() => {
@@ -581,6 +585,10 @@
     });
 
     const fetchData = async () => {
+        if (!isInitialized.value) {
+            return;
+        }
+
         // Prevent fetching summary data if a new specialized report type is selected
         if (selectedReportType.value === 'activeReservationsChange' || 
             selectedReportType.value === 'monthlyReservationEvolution' ||
@@ -588,6 +596,7 @@
             loading.value = false; 
             pmsTotalData.value = {}; forecastTotalData.value = {}; accountingTotalData.value = {};
             occupationBreakdownAllHotels.value = []; // Clear occupation breakdown data
+            reservationListViewData.value = {}; // Clear reservation list view data
             return; 
         }
 
@@ -602,6 +611,7 @@
                     forecastTotalData.value = newForecastTotalData;
                     accountingTotalData.value = newAccountingTotalData;
                     occupationBreakdownAllHotels.value = [];
+                    reservationListViewData.value = {}; // Ensure reservation list view ref is updated
                     return;
                 }        if (!firstDayofFetch.value || !lastDayofFetch.value) {
             // console.log('RMP: Date range is not properly set for summary. Skipping data fetch.');
@@ -627,11 +637,12 @@
             const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
             const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
 
-            const [batchPmsData, batchForecastData, batchAccountingData, batchOccupationBreakdownData] = await Promise.all([
+            const [batchPmsData, batchForecastData, batchAccountingData, batchOccupationBreakdownData, batchReservationListViewRawData] = await Promise.all([
                 fetchBatchCountReservation(selectedHotels.value, pmsFetchStartDate, pmsFetchEndDate),
                 fetchBatchForecastData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
                 fetchBatchAccountingData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
-                fetchBatchOccupationBreakdown(selectedHotels.value, startDateFormatted, endDateFormatted)
+                fetchBatchOccupationBreakdown(selectedHotels.value, startDateFormatted, endDateFormatted),
+                fetchBatchReservationListView(selectedHotels.value, startDateFormatted, endDateFormatted, 'stay_period') // New batch call
             ]);
             
             // Process the results from batchOccupationBreakdownData
@@ -647,6 +658,18 @@
                 }
             }
             occupationBreakdownAllHotels.value = allBreakdownItems;
+
+            // Process batchReservationListViewRawData
+            const newReservationListViewData = {};
+            if (Array.isArray(batchReservationListViewRawData)) {
+                batchReservationListViewRawData.forEach(reservation => {
+                    if (!newReservationListViewData[reservation.hotel_id]) {
+                        newReservationListViewData[reservation.hotel_id] = [];
+                    }
+                    newReservationListViewData[reservation.hotel_id].push(reservation);
+                });
+            }
+            reservationListViewData.value = newReservationListViewData; // Update the ref
 
             for (const hotelId of selectedHotels.value) {
                 currentProcessingHotelId = hotelId;
@@ -710,6 +733,7 @@
                 if (!pmsTotalData.value[hotelKey]) pmsTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform PMS', details: error };
                 if (!forecastTotalData.value[hotelKey]) forecastTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform Forecast', details: error };
                 if (!accountingTotalData.value[hotelKey]) accountingTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform Accounting', details: error };
+                if (!reservationListViewData.value[hotelKey]) reservationListViewData.value[hotelKey] = { error: true, message: 'Failed to load/transform Reservation List View', details: error };
             }
         } finally {
             loading.value = false;
@@ -762,11 +786,10 @@
     }
 
     onMounted(async () => {
-        // console.log('RMP: onMounted. Initial selectedReportType:', selectedReportType.value);
-        // Initial data fetch is triggered by ReportingTopMenu emitting changes on its mount,
-        // which then calls the handlers (like handleHotelChange) in this component.
-        // If ReportingTopMenu does not emit all necessary initial values,
-        // an explicit call to fetchData() might be needed here, guarded by selectedReportType.
-        // However, ReportingTopMenu was modified to emit all values on its mount.
+        // Initial data fetch is triggered by ReportingTopMenu emitting changes on its mount.
+        // We set isInitialized to true and trigger fetchData() to ensure data is fetched
+        // after all initial parameters from ReportingTopMenu are available.
+        isInitialized.value = true;
+        fetchData();
     });
 </script>
