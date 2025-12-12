@@ -63,13 +63,13 @@
                 </template>
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
-                        <div class="w-full md:w-1/2 mb-4 md:mb-0">
+                        <div class="w-full md:w-1/2 mb-4 md:mb-0 print-chart-item">
                             <h6 class="text-center">施設別 売上合計（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
                             <div v-else ref="allHotelsRevenueChartContainer" class="print-chart-container"
                                 :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
                         </div>
-                        <div class="w-full md:w-1/2">
+                        <div class="w-full md:w-1/2 print-chart-item">
                             <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
                             <div v-else>
@@ -562,6 +562,18 @@ watch(() => props.occupancyData, () => {
     }
     .print-chart-container {
         height: v-bind(allHotelsChartPrintHeight) + 'px' !important;
+    }
+
+    @media (orientation: landscape) {
+        .print-chart-item:nth-of-type(2) {
+            page-break-before: always !important;
+        }
+    }
+
+    @media (orientation: portrait) {
+        .print-chart-item:nth-of-type(2) {
+            page-break-before: auto !important; /* Ensure no break is forced */
+        }
     }
 }
 </style>
