@@ -4,7 +4,7 @@
             <h1 class="font-semibold text-gray-700">やり取り一覧</h1>
             <Button label="新規アクション作成" icon="pi pi-plus" @click="openNewActionDialog" class="p-button-success" />
             <Button @click="handleManualSync"
-                v-if="hasGoogleCalendarId && hasGoogleCalendarId"
+                v-if="hasGoogleCalendarId"
                 label="Googleカレンダー同期"
                 icon="pi pi-sync"
                 :loading="isSyncingCalendar"

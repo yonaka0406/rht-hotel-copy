@@ -94,11 +94,13 @@ const openReservationEdit = (id) => {
 };
 
 const toggleDeleteUnlock = (reservationId) => {
-    if (unlockedReservations.value.has(reservationId)) {
-        unlockedReservations.value.delete(reservationId); // Remove if already unlocked
+    const newUnlockedReservations = new Set(unlockedReservations.value); // Clone the Set
+    if (newUnlockedReservations.has(reservationId)) {
+        newUnlockedReservations.delete(reservationId); // Mutate the clone
     } else {
-        unlockedReservations.value.add(reservationId); // Add to unlock
+        newUnlockedReservations.add(reservationId); // Mutate the clone
     }
+    unlockedReservations.value = newUnlockedReservations; // Reassign the ref
 };
 
 const confirmDeleteReservation = (event, reservationId) => {
