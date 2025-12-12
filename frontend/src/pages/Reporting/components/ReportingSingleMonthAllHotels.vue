@@ -1,8 +1,8 @@
 <template>
     <div>
         <div class="flex justify-end mb-2">
-            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" class="no-print" />
-            <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2 no-print" @click="downloadPdf" />
+            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
+
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -58,19 +58,19 @@
                 </Card>
             </Panel>
 
-            <Card class="print-avoid-break">
+            <Card>
                 <template #header>
                     <span class="text-xl font-bold">全施設 収益＆稼働率 概要</span>
                 </template>
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
-                        <div class="w-full md:w-1/2 mb-4 md:mb-0 print-chart-item">
+                        <div class="w-full md:w-1/2 mb-4 md:mb-0">
                             <h6 class="text-center">施設別 売上合計（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
-                            <div v-else ref="allHotelsRevenueChartContainer" class="print-chart-container"
+                            <div v-else ref="allHotelsRevenueChartContainer"
                                 :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
                         </div>
-                        <div class="w-full md:w-1/2 print-chart-item">
+                        <div class="w-full md:w-1/2">
                             <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
                             <div v-else>
@@ -132,7 +132,6 @@
 <script setup>
 // Vue
 import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
-import axios from 'axios';
 
 // Props
 const props = defineProps({
@@ -351,9 +350,7 @@ const allHotelsChartHeight = computed(() => {
     return Math.max(minHeight, calculatedHeight);
 });
 
-const allHotelsChartPrintHeight = computed(() => {
-    return 400; // Fixed height for printing
-});
+
 
 
 
@@ -438,35 +435,7 @@ const disposeAllCharts = () => {
     allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
 };
 
-const downloadPdf = async () => {
-    try {
-        const response = await axios.post('/api/reports/generate-pdf', {
-            selectedView: selectedView.value,
-            revenueData: props.revenueData,
-            occupancyData: props.occupancyData,
-            periodMaxDate: periodMaxDate.value,
-            allHotelNames: allHotelNames.value,
-            // Add other necessary data for the backend to generate the report
-        }, {
-            responseType: 'blob' // Important: receive response as a binary blob
-        });
 
-        // Create a blob URL and trigger download
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'report.pdf'); // Set the desired filename
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-
-        console.log('PDF download initiated successfully!');
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        // Optionally show a toast notification for error
-    }
-};
 
 // Table
 const getSeverity = getSeverityUtil;
@@ -587,25 +556,3 @@ watch(() => props.occupancyData, () => {
     }
 }, { deep: true }); // Use deep watch for array/object changes
 </script>
-<style scoped>
-@media print {
-    .print-avoid-break {
-        page-break-inside: avoid !important;
-    }
-    .print-chart-container {
-        height: v-bind(allHotelsChartPrintHeight) + 'px' !important;
-    }
-
-    @media (orientation: landscape) {
-        .print-chart-item:nth-of-type(2) {
-            page-break-before: always !important;
-        }
-    }
-
-    @media (orientation: portrait) {
-        .print-chart-item:nth-of-type(2) {
-            page-break-before: auto !important; /* Ensure no break is forced */
-        }
-    }
-}
-</style>

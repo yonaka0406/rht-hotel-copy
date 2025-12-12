@@ -1,8 +1,7 @@
 <template>
-    <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 print-container">
+    <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
         <header>
             <ReportingTopMenu
-                class="no-print"
                 :selectedDate="selectedDate"
                 :period="period"
                 :selectedHotels="selectedHotels"
@@ -14,7 +13,7 @@
             />
         </header>
         
-        <main class="flex-1 overflow-auto p-6 print-main">
+        <main class="flex-1 overflow-auto p-6">
             <DailyReportDownloader
                 v-if="selectedReportType === 'dailyReport'"
             />
@@ -90,7 +89,7 @@
             </div>
         </main>
 
-        <footer class="bg-black dark:bg-gray-950 text-white dark:text-gray-300 p-4 text-center text-sm print-footer">
+        <footer class="bg-black dark:bg-gray-950 text-white dark:text-gray-300 p-4 text-center text-sm">
             レッドホーストラスト株式会社
         </footer>
     </div>
@@ -771,23 +770,3 @@
         // However, ReportingTopMenu was modified to emit all values on its mount.
     });
 </script>
-<style scoped>
-@media print {
-    .print-container {
-        height: auto !important; /* Override h-screen */
-        display: block !important; /* Ensure flex context doesn't interfere with block flow */
-    }
-
-    .print-main {
-        overflow: visible !important; /* Allow content to flow */
-        flex: none !important; /* Prevent flex-1 from constraining height */
-    }
-    .print-footer {
-        position: static !important; /* Ensure footer flows with content */
-        page-break-before: auto; /* Allow page break before footer if needed */
-    }
-    .no-print {
-        display: none !important;
-    }
-}
-</style>
