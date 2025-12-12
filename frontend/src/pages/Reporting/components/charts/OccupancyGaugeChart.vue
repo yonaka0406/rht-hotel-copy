@@ -40,7 +40,15 @@ const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
 
 const chartOptions = computed(() => {
-  const { sold_rooms, total_rooms, net_total_rooms, fc_sold_rooms, fc_total_rooms, fc_net_total_rooms } = props.occupancyData;
+  const { total_sold_rooms, total_available_rooms, total_fc_sold_rooms, total_fc_available_rooms } = props.occupancyData;
+
+  // Map to expected names
+  const sold_rooms = total_sold_rooms;
+  const total_rooms = total_available_rooms; // Corresponds to total_available_rooms in aggregateHotelZeroData
+  const net_total_rooms = undefined; // Not directly available from aggregateHotelZeroData
+  const fc_sold_rooms = total_fc_sold_rooms;
+  const fc_total_rooms = total_fc_available_rooms; // Corresponds to total_fc_available_rooms in aggregateHotelZeroData
+  const fc_net_total_rooms = undefined; // Not directly available from aggregateHotelZeroData
 
   // Use net capacity if available, otherwise fall back to gross capacity
   const actualTotalRooms = net_total_rooms !== undefined && net_total_rooms !== null ? net_total_rooms : total_rooms;
