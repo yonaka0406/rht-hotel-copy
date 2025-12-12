@@ -14,8 +14,7 @@
             <span>{{ reservationInfo.check_out }}</span>
         </div>
         <div class="col-span-3">
-            <p class="font-bold mb-1">備考：<span
-                class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
+            <p class="font-bold mb-1">備考：<span class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
             <Textarea v-model="reservationInfo.comment"
                 :disabled="reservationInfo.client_id !== '22222222-2222-2222-2222-222222222222'"
                 @keydown="handleKeydown"
@@ -40,7 +39,8 @@
                 style="background-color: transparent;" />
         </div>
         <div class="field flex flex-col">
-            <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'">
+            <div
+                v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定' || reservationStatus === 'チェックイン'">
                 <div class="flex items-center justify-between mr-2 mb-2">
                     <p class="font-bold">宿泊者：</p>
                     <SplitButton label="予約操作" :model="actionOptions" icon="pi pi-cog" severity="help" class="ml-2"
@@ -76,8 +76,8 @@
                 <span>
                     <i class="pi pi-arrow-down-right mr-1"></i>{{ reservationInfo.check_in }}
                 </span>
-                    <DatePicker id="datepicker-timeonly" v-model="checkInTime" @update:modelValue="checkInChange"
-                        timeOnly fluid />
+                <DatePicker id="datepicker-timeonly" v-model="checkInTime" @update:modelValue="checkInChange" timeOnly
+                    fluid />
                 <div class="col-span-1 flex items-center justify-start">
                     <i class="pi pi-clock ml-1"></i>
                 </div>
@@ -85,41 +85,30 @@
                 <span>
                     <i class="pi pi-arrow-up-right mr-1"></i>{{ reservationInfo.check_out }}
                 </span>
-                
-                <DatePicker id="datepicker-timeonly" v-model="checkOutTime" @update:modelValue="checkOutChange"
-                    timeOnly fluid />
+
+                <DatePicker id="datepicker-timeonly" v-model="checkOutTime" @update:modelValue="checkOutChange" timeOnly
+                    fluid />
                 <div class="col-span-1 flex items-center justify-start">
                     <i class="pi pi-clock ml-1"></i>
-                </div>                
-                
+                </div>
+
             </div>
 
         </div>
         <div class="field relative">
             <div class="absolute top-0 right-0 z-10">
-                <Button 
-                    v-tooltip.top="'重要コメントとしてマーク'"
+                <Button v-tooltip.top="'重要コメントとしてマーク'"
                     :class="{ 'p-button-warning': reservationInfo.has_important_comment }"
                     :icon="reservationInfo.has_important_comment ? 'pi pi-star-fill' : 'pi pi-star'"
-                    @click="toggleImportantComment"
-                    text
-                    rounded
-                    aria-label="重要コメントとしてマーク"
-                />
+                    @click="toggleImportantComment" text rounded aria-label="重要コメントとしてマーク" />
             </div>
             <Fieldset legend="備考" :toggleable="true">
                 <p class="m-0 text-left" style="white-space: pre-wrap;">
                     {{ reservationInfo.comment }}
                 </p>
                 <div class="flex justify-end mt-2">
-                    <Button 
-                        v-tooltip.top="'備考を編集'"
-                        icon="pi pi-pencil"
-                        @click="openCommentDialog"
-                        text
-                        rounded
-                        aria-label="備考を編集"
-                    />
+                    <Button v-tooltip.top="'備考を編集'" icon="pi pi-pencil" @click="openCommentDialog" text rounded
+                        aria-label="備考を編集" />
                 </div>
             </Fieldset>
         </div>
@@ -130,9 +119,10 @@
 
         <div class="field flex flex-col col-span-2" v-if="isLongTermReservation">
             <span>
-                <Button label="キャンセル発生日計算" icon="pi pi-calculator" class="p-button-text p-button-sm ml-2" @click="showCancellationCalculator = true" />
+                <Button label="キャンセル発生日計算" icon="pi pi-calculator" class="p-button-text p-button-sm ml-2"
+                    @click="showCancellationCalculator = true" />
                 からキャンセル料発生日の確認ができます。
-                <i class="pi pi-info-circle ml-1" v-tooltip.top=cancellationFeeMessage></i>                
+                <i class="pi pi-info-circle ml-1" v-tooltip.top=cancellationFeeMessage></i>
             </span>
         </div>
         <div class="field flex flex-col">
@@ -142,7 +132,7 @@
                     optionLabel="label" optionValue="value" @change="updatePaymentTiming"
                     :disabled="reservationStatus === 'キャンセル'" />
             </div>
-        </div>        
+        </div>
         <div class="field flex flex-col ">
             <div class="items-center flex">
                 <span class="font-bold">種類：</span>
@@ -165,7 +155,7 @@
         </div>
         <div class="field flex flex-col" v-if="reservationType !== '社員'">
             <span class="items-center flex"><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
-        </div>        
+        </div>
         <div class="field flex flex-col col-span-2 relative">
             <div class="absolute top-0 right-0">
                 <Button icon="pi pi-history" class="p-button-rounded p-button-text" @click="showHistoryDialog" />
@@ -177,38 +167,21 @@
             <ConfirmDialog group="recovery"></ConfirmDialog>
             <ConfirmDialog group="revertCheckout"></ConfirmDialog>
 
-            <ReservationStatusButtons
-                :reservationType="reservationType"
-                :reservationStatus="reservationStatus"
-                :allRoomsHavePlan="allRoomsHavePlan"
-                :isSubmitting="isSubmitting"
-                :reservation_id="props.reservation_id"
-                :hotel_id="String(reservationInfo.hotel_id)"
-                @updateReservationStatus="updateReservationStatus"
-                @revertCheckout="revertCheckout"
-                @handleCancel="handleCancel"
-                @onReservationDeleted="goToNewReservation"
-            />
+            <ReservationStatusButtons :reservationType="reservationType" :reservationStatus="reservationStatus"
+                :allRoomsHavePlan="allRoomsHavePlan" :isSubmitting="isSubmitting" :reservation_id="props.reservation_id"
+                :hotel_id="String(reservationInfo.hotel_id)" @updateReservationStatus="updateReservationStatus"
+                @revertCheckout="revertCheckout" @handleCancel="handleCancel"
+                @onReservationDeleted="goToNewReservation" />
         </div>
     </div>
 
-    <ReservationCancelDialog
-        :reservation_id="props.reservation_id"
-        :reservation_details="props.reservation_details"
-        v-model:showDateDialog="showDateDialog"
-        v-model:isSubmitting="isSubmitting"
-    />
+    <ReservationCancelDialog :reservation_id="props.reservation_id" :reservation_details="props.reservation_details"
+        v-model:showDateDialog="showDateDialog" v-model:isSubmitting="isSubmitting" />
 
-    <ChangeClientDialog
-        v-model="visibleClientChangeDialog"
-        :client_id="selectedClient"
-    />
+    <ChangeClientDialog v-model="visibleClientChangeDialog" :client_id="selectedClient" />
 
-    <ReservationAddRoomDialog
-        :reservation_details="reservation_details"
-        :isSubmitting="isSubmitting"
-        ref="reservationAddRoomDialogRef"        
-    />
+    <ReservationAddRoomDialog :reservation_details="reservation_details" :isSubmitting="isSubmitting"
+        ref="reservationAddRoomDialogRef" />
 
     <!-- Reservation Edit Dialog -->
     <Dialog v-model:visible="visibleReservationBulkEditDialog" header="全部屋一括編集" :modal="true"
@@ -309,7 +282,8 @@
                                         </FloatLabel>
                                     </div>
                                     <div class="field col mt-8 ml-2">
-                                        <Button label="追加" @click="generateAddonPreview" :loading="isSubmitting" :disabled="isSubmitting" />
+                                        <Button label="追加" @click="generateAddonPreview" :loading="isSubmitting"
+                                            :disabled="isSubmitting" />
                                     </div>
                                 </div>
 
@@ -334,7 +308,8 @@
                                             <template #body="slotProps">
                                                 <Button icon="pi pi-trash"
                                                     class="p-button-text p-button-danger p-button-sm"
-                                                    @click="deleteAddon(slotProps.data)" :loading="isSubmitting" :disabled="isSubmitting" />
+                                                    @click="deleteAddon(slotProps.data)" :loading="isSubmitting"
+                                                    :disabled="isSubmitting" />
                                             </template>
                                         </Column>
                                     </DataTable>
@@ -363,7 +338,8 @@
                                 </div>
                             </template>
                         </Card>
-                        <Message v-if="!areAllRoomsSelectedComputed" severity="info" :closable="false" class="mt-2 mb-6">
+                        <Message v-if="!areAllRoomsSelectedComputed" severity="info" :closable="false"
+                            class="mt-2 mb-6">
                             選択された部屋は新しい予約に移動されます。
                         </Message>
                         <p class="mt-2 mb-6"><span class="font-bold">注意：</span>全ての部屋宿泊期間を変更できる日付が表示されています。</p>
@@ -372,16 +348,18 @@
                                 <FloatLabel>
                                     <label for="checkin">チェックイン</label>
                                     <DatePicker id="checkin" v-model="newCheckIn" :showIcon="true"
-                                        :minDate="computedMinCheckIn || undefined" :maxDate="computedMaxCheckOut || undefined"
-                                        iconDisplay="input" dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
+                                        :minDate="computedMinCheckIn || undefined"
+                                        :maxDate="computedMaxCheckOut || undefined" iconDisplay="input"
+                                        dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
                                 </FloatLabel>
                             </div>
                             <div>
                                 <FloatLabel>
                                     <label for="checkout">チェックアウト</label>
                                     <DatePicker id="checkout" v-model="newCheckOut" :showIcon="true"
-                                        :minDate="computedMinCheckIn || undefined" :maxDate="computedMaxCheckOut || undefined"
-                                        iconDisplay="input" dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
+                                        :minDate="computedMinCheckIn || undefined"
+                                        :maxDate="computedMaxCheckOut || undefined" iconDisplay="input"
+                                        dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid />
                                 </FloatLabel>
                             </div>
                         </div>
@@ -398,11 +376,13 @@
                                     <div class="grid grid-cols-4 gap-4 items-center">
                                         <p class="text-center">{{ change.roomValues.details[0].room_type_name + ' ' +
                                             change.roomValues.details[0].room_number }}
-                                            <i v-if="hasRoomChange(change.roomValues)" class="pi pi-exclamation-triangle ml-2 text-orange-500"
+                                            <i v-if="hasRoomChange(change.roomValues)"
+                                                class="pi pi-exclamation-triangle ml-2 text-orange-500"
                                                 v-tooltip.top="'この部屋には期間変更があります。'"></i>
                                         </p>
                                         <div class="flex justify-center">
-                                            <Checkbox v-model="selectedRoomsForChange" :value="change.roomId" :disabled="hasRoomChange(change.roomValues)" />
+                                            <Checkbox v-model="selectedRoomsForChange" :value="change.roomId"
+                                                :disabled="hasRoomChange(change.roomValues)" />
                                         </div>
                                         <p class="text-center"
                                             :class="{ 'text-xs text-center': !change.results.earliestCheckIn }">
@@ -429,14 +409,17 @@
                 <div v-if="tabsReservationBulkEditDialog === 0 && !isPatternInput" class="field-checkbox mr-4">
                     <Checkbox id="disableRounding" v-model="disableRounding" :binary="true" />
                     <label for="disableRounding" class="ml-2">端数処理を上書きする</label>
-                </div>                                
+                </div>
                 <Button v-if="tabsReservationBulkEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check"
-                    class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
-                
+                    class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll"
+                    :loading="isSubmitting" :disabled="isSubmitting" />
+
                 <Button v-if="tabsReservationBulkEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check"
-                    class="p-button-success p-button-text p-button-sm" @click="applyPatternChangesToAll" :loading="isSubmitting" :disabled="isSubmitting" />
+                    class="p-button-success p-button-text p-button-sm" @click="applyPatternChangesToAll"
+                    :loading="isSubmitting" :disabled="isSubmitting" />
                 <Button v-if="tabsReservationBulkEditDialog === 4" label="適用" icon="pi pi-check"
-                    class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" :loading="isSubmitting" :disabled="isSubmitting" />
+                    class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" :loading="isSubmitting"
+                    :disabled="isSubmitting" />
 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text
                     @click="closeReservationBulkEditDialog" :loading="isSubmitting" :disabled="isSubmitting" />
@@ -444,45 +427,25 @@
         </template>
     </Dialog>
 
-    <ReservationHistoryDialog
-        :reservation_id="props.reservation_id"
-        v-model:visible="historyDialogVisible"
-    />
+    <ReservationHistoryDialog :reservation_id="props.reservation_id" v-model:visible="historyDialogVisible" />
 
-    <ReservationCopyDialog
-        :reservation_id="props.reservation_id"
-        :hotel_id="String(reservationInfo.hotel_id)"
-        v-model:visible="showCopyDialog"
-    />
+    <ReservationCopyDialog :reservation_id="props.reservation_id" :hotel_id="String(reservationInfo.hotel_id)"
+        v-model:visible="showCopyDialog" />
 
-    <ReservationSplitDialog
-        :reservation_id="props.reservation_id"
-        :reservation_details="props.reservation_details"
-        v-model:visible="showSplitDialog"
-    />
+    <ReservationSplitDialog :reservation_id="props.reservation_id" :reservation_details="props.reservation_details"
+        v-model:visible="showSplitDialog" />
 
-    <ReservationCommentDialog
-        v-model:visible="commentDialogVisible"
-        :comment="localCommentInput"
+    <ReservationCommentDialog v-model:visible="commentDialogVisible" :comment="localCommentInput"
         :has-important-comment="reservationInfo.has_important_comment"
-        @save="(newComment) => updateReservationComment(reservationInfo.reservation_id, reservationInfo.hotel_id, newComment)"
-    />
+        @save="(newComment) => updateReservationComment(reservationInfo.reservation_id, reservationInfo.hotel_id, newComment)" />
 
-    <CancellationCalculatorDialog 
-        v-model:visible="showCancellationCalculator" 
-        :reservationDetails="reservation_details" 
-        v-if="reservation_details?.length > 0"
-    />
+    <CancellationCalculatorDialog v-model:visible="showCancellationCalculator" :reservationDetails="reservation_details"
+        v-if="reservation_details?.length > 0" />
 
-    <ReservationAnnounceDialog
-        v-model:visible="visibleSlackDialog"
-        :reservationInfo="reservationInfo"
-        :groupedRooms="groupedRooms"
-        :allReservationClients="allReservationClients"
-        :parking_reservations="props.parking_reservations"
-        :reservation_payments="props.reservation_payments"
-        ref="reservationAnnounceDialogRef"
-    />
+    <ReservationAnnounceDialog v-model:visible="visibleSlackDialog" :reservationInfo="reservationInfo"
+        :groupedRooms="groupedRooms" :allReservationClients="allReservationClients"
+        :parking_reservations="props.parking_reservations" :reservation_payments="props.reservation_payments"
+        ref="reservationAnnounceDialogRef" />
 
 </template>
 
@@ -589,10 +552,10 @@ const toggleImportantComment = async () => {
             hotelId,
             newValue
         );
-        
+
         // Update local state
         reservationInfo.value.has_important_comment = newValue;
-        
+
         // Show feedback
         toast.add({
             severity: 'success',
@@ -751,7 +714,7 @@ const cancellationFeeMessage = computed(() => {
     feeDate.setHours(0, 0, 0, 0);
 
     return `キャンセルポリシーは予約の規模に応じて、「〇日前まで」であればキャンセル料が発生しないように設定できます。`;
-    
+
 });
 
 const numberOfNights = ref(0);

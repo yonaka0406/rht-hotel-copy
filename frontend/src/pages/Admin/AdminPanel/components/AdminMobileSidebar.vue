@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue';
+import { computed } from 'vue';
 import Drawer from 'primevue/drawer';
 import Button from 'primevue/button';
 import Divider from 'primevue/divider';
