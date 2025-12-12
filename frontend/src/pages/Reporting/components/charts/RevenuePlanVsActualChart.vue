@@ -4,6 +4,11 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+// ECharts imports
+// Note: A "non-passive event listener" warning for mousewheel/wheel events may appear in the console.
+// This is typically due to ECharts's internal event handling and is not directly configurable via component props.
+// Addressing it would require deeper ECharts customization or global event listener manipulation,
+// which is beyond the scope of a simple component fix.
 import * as echarts from 'echarts/core';
 import {
   TitleComponent,
