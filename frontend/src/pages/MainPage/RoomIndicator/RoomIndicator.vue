@@ -60,6 +60,7 @@ import { useReservationActions } from './composables/useReservationActions';
 
 const isLoading = ref(false);
 const hasLoadedRooms = ref(false); // New ref to track if rooms have been loaded
+const loadError = ref(false); // New ref to track if an error occurred during loading
 
 onMounted(async () => {
   isLoading.value = true;
@@ -95,6 +96,7 @@ onMounted(async () => {
 
   } catch (error) {
     console.error('Failed to load hotel data:', error);
+    loadError.value = true; // Set error flag
     toast.add({
       severity: 'error',
       summary: 'エラー',
@@ -103,8 +105,8 @@ onMounted(async () => {
     });
   } finally {
     isLoading.value = false;
-    // Display warning toast only after loading has finished and if no rooms were loaded
-    if (!hasLoadedRooms.value) {
+    // Display warning toast only after loading has finished and if no rooms were loaded AND no error occurred
+    if (!hasLoadedRooms.value && !loadError.value) {
       toast.add({
         severity: 'warn',
         summary: '警告',
