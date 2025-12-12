@@ -5,61 +5,61 @@
         </div>
 
         <div v-if="selectedView === 'graph'">
-            <Card class="mb-4">
-                <template #header>
-                    <span class="text-xl font-bold">主要KPI（全施設合計）</span>
-                </template>
-                <template #content>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
-                        </div>
-                    </div>
-                </template>
-                <template #footer>
-                    <div class="flex justify-content-between">
-                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}</small>
-                    </div>
-                </template>
-            </Card>
 
-            <Card class="mb-4">
-                <template #header>
-                    <span class="text-xl font-bold">収益（計画ｘ実績）</span>
-                </template>
-                <template #content>
-                    <div v-if="!hasRevenueDataForChart" class="text-center p-4">
-                        データはありません。
-                    </div>
-                                        <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">                        
-                                            <div class="w-full md:w-1/2">
-                                                <RevenuePlanVsActualChart :revenueData="aggregateHotelZeroData" />
-                                            </div>
-                                            <div class="w-full md:w-1/2">
-                                                <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" />
-                                            </div>                        
-                                        </div>                </template>
-                <template #footer>
-                    <div class="flex justify-content-between">
-                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}</small>
-                    </div>
-                </template>
-            </Card>
+            <Panel header="月次サマリー" class="mb-4">
+                <Card class="mb-4">
+                    <template #header>
+                        <span class="text-xl font-bold">主要KPI（全施設合計）</span>
+                    </template>
+                    <template #content>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
+                            <div class="p-4 bg-gray-50 rounded-lg shadow">
+                                <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
+                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg shadow">
+                                <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
+                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg shadow">
+                                <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
+                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg shadow">
+                                <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
+                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
+                            </div>
+                        </div>
+                    </template>
+                    <template #footer>
+                        <div class="flex justify-content-between">
+                            <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames
+                            }}</small>
+                        </div>
+                    </template>
+                </Card>
 
-            <Card>
+                <Card class="mb-4">
+                    <template #header>
+                        <span class="text-xl font-bold">収益（計画ｘ実績）</span>
+                    </template>
+                    <template #content>
+                        <div v-if="!hasRevenueDataForChart" class="text-center p-4">
+                            データはありません。
+                        </div>
+                        <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
+                            <div class="w-full md:w-1/2">
+                                <RevenuePlanVsActualChart :revenueData="aggregateHotelZeroData" />
+                            </div>
+                            <div class="w-full md:w-1/2">
+                                <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" />
+                            </div>
+                        </div>
+                    </template>
+                </Card>
+            </Panel>
+
+            <Card class="print-avoid-break">
                 <template #header>
                     <span class="text-xl font-bold">全施設 収益＆稼働率 概要</span>
                 </template>
@@ -113,13 +113,8 @@
                         </div>
                     </div>
                 </template>
-                <template #footer>
-                    <div class="flex justify-content-between">
-                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}</small>
-                    </div>
-                </template>
             </Card>
-                        <RevenuePlanVsActualTable :revenueData="props.revenueData" @export-csv="exportCSV" />
+            <RevenuePlanVsActualTable :revenueData="props.revenueData" @export-csv="exportCSV" />
 
             <Card>
                 <template #header>
@@ -162,7 +157,7 @@ import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
+import { Card, Badge, SelectButton, Button, DataTable, Column, Panel } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 
 // Utilities
@@ -196,7 +191,17 @@ const allHotelNames = computed(() => {
 
 const periodMaxDate = computed(() => {
     if (!props.revenueData || props.revenueData.length === 0) return 'N/A';
-    const maxDate = new Date(Math.max(...props.revenueData.map(item => new Date(item.month))));
+    const validTimestamps = props.revenueData
+        .map(item => {
+            const date = new Date(item.month);
+            return isNaN(date.getTime()) ? null : date.getTime();
+        })
+        .filter(timestamp => timestamp !== null && isFinite(timestamp));
+
+    if (validTimestamps.length === 0) {
+        return 'N/A';
+    }
+    const maxDate = new Date(Math.max(...validTimestamps));
     return maxDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit' });
 });
 
@@ -548,3 +553,10 @@ watch(() => props.occupancyData, () => {
     }
 }, { deep: true }); // Use deep watch for array/object changes
 </script>
+<style scoped>
+@media print {
+    .print-avoid-break {
+        page-break-inside: avoid !important;
+    }
+}
+</style>

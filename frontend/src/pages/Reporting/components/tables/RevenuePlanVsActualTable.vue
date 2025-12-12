@@ -33,15 +33,18 @@
                             </div>
                         </template>
                     </Column>
-                    <Column header="分散" sortable style="width: 30%">
+                    <Column header="分散" style="width: 30%">
                         <template #body="{ data }">
                             <div class="flex justify-end mr-2">
                                 {{ formatCurrency(data.accommodation_revenue - data.forecast_revenue) }}
-                                <Badge class="ml-2"
+                                <Badge v-if="data.forecast_revenue !== null && data.forecast_revenue !== undefined && data.forecast_revenue !== 0"
+                                    class="ml-2"
                                     :severity="getSeverity((data.accommodation_revenue / data.forecast_revenue) - 1)"
                                     size="small">
-                                    {{ formatPercentage((data.accommodation_revenue / data.forecast_revenue) -
-                                        1) }}
+                                    {{ formatPercentage((data.accommodation_revenue / data.forecast_revenue) - 1) }}
+                                </Badge>
+                                <Badge v-else class="ml-2" severity="info" size="small">
+                                    —
                                 </Badge>
                             </div>
                         </template>
