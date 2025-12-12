@@ -38,6 +38,9 @@ router.get('/report/occupation-breakdown/:hid/:sdate/:edate', authMiddleware, re
 router.post('/report/channel-summary', authMiddleware, reportController.getChannelSummary);
 router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, reportController.getCheckInOutReport);
 
+// PDF Generation
+router.post('/report/generate-pdf', authMiddleware, reportController.generatePdfReport);
+
 // Batch endpoints for optimized multi-hotel queries
 router.post('/report/batch/count', authMiddleware, reportController.getBatchCountReservation);
 router.post('/report/batch/forecast', authMiddleware, reportController.getBatchForecastData);

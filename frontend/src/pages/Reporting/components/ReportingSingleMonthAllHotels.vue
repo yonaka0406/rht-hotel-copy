@@ -2,6 +2,7 @@
     <div>
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" class="no-print" />
+            <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2 no-print" @click="downloadPdf" />
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -131,6 +132,7 @@
 <script setup>
 // Vue
 import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+import axios from 'axios';
 
 // Props
 const props = defineProps({
@@ -434,6 +436,36 @@ const refreshAllCharts = () => {
 };
 const disposeAllCharts = () => {
     allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
+};
+
+const downloadPdf = async () => {
+    try {
+        const response = await axios.post('/api/reports/generate-pdf', {
+            selectedView: selectedView.value,
+            revenueData: props.revenueData,
+            occupancyData: props.occupancyData,
+            periodMaxDate: periodMaxDate.value,
+            allHotelNames: allHotelNames.value,
+            // Add other necessary data for the backend to generate the report
+        }, {
+            responseType: 'blob' // Important: receive response as a binary blob
+        });
+
+        // Create a blob URL and trigger download
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'report.pdf'); // Set the desired filename
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        console.log('PDF download initiated successfully!');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        // Optionally show a toast notification for error
+    }
 };
 
 // Table
