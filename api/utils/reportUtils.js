@@ -1,3 +1,5 @@
+const formatDate = (date) => {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
     console.error("Invalid Date object:", date);
     throw new Error(`The provided input is not a valid Date object: ${String(date)}`);
   }
@@ -7,6 +9,8 @@
   return `${year}-${month}-${day}`;
 };
 
+const formatDateTime = (date) => {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
     console.error("Invalid Date object:", date);
     throw new Error(`The provided input is not a valid Date object: ${String(date)}`);
   }
@@ -19,7 +23,7 @@
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
-const translateStatus = (status) => {
+const translateReservationStatus = (status) => {
   switch (status) {
     case 'hold':
       return '保留中';
@@ -55,7 +59,7 @@ const translateReservationPaymentTiming = (timing) => {
   }
 };
 
-const translateType = (type) => {
+const translateReservationType = (type) => {
   switch (type) {
     case 'default':
       return '通常';
@@ -93,9 +97,9 @@ const translateMealType = (type) => {
 module.exports = {
   formatDate,
   formatDateTime,
-  translateStatus,
+  translateReservationStatus,
   translateReservationPaymentTiming,
-  translateType,
+  translateReservationType,
   translatePlanType,
   translateMealType,
 };
