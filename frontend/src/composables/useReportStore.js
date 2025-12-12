@@ -851,6 +851,33 @@ export function useReportStore() {
         }
     };
 
+    /**
+     * Batch fetch booker type breakdown data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchBookerTypeBreakdown = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/booker-type', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch booker type breakdown data:', error);
+            return {};
+        }
+    };
+
 
 
     const fetchChannelSummary = async (hotelIds, startDate, endDate) => {
@@ -1010,5 +1037,6 @@ export function useReportStore() {
         fetchBatchOccupationBreakdown,
         generatePdfReport,
         fetchBatchReservationListView, // Add new batch function
+        fetchBatchBookerTypeBreakdown,
     };
 }

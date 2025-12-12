@@ -146,6 +146,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/reporting/channel-summary',
+    name: 'ReportingChannelSummary',
+    component: () => import('@/pages/Reporting/ReportingChannelSummary/ReportingChannelSummary.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/about',
     name: 'About',
     component: AboutPage,

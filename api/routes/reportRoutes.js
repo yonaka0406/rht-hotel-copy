@@ -50,5 +50,6 @@ router.post('/report/batch/forecast', authMiddleware, reportController.getBatchF
 router.post('/report/batch/accounting', authMiddleware, reportController.getBatchAccountingData);
 router.post('/report/batch/occupation-breakdown', authMiddleware, reportController.getBatchOccupationBreakdown);
 router.post('/report/batch/res-list', authMiddleware, reportController.getBatchReservationListView);
+router.post('/report/batch/booker-type', authMiddleware, reportController.getBatchBookerTypeBreakdown);
 
 module.exports = router;

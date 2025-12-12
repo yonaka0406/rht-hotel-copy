@@ -29,30 +29,7 @@
                 :target-month="firstDayOfMonthForApi"
                 :trigger-fetch="reportTriggerKey"
             />
-            <ChannelSummarySingleMonthAllHotels
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'month' && selectedHotels.length > 1"
-                :selected-hotels="selectedHotels"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />
-            <ChannelSummarySingleMonthHotel
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'month' && selectedHotels.length === 1"
-                :hotel-id="selectedHotelIdForReport"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />
-            <ChannelSummaryYearCumulativeAllHotels
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'year' && selectedHotels.length > 1"
-                :selected-hotels="selectedHotels"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />
-            <ChannelSummaryYearCumulativeHotel
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'year' && selectedHotels.length === 1"
-                :hotel-id="selectedHotelIdForReport"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />            
+            
             
             <div v-else> 
                 <div v-if="loading" class="flex justify-content-center align-items-center h-full">
@@ -96,7 +73,8 @@
 </template>
 <script setup>
     // Vue
-    import { ref, computed, onMounted } from 'vue';   
+    import { ref, computed, onMounted } from 'vue';
+    import { useRouter } from 'vue-router';   
 
     import ReportingTopMenu from './components/ReportingTopMenu.vue';
     import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
@@ -106,18 +84,17 @@
     // Import New Report Components
     import ChangeInActiveReservationsReport from './components/ChangeInActiveReservationsReport.vue';
     import MonthlyReservationEvolutionReport from './components/MonthlyReservationEvolutionReport.vue';
-    import ChannelSummarySingleMonthAllHotels from './components/ChannelSummarySingleMonthAllHotels.vue';
-    import ChannelSummarySingleMonthHotel from './components/ChannelSummarySingleMonthHotel.vue';
-    import ChannelSummaryYearCumulativeAllHotels from './components/ChannelSummaryYearCumulativeAllHotels.vue';
     import DailyReportDownloader from './components/DailyReportDownloader.vue';
-    import ChannelSummaryYearCumulativeHotel from './components/ChannelSummaryYearCumulativeHotel.vue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchBatchReservationListView } = useReportStore();
+    const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown } = useReportStore();
 
     // Primevue
     import { ProgressSpinner } from 'primevue';
+
+    // Router
+    const router = useRouter();
 
     const pmsFallbackCapacities = ref({}); // To store fallback capacities per hotel
 
@@ -234,7 +211,6 @@
     const forecastTotalData = ref({});
     const accountingTotalData = ref({});
     const occupationBreakdownAllHotels = ref([]); // New: to store aggregated occupation breakdown data
-    const reservationListViewData = ref({}); // New: to store batched reservation list view data
     // pmsFallbackCapacities was added near the top
 
     const revenueData = computed(() => {
@@ -596,7 +572,6 @@
             loading.value = false; 
             pmsTotalData.value = {}; forecastTotalData.value = {}; accountingTotalData.value = {};
             occupationBreakdownAllHotels.value = []; // Clear occupation breakdown data
-            reservationListViewData.value = {}; // Clear reservation list view data
             return; 
         }
 
@@ -611,7 +586,6 @@
                     forecastTotalData.value = newForecastTotalData;
                     accountingTotalData.value = newAccountingTotalData;
                     occupationBreakdownAllHotels.value = [];
-                    reservationListViewData.value = {}; // Ensure reservation list view ref is updated
                     return;
                 }        if (!firstDayofFetch.value || !lastDayofFetch.value) {
             // console.log('RMP: Date range is not properly set for summary. Skipping data fetch.');
@@ -637,12 +611,11 @@
             const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
             const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
 
-            const [batchPmsData, batchForecastData, batchAccountingData, batchOccupationBreakdownData, batchReservationListViewRawData] = await Promise.all([
+            const [batchPmsData, batchForecastData, batchAccountingData, batchOccupationBreakdownData] = await Promise.all([
                 fetchBatchCountReservation(selectedHotels.value, pmsFetchStartDate, pmsFetchEndDate),
                 fetchBatchForecastData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
                 fetchBatchAccountingData(selectedHotels.value, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
-                fetchBatchOccupationBreakdown(selectedHotels.value, startDateFormatted, endDateFormatted),
-                fetchBatchReservationListView(selectedHotels.value, startDateFormatted, endDateFormatted, 'stay_period') // New batch call
+                fetchBatchOccupationBreakdown(selectedHotels.value, startDateFormatted, endDateFormatted)
             ]);
             
             // Process the results from batchOccupationBreakdownData
@@ -658,18 +631,6 @@
                 }
             }
             occupationBreakdownAllHotels.value = allBreakdownItems;
-
-            // Process batchReservationListViewRawData
-            const newReservationListViewData = {};
-            if (Array.isArray(batchReservationListViewRawData)) {
-                batchReservationListViewRawData.forEach(reservation => {
-                    if (!newReservationListViewData[reservation.hotel_id]) {
-                        newReservationListViewData[reservation.hotel_id] = [];
-                    }
-                    newReservationListViewData[reservation.hotel_id].push(reservation);
-                });
-            }
-            reservationListViewData.value = newReservationListViewData; // Update the ref
 
             for (const hotelId of selectedHotels.value) {
                 currentProcessingHotelId = hotelId;
@@ -768,6 +729,13 @@
     const handleReportTypeChange = (newReportType) => {
         // console.log('RMP: Report type changed to', newReportType);
         selectedReportType.value = newReportType;
+        
+        // Auto-route to channel summary page when reservationAnalysis is selected
+        if (newReportType === 'reservationAnalysis') {
+            router.push('/reporting/channel-summary');
+            return;
+        }
+        
         debouncedFetch();
     };
 

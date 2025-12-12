@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-        <h3 class="text-xl font-semibold mb-4">予約分析（年間累計）</h3>
+        <h3 class="text-xl font-semibold mb-4">予約分析（単月）</h3>
 
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
@@ -122,6 +122,7 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, shallowRef } from 'vue';
 import { useReportStore } from '@/composables/useReportStore';
 import ProgressSpinner from 'primevue/progressspinner';
 import Card from 'primevue/card';
@@ -158,6 +159,14 @@ const props = defineProps({
     selectedDate: {
         type: Date,
         required: true
+    },
+    reservationData: {
+        type: Array,
+        default: () => []
+    },
+    bookerTypeData: {
+        type: Object,
+        default: () => ({})
     }
 });
 
@@ -167,7 +176,7 @@ const viewOptions = ref([
     { label: 'テーブル', value: 'table' }
 ]);
 
-const { fetchChannelSummary, fetchBookerTypeBreakdown, fetchBatchReservationListView } = useReportStore();
+const { fetchChannelSummary } = useReportStore();
 const chartData = ref([]);
 const bookerTypeData = ref([]);
 const lengthOfStayData = ref([]);
@@ -543,17 +552,15 @@ const fetchReportData = async () => {
     try {
         const year = props.selectedDate.getFullYear();
         const month = props.selectedDate.getMonth();
-        const startDate = formatDate(new Date(year, 0, 1)); // January 1st of the selected year
+        const startDate = formatDate(new Date(year, month, 1)); // First day of the selected month
         const endDate = formatDate(new Date(year, month + 1, 0)); // Last day of the selected month        
         const summaryData = await fetchChannelSummary(props.selectedHotels, startDate, endDate);
         chartData.value = summaryData;
 
-        const bookerTypePromises = props.selectedHotels.map(hotelId => fetchBookerTypeBreakdown(hotelId, startDate, endDate));
+        // Use batch data passed from parent instead of making individual requests
+        const bookerTypeResults = props.selectedHotels.map(hotelId => props.bookerTypeData[hotelId] || []);
+        const batchLengthOfStayData = props.reservationData;
 
-        const [bookerTypeResults, batchLengthOfStayData] = await Promise.all([
-            Promise.all(bookerTypePromises),
-            fetchBatchReservationListView(props.selectedHotels, startDate, endDate, 'stay_period')
-        ]);
 
         // Process and store booker type data
         const processedBookerTypeData = [];
@@ -758,4 +765,3 @@ watch(selectedView, async (newView) => {
 
 
 </script>
-

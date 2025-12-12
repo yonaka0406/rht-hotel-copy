@@ -1,4 +1,5 @@
 const { selectCountReservation, selectForecastData, selectAccountingData, selectOccupationBreakdownByMonth, selectBatchReservationListView } = require('../../models/report');
+const { getBookerTypeBreakdown } = require('../../models/metrics');
 const logger = require('../../config/logger');
 const { validateNumericParam } = require('../../utils/validationUtils');
 const { getPool } = require('../../config/database');
@@ -117,10 +118,20 @@ const getBatchReservationListView = async (req, res) => {
   }
 };
 
+/**
+ * Batch endpoint to fetch booker type breakdown data for multiple hotels
+ * POST /report/batch/booker-type
+ * Body: { hotelIds: [1, 2, 3], startDate: '2024-01-01', endDate: '2024-12-31' }
+ */
+const getBatchBookerTypeBreakdown = async (req, res) => {
+    return processBatchRequest(req, res, getBookerTypeBreakdown, 'getBatchBookerTypeBreakdown');
+};
+
 module.exports = {
     getBatchCountReservation,
     getBatchForecastData,
     getBatchAccountingData,
     getBatchOccupationBreakdown,
     getBatchReservationListView,
+    getBatchBookerTypeBreakdown,
 };
