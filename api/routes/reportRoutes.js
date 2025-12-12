@@ -38,8 +38,11 @@ router.get('/report/occupation-breakdown/:hid/:sdate/:edate', authMiddleware, re
 router.post('/report/channel-summary', authMiddleware, reportController.getChannelSummary);
 router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, reportController.getCheckInOutReport);
 
-// PDF Generation
-router.post('/report/generate-pdf', authMiddleware, reportController.generatePdfReport);
+// PDF Report Generation Routes
+router.post('/report/pdf/single-month/single-hotel', authMiddleware, reportController.generateSingleMonthSingleHotelPdf);
+router.post('/report/pdf/single-month/multiple-hotels', authMiddleware, reportController.generateSingleMonthMultipleHotelsPdf);
+router.post('/report/pdf/cumulative/single-hotel', authMiddleware, reportController.generateCumulativeSingleHotelPdf);
+router.post('/report/pdf/cumulative/multiple-hotels', authMiddleware, reportController.generateCumulativeMultipleHotelsPdf);
 
 // Batch endpoints for optimized multi-hotel queries
 router.post('/report/batch/count', authMiddleware, reportController.getBatchCountReservation);
