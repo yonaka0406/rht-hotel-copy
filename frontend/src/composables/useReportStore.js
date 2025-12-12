@@ -893,6 +893,31 @@ export function useReportStore() {
         }
     };
 
+    const generatePdfReport = async (selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, PDF generation limited');
+                throw new Error('API not available, PDF generation limited');
+            }
+
+            const response = await api.post('/report/generate-pdf', {
+                selectedView,
+                revenueData,
+                occupancyData,
+                periodMaxDate,
+                allHotelNames,
+            }, {
+                responseType: 'blob' // Important: receive response as a binary blob
+            });
+
+            return response; // This will be the blob
+
+        } catch (error) {
+            console.error('Failed to generate PDF report:', error);
+            throw error;
+        }
+    };
+
     // ... (existing functions)
 
     return {
@@ -934,5 +959,6 @@ export function useReportStore() {
         fetchBatchForecastData,
         fetchBatchAccountingData,
         fetchBatchOccupationBreakdown,
+        generatePdfReport, // Add to the return object
     };
 }
