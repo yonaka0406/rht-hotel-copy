@@ -649,32 +649,6 @@ const getExportAccommodationTax = async (req, res) => {
     }
 };
 
-
-const getExportAccommodationTax = async (req, res) => {
-    const hotelId = req.params.hid;
-    const startDate = req.params.sdate;
-    const endDate = req.params.edate;
-
-    try {
-        const result = await reportModel.selectExportAccommodationTax(req.requestId, hotelId, startDate, endDate);
-
-        if (!result || result.length === 0) {
-            return res.status(404).send("No data available for the given dates.");
-        }
-
-        const workbook = createAccommodationTaxWorkbook(result, startDate, endDate);
-
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        res.setHeader("Content-Disposition", `attachment; filename=accommodation_tax_report_${startDate}_${endDate}.xlsx`);
-
-        await workbook.xlsx.write(res);
-        res.end();
-    } catch (err) {
-        console.error("Error generating Accommodation Tax Excel:", err);
-        res.status(500).send("Error generating Accommodation Tax Excel");
-    }
-};
-
 const generatePdfReport = async (req, res) => {
     const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames } = req.body;
     const requestId = req.requestId; // Assuming requestId is available from middleware
@@ -714,7 +688,7 @@ const generatePdfReport = async (req, res) => {
             });
             htmlContent += `</tbody></table>`;
         } else {
-             htmlContent += `<p>収益データはありません。</p>`;
+            htmlContent += `<p>収益データはありません。</p>`;
         }
 
         // Add Occupancy Data to HTML

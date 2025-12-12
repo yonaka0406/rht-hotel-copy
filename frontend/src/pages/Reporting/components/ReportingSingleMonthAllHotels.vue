@@ -440,12 +440,7 @@ const disposeAllCharts = () => {
 
 
 
-const disposeAllCharts = () => {
-    allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
-};
-
 // Use report store for PDF generation API call
-import { useReportStore } from '@/composables/useReportStore';
 const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
 const downloadPdf = async () => {
