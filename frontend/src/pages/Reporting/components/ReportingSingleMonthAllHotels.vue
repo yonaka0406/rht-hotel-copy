@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="flex justify-end mb-2">
-            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
+            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" class="no-print" />
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -31,12 +31,7 @@
                             </div>
                         </div>
                     </template>
-                    <template #footer>
-                        <div class="flex justify-content-between">
-                            <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames
-                            }}</small>
-                        </div>
-                    </template>
+
                 </Card>
 
                 <Card class="mb-4">
@@ -55,6 +50,9 @@
                                 <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" />
                             </div>
                         </div>
+                        <Message severity="secondary" :closable="false" class="mt-2 p-2 text-sm">
+                            会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}
+                        </Message>
                     </template>
                 </Card>
             </Panel>
@@ -157,7 +155,7 @@ import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column, Panel } from 'primevue';
+import { Card, Badge, SelectButton, Button, DataTable, Column, Panel, Message } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 
 // Utilities
@@ -352,7 +350,7 @@ const allHotelsChartHeight = computed(() => {
 });
 
 const allHotelsChartPrintHeight = computed(() => {
-    return 500; // Fixed height for printing
+    return 400; // Fixed height for printing
 });
 
 
