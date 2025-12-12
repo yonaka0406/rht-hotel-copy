@@ -1,14 +1,30 @@
 const { chromium } = require('playwright');
 
-const generatePdfReport = async (reqBody, requestId) => {
+const generatePdfReport = async (reportType, reqBody, requestId) => {
     const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames } = reqBody;
     let browser;
+
+    let reportTitle = '月次サマリーレポート';
+    switch (reportType) {
+        case 'singleMonthSingleHotel':
+            reportTitle = '単月 - 単一ホテルサマリーレポート';
+            break;
+        case 'singleMonthMultipleHotels':
+            reportTitle = '単月 - 複数ホテルサマリーレポート';
+            break;
+        case 'cumulativeSingleHotel':
+            reportTitle = '累計 - 単一ホテルサマリーレポート';
+            break;
+        case 'cumulativeMultipleHotels':
+            reportTitle = '累計 - 複数ホテルサマリーレポート';
+            break;
+    }
 
     try {
         let htmlContent = `
             <html>
             <head>
-                <title>Monthly Summary Report</title>
+                <title>${reportTitle}</title>
                 <style>
                     body { font-family: 'Noto Sans JP', sans-serif; margin: 20mm; }
                     h1 { color: #333; }
@@ -20,7 +36,7 @@ const generatePdfReport = async (reqBody, requestId) => {
                 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
             </head>
             <body>
-                <h1>月次サマリーレポート</h1>
+                <h1>${reportTitle}</h1>
                 <p><strong>レポート期間:</strong> ${periodMaxDate}</p>
                 <p><strong>対象施設:</strong> ${allHotelNames}</p>
                 <p><strong>表示モード:</strong> ${selectedView === 'graph' ? 'グラフ' : 'テーブル'}</p>
