@@ -2,7 +2,7 @@
     <div>
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
-
+            <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2" @click="downloadPdf" />
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -158,6 +158,9 @@ import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 // Primevue
 import { Card, Badge, SelectButton, Button, DataTable, Column, Panel, Message } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
+
+// Composables
+import { useReportStore } from '@/composables/useReportStore';
 
 // Utilities
 import {
@@ -436,6 +439,42 @@ const disposeAllCharts = () => {
 };
 
 
+
+const disposeAllCharts = () => {
+    allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
+};
+
+// Use report store for PDF generation API call
+import { useReportStore } from '@/composables/useReportStore';
+const { generatePdfReport: generatePdfReportApi } = useReportStore();
+
+const downloadPdf = async () => {
+    try {
+        const responseBlob = await generatePdfReportApi(
+            selectedView.value,
+            props.revenueData,
+            props.occupancyData,
+            periodMaxDate.value,
+            allHotelNames.value,
+            // Add other necessary data for the backend to generate the report
+        );
+
+        // Create a blob URL and trigger download
+        const url = window.URL.createObjectURL(new Blob([responseBlob]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `monthly_summary_report_${Date.now()}.pdf`); // Set dynamic filename
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        console.log('PDF download initiated successfully!');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        // Optionally show a toast notification for error
+    }
+};
 
 // Table
 const getSeverity = getSeverityUtil;
