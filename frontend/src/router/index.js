@@ -51,9 +51,13 @@ const ClientGroupEdit = () => import('@/pages/CRM/ClientGroupEdit.vue');
 const SalesInteractions = () => import('@/pages/CRM/Sales/SalesInteractions.vue');
 const SalesProjectList = () => import('@/pages/CRM/Sales/SalesProjectList.vue');
 
-const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
-
+const ReportingSalesAndOCC = () => import('@/pages/Reporting/ReportingSalesAndOCC/ReportingSalesAndOCC.vue');
+const ReportingChannelSummary = () => import('@/pages/Reporting/ReportingChannelSummary/ReportingChannelSummary.vue');
+const ReportingDailyReport = () => import('@/pages/Reporting/ReportingDailyReport/ReportingDailyReport.vue');
+const ReportingActiveReservationsChange = () => import('@/pages/Reporting/ReportingActiveReservationsChange/ReportingActiveReservationsChange.vue');
+const ReportingMonthlyReservationEvolution = () => import('@/pages/Reporting/ReportingMonthlyReservationEvolution/ReportingMonthlyReservationEvolution.vue');
 const AboutPage = () => import('@/pages/About/AboutPage.vue');
+
 
 const routes = [
   {
@@ -141,14 +145,32 @@ const routes = [
   },
   {
     path: '/reporting',
-    component: ReportingMainPage,
+    component: ReportingSalesAndOCC,
     children: [],
     meta: { requiresAuth: true },
   },
   {
     path: '/reporting/channel-summary',
     name: 'ReportingChannelSummary',
-    component: () => import('@/pages/Reporting/ReportingChannelSummary/ReportingChannelSummary.vue'),
+    component: ReportingChannelSummary,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/reporting/daily',
+    name: 'ReportingDailyReport',
+    component: ReportingDailyReport,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/reporting/active-reservations-change',
+    name: 'ReportingActiveReservationsChange',
+    component: ReportingActiveReservationsChange,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/reporting/monthly-reservation-evolution',
+    name: 'ReportingMonthlyReservationEvolution',
+    component: ReportingMonthlyReservationEvolution,
     meta: { requiresAuth: true },
   },
   {
