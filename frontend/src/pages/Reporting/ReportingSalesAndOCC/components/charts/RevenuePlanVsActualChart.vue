@@ -69,6 +69,15 @@ const chartOptions = computed(() => {
   const prevYearColor = '#909399';
 
   return {
+    title: {
+      text: '売上 (計画 vs 実績)',
+      left: 'center',
+      top: '0%',
+      textStyle: {
+        fontSize: 16,
+        fontWeight: 'bold'
+      }
+    },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },

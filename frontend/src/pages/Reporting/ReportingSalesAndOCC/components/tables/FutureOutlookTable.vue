@@ -25,7 +25,7 @@
                 <template #body="{ data }">
                     <div class="flex justify-end items-center">
                         <span class="mr-2">{{ formatCurrency(data.sales) }}</span>
-                        <Badge :severity="getSeverity(data.sales_diff)" size="small">
+                        <Badge v-if="data.sales_diff !== null" :severity="getSeverity(data.sales_diff)" size="small">
                             {{ data.sales_diff > 0 ? '+' : '' }}{{ formatYenInTenThousandsNoDecimal(data.sales_diff) }}
                         </Badge>
                     </div>
@@ -44,7 +44,7 @@
                 <template #body="{ data }">
                     <div class="flex justify-end items-center">
                         <span class="mr-2">{{ data.occ.toFixed(1) }}%</span>
-                        <Badge :severity="getSeverity(data.occ_diff)" size="small">
+                        <Badge v-if="data.occ_diff !== null" :severity="getSeverity(data.occ_diff)" size="small">
                             {{ data.occ_diff > 0 ? '+' : '' }}{{ data.occ_diff.toFixed(1) }}%
                         </Badge>
                     </div>
@@ -53,6 +53,10 @@
             <!-- Hidden Columns for Export -->
             <Column field="prev_sales" header="前日実績売上" hidden exportable></Column>
             <Column field="prev_occ" header="前日実績稼働率" hidden exportable></Column>
+            <Column field="confirmed_nights" header="確定泊数" hidden exportable></Column>
+            <Column field="total_bookable_room_nights" header="販売可能室数" hidden exportable></Column>
+            <Column field="blocked_nights" header="ブロック数" hidden exportable></Column>
+            <Column field="net_available_room_nights" header="正味販売可能室数" hidden exportable></Column>
         </DataTable>
     </Panel>
 </template>

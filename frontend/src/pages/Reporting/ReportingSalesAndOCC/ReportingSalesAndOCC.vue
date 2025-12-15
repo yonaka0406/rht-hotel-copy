@@ -18,7 +18,8 @@
                     :futureOutlookData="futureOutlookData" />
                 <ReportingSingleMonthHotel v-else-if="selectedView === 'singleMonthHotel'" :revenueData="revenueData"
                     :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                    :dayOverDayChange="dayOverDayChange" :prevYearRevenueData="prevYearRevenueData" />
+                    :dayOverDayChange="dayOverDayChange" :prevYearRevenueData="prevYearRevenueData"
+                    :prevYearOccupancyData="prevYearOccupancyData" :futureOutlookData="futureOutlookData" />
                 <ReportingYearCumulativeAllHotels v-else-if="selectedView === 'yearCumulativeAllHotels'"
                     :revenueData="revenueData" :occupancyData="occupancyData"
                     :rawOccupationBreakdownData="occupationBreakdownAllHotels" />
@@ -803,7 +804,7 @@ const fetchData = async () => {
     try {
         const [
             batchPmsData, batchForecastData, batchAccountingData, batchOccupationBreakdownData,
-            batchPrevPmsData, batchPrevForecastData, batchPrevAccountingData, batchPrevOccupationBreakdownData
+            batchPrevPmsData, batchPrevAccountingData, batchPrevOccupationBreakdownData
         ] = await Promise.all([
             // Current Year
             fetchBatchCountReservation(selectedHotels.value, pmsFetchStartDate, pmsFetchEndDate),
@@ -814,7 +815,6 @@ const fetchData = async () => {
             // Previous Year
             fetchBatchCountReservation(selectedHotels.value, prevPmsFetchStartDate, prevPmsFetchEndDate),
             // User requested no prev year forecast fetch
-            // fetchBatchForecastData(selectedHotels.value, prevStartDateFormatted, prevEndDateFormatted),
             fetchBatchAccountingData(selectedHotels.value, prevStartDateFormatted, prevEndDateFormatted),
             fetchBatchOccupationBreakdown(selectedHotels.value, prevStartDateFormatted, prevEndDateFormatted)
         ]);
@@ -934,8 +934,8 @@ const fetchData = async () => {
             }
         }
 
-        // Future Outlook Fetch (For Single Month All Hotels)
-        if (selectedView.value === 'singleMonthAllHotels') {
+        // Future Outlook Fetch (For Single Month All Hotels or Single Hotel)
+        if (selectedView.value === 'singleMonthAllHotels' || selectedView.value === 'singleMonthHotel') {
             futureOutlookData.value = [];
             try {
                 const hotelIds = selectedHotels.value.filter(id => id !== 0);
@@ -961,11 +961,33 @@ const fetchData = async () => {
 
                     const outlook = [];
                     for (const [monthLabel, hotelDataMap] of Object.entries(futureData)) {
-                        let totalActualSales = 0, totalForecastSales = 0, totalActualStays = 0, totalActualRooms = 0, totalForecastRooms = 0, totalForecastStays = 0;
+                        let totalActualSales = 0, totalForecastSales = 0, totalForecastRooms = 0, totalForecastStays = 0;
+
+                        let accommodationConfirmedNights = 0;
+                        let accommodationBookableRoomNights = 0;
+                        let accommodationBlockedNights = 0;
+                        let accommodationNetAvailableRoomNights = 0;
+
                         for (const data of Object.values(hotelDataMap)) {
                             if (Array.isArray(data.occupation)) {
-                                const totalRow = data.occupation.find(r => r.plan_name === '稼働の合計');
-                                if (totalRow) { totalActualStays += Number(totalRow.confirmed_nights) || 0; totalActualRooms += Number(totalRow.net_available_room_nights) || 0; }
+                                let hotelBookable = 0;
+                                let hotelNetAvailable = 0;
+
+                                data.occupation.forEach(row => {
+                                    // Capture hotel capacity once per hotel (it's repeated on every row)
+                                    if (hotelBookable === 0 && row.total_bookable_room_nights) {
+                                        hotelBookable = Number(row.total_bookable_room_nights) || 0;
+                                        hotelNetAvailable = Number(row.net_available_room_nights) || 0;
+                                    }
+
+                                    if (row.sales_category === 'accommodation') {
+                                        accommodationConfirmedNights += Number(row.confirmed_nights) || 0;
+                                        accommodationBlockedNights += Number(row.blocked_nights) || 0;
+                                    }
+                                });
+
+                                accommodationBookableRoomNights += hotelBookable;
+                                accommodationNetAvailableRoomNights += hotelNetAvailable;
                             }
                             if (Array.isArray(data.forecast)) { data.forecast.forEach(f => { totalForecastSales += Number(f.accommodation_revenue) || 0; totalForecastRooms += Number(f.available_room_nights) || 0; totalForecastStays += Number(f.rooms_sold_nights) || 0; }); }
 
@@ -990,21 +1012,29 @@ const fetchData = async () => {
 
                             totalActualSales += hotelActualSales;
                         }
-                        const actualOcc = totalActualRooms > 0 ? (totalActualStays / totalActualRooms) * 100 : 0;
-                        const forecastOcc = totalForecastRooms > 0 ? (totalForecastStays / totalForecastRooms) * 100 : 0;
+                        const actualOccAccommodation = accommodationNetAvailableRoomNights > 0 ? (accommodationConfirmedNights / accommodationNetAvailableRoomNights) * 100 : 0;
+                        const forecastOcc = totalForecastRooms > 0 ? (totalForecastStays / totalForecastRooms) * 100 : 0; // This remains general forecast
+
+                        const hasPrevData = !!prevByMonth[monthLabel];
                         const prev = prevByMonth[monthLabel] || { sales: 0, stays: 0, rooms: 0 };
-                        // Use current totalActualRooms as proxy for previous capacity since daily report excludes it
-                        const prevOcc = totalActualRooms > 0 ? (prev.stays / totalActualRooms) * 100 : 0;
+
+                        // prevOcc is not specific to accommodation here, as prevByMonth doesn't have sales_category breakdown.
+                        const prevOcc = accommodationNetAvailableRoomNights > 0 ? (prev.stays / accommodationNetAvailableRoomNights) * 100 : 0;
+
                         outlook.push({
                             month: monthLabel,
                             forecast_sales: totalForecastSales,
                             sales: totalActualSales,
-                            sales_diff: totalActualSales - prev.sales,
+                            sales_diff: hasPrevData ? totalActualSales - prev.sales : null,
                             prev_sales: prev.sales, // Added for hidden column
                             forecast_occ: forecastOcc,
-                            occ: actualOcc,
-                            occ_diff: actualOcc - prevOcc,
-                            prev_occ: prevOcc // Added for hidden column
+                            occ: actualOccAccommodation, // This is now accommodation specific
+                            occ_diff: hasPrevData ? actualOccAccommodation - prevOcc : null, // Diff also accommodation specific
+                            prev_occ: prevOcc, // This is now accommodation specific
+                            confirmed_nights: accommodationConfirmedNights,
+                            total_bookable_room_nights: accommodationBookableRoomNights,
+                            blocked_nights: accommodationBlockedNights,
+                            net_available_room_nights: accommodationNetAvailableRoomNights
                         });
                     }
                     outlook.sort((a, b) => a.month.localeCompare(b.month));
