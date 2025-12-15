@@ -47,10 +47,11 @@
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-3/4 mb-4 md:mb-0">
-                            <div ref="monthlyChartContainer" style="height: 450px; width: 100%;"></div>
+                            <MonthlyRevenuePlanVsActualChart :revenueData="filteredRevenueForChart"
+                                :prevYearRevenueData="filteredPrevYearRevenueForChart" height="450px" />
                         </div>
                         <div class="w-full md:w-1/4">
-                            <div ref="totalChartContainer" style="height: 450px; width: 100%;"></div>
+                            <RevenuePlanVsActualChart :revenueData="aggregateRevenueDataForChart" height="450px" />
                         </div>
                     </div>
                 </template>
@@ -72,9 +73,7 @@
                         </div>
                         <div class="w-full md:w-1/2">
                             <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
-                            <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
-                            <div v-else ref="allHotelsOccupancyChartContainer"
-                                :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
+                            <AllHotelsOccupancyChart :occupancyData="props.occupancyData" />
                         </div>
                     </div>
                 </template>
@@ -119,59 +118,7 @@
                 </template>
             </Card>
 
-            <Card class="mb-4">
-                <template #header>
-                    <span class="text-xl font-bold">収益（計画ｘ実績）</span>
-                </template>
-                <template #content>
-                    <div v-if="!props.revenueData || props.revenueData.length === 0" class="text-center p-4">
-                        データはありません。
-                    </div>
-                    <div v-else class="text-center p-4">
-                        <DataTable :value="props.revenueData" responsiveLayout="scroll" paginator :rows="5"
-                            :rowsPerPageOptions="[5, 15, 30, 50]" stripedRows sortMode="multiple" removableSort>
-                            <Column field="hotel_name" header="施設" frozen sortable style="width: 20%"></Column>
-                            <Column field="month" header="月度" sortable style="width: 10%"></Column>
-                            <Column field="forecast_revenue" header="計画" sortable style="width: 20%">
-                                <template #body="{ data }">
-                                    <div class="flex justify-end mr-2">
-                                        {{ formatCurrency(data.forecast_revenue) }}
-                                    </div>
-                                </template>
-                            </Column>
-                            <Column field="period_revenue" header="実績①" sortable style="width: 20%">
-                                <template #body="{ data }">
-                                    <div class="flex justify-end mr-2">
-                                        {{ formatCurrency(data.period_revenue) }}
-                                    </div>
-                                </template>
-                            </Column>
-                            <Column header="分散" sortable style="width: 30%">
-                                <template #body="{ data }">
-                                    <div class="flex justify-end mr-2">
-                                        {{ formatCurrency(data.period_revenue - data.forecast_revenue) }}
-                                        <Badge class="ml-2"
-                                            :severity="getSeverity((data.period_revenue / data.forecast_revenue) - 1)"
-                                            size="small">
-                                            {{ formatPercentage((data.period_revenue / data.forecast_revenue) - 1) }}
-                                        </Badge>
-                                    </div>
-                                </template>
-                            </Column>
-                            <template #footer>
-                                <div class="flex justify-content-between">
-                                    <small>① 会計データがない場合はPMSの数値になっています。</small>
-                                </div>
-                            </template>
-                            <template #paginatorstart>
-                            </template>
-                            <template #paginatorend>
-                                <Button type="button" icon="pi pi-download" text @click="exportCSV('revenue')" />
-                            </template>
-                        </DataTable>
-                    </div>
-                </template>
-            </Card>
+            <RevenuePlanVsActualTable :revenueData="props.revenueData" />
 
             <Card>
                 <template #header>
@@ -204,13 +151,21 @@ const props = defineProps({
     rawOccupationBreakdownData: {
         type: Array,
         default: () => []
+    },
+    prevYearRevenueData: {
+        type: Array,
+        default: () => []
     }
 });
 
 // Primevue
 import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
+import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
+import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
+import MonthlyRevenuePlanVsActualChart from './charts/MonthlyRevenuePlanVsActualChart.vue';
+import AllHotelsOccupancyChart from './charts/AllHotelsOccupancyChart.vue';
 
 // Utilities
 import {
@@ -304,48 +259,7 @@ const forecastRevPAR = computed(() => {
     return availableRooms ? Math.round(revenue / availableRooms) : NaN;
 });
 
-// ECharts imports
-import * as echarts from 'echarts/core';
-import {
-    TitleComponent,
-    TooltipComponent,
-    GridComponent,
-    LegendComponent,
-    DatasetComponent,
-    TransformComponent,
-} from 'echarts/components';
-import { BarChart, LineChart } from 'echarts/charts';
-import { CanvasRenderer } from 'echarts/renderers';
-
-// Register ECharts components
-echarts.use([
-    TitleComponent,
-    TooltipComponent,
-    GridComponent,
-    LegendComponent,
-    DatasetComponent,
-    TransformComponent,
-    BarChart,
-    LineChart,
-    CanvasRenderer
-]);
-const resizeChartHandler = () => {
-    if (selectedView.value === 'graph') {
-        monthlyChartInstance.value?.resize();
-        totalChartInstance.value?.resize();
-
-        allHotelsOccupancyChartInstance.value?.resize();
-    }
-};
-
-// --- Chart Refs and Instances ---
-const monthlyChartContainer = ref(null);
-const totalChartContainer = ref(null);
-const allHotelsOccupancyChartContainer = ref(null);
-
-const monthlyChartInstance = shallowRef(null);
-const totalChartInstance = shallowRef(null);
-const allHotelsOccupancyChartInstance = shallowRef(null);
+// --- Data Computeds for Charts ---
 
 // --- Data Computeds for Charts ---
 const filteredRevenueForChart = computed(() => {
@@ -356,244 +270,67 @@ const hasRevenueDataForChart = computed(() => {
     return filteredRevenueForChart.value.length > 0;
 });
 
+const filteredPrevYearRevenueForChart = computed(() => {
+    if (!props.prevYearRevenueData) return [];
+    return props.prevYearRevenueData.filter(item => item.hotel_id === 0);
+});
 
-// --- ECharts Options ---
-const monthlyChartOptions = computed(() => {
+// Aggregate revenue data for the RevenuePlanVsActualChart
+const aggregateRevenueDataForChart = computed(() => {
     const data = filteredRevenueForChart.value;
-    if (!data.length) return {};
+    if (!data.length) return { total_forecast_revenue: 0, total_period_accommodation_revenue: 0, total_prev_year_accommodation_revenue: 0 };
+    return {
+        total_forecast_revenue: data.reduce((sum, item) => sum + (item.forecast_revenue || 0), 0),
+        total_period_accommodation_revenue: data.reduce((sum, item) => sum + (item.period_revenue || 0), 0),
+        total_prev_year_accommodation_revenue: 0 // No prev year data in this view
+    };
+});
 
-    const months = [...new Set(data.map(item => item.month))].sort();
-    const getDataForMonth = (month, key) => data.find(d => d.month === month)?.[key] ?? 0;
-
-    const forecastRevenues = months.map(month => getDataForMonth(month, 'forecast_revenue'));
-    const periodRevenues = months.map(month => getDataForMonth(month, 'period_revenue'));
-    const variances = months.map(month => {
-        const forecast = getDataForMonth(month, 'forecast_revenue');
-        const period = getDataForMonth(month, 'period_revenue');
-        return parseFloat(calculateVariancePercentage(period, forecast)) || 0; // Ensure numeric for chart
+// All hotels occupancy chart data
+const allHotelsOccupancyChartData = computed(() => {
+    if (!props.occupancyData || props.occupancyData.length === 0) return [];
+    const hotelMap = new Map();
+    props.occupancyData.forEach(item => {
+        if (item.hotel_id !== 0 && item.hotel_name) {
+            const entry = hotelMap.get(item.hotel_name) || {
+                hotel_name: item.hotel_name,
+                total_sold_rooms: 0,
+                total_fc_sold_rooms: 0,
+                total_rooms: 0,
+                total_fc_total_rooms: 0,
+                total_prev_year_sold_rooms: 0,
+                total_prev_year_rooms: 0
+            };
+            entry.total_sold_rooms += (item.sold_rooms || 0);
+            entry.total_fc_sold_rooms += (item.fc_sold_rooms || 0);
+            entry.total_rooms += (item.total_rooms || 0);
+            entry.total_fc_total_rooms += (item.fc_total_rooms || 0);
+            hotelMap.set(item.hotel_name, entry);
+        }
     });
-
-    return {
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
-            formatter: (params) => {
-                let tooltipText = `${params[0].axisValueLabel}<br/>`;
-                params.forEach(param => {
-                    if (param.seriesName === '分散 (%)') {
-                        tooltipText += `${param.marker} ${param.seriesName}: ${param.value}%<br/>`;
-                    } else {
-                        tooltipText += `${param.marker} ${param.seriesName}: ${formatYenInTenThousands(param.value)}<br/>`;
-                    }
-                });
-                return tooltipText;
-            }
-        },
-        legend: { data: ['計画売上', '実績売上', '分散 (%)'], top: 'bottom' },
-        grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-        xAxis: [{ type: 'category', data: months, axisPointer: { type: 'shadow' } }],
-        yAxis: [
-            { type: 'value', name: '売上 (万円)', axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` }, min: 0 },
-            { type: 'value', axisLabel: { show: false }, splitLine: { show: false } }
-        ],
-        series: [
-            { name: '計画売上', type: 'bar', data: forecastRevenues, emphasis: { focus: 'series' }, itemStyle: { color: colorScheme.forecast } },
-            { name: '実績売上', type: 'bar', data: periodRevenues, emphasis: { focus: 'series' }, itemStyle: { color: colorScheme.actual } },
-            { name: '分散 (%)', type: 'line', yAxisIndex: 1, data: variances, smooth: true, itemStyle: { color: colorScheme.variance }, label: { show: true, position: 'top', formatter: (params) => `${params.value}%` } }
-        ]
-    };
+    return Array.from(hotelMap.values()).map(hotel => ({
+        hotel_name: hotel.hotel_name,
+        actual_occupancy_rate: hotel.total_rooms > 0 ? (hotel.total_sold_rooms / hotel.total_rooms) * 100 : 0,
+        forecast_occupancy_rate: hotel.total_fc_total_rooms > 0 ? (hotel.total_fc_sold_rooms / hotel.total_fc_total_rooms) * 100 : 0,
+        prev_year_occupancy_rate: 0 // No prev year data in this view
+    }));
 });
-const totalChartOptions = computed(() => {
-    const data = filteredRevenueForChart.value;
-    if (!data.length) return {};
 
-    const totalForecastRevenue = data.reduce((sum, item) => sum + (item.forecast_revenue || 0), 0);
-    const totalPeriodRevenue = data.reduce((sum, item) => sum + (item.period_revenue || 0), 0);
-    const varianceAmount = totalPeriodRevenue - totalForecastRevenue;
+const hasAllHotelsOccupancyData = computed(() => allHotelsOccupancyChartData.value.length > 0);
 
-    let displayVariancePercent;
-    if (totalForecastRevenue === 0 || totalForecastRevenue === null) {
-        displayVariancePercent = (totalPeriodRevenue === 0 || totalPeriodRevenue === null) ? "0.00%" : "N/A";
-    } else {
-        const percent = (varianceAmount / totalForecastRevenue) * 100;
-        displayVariancePercent = `${percent.toFixed(2)}%`;
-    }
-
-    const variancePositiveColor = '#4CAF50'; // Green for positive variance
-    const varianceNegativeColor = '#F44336'; // Red for negative variance
-
-    return {
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            formatter: (params) => {
-                const valueParam = params.find(p => p.seriesName === '売上');
-                if (!valueParam || valueParam.value === undefined) { // Check for undefined value from placeholder
-                    // Try to get data from the placeholder if main series has no value (e.g. for base of variance)
-                    const placeholderParam = params.find(p => p.seriesName === 'PlaceholderBase');
-                    if (placeholderParam && valueParam && valueParam.name === '分散') {
-                        // Special handling for variance tooltip if actual value is on placeholder
-                    } else if (!valueParam) {
-                        return '';
-                    }
-                }
-
-                let tooltipText = `${valueParam.name}<br/>`; // X-axis category
-
-                if (valueParam.name === '分散') {
-                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(varianceAmount)}<br/>`; // Use varianceAmount directly
-                    tooltipText += `率: ${displayVariancePercent}`;
-                } else {
-                    // For '計画売上' and '実績売上', valueParam.value is correct
-                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(valueParam.value)}`;
-                }
-                return tooltipText;
-            }
-        },
-        grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
-        xAxis: [{
-            type: 'category',
-            data: ['計画売上', '分散', '実績売上'],
-            splitLine: { show: false },
-            axisLabel: { interval: 0 }
-        }],
-        yAxis: [{
-            type: 'value',
-            name: '金額 (万円)',
-            axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` },
-            splitLine: { show: true }
-        }],
-        series: [
-            { // Invisible base for stacking
-                name: 'PlaceholderBase',
-                type: 'bar',
-                stack: 'total',
-                barWidth: '60%', // Adjust bar width as needed
-                itemStyle: { borderColor: 'transparent', color: 'transparent' },
-                emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' } },
-                data: [
-                    0, // Base for '計画売上' is 0
-                    varianceAmount >= 0 ? totalForecastRevenue : totalPeriodRevenue, // Base for '分散'
-                    0  // Base for '実績売上' is 0
-                ]
-            },
-            { // Visible bars
-                name: '売上',
-                type: 'bar',
-                stack: 'total',
-                barWidth: '60%',
-                label: {
-                    show: true,
-                    formatter: (params) => {
-                        if (params.name === '分散') {
-                            return displayVariancePercent;
-                        }
-                        return formatYenInTenThousandsNoDecimal(params.value);
-                    }
-                },
-                data: [
-                    { // 計画売上
-                        value: totalForecastRevenue,
-                        itemStyle: { color: colorScheme.forecast },
-                        label: { position: 'top' }
-                    },
-                    { // 分散                
-                        value: Math.abs(varianceAmount),
-                        itemStyle: { color: varianceAmount >= 0 ? variancePositiveColor : varianceNegativeColor },
-                        label: { position: 'top' }
-                    },
-                    { // 実績売上
-                        value: totalPeriodRevenue,
-                        itemStyle: { color: colorScheme.actual },
-                        label: { position: 'top' }
-                    }
-                ]
-            }
-        ]
-    };
+const allHotelsChartHeight = computed(() => {
+    const numHotels = allHotelsOccupancyChartData.value.length;
+    const baseHeight = 150;
+    const heightPerHotel = 50;
+    const minHeight = 300;
+    return Math.max(minHeight, baseHeight + (numHotels * heightPerHotel));
 });
-const allHotelsOccupancyChartOptions = computed(() => {
-    const data = allHotelsOccupancyChartData.value;
-    if (!data.length) return {};
-    const hotels = data.map(d => d.hotel_name);
-    const forecast = data.map(d => parseFloat(d.forecast_occupancy_rate.toFixed(1)));
-    const actual = data.map(d => parseFloat(d.actual_occupancy_rate.toFixed(1)));
-    const prevYear = data.map(d => parseFloat(d.prev_year_occupancy_rate.toFixed(1)));
 
-    return {
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            formatter: function (params) {
-                let res = params[0].name + '<br/>';
-                params.forEach(p => {
-                    res += p.marker + p.seriesName + ': ' + p.value + '%<br/>';
-                });
-                return res;
-            }
-        },
-        legend: { data: ['前年度同月度稼働率', '実績稼働率', '計画稼働率'] },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-        xAxis: { type: 'value', axisLabel: { formatter: '{value}%' }, max: 100 },
-        yAxis: { type: 'category', data: hotels, inverse: true },
-        series: [
-            {
-                name: '前年度同月度稼働率',
-                type: 'bar',
-                data: prevYear,
-                itemStyle: { color: '#909399' }
-            },
-            {
-                name: '実績稼働率',
-                type: 'bar',
-                data: actual,
-                itemStyle: { color: colorScheme.actual }
-            },
-            {
-                name: '計画稼働率',
-                type: 'bar',
-                data: forecast,
-                itemStyle: { color: colorScheme.forecast },
-            }
-        ]
-    };
-});
 
 // Initialize charts
-const initOrUpdateChart = (instanceRef, containerRef, options) => {
-    if (containerRef.value) { // Ensure the container element exists
-        if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
-            // If no instance or it's disposed, initialize a new one
-            instanceRef.value = echarts.init(containerRef.value);
-        }
-        // Always set options and resize
-        instanceRef.value.setOption(options, true); // true for notMerge
-        instanceRef.value.resize();
-    } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
-        // Container is gone (e.g., v-if became false), but instance exists. Dispose it.
-        instanceRef.value.dispose();
-        instanceRef.value = null; // Clear the ref
-    }
-};
-const refreshAllCharts = () => {
-    if (hasRevenueDataForChart.value) {
-        initOrUpdateChart(monthlyChartInstance, monthlyChartContainer, monthlyChartOptions.value);
-        initOrUpdateChart(totalChartInstance, totalChartContainer, totalChartOptions.value);
-    } else {
-        monthlyChartInstance.value?.dispose(); monthlyChartInstance.value = null;
-        totalChartInstance.value?.dispose(); totalChartInstance.value = null;
-    }
-    if (hasAllHotelsOccupancyData.value) {
-        initOrUpdateChart(allHotelsOccupancyChartInstance, allHotelsOccupancyChartContainer, allHotelsOccupancyChartOptions.value);
-    } else {
-        allHotelsOccupancyChartInstance.value?.dispose(); allHotelsOccupancyChartInstance.value = null;
-    }
-};
-const disposeAllCharts = () => {
-    monthlyChartInstance.value?.dispose(); monthlyChartInstance.value = null;
-    totalChartInstance.value?.dispose(); totalChartInstance.value = null;
-    allHotelsOccupancyChartInstance.value?.dispose(); allHotelsOccupancyChartInstance.value = null;
-};
+// Chart lifecycle functions are no longer needed since charts are now components
+const refreshAllCharts = () => { };
+const disposeAllCharts = () => { };
 
 // Table
 const getSeverity = getSeverityUtil;
