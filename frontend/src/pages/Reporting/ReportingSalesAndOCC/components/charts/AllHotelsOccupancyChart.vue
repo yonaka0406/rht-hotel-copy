@@ -42,7 +42,7 @@ const chartInstance = shallowRef(null);
 const allHotelsOccupancyChartData = computed(() => {
   if (!props.occupancyData || props.occupancyData.length === 0) return [];
   const hotelMap = new Map();
-  props.occupancyData.forEach(item => {
+  props.occupancyData.filter(item => item.hotel_id !== 0).forEach(item => {
     if (item.hotel_name) {
       const entry = hotelMap.get(item.hotel_name) || {
         hotel_name: item.hotel_name,
@@ -76,8 +76,12 @@ const chartHeight = computed(() => {
 });
 
 const chartOptions = computed(() => {
-  const data = allHotelsOccupancyChartData.value;
+  let data = allHotelsOccupancyChartData.value;
   if (!data.length) return {};
+
+  // Sort data by occupancy_variance in descending order (outperformers at the top)
+  data = [...data].sort((a, b) => b.occupancy_variance - a.occupancy_variance);
+
   const hotelNames = data.map(item => item.hotel_name);
   const forecastValues = data.map(item => item.forecast_occupancy_rate);
   const actualValues = data.map(item => item.actual_occupancy_rate);
