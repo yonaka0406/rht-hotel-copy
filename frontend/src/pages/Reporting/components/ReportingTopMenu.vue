@@ -20,6 +20,7 @@
                     <label for="reportType" class="text-sm text-gray-200 dark:text-gray-300">レポートタイプ</label>
                     <Select v-model="selectedReportType" :options="reportTypeOptions" optionLabel="label"
                         optionValue="value" @change="onInternalReportTypeChange" placeholder="レポートを選択"
+                        :disabled="loading"
                         class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[150px] w-full sm:w-auto" />
                 </div>
 
@@ -28,7 +29,7 @@
                     <div class="flex gap-2 grid">
                         <label for="date" class="text-sm text-gray-200 dark:text-gray-300">月度</label>
                         <DatePicker v-model="selectedDate" view="month" dateFormat="yy年mm月"
-                            @update:modelValue="onInternalDateChange"
+                            @update:modelValue="onInternalDateChange" :disabled="loading"
                             class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[120px] w-full sm:w-auto" />
                     </div>
                 </template>
@@ -38,7 +39,7 @@
                     <div class="flex gap-2 grid">
                         <label for="period" class="text-sm text-gray-200 dark:text-gray-300">期間</label>
                         <Select v-model="period" :options="periodOptions" optionLabel="label" optionValue="value"
-                            @change="onInternalPeriodChange"
+                            @change="onInternalPeriodChange" :disabled="loading"
                             class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[120px] w-full sm:w-auto"
                             placeholder="期間を選択" />
                     </div>
@@ -49,12 +50,13 @@
                     <label for="hotels" class="text-sm text-gray-200 dark:text-gray-300">施設</label>
                     <MultiSelect v-model="localSelectedHotels" :options="hotels" optionLabel="name" optionValue="id"
                         multiple :maxSelectedLabels="1" @change="onInternalHotelSelectionChange" placeholder="施設を選択"
+                        :disabled="loading"
                         class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[180px] w-full sm:w-auto" />
                 </div>
                 <div v-if="showSingleHotelSelect && !isDailyReport" class="flex gap-2 grid"> <!-- Changed condition -->
                     <label for="facility" class="text-sm text-gray-200 dark:text-gray-300">施設</label>
                     <Select v-model="singleSelectedHotelId" :options="hotelOptions" optionLabel="name" optionValue="id"
-                        @change="onInternalHotelSelectionChange" placeholder="施設を選択"
+                        @change="onInternalHotelSelectionChange" placeholder="施設を選択" :disabled="loading"
                         class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[180px] w-full sm:w-auto" />
                 </div>
             </div>
@@ -69,7 +71,8 @@ const props = defineProps({
     selectedDate: Date,
     period: String,
     selectedHotels: Array,
-    initialReportType: String // Optional: if parent wants to set initial report type
+    initialReportType: String,
+    loading: Boolean // Added loading prop
 });
 const emit = defineEmits(['date-change', 'period-change', 'hotel-change', 'report-type-change']);
 
@@ -128,6 +131,7 @@ const reportTypeOptions = ref([
     // { label: '予約数変動 (昨日/今日)', value: 'activeReservationsChange' },
     { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' }
 ]);
+
 
 // When a date is picked in ReportingTopMenu:
 function onInternalDateChange(newDate) {

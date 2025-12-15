@@ -2,7 +2,7 @@
     <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
         <header>
             <ReportingTopMenu :selectedDate="selectedDate" :period="period" :selectedHotels="selectedHotels"
-                :initialReportType="'monthlySummary'" @date-change="handleDateChange"
+                :initialReportType="'monthlySummary'" :loading="loading" @date-change="handleDateChange"
                 @period-change="handlePeriodChange" @hotel-change="handleHotelChange"
                 @report-type-change="handleReportTypeChange" />
         </header>
@@ -53,7 +53,7 @@ import { formatDateToYMD } from '@/utils/dateUtils';
 import { useReportStore } from '@/composables/useReportStore';
 const dayOverDayChange = ref({ rooms: 0, occ: 0, sales: 0 }); // To store pickup for selected period
 const futureOutlookData = ref([]); // Store Future Outlook
-const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate } = useReportStore();
+const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate, fetchDailyReportDataByHotel } = useReportStore();
 
 // Primevue
 import { ProgressSpinner } from 'primevue';
@@ -942,20 +942,19 @@ const fetchData = async () => {
                 if (hotelIds.length > 0) {
                     const latestDateStrRaw = await fetchLatestDailyReportDate();
 
+                    // Use fetchDailyReportDataByHotel for optimized aggregated data
                     const [futureData, prevDayData] = await Promise.all([
-                        fetchBatchFutureOutlook(hotelIds, formatDate(firstDayofFetch.value)), // Pass referenceDate!
-                        latestDateStrRaw ? fetchDailyReportData(latestDateStrRaw) : Promise.resolve([])
+                        fetchBatchFutureOutlook(hotelIds, formatDate(firstDayofFetch.value)),
+                        latestDateStrRaw ? fetchDailyReportDataByHotel(latestDateStrRaw, hotelIds) : Promise.resolve([])
                     ]);
 
                     const prevByMonth = {};
                     if (Array.isArray(prevDayData)) {
                         prevDayData.forEach(item => {
-                            // Filter data to only include selected hotels
-                            if (!hotelIds.includes(Number(item.hotel_id))) return;
-
+                            // Backend already filters by hotelIds and aggregates data
                             const mk = formatDateMonth(new Date(item.month));
                             if (!prevByMonth[mk]) prevByMonth[mk] = { sales: 0, stays: 0, rooms: 0 };
-                            // Daily report returns broken down sales
+
                             const dailySales = (Number(item.accommodation_sales) || 0) + (Number(item.other_sales) || 0);
                             prevByMonth[mk].sales += dailySales;
                             prevByMonth[mk].stays += Number(item.confirmed_stays) || 0;
