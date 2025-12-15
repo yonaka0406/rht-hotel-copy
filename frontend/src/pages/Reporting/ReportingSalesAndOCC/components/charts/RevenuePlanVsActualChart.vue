@@ -48,8 +48,9 @@ const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
 
 const chartOptions = computed(() => {
-  const { total_forecast_revenue, total_period_accommodation_revenue } = props.revenueData;
+  const { total_forecast_revenue, total_period_accommodation_revenue, total_prev_year_accommodation_revenue } = props.revenueData;
   const varianceAmount = total_period_accommodation_revenue - total_forecast_revenue;
+  const prevYearAmount = total_prev_year_accommodation_revenue || 0;
 
   let displayVariancePercent;
   if (total_forecast_revenue === 0 || total_forecast_revenue === null) {
@@ -61,6 +62,7 @@ const chartOptions = computed(() => {
 
   const variancePositiveColor = '#4CAF50';
   const varianceNegativeColor = '#F44336';
+  const prevYearColor = '#909399';
 
   return {
     tooltip: {
@@ -90,7 +92,7 @@ const chartOptions = computed(() => {
     grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
     xAxis: [{
       type: 'category',
-      data: ['計画売上', '分散', '実績売上'],
+      data: ['計画売上', '分散', '実績売上', '前年実績'], // Reordered: Plan, Variance, Actual, PrevYear
       splitLine: { show: false },
       axisLabel: { interval: 0 },
     }],
@@ -109,9 +111,10 @@ const chartOptions = computed(() => {
         itemStyle: { borderColor: 'transparent', color: 'transparent' },
         emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' } },
         data: [
-          0,
-          varianceAmount >= 0 ? total_forecast_revenue : total_period_accommodation_revenue,
-          0,
+          0, // Plan
+          varianceAmount >= 0 ? total_forecast_revenue : total_period_accommodation_revenue, // Variance base
+          0, // Actual
+          0, // Prev Year
         ],
       },
       {
@@ -142,6 +145,11 @@ const chartOptions = computed(() => {
           {
             value: total_period_accommodation_revenue,
             itemStyle: { color: colorScheme.actual },
+            label: { position: 'top' },
+          },
+          {
+            value: prevYearAmount,
+            itemStyle: { color: prevYearColor },
             label: { position: 'top' },
           },
         ],

@@ -34,17 +34,13 @@ export function useReportStore() {
         }
     };
 
-    const getDailyReportData = async (metricDate) => {
-        isLoading.value = true;
-        reportData.value = [];
+    const fetchDailyReportData = async (metricDate) => {
         try {
             const data = await api.get(`/report/daily/data/${metricDate}`);
-            reportData.value = data;
+            return data;
         } catch (error) {
             console.error('Error fetching daily report data:', error);
-            reportData.value = [];
-        } finally {
-            isLoading.value = false;
+            throw error;
         }
     };
 
@@ -956,7 +952,7 @@ export function useReportStore() {
             throw error;
         }
     };
-    
+
     /**
      * Batch fetch reservation list data for multiple hotels.
      * @param {Array<number>} hotelIds - Array of hotel IDs.
@@ -1003,7 +999,7 @@ export function useReportStore() {
         reportData,
         isLoading,
         getAvailableMetricDates,
-        getDailyReportData,
+        fetchDailyReportData,
         downloadDailyReportExcel,
         fetchCountReservation,
         fetchCountReservationDetails,

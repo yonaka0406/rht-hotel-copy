@@ -153,6 +153,10 @@ const props = defineProps({
     rawOccupationBreakdownData: { // Renamed from occupationBreakdownData
         type: Array,
         default: () => []
+    },
+    prevYearRevenueData: {
+        type: Array,
+        default: () => []
     }
 });
 
@@ -223,6 +227,7 @@ const aggregateHotelZeroData = computed(() => {
     // representing the totals for the selected period.
     const revenueEntry = props.revenueData?.find(item => item.hotel_id === 0);
     const occupancyEntry = props.occupancyData?.find(item => item.hotel_id === 0);
+    const prevYearRevenueEntry = props.prevYearRevenueData?.find(item => item.hotel_id === 0);
 
     //console.log('[ReportingSingleMonthAllHotels] revenueEntry (hotel_id=0):', revenueEntry);
     //console.log('[ReportingSingleMonthAllHotels] occupancyEntry (hotel_id=0):', occupancyEntry);
@@ -230,6 +235,7 @@ const aggregateHotelZeroData = computed(() => {
     return {
         total_forecast_revenue: revenueEntry?.forecast_revenue || 0,
         total_period_accommodation_revenue: revenueEntry?.accommodation_revenue || 0,
+        total_prev_year_accommodation_revenue: prevYearRevenueEntry?.accommodation_revenue || 0,
         total_fc_sold_rooms: occupancyEntry?.fc_sold_rooms || 0,
         total_sold_rooms: occupancyEntry?.sold_rooms || 0,
         // fc_total_rooms from occupancy data is total_available_rooms for forecast period
