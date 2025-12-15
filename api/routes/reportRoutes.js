@@ -19,6 +19,7 @@ router.get('/report/download/accommodation-tax/:hid/:sdate/:edate', authMiddlewa
 
 // Daily Report
 router.get('/report/daily/available-dates', authMiddleware, reportController.getAvailableMetricDates);
+router.get('/report/daily/latest-date', authMiddleware, reportController.getLatestDailyReportDate);
 router.get('/report/daily/data/:date', authMiddleware, reportController.getDailyReportData);
 router.get('/report/daily/download-excel/:date1/:date2', authMiddleware, reportController.getExportDailyReportExcel);
 router.post('/report/daily/generate-for-today', authMiddleware, reportController.generateDailyMetrics);

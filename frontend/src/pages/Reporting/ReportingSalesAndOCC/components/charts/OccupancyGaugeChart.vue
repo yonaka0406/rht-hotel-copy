@@ -38,6 +38,10 @@ const props = defineProps({
     type: String,
     default: '450px',
   },
+  previousYearOccupancy: {
+    type: Number,
+    default: null
+  }
 });
 
 const chartContainer = ref(null);
@@ -66,6 +70,11 @@ const chartOptions = computed(() => {
   // Guard against division by zero
   const totalActualOccupancy = actualTotalRooms > 0 ? sold_rooms / actualTotalRooms : 0;
   const totalForecastOccupancy = forecastTotalRooms > 0 ? fc_sold_rooms / forecastTotalRooms : 0;
+
+  console.log('[GaugeChart] Props Data:', props.occupancyData);
+  console.log('[GaugeChart] Actual:', { sold_rooms, actualTotalRooms, totalActualOccupancy });
+  console.log('[GaugeChart] Forecast:', { fc_sold_rooms, forecastTotalRooms, totalForecastOccupancy });
+  console.log('[GaugeChart] Prev:', props.previousYearOccupancy);
 
   return {
     tooltip: {
@@ -126,16 +135,20 @@ const chartOptions = computed(() => {
         valueAnimation: true,
         formatter: function (value) {
           let forecastText = `計画: ${formatPercentage(totalForecastOccupancy)}`;
+          let prevYearText = props.previousYearOccupancy !== null ? `前年度同月度: ${formatPercentage(props.previousYearOccupancy)}` : '';
           return `{actual|${formatPercentage(value)}}
-{forecast|${forecastText}}`;
+{forecast|${forecastText}}
+{prev|${prevYearText}}`;
         },
         rich: {
           actual: { fontSize: 24, fontWeight: 'bold', color: colorScheme.actual },
           forecast: { fontSize: 13, color: colorScheme.forecast, paddingTop: 8 },
+          prev: { fontSize: 13, color: '#999', paddingTop: 4 },
         },
       },
       data: [{ value: totalActualOccupancy, name: '実績稼働率' }],
-    }],
+    }
+    ],
   };
 });
 

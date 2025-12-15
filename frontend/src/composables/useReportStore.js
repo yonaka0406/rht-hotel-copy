@@ -259,9 +259,10 @@ export function useReportStore() {
     /**
      * Batch fetch future outlook data (6 months) for multiple hotels
      * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string|Date} referenceDate - (Optional) Pivot date to start 6-month window
      * @returns {Object} Object with month labels as keys, each containing hotel data
      */
-    const fetchBatchFutureOutlook = async (hotelIds) => {
+    const fetchBatchFutureOutlook = async (hotelIds, referenceDate = null) => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, report functionality limited');
@@ -269,13 +270,29 @@ export function useReportStore() {
             }
 
             const response = await api.post('/report/batch/future-outlook', {
-                hotelIds
+                hotelIds,
+                referenceDate
             });
 
             return response?.results || {};
         } catch (error) {
             console.error('Failed to fetch batch future outlook data:', error);
             return {};
+        }
+    };
+
+    /**
+     * Fetch the latest available daily report date
+     * @returns {string|null} YYYY-MM-DD string or null
+     */
+    const fetchLatestDailyReportDate = async () => {
+        try {
+            if (limitedFunctionality.value) return null;
+            const data = await api.get('/report/daily/latest-date');
+            return data; // should be YYYY-MM-DD or null
+        } catch (error) {
+            console.error('Failed to fetch latest daily report date:', error);
+            return null;
         }
     };
 
@@ -1058,5 +1075,6 @@ export function useReportStore() {
         fetchBatchReservationListView, // Add new batch function
         fetchBatchBookerTypeBreakdown,
         fetchBatchFutureOutlook,
+        fetchLatestDailyReportDate,
     };
 }

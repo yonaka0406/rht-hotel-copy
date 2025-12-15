@@ -23,7 +23,10 @@
                         <div class="w-full md:w-1/2 flex flex-col gap-4">
                             <!-- Row 1: Gauge (Reduced Height) -->
                             <div>
-                                <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" height="250px" />
+                                <div>
+                                    <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" height="250px"
+                                        :previousYearOccupancy="aggregateHotelZeroData?.prevYearOccupancy" />
+                                </div>
                             </div>
 
                             <!-- Row 2: KPIs -->
@@ -161,6 +164,10 @@ const props = defineProps({
         type: Array,
         default: () => []
     },
+    prevYearOccupancyData: {
+        type: Array,
+        default: () => []
+    },
     futureOutlookData: {
         type: Array,
         default: () => []
@@ -247,13 +254,13 @@ const aggregateHotelZeroData = computed(() => {
         total_period_accommodation_revenue: revenueEntry?.accommodation_revenue || 0,
         total_prev_year_accommodation_revenue: prevYearRevenueEntry?.accommodation_revenue || 0,
         total_fc_sold_rooms: occupancyEntry?.fc_sold_rooms || 0,
+        total_fc_available_rooms: occupancyEntry?.fc_total_rooms || 0, // Restored property
         total_sold_rooms: occupancyEntry?.sold_rooms || 0,
-        // fc_total_rooms from occupancy data is total_available_rooms for forecast period
-        total_fc_available_rooms: occupancyEntry?.fc_total_rooms || 0,
         // total_rooms from occupancy data is total_available_rooms for actual period
         total_available_rooms: occupancyEntry?.total_rooms || 0,
         total_prev_year_sold_rooms: prevYearOccupancyEntry?.sold_rooms || 0,
         total_prev_year_available_rooms: prevYearOccupancyEntry?.total_rooms || 0,
+        prevYearOccupancy: prevYearOccupancyEntry?.total_rooms > 0 ? prevYearOccupancyEntry.sold_rooms / prevYearOccupancyEntry.total_rooms : null
     };
 });
 

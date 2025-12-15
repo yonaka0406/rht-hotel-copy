@@ -49,7 +49,8 @@
                             <RevenuePlanVsActualChart :revenueData="singleHotelRevenueChartDataSource[0]" />
                         </div>
                         <div class="w-full md:w-1/2">
-                            <OccupancyGaugeChart :occupancyData="props.occupancyData[0]" />
+                            <OccupancyGaugeChart :occupancyData="props.occupancyData[0]"
+                                :previousYearOccupancy="currentHotelPrevYearOccupancy" />
                             <div class="mt-4 flex justify-around text-center">
                                 <div>
                                     <h6 class="text-sm font-semibold text-gray-600">前日比 (売上)</h6>
@@ -300,6 +301,19 @@ const currentHotelAggregateData = computed(() => {
         total_fc_available_rooms,
         total_available_rooms,
     };
+});
+
+const currentHotelPrevYearOccupancy = computed(() => {
+    if (!props.prevYearOccupancyData || props.prevYearOccupancyData.length === 0) return null;
+    // Assuming single hotel view, we look for the entry matching the current hotel or just the first entry if filtered
+    // But prevYearOccupancyData contains all hotels usually. We need to match by ID if possible, or name.
+    // Wait, props.revenueData[0] is the current hotel.
+    const currentHotelId = props.revenueData[0]?.hotel_id;
+    if (!currentHotelId) return null;
+
+    const entry = props.prevYearOccupancyData.find(item => item.hotel_id === currentHotelId);
+    if (!entry || !entry.total_rooms) return null;
+    return entry.sold_rooms / entry.total_rooms;
 });
 
 const actualADR = computed(() => {

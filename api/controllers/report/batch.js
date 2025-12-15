@@ -151,12 +151,12 @@ const getBatchFutureOutlook = async (req, res) => {
             validateNumericParam(hotelId, 'hotelId');
         }
 
-        // Calculate 6 months: current month and next 5 (using UTC to avoid timezone issues)
-        const today = new Date();
+        // Calculate 6 months: start from referenceDate (or today) and next 5
+        const referenceDate = req.body.referenceDate ? new Date(req.body.referenceDate) : new Date();
         const months = [];
         for (let i = 0; i < 6; i++) {
-            const year = today.getUTCFullYear();
-            const month = today.getUTCMonth() + i;
+            const year = referenceDate.getUTCFullYear();
+            const month = referenceDate.getUTCMonth() + i;
             const monthDate = new Date(Date.UTC(year, month, 1));
             const startDate = monthDate.toISOString().split('T')[0];
             const lastDayDate = new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 0));

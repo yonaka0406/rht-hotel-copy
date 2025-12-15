@@ -82,7 +82,8 @@ function getDaysInMonth(year, month) {
     return new Date(year, month, 0).getDate();
 }
 
-// --- Reactive State for the Parent Component ---const loading = ref(false);
+// --- Reactive State for the Parent Component ---
+const loading = ref(false);
 const selectedDate = ref(new Date());
 const period = ref('month');
 const selectedHotels = ref([]);
