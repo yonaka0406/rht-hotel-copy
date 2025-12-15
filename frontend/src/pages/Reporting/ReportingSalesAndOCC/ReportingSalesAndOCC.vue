@@ -177,7 +177,7 @@ const prevYearRevenueData = computed(() => {
     lastIterMonthDate.setFullYear(lastIterMonthDate.getFullYear() - 1);
 
     while (currentIterMonth <= lastIterMonthDate) {
-        const monthKey = formatDateMonth(currentIterMonth);
+        const monthKey = formatDateMonth(normalizeDate(currentIterMonth));
         monthlyAggregates[monthKey] = {};
         monthlyAggregates[monthKey]['0'] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
         selectedHotels.value.forEach(hotelId => {
@@ -304,7 +304,7 @@ const revenueData = computed(() => {
     let currentIterMonth = new Date(firstDayofFetch.value);
     const lastIterMonthDate = new Date(lastDayofFetch.value);
     while (currentIterMonth <= lastIterMonthDate) {
-        const monthKey = formatDateMonth(currentIterMonth);
+        const monthKey = formatDateMonth(normalizeDate(currentIterMonth));
         monthlyAggregates[monthKey] = {};
         monthlyAggregates[monthKey]['0'] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
         selectedHotels.value.forEach(hotelId => {
@@ -424,7 +424,7 @@ const occupancyData = computed(() => {
     const lastIterMonthDate = new Date(lastDayofFetch.value);
     while (currentIterMonth <= lastIterMonthDate) {
         const iterDateForMonthKey = normalizeDate(currentIterMonth);
-        const monthKey = formatDateMonth(currentIterMonth);
+        const monthKey = formatDateMonth(iterDateForMonthKey);
         monthlyOccupancyAggregates[monthKey] = {};
         monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
         const year = iterDateForMonthKey.getUTCFullYear();
@@ -646,7 +646,7 @@ const prevYearOccupancyData = computed(() => {
 
     while (currentIterMonth <= lastIterMonthDate) {
         const iterDateForMonthKey = normalizeDate(currentIterMonth);
-        const monthKey = formatDateMonth(currentIterMonth);
+        const monthKey = formatDateMonth(iterDateForMonthKey);
         monthlyOccupancyAggregates[monthKey] = {};
         monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
         const year = iterDateForMonthKey.getUTCFullYear();
