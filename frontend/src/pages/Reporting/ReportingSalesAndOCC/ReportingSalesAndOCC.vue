@@ -50,7 +50,7 @@ import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHo
 import { useReportStore } from '@/composables/useReportStore';
 const dayOverDayChange = ref({ rooms: 0, occ: 0, sales: 0 }); // To store pickup for selected period
 const futureOutlookData = ref([]); // Store Future Outlook
-const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, getAvailableMetricDates, availableDates, fetchBatchFutureOutlook } = useReportStore();
+const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate } = useReportStore();
 
 // Primevue
 import { ProgressSpinner } from 'primevue';
@@ -800,6 +800,18 @@ const fetchData = async () => {
             fetchBatchOccupationBreakdown(selectedHotels.value, prevStartDateFormatted, prevEndDateFormatted)
         ]);
 
+        console.log('[RMP] Fetch Dates:', {
+            pmsFetchStartDate, pmsFetchEndDate,
+            forecastAndAccountingStartDate, forecastAndAccountingEndDate,
+            prevPmsFetchStartDate, prevPmsFetchEndDate
+        });
+        console.log('[RMP] Batch Data Keys:', {
+            pms: Object.keys(batchPmsData || {}),
+            forecast: Object.keys(batchForecastData || {}),
+            prevPms: Object.keys(batchPrevPmsData || {}),
+            // prevForecast: Object.keys(batchPrevForecastData || {}) // This uses dummy though?
+        });
+
         // Process Current Year Data (Existing logic...)
         // ... (Keep existing logic for newPmsTotalData etc)
 
@@ -821,7 +833,7 @@ const fetchData = async () => {
             const rawPrevPms = batchPrevPmsData[hKey] || [];
             if (Array.isArray(rawPrevPms)) {
                 newPrevPmsData[hKey] = rawPrevPms.map(item => ({
-                    date: formatDate(normalizeDate(new Date(item.date))),
+                    date: item.date ? String(item.date).substring(0, 10) : null,
                     revenue: item.price !== undefined ? Number(item.price) : 0,
                     accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
                     other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
@@ -840,7 +852,7 @@ const fetchData = async () => {
             const rawPrevAccounting = batchPrevAccountingData[hKey] || [];
             if (Array.isArray(rawPrevAccounting)) {
                 newPrevAccountingData[hKey] = rawPrevAccounting.map(item => ({
-                    date: formatDate(normalizeDate(new Date(item.accounting_month))),
+                    date: item.accounting_month ? String(item.accounting_month).substring(0, 10) : null,
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                 })).filter(item => item.date !== null);
             } else {
@@ -855,57 +867,47 @@ const fetchData = async () => {
         // Day-over-Day Change Fetch (Only if Single Hotel & period='month')
         if (selectedHotels.value.length === 1 && period.value === 'month') {
             try {
-                await getAvailableMetricDates();
-                if (availableDates.value.length > 0) {
-                    // Find latest date
-                    const sortedDates = [...availableDates.value].sort((a, b) => b.getTime() - a.getTime());
-                    const latestDate = sortedDates[0];
+                const latestDateStrRaw = await fetchLatestDailyReportDate();
+                if (latestDateStrRaw) {
+                    const latestDate = new Date(latestDateStrRaw);
                     const latestDateStr = formatDate(latestDate);
 
-                    // Find previous date (from available dates or just previous calendar day? Daily report might skip days if errors, but usually contiguous)
-                    // Let's look for the next available date in the list for robustness
-                    const previousDate = sortedDates.length > 1 ? sortedDates[1] : null;
+                    // Find previous date (Assume previous day for now as finding sorted list is expensive without available-dates)
+                    // Or since we only need DoD for one hotel, we can just fetch the daily report for the previous calendar day.
+                    // If no report exists, it's 0 or null.
+                    const previousDate = new Date(latestDate);
+                    previousDate.setDate(previousDate.getDate() - 1);
+                    const previousDateStr = formatDate(previousDate);
 
-                    if (previousDate) {
-                        const previousDateStr = formatDate(previousDate);
+                    const [latestData, previousData] = await Promise.all([
+                        fetchDailyReportData(latestDateStr),
+                        fetchDailyReportData(previousDateStr)
+                    ]);
 
-                        const [latestData, previousData] = await Promise.all([
-                            fetchDailyReportData(latestDateStr),
-                            fetchDailyReportData(previousDateStr)
-                        ]);
+                    // Filter for the TARGET month (selectedDate) and Hotel
+                    const targetMonthStr = formatDateMonth(selectedDate.value); // YYYY-MM
+                    const targetHotelId = selectedHotels.value[0];
 
-                        // Filter for the TARGET month (selectedDate) and Hotel
-                        const targetMonthStr = formatDateMonth(selectedDate.value); // YYYY-MM
-                        const targetHotelId = selectedHotels.value[0];
+                    const findRecord = (data) => {
+                        if (!Array.isArray(data)) return null;
+                        return data.find(item =>
+                            String(item.hotel_id) === String(targetHotelId) &&
+                            formatDateMonth(new Date(item.month)) === targetMonthStr
+                        );
+                    };
 
-                        const findRecord = (data) => {
-                            if (!Array.isArray(data)) return null;
-                            return data.find(item =>
-                                String(item.hotel_id) === String(targetHotelId) &&
-                                formatDateMonth(new Date(item.month)) === targetMonthStr
-                            );
-                        };
+                    const latestRecord = findRecord(latestData);
+                    const previousRecord = findRecord(previousData);
 
-                        const latestRecord = findRecord(latestData);
-                        const previousRecord = findRecord(previousData);
+                    if (latestRecord && previousRecord) {
+                        const roomChange = (latestRecord.confirmed_stays || 0) - (previousRecord.confirmed_stays || 0);
+                        const salesChange = (latestRecord.total_sales || 0) - (previousRecord.total_sales || 0);
 
-                        if (latestRecord && previousRecord) {
-                            const roomChange = (latestRecord.confirmed_stays || 0) - (previousRecord.confirmed_stays || 0);
-                            const salesChange = (latestRecord.total_sales || 0) - (previousRecord.total_sales || 0); // Or accommodation_sales? "revenue" usually total or accommodation. Let's use total for consistency with top level metric or accom depending on user preference. 
-                            // "Sales" in overview usually refers to Total or Accom. Let's use Total Sales (including others) if that matches "売上" in chart.
-                            // Wait, "Revenue Plan vs Actual" chart usually uses `pms_revenue` (Total?). 
-                            // Check `singleHotelRevenueChartDataSource`: uses `period_revenue` which comes from PMS `price` (Total). 
-                            // So we should use `total_sales`.
+                        const latestOcc = (latestRecord.total_rooms > 0) ? (latestRecord.confirmed_stays / latestRecord.total_rooms) : 0;
+                        const previousOcc = (previousRecord.total_rooms > 0) ? (previousRecord.confirmed_stays / previousRecord.total_rooms) : 0;
+                        const occChange = latestOcc - previousOcc;
 
-                            // Occupancy Change
-                            // Occ = confirmed_stays / total_rooms
-                            // Note: `total_rooms` in daily report is capacity for that month
-                            const latestOcc = (latestRecord.total_rooms > 0) ? (latestRecord.confirmed_stays / latestRecord.total_rooms) : 0;
-                            const previousOcc = (previousRecord.total_rooms > 0) ? (previousRecord.confirmed_stays / previousRecord.total_rooms) : 0;
-                            const occChange = latestOcc - previousOcc;
-
-                            dayOverDayChange.value = { rooms: roomChange, occ: occChange, sales: salesChange };
-                        }
+                        dayOverDayChange.value = { rooms: roomChange, occ: occChange, sales: salesChange };
                     }
                 }
             } catch (e) {
@@ -919,13 +921,11 @@ const fetchData = async () => {
             try {
                 const hotelIds = selectedHotels.value.filter(id => id !== 0);
                 if (hotelIds.length > 0) {
-                    await getAvailableMetricDates();
-                    const latestSnapshotDate = availableDates.value.length > 0
-                        ? [...availableDates.value].sort((a, b) => b.getTime() - a.getTime())[0] : null;
+                    const latestDateStrRaw = await fetchLatestDailyReportDate();
 
                     const [futureData, prevDayData] = await Promise.all([
-                        fetchBatchFutureOutlook(hotelIds),
-                        latestSnapshotDate ? fetchDailyReportData(formatDate(latestSnapshotDate)) : Promise.resolve([])
+                        fetchBatchFutureOutlook(hotelIds, firstDayofFetch.value), // Pass referenceDate!
+                        latestDateStrRaw ? fetchDailyReportData(latestDateStrRaw) : Promise.resolve([])
                     ]);
 
                     const prevByMonth = {};
@@ -937,9 +937,6 @@ const fetchData = async () => {
                             const dailySales = (Number(item.accommodation_sales) || 0) + (Number(item.other_sales) || 0);
                             prevByMonth[mk].sales += dailySales;
                             prevByMonth[mk].stays += Number(item.confirmed_stays) || 0;
-                            // check if total_rooms exists, if not we might need another source or it might be 0
-                            // Assuming total_rooms is present in daily report logic (it typically is for OCC calculation)
-                            // prevByMonth[mk].rooms += Number(item.total_rooms) || 0; // Total rooms is not available in daily report
                         });
                     }
 
@@ -957,10 +954,6 @@ const fetchData = async () => {
                             let hasAccounting = false;
 
                             if (Array.isArray(data.accounting) && data.accounting.length > 0) {
-                                // Check if there is actual value > 0 to consider it "available"
-                                // Or simply presence of record implies closed month? 
-                                // Usually if array is not empty, we have data.
-                                // However, we should sum it up.
                                 let accSum = 0;
                                 data.accounting.forEach(a => { accSum += Number(a.accommodation_revenue) || 0; });
                                 if (accSum > 0) {
@@ -970,7 +963,7 @@ const fetchData = async () => {
                             }
 
                             if (!hasAccounting) {
-                                // Fallback to PMS
+                                // Fallback to PMS. Note: Backend now aggregates into `pms` key.
                                 if (data.pms && typeof data.pms.revenue === 'number') {
                                     hotelActualSales = data.pms.revenue;
                                 }
@@ -1028,7 +1021,7 @@ const fetchData = async () => {
                 }
 
                 const mappedData = rawPmsData.map(item => ({
-                    date: formatDate(normalizeDate(new Date(item.date))),
+                    date: item.date ? String(item.date).substring(0, 10) : null,
                     revenue: item.price !== undefined ? Number(item.price) : 0,
                     accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
                     other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
@@ -1047,7 +1040,7 @@ const fetchData = async () => {
             const rawForecastData = batchForecastData[String(hotelId)] || [];
             if (Array.isArray(rawForecastData)) {
                 newForecastTotalData[String(hotelId)] = rawForecastData.map(item => ({
-                    date: formatDate(normalizeDate(new Date(item.forecast_month))),
+                    date: item.forecast_month ? String(item.forecast_month).substring(0, 10) : null,
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                     total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0,
                     room_count: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0,
@@ -1060,7 +1053,7 @@ const fetchData = async () => {
             const rawAccountingData = batchAccountingData[String(hotelId)] || [];
             if (Array.isArray(rawAccountingData)) {
                 newAccountingTotalData[String(hotelId)] = rawAccountingData.map(item => ({
-                    date: formatDate(normalizeDate(new Date(item.accounting_month))),
+                    date: item.accounting_month ? String(item.accounting_month).substring(0, 10) : null,
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                 })).filter(item => item.date !== null);
             } else {
