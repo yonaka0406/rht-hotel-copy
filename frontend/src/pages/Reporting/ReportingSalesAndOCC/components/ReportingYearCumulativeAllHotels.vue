@@ -415,32 +415,11 @@ const exportCSV = (tableType) => {
 };
 
 onMounted(async () => {
-    //console.log('RYCAll: onMounted', props.revenueData, props.occupancyData);
-
-    if (selectedView.value === 'graph') {
-        // Use nextTick to ensure containers are rendered before initializing
-        nextTick(refreshAllCharts);
-    }
-    window.addEventListener('resize', resizeChartHandler);
+    // Charts are now handled by child components
 });
 onBeforeUnmount(() => {
-    disposeAllCharts();
-    window.removeEventListener('resize', resizeChartHandler);
+    // Charts are now handled by child components
 });
 
-// Watch for changes in computed chart options
-watch([monthlyChartOptions, totalChartOptions], () => {
-    if (selectedView.value === 'graph') {
-        refreshAllCharts();
-    }
-}, { deep: true });
-watch(selectedView, async (newView) => {
-    if (newView === 'graph') {
-        await nextTick();
-        disposeAllCharts();
-        refreshAllCharts();
-    } else {
-        disposeAllCharts();
-    }
-});
+// Chart options watches removed - charts are now handled by child components
 </script>

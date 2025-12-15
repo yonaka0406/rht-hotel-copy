@@ -22,10 +22,12 @@
                     :prevYearOccupancyData="prevYearOccupancyData" :futureOutlookData="futureOutlookData" />
                 <ReportingYearCumulativeAllHotels v-else-if="selectedView === 'yearCumulativeAllHotels'"
                     :revenueData="revenueData" :occupancyData="occupancyData"
-                    :rawOccupationBreakdownData="occupationBreakdownAllHotels" />
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"
+                    :prevYearRevenueData="prevYearRevenueData" />
                 <ReportingYearCumulativeHotel v-else-if="selectedView === 'yearCumulativeHotel'"
                     :revenueData="revenueData" :occupancyData="occupancyData"
-                    :rawOccupationBreakdownData="occupationBreakdownAllHotels" />
+                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"
+                    :prevYearRevenueData="prevYearRevenueData" />
                 <div v-else class="text-gray-700 dark:text-gray-200 text-center mt-4">
                     レポートタイプに対応するサマリービューが見つかりません。
                 </div>
