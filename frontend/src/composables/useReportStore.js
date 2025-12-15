@@ -256,6 +256,29 @@ export function useReportStore() {
         }
     };
 
+    /**
+     * Batch fetch future outlook data (6 months) for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @returns {Object} Object with month labels as keys, each containing hotel data
+     */
+    const fetchBatchFutureOutlook = async (hotelIds) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/future-outlook', {
+                hotelIds
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch future outlook data:', error);
+            return {};
+        }
+    };
+
 
     const fetchOccupationByPeriod = async (period, hotelId, refDate) => {
         try {
@@ -1034,5 +1057,6 @@ export function useReportStore() {
         generatePdfReport,
         fetchBatchReservationListView, // Add new batch function
         fetchBatchBookerTypeBreakdown,
+        fetchBatchFutureOutlook,
     };
 }

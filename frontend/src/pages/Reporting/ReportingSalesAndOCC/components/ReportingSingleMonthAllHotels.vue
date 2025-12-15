@@ -237,6 +237,7 @@ const aggregateHotelZeroData = computed(() => {
     const revenueEntry = props.revenueData?.find(item => item.hotel_id === 0);
     const occupancyEntry = props.occupancyData?.find(item => item.hotel_id === 0);
     const prevYearRevenueEntry = props.prevYearRevenueData?.find(item => item.hotel_id === 0);
+    const prevYearOccupancyEntry = props.prevYearOccupancyData?.find(item => item.hotel_id === 0);
 
     //console.log('[ReportingSingleMonthAllHotels] revenueEntry (hotel_id=0):', revenueEntry);
     //console.log('[ReportingSingleMonthAllHotels] occupancyEntry (hotel_id=0):', occupancyEntry);
@@ -251,6 +252,8 @@ const aggregateHotelZeroData = computed(() => {
         total_fc_available_rooms: occupancyEntry?.fc_total_rooms || 0,
         // total_rooms from occupancy data is total_available_rooms for actual period
         total_available_rooms: occupancyEntry?.total_rooms || 0,
+        total_prev_year_sold_rooms: prevYearOccupancyEntry?.sold_rooms || 0,
+        total_prev_year_available_rooms: prevYearOccupancyEntry?.total_rooms || 0,
     };
 });
 

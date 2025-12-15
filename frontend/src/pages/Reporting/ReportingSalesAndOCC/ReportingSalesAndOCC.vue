@@ -50,7 +50,7 @@ import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHo
 import { useReportStore } from '@/composables/useReportStore';
 const dayOverDayChange = ref({ rooms: 0, occ: 0, sales: 0 }); // To store pickup for selected period
 const futureOutlookData = ref([]); // Store Future Outlook
-const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, getAvailableMetricDates, availableDates } = useReportStore();
+const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, getAvailableMetricDates, availableDates, fetchBatchFutureOutlook } = useReportStore();
 
 // Primevue
 import { ProgressSpinner } from 'primevue';
@@ -71,8 +71,8 @@ function formatDate(date) {
     return `${year}-${month}-${day}`
 }
 function formatDateMonth(date) {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getUTCFullYear()
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
     return `${year}-${month}`
 }
 const normalizeDate = (date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -914,76 +914,88 @@ const fetchData = async () => {
         }
 
         // Future Outlook Fetch (For Single Month All Hotels)
-        if (selectedView.value === 'singleMonthAllHotels' && firstDayofFetch.value) {
+        if (selectedView.value === 'singleMonthAllHotels') {
             futureOutlookData.value = [];
             try {
-                await getAvailableMetricDates();
-                if (availableDates.value.length > 0) {
-                    const sortedDates = [...availableDates.value].sort((a, b) => b.getTime() - a.getTime());
-                    const latestDate = sortedDates[0];
-                    const previousDate = sortedDates.length > 1 ? sortedDates[1] : null;
+                const hotelIds = selectedHotels.value.filter(id => id !== 0);
+                if (hotelIds.length > 0) {
+                    await getAvailableMetricDates();
+                    const latestSnapshotDate = availableDates.value.length > 0
+                        ? [...availableDates.value].sort((a, b) => b.getTime() - a.getTime())[0] : null;
 
-                    let latestData = [];
-                    let previousData = [];
+                    const [futureData, prevDayData] = await Promise.all([
+                        fetchBatchFutureOutlook(hotelIds),
+                        latestSnapshotDate ? fetchDailyReportData(formatDate(latestSnapshotDate)) : Promise.resolve([])
+                    ]);
 
-                    if (latestDate) {
-                        const [lData, pData] = await Promise.all([
-                            fetchDailyReportData(formatDate(latestDate)),
-                            previousDate ? fetchDailyReportData(formatDate(previousDate)) : Promise.resolve([])
-                        ]);
-                        latestData = lData;
-                        previousData = pData;
+                    const prevByMonth = {};
+                    if (Array.isArray(prevDayData)) {
+                        prevDayData.forEach(item => {
+                            const mk = formatDateMonth(new Date(item.month));
+                            if (!prevByMonth[mk]) prevByMonth[mk] = { sales: 0, stays: 0, rooms: 0 };
+                            // Daily report returns broken down sales
+                            const dailySales = (Number(item.accommodation_sales) || 0) + (Number(item.other_sales) || 0);
+                            prevByMonth[mk].sales += dailySales;
+                            prevByMonth[mk].stays += Number(item.confirmed_stays) || 0;
+                            // check if total_rooms exists, if not we might need another source or it might be 0
+                            // Assuming total_rooms is present in daily report logic (it typically is for OCC calculation)
+                            // prevByMonth[mk].rooms += Number(item.total_rooms) || 0; // Total rooms is not available in daily report
+                        });
                     }
 
-                    // Generate next 6 months keys
-                    const monthsToProcess = [];
-                    let d = new Date(firstDayofFetch.value);
-                    for (let i = 0; i < 6; i++) {
-                        monthsToProcess.push(formatDateMonth(d));
-                        d.setMonth(d.getMonth() + 1);
+                    const outlook = [];
+                    for (const [monthLabel, hotelDataMap] of Object.entries(futureData)) {
+                        let totalActualSales = 0, totalForecastSales = 0, totalActualStays = 0, totalActualRooms = 0, totalForecastRooms = 0, totalForecastStays = 0;
+                        for (const data of Object.values(hotelDataMap)) {
+                            if (Array.isArray(data.occupation)) {
+                                const totalRow = data.occupation.find(r => r.plan_name === '稼働の合計');
+                                if (totalRow) { totalActualStays += Number(totalRow.confirmed_nights) || 0; totalActualRooms += Number(totalRow.net_available_room_nights) || 0; }
+                            }
+                            if (Array.isArray(data.forecast)) { data.forecast.forEach(f => { totalForecastSales += Number(f.accommodation_revenue) || 0; totalForecastRooms += Number(f.available_room_nights) || 0; totalForecastStays += Number(f.rooms_sold_nights) || 0; }); }
+
+                            let hotelActualSales = 0;
+                            let hasAccounting = false;
+
+                            if (Array.isArray(data.accounting) && data.accounting.length > 0) {
+                                // Check if there is actual value > 0 to consider it "available"
+                                // Or simply presence of record implies closed month? 
+                                // Usually if array is not empty, we have data.
+                                // However, we should sum it up.
+                                let accSum = 0;
+                                data.accounting.forEach(a => { accSum += Number(a.accommodation_revenue) || 0; });
+                                if (accSum > 0) {
+                                    hotelActualSales = accSum;
+                                    hasAccounting = true;
+                                }
+                            }
+
+                            if (!hasAccounting) {
+                                // Fallback to PMS
+                                if (data.pms && typeof data.pms.revenue === 'number') {
+                                    hotelActualSales = data.pms.revenue;
+                                }
+                            }
+
+                            totalActualSales += hotelActualSales;
+                        }
+                        const actualOcc = totalActualRooms > 0 ? (totalActualStays / totalActualRooms) * 100 : 0;
+                        const forecastOcc = totalForecastRooms > 0 ? (totalForecastStays / totalForecastRooms) * 100 : 0;
+                        const prev = prevByMonth[monthLabel] || { sales: 0, stays: 0, rooms: 0 };
+                        // Use current totalActualRooms as proxy for previous capacity since daily report excludes it
+                        const prevOcc = totalActualRooms > 0 ? (prev.stays / totalActualRooms) * 100 : 0;
+                        outlook.push({
+                            month: monthLabel,
+                            forecast_sales: totalForecastSales,
+                            sales: totalActualSales,
+                            sales_diff: totalActualSales - prev.sales,
+                            prev_sales: prev.sales, // Added for hidden column
+                            forecast_occ: forecastOcc,
+                            occ: actualOcc,
+                            occ_diff: actualOcc - prevOcc,
+                            prev_occ: prevOcc // Added for hidden column
+                        });
                     }
-
-                    const outlook = monthsToProcess.map(targetMonthStr => {
-                        const findRecord = (data) => {
-                            if (!Array.isArray(data)) return null;
-                            // For "All Hotels" we look for hotel_id === 0
-                            return data.find(item =>
-                                String(item.hotel_id) === '0' &&
-                                formatDateMonth(new Date(item.month)) === targetMonthStr
-                            );
-                        };
-
-                        const latestRecord = findRecord(latestData) || {};
-                        const previousRecord = findRecord(previousData) || {};
-
-                        const sales = latestRecord.total_sales || 0;
-                        const sales_last = previousRecord.total_sales || 0;
-                        const sales_diff = sales - sales_last;
-
-                        const rooms = latestRecord.total_rooms || 0;
-                        const stays = latestRecord.confirmed_stays || 0;
-                        const occ = rooms > 0 ? (stays / rooms) * 100 : 0;
-
-                        const rooms_last = previousRecord.total_rooms || 0;
-                        const stays_last = previousRecord.confirmed_stays || 0;
-                        const occ_last = rooms_last > 0 ? (stays_last / rooms_last) * 100 : 0;
-
-                        const occ_diff = occ - occ_last;
-
-                        return {
-                            month: targetMonthStr,
-                            sales: sales,
-                            sales_diff: sales_diff,
-                            occ: occ,
-                            occ_diff: occ_diff,
-                            forecast_sales: 0, // Placeholder, populate if needed from batchForecastData
-                            // Note: batchForecastData is fetched for current view range only.
-                            // If we want Forecast for future months, we might need separate fetch or use what's in daily report if available?
-                            // Daily Report usually tracks Actual/OTB. Plan is static?
-                            // For now, let's rely on OTB (Sales) and DoD. Plan might be added if user specifically asks "Plan vs OTB" for future.
-                            // "Feature Sales" usually means OTB.
-                        };
-                    });
+                    outlook.sort((a, b) => a.month.localeCompare(b.month));
                     futureOutlookData.value = outlook;
                 }
             } catch (e) {

@@ -104,18 +104,18 @@ const getBatchOccupationBreakdown = async (req, res) => {
 };
 
 const getBatchReservationListView = async (req, res) => {
-  const { hotelIds, startDate, endDate, searchType } = req.body;
+    const { hotelIds, startDate, endDate, searchType } = req.body;
 
-  try {
-    const data = await selectBatchReservationListView(req.requestId, hotelIds, startDate, endDate, searchType);
-    if (!data || data.length === 0) {
-      return res.status(200).json([]);
+    try {
+        const data = await selectBatchReservationListView(req.requestId, hotelIds, startDate, endDate, searchType);
+        if (!data || data.length === 0) {
+            return res.status(200).json([]);
+        }
+        res.json(data);
+    } catch (err) {
+        logger.error(`[getBatchReservationListView] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
+        res.status(500).json({ error: 'Internal server error' });
     }
-    res.json(data);
-  } catch (err) {
-    logger.error(`[getBatchReservationListView] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
-    res.status(500).json({ error: 'Internal server error' });
-  }
 };
 
 /**
@@ -127,6 +127,96 @@ const getBatchBookerTypeBreakdown = async (req, res) => {
     return processBatchRequest(req, res, getBookerTypeBreakdown, 'getBatchBookerTypeBreakdown');
 };
 
+/**
+ * Batch endpoint to fetch future outlook data (6 months) for multiple hotels
+ * POST /report/batch/future-outlook
+ * Body: { hotelIds: [1, 2, 3] }
+ * Returns occupation breakdown data for current month and next 5 months.
+ */
+const getBatchFutureOutlook = async (req, res) => {
+    const { hotelIds } = req.body;
+    const operationName = 'getBatchFutureOutlook';
+
+    logger.debug(`[${operationName}] Received request. Request ID: ${req.requestId}, Hotels: ${hotelIds}`);
+
+    try {
+        // Validate input
+        if (!Array.isArray(hotelIds) || hotelIds.length === 0) {
+            logger.debug(`[${operationName}] Validation error: 'hotelIds' must be a non-empty array. Request ID: ${req.requestId}`);
+            return res.status(400).json({ error: 'hotelIds must be a non-empty array' });
+        }
+
+        // Validate each hotel ID
+        for (const hotelId of hotelIds) {
+            validateNumericParam(hotelId, 'hotelId');
+        }
+
+        // Calculate 6 months: current month and next 5 (using UTC to avoid timezone issues)
+        const today = new Date();
+        const months = [];
+        for (let i = 0; i < 6; i++) {
+            const year = today.getUTCFullYear();
+            const month = today.getUTCMonth() + i;
+            const monthDate = new Date(Date.UTC(year, month, 1));
+            const startDate = monthDate.toISOString().split('T')[0];
+            const lastDayDate = new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 0));
+            const endDate = lastDayDate.toISOString().split('T')[0];
+            months.push({ startDate, endDate, monthLabel: `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(2, '0')}` });
+        }
+
+        const pool = getPool(req.requestId);
+        const client = await pool.connect();
+        logger.debug(`[${operationName}] Database client connected. Fetching 6 months of data. Request ID: ${req.requestId}`);
+
+        try {
+            const results = {};
+            const errors = {};
+
+            // For each month, fetch data for all hotels
+            for (const month of months) {
+                results[month.monthLabel] = {};
+                for (const hotelId of hotelIds) {
+                    try {
+                        const occupationData = await selectOccupationBreakdownByMonth(req.requestId, hotelId, month.startDate, month.endDate, client);
+                        const forecastData = await selectForecastData(req.requestId, hotelId, month.startDate, month.endDate, client);
+                        const accountingData = await selectAccountingData(req.requestId, hotelId, month.startDate, month.endDate, client);
+                        const pmsData = await selectCountReservation(req.requestId, hotelId, month.startDate, month.endDate, client);
+
+                        // Aggregate daily PMS data to monthly
+                        let pmsTotalRevenue = 0;
+                        if (Array.isArray(pmsData)) {
+                            pmsTotalRevenue = pmsData.reduce((sum, day) => sum + (Number(day.price) || 0), 0);
+                        }
+
+                        results[month.monthLabel][hotelId] = {
+                            occupation: occupationData || [],
+                            forecast: forecastData || [],
+                            accounting: accountingData || [],
+                            pms: { revenue: pmsTotalRevenue }
+                        };
+                    } catch (err) {
+                        logger.error(`[${operationName}] Failed for hotel ${hotelId}, month ${month.monthLabel}. Error: ${err.message}`, { stack: err.stack });
+                        if (!errors[month.monthLabel]) errors[month.monthLabel] = {};
+                        errors[month.monthLabel][hotelId] = err.message;
+                        if (!results[month.monthLabel]) results[month.monthLabel] = {};
+                        results[month.monthLabel][hotelId] = { occupation: [], forecast: [], accounting: [], pms: { revenue: 0 } };
+                    }
+                }
+            }
+
+            res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
+        } finally {
+            client.release();
+            logger.debug(`[${operationName}] Database client released. Request ID: ${req.requestId}`);
+        }
+    } catch (err) {
+        logger.error(`[${operationName}] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
+        const statusCode = err.statusCode || 500;
+        const errorMessage = statusCode === 500 ? 'Internal server error' : err.message;
+        res.status(statusCode).json({ error: errorMessage });
+    }
+};
+
 module.exports = {
     getBatchCountReservation,
     getBatchForecastData,
@@ -134,4 +224,5 @@ module.exports = {
     getBatchOccupationBreakdown,
     getBatchReservationListView,
     getBatchBookerTypeBreakdown,
+    getBatchFutureOutlook,
 };
