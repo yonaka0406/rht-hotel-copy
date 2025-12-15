@@ -10,17 +10,10 @@ const getLatestDailyReportDate = async (req, res) => {
     const pool = getPool(req.requestId);
 
     try {
-        const result = await pool.query('SELECT MAX(metric_date) as max_date FROM daily_plan_metrics');
+        const result = await pool.query("SELECT TO_CHAR(MAX(metric_date), 'YYYY-MM-DD') as max_date FROM daily_plan_metrics");
         const maxDate = result.rows[0]?.max_date;
 
-        let dateStr = null;
-        if (maxDate) {
-            // ensure YYYY-MM-DD
-            const d = new Date(maxDate);
-            dateStr = d.toISOString().split('T')[0];
-        }
-
-        res.json(dateStr);
+        res.json(maxDate || null);
     } catch (error) {
         logger.error(`[${operationName}] Error fetching latest date:`, error);
         res.status(500).json({ error: 'Database error' });
