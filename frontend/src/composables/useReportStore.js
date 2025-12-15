@@ -282,6 +282,26 @@ export function useReportStore() {
     };
 
     /**
+     * Fetch daily report data aggregated by hotel for a specific date and hotel IDs.
+     * @param {string} date - Metric date in YYYY-MM-DD format
+     * @param {Array<number>} hotelIds - Array of hotel IDs (optional)
+     * @returns {Array} Array of aggregated data objects
+     */
+    const fetchDailyReportDataByHotel = async (date, hotelIds = []) => {
+        try {
+            if (limitedFunctionality.value) return [];
+            const data = await api.post('/report/daily/data-by-hotel', {
+                date,
+                hotelIds
+            });
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch daily report data by hotel:', error);
+            return [];
+        }
+    };
+
+    /**
      * Fetch the latest available daily report date
      * @returns {string|null} YYYY-MM-DD string or null
      */
@@ -1076,5 +1096,6 @@ export function useReportStore() {
         fetchBatchBookerTypeBreakdown,
         fetchBatchFutureOutlook,
         fetchLatestDailyReportDate,
+        fetchDailyReportDataByHotel,
     };
 }

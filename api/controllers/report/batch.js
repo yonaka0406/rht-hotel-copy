@@ -204,6 +204,12 @@ const getBatchFutureOutlook = async (req, res) => {
                 }
             }
 
+            // console.log('Summarized Outlook Data:', JSON.stringify(results, null, 2)); // Debug log requested by user
+            console.log('Summarized Outlook Data Keys:', Object.keys(results));
+            Object.keys(results).forEach(m => {
+                console.log(`Month: ${m}, Hotels: ${Object.keys(results[m])}`);
+            });
+
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
         } finally {
             client.release();

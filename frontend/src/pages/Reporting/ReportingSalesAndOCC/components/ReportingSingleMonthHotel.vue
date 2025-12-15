@@ -5,86 +5,62 @@
         </div>
 
         <div v-if="selectedView === 'graph'">
-            <Card class="mb-4">
-                <template #header>
-                    <span class="text-xl font-bold">主要KPI（{{ currentHotelName }}）</span>
-                </template>
-                <template #content>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
-                        </div>
-                    </div>
-                </template>
-                <template #footer>
-                    <div class="flex justify-content-between">
-                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。</small>
-                    </div>
-                </template>
-            </Card>
-
-            <Card class="mb-4">
-                <template #header>
-                    <span class="text-xl font-bold">収益・稼働率 （計画ｘ実績）- {{ currentHotelName }}</span>
-                </template>
-                <template #content>
+            <Panel header="月次サマリー" class="mb-4">
+                <template #default>
                     <div v-if="!hasRevenueDataForChart" class="text-center p-4">
                         データはありません。
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
+                        <!-- Column 1: Revenue Chart (Tall) -->
                         <div class="w-full md:w-1/2">
-                            <RevenuePlanVsActualChart :revenueData="singleHotelRevenueChartDataSource[0]" />
+                            <RevenuePlanVsActualChart :revenueData="singleHotelRevenueChartDataSource[0]"
+                                height="500px" />
                         </div>
-                        <div class="w-full md:w-1/2">
-                            <OccupancyGaugeChart :occupancyData="props.occupancyData[0]"
-                                :previousYearOccupancy="currentHotelPrevYearOccupancy" />
-                            <div class="mt-4 flex justify-around text-center">
-                                <div>
-                                    <h6 class="text-sm font-semibold text-gray-600">前日比 (売上)</h6>
-                                    <div class="text-xl font-bold"
-                                        :class="dayOverDayChange.sales >= 0 ? 'text-green-600' : 'text-red-500'">
-                                        {{ dayOverDayChange.sales > 0 ? '+' : '' }}{{
-                                            formatYenInTenThousands(dayOverDayChange.sales) }}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h6 class="text-sm font-semibold text-gray-600">前日比 (室数)</h6>
-                                    <div class="text-xl font-bold"
-                                        :class="dayOverDayChange.rooms >= 0 ? 'text-green-600' : 'text-red-500'">
-                                        {{ dayOverDayChange.rooms > 0 ? '+' : '' }}{{ dayOverDayChange.rooms }} 室
-                                    </div>
-                                </div>
-                                <div>
-                                    <h6 class="text-sm font-semibold text-gray-600">前日比 (稼働率)</h6>
-                                    <div class="text-xl font-bold"
-                                        :class="dayOverDayChange.occ >= 0 ? 'text-green-600' : 'text-red-500'">
-                                        {{ dayOverDayChange.occ > 0 ? '+' : '' }}{{ (dayOverDayChange.occ *
-                                            100).toFixed(1) }}%
-                                    </div>
-                                </div>
+
+                        <!-- Column 2: Gauge + KPIs + DoD -->
+                        <div class="w-full md:w-1/2 flex flex-col gap-4">
+                            <!-- Gauge + DoD -->
+                            <div class="flex flex-col items-center">
+                                <OccupancyGaugeChart :occupancyData="gaugeChartData" height="250px"
+                                    :previousYearOccupancy="currentHotelPrevYearOccupancy" />
+
+
+                            </div>
+
+                            <!-- KPIs (ADR/RevPAR) -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <Card class="shadow-sm bg-gray-50">
+                                    <template #content>
+                                        <div class="flex flex-col items-center text-center">
+                                            <h6 class="text-sm font-medium text-gray-500 mb-2">実績 ADR</h6>
+                                            <span class="text-2xl font-bold text-gray-800">{{
+                                                formatCurrency(actualADR) }}</span>
+                                            <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                                formatCurrency(forecastADR) }})</span>
+                                        </div>
+                                    </template>
+                                </Card>
+                                <Card class="shadow-sm bg-gray-50">
+                                    <template #content>
+                                        <div class="flex flex-col items-center text-center">
+                                            <h6 class="text-sm font-medium text-gray-500 mb-2">実績 RevPAR</h6>
+                                            <span class="text-2xl font-bold text-gray-800">{{
+                                                formatCurrency(actualRevPAR) }}</span>
+                                            <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                                formatCurrency(forecastRevPAR) }})</span>
+                                        </div>
+                                    </template>
+                                </Card>
                             </div>
                         </div>
                     </div>
+                    <Message severity="secondary" :closable="false" class="mt-2 p-2 text-sm">
+                        会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。
+                    </Message>
                 </template>
-                <template #footer>
-                    <div class="flex justify-content-between">
-                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。</small>
-                    </div>
-                </template>
-            </Card>
+            </Panel>
+
+            <FutureOutlookTable :data="futureOutlookData" />
 
         </div>
 
@@ -218,15 +194,20 @@ const props = defineProps({
     prevYearOccupancyData: {
         type: Array,
         default: () => []
+    },
+    futureOutlookData: {
+        type: Array,
+        default: () => []
     }
 });
 
 // Components
 import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
 import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
+import FutureOutlookTable from './tables/FutureOutlookTable.vue'; // Added Import
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
+import { Card, Badge, SelectButton, Button, DataTable, Column, Panel, Message } from 'primevue'; // Added Panel, Message
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 
 // Utilities
@@ -301,7 +282,26 @@ const currentHotelAggregateData = computed(() => {
         total_fc_available_rooms,
         total_available_rooms,
     };
+    let total_prev_year_sold_rooms = 0;
+    props.prevYearOccupancyData?.forEach((item, index) => {
+        total_prev_year_sold_rooms += (item.sold_rooms || 0);
+    });
+
+    return {
+        total_forecast_revenue,
+        total_period_accommodation_revenue,
+        total_prev_year_accommodation_revenue,
+        total_fc_sold_rooms,
+        total_sold_rooms,
+        total_prev_year_sold_rooms,
+        total_fc_available_rooms,
+        total_available_rooms,
+    };
 });
+
+watch(currentHotelAggregateData, (newValue) => {
+    console.log('ReportingSingleMonthHotel: Sum of all fields by month:', newValue);
+}, { immediate: true });
 
 const currentHotelPrevYearOccupancy = computed(() => {
     if (!props.prevYearOccupancyData || props.prevYearOccupancyData.length === 0) return null;
@@ -341,6 +341,20 @@ const forecastRevPAR = computed(() => {
 });
 
 
+
+
+// Adapted data for OccupancyGaugeChart which expects 'total_sold_rooms' etc.
+const gaugeChartData = computed(() => {
+    // If no data, return empty object to prevent errors, defaults in chart will handle it
+    if (!props.occupancyData || props.occupancyData.length === 0) return {};
+    const raw = props.occupancyData[0] || {};
+    return {
+        total_sold_rooms: raw.sold_rooms,
+        total_available_rooms: raw.total_rooms,
+        total_fc_sold_rooms: raw.fc_sold_rooms,
+        total_fc_available_rooms: raw.fc_total_rooms
+    };
+});
 
 // ECharts imports    
 const resizeChartHandler = () => {

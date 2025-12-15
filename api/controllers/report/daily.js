@@ -1,4 +1,4 @@
-const { getPool } = require('../../config/database');
+const { selectLatestDailyReportDate, selectDailyReportDataByHotel } = require('../../models/report');
 const logger = require('../../config/logger');
 
 /**
@@ -7,19 +7,56 @@ const logger = require('../../config/logger');
  */
 const getLatestDailyReportDate = async (req, res) => {
     const operationName = 'getLatestDailyReportDate';
-    const pool = getPool(req.requestId);
-
     try {
-        const result = await pool.query("SELECT TO_CHAR(MAX(metric_date), 'YYYY-MM-DD') as max_date FROM daily_plan_metrics");
-        const maxDate = result.rows[0]?.max_date;
-
-        res.json(maxDate || null);
+        const maxDate = await selectLatestDailyReportDate(req.requestId);
+        res.json(maxDate);
     } catch (error) {
         logger.error(`[${operationName}] Error fetching latest date:`, error);
         res.status(500).json({ error: 'Database error' });
     }
 };
 
+/**
+ * Get aggregated daily report data for a specific date.
+ * GET /report/daily/data/:date
+ */
+const getDailyReportData = async (req, res) => {
+    const operationName = 'getDailyReportData';
+    const { date } = req.params;
+
+    try {
+        // Use the aggregated query by hotel
+        const data = await selectDailyReportDataByHotel(req.requestId, date);
+        res.json(data);
+    } catch (error) {
+        logger.error(`[${operationName}] Error fetching daily report data:`, error);
+        res.status(500).json({ error: 'Database error' });
+    }
+};
+
+/**
+ * Get daily report data aggregated by hotel for a specific date and hotel IDs.
+ * POST /report/daily/data-by-hotel
+ */
+const getDailyReportDataByHotel = async (req, res) => {
+    const operationName = 'getDailyReportDataByHotel';
+    const { date, hotelIds } = req.body;
+
+    if (!date) {
+        return res.status(400).json({ error: 'Date is required' });
+    }
+
+    try {
+        const data = await selectDailyReportDataByHotel(req.requestId, date, hotelIds);
+        res.json(data);
+    } catch (error) {
+        logger.error(`[${operationName}] Error fetching daily report data by hotel:`, error);
+        res.status(500).json({ error: 'Database error' });
+    }
+};
+
 module.exports = {
-    getLatestDailyReportDate
+    getLatestDailyReportDate,
+    getDailyReportData,
+    getDailyReportDataByHotel
 };

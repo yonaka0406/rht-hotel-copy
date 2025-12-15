@@ -950,6 +950,9 @@ const fetchData = async () => {
                     const prevByMonth = {};
                     if (Array.isArray(prevDayData)) {
                         prevDayData.forEach(item => {
+                            // Filter data to only include selected hotels
+                            if (!hotelIds.includes(Number(item.hotel_id))) return;
+
                             const mk = formatDateMonth(new Date(item.month));
                             if (!prevByMonth[mk]) prevByMonth[mk] = { sales: 0, stays: 0, rooms: 0 };
                             // Daily report returns broken down sales
@@ -1022,6 +1025,7 @@ const fetchData = async () => {
                         const prevOcc = accommodationNetAvailableRoomNights > 0 ? (prev.stays / accommodationNetAvailableRoomNights) * 100 : 0;
 
                         outlook.push({
+                            metric_date: latestDateStrRaw, // Added for export
                             month: monthLabel,
                             forecast_sales: totalForecastSales,
                             sales: totalActualSales,
@@ -1031,6 +1035,7 @@ const fetchData = async () => {
                             occ: actualOccAccommodation, // This is now accommodation specific
                             occ_diff: hasPrevData ? actualOccAccommodation - prevOcc : null, // Diff also accommodation specific
                             prev_occ: prevOcc, // This is now accommodation specific
+                            prev_confirmed_stays: prev.stays, // Added for hidden column
                             confirmed_nights: accommodationConfirmedNights,
                             total_bookable_room_nights: accommodationBookableRoomNights,
                             blocked_nights: accommodationBlockedNights,
