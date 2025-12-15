@@ -281,7 +281,7 @@ const dt = ref();
 const loadedDateTitle = ref('レポートデータ');
 const loadedDate = ref(''); // New reactive variable for card title
 const activeTab = ref(0);
-const comparisonData = ref({});
+const comparisonData = ref([]);
 
 const date1 = ref(new Date(new Date().setDate(new Date().getDate() - 1)));
 const date2 = ref(new Date());
@@ -342,8 +342,8 @@ const compareDates = async () => {
                 current.cancelled_stays += Number(item.cancelled_stays);
                 current.accommodation_sales += Number(item.accommodation_sales || 0);
                 current.other_sales += Number(item.other_sales || 0);
-                current.total_sales += Number(item.normal_sales) + Number(item.cancellation_sales);
-                current.cancelled_sales += Number(item.cancellation_sales);
+                current.total_sales += (Number(item.accommodation_sales) + Number(item.other_sales)); // normal sales
+                current.cancelled_sales += (Number(item.accommodation_sales_cancelled) + Number(item.other_sales_cancelled)); // cancelled sales
             });
             return aggregated;
         };

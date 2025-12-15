@@ -34,7 +34,7 @@ const selectDailyReportData = async (requestId, metricDate) => {
         WHERE
             dpm.metric_date = $1
         GROUP BY
-            dpm.metric_date, dpm.month, dpm.hotel_id, dpm.plans_global_id, dpm.plans_hotel_id, h.name, dpm.plan_name, dpm.created_at
+            dpm.metric_date, dpm.month, dpm.hotel_id, dpm.plans_global_id, dpm.plans_hotel_id, h.name, dpm.plan_name
         ORDER BY
             dpm.hotel_id, dpm.month, h.name, dpm.plan_name;
     `;
@@ -45,8 +45,8 @@ const selectDailyReportData = async (requestId, metricDate) => {
         const result = await pool.query(query, values);
         return result.rows;
     } catch (err) {
-        console.error('Error retrieving daily report data:', err);
-        throw new Error('Database error');
+        logger.error({ err }, 'Error retrieving daily report data');
+        throw Object.assign(new Error(`Database error: ${err.message}`), { stack: err.stack });
     }
 };
 
@@ -68,18 +68,19 @@ const selectDailyReportDataByHotel = async (requestId, metricDate, hotelIds) => 
             TO_CHAR(dpm.metric_date, 'YYYY-MM-DD') as metric_date,
             TO_CHAR(dpm.month, 'YYYY-MM-DD') as month,
             dpm.hotel_id,
+            h.name as hotel_name,
             SUM(dpm.confirmed_stays) as confirmed_stays,
             SUM(dpm.pending_stays) as pending_stays,
             SUM(dpm.in_talks_stays) as in_talks_stays,
             SUM(dpm.cancelled_stays) as cancelled_stays,
             SUM(dpm.non_billable_cancelled_stays) as non_billable_cancelled_stays,
             SUM(dpm.employee_stays) as employee_stays,
-            ROUND(SUM(dpm.normal_sales) / 1.1) as normal_sales,
-            ROUND(SUM(dpm.cancellation_sales) / 1.1) as cancellation_sales,
-            ROUND(SUM(dpm.accommodation_sales) / 1.1) as accommodation_sales,
-            ROUND(SUM(dpm.other_sales) / 1.1) as other_sales,
-            ROUND(SUM(dpm.accommodation_sales_cancelled) / 1.1) as accommodation_sales_cancelled,
-            ROUND(SUM(dpm.other_sales_cancelled) / 1.1) as other_sales_cancelled,
+            SUM(dpm.normal_sales) as normal_sales,
+            SUM(dpm.cancellation_sales) as cancellation_sales,
+            SUM(dpm.accommodation_sales) as accommodation_sales,
+            SUM(dpm.other_sales) as other_sales,
+            SUM(dpm.accommodation_sales_cancelled) as accommodation_sales_cancelled,
+            SUM(dpm.other_sales_cancelled) as other_sales_cancelled,
             SUM(dpm.non_accommodation_stays) as non_accommodation_stays,
             MAX(dpm.created_at) as created_at
         FROM
@@ -97,7 +98,7 @@ const selectDailyReportDataByHotel = async (requestId, metricDate, hotelIds) => 
     }
 
     query += `
-        GROUP BY dpm.metric_date, dpm.hotel_id, dpm.month
+        GROUP BY dpm.metric_date, dpm.hotel_id, dpm.month, h.name
         ORDER BY dpm.hotel_id, dpm.month;
     `;
 

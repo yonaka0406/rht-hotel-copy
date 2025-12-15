@@ -64,7 +64,7 @@ const chartOptions = computed(() => {
         const monthNum = month.slice(-2);
         // Find previous year data with matching month number
         const prevData = props.prevYearRevenueData.find(d => d.month?.slice(-2) === monthNum);
-        return prevData?.period_revenue || prevData?.accommodation_revenue || 0;
+        return prevData?.period_revenue ?? prevData?.accommodation_revenue ?? 0;
     };
 
     const forecastRevenues = months.map(month => getDataForMonth(month, 'forecast_revenue'));

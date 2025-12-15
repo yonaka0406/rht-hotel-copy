@@ -27,7 +27,16 @@ const getDailyReportData = async (req, res) => {
     try {
         // Use the aggregated query by hotel
         const data = await selectDailyReportDataByHotel(req.requestId, date);
-        res.json(data);
+        const processedData = data.map(row => ({
+            ...row,
+            normal_sales: row.normal_sales ? Math.round(row.normal_sales / 1.1) : row.normal_sales,
+            cancellation_sales: row.cancellation_sales ? Math.round(row.cancellation_sales / 1.1) : row.cancellation_sales,
+            accommodation_sales: row.accommodation_sales ? Math.round(row.accommodation_sales / 1.1) : row.accommodation_sales,
+            other_sales: row.other_sales ? Math.round(row.other_sales / 1.1) : row.other_sales,
+            accommodation_sales_cancelled: row.accommodation_sales_cancelled ? Math.round(row.accommodation_sales_cancelled / 1.1) : row.accommodation_sales_cancelled,
+            other_sales_cancelled: row.other_sales_cancelled ? Math.round(row.other_sales_cancelled / 1.1) : row.other_sales_cancelled,
+        }));
+        res.json(processedData);
     } catch (error) {
         logger.error(`[${operationName}] Error fetching daily report data:`, error);
         res.status(500).json({ error: 'Database error' });
@@ -48,7 +57,16 @@ const getDailyReportDataByHotel = async (req, res) => {
 
     try {
         const data = await selectDailyReportDataByHotel(req.requestId, date, hotelIds);
-        res.json(data);
+        const processedData = data.map(row => ({
+            ...row,
+            normal_sales: row.normal_sales ? Math.round(row.normal_sales / 1.1) : row.normal_sales,
+            cancellation_sales: row.cancellation_sales ? Math.round(row.cancellation_sales / 1.1) : row.cancellation_sales,
+            accommodation_sales: row.accommodation_sales ? Math.round(row.accommodation_sales / 1.1) : row.accommodation_sales,
+            other_sales: row.other_sales ? Math.round(row.other_sales / 1.1) : row.other_sales,
+            accommodation_sales_cancelled: row.accommodation_sales_cancelled ? Math.round(row.accommodation_sales_cancelled / 1.1) : row.accommodation_sales_cancelled,
+            other_sales_cancelled: row.other_sales_cancelled ? Math.round(row.other_sales_cancelled / 1.1) : row.other_sales_cancelled,
+        }));
+        res.json(processedData);
     } catch (error) {
         logger.error(`[${operationName}] Error fetching daily report data by hotel:`, error);
         res.status(500).json({ error: 'Database error' });

@@ -16,7 +16,7 @@
             <Column field="forecast_sales" header="計画売上" style="width: 20%">
                 <template #body="{ data }">
                     <div class="text-right">
-                        {{ data.forecast_sales > 0 ? formatCurrency(data.forecast_sales) : '-' }}
+                        {{ data.forecast_sales != null ? formatCurrency(data.forecast_sales) : '-' }}
                     </div>
                 </template>
             </Column>
@@ -35,7 +35,7 @@
             <Column field="forecast_occ" header="計画稼働率" style="width: 20%">
                 <template #body="{ data }">
                     <div class="text-right">
-                        {{ data.forecast_occ ? data.forecast_occ.toFixed(1) + '%' : '-' }}
+                        {{ Number.isFinite(data?.forecast_occ) ? data.forecast_occ.toFixed(1) + '%' : '-' }}
                     </div>
                 </template>
             </Column>
@@ -43,7 +43,7 @@
             <Column field="occ" header="実績稼働率 / 前日比" style="width: 25%">
                 <template #body="{ data }">
                     <div class="flex justify-end items-center">
-                        <span class="mr-2">{{ data.occ.toFixed(1) }}%</span>
+                        <span class="mr-2">{{ Number.isFinite(data?.occ) ? data.occ.toFixed(1) + '%' : '-' }}</span>
                         <Badge v-if="data.occ_diff !== null" :severity="getSeverity(data.occ_diff)" size="small">
                             {{ data.occ_diff > 0 ? '+' : '' }}{{ data.occ_diff.toFixed(1) }}%
                         </Badge>
@@ -72,7 +72,6 @@ defineProps({
     data: {
         type: Array,
         required: true,
-        default: () => []
     }
 });
 

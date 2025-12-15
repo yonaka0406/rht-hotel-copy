@@ -152,7 +152,17 @@ const getBatchFutureOutlook = async (req, res) => {
         }
 
         // Calculate 6 months: start from referenceDate (or today) and next 5
-        const referenceDate = req.body.referenceDate ? new Date(req.body.referenceDate) : new Date();
+        let referenceDate;
+        if (req.body.referenceDate) {
+            const parsedDate = new Date(req.body.referenceDate);
+            if (isNaN(parsedDate.getTime())) {
+                logger.debug(`[${operationName}] Validation error: 'referenceDate' is invalid. Request ID: ${req.requestId}`);
+                return res.status(400).json({ error: 'Invalid referenceDate provided' });
+            }
+            referenceDate = parsedDate;
+        } else {
+            referenceDate = new Date(); // Default to new Date() if not provided
+        }
         const months = [];
         for (let i = 0; i < 6; i++) {
             const year = referenceDate.getUTCFullYear();
@@ -204,10 +214,9 @@ const getBatchFutureOutlook = async (req, res) => {
                 }
             }
 
-            // console.log('Summarized Outlook Data:', JSON.stringify(results, null, 2)); // Debug log requested by user
-            console.log('Summarized Outlook Data Keys:', Object.keys(results));
+            logger.debug('Summarized Outlook Data Keys:', Object.keys(results));
             Object.keys(results).forEach(m => {
-                console.log(`Month: ${m}, Hotels: ${Object.keys(results[m])}`);
+                logger.debug(`Month: ${m}, Hotels: ${Object.keys(results[m])}`);
             });
 
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });

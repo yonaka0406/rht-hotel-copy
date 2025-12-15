@@ -345,41 +345,41 @@ const hasRevenueDataForChart = computed(() => {
     return filteredRevenueForChart.value.length > 0;
 });
 
-// const allHotelsRevenueChartData = computed(() => {
-//     if (!props.revenueData || props.revenueData.length === 0) return [];
-//     const hotelMap = new Map();
-//     props.revenueData.forEach(item => {
-//         if (item.hotel_name && item.hotel_name !== '施設合計') {
-//             const entry = hotelMap.get(item.hotel_name) || {
-//                 hotel_name: item.hotel_name,
-//                 total_forecast_revenue: 0,
-//                 total_period_accommodation_revenue: 0,
-//                 revenue_to_forecast: 0,
-//                 forecast_achieved_percentage: 0
-//             };
-//             entry.total_forecast_revenue += (item.forecast_revenue || 0);
-//             entry.total_period_accommodation_revenue += (item.accommodation_revenue || 0);
-//             hotelMap.set(item.hotel_name, entry);
-//         }
-//     });
-//     // Calculate derived fields after summing up
-//     return Array.from(hotelMap.values()).map(hotel => {
-//         if ((hotel.total_forecast_revenue - hotel.total_period_accommodation_revenue) < 0) {
-//             hotel.revenue_to_forecast = 0;
-//         } else {
-//             hotel.revenue_to_forecast = hotel.total_forecast_revenue - hotel.total_period_accommodation_revenue;
-//         }
+const allHotelsRevenueChartData = computed(() => {
+    if (!props.revenueData || props.revenueData.length === 0) return [];
+    const hotelMap = new Map();
+    props.revenueData.forEach(item => {
+        if (item.hotel_name && item.hotel_name !== '施設合計') {
+            const entry = hotelMap.get(item.hotel_name) || {
+                hotel_name: item.hotel_name,
+                total_forecast_revenue: 0,
+                total_period_accommodation_revenue: 0,
+                revenue_to_forecast: 0,
+                forecast_achieved_percentage: 0
+            };
+            entry.total_forecast_revenue += (item.forecast_revenue || 0);
+            entry.total_period_accommodation_revenue += (item.accommodation_revenue || 0);
+            hotelMap.set(item.hotel_name, entry);
+        }
+    });
+    // Calculate derived fields after summing up
+    return Array.from(hotelMap.values()).map(hotel => {
+        if ((hotel.total_forecast_revenue - hotel.total_period_accommodation_revenue) < 0) {
+            hotel.revenue_to_forecast = 0;
+        } else {
+            hotel.revenue_to_forecast = hotel.total_forecast_revenue - hotel.total_period_accommodation_revenue;
+        }
 
-//         if (hotel.total_forecast_revenue > 0) {
-//             hotel.forecast_achieved_percentage = (hotel.total_period_accommodation_revenue / hotel.total_forecast_revenue) * 100;
-//         } else {
-//             // Handle cases where forecast is 0
-//             hotel.forecast_achieved_percentage = hotel.total_period_accommodation_revenue > 0 ? Infinity : 0;
-//         }
-//         return hotel;
-//     });
-// });
-// const hasAllHotelsRevenueData = computed(() => allHotelsRevenueChartData.value.length > 0);
+        if (hotel.total_forecast_revenue > 0) {
+            hotel.forecast_achieved_percentage = (hotel.total_period_accommodation_revenue / hotel.total_forecast_revenue) * 100;
+        } else {
+            // Handle cases where forecast is 0
+            hotel.forecast_achieved_percentage = hotel.total_period_accommodation_revenue > 0 ? Infinity : 0;
+        }
+        return hotel;
+    });
+});
+const hasAllHotelsRevenueData = computed(() => allHotelsRevenueChartData.value.length > 0);
 
 const hasAllHotelsOccupancyData = computed(() => {
     return props.occupancyData && props.occupancyData.length > 0 &&
@@ -400,54 +400,54 @@ const hasAllHotelsOccupancyData = computed(() => {
 
 
 // --- ECharts Options ---
-// const allHotelsRevenueChartOptions = computed(() => {
-//     const data = allHotelsRevenueChartData.value;
-//     if (!data.length) return {};
-//     const hotelNames = data.map(item => item.hotel_name);
-//     const forecastValues = data.map(item => item.total_forecast_revenue);
-//     const accommodationValues = data.map(item => item.total_period_accommodation_revenue);
-//     const revenueToForecastValues = data.map(item => item.revenue_to_forecast); // Get data for the new series
+const allHotelsRevenueChartOptions = computed(() => {
+    const data = allHotelsRevenueChartData.value;
+    if (!data.length) return {};
+    const hotelNames = data.map(item => item.hotel_name);
+    const forecastValues = data.map(item => item.total_forecast_revenue);
+    const accommodationValues = data.map(item => item.total_period_accommodation_revenue);
+    const revenueToForecastValues = data.map(item => item.revenue_to_forecast); // Get data for the new series
 
-//     const extraData = data.map(item => ({
-//         revenue_to_forecast: item.revenue_to_forecast,
-//         forecast_achieved_percentage: item.forecast_achieved_percentage
-//     }));
+    const extraData = data.map(item => ({
+        revenue_to_forecast: item.revenue_to_forecast,
+        forecast_achieved_percentage: item.forecast_achieved_percentage
+    }));
 
-//     return {
-//         tooltip: {
-//             trigger: 'axis',
-//             axisPointer: { type: 'shadow' },
-//             formatter: params => {
-//                 const dataIndex = params[0].dataIndex;
-//                 const currentHotelExtraData = extraData[dataIndex];
-//                 let tooltip = `${params[0].name}<br/>`;
-//                 params.forEach(param => {
-//                     tooltip += `${param.marker} ${param.seriesName}: ${formatYenInTenThousands(param.value)}<br/>`;
-//                 });
-//                 // The '計画達成まで' is now a series, so it will be included above by default.
-//                 // We can keep the '達成率' here.
-//                 tooltip += `達成率: ${currentHotelExtraData.forecast_achieved_percentage === Infinity ? 'N/A' : currentHotelExtraData.forecast_achieved_percentage.toFixed(2) + '%'}<br/>`;
-//                 return tooltip;
-//             }
-//         },
-//         legend: { data: ['計画売上合計', '実績売上合計', '計画達成まで'], top: 'bottom' }, // Added new series to legend
-//         grid: { containLabel: true, left: '3%', right: '10%', bottom: '10%' },
-//         xAxis: { type: 'value', name: '売上 (万円)', axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') } },
-//         yAxis: { type: 'category', data: hotelNames, inverse: true },
-//         series: [
-//             { name: '計画売上合計', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
-//             { name: '実績売上合計', type: 'bar', data: accommodationValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
-//             {
-//                 name: '計画達成まで',
-//                 type: 'bar',
-//                 data: revenueToForecastValues,
-//                 itemStyle: { color: colorScheme.toForecast },
-//                 barGap: '5%',
-//                 label: { show: true, position: 'right', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' }
-//             }
-//         ]
-//     };
-// });
+    return {
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: params => {
+                const dataIndex = params[0].dataIndex;
+                const currentHotelExtraData = extraData[dataIndex];
+                let tooltip = `${params[0].name}<br/>`;
+                params.forEach(param => {
+                    tooltip += `${param.marker} ${param.seriesName}: ${formatYenInTenThousands(param.value)}<br/>`;
+                });
+                // The '計画達成まで' is now a series, so it will be included above by default.
+                // We can keep the '達成率' here.
+                tooltip += `達成率: ${currentHotelExtraData.forecast_achieved_percentage === Infinity ? 'N/A' : currentHotelExtraData.forecast_achieved_percentage.toFixed(2) + '%'}<br/>`;
+                return tooltip;
+            }
+        },
+        legend: { data: ['計画売上合計', '実績売上合計', '計画達成まで'], top: 'bottom' }, // Added new series to legend
+        grid: { containLabel: true, left: '3%', right: '10%', bottom: '10%' },
+        xAxis: { type: 'value', name: '売上 (万円)', axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') } },
+        yAxis: { type: 'category', data: hotelNames, inverse: true },
+        series: [
+            { name: '計画売上合計', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
+            { name: '実績売上合計', type: 'bar', data: accommodationValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
+            {
+                name: '計画達成まで',
+                type: 'bar',
+                data: revenueToForecastValues,
+                itemStyle: { color: colorScheme.toForecast },
+                barGap: '5%',
+                label: { show: true, position: 'right', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' }
+            }
+        ]
+    };
+});
 
 
 // Initialize charts
@@ -559,6 +559,13 @@ const downloadPdf = async () => {
 // Table
 const getSeverity = getSeverityUtil;
 
+const csvEscape = (value) => {
+    if (value === null || value === undefined) return '';
+    const stringValue = String(value);
+    // Replace all double quotes with two double quotes, then wrap the whole string in double quotes
+    return `"${stringValue.replace(/"/g, '""')}"`;
+};
+
 const exportCSV = (tableType) => {
     let csvString = '';
     let filename = 'data.csv';
@@ -576,8 +583,8 @@ const exportCSV = (tableType) => {
             else if (accommodationRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
 
             const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
+                csvEscape(row.hotel_name),
+                csvEscape(row.month),
                 forecastRevenue,
                 accommodationRevenue,
                 varianceAmount,
@@ -603,8 +610,8 @@ const exportCSV = (tableType) => {
             const occ = row.occ || 0;
 
             const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
+                csvEscape(row.hotel_name),
+                csvEscape(row.month),
                 fcSold,
                 sold,
                 sold - fcSold,

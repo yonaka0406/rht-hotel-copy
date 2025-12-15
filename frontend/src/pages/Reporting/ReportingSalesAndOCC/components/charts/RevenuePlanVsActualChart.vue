@@ -82,21 +82,22 @@ const chartOptions = computed(() => {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (params) => {
+        // Find the series with actual values, which is '売上'
         const valueParam = params.find(p => p.seriesName === '売上');
-        if (!valueParam || valueParam.value === undefined) {
-          const placeholderParam = params.find(p => p.seriesName === 'PlaceholderBase');
-          if (placeholderParam && valueParam && valueParam.name === '分散') {
-            // Special handling for variance tooltip
-          } else if (!valueParam) {
-            return '';
-          }
+
+        // If no relevant data, return empty tooltip
+        if (!valueParam) {
+          return '';
         }
 
         let tooltipText = `${valueParam.name}<br/>`;
+
+        // Handle variance separately
         if (valueParam.name === '分散') {
           tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(varianceAmount)}<br/>`;
           tooltipText += `率: ${displayVariancePercent}`;
         } else {
+          // Handle other series (計画売上, 実績売上, 前年実績)
           tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(valueParam.value)}`;
         }
         return tooltipText;

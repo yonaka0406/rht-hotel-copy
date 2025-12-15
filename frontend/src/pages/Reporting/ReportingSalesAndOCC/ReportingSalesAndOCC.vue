@@ -55,6 +55,7 @@ import { formatDateToYMD } from '@/utils/dateUtils';
 import { useReportStore } from '@/composables/useReportStore';
 const dayOverDayChange = ref({ rooms: 0, occ: 0, sales: 0 }); // To store pickup for selected period
 const futureOutlookData = ref([]); // Store Future Outlook
+const dataErrors = ref({}); // To store errors for specific hotel data fetches
 const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate, fetchDailyReportDataByHotel } = useReportStore();
 
 // Primevue
@@ -69,20 +70,31 @@ const pmsFallbackCapacities = ref({}); // To store fallback capacities per hotel
 const isInitialized = ref(false); // Flag to control initial data fetch
 
 // -- Helper Functions --
+// Helper to format a Date object to YYYY-MM-DD using UTC values
 function formatDate(date) {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+    if (!date) return null;
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
+// Helper to format a Date object to YYYY-MM using UTC values
 function formatDateMonth(date) {
-    const year = date.getUTCFullYear()
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-    return `${year}-${month}`
+    if (!date) return null;
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
 }
-const normalizeDate = (date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+// Helper to normalize a Date object to UTC midnight (00:00:00)
+const normalizeDate = (date) => {
+    if (!date) return null;
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+};
+// Helper to get the number of days in a given month (1-indexed) of a year, using UTC
 function getDaysInMonth(year, month) {
-    return new Date(year, month, 0).getDate();
+    if (typeof year !== 'number' || typeof month !== 'number') return 0;
+    // month - 1 because Date constructor expects 0-indexed month
+    return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 // --- Reactive State for the Parent Component ---
@@ -1120,13 +1132,15 @@ const fetchData = async () => {
         forecastTotalData.value = newForecastTotalData;
         accountingTotalData.value = newAccountingTotalData;
     } catch (error) {
-        // ... (Keep existing error handler)
         console.error(`RMP: Error during summary data fetching (hotel ID ${currentProcessingHotelId || 'N/A'} may have failed):`, error);
         if (currentProcessingHotelId) {
             const hotelKey = String(currentProcessingHotelId);
-            if (!pmsTotalData.value[hotelKey]) pmsTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform PMS', details: error };
-            if (!forecastTotalData.value[hotelKey]) forecastTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform Forecast', details: error };
-            if (!accountingTotalData.value[hotelKey]) accountingTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform Accounting', details: error };
+            // Ensure error is recorded in a separate error store to maintain array type consistency of data refs
+            dataErrors.value[hotelKey] = { message: error.message || 'Failed to load data', details: error };
+            // Clear or ensure data refs are empty arrays for the affected hotelKey to prevent downstream issues
+            if (!pmsTotalData.value[hotelKey]) pmsTotalData.value[hotelKey] = [];
+            if (!forecastTotalData.value[hotelKey]) forecastTotalData.value[hotelKey] = [];
+            if (!accountingTotalData.value[hotelKey]) accountingTotalData.value[hotelKey] = [];
         }
     } finally {
         loading.value = false;

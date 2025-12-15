@@ -145,35 +145,16 @@ const routes = [
   },
   {
     path: '/reporting',
-    component: ReportingSalesAndOCC,
-    children: [],
+    component: ReportingSalesAndOCC, // The parent route itself renders ReportingSalesAndOCC
     meta: { requiresAuth: true },
-  },
-  {
-    path: '/reporting/channel-summary',
-    name: 'ReportingChannelSummary',
-    component: ReportingChannelSummary,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/reporting/daily',
-    name: 'ReportingDailyReport',
-    component: ReportingDailyReport,
-    meta: { requiresAuth: true },
-  },
-  /*
-  {
-    path: '/reporting/active-reservations-change',
-    name: 'ReportingActiveReservationsChange',
-    component: ReportingActiveReservationsChange,
-    meta: { requiresAuth: true },
-  },
-  */
-  {
-    path: '/reporting/monthly-reservation-evolution',
-    name: 'ReportingMonthlyReservationEvolution',
-    component: ReportingMonthlyReservationEvolution,
-    meta: { requiresAuth: true },
+    children: [
+      { path: 'channel-summary', name: 'ReportingChannelSummary', component: ReportingChannelSummary, meta: { requiresAuth: true } },
+      { path: 'daily', name: 'ReportingDailyReport', component: ReportingDailyReport, meta: { requiresAuth: true } },
+      /*
+      { path: 'active-reservations-change', name: 'ReportingActiveReservationsChange', component: ReportingActiveReservationsChange, meta: { requiresAuth: true } },
+      */
+      { path: 'monthly-reservation-evolution', name: 'ReportingMonthlyReservationEvolution', component: ReportingMonthlyReservationEvolution, meta: { requiresAuth: true } },
+    ]
   },
   {
     path: '/about',
