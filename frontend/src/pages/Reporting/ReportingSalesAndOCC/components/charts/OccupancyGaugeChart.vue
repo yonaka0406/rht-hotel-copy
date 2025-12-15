@@ -1,5 +1,5 @@
 <template>
-  <div ref="chartContainer" style="height: 450px; width: 100%;"></div>
+  <div ref="chartContainer" :style="{ height: height, width: '100%' }"></div>
 </template>
 
 <script setup>
@@ -33,6 +33,10 @@ const props = defineProps({
   occupancyData: {
     type: Object,
     required: true,
+  },
+  height: {
+    type: String,
+    default: '450px',
   },
 });
 
@@ -74,8 +78,8 @@ const chartOptions = computed(() => {
     },
     series: [{
       type: 'gauge',
-      radius: '90%',
-      center: ['50%', '55%'],
+      radius: '100%',
+      center: ['50%', '80%'],
       startAngle: 180,
       endAngle: 0,
       min: 0,

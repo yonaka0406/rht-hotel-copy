@@ -2,46 +2,13 @@
     <div>
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
-            <Button 
-                icon="pi pi-file-pdf" 
-                label="PDFをダウンロード" 
-                class="p-button-secondary ml-2" 
-                @click="downloadPdf" 
-                :loading="isDownloadingPdf"
-                :disabled="isDownloadingPdf"
-            />
+            <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2" @click="downloadPdf"
+                :loading="isDownloadingPdf" :disabled="isDownloadingPdf" />
         </div>
 
         <div v-if="selectedView === 'graph'">
 
             <Panel header="月次サマリー" class="mb-4">
-                <Card class="mb-4">
-                    <template #header>
-                        <span class="text-xl font-bold">主要KPI（全施設合計）</span>
-                    </template>
-                    <template #content>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
-                            </div>
-                        </div>
-                    </template>
-
-                </Card>
-
                 <Card class="mb-4">
                     <template #header>
                         <span class="text-xl font-bold">収益（計画ｘ実績）</span>
@@ -51,16 +18,101 @@
                             データはありません。
                         </div>
                         <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
+                            <!-- Column 1: Revenue Chart (Tall) -->
                             <div class="w-full md:w-1/2">
-                                <RevenuePlanVsActualChart :revenueData="aggregateHotelZeroData" />
+                                <RevenuePlanVsActualChart :revenueData="aggregateHotelZeroData" height="500px" />
                             </div>
-                            <div class="w-full md:w-1/2">
-                                <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" />
+
+                            <!-- Column 2: Gauge + KPIs -->
+                            <div class="w-full md:w-1/2 flex flex-col gap-4">
+                                <!-- Row 1: Gauge (Reduced Height) -->
+                                <div>
+                                    <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" height="250px" />
+                                </div>
+
+                                <!-- Row 2: KPIs -->
+                                <!-- Row 2: KPIs -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <Card class="shadow-sm bg-gray-50">
+                                        <template #content>
+                                            <div class="flex flex-col items-center text-center">
+                                                <h6 class="text-sm font-medium text-gray-500 mb-2">ADR</h6>
+                                                <span class="text-2xl font-bold text-gray-800">{{
+                                                    formatCurrency(actualADR) }}</span>
+                                                <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                                    formatCurrency(forecastADR) }})</span>
+                                                <span v-if="ADRDifference"
+                                                    :class="['text-xs font-bold mt-1', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                                    {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference)
+                                                    }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </Card>
+                                    <Card class="shadow-sm bg-gray-50">
+                                        <template #content>
+                                            <div class="flex flex-col items-center text-center">
+                                                <h6 class="text-sm font-medium text-gray-500 mb-2">RevPAR</h6>
+                                                <span class="text-2xl font-bold text-gray-800">{{
+                                                    formatCurrency(actualRevPAR) }}</span>
+                                                <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                                    formatCurrency(forecastRevPAR) }})</span>
+                                                <span v-if="revPARDifference"
+                                                    :class="['text-xs font-bold mt-1', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                                    {{ revPARDifference > 0 ? '+' : '' }}{{
+                                                    formatCurrency(revPARDifference) }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </Card>
+                                </div>
                             </div>
                         </div>
                         <Message severity="secondary" :closable="false" class="mt-2 p-2 text-sm">
                             会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}
                         </Message>
+                    </template>
+                </Card>
+            </Panel>
+
+            <Panel header="今後の見通し (6ヶ月)" class="mb-4">
+                <Card>
+                    <template #content>
+                        <DataTable :value="futureOutlookData" responsiveLayout="scroll" stripedRows showGridlines>
+                            <Column field="month" header="月度" style="width: 15%">
+                                <template #body="{ data }">
+                                    {{ data.month }}
+                                </template>
+                            </Column>
+                            <Column field="forecast_sales" header="計画売上" style="width: 25%">
+                                <template #body="{ data }">
+                                    <div class="text-right">
+                                        {{ data.forecast_sales > 0 ? formatCurrency(data.forecast_sales) : '-' }}
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column field="sales" header="実績(OTB)売上 / 前日比" style="width: 30%">
+                                <template #body="{ data }">
+                                    <div class="flex justify-end items-center">
+                                        <span class="mr-2">{{ formatCurrency(data.sales) }}</span>
+                                        <Badge :severity="getSeverity(data.sales_diff)" size="small">
+                                            {{ data.sales_diff > 0 ? '+' : '' }}{{
+                                                formatYenInTenThousandsNoDecimal(data.sales_diff) }}
+                                        </Badge>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column field="occ" header="実績(OTB)稼働率 / 前日比" style="width: 30%">
+                                <template #body="{ data }">
+                                    <div class="flex justify-end items-center">
+                                        <span class="mr-2">{{ data.occ.toFixed(1) }}%</span>
+                                        <Badge :severity="getSeverity(data.occ_diff)" size="small">
+                                            {{ data.occ_diff > 0 ? '+' : '' }}{{ data.occ_diff.toFixed(1) }}%
+                                        </Badge>
+                                    </div>
+                                </template>
+                            </Column>
+                        </DataTable>
                     </template>
                 </Card>
             </Panel>
@@ -155,6 +207,10 @@ const props = defineProps({
         default: () => []
     },
     prevYearRevenueData: {
+        type: Array,
+        default: () => []
+    },
+    futureOutlookData: {
         type: Array,
         default: () => []
     }
@@ -268,6 +324,16 @@ const forecastRevPAR = computed(() => {
     const { total_forecast_revenue, total_fc_available_rooms } = aggregateHotelZeroData.value;
     if (total_fc_available_rooms === 0 || total_fc_available_rooms === null || total_fc_available_rooms === undefined) return NaN;
     return Math.round(total_forecast_revenue / total_fc_available_rooms);
+});
+
+const ADRDifference = computed(() => {
+    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return 0;
+    return actualADR.value - forecastADR.value;
+});
+
+const revPARDifference = computed(() => {
+    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return 0;
+    return actualRevPAR.value - forecastRevPAR.value;
 });
 
 // ECharts imports
@@ -461,9 +527,9 @@ const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
 const downloadPdf = async () => {
     if (isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
-    
+
     isDownloadingPdf.value = true;
-    
+
     try {
         const pdfRequestData = {
             selectedView: selectedView.value,
@@ -487,7 +553,7 @@ const downloadPdf = async () => {
             // Chart options for the all hotels revenue chart
             allHotelsRevenueChartOptions: hasAllHotelsRevenueData.value ? allHotelsRevenueChartOptions.value : null
         };
-        
+
         console.log('PDF Request Data:', pdfRequestData);
         console.log('Debug - Props data:', {
             revenueDataLength: props.revenueData ? props.revenueData.length : 0,
@@ -506,7 +572,7 @@ const downloadPdf = async () => {
             hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
             allHotelsRevenueChartOptions: allHotelsRevenueChartOptions.value
         });
-        
+
         const responseBlob = await generatePdfReportApi(
             'singleMonthMultipleHotels', // Specific report type for this component
             pdfRequestData

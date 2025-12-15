@@ -14,7 +14,7 @@
             <div v-else>
                 <ReportingSingleMonthAllHotels v-if="selectedView === 'singleMonthAllHotels'" :revenueData="revenueData"
                     :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                    :prevYearRevenueData="prevYearRevenueData" />
+                    :prevYearRevenueData="prevYearRevenueData" :futureOutlookData="futureOutlookData" />
                 <ReportingSingleMonthHotel v-else-if="selectedView === 'singleMonthHotel'" :revenueData="revenueData"
                     :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
                     :dayOverDayChange="dayOverDayChange" :prevYearRevenueData="prevYearRevenueData" />
@@ -49,6 +49,7 @@ import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHo
 // Stores
 import { useReportStore } from '@/composables/useReportStore';
 const dayOverDayChange = ref({ rooms: 0, occ: 0, sales: 0 }); // To store pickup for selected period
+const futureOutlookData = ref([]); // Store Future Outlook
 const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, getAvailableMetricDates, availableDates } = useReportStore();
 
 // Primevue
@@ -164,7 +165,7 @@ const prevYearRevenueData = computed(() => {
     selectedHotels.value.forEach(hotelId => {
         hotelIdLookup.set(String(hotelId), hotelId);
     });
-    
+
     // Aggregate prev year data
     const monthlyAggregates = {};
     // Calculate date range for previous year
@@ -257,29 +258,29 @@ const prevYearRevenueData = computed(() => {
             const pmsOtherRev = aggregatedMonthData.pms_other_revenue;
             const accRev = aggregatedMonthData.acc_revenue;
             const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
-            
+
             let periodRev = (accRev !== null) ? accRev : (pmsRev || 0);
             let accommodationRev = (accRev !== null) ? accRev : (pmsAccommodationRev || 0);
             let otherRev = (accRev !== null) ? 0 : (pmsOtherRev || 0);
-            
+
             // Map previous year month to current year month for easy matching in components
             const [y, m] = monthKey.split('-');
             const currentYearMonth = `${parseInt(y) + 1}-${m}`;
 
             result.push({
-                month: monthKey, 
+                month: monthKey,
                 current_year_month: currentYearMonth,
-                hotel_id: outputHotelId, 
+                hotel_id: outputHotelId,
                 hotel_name: hotelName,
-                pms_revenue: pmsRev, 
-                acc_revenue: accRev, 
+                pms_revenue: pmsRev,
+                acc_revenue: accRev,
                 period_revenue: periodRev,
-                accommodation_revenue: accommodationRev, 
+                accommodation_revenue: accommodationRev,
                 other_revenue: otherRev,
             });
         }
     });
-    
+
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
     }
@@ -912,8 +913,84 @@ const fetchData = async () => {
             }
         }
 
-        // ... (Keep existing assignments for current year)
-        // ...
+        // Future Outlook Fetch (For Single Month All Hotels)
+        if (selectedView.value === 'singleMonthAllHotels' && firstDayofFetch.value) {
+            futureOutlookData.value = [];
+            try {
+                await getAvailableMetricDates();
+                if (availableDates.value.length > 0) {
+                    const sortedDates = [...availableDates.value].sort((a, b) => b.getTime() - a.getTime());
+                    const latestDate = sortedDates[0];
+                    const previousDate = sortedDates.length > 1 ? sortedDates[1] : null;
+
+                    let latestData = [];
+                    let previousData = [];
+
+                    if (latestDate) {
+                        const [lData, pData] = await Promise.all([
+                            fetchDailyReportData(formatDate(latestDate)),
+                            previousDate ? fetchDailyReportData(formatDate(previousDate)) : Promise.resolve([])
+                        ]);
+                        latestData = lData;
+                        previousData = pData;
+                    }
+
+                    // Generate next 6 months keys
+                    const monthsToProcess = [];
+                    let d = new Date(firstDayofFetch.value);
+                    for (let i = 0; i < 6; i++) {
+                        monthsToProcess.push(formatDateMonth(d));
+                        d.setMonth(d.getMonth() + 1);
+                    }
+
+                    const outlook = monthsToProcess.map(targetMonthStr => {
+                        const findRecord = (data) => {
+                            if (!Array.isArray(data)) return null;
+                            // For "All Hotels" we look for hotel_id === 0
+                            return data.find(item =>
+                                String(item.hotel_id) === '0' &&
+                                formatDateMonth(new Date(item.month)) === targetMonthStr
+                            );
+                        };
+
+                        const latestRecord = findRecord(latestData) || {};
+                        const previousRecord = findRecord(previousData) || {};
+
+                        const sales = latestRecord.total_sales || 0;
+                        const sales_last = previousRecord.total_sales || 0;
+                        const sales_diff = sales - sales_last;
+
+                        const rooms = latestRecord.total_rooms || 0;
+                        const stays = latestRecord.confirmed_stays || 0;
+                        const occ = rooms > 0 ? (stays / rooms) * 100 : 0;
+
+                        const rooms_last = previousRecord.total_rooms || 0;
+                        const stays_last = previousRecord.confirmed_stays || 0;
+                        const occ_last = rooms_last > 0 ? (stays_last / rooms_last) * 100 : 0;
+
+                        const occ_diff = occ - occ_last;
+
+                        return {
+                            month: targetMonthStr,
+                            sales: sales,
+                            sales_diff: sales_diff,
+                            occ: occ,
+                            occ_diff: occ_diff,
+                            forecast_sales: 0, // Placeholder, populate if needed from batchForecastData
+                            // Note: batchForecastData is fetched for current view range only.
+                            // If we want Forecast for future months, we might need separate fetch or use what's in daily report if available?
+                            // Daily Report usually tracks Actual/OTB. Plan is static?
+                            // For now, let's rely on OTB (Sales) and DoD. Plan might be added if user specifically asks "Plan vs OTB" for future.
+                            // "Feature Sales" usually means OTB.
+                        };
+                    });
+                    futureOutlookData.value = outlook;
+                }
+            } catch (e) {
+                console.error('Future Outlook fetch failed', e);
+            }
+        }
+
         let allBreakdownItems = [];
         for (const hotelIdKey in batchOccupationBreakdownData) {
             const hotelOccupationData = batchOccupationBreakdownData[hotelIdKey];

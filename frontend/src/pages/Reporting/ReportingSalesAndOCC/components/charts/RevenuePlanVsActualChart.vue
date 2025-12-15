@@ -1,5 +1,5 @@
 <template>
-  <div ref="chartContainer" style="height: 450px; width: 100%;"></div>
+  <div ref="chartContainer" :style="{ height: height, width: '100%' }"></div>
 </template>
 
 <script setup>
@@ -41,6 +41,10 @@ const props = defineProps({
   revenueData: {
     type: Object,
     required: true,
+  },
+  height: {
+    type: String,
+    default: '450px',
   },
 });
 
