@@ -161,12 +161,14 @@ const routes = [
     component: ReportingDailyReport,
     meta: { requiresAuth: true },
   },
+  /*
   {
     path: '/reporting/active-reservations-change',
     name: 'ReportingActiveReservationsChange',
     component: ReportingActiveReservationsChange,
     meta: { requiresAuth: true },
   },
+  */
   {
     path: '/reporting/monthly-reservation-evolution',
     name: 'ReportingMonthlyReservationEvolution',

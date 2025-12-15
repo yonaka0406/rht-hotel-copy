@@ -1,59 +1,33 @@
 <template>
     <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
         <header>
-            <ReportingTopMenu
-                :selectedDate="selectedDate"
-                :period="period"
-                :selectedHotels="selectedHotels"
-                :initialReportType="'reservationAnalysis'"
-                @date-change="handleDateChange"
-                @period-change="handlePeriodChange"
-                @hotel-change="handleHotelChange"
-                @report-type-change="handleReportTypeChange"
-            />
+            <ReportingTopMenu :selectedDate="selectedDate" :period="period" :selectedHotels="selectedHotels"
+                :initialReportType="'reservationAnalysis'" @date-change="handleDateChange"
+                @period-change="handlePeriodChange" @hotel-change="handleHotelChange"
+                @report-type-change="handleReportTypeChange" />
         </header>
-        
+
         <main class="flex-1 overflow-auto p-6">
             <div v-if="loading" class="flex justify-content-center align-items-center h-full">
                 <ProgressSpinner />
             </div>
-            
+
             <!-- Single Month Views -->
-            <ChannelSummarySingleMonthAllHotels
-                v-else-if="period === 'month' && selectedHotels.length > 1"
-                :selected-hotels="selectedHotels"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-                :reservation-data="reservationListData"
-                :booker-type-data="bookerTypeData"
-            />
-            <ChannelSummarySingleMonthHotel
-                v-else-if="period === 'month' && selectedHotels.length === 1"
-                :hotel-id="selectedHotelIdForReport"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-                :reservation-data="reservationListData"
-                :booker-type-data="bookerTypeData"
-            />
-            
+            <ChannelSummarySingleMonthAllHotels v-else-if="period === 'month' && selectedHotels.length > 1"
+                :selected-hotels="selectedHotels" :trigger-fetch="reportTriggerKey" :selected-date="selectedDate"
+                :reservation-data="reservationListData" :booker-type-data="bookerTypeData" />
+            <ChannelSummarySingleMonthHotel v-else-if="period === 'month' && selectedHotels.length === 1"
+                :hotel-id="selectedHotelIdForReport" :trigger-fetch="reportTriggerKey" :selected-date="selectedDate"
+                :reservation-data="reservationListData" :booker-type-data="bookerTypeData" />
+
             <!-- Year Cumulative Views -->
-            <ChannelSummaryYearCumulativeAllHotels
-                v-else-if="period === 'year' && selectedHotels.length > 1"
-                :selected-hotels="selectedHotels"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-                :reservation-data="reservationListData"
-                :booker-type-data="bookerTypeData"
-            />
-            <ChannelSummaryYearCumulativeHotel
-                v-else-if="period === 'year' && selectedHotels.length === 1"
-                :hotel-id="selectedHotelIdForReport"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-                :reservation-data="reservationListData"
-                :booker-type-data="bookerTypeData"
-            />
-            
+            <ChannelSummaryYearCumulativeAllHotels v-else-if="period === 'year' && selectedHotels.length > 1"
+                :selected-hotels="selectedHotels" :trigger-fetch="reportTriggerKey" :selected-date="selectedDate"
+                :reservation-data="reservationListData" :booker-type-data="bookerTypeData" />
+            <ChannelSummaryYearCumulativeHotel v-else-if="period === 'year' && selectedHotels.length === 1"
+                :hotel-id="selectedHotelIdForReport" :trigger-fetch="reportTriggerKey" :selected-date="selectedDate"
+                :reservation-data="reservationListData" :booker-type-data="bookerTypeData" />
+
             <!-- No Selection State -->
             <div v-else class="text-center p-8">
                 <div class="text-gray-500 dark:text-gray-400">
@@ -153,11 +127,11 @@ const fetchReservationData = async () => {
     }
 
     loading.value = true;
-    
+
     try {
         const startDate = formatDate(firstDayOfFetch.value);
         const endDate = formatDate(lastDayOfFetch.value);
-        
+
         console.log('Fetching reservation data for channel summary:', {
             hotels: selectedHotels.value,
             startDate,
@@ -166,9 +140,9 @@ const fetchReservationData = async () => {
 
         const [batchReservationData, batchBookerTypeData] = await Promise.all([
             fetchBatchReservationListView(
-                selectedHotels.value, 
-                startDate, 
-                endDate, 
+                selectedHotels.value,
+                startDate,
+                endDate,
                 'stay_period'
             ),
             fetchBatchBookerTypeBreakdown(
@@ -198,7 +172,7 @@ const fetchReservationData = async () => {
 
         console.log('Reservation data fetched:', reservationListData.value.length, 'reservations');
         console.log('Booker type data fetched for', Object.keys(bookerTypeData.value).length, 'hotels');
-        
+
     } catch (error) {
         console.error('Error fetching data for channel summary:', error);
         reservationListData.value = [];
@@ -236,12 +210,18 @@ const handleHotelChange = (newSelectedHotelIds, hotelsFromMenu) => {
 };
 
 const handleReportTypeChange = (newReportType) => {
-    // If user selects a different report type, redirect to main reporting page
-    if (newReportType !== 'reservationAnalysis') {
-        router.push('/reporting');
+    if (newReportType === 'reservationAnalysis') {
+        // Already here
         return;
+    } else if (newReportType === 'monthlySummary') {
+        router.push('/reporting');
+    } else if (newReportType === 'dailyReport') {
+        router.push('/reporting/daily');
+    } else if (newReportType === 'activeReservationsChange') {
+        router.push('/reporting/active-reservations-change');
+    } else if (newReportType === 'monthlyReservationEvolution') {
+        router.push('/reporting/monthly-reservation-evolution');
     }
-    // If still reservationAnalysis, stay on this page
 };
 
 // Watch for trigger changes from child components
