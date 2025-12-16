@@ -159,6 +159,7 @@
             </Card>
         </div>
     </div>
+    <Toast />
 </template>
 <script setup>
 // Vue
@@ -200,7 +201,8 @@ import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 
 // Primevue
-import { Card, Badge, SelectButton, Button, DataTable, Column, Panel, Message } from 'primevue';
+import { Card, Badge, SelectButton, Button, DataTable, Column, Panel, Message, Toast } from 'primevue';
+import { useToast } from 'primevue/usetoast';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
 import FutureOutlookTable from './tables/FutureOutlookTable.vue';
 
@@ -554,8 +556,17 @@ const allHotelsRevenueChartOptions = computed(() => {
 // Use report store for PDF generation API call
 const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
-// Use print optimization composable
-const { isPrintMode, delayedPrint } = usePrintOptimization();
+// Use print optimization composable with browser compatibility
+const { 
+    isPrintMode, 
+    delayedPrint, 
+    getPrintCapabilities, 
+    getProgressiveEnhancementFallback,
+    applyBrowserSpecificOptimizations 
+} = usePrintOptimization();
+
+// Use toast for notifications
+const toast = useToast();
 
 const downloadPdf = async () => {
     if (isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
@@ -681,8 +692,13 @@ const downloadPdf = async () => {
             errorMessage = 'サーバーリソースが不足しています。しばらく待ってから再試行してください。';
         }
         
-        // Show user-friendly error message (you can replace this with your toast notification system)
-        alert(errorMessage);
+        // Show user-friendly error message using toast notification
+        toast.add({ 
+            severity: 'error', 
+            summary: 'PDF生成エラー', 
+            detail: errorMessage, 
+            life: 5000 
+        });
         
         // Log detailed error for debugging
         console.error('Detailed PDF generation error:', {
@@ -701,20 +717,54 @@ const downloadPdf = async () => {
     }
 };
 
-// New print-based PDF download method with static image support
+// New print-based PDF download method with browser compatibility and static image support
 const downloadPrintPdf = async () => {
     if (isPrintDownloading.value || isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
 
     isPrintDownloading.value = true;
 
     try {
+        // Check browser compatibility and show warnings if needed
+        const capabilities = getPrintCapabilities();
+        const fallbackInfo = getProgressiveEnhancementFallback();
+        
+        if (fallbackInfo) {
+            toast.add({ 
+                severity: 'warn', 
+                summary: 'ブラウザ互換性', 
+                detail: fallbackInfo.message, 
+                life: 8000 
+            });
+            
+            // For very old browsers, recommend using server PDF instead
+            if (!capabilities.supportsMediaQueries) {
+                isPrintDownloading.value = false;
+                toast.add({ 
+                    severity: 'error', 
+                    summary: 'ブラウザ非対応', 
+                    detail: 'このブラウザでは印刷PDFがサポートされていません。サーバーPDFをご利用ください。', 
+                    life: 10000 
+                });
+                return;
+            }
+        }
+        
+        // Apply browser-specific optimizations
+        applyBrowserSpecificOptimizations();
+        
+        console.log('Print PDF initiated with browser:', capabilities.browser.name, capabilities.browser.version);
         // Setup fallback to backend PDF generation if print mode fails
         printOptimizationService.setFallbackCallback(async (reason, error) => {
             console.warn('Print PDF failed, falling back to server PDF:', reason, error);
             isPrintDownloading.value = false;
             
             // Show user feedback about fallback
-            alert('印刷PDFの生成に失敗しました。サーバーPDFを使用してください。');
+            toast.add({ 
+                severity: 'warn', 
+                summary: '印刷PDF失敗', 
+                detail: '印刷PDFの生成に失敗しました。サーバーPDFを使用してください。', 
+                life: 5000 
+            });
         });
 
         // Activate print mode with optimizations
@@ -787,7 +837,12 @@ const downloadPrintPdf = async () => {
             errorMessage = '印刷モードの有効化に失敗しました。サーバーPDFをご利用ください。';
         }
         
-        alert(errorMessage);
+        toast.add({ 
+            severity: 'error', 
+            summary: '印刷PDFエラー', 
+            detail: errorMessage, 
+            life: 5000 
+        });
         
         // Log detailed error for debugging
         console.error('Detailed print PDF error:', {
@@ -802,14 +857,51 @@ const downloadPrintPdf = async () => {
     } finally {
         isPrintDownloading.value = false;
         
-        // Cleanup: Remove print-specific classes and attributes
-        setTimeout(() => {
+        // Setup reliable print-completion handlers
+        const cleanupPrintMode = () => {
             const reportContainer = document.querySelector('.print-optimized');
             if (reportContainer) {
                 reportContainer.classList.remove('print-optimized', 'print-black-text', 'print-white-bg');
             }
             document.body.removeAttribute('data-report-title');
-        }, 1000); // Delay to ensure print dialog has processed
+        };
+
+        // Primary handler: afterprint event
+        const handleAfterPrint = () => {
+            cleanupPrintMode();
+            window.removeEventListener('afterprint', handleAfterPrint);
+        };
+        
+        // Fallback handler: MediaQueryList for broader browser support
+        let printMediaQuery = null;
+        let mediaQueryHandler = null;
+        
+        if (window.matchMedia) {
+            printMediaQuery = window.matchMedia('print');
+            mediaQueryHandler = (e) => {
+                // When print media query no longer matches, print is complete
+                if (!e.matches) {
+                    cleanupPrintMode();
+                    printMediaQuery.removeEventListener('change', mediaQueryHandler);
+                }
+            };
+            printMediaQuery.addEventListener('change', mediaQueryHandler);
+        }
+        
+        // Setup primary afterprint listener
+        window.addEventListener('afterprint', handleAfterPrint);
+        
+        // Fallback timeout as last resort (reduced from 1000ms to 500ms)
+        setTimeout(() => {
+            // Only cleanup if handlers haven't already done so
+            if (document.querySelector('.print-optimized')) {
+                cleanupPrintMode();
+                window.removeEventListener('afterprint', handleAfterPrint);
+                if (printMediaQuery && mediaQueryHandler) {
+                    printMediaQuery.removeEventListener('change', mediaQueryHandler);
+                }
+            }
+        }, 500);
     }
 };
 

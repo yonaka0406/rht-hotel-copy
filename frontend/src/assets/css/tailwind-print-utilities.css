@@ -2,6 +2,17 @@
  * Tailwind Print Utilities
  * Extended print utility classes for enhanced print layout control
  * Complements the main print-styles.css with additional Tailwind-style utilities
+ * 
+ * IMPORTANT NOTES:
+ * - Fixed and sticky positioning is not consistently supported in print media and has been omitted
+ * - Paper size and orientation classes (print:a4:*, print:letter:*, print:landscape:*) are manual helper classes
+ * - These classes are NOT automatically applied based on browser detection - developers must apply them manually
+ * - For automatic paper size/orientation handling, use @page rules in CSS or JavaScript feature detection
+ * 
+ * USAGE:
+ * - Apply print utilities manually: <div class="print:block print:a4:text-sm">
+ * - Use @page rules for automatic paper setup: @page { size: A4 portrait; }
+ * - Combine with JavaScript for runtime detection if needed
  */
 
 @media print {
@@ -34,13 +45,24 @@
 
   /* ==========================================================================
      Print Positioning Utilities
+     Note: Fixed and sticky positioning are not consistently supported in print media
      ========================================================================== */
   
   .print\:static { position: static !important; }
-  .print\:fixed { position: fixed !important; }
-  .print\:absolute { position: absolute !important; }
   .print\:relative { position: relative !important; }
-  .print\:sticky { position: sticky !important; }
+  .print\:absolute { position: absolute !important; }
+  
+  /* Print-safe alternatives for fixed/sticky positioning */
+  .print\:block-fixed { 
+    position: static !important; 
+    display: block !important; 
+    width: 100% !important; 
+  }
+  .print\:block-sticky { 
+    position: static !important; 
+    display: block !important; 
+    width: 100% !important; 
+  }
 
   /* ==========================================================================
      Print Spacing Utilities (Margin)
@@ -65,7 +87,6 @@
   .print\:m-11 { margin: 44pt !important; }
   .print\:m-12 { margin: 48pt !important; }
 
-}
   /* Margin X-axis */
   .print\:mx-0 { margin-left: 0 !important; margin-right: 0 !important; }
   .print\:mx-1 { margin-left: 4pt !important; margin-right: 4pt !important; }
@@ -603,34 +624,46 @@
   .print\:gap-y-8 { row-gap: 32pt !important; }
 
   /* ==========================================================================
-     Print Responsive Utilities for Different Paper Sizes
+     Manual Print Helper Classes for Different Paper Sizes
+     
+     IMPORTANT: These classes are NOT automatically applied based on paper size detection.
+     CSS cannot detect paper size or orientation automatically.
+     
+     USAGE:
+     - Apply manually when you know the target paper size: <div class="print:a4:text-sm">
+     - Use @page rules for automatic paper setup: @page { size: A4 portrait; }
+     - Combine with JavaScript feature detection if runtime detection is needed
+     
+     For automatic behavior, use proper @page declarations:
+     @page { size: A4 portrait; margin: 20mm; }
+     @page { size: Letter landscape; margin: 0.75in; }
      ========================================================================== */
   
-  /* A4 Portrait Specific (210mm x 297mm) */
-  .print\:a4\:text-xs { font-size: 7pt !important; }
-  .print\:a4\:text-sm { font-size: 8pt !important; }
-  .print\:a4\:text-base { font-size: 9pt !important; }
-  .print\:a4\:p-1 { padding: 3pt !important; }
-  .print\:a4\:p-2 { padding: 6pt !important; }
-  .print\:a4\:m-1 { margin: 3pt !important; }
-  .print\:a4\:m-2 { margin: 6pt !important; }
+  /* Manual A4 Portrait Helper Classes (210mm x 297mm) - Apply manually when targeting A4 */
+  .print\:manual-a4\:text-xs { font-size: 7pt !important; }
+  .print\:manual-a4\:text-sm { font-size: 8pt !important; }
+  .print\:manual-a4\:text-base { font-size: 9pt !important; }
+  .print\:manual-a4\:p-1 { padding: 3pt !important; }
+  .print\:manual-a4\:p-2 { padding: 6pt !important; }
+  .print\:manual-a4\:m-1 { margin: 3pt !important; }
+  .print\:manual-a4\:m-2 { margin: 6pt !important; }
 
-  /* Letter Portrait Specific (8.5" x 11") */
-  .print\:letter\:text-xs { font-size: 7pt !important; }
-  .print\:letter\:text-sm { font-size: 8pt !important; }
-  .print\:letter\:text-base { font-size: 9pt !important; }
-  .print\:letter\:p-1 { padding: 3pt !important; }
-  .print\:letter\:p-2 { padding: 6pt !important; }
-  .print\:letter\:m-1 { margin: 3pt !important; }
-  .print\:letter\:m-2 { margin: 6pt !important; }
+  /* Manual Letter Portrait Helper Classes (8.5" x 11") - Apply manually when targeting Letter */
+  .print\:manual-letter\:text-xs { font-size: 7pt !important; }
+  .print\:manual-letter\:text-sm { font-size: 8pt !important; }
+  .print\:manual-letter\:text-base { font-size: 9pt !important; }
+  .print\:manual-letter\:p-1 { padding: 3pt !important; }
+  .print\:manual-letter\:p-2 { padding: 6pt !important; }
+  .print\:manual-letter\:m-1 { margin: 3pt !important; }
+  .print\:manual-letter\:m-2 { margin: 6pt !important; }
 
-  /* Landscape Orientation Specific */
-  .print\:landscape\:flex { display: flex !important; }
-  .print\:landscape\:grid { display: grid !important; }
-  .print\:landscape\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  .print\:landscape\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-  .print\:landscape\:w-1\/2 { width: 50% !important; }
-  .print\:landscape\:w-1\/3 { width: 33.333333% !important; }
-  .print\:landscape\:w-2\/3 { width: 66.666667% !important; }
+  /* Manual Landscape Helper Classes - Apply manually when targeting landscape orientation */
+  .print\:manual-landscape\:flex { display: flex !important; }
+  .print\:manual-landscape\:grid { display: grid !important; }
+  .print\:manual-landscape\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .print\:manual-landscape\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .print\:manual-landscape\:w-1\/2 { width: 50% !important; }
+  .print\:manual-landscape\:w-1\/3 { width: 33.333333% !important; }
+  .print\:manual-landscape\:w-2\/3 { width: 66.666667% !important; }
 
 } /* End @media print */

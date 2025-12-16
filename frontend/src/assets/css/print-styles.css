@@ -54,7 +54,22 @@
   
   * {
     -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Browser-specific print optimizations */
+  .browser-firefox * {
+    -moz-print-color-adjust: exact !important;
+  }
+  
+  .browser-safari *,
+  .engine-webkit * {
+    -webkit-print-color-adjust: exact !important;
+  }
+  
+  .browser-chrome *,
+  .browser-edge *,
+  .engine-blink * {
     print-color-adjust: exact !important;
   }
   
@@ -104,9 +119,15 @@
      Element Visibility - Hide/Show for Print
      ========================================================================== */
   
-  /* Elements to hide during print */
+  /* Performance-optimized: Group similar elements for better CSS parsing */
   .no-print,
   .print-hidden,
+  .interactive-only,
+  .screen-only {
+    display: none !important;
+  }
+  
+  /* Navigation and UI elements */
   nav:not(.print-keep),
   .navigation:not(.print-keep),
   .sidebar:not(.print-keep),
@@ -114,13 +135,21 @@
   .footer:not(.print-keep),
   .reporting-top-menu,
   .report-filters,
-  .report-navigation,
+  .report-navigation {
+    display: none !important;
+  }
+  
+  /* Interactive components */
   button:not(.print-keep),
   .p-button:not(.print-keep),
   .p-selectbutton:not(.print-keep),
   .p-toolbar:not(.print-keep),
   .p-menubar:not(.print-keep),
-  .p-tabmenu:not(.print-keep),
+  .p-tabmenu:not(.print-keep) {
+    display: none !important;
+  }
+  
+  /* Overlays and tooltips */
   .scroll-indicator,
   .tooltip,
   .p-tooltip,
@@ -128,9 +157,7 @@
   .p-dropdown-panel,
   .modal-backdrop,
   .p-dialog-mask,
-  .p-overlay,
-  .interactive-only,
-  .screen-only {
+  .p-overlay {
     display: none !important;
   }
   
@@ -363,17 +390,22 @@
     max-height: 100% !important;
   }
   
-  /* Specific canvas controls for chart containers - maintain aspect ratio */
+  /* Canvas sizing for chart containers - responsive CSS control
+     Note: object-fit has no effect on canvas elements, so we use responsive width/height
+     For print mode, canvas elements are replaced with static images via JavaScript */
   .hotel-sales-chart canvas,
   .hotel-occupancy-chart canvas {
     max-width: 100% !important;
     max-height: 100% !important;
-    width: auto !important; /* Let width adjust to maintain aspect ratio */
-    height: auto !important; /* Let height adjust to maintain aspect ratio */
-    object-fit: contain !important; /* Maintain aspect ratio, center if needed */
+    width: 100% !important; /* Responsive width for proper scaling */
+    height: auto !important; /* Maintain aspect ratio */
     display: block !important;
-    margin: 0 auto !important; /* Simple horizontal centering */
+    margin: 0 auto !important; /* Center horizontally */
   }
+  
+  /* Print mode uses static images instead of live canvas elements
+     Static images are generated using chart.getDataURL() in chart components
+     This ensures reliable print rendering without canvas sizing issues */
   
   /* Ensure chart component containers size naturally */
   .hotel-sales-chart > div,
@@ -893,6 +925,65 @@
     margin: 6pt 0 !important;
     font-size: 9pt !important;
     background: #f9f9f9 !important;
+  }
+  
+  /* ==========================================================================
+     Browser-Specific Print Compatibility
+     ========================================================================== */
+  
+  /* Firefox-specific optimizations */
+  .browser-firefox .chart-container,
+  .browser-firefox .print-chart-wrapper {
+    page-break-inside: avoid !important;
+    -moz-page-break-inside: avoid !important;
+  }
+  
+  .browser-firefox canvas {
+    image-rendering: -moz-crisp-edges !important;
+  }
+  
+  /* Safari/WebKit-specific optimizations */
+  .browser-safari .chart-container,
+  .browser-safari .print-chart-wrapper,
+  .engine-webkit .chart-container,
+  .engine-webkit .print-chart-wrapper {
+    -webkit-page-break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .browser-safari canvas,
+  .engine-webkit canvas {
+    image-rendering: -webkit-crisp-edges !important;
+    image-rendering: crisp-edges !important;
+  }
+  
+  /* Chrome/Edge/Blink-specific optimizations */
+  .browser-chrome .print-chart-wrapper img,
+  .browser-edge .print-chart-wrapper img,
+  .engine-blink .print-chart-wrapper img {
+    image-rendering: pixelated !important;
+    image-rendering: crisp-edges !important;
+  }
+  
+  /* Fallback for older browsers */
+  .browser-unknown .chart-container {
+    border: 1px solid #000 !important;
+    background: #fff !important;
+    margin-bottom: 20pt !important;
+  }
+  
+  .browser-unknown .print-chart-wrapper {
+    min-height: 200mm !important;
+    border: 2px solid #000 !important;
+  }
+  
+  /* Progressive enhancement classes */
+  .supports-color-adjust * {
+    print-color-adjust: exact !important;
+  }
+  
+  .supports-page-break .avoid-page-break {
+    page-break-inside: avoid !important;
   }
   
   /* ==========================================================================

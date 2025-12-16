@@ -72,12 +72,150 @@ export class PrintStyleManager {
   }
 
   /**
+   * Validate print configuration for security
+   * @param {Object} config - Print styles configuration
+   * @throws {Error} If configuration contains invalid or unsafe values
+   * @private
+   */
+  validatePrintConfig(config) {
+    const {
+      pageSize = 'A4',
+      orientation = 'portrait',
+      margins = { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' },
+      hideSelectors = [],
+      showSelectors = [],
+      pageBreakRules = [],
+      customCSS = ''
+    } = config;
+
+    // Validate page size - whitelist allowed values
+    const allowedPageSizes = ['A4', 'A3', 'A5', 'Letter', 'Legal', 'Tabloid'];
+    if (!allowedPageSizes.includes(pageSize)) {
+      throw new Error(`Invalid page size: ${pageSize}. Allowed values: ${allowedPageSizes.join(', ')}`);
+    }
+
+    // Validate orientation - whitelist allowed values
+    const allowedOrientations = ['portrait', 'landscape'];
+    if (!allowedOrientations.includes(orientation)) {
+      throw new Error(`Invalid orientation: ${orientation}. Allowed values: ${allowedOrientations.join(', ')}`);
+    }
+
+    // Validate margins - strict pattern matching
+    const marginPattern = /^(\d+(\.\d+)?(mm|cm|in|pt|px)|0)$/;
+    const marginKeys = ['top', 'right', 'bottom', 'left'];
+    
+    marginKeys.forEach(key => {
+      const value = margins[key];
+      if (value && !marginPattern.test(value)) {
+        throw new Error(`Invalid margin value for ${key}: ${value}. Must match pattern: number + unit (mm|cm|in|pt|px) or 0`);
+      }
+    });
+
+    // Validate selectors - reject dangerous characters
+    const validateSelector = (selector, context) => {
+      if (typeof selector !== 'string') {
+        throw new Error(`Invalid selector in ${context}: must be a string`);
+      }
+      
+      // Check for dangerous characters that could break CSS or enable injection
+      const dangerousChars = /[<>{};"'`\\]/;
+      if (dangerousChars.test(selector)) {
+        throw new Error(`Invalid selector in ${context}: "${selector}" contains dangerous characters (<>{};"'`\\)`);
+      }
+      
+      // Check for CSS injection patterns
+      const injectionPatterns = [
+        /\/\*.*\*\//,  // CSS comments
+        /@import/i,     // CSS imports
+        /@media/i,      // Nested media queries
+        /expression\s*\(/i, // IE expressions
+        /javascript:/i,  // JavaScript URLs
+        /data:/i,       // Data URLs
+        /url\s*\(/i     // URL functions
+      ];
+      
+      injectionPatterns.forEach(pattern => {
+        if (pattern.test(selector)) {
+          throw new Error(`Invalid selector in ${context}: "${selector}" contains potentially dangerous pattern`);
+        }
+      });
+      
+      // Basic CSS selector validation - must start with valid CSS selector characters
+      if (!/^[a-zA-Z0-9._#\-\[\]:() ]+$/.test(selector)) {
+        throw new Error(`Invalid selector in ${context}: "${selector}" contains invalid characters`);
+      }
+    };
+
+    // Validate hide selectors
+    hideSelectors.forEach(selector => validateSelector(selector, 'hideSelectors'));
+
+    // Validate show selectors
+    showSelectors.forEach(selector => validateSelector(selector, 'showSelectors'));
+
+    // Validate page break rules selectors
+    pageBreakRules.forEach((rule, index) => {
+      if (!rule.selector) {
+        throw new Error(`Page break rule ${index} missing selector`);
+      }
+      validateSelector(rule.selector, `pageBreakRules[${index}]`);
+      
+      // Validate page break values
+      const allowedBreakValues = ['auto', 'always', 'avoid', 'left', 'right', 'page', 'column'];
+      ['breakBefore', 'breakAfter', 'breakInside'].forEach(prop => {
+        if (rule[prop] && !allowedBreakValues.includes(rule[prop])) {
+          throw new Error(`Invalid ${prop} value in page break rule ${index}: ${rule[prop]}`);
+        }
+      });
+    });
+
+    // Validate custom CSS - block dangerous patterns
+    if (customCSS) {
+      if (typeof customCSS !== 'string') {
+        throw new Error('Custom CSS must be a string');
+      }
+      
+      // Block dangerous patterns that could enable injection
+      const dangerousPatterns = [
+        /<\/style>/i,           // Closing style tag
+        /<script/i,             // Script tags
+        /<\/script>/i,          // Closing script tag
+        /javascript:/i,         // JavaScript URLs
+        /expression\s*\(/i,     // IE expressions
+        /import\s+/i,           // CSS imports
+        /@import/i,             // CSS import rules
+        /url\s*\(\s*["']?javascript:/i, // JavaScript in URLs
+        /url\s*\(\s*["']?data:/i,       // Data URLs (potential XSS)
+        /behavior\s*:/i,        // IE behaviors
+        /-moz-binding/i,        // Mozilla bindings
+        /vbscript:/i,           // VBScript URLs
+        /onload\s*=/i,          // Event handlers
+        /onerror\s*=/i,         // Event handlers
+        /onclick\s*=/i          // Event handlers
+      ];
+      
+      dangerousPatterns.forEach(pattern => {
+        if (pattern.test(customCSS)) {
+          throw new Error(`Custom CSS contains dangerous pattern: ${pattern.source}`);
+        }
+      });
+      
+      // Additional length check to prevent DoS
+      if (customCSS.length > 10000) {
+        throw new Error('Custom CSS exceeds maximum length of 10,000 characters');
+      }
+    }
+  }
+
+  /**
    * Generate print CSS from configuration
    * @param {Object} config - Print styles configuration
    * @returns {string} Generated CSS text
    * @private
    */
   generatePrintCSS(config) {
+    // Validate configuration for security
+    this.validatePrintConfig(config);
+    
     const {
       pageSize = 'A4',
       orientation = 'portrait',
@@ -114,9 +252,10 @@ export class PrintStyleManager {
     // Layout optimization styles
     css += this.generateLayoutOptimizationCSS();
 
-    // Custom CSS
+    // Custom CSS (sanitized)
     if (customCSS) {
-      css += `\n  /* Custom CSS */\n  ${customCSS}\n`;
+      const sanitizedCSS = this.sanitizeCustomCSS(customCSS);
+      css += `\n  /* Custom CSS */\n  ${sanitizedCSS}\n`;
     }
 
     css += '}\n';
@@ -216,6 +355,57 @@ export class PrintStyleManager {
   }
 
   /**
+   * Escape CSS selector for safe injection
+   * @param {string} selector - CSS selector to escape
+   * @returns {string} Escaped selector
+   * @private
+   */
+  escapeCSSSelector(selector) {
+    // Additional escaping for any remaining edge cases
+    // Note: validation should have already caught dangerous patterns
+    return selector.replace(/['"\\]/g, '\\$&');
+  }
+
+  /**
+   * Sanitize custom CSS for safe injection
+   * @param {string} customCSS - Custom CSS to sanitize
+   * @returns {string} Sanitized CSS
+   * @private
+   */
+  sanitizeCustomCSS(customCSS) {
+    // Note: validation should have already caught dangerous patterns
+    // This is an additional layer of defense
+    
+    // Remove any remaining potentially dangerous content
+    let sanitized = customCSS
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, '')
+      // Remove JavaScript URLs
+      .replace(/javascript\s*:/gi, '')
+      // Remove data URLs
+      .replace(/data\s*:/gi, '')
+      // Remove CSS expressions
+      .replace(/expression\s*\([^)]*\)/gi, '')
+      // Remove CSS imports
+      .replace(/@import[^;]*;/gi, '')
+      // Remove CSS comments that could hide malicious content
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      // Normalize whitespace
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Ensure CSS is properly formatted (basic indentation)
+    sanitized = sanitized
+      .split(';')
+      .map(rule => rule.trim())
+      .filter(rule => rule.length > 0)
+      .map(rule => `    ${rule};`)
+      .join('\n');
+
+    return sanitized;
+  }
+
+  /**
    * Generate visibility CSS for hiding/showing elements
    * @param {Array} hideSelectors - Selectors for elements to hide
    * @param {Array} showSelectors - Selectors for elements to show
@@ -225,7 +415,7 @@ export class PrintStyleManager {
   generateVisibilityCSS(hideSelectors, showSelectors) {
     let css = '\n  /* Element Visibility */\n';
 
-    // Default elements to hide
+    // Default elements to hide (pre-validated safe selectors)
     const defaultHideSelectors = [
       '.no-print',
       '.print-hidden',
@@ -244,17 +434,19 @@ export class PrintStyleManager {
       '.modal-backdrop'
     ];
 
-    // Combine with custom hide selectors
-    const allHideSelectors = [...defaultHideSelectors, ...hideSelectors];
+    // Escape and combine with custom hide selectors
+    const escapedHideSelectors = hideSelectors.map(selector => this.escapeCSSSelector(selector));
+    const allHideSelectors = [...defaultHideSelectors, ...escapedHideSelectors];
 
     // Generate hide rules
     if (allHideSelectors.length > 0) {
       css += `  ${allHideSelectors.join(',\n  ')} {\n    display: none !important;\n  }\n`;
     }
 
-    // Generate show rules
+    // Generate show rules with escaped selectors
     if (showSelectors.length > 0) {
-      css += `\n  ${showSelectors.join(',\n  ')} {\n    display: block !important;\n  }\n`;
+      const escapedShowSelectors = showSelectors.map(selector => this.escapeCSSSelector(selector));
+      css += `\n  ${escapedShowSelectors.join(',\n  ')} {\n    display: block !important;\n  }\n`;
     }
 
     return css;
@@ -269,7 +461,7 @@ export class PrintStyleManager {
   generatePageBreakCSS(pageBreakRules) {
     let css = '\n  /* Page Break Rules */\n';
 
-    // Default page break rules
+    // Default page break rules (pre-validated safe selectors)
     const defaultRules = [
       { selector: '.page-break-before', breakBefore: 'always' },
       { selector: '.page-break-after', breakAfter: 'always' },
@@ -283,8 +475,12 @@ export class PrintStyleManager {
       { selector: 'tfoot', breakBefore: 'avoid' }
     ];
 
-    // Combine with custom rules
-    const allRules = [...defaultRules, ...pageBreakRules];
+    // Escape custom rules and combine
+    const escapedCustomRules = pageBreakRules.map(rule => ({
+      ...rule,
+      selector: this.escapeCSSSelector(rule.selector)
+    }));
+    const allRules = [...defaultRules, ...escapedCustomRules];
 
     // Generate CSS for each rule
     allRules.forEach(rule => {
@@ -651,12 +847,40 @@ export class PrintStyleManager {
   }
 
   /**
+   * Validate selector for DOM operations
+   * @param {string} selector - CSS selector to validate
+   * @returns {boolean} True if selector is safe for DOM operations
+   * @private
+   */
+  isValidDOMSelector(selector) {
+    try {
+      // Basic validation - check for dangerous characters
+      const dangerousChars = /[<>{};"'`\\]/;
+      if (dangerousChars.test(selector)) {
+        return false;
+      }
+      
+      // Test if selector is valid by attempting to use it
+      document.querySelector(selector);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
    * Hide elements for print mode
    * @param {Array} selectors - CSS selectors for elements to hide
    */
   hideElementsForPrint(selectors) {
     selectors.forEach(selector => {
       try {
+        // Validate selector before using it
+        if (!this.isValidDOMSelector(selector)) {
+          console.warn(`[PrintStyleManager] Invalid or unsafe selector: ${selector}`);
+          return;
+        }
+        
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
           this.storeOriginalStyles(element);
@@ -664,7 +888,7 @@ export class PrintStyleManager {
           this.hiddenElements.add(element);
         });
       } catch (error) {
-        console.warn(`[PrintStyleManager] Invalid selector: ${selector}`, error);
+        console.warn(`[PrintStyleManager] Error with selector: ${selector}`, error);
       }
     });
   }
@@ -676,13 +900,19 @@ export class PrintStyleManager {
   showElementsForPrint(selectors) {
     selectors.forEach(selector => {
       try {
+        // Validate selector before using it
+        if (!this.isValidDOMSelector(selector)) {
+          console.warn(`[PrintStyleManager] Invalid or unsafe selector: ${selector}`);
+          return;
+        }
+        
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
           this.storeOriginalStyles(element);
           element.style.display = 'block';
         });
       } catch (error) {
-        console.warn(`[PrintStyleManager] Invalid selector: ${selector}`, error);
+        console.warn(`[PrintStyleManager] Error with selector: ${selector}`, error);
       }
     });
   }
@@ -695,6 +925,28 @@ export class PrintStyleManager {
     rules.forEach(rule => {
       try {
         const { selector, breakBefore, breakAfter, breakInside } = rule;
+        
+        // Validate selector before using it
+        if (!this.isValidDOMSelector(selector)) {
+          console.warn(`[PrintStyleManager] Invalid or unsafe selector in page break rule: ${selector}`);
+          return;
+        }
+        
+        // Validate page break values
+        const allowedBreakValues = ['auto', 'always', 'avoid', 'left', 'right', 'page', 'column'];
+        if (breakBefore && !allowedBreakValues.includes(breakBefore)) {
+          console.warn(`[PrintStyleManager] Invalid breakBefore value: ${breakBefore}`);
+          return;
+        }
+        if (breakAfter && !allowedBreakValues.includes(breakAfter)) {
+          console.warn(`[PrintStyleManager] Invalid breakAfter value: ${breakAfter}`);
+          return;
+        }
+        if (breakInside && !allowedBreakValues.includes(breakInside)) {
+          console.warn(`[PrintStyleManager] Invalid breakInside value: ${breakInside}`);
+          return;
+        }
+        
         const elements = document.querySelectorAll(selector);
         
         elements.forEach(element => {

@@ -6,7 +6,7 @@
             <img v-if="isPrintMode && printImage" :src="printImage" alt="施設別 売上合計（計画 vs 実績）" />
             <div v-else
                 ref="allHotelsRevenueChartContainer"
-                :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"
+                :style="allHotelsChartHeight > 0 ? { height: allHotelsChartHeight + 'px', width: '100%' } : { width: '100%' }"
                 class="chart-container hotel-sales-comparison-print-optimized"
                 :class="{ 'print-mode': isPrintMode }"
             ></div>
@@ -69,7 +69,7 @@ const allHotelsChartHeight = computed(() => {
     
     // Skip height calculation for print mode - let CSS handle it
     if (isPrintMode.value) {
-        return null; // No JavaScript height in print mode
+        return 0; // Return 0 instead of null to prevent "nullpx" in styles
     }
     
     // Calculate height based on number of hotels for screen display only
@@ -102,12 +102,18 @@ const initOrUpdateChart = () => {
             allHotelsRevenueChartInstance.value = echarts.init(allHotelsRevenueChartContainer.value);
         }
         
-        // Store original options for print restoration
-        originalOptions.value = allHotelsRevenueChartOptions.value;
+        // Only store original options when NOT in print mode to avoid capturing print-optimized options
+        if (!isPrintMode.value) {
+            // Deep clone the options to prevent mutation
+            originalOptions.value = JSON.parse(JSON.stringify(allHotelsRevenueChartOptions.value));
+        }
         
         // Apply current options (print-optimized if in print mode)
         if (isPrintMode.value) {
-            optimizeChartForPrint(allHotelsRevenueChartInstance.value, allHotelsRevenueChartOptions.value);
+            // Use stored original options for print optimization, not current computed options
+            if (originalOptions.value) {
+                optimizeChartForPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            }
         } else {
             allHotelsRevenueChartInstance.value.setOption(allHotelsRevenueChartOptions.value, true);
         }
@@ -139,15 +145,26 @@ onBeforeUnmount(() => {
 });
 
 // Watch for print mode changes
-watch(isPrintMode, (newPrintMode) => {
+watch(isPrintMode, async (newPrintMode) => {
     if (allHotelsRevenueChartInstance.value && originalOptions.value) {
         if (newPrintMode) {
             // Capture chart as static image for print
             const imageDataUrl = optimizeChartForPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
             printImage.value = imageDataUrl;
         } else {
-            restoreChartFromPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            // Clear print image first
             printImage.value = null;
+            
+            // Wait for DOM to update before restoring chart
+            await nextTick();
+            
+            // Ensure container still exists after DOM update
+            if (allHotelsRevenueChartContainer.value && allHotelsRevenueChartInstance.value && !allHotelsRevenueChartInstance.value.isDisposed?.()) {
+                restoreChartFromPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            } else {
+                // Container was replaced, reinitialize chart
+                nextTick(initOrUpdateChart);
+            }
         }
     }
 });

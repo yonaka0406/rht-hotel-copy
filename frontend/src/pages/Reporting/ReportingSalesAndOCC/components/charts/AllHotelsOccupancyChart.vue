@@ -4,7 +4,7 @@
       <img v-if="isPrintMode && printImage" :src="printImage" alt="施設別 稼働率（計画 vs 実績）" />
       <div v-else
         ref="chartContainer" 
-        :style="{ height: chartHeight + 'px', width: '100%' }"
+        :style="chartHeight > 0 ? { height: chartHeight + 'px', width: '100%' } : { width: '100%' }"
         class="chart-container all-hotels-occupancy-print-optimized"
         :class="{ 'print-mode': isPrintMode }"
       ></div>
@@ -64,7 +64,7 @@ const chartHeight = computed(() => {
   
   // Skip height calculation for print mode - let CSS handle it
   if (isPrintMode.value) {
-    return null; // No JavaScript height in print mode
+    return 0; // Return 0 instead of null to prevent "nullpx" in styles
   }
   
   // Calculate height based on number of hotels for screen display only
@@ -97,12 +97,18 @@ const initOrUpdateChart = () => {
       chartInstance.value = echarts.init(chartContainer.value);
     }
     
-    // Store original options for print restoration
-    originalOptions.value = chartOptions.value;
+    // Only store original options when NOT in print mode to avoid capturing print-optimized options
+    if (!isPrintMode.value) {
+      // Deep clone the options to prevent mutation
+      originalOptions.value = JSON.parse(JSON.stringify(chartOptions.value));
+    }
     
     // Apply current options (print-optimized if in print mode)
     if (isPrintMode.value) {
-      optimizeChartForPrint(chartInstance.value, chartOptions.value);
+      // Use stored original options for print optimization, not current computed options
+      if (originalOptions.value) {
+        optimizeChartForPrint(chartInstance.value, originalOptions.value);
+      }
     } else {
       chartInstance.value.setOption(chartOptions.value, true);
     }
@@ -126,15 +132,26 @@ onBeforeUnmount(() => {
 });
 
 // Watch for print mode changes
-watch(isPrintMode, (newPrintMode) => {
+watch(isPrintMode, async (newPrintMode) => {
   if (chartInstance.value && originalOptions.value) {
     if (newPrintMode) {
       // Capture chart as static image for print
       const imageDataUrl = optimizeChartForPrint(chartInstance.value, originalOptions.value);
       printImage.value = imageDataUrl;
     } else {
-      restoreChartFromPrint(chartInstance.value, originalOptions.value);
+      // Clear print image first
       printImage.value = null;
+      
+      // Wait for DOM to update before restoring chart
+      await nextTick();
+      
+      // Ensure container still exists after DOM update
+      if (chartContainer.value && chartInstance.value && !chartInstance.value.isDisposed?.()) {
+        restoreChartFromPrint(chartInstance.value, originalOptions.value);
+      } else {
+        // Container was replaced, reinitialize chart
+        nextTick(initOrUpdateChart);
+      }
     }
   }
 });

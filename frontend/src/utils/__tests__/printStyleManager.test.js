@@ -480,4 +480,111 @@ describe('PrintStyleManager', () => {
       expect(css).toContain('@page');
     });
   });
+
+  describe('Security Validation', () => {
+    it('should validate page size whitelist', () => {
+      expect(() => manager.generatePrintCSS({ pageSize: 'A4' })).not.toThrow();
+      expect(() => manager.generatePrintCSS({ pageSize: 'Letter' })).not.toThrow();
+      expect(() => manager.generatePrintCSS({ pageSize: 'InvalidSize' })).toThrow(/Invalid page size/);
+    });
+
+    it('should validate orientation whitelist', () => {
+      expect(() => manager.generatePrintCSS({ orientation: 'portrait' })).not.toThrow();
+      expect(() => manager.generatePrintCSS({ orientation: 'landscape' })).not.toThrow();
+      expect(() => manager.generatePrintCSS({ orientation: 'invalid' })).toThrow(/Invalid orientation/);
+    });
+
+    it('should validate margin patterns', () => {
+      expect(() => manager.generatePrintCSS({ 
+        margins: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' }
+      })).not.toThrow();
+      
+      expect(() => manager.generatePrintCSS({ 
+        margins: { top: '20px', right: '15pt', bottom: '1in', left: '2cm' }
+      })).not.toThrow();
+
+      expect(() => manager.generatePrintCSS({ 
+        margins: { top: 'invalid', right: '15mm', bottom: '20mm', left: '15mm' }
+      })).toThrow(/Invalid margin value/);
+
+      expect(() => manager.generatePrintCSS({ 
+        margins: { top: '20mm; color: red;', right: '15mm', bottom: '20mm', left: '15mm' }
+      })).toThrow(/Invalid margin value/);
+    });
+
+    it('should validate selectors for dangerous characters', () => {
+      expect(() => manager.generatePrintCSS({ 
+        hideSelectors: ['.safe-class', '#safe-id']
+      })).not.toThrow();
+
+      expect(() => manager.generatePrintCSS({ 
+        hideSelectors: ['.class<script>']
+      })).toThrow(/dangerous characters/);
+
+      expect(() => manager.generatePrintCSS({ 
+        hideSelectors: ['.class{color:red}']
+      })).toThrow(/dangerous characters/);
+
+      expect(() => manager.generatePrintCSS({ 
+        hideSelectors: ['.class"injection"']
+      })).toThrow(/dangerous characters/);
+    });
+
+    it('should validate page break rule selectors', () => {
+      expect(() => manager.generatePrintCSS({ 
+        pageBreakRules: [{ selector: '.safe-class', breakBefore: 'always' }]
+      })).not.toThrow();
+
+      expect(() => manager.generatePrintCSS({ 
+        pageBreakRules: [{ selector: '.class<script>', breakBefore: 'always' }]
+      })).toThrow(/dangerous characters/);
+
+      expect(() => manager.generatePrintCSS({ 
+        pageBreakRules: [{ selector: '.safe-class', breakBefore: 'invalid' }]
+      })).toThrow(/Invalid breakBefore value/);
+    });
+
+    it('should validate custom CSS for dangerous patterns', () => {
+      expect(() => manager.generatePrintCSS({ 
+        customCSS: 'body { color: red; }'
+      })).not.toThrow();
+
+      expect(() => manager.generatePrintCSS({ 
+        customCSS: 'body { color: red; } </style><script>alert("xss")</script>'
+      })).toThrow(/dangerous pattern/);
+
+      expect(() => manager.generatePrintCSS({ 
+        customCSS: '@import url("malicious.css");'
+      })).toThrow(/dangerous pattern/);
+
+      expect(() => manager.generatePrintCSS({ 
+        customCSS: 'body { background: url(javascript:alert("xss")); }'
+      })).toThrow(/dangerous pattern/);
+
+      expect(() => manager.generatePrintCSS({ 
+        customCSS: 'a'.repeat(10001) // Too long
+      })).toThrow(/exceeds maximum length/);
+    });
+
+    it('should validate DOM selectors before use', () => {
+      expect(manager.isValidDOMSelector('.safe-class')).toBe(true);
+      expect(manager.isValidDOMSelector('#safe-id')).toBe(true);
+      expect(manager.isValidDOMSelector('div.class')).toBe(true);
+      
+      expect(manager.isValidDOMSelector('.class<script>')).toBe(false);
+      expect(manager.isValidDOMSelector('.class{color:red}')).toBe(false);
+      expect(manager.isValidDOMSelector('.class"injection"')).toBe(false);
+    });
+
+    it('should sanitize custom CSS', () => {
+      const maliciousCSS = 'body { color: red; } </style><script>alert("xss")</script> /* comment */ @import "bad.css";';
+      const sanitized = manager.sanitizeCustomCSS(maliciousCSS);
+      
+      expect(sanitized).not.toContain('</style>');
+      expect(sanitized).not.toContain('<script>');
+      expect(sanitized).not.toContain('@import');
+      expect(sanitized).not.toContain('/*');
+      expect(sanitized).toContain('body { color: red; }');
+    });
+  });
 });
