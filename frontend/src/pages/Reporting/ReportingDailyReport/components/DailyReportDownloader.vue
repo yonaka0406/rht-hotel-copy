@@ -334,7 +334,6 @@ const compareDates = async () => {
                         accommodation_sales: 0,
                         other_sales: 0,
                         total_sales: 0,
-                        cancelled_sales: 0,
                     });
                 }
                 const current = aggregated.get(key);
@@ -342,8 +341,7 @@ const compareDates = async () => {
                 current.cancelled_stays += Number(item.cancelled_stays);
                 current.accommodation_sales += Number(item.accommodation_sales || 0);
                 current.other_sales += Number(item.other_sales || 0);
-                current.total_sales += (Number(item.accommodation_sales) + Number(item.other_sales)); // normal sales
-                current.cancelled_sales += (Number(item.accommodation_sales_cancelled) + Number(item.other_sales_cancelled)); // cancelled sales
+                current.total_sales += (Number(item.accommodation_sales || 0) + Number(item.other_sales || 0)); // normal sales
             });
             return aggregated;
         };

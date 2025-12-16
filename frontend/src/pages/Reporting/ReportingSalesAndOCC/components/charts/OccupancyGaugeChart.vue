@@ -61,12 +61,12 @@ const chartOptions = computed(() => {
   const forecastTotalRooms = total_fc_available_rooms;
 
   // Guard against division by zero
-  const totalActualOccupancy = actualTotalRooms > 0 ? sold_rooms / actualTotalRooms : 0;
-  const totalForecastOccupancy = forecastTotalRooms > 0 ? fc_sold_rooms / forecastTotalRooms : 0;
+  const totalActualOccupancy = actualTotalRooms > 0 ? total_sold_rooms / actualTotalRooms : 0;
+  const totalForecastOccupancy = forecastTotalRooms > 0 ? total_fc_sold_rooms / forecastTotalRooms : 0;
 
   console.log('[GaugeChart] Props Data:', props.occupancyData);
-  console.log('[GaugeChart] Actual:', { sold_rooms, actualTotalRooms, totalActualOccupancy });
-  console.log('[GaugeChart] Forecast:', { fc_sold_rooms, forecastTotalRooms, totalForecastOccupancy });
+  console.log('[GaugeChart] Actual:', { total_sold_rooms, actualTotalRooms, totalActualOccupancy });
+  console.log('[GaugeChart] Forecast:', { total_fc_sold_rooms, forecastTotalRooms, totalForecastOccupancy });
   console.log('[GaugeChart] Prev:', props.previousYearOccupancy);
 
   return {

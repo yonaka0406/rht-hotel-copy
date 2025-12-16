@@ -1,5 +1,6 @@
 const { selectLatestDailyReportDate, selectDailyReportDataByHotel } = require('../../models/report');
 const logger = require('../../config/logger');
+const { processSalesRow } = require('./services/salesProcessor'); // New import
 
 /**
  * Get the latest available date from the daily_report table.
@@ -27,15 +28,7 @@ const getDailyReportData = async (req, res) => {
     try {
         // Use the aggregated query by hotel
         const data = await selectDailyReportDataByHotel(req.requestId, date);
-        const processedData = data.map(row => ({
-            ...row,
-            normal_sales: row.normal_sales ? Math.round(row.normal_sales / 1.1) : row.normal_sales,
-            cancellation_sales: row.cancellation_sales ? Math.round(row.cancellation_sales / 1.1) : row.cancellation_sales,
-            accommodation_sales: row.accommodation_sales ? Math.round(row.accommodation_sales / 1.1) : row.accommodation_sales,
-            other_sales: row.other_sales ? Math.round(row.other_sales / 1.1) : row.other_sales,
-            accommodation_sales_cancelled: row.accommodation_sales_cancelled ? Math.round(row.accommodation_sales_cancelled / 1.1) : row.accommodation_sales_cancelled,
-            other_sales_cancelled: row.other_sales_cancelled ? Math.round(row.other_sales_cancelled / 1.1) : row.other_sales_cancelled,
-        }));
+        const processedData = data.map(processSalesRow);
         res.json(processedData);
     } catch (error) {
         logger.error(`[${operationName}] Error fetching daily report data:`, error);
@@ -55,18 +48,13 @@ const getDailyReportDataByHotel = async (req, res) => {
         return res.status(400).json({ error: 'Date is required' });
     }
 
-    try {
-        const data = await selectDailyReportDataByHotel(req.requestId, date, hotelIds);
-        const processedData = data.map(row => ({
-            ...row,
-            normal_sales: row.normal_sales ? Math.round(row.normal_sales / 1.1) : row.normal_sales,
-            cancellation_sales: row.cancellation_sales ? Math.round(row.cancellation_sales / 1.1) : row.cancellation_sales,
-            accommodation_sales: row.accommodation_sales ? Math.round(row.accommodation_sales / 1.1) : row.accommodation_sales,
-            other_sales: row.other_sales ? Math.round(row.other_sales / 1.1) : row.other_sales,
-            accommodation_sales_cancelled: row.accommodation_sales_cancelled ? Math.round(row.accommodation_sales_cancelled / 1.1) : row.accommodation_sales_cancelled,
-            other_sales_cancelled: row.other_sales_cancelled ? Math.round(row.other_sales_cancelled / 1.1) : row.other_sales_cancelled,
-        }));
-        res.json(processedData);
+        try {
+
+            const data = await selectDailyReportDataByHotel(req.requestId, date, hotelIds);
+
+            const processedData = data.map(processSalesRow);
+
+            res.json(processedData);
     } catch (error) {
         logger.error(`[${operationName}] Error fetching daily report data by hotel:`, error);
         res.status(500).json({ error: 'Database error' });

@@ -8,6 +8,11 @@
         </header>
 
         <main class="flex-1 overflow-auto p-6">
+            <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
+                <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
+                    ホテルID {{ hotelId }}: {{ error.message }} - 詳細: {{ error.details?.message || error.details }}
+                </Message>
+            </div>
             <div v-if="loading" class="flex justify-center items-center h-full">
                 <ProgressSpinner />
             </div>
@@ -59,7 +64,7 @@ const dataErrors = ref({}); // To store errors for specific hotel data fetches
 const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate, fetchDailyReportDataByHotel } = useReportStore();
 
 // Primevue
-import { ProgressSpinner } from 'primevue';
+import { Message, ProgressSpinner } from 'primevue';
 
 // Router
 const router = useRouter();
@@ -770,6 +775,9 @@ const fetchData = async () => {
     if (!isInitialized.value) {
         return;
     }
+
+    // Clear previous errors at the start of a new fetch operation
+    dataErrors.value = {};
 
     const newPmsTotalData = {};
     const newForecastTotalData = {};

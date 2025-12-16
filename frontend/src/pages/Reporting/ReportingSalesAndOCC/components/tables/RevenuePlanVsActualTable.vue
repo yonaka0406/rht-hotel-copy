@@ -63,6 +63,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'; // Add this line
 import { Card, DataTable, Column, Badge, Button } from 'primevue';
 import {
     formatCurrencyForReporting as formatCurrency,
