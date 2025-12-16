@@ -73,10 +73,11 @@
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-3/4 mb-4 md:mb-0">
-                            <div ref="monthlyOccupancyChartContainer" style="height: 450px; width: 100%;"></div>
+                            <MonthlyOccupancyChart :occupancyData="currentHotelOccupancyData" 
+                                :title="currentHotelName" height="450px" />
                         </div>
                         <div class="w-full md:w-1/4">
-                            <div ref="totalOccupancyChartContainer" style="height: 450px; width: 100%;"></div>
+                            <OccupancyGaugeChart :occupancyData="aggregatedCurrentHotelOccupancy" height="450px" />
                         </div>
                     </div>
                 </template>
@@ -162,6 +163,8 @@ import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue'
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 import MonthlyRevenuePlanVsActualChart from './charts/MonthlyRevenuePlanVsActualChart.vue';
 import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
+import MonthlyOccupancyChart from './charts/MonthlyOccupancyChart.vue';
+import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 
 // Utilities
 import {
@@ -300,232 +303,9 @@ const forecastRevPAR = computed(() => {
     return availableRooms ? Math.round(revenue / availableRooms) : NaN;
 });
 
-// ECharts imports
-import * as echarts from 'echarts/core';
-import { TitleComponent, TooltipComponent, GridComponent, LegendComponent, DatasetComponent, TransformComponent, VisualMapComponent } from 'echarts/components';
-import { BarChart, LineChart, GaugeChart } from 'echarts/charts';
-import { CanvasRenderer } from 'echarts/renderers';
+// ECharts are now handled by individual chart components
 
-echarts.use([TitleComponent, TooltipComponent, GridComponent, LegendComponent, DatasetComponent, TransformComponent, VisualMapComponent, BarChart, LineChart, GaugeChart, CanvasRenderer]);
-
-const resizeChartHandler = () => {
-    if (selectedView.value === 'graph') {
-        monthlyOccupancyChartInstance.value?.resize();
-        totalOccupancyChartInstance.value?.resize();
-    }
-};
-
-const monthlyOccupancyChartContainer = ref(null);
-const totalOccupancyChartContainer = ref(null);
-const monthlyOccupancyChartInstance = shallowRef(null);
-const totalOccupancyChartInstance = shallowRef(null);
-
-// Revenue chart options removed - now using MonthlyRevenuePlanVsActualChart and RevenuePlanVsActualChart components\n
-
-const monthlyOccupancyChartOptions = computed(() => {
-    const data = currentHotelOccupancyData.value;
-    if (!data || data.length === 0) return {};
-
-    const months = [...new Set(data.map(item => item.month))].sort((a, b) => new Date(a) - new Date(b));
-    // fc_occ and occ are already percentages (e.g., 85.0 for 85%), so divide by 100 for chart (0-1 scale)
-    const forecastOccupancy = months.map(month => (data.find(d => d.month === month)?.fc_occ ?? 0) / 100);
-    const actualOccupancy = months.map(month => (data.find(d => d.month === month)?.occ ?? 0) / 100);
-
-    return {
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
-            formatter: (params) => {
-                let tooltipText = `${currentHotelName.value} - ${params[0].axisValueLabel}<br/>`;
-                params.forEach(param => {
-                    tooltipText += `${param.marker} ${param.seriesName}: ${formatPercentage(param.value)}<br/>`;
-                });
-                return tooltipText;
-            }
-        },
-        legend: {
-            data: [
-                { name: '計画稼働率', itemStyle: { color: colorScheme.forecast } }, // For legend color
-                { name: '実績稼働率', itemStyle: { color: colorScheme.actual } }   // For legend color
-            ],
-            top: 'bottom'
-        },
-        grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-        xAxis: [{ type: 'category', data: months, axisPointer: { type: 'shadow' } }],
-        yAxis: [{
-            type: 'value',
-            name: '稼働率',
-            min: 0,
-            max: 1, // Data is 0-1
-            axisLabel: { formatter: (value) => formatPercentage(value) }
-        }],
-        visualMap: [
-            {
-                show: false,
-                type: 'continuous',
-                seriesIndex: 0, // Targets '計画稼働率'
-                dimension: 1,   // Apply gradient based on y-axis values
-                min: 0,
-                max: 1,
-                inRange: {
-                    color: [colorScheme.neutral_gray, colorScheme.forecast_gradient_bottom, colorScheme.forecast_gradient_middle, colorScheme.forecast_gradient_top]
-                }
-            },
-            {
-                show: false,
-                type: 'continuous',
-                seriesIndex: 1, // Targets '実績稼働率'
-                dimension: 1,   // Apply gradient based on y-axis values
-                min: 0,
-                max: 1,
-                inRange: {
-                    color: [colorScheme.neutral_gray, colorScheme.actual_gradient_bottom, colorScheme.actual_gradient_middle, colorScheme.actual_gradient_top]
-                }
-            }
-        ],
-        series: [
-            {
-                name: '計画稼働率',
-                type: 'line',
-                data: forecastOccupancy,
-                smooth: true,
-                symbol: 'roundRect',
-                symbolSize: 8,
-                itemStyle: { color: colorScheme.forecast },
-                lineStyle: { width: 2.5 },
-                emphasis: { focus: 'series' }
-            },
-            {
-                name: '実績稼働率',
-                type: 'line',
-                data: actualOccupancy,
-                smooth: true,
-                symbol: 'triangle',
-                symbolSize: 8,
-                itemStyle: { color: colorScheme.actual },
-                lineStyle: { width: 2.5 },
-                emphasis: { focus: 'series' }
-            }
-        ]
-    };
-});
-
-const totalOccupancyChartOptions = computed(() => {
-    const aggOccData = aggregatedCurrentHotelOccupancy.value;
-    if (!aggOccData) return {};
-
-    const actualSold = aggOccData.total_sold_rooms;
-    const actualAvailable = aggOccData.total_available_rooms;
-    const forecastSold = aggOccData.total_fc_sold_rooms;
-    const forecastAvailable = aggOccData.total_fc_available_rooms;
-
-    const totalActualOccupancy = actualAvailable > 0 ? actualSold / actualAvailable : 0;
-    const totalForecastOccupancy = forecastAvailable > 0 ? forecastSold / forecastAvailable : 0;
-
-    return {
-        tooltip: {
-            formatter: (params) => {
-                // For gauge, params can be tricky. Let's rely on the detail formatter.
-                // This tooltip might show for the gauge series if hovered directly.
-                if (params.seriesName === '実績稼働率') {
-                    return `実績稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
-                }
-                return '';
-            }
-        },
-        series: [{
-            type: 'gauge',
-            radius: '90%',
-            center: ['50%', '55%'], // Adjusted center for better title/detail placement
-            startAngle: 180, // Start from bottom left
-            endAngle: 0,     // End at bottom right
-            min: 0,
-            max: 1, // Data is 0 to 1
-            splitNumber: 4,
-            axisLine: {
-                lineStyle: {
-                    width: 22, // Thickness of the ring
-                    color: [ // Segment colors for the track
-                        // Color the track based on actual occupancy, or use progress component
-                        [1, '#E0E0E0'] // Default track color
-                    ]
-                }
-            },
-            progress: { // Shows the actual occupancy fill
-                show: true,
-                width: 22, // Match axisLine width
-                itemStyle: { // Gradient for the progress fill
-                    color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                        { offset: 0, color: colorScheme.actual_gradient_bottom }, // Brighter at start
-                        { offset: 1, color: colorScheme.actual_gradient_top }    // Darker at end
-                    ])
-                }
-            },
-            pointer: { show: false }, // No pointer for a cleaner ring look
-            axisTick: { show: false },
-            splitLine: { show: false },
-            axisLabel: { // Labels like 0%, 25%, 50%, 75%, 100%
-                show: true,
-                distance: 5, // Distance from the ring
-                formatter: function (value) { return (value * 100).toFixed(0) + '%'; },
-                fontSize: 10,
-                color: '#555'
-            },
-            title: { // "実績稼働率"
-                offsetCenter: [0, '25%'], // Position below the percentage value
-                fontSize: 14,
-                color: '#333',
-                fontWeight: 'normal'
-            },
-            detail: { // Shows actual percentage, and we add forecast here
-                width: '70%',
-                lineHeight: 22,
-                offsetCenter: [0, '-10%'], // Position in the middle of the ring
-                valueAnimation: true,
-                formatter: function (value) {
-                    // Using rich text to style actual and forecast differently
-                    let forecastText = `計画: ${formatPercentage(totalForecastOccupancy)}`;
-                    return `{actual|${formatPercentage(value)}}\n{forecast|${forecastText}}`;
-                },
-                rich: {
-                    actual: { fontSize: 24, fontWeight: 'bold', color: colorScheme.actual },
-                    forecast: { fontSize: 13, color: colorScheme.forecast, paddingTop: 8 }
-                }
-            },
-            data: [{ value: totalActualOccupancy, name: '期間実績稼働率' }]
-        }]
-    };
-});
-
-const initOrUpdateChart = (instanceRef, containerRef, options) => {
-    if (containerRef.value) {
-        if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
-            instanceRef.value = echarts.init(containerRef.value);
-        }
-        instanceRef.value.setOption(options, true);
-        instanceRef.value.resize();
-    } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
-        instanceRef.value.dispose();
-        instanceRef.value = null;
-    }
-};
-
-const refreshAllCharts = () => {
-    // Revenue charts are now handled by components
-    // Occupancy Charts
-    if (currentHotelOccupancyData.value && currentHotelOccupancyData.value.length > 0) {
-        initOrUpdateChart(monthlyOccupancyChartInstance, monthlyOccupancyChartContainer, monthlyOccupancyChartOptions.value);
-        initOrUpdateChart(totalOccupancyChartInstance, totalOccupancyChartContainer, totalOccupancyChartOptions.value);
-    } else {
-        monthlyOccupancyChartInstance.value?.dispose(); monthlyOccupancyChartInstance.value = null;
-        totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
-    }
-};
-
-const disposeAllCharts = () => {
-    monthlyOccupancyChartInstance.value?.dispose(); monthlyOccupancyChartInstance.value = null;
-    totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
-};
+// All charts are now handled by components
 
 const getSeverity = getSeverityUtil;
 
@@ -595,29 +375,11 @@ const exportCSV = (tableType) => {
 };
 
 onMounted(async () => {
-    if (selectedView.value === 'graph') {
-        nextTick(refreshAllCharts);
-    }
-    window.addEventListener('resize', resizeChartHandler);
+    // All charts are now handled by child components
 });
 onBeforeUnmount(() => {
-    disposeAllCharts();
-    window.removeEventListener('resize', resizeChartHandler);
+    // All charts are now handled by child components
 });
 
-// Watch occupancy chart options and data (revenue charts are now handled by components)
-watch([monthlyOccupancyChartOptions, totalOccupancyChartOptions, currentHotelOccupancyData], () => {
-    if (selectedView.value === 'graph') {
-        nextTick(refreshAllCharts);
-    }
-}, { deep: true });
-
-watch(selectedView, async (newView) => {
-    if (newView === 'graph') {
-        await nextTick();
-        refreshAllCharts();
-    } else {
-        disposeAllCharts();
-    }
-});
+// All chart lifecycle management is now handled by child components
 </script>

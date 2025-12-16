@@ -62,6 +62,27 @@
                 </template>
             </Card>
 
+            <Card class="mb-4">
+                <template #header>
+                    <span class="text-xl font-bold">稼働率（計画ｘ実績）- 全施設合計</span>
+                </template>
+                <template #content>
+                    <div v-if="!filteredOccupancyForChart || filteredOccupancyForChart.length === 0"
+                        class="text-center p-4">
+                        データはありません。
+                    </div>
+                    <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
+                        <div class="w-full md:w-3/4 mb-4 md:mb-0">
+                            <MonthlyOccupancyChart :occupancyData="filteredOccupancyForChart" 
+                                title="全施設合計" height="450px" />
+                        </div>
+                        <div class="w-full md:w-1/4">
+                            <OccupancyGaugeChart :occupancyData="aggregatedAllHotelsOccupancy" height="450px" />
+                        </div>
+                    </div>
+                </template>
+            </Card>
+
             <Card>
                 <template #header>
                     <span class="text-xl font-bold">全施設 収益＆稼働率 概要</span>
@@ -166,6 +187,8 @@ import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
 import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
 import MonthlyRevenuePlanVsActualChart from './charts/MonthlyRevenuePlanVsActualChart.vue';
 import AllHotelsOccupancyChart from './charts/AllHotelsOccupancyChart.vue';
+import MonthlyOccupancyChart from './charts/MonthlyOccupancyChart.vue';
+import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 
 // Utilities
 import {
@@ -273,6 +296,11 @@ const hasRevenueDataForChart = computed(() => {
 const filteredPrevYearRevenueForChart = computed(() => {
     if (!props.prevYearRevenueData) return [];
     return props.prevYearRevenueData.filter(item => item.hotel_id === 0);
+});
+
+const filteredOccupancyForChart = computed(() => {
+    if (!props.occupancyData) return [];
+    return props.occupancyData.filter(item => item.hotel_id === 0);
 });
 
 // Aggregate revenue data for the RevenuePlanVsActualChart
