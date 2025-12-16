@@ -71,7 +71,7 @@ import {
 } from '@/utils/formatUtils';
 import { getSeverity } from '@/utils/reportingUtils';
 
-defineProps({
+const props = defineProps({
     revenueData: {
         type: Array,
         required: true

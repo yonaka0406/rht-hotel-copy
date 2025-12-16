@@ -1,26 +1,44 @@
 <template>
-    <div>
-        <div class="flex justify-end mb-2">
+    <div class="reporting-single-month-container" data-report-container>
+        <div class="flex justify-end mb-2 no-print">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
-            <!-- <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2" @click="downloadPdf"
-                :loading="isDownloadingPdf" :disabled="isDownloadingPdf" /> -->
+            <div class="ml-2 flex gap-2">
+                <Button 
+                    icon="pi pi-print" 
+                    label="印刷PDF" 
+                    class="p-button-secondary" 
+                    @click="downloadPrintPdf"
+                    :loading="isPrintDownloading" 
+                    :disabled="isPrintDownloading"
+                    title="ブラウザの印刷機能を使用してPDFを生成"
+                />
+                <!-- <Button 
+                    icon="pi pi-file-pdf" 
+                    label="サーバーPDF" 
+                    class="p-button-secondary" 
+                    @click="downloadPdf"
+                    :loading="isDownloadingPdf" 
+                    :disabled="isDownloadingPdf || isPrintDownloading"
+                    title="サーバーでPDFを生成（フォールバック）"
+                /> -->
+            </div>
         </div>
 
         <div v-if="selectedView === 'graph'">
 
-            <Panel header="月次サマリー" class="mb-4">
+            <Panel header="月次サマリー" class="mb-4 monthly-summary-panel">
                 <template #default>
                     <div v-if="!hasRevenueDataForChart" class="text-center p-4">
                         データはありません。
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
                         <!-- Column 1: Revenue Chart (Tall) -->
-                        <div class="w-full md:w-1/2">
+                        <div class="w-full md:w-1/2 chart-container revenue-chart-column">
                             <RevenuePlanVsActualChart :revenueData="aggregateHotelZeroData" height="500px" />
                         </div>
 
                         <!-- Column 2: Gauge + KPIs -->
-                        <div class="w-full md:w-1/2 flex flex-col gap-4">
+                        <div class="w-full md:w-1/2 flex flex-col gap-4 gauge-kpi-column">
                             <!-- Row 1: Gauge (Reduced Height) -->
                             <div>
                                 <div>
@@ -30,7 +48,7 @@
                             </div>
 
                             <!-- Row 2: KPIs -->
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 gap-4 kpi-section">
                                 <Card class="shadow-sm bg-gray-50">
                                     <template #content>
                                         <div class="flex flex-col items-center text-center">
@@ -72,9 +90,9 @@
                 </template>
             </Panel>
 
-            <FutureOutlookTable :data="futureOutlookData" />
+            <FutureOutlookTable :data="futureOutlookData" class="future-outlook-section" />
 
-            <Card>
+            <Card class="hotel-overview-card">
                 <template #header>
                     <span class="text-xl font-bold">全施設 収益＆稼働率 概要</span>
                 </template>
@@ -191,6 +209,7 @@ import { useReportStore } from '@/composables/useReportStore';
 
 // Services
 import chartConfigService from '../../services/ChartConfigurationService';
+import printOptimizationService from '@/services/printOptimizationService.js';
 
 // Utilities
 import {
@@ -210,6 +229,7 @@ const viewOptions = ref([
 
 // PDF download loading state
 const isDownloadingPdf = ref(false);
+const isPrintDownloading = ref(false);
 
 // Computed property to get all unique hotel names from revenueData    
 const allHotelNames = computed(() => {
@@ -677,6 +697,118 @@ const downloadPdf = async () => {
     }
 };
 
+// New print-based PDF download method
+const downloadPrintPdf = async () => {
+    if (isPrintDownloading.value || isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
+
+    isPrintDownloading.value = true;
+
+    try {
+        // Setup fallback to backend PDF generation if print mode fails
+        printOptimizationService.setFallbackCallback(async (reason, error) => {
+            console.warn('Print PDF failed, falling back to server PDF:', reason, error);
+            isPrintDownloading.value = false;
+            
+            // Show user feedback about fallback
+            alert('印刷PDFの生成に失敗しました。サーバーPDFを使用してください。');
+        });
+
+        // Activate print mode with optimizations
+        const printActivated = await printOptimizationService.activatePrintMode({
+            hideElements: [
+                '.no-print',
+                '.reporting-top-menu', // Hide the top menu with filters and navigation
+                '.report-filters',
+                '.report-navigation',
+                '.p-selectbutton', // Hide view selector
+                'button:not(.print-keep)', // Hide all buttons except those marked to keep
+                '.p-button:not(.print-keep)',
+                '.interactive-only',
+                '.screen-only'
+            ],
+            optimizeCharts: true,
+            pageBreakRules: [
+                {
+                    selector: '.monthly-summary-panel',
+                    breakInside: 'avoid'
+                },
+                {
+                    selector: '.kpi-section',
+                    breakInside: 'avoid'
+                },
+                {
+                    selector: '.chart-container',
+                    breakInside: 'avoid'
+                },
+                {
+                    selector: '.hotel-overview-card',
+                    breakBefore: 'auto',
+                    breakInside: 'auto'
+                }
+            ]
+        });
+
+        if (printActivated) {
+            // Add print-specific classes to the main container
+            const reportContainer = document.querySelector('.reporting-single-month-container') || 
+                                  document.querySelector('[data-report-container]') ||
+                                  document.body;
+            
+            if (reportContainer) {
+                reportContainer.classList.add('print-optimized', 'print-black-text', 'print-white-bg');
+            }
+
+            // Add report title for print headers
+            document.body.setAttribute('data-report-title', `Monthly Report ${periodMaxDate.value}`);
+
+            // Trigger the browser's print dialog
+            await printOptimizationService.triggerPrint();
+            
+            console.log('Print PDF dialog opened successfully');
+        } else {
+            throw new Error('Failed to activate print mode');
+        }
+
+    } catch (error) {
+        console.error('Error in print PDF workflow:', error);
+        
+        // Enhanced error handling with user feedback
+        let errorMessage = '印刷PDFの生成中にエラーが発生しました。';
+        
+        if (error.message.includes('browser')) {
+            errorMessage = 'ブラウザが印刷機能をサポートしていません。サーバーPDFをご利用ください。';
+        } else if (error.message.includes('permission')) {
+            errorMessage = '印刷の許可が必要です。ブラウザの設定を確認してください。';
+        } else if (error.message.includes('activation')) {
+            errorMessage = '印刷モードの有効化に失敗しました。サーバーPDFをご利用ください。';
+        }
+        
+        alert(errorMessage);
+        
+        // Log detailed error for debugging
+        console.error('Detailed print PDF error:', {
+            message: error.message,
+            stack: error.stack,
+            selectedView: selectedView.value,
+            hasAggregateData: !!aggregateHotelZeroData.value,
+            hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
+            hasAllHotelsOccupancyData: hasAllHotelsOccupancyData.value
+        });
+        
+    } finally {
+        isPrintDownloading.value = false;
+        
+        // Cleanup: Remove print-specific classes and attributes
+        setTimeout(() => {
+            const reportContainer = document.querySelector('.print-optimized');
+            if (reportContainer) {
+                reportContainer.classList.remove('print-optimized', 'print-black-text', 'print-white-bg');
+            }
+            document.body.removeAttribute('data-report-title');
+        }, 1000); // Delay to ensure print dialog has processed
+    }
+};
+
 // Table
 const getSeverity = getSeverityUtil;
 
@@ -803,3 +935,29 @@ watch(() => props.occupancyData, () => {
         // nextTick(refreshAllCharts);
     }
 }, { deep: true }); // Use deep watch for array/object changes</script>
+
+<style>
+@import '@/assets/css/print-styles.css';
+
+/* Component-specific print optimizations */
+@media print {
+  .reporting-single-month-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Add data attributes for print identification */
+  .monthly-summary-panel {
+    page-break-inside: avoid !important;
+  }
+  
+  .kpi-section {
+    page-break-inside: avoid !important;
+  }
+  
+  .chart-container {
+    page-break-inside: avoid !important;
+  }
+}
+</style>

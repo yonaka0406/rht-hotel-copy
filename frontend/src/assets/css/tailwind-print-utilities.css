@@ -1,0 +1,636 @@
+/**
+ * Tailwind Print Utilities
+ * Extended print utility classes for enhanced print layout control
+ * Complements the main print-styles.css with additional Tailwind-style utilities
+ */
+
+@media print {
+  
+  /* ==========================================================================
+     Print Display Utilities
+     ========================================================================== */
+  
+  .print\:block { display: block !important; }
+  .print\:inline-block { display: inline-block !important; }
+  .print\:inline { display: inline !important; }
+  .print\:flex { display: flex !important; }
+  .print\:inline-flex { display: inline-flex !important; }
+  .print\:table { display: table !important; }
+  .print\:inline-table { display: inline-table !important; }
+  .print\:table-caption { display: table-caption !important; }
+  .print\:table-cell { display: table-cell !important; }
+  .print\:table-column { display: table-column !important; }
+  .print\:table-column-group { display: table-column-group !important; }
+  .print\:table-footer-group { display: table-footer-group !important; }
+  .print\:table-header-group { display: table-header-group !important; }
+  .print\:table-row-group { display: table-row-group !important; }
+  .print\:table-row { display: table-row !important; }
+  .print\:flow-root { display: flow-root !important; }
+  .print\:grid { display: grid !important; }
+  .print\:inline-grid { display: inline-grid !important; }
+  .print\:contents { display: contents !important; }
+  .print\:list-item { display: list-item !important; }
+  .print\:hidden { display: none !important; }
+
+  /* ==========================================================================
+     Print Positioning Utilities
+     ========================================================================== */
+  
+  .print\:static { position: static !important; }
+  .print\:fixed { position: fixed !important; }
+  .print\:absolute { position: absolute !important; }
+  .print\:relative { position: relative !important; }
+  .print\:sticky { position: sticky !important; }
+
+  /* ==========================================================================
+     Print Spacing Utilities (Margin)
+     ========================================================================== */
+  
+  .print\:m-0 { margin: 0 !important; }
+  .print\:m-px { margin: 1px !important; }
+  .print\:m-0\.5 { margin: 2pt !important; }
+  .print\:m-1 { margin: 4pt !important; }
+  .print\:m-1\.5 { margin: 6pt !important; }
+  .print\:m-2 { margin: 8pt !important; }
+  .print\:m-2\.5 { margin: 10pt !important; }
+  .print\:m-3 { margin: 12pt !important; }
+  .print\:m-3\.5 { margin: 14pt !important; }
+  .print\:m-4 { margin: 16pt !important; }
+  .print\:m-5 { margin: 20pt !important; }
+  .print\:m-6 { margin: 24pt !important; }
+  .print\:m-7 { margin: 28pt !important; }
+  .print\:m-8 { margin: 32pt !important; }
+  .print\:m-9 { margin: 36pt !important; }
+  .print\:m-10 { margin: 40pt !important; }
+  .print\:m-11 { margin: 44pt !important; }
+  .print\:m-12 { margin: 48pt !important; }
+
+}
+  /* Margin X-axis */
+  .print\:mx-0 { margin-left: 0 !important; margin-right: 0 !important; }
+  .print\:mx-1 { margin-left: 4pt !important; margin-right: 4pt !important; }
+  .print\:mx-2 { margin-left: 8pt !important; margin-right: 8pt !important; }
+  .print\:mx-3 { margin-left: 12pt !important; margin-right: 12pt !important; }
+  .print\:mx-4 { margin-left: 16pt !important; margin-right: 16pt !important; }
+  .print\:mx-5 { margin-left: 20pt !important; margin-right: 20pt !important; }
+  .print\:mx-6 { margin-left: 24pt !important; margin-right: 24pt !important; }
+  .print\:mx-8 { margin-left: 32pt !important; margin-right: 32pt !important; }
+  .print\:mx-auto { margin-left: auto !important; margin-right: auto !important; }
+
+  /* Margin Y-axis */
+  .print\:my-0 { margin-top: 0 !important; margin-bottom: 0 !important; }
+  .print\:my-1 { margin-top: 4pt !important; margin-bottom: 4pt !important; }
+  .print\:my-2 { margin-top: 8pt !important; margin-bottom: 8pt !important; }
+  .print\:my-3 { margin-top: 12pt !important; margin-bottom: 12pt !important; }
+  .print\:my-4 { margin-top: 16pt !important; margin-bottom: 16pt !important; }
+  .print\:my-5 { margin-top: 20pt !important; margin-bottom: 20pt !important; }
+  .print\:my-6 { margin-top: 24pt !important; margin-bottom: 24pt !important; }
+  .print\:my-8 { margin-top: 32pt !important; margin-bottom: 32pt !important; }
+
+  /* Individual Margins */
+  .print\:mt-0 { margin-top: 0 !important; }
+  .print\:mt-1 { margin-top: 4pt !important; }
+  .print\:mt-2 { margin-top: 8pt !important; }
+  .print\:mt-3 { margin-top: 12pt !important; }
+  .print\:mt-4 { margin-top: 16pt !important; }
+  .print\:mt-5 { margin-top: 20pt !important; }
+  .print\:mt-6 { margin-top: 24pt !important; }
+  .print\:mt-8 { margin-top: 32pt !important; }
+
+  .print\:mr-0 { margin-right: 0 !important; }
+  .print\:mr-1 { margin-right: 4pt !important; }
+  .print\:mr-2 { margin-right: 8pt !important; }
+  .print\:mr-3 { margin-right: 12pt !important; }
+  .print\:mr-4 { margin-right: 16pt !important; }
+
+  .print\:mb-0 { margin-bottom: 0 !important; }
+  .print\:mb-1 { margin-bottom: 4pt !important; }
+  .print\:mb-2 { margin-bottom: 8pt !important; }
+  .print\:mb-3 { margin-bottom: 12pt !important; }
+  .print\:mb-4 { margin-bottom: 16pt !important; }
+  .print\:mb-5 { margin-bottom: 20pt !important; }
+  .print\:mb-6 { margin-bottom: 24pt !important; }
+  .print\:mb-8 { margin-bottom: 32pt !important; }
+
+  .print\:ml-0 { margin-left: 0 !important; }
+  .print\:ml-1 { margin-left: 4pt !important; }
+  .print\:ml-2 { margin-left: 8pt !important; }
+  .print\:ml-3 { margin-left: 12pt !important; }
+  .print\:ml-4 { margin-left: 16pt !important; }
+
+  /* ==========================================================================
+     Print Spacing Utilities (Padding)
+     ========================================================================== */
+  
+  .print\:p-0 { padding: 0 !important; }
+  .print\:p-px { padding: 1px !important; }
+  .print\:p-0\.5 { padding: 2pt !important; }
+  .print\:p-1 { padding: 4pt !important; }
+  .print\:p-1\.5 { padding: 6pt !important; }
+  .print\:p-2 { padding: 8pt !important; }
+  .print\:p-2\.5 { padding: 10pt !important; }
+  .print\:p-3 { padding: 12pt !important; }
+  .print\:p-3\.5 { padding: 14pt !important; }
+  .print\:p-4 { padding: 16pt !important; }
+  .print\:p-5 { padding: 20pt !important; }
+  .print\:p-6 { padding: 24pt !important; }
+  .print\:p-8 { padding: 32pt !important; }
+  /* Padding X-axis */
+  .print\:px-0 { padding-left: 0 !important; padding-right: 0 !important; }
+  .print\:px-1 { padding-left: 4pt !important; padding-right: 4pt !important; }
+  .print\:px-2 { padding-left: 8pt !important; padding-right: 8pt !important; }
+  .print\:px-3 { padding-left: 12pt !important; padding-right: 12pt !important; }
+  .print\:px-4 { padding-left: 16pt !important; padding-right: 16pt !important; }
+  .print\:px-5 { padding-left: 20pt !important; padding-right: 20pt !important; }
+  .print\:px-6 { padding-left: 24pt !important; padding-right: 24pt !important; }
+  .print\:px-8 { padding-left: 32pt !important; padding-right: 32pt !important; }
+
+  /* Padding Y-axis */
+  .print\:py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+  .print\:py-1 { padding-top: 4pt !important; padding-bottom: 4pt !important; }
+  .print\:py-2 { padding-top: 8pt !important; padding-bottom: 8pt !important; }
+  .print\:py-3 { padding-top: 12pt !important; padding-bottom: 12pt !important; }
+  .print\:py-4 { padding-top: 16pt !important; padding-bottom: 16pt !important; }
+  .print\:py-5 { padding-top: 20pt !important; padding-bottom: 20pt !important; }
+  .print\:py-6 { padding-top: 24pt !important; padding-bottom: 24pt !important; }
+  .print\:py-8 { padding-top: 32pt !important; padding-bottom: 32pt !important; }
+
+  /* Individual Paddings */
+  .print\:pt-0 { padding-top: 0 !important; }
+  .print\:pt-1 { padding-top: 4pt !important; }
+  .print\:pt-2 { padding-top: 8pt !important; }
+  .print\:pt-3 { padding-top: 12pt !important; }
+  .print\:pt-4 { padding-top: 16pt !important; }
+  .print\:pt-5 { padding-top: 20pt !important; }
+  .print\:pt-6 { padding-top: 24pt !important; }
+
+  .print\:pr-0 { padding-right: 0 !important; }
+  .print\:pr-1 { padding-right: 4pt !important; }
+  .print\:pr-2 { padding-right: 8pt !important; }
+  .print\:pr-3 { padding-right: 12pt !important; }
+  .print\:pr-4 { padding-right: 16pt !important; }
+
+  .print\:pb-0 { padding-bottom: 0 !important; }
+  .print\:pb-1 { padding-bottom: 4pt !important; }
+  .print\:pb-2 { padding-bottom: 8pt !important; }
+  .print\:pb-3 { padding-bottom: 12pt !important; }
+  .print\:pb-4 { padding-bottom: 16pt !important; }
+  .print\:pb-5 { padding-bottom: 20pt !important; }
+  .print\:pb-6 { padding-bottom: 24pt !important; }
+
+  .print\:pl-0 { padding-left: 0 !important; }
+  .print\:pl-1 { padding-left: 4pt !important; }
+  .print\:pl-2 { padding-left: 8pt !important; }
+  .print\:pl-3 { padding-left: 12pt !important; }
+  .print\:pl-4 { padding-left: 16pt !important; }
+
+  /* ==========================================================================
+     Print Width Utilities
+     ========================================================================== */
+  
+  .print\:w-0 { width: 0 !important; }
+  .print\:w-px { width: 1px !important; }
+  .print\:w-0\.5 { width: 2pt !important; }
+  .print\:w-1 { width: 4pt !important; }
+  .print\:w-1\.5 { width: 6pt !important; }
+  .print\:w-2 { width: 8pt !important; }
+  .print\:w-2\.5 { width: 10pt !important; }
+  .print\:w-3 { width: 12pt !important; }
+  .print\:w-3\.5 { width: 14pt !important; }
+  .print\:w-4 { width: 16pt !important; }
+  .print\:w-5 { width: 20pt !important; }
+  .print\:w-6 { width: 24pt !important; }
+  .print\:w-7 { width: 28pt !important; }
+  .print\:w-8 { width: 32pt !important; }
+  .print\:w-9 { width: 36pt !important; }
+  .print\:w-10 { width: 40pt !important; }
+  .print\:w-11 { width: 44pt !important; }
+  .print\:w-12 { width: 48pt !important; }
+  /* Fractional Widths */
+  .print\:w-1\/2 { width: 50% !important; }
+  .print\:w-1\/3 { width: 33.333333% !important; }
+  .print\:w-2\/3 { width: 66.666667% !important; }
+  .print\:w-1\/4 { width: 25% !important; }
+  .print\:w-2\/4 { width: 50% !important; }
+  .print\:w-3\/4 { width: 75% !important; }
+  .print\:w-1\/5 { width: 20% !important; }
+  .print\:w-2\/5 { width: 40% !important; }
+  .print\:w-3\/5 { width: 60% !important; }
+  .print\:w-4\/5 { width: 80% !important; }
+  .print\:w-1\/6 { width: 16.666667% !important; }
+  .print\:w-2\/6 { width: 33.333333% !important; }
+  .print\:w-3\/6 { width: 50% !important; }
+  .print\:w-4\/6 { width: 66.666667% !important; }
+  .print\:w-5\/6 { width: 83.333333% !important; }
+  .print\:w-1\/12 { width: 8.333333% !important; }
+  .print\:w-2\/12 { width: 16.666667% !important; }
+  .print\:w-3\/12 { width: 25% !important; }
+  .print\:w-4\/12 { width: 33.333333% !important; }
+  .print\:w-5\/12 { width: 41.666667% !important; }
+  .print\:w-6\/12 { width: 50% !important; }
+  .print\:w-7\/12 { width: 58.333333% !important; }
+  .print\:w-8\/12 { width: 66.666667% !important; }
+  .print\:w-9\/12 { width: 75% !important; }
+  .print\:w-10\/12 { width: 83.333333% !important; }
+  .print\:w-11\/12 { width: 91.666667% !important; }
+  .print\:w-full { width: 100% !important; }
+  .print\:w-screen { width: 100vw !important; }
+  .print\:w-min { width: min-content !important; }
+  .print\:w-max { width: max-content !important; }
+  .print\:w-fit { width: fit-content !important; }
+  .print\:w-auto { width: auto !important; }
+
+  /* ==========================================================================
+     Print Height Utilities
+     ========================================================================== */
+  
+  .print\:h-0 { height: 0 !important; }
+  .print\:h-px { height: 1px !important; }
+  .print\:h-0\.5 { height: 2pt !important; }
+  .print\:h-1 { height: 4pt !important; }
+  .print\:h-1\.5 { height: 6pt !important; }
+  .print\:h-2 { height: 8pt !important; }
+  .print\:h-2\.5 { height: 10pt !important; }
+  .print\:h-3 { height: 12pt !important; }
+  .print\:h-3\.5 { height: 14pt !important; }
+  .print\:h-4 { height: 16pt !important; }
+  .print\:h-5 { height: 20pt !important; }
+  .print\:h-6 { height: 24pt !important; }
+  .print\:h-7 { height: 28pt !important; }
+  .print\:h-8 { height: 32pt !important; }
+  .print\:h-9 { height: 36pt !important; }
+  .print\:h-10 { height: 40pt !important; }
+  .print\:h-11 { height: 44pt !important; }
+  .print\:h-12 { height: 48pt !important; }
+  .print\:h-14 { height: 56pt !important; }
+  .print\:h-16 { height: 64pt !important; }
+  .print\:h-20 { height: 80pt !important; }
+  .print\:h-24 { height: 96pt !important; }
+  .print\:h-28 { height: 112pt !important; }
+  .print\:h-32 { height: 128pt !important; }
+  .print\:h-36 { height: 144pt !important; }
+  .print\:h-40 { height: 160pt !important; }
+  .print\:h-44 { height: 176pt !important; }
+  .print\:h-48 { height: 192pt !important; }
+  .print\:h-52 { height: 208pt !important; }
+  .print\:h-56 { height: 224pt !important; }
+  .print\:h-60 { height: 240pt !important; }
+  .print\:h-64 { height: 256pt !important; }
+  .print\:h-72 { height: 288pt !important; }
+  .print\:h-80 { height: 320pt !important; }
+  .print\:h-96 { height: 384pt !important; }
+  .print\:h-auto { height: auto !important; }
+  .print\:h-1\/2 { height: 50% !important; }
+  .print\:h-1\/3 { height: 33.333333% !important; }
+  .print\:h-2\/3 { height: 66.666667% !important; }
+  .print\:h-1\/4 { height: 25% !important; }
+  .print\:h-2\/4 { height: 50% !important; }
+  .print\:h-3\/4 { height: 75% !important; }
+  .print\:h-1\/5 { height: 20% !important; }
+  .print\:h-2\/5 { height: 40% !important; }
+  .print\:h-3\/5 { height: 60% !important; }
+  .print\:h-4\/5 { height: 80% !important; }
+  .print\:h-1\/6 { height: 16.666667% !important; }
+  .print\:h-2\/6 { height: 33.333333% !important; }
+  .print\:h-3\/6 { height: 50% !important; }
+  .print\:h-4\/6 { height: 66.666667% !important; }
+  .print\:h-5\/6 { height: 83.333333% !important; }
+  .print\:h-full { height: 100% !important; }
+  .print\:h-screen { height: 100vh !important; }
+  .print\:h-min { height: min-content !important; }
+  .print\:h-max { height: max-content !important; }
+  .print\:h-fit { height: fit-content !important; }
+  /* ==========================================================================
+     Print Typography Utilities
+     ========================================================================== */
+  
+  .print\:text-xs { font-size: 8pt !important; line-height: 1.2 !important; }
+  .print\:text-sm { font-size: 9pt !important; line-height: 1.25 !important; }
+  .print\:text-base { font-size: 10pt !important; line-height: 1.3 !important; }
+  .print\:text-lg { font-size: 11pt !important; line-height: 1.35 !important; }
+  .print\:text-xl { font-size: 12pt !important; line-height: 1.4 !important; }
+  .print\:text-2xl { font-size: 14pt !important; line-height: 1.4 !important; }
+  .print\:text-3xl { font-size: 16pt !important; line-height: 1.4 !important; }
+  .print\:text-4xl { font-size: 18pt !important; line-height: 1.4 !important; }
+  .print\:text-5xl { font-size: 20pt !important; line-height: 1.4 !important; }
+  .print\:text-6xl { font-size: 24pt !important; line-height: 1.4 !important; }
+  .print\:text-7xl { font-size: 28pt !important; line-height: 1.4 !important; }
+  .print\:text-8xl { font-size: 32pt !important; line-height: 1.4 !important; }
+  .print\:text-9xl { font-size: 36pt !important; line-height: 1.4 !important; }
+
+  /* Font Weight */
+  .print\:font-thin { font-weight: 100 !important; }
+  .print\:font-extralight { font-weight: 200 !important; }
+  .print\:font-light { font-weight: 300 !important; }
+  .print\:font-normal { font-weight: 400 !important; }
+  .print\:font-medium { font-weight: 500 !important; }
+  .print\:font-semibold { font-weight: 600 !important; }
+  .print\:font-bold { font-weight: 700 !important; }
+  .print\:font-extrabold { font-weight: 800 !important; }
+  .print\:font-black { font-weight: 900 !important; }
+
+  /* Text Alignment */
+  .print\:text-left { text-align: left !important; }
+  .print\:text-center { text-align: center !important; }
+  .print\:text-right { text-align: right !important; }
+  .print\:text-justify { text-align: justify !important; }
+  .print\:text-start { text-align: start !important; }
+  .print\:text-end { text-align: end !important; }
+
+  /* Text Transform */
+  .print\:uppercase { text-transform: uppercase !important; }
+  .print\:lowercase { text-transform: lowercase !important; }
+  .print\:capitalize { text-transform: capitalize !important; }
+  .print\:normal-case { text-transform: none !important; }
+
+  /* Text Decoration */
+  .print\:underline { text-decoration-line: underline !important; }
+  .print\:overline { text-decoration-line: overline !important; }
+  .print\:line-through { text-decoration-line: line-through !important; }
+  .print\:no-underline { text-decoration-line: none !important; }
+
+  /* ==========================================================================
+     Print Color Utilities
+     ========================================================================== */
+  
+  /* Text Colors */
+  .print\:text-transparent { color: transparent !important; }
+  .print\:text-current { color: currentColor !important; }
+  .print\:text-black { color: #000 !important; }
+  .print\:text-white { color: #fff !important; }
+  .print\:text-gray-50 { color: #f9fafb !important; }
+  .print\:text-gray-100 { color: #f3f4f6 !important; }
+  .print\:text-gray-200 { color: #e5e7eb !important; }
+  .print\:text-gray-300 { color: #d1d5db !important; }
+  .print\:text-gray-400 { color: #9ca3af !important; }
+  .print\:text-gray-500 { color: #6b7280 !important; }
+  .print\:text-gray-600 { color: #4b5563 !important; }
+  .print\:text-gray-700 { color: #374151 !important; }
+  .print\:text-gray-800 { color: #1f2937 !important; }
+  .print\:text-gray-900 { color: #111827 !important; }
+
+  /* Background Colors */
+  .print\:bg-transparent { background-color: transparent !important; }
+  .print\:bg-current { background-color: currentColor !important; }
+  .print\:bg-black { background-color: #000 !important; }
+  .print\:bg-white { background-color: #fff !important; }
+  .print\:bg-gray-50 { background-color: #f9fafb !important; }
+  .print\:bg-gray-100 { background-color: #f3f4f6 !important; }
+  .print\:bg-gray-200 { background-color: #e5e7eb !important; }
+  .print\:bg-gray-300 { background-color: #d1d5db !important; }
+  .print\:bg-gray-400 { background-color: #9ca3af !important; }
+  .print\:bg-gray-500 { background-color: #6b7280 !important; }
+  .print\:bg-gray-600 { background-color: #4b5563 !important; }
+  .print\:bg-gray-700 { background-color: #374151 !important; }
+  .print\:bg-gray-800 { background-color: #1f2937 !important; }
+  .print\:bg-gray-900 { background-color: #111827 !important; }
+  /* ==========================================================================
+     Print Border Utilities
+     ========================================================================== */
+  
+  /* Border Width */
+  .print\:border-0 { border-width: 0 !important; }
+  .print\:border-2 { border-width: 2px !important; }
+  .print\:border-4 { border-width: 4px !important; }
+  .print\:border-8 { border-width: 8px !important; }
+  .print\:border { border-width: 1px !important; }
+  .print\:border-x { border-left-width: 1px !important; border-right-width: 1px !important; }
+  .print\:border-y { border-top-width: 1px !important; border-bottom-width: 1px !important; }
+  .print\:border-t { border-top-width: 1px !important; }
+  .print\:border-r { border-right-width: 1px !important; }
+  .print\:border-b { border-bottom-width: 1px !important; }
+  .print\:border-l { border-left-width: 1px !important; }
+
+  /* Border Colors */
+  .print\:border-transparent { border-color: transparent !important; }
+  .print\:border-current { border-color: currentColor !important; }
+  .print\:border-black { border-color: #000 !important; }
+  .print\:border-white { border-color: #fff !important; }
+  .print\:border-gray-100 { border-color: #f3f4f6 !important; }
+  .print\:border-gray-200 { border-color: #e5e7eb !important; }
+  .print\:border-gray-300 { border-color: #d1d5db !important; }
+  .print\:border-gray-400 { border-color: #9ca3af !important; }
+  .print\:border-gray-500 { border-color: #6b7280 !important; }
+  .print\:border-gray-600 { border-color: #4b5563 !important; }
+  .print\:border-gray-700 { border-color: #374151 !important; }
+  .print\:border-gray-800 { border-color: #1f2937 !important; }
+  .print\:border-gray-900 { border-color: #111827 !important; }
+
+  /* Border Style */
+  .print\:border-solid { border-style: solid !important; }
+  .print\:border-dashed { border-style: dashed !important; }
+  .print\:border-dotted { border-style: dotted !important; }
+  .print\:border-double { border-style: double !important; }
+  .print\:border-hidden { border-style: hidden !important; }
+  .print\:border-none { border-style: none !important; }
+
+  /* ==========================================================================
+     Print Page Break Utilities
+     ========================================================================== */
+  
+  /* Page Break Before */
+  .print\:break-before-auto { page-break-before: auto !important; }
+  .print\:break-before-avoid { page-break-before: avoid !important; }
+  .print\:break-before-all { page-break-before: always !important; }
+  .print\:break-before-avoid-page { page-break-before: avoid !important; }
+  .print\:break-before-page { page-break-before: always !important; }
+  .print\:break-before-left { page-break-before: left !important; }
+  .print\:break-before-right { page-break-before: right !important; }
+
+  /* Page Break After */
+  .print\:break-after-auto { page-break-after: auto !important; }
+  .print\:break-after-avoid { page-break-after: avoid !important; }
+  .print\:break-after-all { page-break-after: always !important; }
+  .print\:break-after-avoid-page { page-break-after: avoid !important; }
+  .print\:break-after-page { page-break-after: always !important; }
+  .print\:break-after-left { page-break-after: left !important; }
+  .print\:break-after-right { page-break-after: right !important; }
+
+  /* Page Break Inside */
+  .print\:break-inside-auto { page-break-inside: auto !important; }
+  .print\:break-inside-avoid { page-break-inside: avoid !important; }
+  .print\:break-inside-avoid-page { page-break-inside: avoid !important; }
+
+  /* ==========================================================================
+     Print Flexbox Utilities
+     ========================================================================== */
+  
+  /* Flex Direction */
+  .print\:flex-row { flex-direction: row !important; }
+  .print\:flex-row-reverse { flex-direction: row-reverse !important; }
+  .print\:flex-col { flex-direction: column !important; }
+  .print\:flex-col-reverse { flex-direction: column-reverse !important; }
+
+  /* Flex Wrap */
+  .print\:flex-wrap { flex-wrap: wrap !important; }
+  .print\:flex-wrap-reverse { flex-wrap: wrap-reverse !important; }
+  .print\:flex-nowrap { flex-wrap: nowrap !important; }
+
+  /* Flex */
+  .print\:flex-1 { flex: 1 1 0% !important; }
+  .print\:flex-auto { flex: 1 1 auto !important; }
+  .print\:flex-initial { flex: 0 1 auto !important; }
+  .print\:flex-none { flex: none !important; }
+
+  /* Flex Grow */
+  .print\:grow { flex-grow: 1 !important; }
+  .print\:grow-0 { flex-grow: 0 !important; }
+
+  /* Flex Shrink */
+  .print\:shrink { flex-shrink: 1 !important; }
+  .print\:shrink-0 { flex-shrink: 0 !important; }
+
+  /* Justify Content */
+  .print\:justify-start { justify-content: flex-start !important; }
+  .print\:justify-end { justify-content: flex-end !important; }
+  .print\:justify-center { justify-content: center !important; }
+  .print\:justify-between { justify-content: space-between !important; }
+  .print\:justify-around { justify-content: space-around !important; }
+  .print\:justify-evenly { justify-content: space-evenly !important; }
+
+  /* Align Items */
+  .print\:items-start { align-items: flex-start !important; }
+  .print\:items-end { align-items: flex-end !important; }
+  .print\:items-center { align-items: center !important; }
+  .print\:items-baseline { align-items: baseline !important; }
+  .print\:items-stretch { align-items: stretch !important; }
+
+  /* Align Content */
+  .print\:content-center { align-content: center !important; }
+  .print\:content-start { align-content: flex-start !important; }
+  .print\:content-end { align-content: flex-end !important; }
+  .print\:content-between { align-content: space-between !important; }
+  .print\:content-around { align-content: space-around !important; }
+  .print\:content-evenly { align-content: space-evenly !important; }
+  /* ==========================================================================
+     Print Grid Utilities
+     ========================================================================== */
+  
+  /* Grid Template Columns */
+  .print\:grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-7 { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-8 { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-9 { grid-template-columns: repeat(9, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-10 { grid-template-columns: repeat(10, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-11 { grid-template-columns: repeat(11, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+  .print\:grid-cols-none { grid-template-columns: none !important; }
+
+  /* Grid Column Span */
+  .print\:col-auto { grid-column: auto !important; }
+  .print\:col-span-1 { grid-column: span 1 / span 1 !important; }
+  .print\:col-span-2 { grid-column: span 2 / span 2 !important; }
+  .print\:col-span-3 { grid-column: span 3 / span 3 !important; }
+  .print\:col-span-4 { grid-column: span 4 / span 4 !important; }
+  .print\:col-span-5 { grid-column: span 5 / span 5 !important; }
+  .print\:col-span-6 { grid-column: span 6 / span 6 !important; }
+  .print\:col-span-7 { grid-column: span 7 / span 7 !important; }
+  .print\:col-span-8 { grid-column: span 8 / span 8 !important; }
+  .print\:col-span-9 { grid-column: span 9 / span 9 !important; }
+  .print\:col-span-10 { grid-column: span 10 / span 10 !important; }
+  .print\:col-span-11 { grid-column: span 11 / span 11 !important; }
+  .print\:col-span-12 { grid-column: span 12 / span 12 !important; }
+  .print\:col-span-full { grid-column: 1 / -1 !important; }
+
+  /* Grid Template Rows */
+  .print\:grid-rows-1 { grid-template-rows: repeat(1, minmax(0, 1fr)) !important; }
+  .print\:grid-rows-2 { grid-template-rows: repeat(2, minmax(0, 1fr)) !important; }
+  .print\:grid-rows-3 { grid-template-rows: repeat(3, minmax(0, 1fr)) !important; }
+  .print\:grid-rows-4 { grid-template-rows: repeat(4, minmax(0, 1fr)) !important; }
+  .print\:grid-rows-5 { grid-template-rows: repeat(5, minmax(0, 1fr)) !important; }
+  .print\:grid-rows-6 { grid-template-rows: repeat(6, minmax(0, 1fr)) !important; }
+  .print\:grid-rows-none { grid-template-rows: none !important; }
+
+  /* Grid Row Span */
+  .print\:row-auto { grid-row: auto !important; }
+  .print\:row-span-1 { grid-row: span 1 / span 1 !important; }
+  .print\:row-span-2 { grid-row: span 2 / span 2 !important; }
+  .print\:row-span-3 { grid-row: span 3 / span 3 !important; }
+  .print\:row-span-4 { grid-row: span 4 / span 4 !important; }
+  .print\:row-span-5 { grid-row: span 5 / span 5 !important; }
+  .print\:row-span-6 { grid-row: span 6 / span 6 !important; }
+  .print\:row-span-full { grid-row: 1 / -1 !important; }
+
+  /* Gap */
+  .print\:gap-0 { gap: 0 !important; }
+  .print\:gap-px { gap: 1px !important; }
+  .print\:gap-0\.5 { gap: 2pt !important; }
+  .print\:gap-1 { gap: 4pt !important; }
+  .print\:gap-1\.5 { gap: 6pt !important; }
+  .print\:gap-2 { gap: 8pt !important; }
+  .print\:gap-2\.5 { gap: 10pt !important; }
+  .print\:gap-3 { gap: 12pt !important; }
+  .print\:gap-3\.5 { gap: 14pt !important; }
+  .print\:gap-4 { gap: 16pt !important; }
+  .print\:gap-5 { gap: 20pt !important; }
+  .print\:gap-6 { gap: 24pt !important; }
+  .print\:gap-7 { gap: 28pt !important; }
+  .print\:gap-8 { gap: 32pt !important; }
+
+  /* Gap X */
+  .print\:gap-x-0 { column-gap: 0 !important; }
+  .print\:gap-x-px { column-gap: 1px !important; }
+  .print\:gap-x-0\.5 { column-gap: 2pt !important; }
+  .print\:gap-x-1 { column-gap: 4pt !important; }
+  .print\:gap-x-1\.5 { column-gap: 6pt !important; }
+  .print\:gap-x-2 { column-gap: 8pt !important; }
+  .print\:gap-x-2\.5 { column-gap: 10pt !important; }
+  .print\:gap-x-3 { column-gap: 12pt !important; }
+  .print\:gap-x-3\.5 { column-gap: 14pt !important; }
+  .print\:gap-x-4 { column-gap: 16pt !important; }
+  .print\:gap-x-5 { column-gap: 20pt !important; }
+  .print\:gap-x-6 { column-gap: 24pt !important; }
+  .print\:gap-x-8 { column-gap: 32pt !important; }
+
+  /* Gap Y */
+  .print\:gap-y-0 { row-gap: 0 !important; }
+  .print\:gap-y-px { row-gap: 1px !important; }
+  .print\:gap-y-0\.5 { row-gap: 2pt !important; }
+  .print\:gap-y-1 { row-gap: 4pt !important; }
+  .print\:gap-y-1\.5 { row-gap: 6pt !important; }
+  .print\:gap-y-2 { row-gap: 8pt !important; }
+  .print\:gap-y-2\.5 { row-gap: 10pt !important; }
+  .print\:gap-y-3 { row-gap: 12pt !important; }
+  .print\:gap-y-3\.5 { row-gap: 14pt !important; }
+  .print\:gap-y-4 { row-gap: 16pt !important; }
+  .print\:gap-y-5 { row-gap: 20pt !important; }
+  .print\:gap-y-6 { row-gap: 24pt !important; }
+  .print\:gap-y-8 { row-gap: 32pt !important; }
+
+  /* ==========================================================================
+     Print Responsive Utilities for Different Paper Sizes
+     ========================================================================== */
+  
+  /* A4 Portrait Specific (210mm x 297mm) */
+  .print\:a4\:text-xs { font-size: 7pt !important; }
+  .print\:a4\:text-sm { font-size: 8pt !important; }
+  .print\:a4\:text-base { font-size: 9pt !important; }
+  .print\:a4\:p-1 { padding: 3pt !important; }
+  .print\:a4\:p-2 { padding: 6pt !important; }
+  .print\:a4\:m-1 { margin: 3pt !important; }
+  .print\:a4\:m-2 { margin: 6pt !important; }
+
+  /* Letter Portrait Specific (8.5" x 11") */
+  .print\:letter\:text-xs { font-size: 7pt !important; }
+  .print\:letter\:text-sm { font-size: 8pt !important; }
+  .print\:letter\:text-base { font-size: 9pt !important; }
+  .print\:letter\:p-1 { padding: 3pt !important; }
+  .print\:letter\:p-2 { padding: 6pt !important; }
+  .print\:letter\:m-1 { margin: 3pt !important; }
+  .print\:letter\:m-2 { margin: 6pt !important; }
+
+  /* Landscape Orientation Specific */
+  .print\:landscape\:flex { display: flex !important; }
+  .print\:landscape\:grid { display: grid !important; }
+  .print\:landscape\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .print\:landscape\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .print\:landscape\:w-1\/2 { width: 50% !important; }
+  .print\:landscape\:w-1\/3 { width: 33.333333% !important; }
+  .print\:landscape\:w-2\/3 { width: 66.666667% !important; }
+
+} /* End @media print */

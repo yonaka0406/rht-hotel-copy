@@ -1,6 +1,6 @@
 <template>
     <div
-        class="min-h-[4rem] bg-red-600 dark:bg-red-900 text-white dark:text-gray-200 p-4 flex flex-wrap shadow-md gap-4">
+        class="min-h-[4rem] bg-red-600 dark:bg-red-900 text-white dark:text-gray-200 p-4 flex flex-wrap shadow-md gap-4 reporting-top-menu no-print">
         <!-- Header and Filters Row -->
         <div class="flex flex-wrap gap-x-4 gap-y-2">
             <div class="flex gap-x-4 gap-y-2 flex-wrap">

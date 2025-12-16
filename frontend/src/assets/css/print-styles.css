@@ -1,0 +1,841 @@
+/**
+ * Comprehensive Print CSS Styles
+ * Optimized for ReportingSingleMonthAllHotels component and general print usage
+ * Includes Tailwind print utilities, chart optimizations, and responsive layouts
+ */
+
+/* ==========================================================================
+   Print Media Query - All print styles contained within
+   ========================================================================== */
+
+@media print {
+  
+  /* ==========================================================================
+     Page Setup and Global Print Configuration
+     ========================================================================== */
+  
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm 20mm 15mm;
+    
+    @top-center {
+      content: "Monthly Report - " attr(data-report-title);
+      font-size: 10pt;
+      color: #666;
+    }
+    
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9pt;
+      color: #666;
+    }
+  }
+  
+  @page :first {
+    @top-center {
+      content: none;
+    }
+  }
+  
+  /* Alternative page sizes */
+  @page letter {
+    size: Letter portrait;
+    margin: 0.75in 0.5in 0.75in 0.5in;
+  }
+  
+  @page landscape {
+    size: A4 landscape;
+    margin: 15mm 20mm 15mm 20mm;
+  }
+  
+  /* ==========================================================================
+     Global Print Reset and Base Styles
+     ========================================================================== */
+  
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+    color: #000 !important;
+    background: #fff !important;
+    font-family: Arial, sans-serif !important;
+  }
+  
+  /* ==========================================================================
+     Element Visibility - Hide/Show for Print
+     ========================================================================== */
+  
+  /* Elements to hide during print */
+  .no-print,
+  .print-hidden,
+  nav:not(.print-keep),
+  .navigation:not(.print-keep),
+  .sidebar:not(.print-keep),
+  .header-actions:not(.print-keep),
+  .footer:not(.print-keep),
+  .reporting-top-menu,
+  .report-filters,
+  .report-navigation,
+  button:not(.print-keep),
+  .p-button:not(.print-keep),
+  .p-selectbutton:not(.print-keep),
+  .p-toolbar:not(.print-keep),
+  .p-menubar:not(.print-keep),
+  .p-tabmenu:not(.print-keep),
+  .scroll-indicator,
+  .tooltip,
+  .p-tooltip,
+  .dropdown-menu,
+  .p-dropdown-panel,
+  .modal-backdrop,
+  .p-dialog-mask,
+  .p-overlay,
+  .interactive-only,
+  .screen-only {
+    display: none !important;
+  }
+  
+  /* Specific reporting interface elements to hide */
+  .reporting-top-menu,
+  .reporting-top-menu *,
+  .report-filters,
+  .report-filters *,
+  .report-navigation,
+  .report-navigation * {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Elements to show only during print */
+  .print-only,
+  .print-show {
+    display: block !important;
+  }
+  
+  .print-inline {
+    display: inline !important;
+  }
+  
+  .print-flex {
+    display: flex !important;
+  }
+  
+  /* ==========================================================================
+     Typography and Text Optimization
+     ========================================================================== */
+  
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid !important;
+    margin-top: 0 !important;
+    font-weight: bold !important;
+    color: #000 !important;
+    orphans: 3;
+    widows: 3;
+  }
+  
+  h1 { 
+    font-size: 18pt !important; 
+    margin-bottom: 12pt !important; 
+    page-break-before: auto;
+  }
+  
+  h2 { 
+    font-size: 16pt !important; 
+    margin-bottom: 10pt !important; 
+  }
+  
+  h3 { 
+    font-size: 14pt !important; 
+    margin-bottom: 8pt !important; 
+  }
+  
+  h4 { 
+    font-size: 12pt !important; 
+    margin-bottom: 6pt !important; 
+  }
+  
+  h5 { 
+    font-size: 11pt !important; 
+    margin-bottom: 4pt !important; 
+  }
+  
+  h6 { 
+    font-size: 10pt !important; 
+    margin-bottom: 4pt !important; 
+  }
+  
+  p {
+    margin: 0 0 6pt 0 !important;
+    orphans: 3;
+    widows: 3;
+    font-size: 10pt !important;
+  }
+  
+  /* Links */
+  a {
+    color: #000 !important;
+    text-decoration: underline !important;
+  }
+  
+  a[href]:after {
+    content: " (" attr(href) ")" !important;
+    font-size: 8pt !important;
+    color: #666 !important;
+  }
+  
+  /* Suppress URL printing for internal links */
+  a[href^="#"]:after,
+  a[href^="/"]:after,
+  a.no-print-url:after {
+    content: "" !important;
+  }
+  
+  /* ==========================================================================
+     Layout and Container Optimization
+     ========================================================================== */
+  
+  .print-container,
+  .container,
+  .main-content,
+  .report-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    float: none !important;
+  }
+  
+  /* Flexbox to block for print */
+  .flex,
+  .d-flex,
+  .p-d-flex {
+    display: block !important;
+  }
+  
+  /* Grid to block for print */
+  .grid,
+  .p-grid,
+  .p-d-grid {
+    display: block !important;
+  }
+  
+  /* Column stacking */
+  .col,
+  .p-col,
+  [class*="col-"],
+  [class*="p-col-"] {
+    width: 100% !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 0 12pt 0 !important;
+  }
+  
+  /* ==========================================================================
+     Card and Panel Styles for Print
+     ========================================================================== */
+  
+  .p-card,
+  .card {
+    border: 1px solid #ddd !important;
+    margin-bottom: 12pt !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+  
+  .p-card-header,
+  .card-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #ddd !important;
+    padding: 8pt !important;
+    font-weight: bold !important;
+    font-size: 11pt !important;
+  }
+  
+  .p-card-content,
+  .p-card-body,
+  .card-body {
+    padding: 8pt !important;
+  }
+  
+  .p-card-title {
+    font-size: 12pt !important;
+    font-weight: bold !important;
+    margin-bottom: 6pt !important;
+  }
+  
+  .p-panel {
+    border: 1px solid #ddd !important;
+    margin-bottom: 12pt !important;
+    page-break-inside: avoid;
+    background: #fff !important;
+  }
+  
+  .p-panel-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #ddd !important;
+    padding: 8pt !important;
+    font-weight: bold !important;
+    font-size: 11pt !important;
+  }
+  
+  .p-panel-content {
+    padding: 8pt !important;
+  }
+  
+  /* ==========================================================================
+     Chart-Specific Print Styles
+     ========================================================================== */
+  
+  .chart-container,
+  .echarts-container,
+  .chart-print-optimized,
+  [class*="chart"] {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 12pt !important;
+    border: 1px solid #ddd !important;
+    padding: 8pt !important;
+  }
+  
+  /* ECharts canvas optimization */
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  
+  /* Chart titles and legends */
+  .chart-title {
+    font-size: 12pt !important;
+    font-weight: bold !important;
+    margin-bottom: 6pt !important;
+    color: #000 !important;
+    text-align: center !important;
+  }
+  
+  .chart-legend {
+    font-size: 9pt !important;
+    margin-top: 6pt !important;
+    text-align: center !important;
+  }
+  
+  /* Specific chart components for ReportingSingleMonthAllHotels */
+  .revenue-chart-container {
+    page-break-inside: avoid !important;
+    margin-bottom: 15pt !important;
+  }
+  
+  .occupancy-gauge-container {
+    page-break-inside: avoid !important;
+    margin-bottom: 12pt !important;
+  }
+  
+  .hotel-comparison-chart {
+    page-break-inside: avoid !important;
+    margin-bottom: 15pt !important;
+  }
+  
+  /* ==========================================================================
+     Table Styles for Print
+     ========================================================================== */
+  
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    margin-bottom: 12pt !important;
+    font-size: 9pt !important;
+  }
+  
+  th, td {
+    border: 1px solid #000 !important;
+    padding: 4pt 6pt !important;
+    text-align: left !important;
+    vertical-align: top !important;
+  }
+  
+  th {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+    page-break-after: avoid !important;
+    font-size: 9pt !important;
+  }
+  
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+  
+  thead {
+    display: table-header-group !important;
+    page-break-after: avoid !important;
+  }
+  
+  tfoot {
+    display: table-footer-group !important;
+    page-break-before: avoid !important;
+  }
+  
+  tbody {
+    display: table-row-group !important;
+  }
+  
+  /* PrimeVue DataTable specific styles */
+  .p-datatable {
+    font-size: 9pt !important;
+  }
+  
+  .p-datatable .p-datatable-thead > tr > th {
+    background-color: #f0f0f0 !important;
+    border: 1px solid #000 !important;
+    padding: 4pt 6pt !important;
+    font-size: 9pt !important;
+  }
+  
+  .p-datatable .p-datatable-tbody > tr > td {
+    border: 1px solid #000 !important;
+    padding: 4pt 6pt !important;
+    font-size: 9pt !important;
+  }
+  
+  .p-datatable .p-datatable-footer {
+    background-color: #f8f9fa !important;
+    border: 1px solid #000 !important;
+    padding: 4pt 6pt !important;
+  }
+  
+  /* ==========================================================================
+     Page Break Control
+     ========================================================================== */
+  
+  /* Force page breaks */
+  .page-break-before,
+  .print-page-break-before {
+    page-break-before: always !important;
+  }
+  
+  .page-break-after,
+  .print-page-break-after {
+    page-break-after: always !important;
+  }
+  
+  /* Avoid page breaks */
+  .no-page-break,
+  .print-no-break,
+  .avoid-page-break {
+    page-break-inside: avoid !important;
+  }
+  
+  /* Auto page breaks */
+  .page-break-auto {
+    page-break-inside: auto !important;
+  }
+  
+  /* Specific component page break rules */
+  .monthly-summary-section {
+    page-break-inside: avoid !important;
+    margin-bottom: 15pt !important;
+  }
+  
+  .kpi-section {
+    page-break-inside: avoid !important;
+    margin-bottom: 12pt !important;
+  }
+  
+  .future-outlook-section {
+    page-break-before: auto !important;
+    page-break-inside: auto !important;
+    margin-bottom: 15pt !important;
+  }
+  
+  .hotel-overview-section {
+    page-break-before: auto !important;
+    page-break-inside: auto !important;
+  }
+  
+  /* ==========================================================================
+     Tailwind Print Utility Classes
+     ========================================================================== */
+  
+  /* Print-specific display utilities */
+  .print\:block { display: block !important; }
+  .print\:inline { display: inline !important; }
+  .print\:inline-block { display: inline-block !important; }
+  .print\:flex { display: flex !important; }
+  .print\:hidden { display: none !important; }
+  
+  /* Print-specific spacing utilities */
+  .print\:m-0 { margin: 0 !important; }
+  .print\:m-1 { margin: 4pt !important; }
+  .print\:m-2 { margin: 8pt !important; }
+  .print\:m-3 { margin: 12pt !important; }
+  .print\:m-4 { margin: 16pt !important; }
+  
+  .print\:p-0 { padding: 0 !important; }
+  .print\:p-1 { padding: 4pt !important; }
+  .print\:p-2 { padding: 8pt !important; }
+  .print\:p-3 { padding: 12pt !important; }
+  .print\:p-4 { padding: 16pt !important; }
+  
+  /* Print-specific width utilities */
+  .print\:w-full { width: 100% !important; }
+  .print\:w-1\/2 { width: 50% !important; }
+  .print\:w-1\/3 { width: 33.333333% !important; }
+  .print\:w-2\/3 { width: 66.666667% !important; }
+  .print\:w-1\/4 { width: 25% !important; }
+  .print\:w-3\/4 { width: 75% !important; }
+  
+  /* Print-specific text utilities */
+  .print\:text-xs { font-size: 8pt !important; }
+  .print\:text-sm { font-size: 9pt !important; }
+  .print\:text-base { font-size: 10pt !important; }
+  .print\:text-lg { font-size: 11pt !important; }
+  .print\:text-xl { font-size: 12pt !important; }
+  .print\:text-2xl { font-size: 14pt !important; }
+  .print\:text-3xl { font-size: 16pt !important; }
+  
+  .print\:text-left { text-align: left !important; }
+  .print\:text-center { text-align: center !important; }
+  .print\:text-right { text-align: right !important; }
+  
+  .print\:font-normal { font-weight: normal !important; }
+  .print\:font-bold { font-weight: bold !important; }
+  
+  /* Print-specific color utilities */
+  .print\:text-black { color: #000 !important; }
+  .print\:text-gray-600 { color: #666 !important; }
+  .print\:text-gray-800 { color: #333 !important; }
+  
+  .print\:bg-white { background-color: #fff !important; }
+  .print\:bg-gray-50 { background-color: #f9f9f9 !important; }
+  .print\:bg-gray-100 { background-color: #f3f3f3 !important; }
+  
+  /* Print-specific border utilities */
+  .print\:border { border: 1px solid #000 !important; }
+  .print\:border-t { border-top: 1px solid #000 !important; }
+  .print\:border-b { border-bottom: 1px solid #000 !important; }
+  .print\:border-l { border-left: 1px solid #000 !important; }
+  .print\:border-r { border-right: 1px solid #000 !important; }
+  
+  .print\:border-gray-300 { border-color: #ddd !important; }
+  .print\:border-gray-400 { border-color: #ccc !important; }
+  
+  /* ==========================================================================
+     Responsive Print Layouts for Different Paper Sizes
+     ========================================================================== */
+  
+  /* A4 Portrait (default) - 210mm x 297mm */
+  @media print and (max-width: 210mm) {
+    .chart-container {
+      max-width: 180mm !important;
+    }
+    
+    .kpi-grid {
+      grid-template-columns: 1fr 1fr !important;
+    }
+    
+    .print\:a4\:text-sm { font-size: 9pt !important; }
+    .print\:a4\:p-2 { padding: 6pt !important; }
+  }
+  
+  /* Letter Portrait - 8.5" x 11" */
+  @media print and (max-width: 8.5in) {
+    .chart-container {
+      max-width: 7.5in !important;
+    }
+    
+    .print\:letter\:text-sm { font-size: 9pt !important; }
+    .print\:letter\:p-2 { padding: 6pt !important; }
+  }
+  
+  /* Landscape orientation adjustments */
+  @media print and (orientation: landscape) {
+    .chart-container {
+      max-width: 90% !important;
+      margin: 0 auto 12pt auto !important;
+    }
+    
+    .kpi-grid {
+      grid-template-columns: repeat(4, 1fr) !important;
+    }
+    
+    .print\:landscape\:flex { display: flex !important; }
+    .print\:landscape\:w-1\/2 { width: 50% !important; }
+  }
+  
+  /* ==========================================================================
+     ReportingSingleMonthAllHotels Specific Styles
+     ========================================================================== */
+  
+  /* Main report container */
+  .reporting-single-month-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Ensure first content starts at top of page */
+  .reporting-single-month-container > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Remove any potential blank space from hidden elements */
+  .reporting-single-month-container > .no-print,
+  .reporting-single-month-container > .print-hidden {
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  /* Force first visible content to start at top */
+  .reporting-single-month-container {
+    position: relative !important;
+  }
+  
+  .reporting-single-month-container > div:first-child:not(.no-print) {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Ensure SelectButton container doesn't create blank space */
+  .reporting-single-month-container > div:first-child.no-print {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+  
+  /* Make sure the graph content starts at the top */
+  .reporting-single-month-container > div:not(.no-print):first-of-type {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Monthly summary panel */
+  .monthly-summary-panel {
+    page-break-inside: avoid !important;
+    margin-bottom: 15pt !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  .monthly-summary-panel .p-panel-header {
+    background-color: #f0f0f0 !important;
+    font-size: 14pt !important;
+    font-weight: bold !important;
+    text-align: center !important;
+  }
+  
+  /* Revenue and occupancy chart layout */
+  .chart-layout-container {
+    display: block !important;
+  }
+  
+  .revenue-chart-column {
+    width: 100% !important;
+    margin-bottom: 12pt !important;
+  }
+  
+  .gauge-kpi-column {
+    width: 100% !important;
+  }
+  
+  /* KPI cards layout */
+  .kpi-cards-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8pt !important;
+    margin-top: 8pt !important;
+  }
+  
+  .kpi-card {
+    border: 1px solid #ddd !important;
+    padding: 6pt !important;
+    text-align: center !important;
+    background: #f9f9f9 !important;
+  }
+  
+  .kpi-card h6 {
+    font-size: 9pt !important;
+    margin-bottom: 3pt !important;
+    color: #666 !important;
+  }
+  
+  .kpi-card .kpi-value {
+    font-size: 14pt !important;
+    font-weight: bold !important;
+    color: #000 !important;
+  }
+  
+  .kpi-card .kpi-plan {
+    font-size: 8pt !important;
+    color: #666 !important;
+  }
+  
+  .kpi-card .kpi-difference {
+    font-size: 8pt !important;
+    font-weight: bold !important;
+  }
+  
+  /* Future outlook table */
+  .future-outlook-table {
+    page-break-inside: auto !important;
+    margin-bottom: 15pt !important;
+  }
+  
+  /* Hotel overview section */
+  .hotel-overview-card {
+    page-break-before: always !important;
+    page-break-inside: auto !important;
+    margin-bottom: 15pt !important;
+  }
+  
+  .hotel-overview-content {
+    display: block !important;
+  }
+  
+  .hotel-sales-chart {
+    width: 100% !important;
+    margin-bottom: 12pt !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .hotel-occupancy-chart {
+    width: 100% !important;
+    page-break-inside: avoid !important;
+  }
+  
+  /* Message and info boxes */
+  .p-message {
+    border: 1px solid #ddd !important;
+    padding: 6pt !important;
+    margin: 6pt 0 !important;
+    font-size: 9pt !important;
+    background: #f9f9f9 !important;
+  }
+  
+  /* ==========================================================================
+     Print Optimization Utilities
+     ========================================================================== */
+  
+  /* Force black text for better print readability */
+  .print-black-text,
+  .print-black-text * {
+    color: #000 !important;
+  }
+  
+  /* Remove shadows and effects for print */
+  .print-no-shadow {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  /* Ensure white background for print */
+  .print-white-bg {
+    background: #fff !important;
+  }
+  
+  /* Print-specific borders */
+  .print-border {
+    border: 1px solid #000 !important;
+  }
+  
+  .print-border-light {
+    border: 1px solid #ddd !important;
+  }
+  
+  /* ==========================================================================
+     Debug and Development Utilities (remove in production)
+     ========================================================================== */
+  
+  .print-debug {
+    border: 2px dashed red !important;
+    position: relative !important;
+  }
+  
+  .print-debug::before {
+    content: "DEBUG: " attr(class) !important;
+    position: absolute !important;
+    top: -15pt !important;
+    left: 0 !important;
+    font-size: 8pt !important;
+    color: red !important;
+    background: white !important;
+    padding: 2pt !important;
+  }
+  
+  /* ==========================================================================
+     Images and Media
+     ========================================================================== */
+  
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid !important;
+  }
+  
+  /* Hide decorative images */
+  img.decorative,
+  img[alt=""],
+  .background-image {
+    display: none !important;
+  }
+  
+  /* ==========================================================================
+     Accessibility and Screen Reader Support
+     ========================================================================== */
+  
+  .sr-only {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+    border: 0 !important;
+  }
+  
+} /* End @media print */
+
+/* ==========================================================================
+   Print Preview Styles (for development)
+   ========================================================================== */
+
+@media screen {
+  .print-preview {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 20px auto;
+    background: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 20mm 15mm;
+    font-family: Arial, sans-serif;
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+  
+  .print-preview * {
+    color: #000 !important;
+  }
+}

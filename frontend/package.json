@@ -20,6 +20,7 @@
     "echarts": "^6.0.0",
     "echarts-stat": "^1.2.0",
     "esbuild": "^0.25.11",
+    "lodash.clonedeep": "^4.5.0",
     "papaparse": "^5.5.3",
     "primeicons": "^7.0.0",
     "primevue": "^4.4.1",
