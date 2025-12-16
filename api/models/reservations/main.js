@@ -4103,8 +4103,8 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
       `SELECT 
          COUNT(*) FILTER (WHERE cancelled IS NULL) as active_count
        FROM reservation_details 
-       WHERE reservation_id = $1`,
-      [reservationId]
+       WHERE reservation_id = $1 AND hotel_id = $2`,
+      [reservationId, hotelId]
     );
 
     if (parseInt(statusCheck.active_count, 10) === 0) {

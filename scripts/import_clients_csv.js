@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const { parse } = require('csv-parse');
-const crypto = require('crypto');
+
 const { getPool, getDevPool, getProdPool } = require('../api/config/database'); // Adjust path as necessary
 
 const CSV_FILE_PATH = './temp/顧客マスター - 顧客.csv';

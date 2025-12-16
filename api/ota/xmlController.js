@@ -64,7 +64,8 @@ async function queueOtaXmlRequest(req, res, hotel_id, serviceName, xmlBody, curr
         });
         throw error; // Rethrow original error
     }
-} const computeBatchDateRange = (batch, dateExtractor) => {
+}
+const computeBatchDateRange = (batch, dateExtractor) => {
     if (!batch || batch.length === 0) {
         return { from: 'N/A', to: 'N/A' };
     }
