@@ -206,6 +206,7 @@ const generateFallbackContent = (chartType, error) => {
 };
 
 const generatePdfReport = async (reportType, reqBody, requestId) => {
+    const startTime = Date.now();
     logger.debug('PDF generation started', {
         requestId,
         reportType,
@@ -226,19 +227,31 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
         allHotelsRevenueChartOptions 
     } = reqBody;
     
-    // Debug: Log the actual received data
+    // Create a redacted summary of the request body for logging
+    const redactedReqBody = { ...reqBody };
+    const sensitiveKeys = ['kpiData', 'chartData', 'serializedChartConfigs', 'allHotelNames', 'allHotelsRevenueChartOptions'];
+    sensitiveKeys.forEach(key => {
+        if (redactedReqBody[key]) {
+            if (Array.isArray(redactedReqBody[key])) {
+                redactedReqBody[key] = `[Array(${redactedReqBody[key].length})]`;
+            } else if (typeof redactedReqBody[key] === 'object' && redactedReqBody[key] !== null) {
+                redactedReqBody[key] = `[Object keys: ${Object.keys(redactedReqBody[key]).join(', ')}]`;
+            } else {
+                redactedReqBody[key] = '[Redacted]';
+            }
+        }
+    });
+
+    // Debug: Log the actual received data (redacted)
     logger.debug('Received request body data', {
         requestId,
         selectedView,
         periodMaxDate,
-        allHotelNames,
-        kpiData: kpiData ? JSON.stringify(kpiData, null, 2) : null,
-        chartData: chartData ? JSON.stringify(chartData, null, 2) : null,
-        allHotelsRevenueChartOptions: allHotelsRevenueChartOptions ? 'present' : null,
         fullReqBodyKeys: Object.keys(reqBody),
-        fullReqBody: JSON.stringify(reqBody, null, 2)
+        reqBodySummary: redactedReqBody
     });
     let browser;
+    let page = null;
 
     let reportTitle = '月次サマリーレポート';
     switch (reportType) {
@@ -1202,7 +1215,7 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             ]
         });
         
-        const page = await browser.newPage();
+        page = await browser.newPage();
         
         // Set page resource limits
         await page.setViewportSize({ width: 1200, height: 800 });
@@ -1242,11 +1255,6 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             // Listen to console messages from the page
             page.on('console', msg => {
                 logger.debug(`Browser console [${msg.type()}]:`, { requestId, message: msg.text() });
-            });
-            
-            // Listen to page errors
-            page.on('pageerror', error => {
-                logger.error('Page error:', { requestId, error: error.message, stack: error.stack });
             });
             
             try {
@@ -1347,18 +1355,7 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
         });
 
         // Collect final metrics
-        const generationTime = (() => {
-            try {
-                // Handle both string and number requestIds
-                const requestIdStr = String(requestId);
-                if (requestIdStr.includes('-')) {
-                    return Date.now() - new Date(requestIdStr.split('-')[0]).getTime();
-                }
-                return Date.now(); // Fallback if no timestamp in requestId
-            } catch (error) {
-                return Date.now(); // Fallback on any error
-            }
-        })();
+        const generationTime = Date.now() - startTime;
         
         logger.info('PDF generated successfully', { 
             requestId, 
@@ -1484,18 +1481,6 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
         
         // Log final resource cleanup metrics
         const finalTime = Date.now();
-        const startTime = (() => {
-            try {
-                // Handle both string and number requestIds
-                const requestIdStr = String(requestId);
-                if (requestIdStr.includes('-')) {
-                    return new Date(requestIdStr.split('-')[0]).getTime();
-                }
-                return finalTime; // Fallback if no timestamp in requestId
-            } catch (error) {
-                return finalTime; // Fallback on any error
-            }
-        })();
         
         logger.info('PDF generation process completed', {
             requestId,
