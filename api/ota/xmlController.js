@@ -484,7 +484,7 @@ const getXMLTemplate = async (req, res) => {
         const template = await selectXMLTemplate(req.requestId, hotel_id, name);
         res.send(template);
     } catch (error) {
-        console.error('Error getting xml template:', error);
+        logger.error('Error getting xml template:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -494,7 +494,7 @@ const getRecentQueuedReservations = async (req, res) => {
         const queue = await selectOTAReservationQueue(req.requestId);
         res.json(queue);
     } catch (error) {
-        console.error('Error getting ota queue:', error);
+        logger.error('Error getting ota queue:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -503,7 +503,7 @@ const getXMLRecentResponses = async (req, res) => {
         const responses = await selectXMLRecentResponses(req.requestId);
         res.json(responses);
     } catch (error) {
-        console.error('Error getting xml responses:', error);
+        logger.error('Error getting xml responses:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -551,7 +551,7 @@ const postXMLResponse = async (req, res) => {
         const parser = new xml2js.Parser();
         parser.parseString(xml, async (err, result) => {
             if (err) {
-                console.error('Error parsing XML:', err);
+                logger.error('Error parsing XML:', err);
                 return res.status(400).json({ error: 'Invalid XML' });
             }
             // logger.debug('Parsed XML:', result);
@@ -561,13 +561,13 @@ const postXMLResponse = async (req, res) => {
                 // logger.debug('XML response added successfully', responseXml);
                 res.json({ response: 'XML response added successfully', data: responseXml });
             } catch (error) {
-                console.error('Error in submitXMLTemplate:', error);
+                logger.error('Error in submitXMLTemplate:', error);
                 res.status(500).json({ error: error.message });
             }
 
         });
     } catch (error) {
-        console.error('Error getting xml template:', error);
+        logger.error('Error getting xml template:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -659,7 +659,7 @@ const getTLRoomMaster = async (req, res) => {
         const master = await selectTLRoomMaster(req.requestId, hotel_id);
         res.send(master);
     } catch (error) {
-        console.error('Error getting TL data:', error);
+        logger.error('Error getting TL data:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -670,7 +670,7 @@ const createTLRoomMaster = async (req, res) => {
         const master = await insertTLRoomMaster(req.requestId, data);
         res.json(master);
     } catch (err) {
-        console.error('Error creating master:', err);
+        logger.error('Error creating master:', err);
         res.status(500).json({ error: 'Failed to create master' });
     }
 };
@@ -681,7 +681,7 @@ const getTLPlanMaster = async (req, res) => {
         const master = await selectTLPlanMaster(req.requestId, hotel_id);
         res.send(master);
     } catch (error) {
-        console.error('Error getting TL data:', error);
+        logger.error('Error getting TL data:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -692,7 +692,7 @@ const createTLPlanMaster = async (req, res) => {
         const master = await insertTLPlanMaster(req.requestId, data);
         res.json(master);
     } catch (err) {
-        console.error('Error creating master:', err);
+        logger.error('Error creating master:', err);
         res.status(500).json({ error: 'Failed to create master' });
     }
 };
@@ -714,13 +714,13 @@ const getOTAReservations = async (req, res) => {
 
             if (!hotels || hotels.length === 0) {
                 const errorMsg = 'No hotels found.';
-                console.error(`[${requestId}] ${errorMsg}`);
+                logger.error(`[${requestId}] ${errorMsg}`);
                 logger.warn(errorMsg);
                 return res.status(404).send({ error: errorMsg });
             }
         } catch (hotelError) {
             const errorMsg = `Error fetching hotels: ${hotelError.message}`;
-            console.error(`[${requestId}] ${errorMsg}`, { stack: hotelError.stack });
+            logger.error(`[${requestId}] ${errorMsg}`, { stack: hotelError.stack });
             logger.error('Error fetching hotels:', {
                 requestId,
                 error: hotelError.message,
@@ -754,7 +754,7 @@ const getOTAReservations = async (req, res) => {
                     logger.debug(`[${requestId}] [Hotel ${hotelId}] Successfully connected to database`);
                 } catch (connectError) {
                     const errorMsg = `Database connection error for hotel ${hotelId}: ${connectError.message}`;
-                    console.error(`[${requestId}] ${errorMsg}`, { stack: connectError.stack });
+                    logger.error(`[${requestId}] ${errorMsg}`, { stack: connectError.stack });
                     logger.error('Database connection error:', {
                         requestId,
                         hotelId,
@@ -980,7 +980,7 @@ const getOTAReservations = async (req, res) => {
                         await dbClient.release();
                     } catch (releaseError) {
                         const errorMsg = `Error releasing database client for hotel ${hotelId}: ${releaseError.message}`;
-                        console.error(`[${requestId}] ${errorMsg}`);
+                        logger.error(`[${requestId}] ${errorMsg}`);
                         logger.error('Error releasing database client:', {
                             requestId,
                             hotelId: hotel?.hotel_id || 'unknown',
@@ -996,7 +996,7 @@ const getOTAReservations = async (req, res) => {
 
     } catch (error) {
         const errorMsg = `Unexpected error in getOTAReservations: ${error.message}`;
-        console.error(`[${requestId}] ${errorMsg}`, { stack: error.stack });
+        logger.error(`[${requestId}] ${errorMsg}`, { stack: error.stack });
         logger.error('Error in getOTAReservations:', {
             requestId,
             error: error.message,
@@ -1040,7 +1040,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
 
     if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
         const errorMsg = `Invalid date provided to checkOTAStock. startDate: ${startDate}, endDate: ${endDate}`;
-        console.error(errorMsg);
+        logger.error(errorMsg);
         throw new Error(errorMsg);
     }
 
@@ -1107,7 +1107,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
 
             allResponses = allResponses.concat(transformedResponse);
         } catch (error) {
-            console.error(`Error submitting XML template for date range ${range.start} - ${range.end}:`, error);
+            logger.error(`Error submitting XML template for date range ${range.start} - ${range.end}:`, error);
             throw error;
         }
     }
@@ -1208,11 +1208,11 @@ const updateInventoryMultipleDays = async (req, res) => {
     try {
         stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate);
         if (!Array.isArray(stockCheckResults)) {
-            console.error('checkOTAStock did not return an array:', stockCheckResults);
+            logger.error('checkOTAStock did not return an array:', stockCheckResults);
             stockCheckResults = [];
         }
     } catch (error) {
-        console.error('Error during checkOTAStock:', error);
+        logger.error('Error during checkOTAStock:', error);
         return res.status(500).send({ error: 'Failed to retrieve current stock information.' });
     }
     // Create a map for quick lookup of stock check results by room type group and date
