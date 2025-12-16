@@ -2,7 +2,7 @@
  * Composable for chart print optimization
  * Provides print mode detection and chart optimization utilities
  */
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 
 export function usePrintOptimization() {
   const isPrintMode = ref(false);
@@ -19,9 +19,9 @@ export function usePrintOptimization() {
     isPreparingForPrint.value = false;
   };
 
-  // Chart optimization for print
+  // Chart optimization for print - capture as static image
   const optimizeChartForPrint = (chartInstance, originalOptions) => {
-    if (!chartInstance || !originalOptions) return;
+    if (!chartInstance || !originalOptions) return null;
 
     // Create print-optimized options
     const printOptions = {
@@ -78,7 +78,18 @@ export function usePrintOptimization() {
 
     // Apply the print-optimized options
     chartInstance.setOption(printOptions, true);
-    chartInstance.resize();
+    
+    // Capture chart as static image for print
+    try {
+      const imageDataUrl = chartInstance.getDataURL({
+        pixelRatio: 2,
+        backgroundColor: '#fff'
+      });
+      return imageDataUrl;
+    } catch (error) {
+      console.warn('Failed to capture chart image:', error);
+      return null;
+    }
   };
 
   // Restore original chart options after print
@@ -151,12 +162,23 @@ export function usePrintOptimization() {
     }
   });
 
+  // Delay printing until images are ready
+  const delayedPrint = async () => {
+    // Wait for Vue to update the DOM
+    await nextTick();
+    // Additional delay to ensure images are captured and rendered
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
+
   return {
     isPrintMode,
     isPreparingForPrint,
     optimizeChartForPrint,
     restoreChartFromPrint,
     getPrintChartDimensions,
-    supportsPrintMediaQueries
+    supportsPrintMediaQueries,
+    delayedPrint
   };
 }

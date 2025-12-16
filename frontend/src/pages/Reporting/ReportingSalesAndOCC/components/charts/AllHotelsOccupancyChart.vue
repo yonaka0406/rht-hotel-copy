@@ -1,10 +1,15 @@
 <template>
-  <div 
-    ref="chartContainer" 
-    :style="{ height: chartHeight + 'px', width: '100%' }"
-    class="chart-container all-hotels-occupancy-print-optimized"
-    :class="{ 'print-mode': isPrintMode }"
-  ></div>
+  <div class="hotel-occupancy-chart print-no-break">
+    <div class="print-chart-wrapper">
+      <img v-if="isPrintMode && printImage" :src="printImage" alt="施設別 稼働率（計画 vs 実績）" />
+      <div v-else
+        ref="chartContainer" 
+        :style="{ height: chartHeight + 'px', width: '100%' }"
+        class="chart-container all-hotels-occupancy-print-optimized"
+        :class="{ 'print-mode': isPrintMode }"
+      ></div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -43,6 +48,7 @@ const props = defineProps({
 
 const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
+const printImage = ref(null);
 
 // Print optimization composable
 const { 
@@ -56,7 +62,12 @@ const {
 const chartHeight = computed(() => {
   if (!props.occupancyData || props.occupancyData.length === 0) return 450;
   
-  // Calculate height based on number of hotels and print mode
+  // Skip height calculation for print mode - let CSS handle it
+  if (isPrintMode.value) {
+    return null; // No JavaScript height in print mode
+  }
+  
+  // Calculate height based on number of hotels for screen display only
   const hotelMap = new Map();
   props.occupancyData.filter(item => item.hotel_id !== 0).forEach(item => {
     if (item.hotel_name) {
@@ -65,14 +76,6 @@ const chartHeight = computed(() => {
   });
   
   const numHotels = hotelMap.size;
-  
-  // Optimize for print mode
-  if (isPrintMode.value) {
-    // For print, use a fixed height that fits on one page
-    return 600; // Fixed height for print mode
-  }
-  
-  // Normal screen display logic
   const baseHeight = 150;
   const heightPerHotel = 50;
   const minHeight = 450;
@@ -126,9 +129,12 @@ onBeforeUnmount(() => {
 watch(isPrintMode, (newPrintMode) => {
   if (chartInstance.value && originalOptions.value) {
     if (newPrintMode) {
-      optimizeChartForPrint(chartInstance.value, originalOptions.value);
+      // Capture chart as static image for print
+      const imageDataUrl = optimizeChartForPrint(chartInstance.value, originalOptions.value);
+      printImage.value = imageDataUrl;
     } else {
       restoreChartFromPrint(chartInstance.value, originalOptions.value);
+      printImage.value = null;
     }
   }
 });
@@ -144,26 +150,31 @@ watch(() => props.occupancyData, () => {
 }
 
 @media print {
-  .all-hotels-occupancy-print-optimized {
-    page-break-inside: avoid !important;
-    page-break-before: always !important;
-    margin-bottom: 20pt !important;
-    margin-top: 0 !important;
-    border: 1px solid #ddd !important;
-    padding: 8pt !important;
-    background: white !important;
-    height: 600px !important;
-    max-height: 600px !important;
-    position: relative !important;
-    clear: both !important;
+  /* Root element - print-safe */
+  .hotel-occupancy-chart {
     display: block !important;
-    overflow: hidden !important;
+    width: 100% !important;
+    height: auto !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
-  .all-hotels-occupancy-print-optimized.print-mode {
-    height: 600px !important;
-    max-height: 600px !important;
-    overflow: hidden !important;
+  /* Print chart wrapper for static images */
+  .print-chart-wrapper {
+    display: block !important;
+    width: 100% !important;
+    min-height: 220mm !important;
+    page-break-inside: avoid !important;
+    text-align: center !important;
+  }
+  
+  .print-chart-wrapper img {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    display: block !important;
+    margin: 0 auto !important;
   }
 }
 </style>

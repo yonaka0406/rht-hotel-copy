@@ -206,6 +206,7 @@ import FutureOutlookTable from './tables/FutureOutlookTable.vue';
 
 // Composables
 import { useReportStore } from '@/composables/useReportStore';
+import { usePrintOptimization } from '@/composables/usePrintOptimization';
 
 // Services
 import chartConfigService from '../../services/ChartConfigurationService';
@@ -553,6 +554,9 @@ const allHotelsRevenueChartOptions = computed(() => {
 // Use report store for PDF generation API call
 const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
+// Use print optimization composable
+const { isPrintMode, delayedPrint } = usePrintOptimization();
+
 const downloadPdf = async () => {
     if (isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
 
@@ -697,7 +701,7 @@ const downloadPdf = async () => {
     }
 };
 
-// New print-based PDF download method
+// New print-based PDF download method with static image support
 const downloadPrintPdf = async () => {
     if (isPrintDownloading.value || isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
 
@@ -737,7 +741,7 @@ const downloadPrintPdf = async () => {
                     breakInside: 'avoid'
                 },
                 {
-                    selector: '.chart-container',
+                    selector: '.print-chart-wrapper',
                     breakInside: 'avoid'
                 },
                 {
@@ -761,10 +765,10 @@ const downloadPrintPdf = async () => {
             // Add report title for print headers
             document.body.setAttribute('data-report-title', `Monthly Report ${periodMaxDate.value}`);
 
-            // Trigger the browser's print dialog
-            await printOptimizationService.triggerPrint();
+            // Use delayed print to ensure static images are ready
+            await delayedPrint();
             
-            console.log('Print PDF dialog opened successfully');
+            console.log('Print PDF dialog opened successfully with static images');
         } else {
             throw new Error('Failed to activate print mode');
         }

@@ -1,13 +1,16 @@
 <template>
-    <div>
+    <div class="hotel-sales-chart print-no-break">
         <h6 class="text-center">施設別 売上合計（計画 vs 実績）</h6>
         <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
-        <div v-else 
-            ref="allHotelsRevenueChartContainer"
-            :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"
-            class="chart-container hotel-sales-comparison-print-optimized"
-            :class="{ 'print-mode': isPrintMode }"
-        ></div>
+        <div v-else class="print-chart-wrapper">
+            <img v-if="isPrintMode && printImage" :src="printImage" alt="施設別 売上合計（計画 vs 実績）" />
+            <div v-else
+                ref="allHotelsRevenueChartContainer"
+                :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"
+                class="chart-container hotel-sales-comparison-print-optimized"
+                :class="{ 'print-mode': isPrintMode }"
+            ></div>
+        </div>
     </div>
 </template>
 
@@ -48,6 +51,7 @@ const props = defineProps({
 
 const allHotelsRevenueChartContainer = ref(null);
 const allHotelsRevenueChartInstance = shallowRef(null);
+const printImage = ref(null);
 
 // Print optimization composable
 const { 
@@ -63,7 +67,12 @@ const hasAllHotelsRevenueData = computed(() => props.revenueData && props.revenu
 const allHotelsChartHeight = computed(() => {
     if (!hasAllHotelsRevenueData.value) return 450;
     
-    // Calculate height based on number of hotels and print mode
+    // Skip height calculation for print mode - let CSS handle it
+    if (isPrintMode.value) {
+        return null; // No JavaScript height in print mode
+    }
+    
+    // Calculate height based on number of hotels for screen display only
     const hotelMap = new Map();
     props.revenueData.forEach(item => {
         if (item.hotel_name && item.hotel_name !== '施設合計') {
@@ -72,14 +81,6 @@ const allHotelsChartHeight = computed(() => {
     });
     
     const numHotels = hotelMap.size;
-    
-    // Optimize for print mode
-    if (isPrintMode.value) {
-        // For print, use a fixed height that fits on one page
-        return 600; // Fixed height for print mode
-    }
-    
-    // Normal screen display logic
     const baseHeight = 150;
     const heightPerHotel = 50;
     const minHeight = 450;
@@ -141,9 +142,12 @@ onBeforeUnmount(() => {
 watch(isPrintMode, (newPrintMode) => {
     if (allHotelsRevenueChartInstance.value && originalOptions.value) {
         if (newPrintMode) {
-            optimizeChartForPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            // Capture chart as static image for print
+            const imageDataUrl = optimizeChartForPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            printImage.value = imageDataUrl;
         } else {
             restoreChartFromPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            printImage.value = null;
         }
     }
 });
@@ -160,25 +164,31 @@ watch(() => props.revenueData, () => {
 }
 
 @media print {
-  .hotel-sales-comparison-print-optimized {
-    page-break-inside: avoid !important;
-    page-break-after: always !important;
-    margin-bottom: 0 !important;
-    border: 1px solid #ddd !important;
-    padding: 8pt !important;
-    background: white !important;
-    height: 600px !important;
-    max-height: 600px !important;
-    position: relative !important;
-    clear: both !important;
+  /* Root element - print-safe */
+  .hotel-sales-chart {
     display: block !important;
-    overflow: hidden !important;
+    width: 100% !important;
+    height: auto !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
-  .hotel-sales-comparison-print-optimized.print-mode {
-    height: 600px !important;
-    max-height: 600px !important;
-    overflow: hidden !important;
+  /* Print chart wrapper for static images */
+  .print-chart-wrapper {
+    display: block !important;
+    width: 100% !important;
+    min-height: 220mm !important;
+    page-break-inside: avoid !important;
+    text-align: center !important;
+  }
+  
+  .print-chart-wrapper img {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    display: block !important;
+    margin: 0 auto !important;
   }
 }
 </style>

@@ -363,13 +363,24 @@
     max-height: 100% !important;
   }
   
-  /* Specific canvas controls for chart containers */
+  /* Specific canvas controls for chart containers - maintain aspect ratio */
   .hotel-sales-chart canvas,
   .hotel-occupancy-chart canvas {
     max-width: 100% !important;
-    max-height: 580px !important; /* Slightly less than container to account for padding */
+    max-height: 100% !important;
+    width: auto !important; /* Let width adjust to maintain aspect ratio */
+    height: auto !important; /* Let height adjust to maintain aspect ratio */
+    object-fit: contain !important; /* Maintain aspect ratio, center if needed */
+    display: block !important;
+    margin: 0 auto !important; /* Simple horizontal centering */
+  }
+  
+  /* Ensure chart component containers size naturally */
+  .hotel-sales-chart > div,
+  .hotel-occupancy-chart > div {
     width: 100% !important;
-    height: 580px !important;
+    height: auto !important;
+    text-align: center !important;
   }
   
   /* Chart titles and legends */
@@ -492,6 +503,14 @@
   .print-no-break,
   .avoid-page-break {
     page-break-inside: avoid !important;
+  }
+  
+  /* Print-safe chart containers */
+  .print-no-break {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
   }
   
   /* Auto page breaks */
@@ -810,41 +829,61 @@
     position: relative !important;
   }
   
-  /* First chart container */
-  .hotel-overview-content .md\:w-1\/2:first-child {
-    page-break-after: always !important;
-  }
-  
-  /* Second chart container */
+  /* Chart containers - let individual charts handle page breaks */
+  .hotel-overview-content .md\:w-1\/2:first-child,
   .hotel-overview-content .md\:w-1\/2:last-child {
-    page-break-before: always !important;
+    page-break-before: auto !important;
+    page-break-after: auto !important;
   }
   
   .hotel-sales-chart {
     width: 100% !important;
-    height: 600px !important; /* Fixed height to fit on one page */
+    height: auto !important;
     margin-bottom: 0 !important;
     page-break-inside: avoid !important;
-    page-break-after: always !important; /* Force page break after first chart */
+    page-break-after: always !important; /* Page 3 - force break after sales chart */
     page-break-before: auto !important;
     position: relative !important;
     clear: both !important;
     display: block !important;
-    overflow: hidden !important; /* Prevent content overflow */
+    text-align: center !important;
+    overflow: visible !important;
   }
   
   .hotel-occupancy-chart {
     width: 100% !important;
-    height: 600px !important; /* Fixed height to fit on one page */
+    height: auto !important;
     margin-bottom: 20pt !important;
-    margin-top: 0 !important; /* No extra margin since we have page break */
+    margin-top: 0 !important;
     page-break-inside: avoid !important;
-    page-break-before: always !important; /* Force page break before second chart */
+    page-break-before: always !important; /* Page 4 - force break before occupancy chart */
     page-break-after: auto !important;
     position: relative !important;
     clear: both !important;
     display: block !important;
-    overflow: hidden !important; /* Prevent content overflow */
+    text-align: center !important;
+    overflow: visible !important;
+  }
+  
+  /* Print chart wrapper for static images */
+  .print-chart-wrapper {
+    display: block !important;
+    width: 100% !important;
+    min-height: 220mm !important;
+    page-break-inside: avoid !important;
+    text-align: center !important;
+    margin: 0 !important;
+    padding: 8pt !important;
+  }
+  
+  .print-chart-wrapper img {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    display: block !important;
+    margin: 0 auto !important;
+    border: 1px solid #ddd !important;
+    background: white !important;
   }
   
   /* Message and info boxes */
