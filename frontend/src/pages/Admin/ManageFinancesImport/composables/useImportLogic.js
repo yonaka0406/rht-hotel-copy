@@ -167,13 +167,21 @@ export function useImportLogic() {
             return;
         }
 
-        const month1 = new Date(date);
-        const month2 = new Date(date);
+        let month1 = new Date(date);
+        let month2 = new Date(date);
 
         if (type === 'forecast') {
             month2.setMonth(month1.getMonth() + 12);
         } else {
-            month1.setMonth(month2.getMonth() - 12);
+            // For accounting, we want past 12 months ending with the selected month
+            // If user selects Dec 2025, we want data from Dec 2024 to Dec 2025
+            const selectedMonth = month2.getMonth();
+            const selectedYear = month2.getFullYear();
+            
+            // Set month1 to 12 months before the selected month (same month, previous year)
+            month1 = new Date(selectedYear - 1, selectedMonth, 1);
+            // Set month2 to the month after selected month (for exclusive upper bound)
+            month2 = new Date(selectedYear, selectedMonth + 1, 1);
         }
 
         try {
