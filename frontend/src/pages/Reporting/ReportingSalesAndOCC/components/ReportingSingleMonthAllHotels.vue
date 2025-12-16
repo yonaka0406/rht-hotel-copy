@@ -98,10 +98,10 @@
                 </template>
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
-                        <div class="w-full md:w-1/2 mb-4 md:mb-0">
+                        <div class="w-full md:w-1/2 mb-4 md:mb-0 hotel-sales-chart">
                             <HotelSalesComparisonChart :revenueData="props.revenueData" />
                         </div>
-                        <div class="w-full md:w-1/2">
+                        <div class="w-full md:w-1/2 hotel-occupancy-chart">
                             <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
                             <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
                             <div v-else>

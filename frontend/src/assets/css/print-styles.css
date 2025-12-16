@@ -70,6 +70,36 @@
     font-family: Arial, sans-serif !important;
   }
   
+  /* Hide scrollbars but allow content flow */
+  html, body {
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* Internet Explorer 10+ */
+  }
+  
+  /* Hide webkit scrollbars */
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  
+  /* Hide scrollbars on specific containers only */
+  .chart-container,
+  .echarts-container,
+  [class*="chart"]:not(.chart-title) {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  .chart-container::-webkit-scrollbar,
+  .echarts-container::-webkit-scrollbar,
+  [class*="chart"]:not(.chart-title)::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  
   /* ==========================================================================
      Element Visibility - Hide/Show for Print
      ========================================================================== */
@@ -243,6 +273,20 @@
     padding: 0 0 12pt 0 !important;
   }
   
+  /* Responsive width classes become full width in print */
+  .md\:w-1\/2,
+  .lg\:w-1\/2,
+  .xl\:w-1\/2 {
+    width: 100% !important;
+  }
+  
+  /* Ensure flex columns stack vertically */
+  .flex-col,
+  .md\:flex-row {
+    display: block !important;
+    flex-direction: column !important;
+  }
+  
   /* ==========================================================================
      Card and Panel Styles for Print
      ========================================================================== */
@@ -316,6 +360,16 @@
   canvas {
     max-width: 100% !important;
     height: auto !important;
+    max-height: 100% !important;
+  }
+  
+  /* Specific canvas controls for chart containers */
+  .hotel-sales-chart canvas,
+  .hotel-occupancy-chart canvas {
+    max-width: 100% !important;
+    max-height: 580px !important; /* Slightly less than container to account for padding */
+    width: 100% !important;
+    height: 580px !important;
   }
   
   /* Chart titles and legends */
@@ -707,21 +761,90 @@
     page-break-before: always !important;
     page-break-inside: auto !important;
     margin-bottom: 15pt !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+  
+  /* Ensure card footers stay with their content */
+  .p-card-footer,
+  .card-footer {
+    page-break-before: avoid !important;
+    page-break-after: auto !important;
+    margin-top: 8pt !important;
   }
   
   .hotel-overview-content {
     display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure chart sections don't break awkwardly */
+  .hotel-overview-content > div {
+    page-break-inside: avoid !important;
+    margin-bottom: 12pt !important;
+  }
+  
+  /* Container for both charts - ensure proper stacking */
+  .hotel-overview-content .flex {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Individual chart column containers - ensure they don't overlap */
+  .hotel-overview-content .w-full {
+    width: 100% !important;
+    margin-bottom: 0 !important; /* No margin since we use page breaks */
+    height: auto !important;
+    position: relative !important;
+    clear: both !important;
+  }
+  
+  /* Ensure md:w-1/2 becomes full width in print with proper spacing */
+  .hotel-overview-content .md\:w-1\/2 {
+    width: 100% !important;
+    margin-bottom: 0 !important; /* No margin since we use page breaks */
+    display: block !important;
+    float: none !important;
+    position: relative !important;
+  }
+  
+  /* First chart container */
+  .hotel-overview-content .md\:w-1\/2:first-child {
+    page-break-after: always !important;
+  }
+  
+  /* Second chart container */
+  .hotel-overview-content .md\:w-1\/2:last-child {
+    page-break-before: always !important;
   }
   
   .hotel-sales-chart {
     width: 100% !important;
-    margin-bottom: 12pt !important;
+    height: 600px !important; /* Fixed height to fit on one page */
+    margin-bottom: 0 !important;
     page-break-inside: avoid !important;
+    page-break-after: always !important; /* Force page break after first chart */
+    page-break-before: auto !important;
+    position: relative !important;
+    clear: both !important;
+    display: block !important;
+    overflow: hidden !important; /* Prevent content overflow */
   }
   
   .hotel-occupancy-chart {
     width: 100% !important;
+    height: 600px !important; /* Fixed height to fit on one page */
+    margin-bottom: 20pt !important;
+    margin-top: 0 !important; /* No extra margin since we have page break */
     page-break-inside: avoid !important;
+    page-break-before: always !important; /* Force page break before second chart */
+    page-break-after: auto !important;
+    position: relative !important;
+    clear: both !important;
+    display: block !important;
+    overflow: hidden !important; /* Prevent content overflow */
   }
   
   /* Message and info boxes */

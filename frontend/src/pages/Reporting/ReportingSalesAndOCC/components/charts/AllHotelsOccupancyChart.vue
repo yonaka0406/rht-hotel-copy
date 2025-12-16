@@ -1,9 +1,15 @@
 <template>
-  <div ref="chartContainer" :style="{ height: chartHeight + 'px', width: '100%' }"></div>
+  <div 
+    ref="chartContainer" 
+    :style="{ height: chartHeight + 'px', width: '100%' }"
+    class="chart-container all-hotels-occupancy-print-optimized"
+    :class="{ 'print-mode': isPrintMode }"
+  ></div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+import { usePrintOptimization } from '@/composables/usePrintOptimization';
 import * as echarts from 'echarts/core';
 import {
   TitleComponent,
@@ -38,10 +44,19 @@ const props = defineProps({
 const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
 
+// Print optimization composable
+const { 
+  isPrintMode, 
+  isPreparingForPrint, 
+  optimizeChartForPrint, 
+  restoreChartFromPrint, 
+  getPrintChartDimensions 
+} = usePrintOptimization();
+
 const chartHeight = computed(() => {
   if (!props.occupancyData || props.occupancyData.length === 0) return 450;
   
-  // Calculate height based on number of hotels (similar to original logic)
+  // Calculate height based on number of hotels and print mode
   const hotelMap = new Map();
   props.occupancyData.filter(item => item.hotel_id !== 0).forEach(item => {
     if (item.hotel_name) {
@@ -50,10 +65,17 @@ const chartHeight = computed(() => {
   });
   
   const numHotels = hotelMap.size;
-  const baseHeight = 150; // Base height for axes, legend, etc.
-  const heightPerHotel = 50; // Pixels per hotel bar
-  const minHeight = 450; // Minimum height to prevent it from being too small
-
+  
+  // Optimize for print mode
+  if (isPrintMode.value) {
+    // For print, use a fixed height that fits on one page
+    return 600; // Fixed height for print mode
+  }
+  
+  // Normal screen display logic
+  const baseHeight = 150;
+  const heightPerHotel = 50;
+  const minHeight = 450;
   const calculatedHeight = baseHeight + (numHotels * heightPerHotel);
 
   return Math.max(minHeight, calculatedHeight);
@@ -63,12 +85,25 @@ const chartOptions = computed(() => {
   return ChartConfigurationService.getAllHotelsOccupancyConfig(props.occupancyData, { height: chartHeight.value });
 });
 
+// Store original options for print restoration
+const originalOptions = ref(null);
+
 const initOrUpdateChart = () => {
   if (chartContainer.value) {
     if (!chartInstance.value || chartInstance.value.isDisposed?.()) {
       chartInstance.value = echarts.init(chartContainer.value);
     }
-    chartInstance.value.setOption(chartOptions.value, true);
+    
+    // Store original options for print restoration
+    originalOptions.value = chartOptions.value;
+    
+    // Apply current options (print-optimized if in print mode)
+    if (isPrintMode.value) {
+      optimizeChartForPrint(chartInstance.value, chartOptions.value);
+    } else {
+      chartInstance.value.setOption(chartOptions.value, true);
+    }
+    
     chartInstance.value.resize();
   }
 };
@@ -87,7 +122,48 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', resizeChartHandler);
 });
 
+// Watch for print mode changes
+watch(isPrintMode, (newPrintMode) => {
+  if (chartInstance.value && originalOptions.value) {
+    if (newPrintMode) {
+      optimizeChartForPrint(chartInstance.value, originalOptions.value);
+    } else {
+      restoreChartFromPrint(chartInstance.value, originalOptions.value);
+    }
+  }
+});
+
 watch(() => props.occupancyData, () => {
   nextTick(initOrUpdateChart);
 }, { deep: true });
 </script>
+
+<style scoped>
+.all-hotels-occupancy-print-optimized {
+  transition: all 0.3s ease;
+}
+
+@media print {
+  .all-hotels-occupancy-print-optimized {
+    page-break-inside: avoid !important;
+    page-break-before: always !important;
+    margin-bottom: 20pt !important;
+    margin-top: 0 !important;
+    border: 1px solid #ddd !important;
+    padding: 8pt !important;
+    background: white !important;
+    height: 600px !important;
+    max-height: 600px !important;
+    position: relative !important;
+    clear: both !important;
+    display: block !important;
+    overflow: hidden !important;
+  }
+  
+  .all-hotels-occupancy-print-optimized.print-mode {
+    height: 600px !important;
+    max-height: 600px !important;
+    overflow: hidden !important;
+  }
+}
+</style>
