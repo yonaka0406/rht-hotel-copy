@@ -1,5 +1,5 @@
 const { format } = require("@fast-csv/format");
-const { formatDate, translateStatus, translateType, translatePlanType, translateReservationPaymentTiming } = require('../../../utils/reportUtils');
+const { formatDate, translateReservationStatus, translateReservationType, translatePlanType, translateReservationPaymentTiming } = require('../../../utils/reportUtils');
 
 const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
     // Edit totals
@@ -57,7 +57,7 @@ const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
 
     processedReservations.forEach((reservation) => {
         const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
-        const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
+        const clientNames = clients.map(client => client.name).join(", ");
 
         // Calculate sales amounts
         // Use plan_price from reservation_details (edited values)
@@ -88,16 +88,20 @@ const generateReservationDetailsCsv = (res, result, startDate, endDate) => {
             ホテルID: reservation.hotel_id,
             ホテル名称: reservation.formal_name,
             レポート期間: `${startDate} ～ ${endDate}`,
-            ステータス: translateStatus(reservation.reservation_status),
-            予約種類: translateType(reservation.reservation_type),
+            ステータス: translateReservationStatus(reservation.reservation_status),
+            予約種類: translateReservationType(reservation.reservation_type),
             エージェント: reservation.agent,
             OTA_ID: reservation.ota_reservation_id,
+            予約者ID: reservation.booker_id,
+            予約者顧客ID: reservation.booker_customer_id,
             予約者: reservation.booker_name,
             予約者カナ: reservation.booker_kana,
+            予約者電話番号: reservation.booker_phone,
             チェックイン: formatDate(new Date(reservation.check_in)),
             チェックアウト: formatDate(new Date(reservation.check_out)),
             宿泊日数: reservation.number_of_nights,
             予約人数: reservation.reservation_number_of_people,
+            宿泊者: clientNames,
             販売用部屋: reservation.for_sale ? 'はい' : 'いいえ',
             建物階: reservation.floor,
             部屋番号: reservation.room_number,

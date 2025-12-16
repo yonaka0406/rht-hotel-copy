@@ -9,7 +9,9 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       ,reservations.id
       ,reservations.status
       ,reservations.reservation_client_id AS booker_id
+      ,booker.customer_id AS booker_customer_id
       ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
+      ,booker.phone AS booker_phone
       ,booker.name_kana AS booker_name_kana
       ,booker.name_kanji AS booker_name_kanji
       ,reservations.check_in
@@ -157,9 +159,12 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       head.hotel_id
       ,head.formal_name
       ,head.id AS reservation_id
+      ,head.booker_id
+      ,head.booker_customer_id
       ,head.booker_name
       ,head.booker_kana
       ,head.booker_kanji
+      ,head.booker_phone
       ,head.check_in
       ,head.check_out
       ,head.check_out - head.check_in AS number_of_nights
@@ -205,17 +210,20 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,h.formal_name
           ,r.id
           ,r.check_in
-            ,r.check_out
-            ,r.number_of_people
-            ,r.status
-            ,r.type
-            ,r.agent
-            ,r.ota_reservation_id
-            ,r.payment_timing
-            ,COALESCE(c.name_kanji, c.name_kana, c.name) AS booker_name
-            ,c.name_kana AS booker_kana
-            ,COALESCE(c.name_kanji,'') AS booker_kanji
-            ,SUM(COALESCE(rp.value,0)) as payments
+          ,r.check_out
+          ,r.number_of_people
+          ,r.status
+          ,r.type
+          ,r.agent
+          ,r.ota_reservation_id
+          ,r.payment_timing
+          ,r.reservation_client_id AS booker_id
+          ,c.customer_id AS booker_customer_id
+          ,COALESCE(c.name_kanji, c.name_kana, c.name) AS booker_name
+          ,c.name_kana AS booker_kana
+          ,COALESCE(c.name_kanji,'') AS booker_kanji
+          ,c.phone AS booker_phone
+          ,SUM(COALESCE(rp.value,0)) as payments
         FROM
           reservations r 
           JOIN reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
@@ -238,7 +246,9 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,r.agent
           ,r.ota_reservation_id
           ,r.payment_timing
+          ,r.reservation_client_id ,c.customer_id
           ,c.name_kanji, c.name, c.name_kana
+          ,c.phone
       ) head 
       JOIN
       (
@@ -248,14 +258,14 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,rd.id
           ,rd.date
           ,rooms.floor
-            ,rooms.room_number
-            ,rooms.capacity
-            ,rooms.smoking
-            ,rooms.has_wet_area
-            ,rooms.for_sale
-            ,room_types.name AS room_type_name
+          ,rooms.room_number
+          ,rooms.capacity
+          ,rooms.smoking
+          ,rooms.has_wet_area
+          ,rooms.for_sale
+          ,room_types.name AS room_type_name
           ,rd.number_of_people
-            ,rd.plan_type
+          ,rd.plan_type
           ,COALESCE(ph.name, pg.name) AS plan_name
           ,(CASE 
             WHEN rd.plan_type = 'per_room' 
@@ -266,12 +276,12 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,ra.addon_name
           ,ra.sales_category AS addon_sales_category
           ,COALESCE(ra.quantity,0) AS addon_quantity
-            ,COALESCE(ra.price,0) AS addon_price
+          ,COALESCE(ra.price,0) AS addon_price
           ,(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) AS addon_value
           ,(COALESCE(ra.quantity,0) * COALESCE(ra.net_price,0)) AS addon_net_value
           ,rd.billable
-            ,rd.cancelled
-            ,rd.is_accommodation
+          ,rd.cancelled
+          ,rd.is_accommodation
         FROM
           reservation_details rd	
           JOIN rooms ON rd.hotel_id = rooms.hotel_id AND rd.room_id = rooms.id

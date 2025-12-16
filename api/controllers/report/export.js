@@ -6,7 +6,7 @@ const { createAccommodationTaxWorkbook } = require('./services/accommodationTaxE
 const { generateReservationDetailsCsv } = require('./services/reservationDetailsCsv');
 const { generatePdfReport: generatePdfServiceReport } = require('./services/pdfGeneratorService'); // <--- Import the service function
 
-const { formatDate, formatDateTime, translateStatus, translateReservationPaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
+const { formatDate, formatDateTime, translateReservationStatus, translateReservationPaymentTiming } = require('../../utils/reportUtils');
 
 const getExportReservationList = async (req, res) => {
     const hotelId = req.params.hid;
@@ -40,9 +40,12 @@ const getExportReservationList = async (req, res) => {
                 ホテルID: reservation.hotel_id,
                 ホテル名称: reservation.formal_name,
                 レポート期間: `${startDate} ～ ${endDate}`,
-                ステータス: translateStatus(reservation.status),
+                ステータス: translateReservationStatus(reservation.status),
+                予約者ID: reservation.booker_id,
+                予約者顧客ID: reservation.booker_customer_id,
                 予約者: reservation.booker_name,
                 予約者カナ: reservation.booker_name_kana,
+                予約者電話番号: reservation.booker_phone,
                 チェックイン: formatDate(new Date(reservation.check_in)),
                 チェックアウト: formatDate(new Date(reservation.check_out)),
                 宿泊日数: reservation.number_of_nights,
