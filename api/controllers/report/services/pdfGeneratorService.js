@@ -376,6 +376,31 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                             hasAllHotelsOccupancyData: !!(chartData && chartData.allHotelsOccupancyData)
                         });
 
+                        // Define utility functions for chart formatting (since they're not available in this context)
+                        const formatPercentage = (value) => {
+                            console.log('[${requestId}] FORMATTING: formatPercentage called with:', value, 'type:', typeof value);
+                            if (value === null || value === undefined) return '-';
+                            const num = Number(value);
+                            if (!Number.isFinite(num)) return '-';
+                            const result = (num * 100).toFixed(2) + '%';
+                            console.log('[${requestId}] FORMATTING: formatPercentage result:', result);
+                            return result;
+                        };
+                        
+                        const formatYenInTenThousands = (value) => {
+                            if (value === null || value === undefined) return '-';
+                            const num = Number(value);
+                            if (!Number.isFinite(num)) return '-';
+                            return (num / 10000).toFixed(1) + '万円';
+                        };
+                        
+                        const formatYenInTenThousandsNoDecimal = (value) => {
+                            if (value === null || value === undefined) return '-';
+                            const num = Number(value);
+                            if (!Number.isFinite(num)) return '-';
+                            return (num / 10000).toFixed(0) + '万円';
+                        };
+
                         // Define fallback content generator function
                         const generateFallbackContent = (chartType, error) => {
                             const fallbackMessages = {
@@ -406,11 +431,7 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                         };
 
                         // Verify ECharts is available (should be immediate since it's embedded)
-                        console.log('[${requestId}] Checking ECharts availability...');
-                        console.log('[${requestId}] typeof echarts:', typeof echarts);
-                        console.log('[${requestId}] echarts object:', echarts);
-                        console.log('[${requestId}] echarts.init:', typeof (echarts && echarts.init));
-                        console.log('[${requestId}] echarts.setOption:', typeof (echarts && echarts.setOption));
+                        // Check ECharts availability (reduced logging)
                         
                         if (typeof echarts === 'undefined') {
                             console.error('[${requestId}] ECharts is undefined');
@@ -434,13 +455,7 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                             return;
                         }
                         
-                        console.log('[${requestId}] ECharts library verified and ready');
-                        console.log('[${requestId}] ECharts version:', echarts.version || 'unknown');
-                        console.log('[${requestId}] ECharts methods:', {
-                            init: typeof echarts.init,
-                            setOption: typeof echarts.setOption,
-                            dispose: typeof echarts.dispose
-                        });
+                        console.log('[${requestId}] ECharts library ready');
 
                         // Chart initialization functions using serialized configurations
                         const initRevenuePlanVsActualChart = () => new Promise((resolve) => {
@@ -453,22 +468,12 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                             }
                             
                             try {
-                                console.log('[${requestId}] Attempting to initialize RevenuePlanVsActual chart');
-                                console.log('[${requestId}] Container dimensions:', {
-                                    width: chartContainer.offsetWidth,
-                                    height: chartContainer.offsetHeight,
-                                    clientWidth: chartContainer.clientWidth,
-                                    clientHeight: chartContainer.clientHeight
-                                });
-                                
                                 const chart = echarts.init(chartContainer);
-                                console.log('[${requestId}] ECharts instance created successfully');
                                 
                                 // Use serialized configuration if available, otherwise fallback to basic chart
                                 let options = chartConfigs.revenuePlanVsActual;
                                 
                                 if (!options) {
-                                    console.warn('[${requestId}] No serialized config for RevenuePlanVsActual, using fallback');
                                     // Fallback basic chart
                                     options = {
                                         animation: false,
@@ -481,35 +486,18 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                         xAxis: { type: 'category', data: ['計画売上', '分散', '実績売上'] },
                                         yAxis: { type: 'value' }
                                     };
-                                } else {
-                                    console.log('[${requestId}] Using serialized config for RevenuePlanVsActual');
                                 }
                                 
                                 // Ensure animation is disabled for PDF
                                 options.animation = false;
                                 
-                                console.log('[${requestId}] Setting chart options:', JSON.stringify(options, null, 2));
                                 chart.setOption(options);
-                                console.log('[${requestId}] Chart options set, calling resize');
                                 chart.resize();
-                                
-                                console.log('[${requestId}] RevenuePlanVsActual chart initialization completed successfully');
                             
                             const chartTimeout = setTimeout(() => {
                                 console.warn('[${requestId}] RevenuePlanVsActual chart rendering timeout - checking canvas content');
                                 
-                                // Check if canvas was created
-                                const canvases = chartContainer.querySelectorAll('canvas');
-                                console.log('[${requestId}] Canvas count after timeout:', canvases.length);
-                                
-                                if (canvases.length > 0) {
-                                    console.log('[${requestId}] Canvas found, checking content');
-                                    const canvas = canvases[0];
-                                    const ctx = canvas.getContext('2d');
-                                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                                    const hasContent = imageData.data.some(pixel => pixel !== 0);
-                                    console.log('[${requestId}] Canvas has content:', hasContent);
-                                }
+
                                 
                                 try {
                                     chart.dispose();
@@ -524,13 +512,7 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                     clearTimeout(chartTimeout);
                                     console.log('[${requestId}] RevenuePlanVsActual chart finished rendering');
                                     
-                                    // Verify canvas content
-                                    const canvases = chartContainer.querySelectorAll('canvas');
-                                    console.log('[${requestId}] Canvas count after finished:', canvases.length);
-                                    if (canvases.length > 0) {
-                                        const canvas = canvases[0];
-                                        console.log('[${requestId}] Canvas dimensions:', canvas.width, 'x', canvas.height);
-                                    }
+
                                     
                                     setTimeout(resolve, 100);
                                 });
@@ -564,6 +546,11 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 // Use serialized configuration if available, otherwise fallback to basic chart
                                 let options = chartConfigs.occupancyGauge;
                                 
+                                console.log('[${requestId}] FORMATTING: OccupancyGauge config available:', !!options);
+                                if (options && options.series && options.series[0] && options.series[0].data) {
+                                    console.log('[${requestId}] FORMATTING: Serialized occupancy data:', options.series[0].data[0]);
+                                }
+                                
                                 if (!options) {
                                     console.warn('[${requestId}] No serialized config for OccupancyGauge, using fallback');
                                     // Fallback basic gauge chart
@@ -596,10 +583,41 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 // Ensure animation is disabled for PDF
                                 options.animation = false;
                                 
+                                // Fix formatter functions that might not work after deserialization
+                                if (options.series && options.series[0]) {
+                                    const series = options.series[0];
+                                    
+                                    // Log original data value for debugging formatting
+                                    if (series.data && series.data[0]) {
+                                        console.log('[${requestId}] FORMATTING: Original occupancy value:', series.data[0].value);
+                                    }
+                                    
+                                    // Fix detail formatter for occupancy gauge
+                                    if (series.detail) {
+                                        console.log('[${requestId}] FORMATTING: Replacing detail formatter');
+                                        series.detail.formatter = function (value) {
+                                            const formatted = formatPercentage(value);
+                                            console.log('[${requestId}] FORMATTING: Detail formatter - input:', value, 'output:', formatted);
+                                            return formatted;
+                                        };
+                                    }
+                                    
+                                    // Fix axisLabel formatter
+                                    if (series.axisLabel) {
+                                        console.log('[${requestId}] FORMATTING: Replacing axisLabel formatter');
+                                        series.axisLabel.formatter = function (value) {
+                                            const formatted = (value * 100).toFixed(0) + '%';
+                                            console.log('[${requestId}] FORMATTING: AxisLabel formatter - input:', value, 'output:', formatted);
+                                            return formatted;
+                                        };
+                                    }
+                                }
+                                
+                                console.log('[${requestId}] FORMATTING: Setting occupancy gauge options with data:', 
+                                    options.series[0].data[0] ? options.series[0].data[0].value : 'no data');
+                                
                                 chart.setOption(options);
                                 chart.resize();
-                                
-                                console.log('[${requestId}] OccupancyGauge chart options set successfully');
                                 
                                 const chartTimeout = setTimeout(() => {
                                 console.warn('[${requestId}] OccupancyGauge chart rendering timeout - proceeding with fallback');
@@ -819,16 +837,18 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                             console.log('[${requestId}] Skipping aggregate charts - no aggregateData');
                         }
                         if (chartData && chartData.allHotelsRevenueData && chartData.allHotelsRevenueData.length > 0) {
-                            console.log('[${requestId}] Adding AllHotelsRevenue chart to promises');
+                            console.log('[${requestId}] FACILITY CHARTS: Adding AllHotelsRevenue chart - data count:', chartData.allHotelsRevenueData.length);
+                            console.log('[${requestId}] FACILITY CHARTS: Revenue data sample:', chartData.allHotelsRevenueData[0]);
                             promises.push(initAllHotelsRevenueChart());
                         } else {
-                            console.log('[${requestId}] Skipping AllHotelsRevenue chart - no data or empty array');
+                            console.log('[${requestId}] FACILITY CHARTS: Skipping AllHotelsRevenue - no data. Available keys:', chartData ? Object.keys(chartData) : 'no chartData');
                         }
                         if (chartData && chartData.allHotelsOccupancyData && chartData.allHotelsOccupancyData.length > 0) {
-                            console.log('[${requestId}] Adding AllHotelsOccupancy chart to promises');
+                            console.log('[${requestId}] FACILITY CHARTS: Adding AllHotelsOccupancy chart - data count:', chartData.allHotelsOccupancyData.length);
+                            console.log('[${requestId}] FACILITY CHARTS: Occupancy data sample:', chartData.allHotelsOccupancyData[0]);
                             promises.push(initAllHotelsOccupancyChart());
                         } else {
-                            console.log('[${requestId}] Skipping AllHotelsOccupancy chart - no data or empty array');
+                            console.log('[${requestId}] FACILITY CHARTS: Skipping AllHotelsOccupancy - no data. Available keys:', chartData ? Object.keys(chartData) : 'no chartData');
                         }
 
                         console.log('[${requestId}] Total promises to wait for:', promises.length);
@@ -925,59 +945,50 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                     <h1>${reportTitle}</h1>
                     <p><strong>レポート期間:</strong> ${periodMaxDate}</p>
                     <p><strong>対象施設:</strong> ${allHotelNames}</p>
-                    <p><strong>表示モード:</strong> ${selectedView === 'graph' ? 'グラフ' : 'テーブル'}</p>
 
-                    <!-- Debug: Test element -->
-                    <div id="test-element" style="background: red; height: 50px; width: 100px;">TEST</div>
 
-                    ${kpiData ? `
-                        <div class="kpi-section">
-                            <h2>主要KPI（全施設合計）</h2>
-                            <div class="kpi-grid">
-                                <div class="kpi-card">
-                                    <h3>実績 ADR</h3>
-                                    <p class="kpi-value">${isNaN(kpiData.actualADR) ? 'N/A' : kpiData.actualADR.toLocaleString('ja-JP')}円</p>
-                                </div>
-                                <div class="kpi-card">
-                                    <h3>計画 ADR</h3>
-                                    <p class="kpi-value">${isNaN(kpiData.forecastADR) ? 'N/A' : kpiData.forecastADR.toLocaleString('ja-JP')}円</p>
-                                </div>
-                                <div class="kpi-card">
-                                    <h3>実績 RevPAR</h3>
-                                    <p class="kpi-value">${isNaN(kpiData.actualRevPAR) ? 'N/A' : kpiData.actualRevPAR.toLocaleString('ja-JP')}円</p>
-                                </div>
-                                <div class="kpi-card">
-                                    <h3>計画 RevPAR</h3>
-                                    <p class="kpi-value">${isNaN(kpiData.forecastRevPAR) ? 'N/A' : kpiData.forecastRevPAR.toLocaleString('ja-JP')}円</p>
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
+
 
                     <div class="charts-section">
-                        <h2>収益（計画×実績）</h2>
+                        <h2>月次サマリー</h2>
                         <div class="chart-row">
+                            <!-- Left Column: Revenue Chart (Tall) -->
                             <div class="chart-half">
-                                <h3>収益 計画 vs 実績</h3>
-                                <div id="revenuePlanVsActualContainer" style="width: 400px; height: 300px; margin: 0 auto;"></div>
+                                <div id="revenuePlanVsActualContainer" style="width: 400px; height: 500px; margin: 0 auto;"></div>
                             </div>
-                            <div class="chart-half">
-                                <h3>稼働率</h3>
-                                <div id="occupancyGaugeContainer" style="width: 400px; height: 300px; margin: 0 auto;"></div>
+                            <!-- Right Column: Gauge + KPIs -->
+                            <div class="chart-half" style="display: flex; flex-direction: column; gap: 20px;">
+                                <!-- Gauge Chart -->
+                                <div>
+                                    <div id="occupancyGaugeContainer" style="width: 400px; height: 250px; margin: 0 auto;"></div>
+                                </div>
+                                <!-- KPI Cards -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e9ecef;">
+                                        <h4 style="font-size: 0.9em; color: #666; margin: 0 0 10px 0; font-weight: 500;">ADR</h4>
+                                        <p style="font-size: 1.4em; font-weight: bold; color: #333; margin: 0;">${kpiData.actualADR ? kpiData.actualADR.toLocaleString('ja-JP') : 'N/A'}円</p>
+                                        <p style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">(計画: ${kpiData.forecastADR ? kpiData.forecastADR.toLocaleString('ja-JP') : 'N/A'}円)</p>
+                                    </div>
+                                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e9ecef;">
+                                        <h4 style="font-size: 0.9em; color: #666; margin: 0 0 10px 0; font-weight: 500;">RevPAR</h4>
+                                        <p style="font-size: 1.4em; font-weight: bold; color: #333; margin: 0;">${kpiData.actualRevPAR ? kpiData.actualRevPAR.toLocaleString('ja-JP') : 'N/A'}円</p>
+                                        <p style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">(計画: ${kpiData.forecastRevPAR ? kpiData.forecastRevPAR.toLocaleString('ja-JP') : 'N/A'}円)</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="all-hotels-section">
-                        <h2>全施設 収益＆稼働率 概要</h2>
+                        <h2 style="page-break-before: always;">全施設 収益＆稼働率 概要</h2>
                         <div class="chart-row">
                             <div class="chart-half">
                                 <h3>施設別 売上合計（計画 vs 実績）</h3>
-                                <div id="allHotelsRevenueContainer" style="width: 400px; height: 450px; margin: 0 auto;"></div>
+                                <div id="allHotelsRevenueContainer" style="width: 400px; height: 900px; margin: 0 auto;"></div>
                             </div>
                             <div class="chart-half">
                                 <h3>施設別 稼働率（計画 vs 実績）</h3>
-                                <div id="allHotelsOccupancyContainer" style="width: 400px; height: 450px; margin: 0 auto;"></div>
+                                <div id="allHotelsOccupancyContainer" style="width: 400px; height: 900px; margin: 0 auto;"></div>
                             </div>
                         </div>
                     </div>
