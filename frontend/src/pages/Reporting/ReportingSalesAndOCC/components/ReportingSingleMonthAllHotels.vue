@@ -2,68 +2,77 @@
     <div>
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
-            <Button 
-                icon="pi pi-file-pdf" 
-                label="PDFをダウンロード" 
-                class="p-button-secondary ml-2" 
-                @click="downloadPdf" 
-                :loading="isDownloadingPdf"
-                :disabled="isDownloadingPdf"
-            />
+            <!-- <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2" @click="downloadPdf"
+                :loading="isDownloadingPdf" :disabled="isDownloadingPdf" /> -->
         </div>
 
         <div v-if="selectedView === 'graph'">
 
             <Panel header="月次サマリー" class="mb-4">
-                <Card class="mb-4">
-                    <template #header>
-                        <span class="text-xl font-bold">主要KPI（全施設合計）</span>
-                    </template>
-                    <template #content>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg shadow">
-                                <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
-                                <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
-                            </div>
+                <template #default>
+                    <div v-if="!hasRevenueDataForChart" class="text-center p-4">
+                        データはありません。
+                    </div>
+                    <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
+                        <!-- Column 1: Revenue Chart (Tall) -->
+                        <div class="w-full md:w-1/2">
+                            <RevenuePlanVsActualChart :revenueData="aggregateHotelZeroData" height="500px" />
                         </div>
-                    </template>
 
-                </Card>
+                        <!-- Column 2: Gauge + KPIs -->
+                        <div class="w-full md:w-1/2 flex flex-col gap-4">
+                            <!-- Row 1: Gauge (Reduced Height) -->
+                            <div>
+                                <div>
+                                    <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" height="250px"
+                                        :previousYearOccupancy="aggregateHotelZeroData?.prevYearOccupancy" />
+                                </div>
+                            </div>
 
-                <Card class="mb-4">
-                    <template #header>
-                        <span class="text-xl font-bold">収益（計画ｘ実績）</span>
-                    </template>
-                    <template #content>
-                        <div v-if="!hasRevenueDataForChart" class="text-center p-4">
-                            データはありません。
-                        </div>
-                        <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
-                            <div class="w-full md:w-1/2">
-                                <RevenuePlanVsActualChart :revenueData="aggregateHotelZeroData" />
+                            <!-- Row 2: KPIs -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <Card class="shadow-sm bg-gray-50">
+                                    <template #content>
+                                        <div class="flex flex-col items-center text-center">
+                                            <h6 class="text-sm font-medium text-gray-500 mb-2">ADR</h6>
+                                            <span class="text-2xl font-bold text-gray-800">{{
+                                                formatCurrency(actualADR) }}</span>
+                                            <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                                formatCurrency(forecastADR) }})</span>
+                                            <span v-if="ADRDifference"
+                                                :class="['text-xs font-bold mt-1', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference)
+                                                }}
+                                            </span>
+                                        </div>
+                                    </template>
+                                </Card>
+                                <Card class="shadow-sm bg-gray-50">
+                                    <template #content>
+                                        <div class="flex flex-col items-center text-center">
+                                            <h6 class="text-sm font-medium text-gray-500 mb-2">RevPAR</h6>
+                                            <span class="text-2xl font-bold text-gray-800">{{
+                                                formatCurrency(actualRevPAR) }}</span>
+                                            <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                                formatCurrency(forecastRevPAR) }})</span>
+                                            <span v-if="revPARDifference"
+                                                :class="['text-xs font-bold mt-1', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                                {{ revPARDifference > 0 ? '+' : '' }}{{
+                                                    formatCurrency(revPARDifference) }}
+                                            </span>
+                                        </div>
+                                    </template>
+                                </Card>
                             </div>
-                            <div class="w-full md:w-1/2">
-                                <OccupancyGaugeChart :occupancyData="aggregateHotelZeroData" />
-                            </div>
                         </div>
-                        <Message severity="secondary" :closable="false" class="mt-2 p-2 text-sm">
-                            会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}
-                        </Message>
-                    </template>
-                </Card>
+                    </div>
+                    <Message severity="secondary" :closable="false" class="mt-2 p-2 text-sm">
+                        会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}
+                    </Message>
+                </template>
             </Panel>
+
+            <FutureOutlookTable :data="futureOutlookData" />
 
             <Card>
                 <template #header>
@@ -72,10 +81,7 @@
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-1/2 mb-4 md:mb-0">
-                            <h6 class="text-center">施設別 売上合計（計画 vs 実績）</h6>
-                            <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
-                            <div v-else ref="allHotelsRevenueChartContainer"
-                                :style="{ height: allHotelsChartHeight + 'px', width: '100%' }"></div>
+                            <HotelSalesComparisonChart :revenueData="props.revenueData" />
                         </div>
                         <div class="w-full md:w-1/2">
                             <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
@@ -153,6 +159,18 @@ const props = defineProps({
     rawOccupationBreakdownData: { // Renamed from occupationBreakdownData
         type: Array,
         default: () => []
+    },
+    prevYearRevenueData: {
+        type: Array,
+        default: () => []
+    },
+    prevYearOccupancyData: {
+        type: Array,
+        default: () => []
+    },
+    futureOutlookData: {
+        type: Array,
+        default: () => []
     }
 });
 
@@ -160,14 +178,19 @@ const props = defineProps({
 import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
 import AllHotelsOccupancyChart from './charts/AllHotelsOccupancyChart.vue';
 import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
+import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
 
 // Primevue
 import { Card, Badge, SelectButton, Button, DataTable, Column, Panel, Message } from 'primevue';
 import OccupancyPlanVsActualTable from './tables/OccupancyPlanVsActualTable.vue';
+import FutureOutlookTable from './tables/FutureOutlookTable.vue';
 
 // Composables
 import { useReportStore } from '@/composables/useReportStore';
+
+// Services
+import chartConfigService from '../../services/ChartConfigurationService';
 
 // Utilities
 import {
@@ -223,20 +246,71 @@ const aggregateHotelZeroData = computed(() => {
     // representing the totals for the selected period.
     const revenueEntry = props.revenueData?.find(item => item.hotel_id === 0);
     const occupancyEntry = props.occupancyData?.find(item => item.hotel_id === 0);
+    const prevYearRevenueEntry = props.prevYearRevenueData?.find(item => item.hotel_id === 0);
+    const prevYearOccupancyEntry = props.prevYearOccupancyData?.find(item => item.hotel_id === 0);
 
-    //console.log('[ReportingSingleMonthAllHotels] revenueEntry (hotel_id=0):', revenueEntry);
-    //console.log('[ReportingSingleMonthAllHotels] occupancyEntry (hotel_id=0):', occupancyEntry);
+    // Log current and previous year data to verify correct months
+    //console.log('[ReportingSingleMonthAllHotels] Current year data:', {
+    //    revenueEntry: revenueEntry,
+    //    occupancyEntry: occupancyEntry,
+    //    currentMonth: revenueEntry?.month,
+    //    currentYear: revenueEntry?.month ? new Date(revenueEntry.month).getFullYear() : 'N/A'
+    //});
+    
+    //console.log('[ReportingSingleMonthAllHotels] Previous year data:', {
+    //    prevYearRevenueEntry: prevYearRevenueEntry,
+    //    prevYearOccupancyEntry: prevYearOccupancyEntry,
+    //    prevYearMonth: prevYearRevenueEntry?.month,
+    //    prevYearYear: prevYearRevenueEntry?.month ? new Date(prevYearRevenueEntry.month).getFullYear() : 'N/A'
+    //});
 
-    return {
+    // Verify that we're comparing the same month but different years
+    if (revenueEntry?.month && prevYearRevenueEntry?.month) {
+        const currentDate = new Date(revenueEntry.month);
+        const prevYearDate = new Date(prevYearRevenueEntry.month);
+        const currentMonth = currentDate.getMonth();
+        const prevYearMonth = prevYearDate.getMonth();
+        const yearDiff = currentDate.getFullYear() - prevYearDate.getFullYear();
+        
+        //console.log('[ReportingSingleMonthAllHotels] Month comparison:', {
+        //    currentMonth: currentMonth,
+        //    prevYearMonth: prevYearMonth,
+        //    yearDifference: yearDiff,
+        //    isSameMonth: currentMonth === prevYearMonth,
+        //    isOneYearDiff: yearDiff === 1
+        //});
+        
+        if (currentMonth !== prevYearMonth) {
+            console.warn('[ReportingSingleMonthAllHotels] WARNING: Current month and previous year month do not match!');
+        }
+        if (yearDiff !== 1) {
+            console.warn('[ReportingSingleMonthAllHotels] WARNING: Year difference is not exactly 1 year!');
+        }
+    }
+
+    const result = {
         total_forecast_revenue: revenueEntry?.forecast_revenue || 0,
         total_period_accommodation_revenue: revenueEntry?.accommodation_revenue || 0,
+        total_prev_year_accommodation_revenue: prevYearRevenueEntry?.accommodation_revenue || 0,
         total_fc_sold_rooms: occupancyEntry?.fc_sold_rooms || 0,
+        total_fc_available_rooms: occupancyEntry?.fc_total_rooms || 0, // Restored property
         total_sold_rooms: occupancyEntry?.sold_rooms || 0,
-        // fc_total_rooms from occupancy data is total_available_rooms for forecast period
-        total_fc_available_rooms: occupancyEntry?.fc_total_rooms || 0,
         // total_rooms from occupancy data is total_available_rooms for actual period
         total_available_rooms: occupancyEntry?.total_rooms || 0,
+        total_prev_year_sold_rooms: prevYearOccupancyEntry?.sold_rooms || 0,
+        total_prev_year_available_rooms: prevYearOccupancyEntry?.total_rooms || 0,
+        prevYearOccupancy: prevYearOccupancyEntry?.total_rooms > 0 ? prevYearOccupancyEntry.sold_rooms / prevYearOccupancyEntry.total_rooms : null
     };
+
+    //console.log('[ReportingSingleMonthAllHotels] aggregateHotelZeroData result:', {
+    //    result,
+    //    revenueEntryMonth: revenueEntry?.month,
+    //    prevYearRevenueEntryMonth: prevYearRevenueEntry?.month,
+    //    occupancyEntryMonth: occupancyEntry?.month,
+    //    prevYearOccupancyEntryMonth: prevYearOccupancyEntry?.month
+    //});
+
+    return result;
 });
 
 const actualADR = computed(() => {
@@ -264,42 +338,51 @@ const forecastRevPAR = computed(() => {
     return Math.round(total_forecast_revenue / total_fc_available_rooms);
 });
 
+const ADRDifference = computed(() => {
+    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return 0;
+    return actualADR.value - forecastADR.value;
+});
+
+const revPARDifference = computed(() => {
+    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return 0;
+    return actualRevPAR.value - forecastRevPAR.value;
+});
+
 // ECharts imports
-import * as echarts from 'echarts/core';
-import {
-    TitleComponent,
-    TooltipComponent,
-    GridComponent,
-    LegendComponent,
-    DatasetComponent,
-    TransformComponent,
-} from 'echarts/components';
-import { BarChart, LineChart } from 'echarts/charts';
-import { CanvasRenderer } from 'echarts/renderers';
+// import * as echarts from 'echarts/core';
+// import {
+//     TitleComponent,
+//     TooltipComponent,
+//     GridComponent,
+//     LegendComponent,
+//     DatasetComponent,
+//     TransformComponent,
+// } from 'echarts/components';
+// import { BarChart, LineChart } from 'echarts/charts';
+// import { CanvasRenderer } from 'echarts/renderers';
 
 // Register ECharts components
-echarts.use([
-    TitleComponent,
-    TooltipComponent,
-    GridComponent,
-    LegendComponent,
-    DatasetComponent,
-    TransformComponent,
-    BarChart,
-    CanvasRenderer
-]);
+// echarts.use([
+//     TitleComponent,
+//     TooltipComponent,
+//     GridComponent,
+//     LegendComponent,
+//     DatasetComponent,
+//     TransformComponent,
+//     BarChart,
+//     CanvasRenderer
+// ]);
 
 // --- Chart Refs and Instances ---
-const allHotelsRevenueChartContainer = ref(null);
+// --- Chart Refs and Instances ---
+// const allHotelsRevenueChartContainer = ref(null);
+// const allHotelsRevenueChartInstance = shallowRef(null);
 
-const allHotelsRevenueChartInstance = shallowRef(null);
-
-const resizeChartHandler = () => {
-    if (selectedView.value === 'graph') {
-        allHotelsRevenueChartInstance.value?.resize();
-    }
-};
-
+// const resizeChartHandler = () => {
+//     if (selectedView.value === 'graph') {
+//         allHotelsRevenueChartInstance.value?.resize();
+//     }
+// };
 
 
 // --- Data Computeds for Charts ---
@@ -352,22 +435,20 @@ const hasAllHotelsOccupancyData = computed(() => {
         props.occupancyData.some(item => item.hotel_id !== 0);
 });
 
-const allHotelsChartHeight = computed(() => {
-    const numHotels = allHotelsRevenueChartData.value.length;
-    const baseHeight = 150; // Base height for axes, legend, etc.
-    const heightPerHotel = 50; // Pixels per hotel bar
-    const minHeight = 450; // Minimum height to prevent it from being too small
+// const allHotelsChartHeight = computed(() => {
+//     const numHotels = allHotelsRevenueChartData.value.length;
+//     const baseHeight = 150; // Base height for axes, legend, etc.
+//     const heightPerHotel = 50; // Pixels per hotel bar
+//     const minHeight = 450; // Minimum height to prevent it from being too small
 
-    const calculatedHeight = baseHeight + (numHotels * heightPerHotel);
+//     const calculatedHeight = baseHeight + (numHotels * heightPerHotel);
 
-    return Math.max(minHeight, calculatedHeight);
-});
-
-
+//     return Math.max(minHeight, calculatedHeight);
+// });
 
 
 
-// --- ECharts Options ---    
+// --- ECharts Options ---
 const allHotelsRevenueChartOptions = computed(() => {
     const data = allHotelsRevenueChartData.value;
     if (!data.length) return {};
@@ -419,35 +500,34 @@ const allHotelsRevenueChartOptions = computed(() => {
 
 
 // Initialize charts
-const initOrUpdateChart = (instanceRef, containerRef, options) => {
-    if (containerRef.value) { // Ensure the container element exists
-        if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
-            // If no instance or it's disposed, initialize a new one
-            instanceRef.value = echarts.init(containerRef.value);
-        }
-        // Always set options and resize
-        instanceRef.value.setOption(options, true); // true for notMerge
-        instanceRef.value.resize();
-    } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
-        // Container is gone (e.g., v-if became false), but instance exists. Dispose it.
-        instanceRef.value.dispose();
-        instanceRef.value = null; // Clear the ref
-    }
-};
-const refreshAllCharts = () => {
-    if (hasAllHotelsRevenueData.value) {
-        initOrUpdateChart(allHotelsRevenueChartInstance, allHotelsRevenueChartContainer, allHotelsRevenueChartOptions.value);
-    } else {
-        allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
-    }
+// const initOrUpdateChart = (instanceRef, containerRef, options) => {
+//     if (containerRef.value) { // Ensure the container element exists
+//         if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
+//             // If no instance or it's disposed, initialize a new one
+//             instanceRef.value = echarts.init(containerRef.value);
+//         }
+//         // Always set options and resize
+//         instanceRef.value.setOption(options, true); // true for notMerge
+//         instanceRef.value.resize();
+//     } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
+//         // Container is gone (e.g., v-if became false), but instance exists. Dispose it.
+//         instanceRef.value.dispose();
+//         instanceRef.value = null; // Clear the ref
+//     }
+// };
+// const refreshAllCharts = () => {
+//     if (hasAllHotelsRevenueData.value) {
+//         initOrUpdateChart(allHotelsRevenueChartInstance, allHotelsRevenueChartContainer, allHotelsRevenueChartOptions.value);
+//     } else {
+//         allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
+//     }
 
 
 
-};
-const disposeAllCharts = () => {
-    allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
-};
-
+// };
+// const disposeAllCharts = () => {
+//     allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
+// };
 
 
 // Use report store for PDF generation API call
@@ -455,10 +535,44 @@ const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
 const downloadPdf = async () => {
     if (isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
-    
+
     isDownloadingPdf.value = true;
-    
+
+    // Generate serialized chart configurations using the service
+    let serializedChartConfigs = {};
+
     try {
+        
+        try {
+            // Serialize RevenuePlanVsActual chart configuration
+            if (aggregateHotelZeroData.value) {
+                const revenuePlanVsActualConfig = chartConfigService.getRevenuePlanVsActualConfig(aggregateHotelZeroData.value);
+                serializedChartConfigs.revenuePlanVsActual = chartConfigService.serializeConfig(revenuePlanVsActualConfig, 'revenuePlanVsActual');
+            }
+            
+            // Serialize OccupancyGauge chart configuration
+            if (aggregateHotelZeroData.value) {
+                const occupancyGaugeConfig = chartConfigService.getOccupancyGaugeConfig(aggregateHotelZeroData.value);
+                serializedChartConfigs.occupancyGauge = chartConfigService.serializeConfig(occupancyGaugeConfig, 'occupancyGauge');
+            }
+            
+            // Serialize AllHotelsRevenue chart configuration
+            if (hasAllHotelsRevenueData.value && allHotelsRevenueChartData.value.length > 0) {
+                const allHotelsRevenueConfig = chartConfigService.getAllHotelsRevenueConfig(allHotelsRevenueChartData.value);
+                serializedChartConfigs.allHotelsRevenue = chartConfigService.serializeConfig(allHotelsRevenueConfig, 'allHotelsRevenue');
+            }
+            
+            // Serialize AllHotelsOccupancy chart configuration
+            if (hasAllHotelsOccupancyData.value) {
+                const occupancyDataFiltered = props.occupancyData.filter(item => item.hotel_id !== 0);
+                const allHotelsOccupancyConfig = chartConfigService.getAllHotelsOccupancyConfig(occupancyDataFiltered);
+                serializedChartConfigs.allHotelsOccupancy = chartConfigService.serializeConfig(allHotelsOccupancyConfig, 'allHotelsOccupancy');
+            }
+        } catch (serializationError) {
+            console.error('Error serializing chart configurations:', serializationError);
+            // Continue with empty serialized configs - the backend will handle fallbacks
+        }
+
         const pdfRequestData = {
             selectedView: selectedView.value,
             periodMaxDate: periodMaxDate.value,
@@ -478,11 +592,21 @@ const downloadPdf = async () => {
                 allHotelsRevenueData: allHotelsRevenueChartData.value,
                 allHotelsOccupancyData: props.occupancyData.filter(item => item.hotel_id !== 0)
             },
-            // Chart options for the all hotels revenue chart
+            // Send serialized chart configurations instead of raw options
+            serializedChartConfigs: serializedChartConfigs,
+            // Keep legacy support for now
             allHotelsRevenueChartOptions: hasAllHotelsRevenueData.value ? allHotelsRevenueChartOptions.value : null
         };
-        
+
         console.log('PDF Request Data:', pdfRequestData);
+        console.log('Debug - Serialized Chart Configurations:', {
+            serializedConfigKeys: Object.keys(serializedChartConfigs),
+            configCount: Object.keys(serializedChartConfigs).length,
+            hasRevenuePlanVsActual: !!serializedChartConfigs.revenuePlanVsActual,
+            hasOccupancyGauge: !!serializedChartConfigs.occupancyGauge,
+            hasAllHotelsRevenue: !!serializedChartConfigs.allHotelsRevenue,
+            hasAllHotelsOccupancy: !!serializedChartConfigs.allHotelsOccupancy
+        });
         console.log('Debug - Props data:', {
             revenueDataLength: props.revenueData ? props.revenueData.length : 0,
             occupancyDataLength: props.occupancyData ? props.occupancyData.length : 0,
@@ -498,9 +622,9 @@ const downloadPdf = async () => {
             allHotelsRevenueChartData: allHotelsRevenueChartData.value,
             occupancyDataFiltered: props.occupancyData.filter(item => item.hotel_id !== 0),
             hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
-            allHotelsRevenueChartOptions: allHotelsRevenueChartOptions.value
+            hasAllHotelsOccupancyData: hasAllHotelsOccupancyData.value
         });
-        
+
         const responseBlob = await generatePdfReportApi(
             'singleMonthMultipleHotels', // Specific report type for this component
             pdfRequestData
@@ -519,7 +643,35 @@ const downloadPdf = async () => {
         console.log('PDF download initiated successfully!');
     } catch (error) {
         console.error('Error generating PDF:', error);
-        // Optionally show a toast notification for error
+        
+        // Enhanced error handling with user feedback
+        let errorMessage = 'PDFの生成中にエラーが発生しました。';
+        
+        if (error.message.includes('timeout')) {
+            errorMessage = 'PDFの生成がタイムアウトしました。しばらく待ってから再試行してください。';
+        } else if (error.message.includes('network')) {
+            errorMessage = 'ネットワークエラーが発生しました。接続を確認してください。';
+        } else if (error.message.includes('serialization')) {
+            errorMessage = 'チャート設定の処理中にエラーが発生しました。';
+        } else if (error.message.includes('resource')) {
+            errorMessage = 'サーバーリソースが不足しています。しばらく待ってから再試行してください。';
+        }
+        
+        // Show user-friendly error message (you can replace this with your toast notification system)
+        alert(errorMessage);
+        
+        // Log detailed error for debugging
+        console.error('Detailed PDF generation error:', {
+            message: error.message,
+            stack: error.stack,
+            requestData: {
+                selectedView: selectedView.value,
+                hasAggregateData: !!aggregateHotelZeroData.value,
+                hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
+                hasAllHotelsOccupancyData: hasAllHotelsOccupancyData.value,
+                serializedConfigCount: serializedChartConfigs ? Object.keys(serializedChartConfigs).length : 0
+            }
+        });
     } finally {
         isDownloadingPdf.value = false;
     }
@@ -527,6 +679,13 @@ const downloadPdf = async () => {
 
 // Table
 const getSeverity = getSeverityUtil;
+
+const csvEscape = (value) => {
+    if (value === null || value === undefined) return '';
+    const stringValue = String(value);
+    // Replace all double quotes with two double quotes, then wrap the whole string in double quotes
+    return `"${stringValue.replace(/"/g, '""')}"`;
+};
 
 const exportCSV = (tableType) => {
     let csvString = '';
@@ -545,8 +704,8 @@ const exportCSV = (tableType) => {
             else if (accommodationRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
 
             const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
+                csvEscape(row.hotel_name),
+                csvEscape(row.month),
                 forecastRevenue,
                 accommodationRevenue,
                 varianceAmount,
@@ -572,8 +731,8 @@ const exportCSV = (tableType) => {
             const occ = row.occ || 0;
 
             const csvRow = [
-                `"${row.hotel_name || ''}"`,
-                `"${row.month || ''}"`,
+                csvEscape(row.hotel_name),
+                csvEscape(row.month),
                 fcSold,
                 sold,
                 sold - fcSold,
@@ -609,38 +768,38 @@ const exportCSV = (tableType) => {
 onMounted(async () => {
     //console.log('RSMAll: onMounted', props.revenueData, props.occupancyData);
 
-    if (selectedView.value === 'graph') {
-        // Use nextTick to ensure containers are rendered before initializing
-        nextTick(refreshAllCharts);
-    }
-    window.addEventListener('resize', resizeChartHandler);
+    // No need to refresh charts here, as HotelSalesComparisonChart handles its own lifecycle.
+    // if (selectedView.value === 'graph') {
+    //     // Use nextTick to ensure containers are rendered before initializing
+    //     nextTick(refreshAllCharts);
+    // }
+    // window.addEventListener('resize', resizeChartHandler);
 });
 onBeforeUnmount(() => {
-    disposeAllCharts();
-    window.removeEventListener('resize', resizeChartHandler);
+    // disposeAllCharts();
+    // window.removeEventListener('resize', resizeChartHandler);
 });
 
-// Watch for changes in computed chart options    
+// Watch for changes in computed chart options
 watch(selectedView, async (newView) => {
     if (newView === 'graph') {
         await nextTick();
-        disposeAllCharts();
-        refreshAllCharts();
+        // disposeAllCharts();
+        // refreshAllCharts();
     } else {
-        disposeAllCharts();
+        // disposeAllCharts();
     }
 });
 
 // Watch for changes in revenueData and occupancyData props to re-render charts
 watch(() => props.revenueData, () => {
     if (selectedView.value === 'graph') {
-        nextTick(refreshAllCharts);
+        // nextTick(refreshAllCharts);
     }
 }, { deep: true }); // Use deep watch for array/object changes
 
 watch(() => props.occupancyData, () => {
     if (selectedView.value === 'graph') {
-        nextTick(refreshAllCharts);
+        // nextTick(refreshAllCharts);
     }
-}, { deep: true }); // Use deep watch for array/object changes
-</script>
+}, { deep: true }); // Use deep watch for array/object changes</script>

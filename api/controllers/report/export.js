@@ -726,7 +726,6 @@ module.exports = {
     getExportReservationDetails,
     getExportMealCount,
     getDailyReport,
-    getDailyReportData,
     getAvailableMetricDates,
     generateDailyMetrics,
     getExportDailyReportExcel,

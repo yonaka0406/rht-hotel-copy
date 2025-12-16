@@ -50,6 +50,21 @@ export const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Format date to YYYY-MM-DD in JST (Asia/Tokyo)
+export const formatDateToYMD = (dateString) => {
+  if (!dateString) return null;
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return null;
+
+  // Use en-CA locale to get YYYY-MM-DD format
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Tokyo'
+  }).format(d);
+};
+
 export const formatDateWithDay = (date) => {
   const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
   const parsedDate = new Date(date);

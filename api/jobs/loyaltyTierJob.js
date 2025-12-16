@@ -190,18 +190,17 @@ const assignLoyaltyTiers = async () => {
 
         // Release the client back to the pool
         client.release();
-        //console.log('Database client released.');
     }
 };
 
 // Schedule the job to run daily at 2 AM
-const scheduleLoyaltyTierJob = () => {    
+const scheduleLoyaltyTierJob = () => {
     cron.schedule('0 2 * * *', async () => {
         try {
             //console.log('Loyalty tier assignment job triggered by cron schedule.');
             await assignLoyaltyTiers();
         } catch (error) {
-            console.error('Loyalty tier assignment job failed:', error);            
+            console.error('Loyalty tier assignment job failed:', error);
         }
     }, {
         scheduled: true,

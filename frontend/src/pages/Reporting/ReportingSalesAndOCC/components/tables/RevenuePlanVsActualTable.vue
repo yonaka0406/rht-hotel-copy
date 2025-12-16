@@ -8,15 +8,8 @@
                 データはありません。
             </div>
             <div v-else class="text-center p-4">
-                <DataTable :value="revenueData"
-                    responsiveLayout="scroll"
-                    paginator
-                    :rows="5"
-                    :rowsPerPageOptions="[5, 15, 30, 50]"
-                    stripedRows
-                    sortMode="multiple"
-                    removableSort
-                >
+                <DataTable :value="processedRevenueData" responsiveLayout="scroll" paginator :rows="5"
+                    :rowsPerPageOptions="[5, 15, 30, 50]" stripedRows sortMode="multiple" removableSort>
                     <Column field="hotel_name" header="施設" frozen sortable style="width: 20%"></Column>
                     <Column field="month" header="月度" sortable style="width: 10%"></Column>
                     <Column field="forecast_revenue" header="計画" sortable style="width: 20%">
@@ -26,22 +19,26 @@
                             </div>
                         </template>
                     </Column>
-                    <Column field="accommodation_revenue" header="実績①" sortable style="width: 20%">
+                    <Column field="actual_revenue" header="実績①" sortable style="width: 20%">
                         <template #body="{ data }">
                             <div class="flex justify-end mr-2">
-                                {{ formatCurrency(data.accommodation_revenue) }}
+                                {{ formatCurrency(data.actual_revenue) }}
                             </div>
                         </template>
                     </Column>
-                    <Column header="分散" style="width: 30%">
+                    <Column field="variance_amount" header="分散" sortable style="width: 30%">
                         <template #body="{ data }">
                             <div class="flex justify-end mr-2">
-                                {{ formatCurrency(data.accommodation_revenue - data.forecast_revenue) }}
-                                <Badge v-if="data.forecast_revenue !== null && data.forecast_revenue !== undefined && data.forecast_revenue !== 0"
+                                <span v-if="data.variance_amount != null">
+                                    {{ formatCurrency(data.variance_amount) }}
+                                </span>
+                                <span v-else>—</span>
+                                <Badge
+                                    v-if="data.variance_percentage != null"
                                     class="ml-2"
-                                    :severity="getSeverity((data.accommodation_revenue / data.forecast_revenue) - 1)"
+                                    :severity="getSeverity(data.variance_percentage)"
                                     size="small">
-                                    {{ formatPercentage((data.accommodation_revenue / data.forecast_revenue) - 1) }}
+                                    {{ formatPercentage(data.variance_percentage) }}
                                 </Badge>
                                 <Badge v-else class="ml-2" severity="info" size="small">
                                     —
@@ -66,7 +63,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { computed } from 'vue'; // Add this line
 import { Card, DataTable, Column, Badge, Button } from 'primevue';
 import {
     formatCurrencyForReporting as formatCurrency,
@@ -82,6 +79,30 @@ defineProps({
 });
 
 defineEmits(['export-csv']);
+
+const processedRevenueData = computed(() => {
+    return props.revenueData.map(data => {
+        const actualRevenue = data.accommodation_revenue ?? data.period_revenue;
+        const forecast = data.forecast_revenue;
+
+        const varianceAmount = (actualRevenue != null && forecast != null) ? (actualRevenue - forecast) : null;
+
+        let variancePercentage = null;
+        if (actualRevenue != null && forecast != null && forecast !== 0) {
+            const ratio = (actualRevenue / forecast) - 1;
+            if (Number.isFinite(ratio)) {
+                variancePercentage = ratio;
+            }
+        }
+
+        return {
+            ...data,
+            actual_revenue: actualRevenue, // Add for convenience
+            variance_amount: varianceAmount,
+            variance_percentage: variancePercentage
+        };
+    });
+});
 </script>
 
 <style scoped>

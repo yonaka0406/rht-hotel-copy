@@ -3,9 +3,8 @@
         データはありません。
     </div>
     <div v-else class="p-fluid">
-        <DataTable 
-            :value="occupancyData"
-            responsiveLayout="scroll" 
+                <DataTable
+                    :value="processedOccupancyData"            responsiveLayout="scroll" 
             paginator 
             :rows="rows"
             :rowsPerPageOptions="rowsPerPageOptions"
@@ -21,8 +20,8 @@
             <Column field="sold_rooms" header="実績販売室数" sortable style="min-width: 100px; width: 10%">
                 <template #body="{data}">{{ data.sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
             </Column>
-            <Column header="販売室数差異" sortable style="min-width: 100px; width: 10%">
-                <template #body="{data}">{{ ( (data.sold_rooms || 0) - (data.fc_sold_rooms || 0) ).toLocaleString('ja-JP') }}</template>
+            <Column field="diff_sold_rooms" header="販売室数差異" sortable style="min-width: 100px; width: 10%">
+                <template #body="{data}">{{ data.diff_sold_rooms?.toLocaleString('ja-JP') }}</template>
             </Column>
             <Column v-if="showNonAccommodationColumn" field="non_accommodation_stays" header="非宿泊数" sortable style="min-width: 100px; width: 10%">
                 <template #body="{data}">{{ data.non_accommodation_stays?.toLocaleString('ja-JP') || 0 }}</template>
@@ -98,6 +97,13 @@ const props = defineProps({
 });
 
 const getSeverity = (value) => getSeverityUtil(value);
+
+const processedOccupancyData = computed(() => {
+    return props.occupancyData.map(item => ({
+        ...item,
+        diff_sold_rooms: (item.sold_rooms || 0) - (item.fc_sold_rooms || 0)
+    }));
+});
 
 const monthColumnStyle = computed(() => {
     return props.showHotelColumn

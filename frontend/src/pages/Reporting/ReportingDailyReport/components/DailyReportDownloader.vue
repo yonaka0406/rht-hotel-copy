@@ -267,7 +267,7 @@ const {
     reportData,
     isLoading,
     getAvailableMetricDates,
-    getDailyReportData,
+    fetchDailyReportData,
     generateDailyMetricsForToday,
     downloadDailyReportExcel,
 } = useReportStore();
@@ -281,7 +281,7 @@ const dt = ref();
 const loadedDateTitle = ref('レポートデータ');
 const loadedDate = ref(''); // New reactive variable for card title
 const activeTab = ref(0);
-const comparisonData = ref({});
+const comparisonData = ref([]);
 
 const date1 = ref(new Date(new Date().setDate(new Date().getDate() - 1)));
 const date2 = ref(new Date());
@@ -302,93 +302,93 @@ const compareDates = async () => {
     const d1 = formatDate(date1.value);
     const d2 = formatDate(date2.value);
 
-    await getDailyReportData(d1);
-    const data1 = JSON.parse(JSON.stringify(reportData.value));
+    try {
+        const data1 = await fetchDailyReportData(d1);
+        const data2 = await fetchDailyReportData(d2);
 
-    await getDailyReportData(d2);
-    const data2 = JSON.parse(JSON.stringify(reportData.value));
+        comparedDate1.value = d1;
+        comparedDate2.value = d2;
 
-    comparedDate1.value = d1;
-    comparedDate2.value = d2;
-
-    const calculateChange = (value2, value1) => {
-        if (value1 === null || value1 === undefined || isNaN(value1)) {
-            return value2 === null || value2 === undefined || isNaN(value2) || value2 === 0 ? 0 : Infinity;
-        }
-        if (value1 === 0) {
-            return value2 === 0 ? 0 : Infinity;
-        }
-        return ((value2 - value1) / value1) * 100;
-    };
-
-    // Aggregate data1 and data2 by hotel_id and month
-    const aggregateData = (data) => {
-        const aggregated = new Map();
-        data.forEach(item => {
-            const key = `${item.hotel_id}-${formatDate(item.month)}`;
-            if (!aggregated.has(key)) {
-                aggregated.set(key, {
-                    hotel_id: item.hotel_id,
-                    hotel_name: item.hotel_name,
-                    month: item.month,
-                    confirmed_stays: 0,
-                    cancelled_stays: 0,
-                    accommodation_sales: 0,
-                    other_sales: 0,
-                    total_sales: 0,
-                    cancelled_sales: 0,
-                });
+        const calculateChange = (value2, value1) => {
+            if (value1 === null || value1 === undefined || isNaN(value1)) {
+                return value2 === null || value2 === undefined || isNaN(value2) || value2 === 0 ? 0 : Infinity;
             }
-            const current = aggregated.get(key);
-            current.confirmed_stays += Number(item.confirmed_stays);
-            current.cancelled_stays += Number(item.cancelled_stays);
-            current.accommodation_sales += Number(item.accommodation_sales || 0);
-            current.other_sales += Number(item.other_sales || 0);
-            current.total_sales += Number(item.normal_sales) + Number(item.cancellation_sales);
-            current.cancelled_sales += Number(item.cancellation_sales);
+            if (value1 === 0) {
+                return value2 === 0 ? 0 : Infinity;
+            }
+            return ((value2 - value1) / value1) * 100;
+        };
+
+        // Aggregate data1 and data2 by hotel_id and month
+        const aggregateData = (data) => {
+            const aggregated = new Map();
+            data.forEach(item => {
+                const key = `${item.hotel_id}-${formatDate(item.month)}`;
+                if (!aggregated.has(key)) {
+                    aggregated.set(key, {
+                        hotel_id: item.hotel_id,
+                        hotel_name: item.hotel_name,
+                        month: item.month,
+                        confirmed_stays: 0,
+                        cancelled_stays: 0,
+                        accommodation_sales: 0,
+                        other_sales: 0,
+                        total_sales: 0,
+                    });
+                }
+                const current = aggregated.get(key);
+                current.confirmed_stays += Number(item.confirmed_stays);
+                current.cancelled_stays += Number(item.cancelled_stays);
+                current.accommodation_sales += Number(item.accommodation_sales || 0);
+                current.other_sales += Number(item.other_sales || 0);
+                current.total_sales += (Number(item.accommodation_sales || 0) + Number(item.other_sales || 0)); // normal sales
+            });
+            return aggregated;
+        };
+
+        const aggregatedData1 = aggregateData(data1);
+        const aggregatedData2 = aggregateData(data2);
+
+        // Process data for comparison
+        const processed = [];
+        aggregatedData2.forEach(item2 => {
+            const key = `${item2.hotel_id}-${formatDate(item2.month)}`;
+            const item1 = aggregatedData1.get(key);
+
+            const confirmedStaysChange = item1 ? calculateChange(item2.confirmed_stays, item1.confirmed_stays) : (item2.confirmed_stays !== 0 ? Infinity : 0);
+            const cancelledStaysChange = item1 ? calculateChange(item2.cancelled_stays, item1.cancelled_stays) : (item2.cancelled_stays !== 0 ? Infinity : 0);
+            const accommodationSalesChange = item1 ? calculateChange(item2.accommodation_sales, item1.accommodation_sales) : (item2.accommodation_sales !== 0 ? Infinity : 0);
+            const otherSalesChange = item1 ? calculateChange(item2.other_sales, item1.other_sales) : (item2.other_sales !== 0 ? Infinity : 0);
+            const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);        
+
+            processed.push({
+                hotel_name: item2.hotel_name,
+                month: formatDate(item2.month),
+                confirmed_stays_date2: item2.confirmed_stays,
+                confirmed_stays_change: confirmedStaysChange,
+                confirmed_stays_date1: item1 ? item1.confirmed_stays : 0,
+                cancelled_stays_date2: item2.cancelled_stays,
+                cancelled_stays_change: cancelledStaysChange,
+                cancelled_stays_date1: item1 ? item1.cancelled_stays : 0,
+                accommodation_sales_date2: item2.accommodation_sales,
+                accommodation_sales_change: accommodationSalesChange,
+                accommodation_sales_date1: item1 ? item1.accommodation_sales : 0,
+                other_sales_date2: item2.other_sales,
+                other_sales_change: otherSalesChange,
+                other_sales_date1: item1 ? item1.other_sales : 0,
+                total_sales_date2: item2.total_sales,
+                total_sales_change: totalSalesChange,
+                total_sales_date1: item1 ? item1.total_sales : 0,
+            });
         });
-        return aggregated;
-    };
 
-    const aggregatedData1 = aggregateData(data1);
-    const aggregatedData2 = aggregateData(data2);
-
-    // Process data for comparison
-    const processed = [];
-    aggregatedData2.forEach(item2 => {
-        const key = `${item2.hotel_id}-${formatDate(item2.month)}`;
-        const item1 = aggregatedData1.get(key);
-
-        const confirmedStaysChange = item1 ? calculateChange(item2.confirmed_stays, item1.confirmed_stays) : (item2.confirmed_stays !== 0 ? Infinity : 0);
-        const cancelledStaysChange = item1 ? calculateChange(item2.cancelled_stays, item1.cancelled_stays) : (item2.cancelled_stays !== 0 ? Infinity : 0);
-        const accommodationSalesChange = item1 ? calculateChange(item2.accommodation_sales, item1.accommodation_sales) : (item2.accommodation_sales !== 0 ? Infinity : 0);
-        const otherSalesChange = item1 ? calculateChange(item2.other_sales, item1.other_sales) : (item2.other_sales !== 0 ? Infinity : 0);
-        const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);        
-
-        processed.push({
-            hotel_name: item2.hotel_name,
-            month: formatDate(item2.month),
-            confirmed_stays_date2: item2.confirmed_stays,
-            confirmed_stays_change: confirmedStaysChange,
-            confirmed_stays_date1: item1 ? item1.confirmed_stays : 0,
-            cancelled_stays_date2: item2.cancelled_stays,
-            cancelled_stays_change: cancelledStaysChange,
-            cancelled_stays_date1: item1 ? item1.cancelled_stays : 0,
-            accommodation_sales_date2: item2.accommodation_sales,
-            accommodation_sales_change: accommodationSalesChange,
-            accommodation_sales_date1: item1 ? item1.accommodation_sales : 0,
-            other_sales_date2: item2.other_sales,
-            other_sales_change: otherSalesChange,
-            other_sales_date1: item1 ? item1.other_sales : 0,
-            total_sales_date2: item2.total_sales,
-            total_sales_change: totalSalesChange,
-            total_sales_date1: item1 ? item1.total_sales : 0,
-        });
-    });
-
-    comparisonData.value = processed;
-
-    isLoading.value = false;
+        comparisonData.value = processed;
+    } catch (error) {
+        console.error('Comparison failed:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '比較データの取得に失敗しました。', life: 3000 });
+    } finally {
+        isLoading.value = false;
+    }
 };
 const getBadgeProps = (change) => {
     if (!isFinite(change) || change === 0) { // Handles null, undefined, NaN
@@ -421,25 +421,35 @@ onMounted(async () => {
 
 });
 
-const loadReport = async () => { // Made async to await getDailyReportData
+const loadReport = async () => { // Made async to await fetchDailyReportData
     if (!selectedDate.value) return;
+    isLoading.value = true;
     const date = formatDate(selectedDate.value);
     const today = formatDate(new Date()); // Get today's date formatted
 
-    await getDailyReportData(date); // Attempt to load data
+    try {
+        let data = await fetchDailyReportData(date); // Attempt to load data
+        reportData.value = data;
 
-    // If no data is available for today's date, generate it
-    if (reportData.value.length === 0 && date === today) {
-        const result = await generateDailyMetricsForToday();
-        if (result.success) {
-            await getDailyReportData(date); // Re-load data after generation
-        } else {
-            console.error('Failed to generate daily metrics:', result.error);
+        // If no data is available for today's date, generate it
+        if (reportData.value.length === 0 && date === today) {
+            const result = await generateDailyMetricsForToday();
+            if (result.success) {
+                data = await fetchDailyReportData(date); // Re-load data after generation
+                reportData.value = data;
+            } else {
+                console.error('Failed to generate daily metrics:', result.error);
+            }
         }
+                        
+        loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
+        loadedDate.value = date;
+    } catch (error) {
+        console.error('Failed to load report:', error);
+        reportData.value = [];
+    } finally {
+        isLoading.value = false;
     }
-                    
-    loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
-    loadedDate.value = date;
 };
 
 const exportComparisonToExcel = async () => {

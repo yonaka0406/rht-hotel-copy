@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { defineProps, ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { Card, Panel } from 'primevue';
 import * as echarts from 'echarts/core';
 import {

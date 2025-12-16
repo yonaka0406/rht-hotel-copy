@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const { parse } = require('csv-parse');
-const crypto = require('crypto'); 
+const crypto = require('crypto');
 const { getPool, getDevPool, getProdPool } = require('../api/config/database'); // Adjust path as necessary
 
 const CSV_FILE_PATH = './temp/顧客マスター - 顧客.csv';
@@ -118,7 +118,6 @@ async function importCSV(dryRun, env = 'dev') { // Added env parameter
                 // The getDevPool function already logs "Explicitly selecting development pool"
             }
             client = await selectedPool.connect();
-            console.log('Database client connected.');
         } else if (!dryRun && records.length === 0) {
             console.log('No records to import, database connection not initiated.');
         }
@@ -183,7 +182,7 @@ async function importCSV(dryRun, env = 'dev') { // Added env parameter
                     } else {
                         const parts = billingAddressFull.split(/[市区町村郡]/);
                         if (parts.length > 1 && billingAddressFull.match(/[市区町村郡]/)) {
-                             billingCity = parts[0] + billingAddressFull.match(/[市区町村郡]/)[0];
+                            billingCity = parts[0] + billingAddressFull.match(/[市区町村郡]/)[0];
                         } else { billingCity = billingAddressFull.split(' ')[0]; }
                     }
                 }
@@ -306,7 +305,6 @@ async function importCSV(dryRun, env = 'dev') { // Added env parameter
         if (client && !dryRun) {
             try {
                 client.release();
-                console.log('Database client released.');
             } catch (releaseError) {
                 console.error('Error releasing database client:', releaseError.message, releaseError.stack ? `\nStack: ${releaseError.stack}` : '');
             }

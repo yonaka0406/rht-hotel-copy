@@ -6,4 +6,5 @@ module.exports = {
   ...main,
   ...exportController,
   ...batch,
+  ...require('./daily')
 }

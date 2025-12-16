@@ -1,7 +1,13 @@
 <template>
     <div class="p-4">
-        <h3 class="text-xl font-semibold mb-2">予約進化 (OTBマトリクス) - {{ formatTargetMonthForDisplay(props.targetMonth) }}</h3>
-        
+        <h3 class="text-xl font-semibold mb-2">予約進化 (OTBマトリクス) - {{ formatTargetMonthForDisplay(props.targetMonth) }}
+        </h3>
+
+        <Message severity="info" class="mb-4" :closable="false">
+            <span class="font-bold">OTB (On The Books) とは:</span>
+            ホスピタリティ業界において、将来の日付に対して確定・確保された予約や収益のことを指します。来月の客室販売数を知るなど、予測や戦略策定において重要な指標となります。
+        </Message>
+
         <div v-if="loading" class="flex justify-center items-center py-10">
             <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" animationDuration=".5s" />
         </div>
@@ -18,7 +24,8 @@
                     </div>
                 </template>
                 <template #content>
-                    <div ref="heatmapChartContainer" style="height: 600px;" v-if="heatmapEchartsOptions"></div> <!-- Taller height for heatmap -->
+                    <div ref="heatmapChartContainer" style="height: 600px;" v-if="heatmapEchartsOptions"></div>
+                    <!-- Taller height for heatmap -->
                     <p v-else class="text-gray-500 p-4">ヒートマップデータはないまたは処理中</p>
                 </template>
             </Card>
@@ -31,7 +38,8 @@
                     </div>
                 </template>
                 <template #content>
-                    <div ref="lineChartContainer" style="height: 400px" v-if="averageData.length && echartsOptions"></div>
+                    <div ref="lineChartContainer" style="height: 400px" v-if="averageData.length && echartsOptions">
+                    </div>
                     <p v-else-if="!averageData.length" class="text-gray-500 p-4">平均OTBデータがありません。</p>
                     <!-- The fallback DataTable that was here is removed as it's likely unreachable -->
                 </template>
@@ -45,32 +53,33 @@ import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount, shallowRef 
 import { useReportStore } from '@/composables/useReportStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import ProgressSpinner from 'primevue/progressspinner';
-import Card from 'primevue/card'; // Assuming Card is kept from previous change
+import Card from 'primevue/card';
+import Message from 'primevue/message';
 
 // ECharts imports
 import * as echarts from 'echarts/core';
 import {
-  TooltipComponent,
-  GridComponent,
-  LegendComponent,
-  TitleComponent,
-  VisualMapComponent, // Added
-  DataZoomComponent // Added for zoomable charts
+    TooltipComponent,
+    GridComponent,
+    LegendComponent,
+    TitleComponent,
+    VisualMapComponent, // Added
+    DataZoomComponent // Added for zoomable charts
 } from 'echarts/components';
 import { LineChart, HeatmapChart } from 'echarts/charts'; // Added
 import { CanvasRenderer } from 'echarts/renderers';
 
 // Register ECharts components
 echarts.use([
-  TooltipComponent,
-  GridComponent,
-  LegendComponent,
-  TitleComponent,
-  VisualMapComponent, // Added
-  DataZoomComponent, // Added for zoomable charts
-  LineChart,
-  HeatmapChart,       // Added
-  CanvasRenderer,
+    TooltipComponent,
+    GridComponent,
+    LegendComponent,
+    TitleComponent,
+    VisualMapComponent, // Added
+    DataZoomComponent, // Added for zoomable charts
+    LineChart,
+    HeatmapChart,       // Added
+    CanvasRenderer,
 ]);
 
 const props = defineProps({
@@ -139,7 +148,7 @@ const fetchReportData = async () => {
                 current.sum += count;
                 current.items++;
             });
-            
+
             averageData.value = Array.from(leadDayMap.entries()).map(([lead_days, data]) => ({
                 lead_days: parseInt(lead_days, 10),
                 avg_booked_room_nights: data.items > 0 ? data.sum / data.items : 0
@@ -168,7 +177,7 @@ const averageDataWithOccupationRate = computed(() => {
         ...item,
         avg_occupation_rate: item.avg_booked_room_nights / totalRooms
     }));
-});      
+});
 
 
 // Helper function to get all dates in a given month (YYYY-MM-DD format for the first day)
@@ -394,7 +403,7 @@ const echartsOptions = computed(() => {
 
 // Watch for prop changes to refetch data
 watch(() => [props.hotelId, props.targetMonth, props.triggerFetch],
-    ([_newHotelId, _newTargetMonth, _newTriggerFetch], [_oldHotelId, _oldTargetMonth, _oldTriggerFetch] = []) => {        
+    ([_newHotelId, _newTargetMonth, _newTriggerFetch], [_oldHotelId, _oldTargetMonth, _oldTriggerFetch] = []) => {
         fetchReportData(); // Call the original handler
     },
     { immediate: true, deep: true }
@@ -456,14 +465,14 @@ const heatmapEchartsOptions = computed(() => {
             orient: 'horizontal',
             left: 'center',
             bottom: '5%',
-            color: ['#D32F2F', '#FFEB3B', '#ECEFF1','#FFFFFF'],
+            color: ['#D32F2F', '#FFEB3B', '#ECEFF1', '#FFFFFF'],
         },
         series: [{
             name: '宿泊数',
             type: 'heatmap',
             data: hData.seriesData, // [xIndex, yIndex, value]
             label: {
-                show: false,                
+                show: false,
             },
             emphasis: {
                 itemStyle: {
