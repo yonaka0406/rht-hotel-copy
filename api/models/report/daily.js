@@ -87,13 +87,13 @@ const selectDailyReportDataByHotel = async (requestId, metricDate, hotelIds) => 
             daily_plan_metrics dpm
         JOIN
             hotels h ON dpm.hotel_id = h.id
-        WHERE metric_date = $1
+        WHERE dpm.metric_date = $1
     `;
 
     const values = [metricDate];
 
     if (hotelIds && hotelIds.length > 0) {
-        query += ` AND hotel_id = ANY($2)`;
+        query += ` AND dpm.hotel_id = ANY($2)`;
         values.push(hotelIds);
     }
 
