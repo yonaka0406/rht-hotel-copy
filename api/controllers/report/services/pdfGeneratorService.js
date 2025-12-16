@@ -1,5 +1,209 @@
 const { chromium } = require('playwright');
 const logger = require('../../../config/logger');
+const StyleConsistencyValidator = require('../../../services/styleConsistencyValidator');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Enhanced PDF Generator Service
+ * 
+ * This service generates PDF reports using serialized chart configurations from the frontend.
+ * It ensures visual consistency between web and PDF outputs by using the same chart configurations.
+ * Includes style validation and enhanced error handling with fallback content.
+ */
+
+// Initialize style consistency validator
+const styleValidator = new StyleConsistencyValidator();
+
+// Load ECharts library content
+let echartsLibraryContent = null;
+const loadEChartsLibrary = () => {
+    if (echartsLibraryContent === null) {
+        try {
+            const echartsPath = path.join(__dirname, '../../../node_modules/echarts/dist/echarts.min.js');
+            echartsLibraryContent = fs.readFileSync(echartsPath, 'utf8');
+            logger.debug('ECharts library loaded successfully', { size: echartsLibraryContent.length });
+        } catch (error) {
+            logger.error('Failed to load ECharts library from local file', { error: error.message });
+            echartsLibraryContent = ''; // Fallback to empty string
+        }
+    }
+    return echartsLibraryContent;
+};
+
+/**
+ * Deserialize chart configuration from frontend
+ * Reconstructs functions and gradients from serialized form
+ */
+const deserializeChartConfig = (serializedConfig) => {
+    if (!serializedConfig || serializedConfig.type !== 'chart-config') {
+        throw new Error('Invalid serialized configuration type');
+    }
+
+    const deserializeObject = (obj, functions, gradients) => {
+        if (obj === null || obj === undefined) return obj;
+
+        if (typeof obj === 'object' && obj.__function) {
+            const func = functions.find(f => f.id === obj.__function);
+            if (func) {
+                try {
+                    // Safely reconstruct function from source
+                    return new Function('return ' + func.source)();
+                } catch (error) {
+                    logger.warn('Failed to reconstruct function, using fallback', { error: error.message });
+                    return () => 'N/A'; // Fallback function
+                }
+            }
+            return null;
+        }
+
+        if (typeof obj === 'object' && obj.__gradient) {
+            const gradient = gradients.find(g => g.id === obj.__gradient);
+            if (gradient && gradient.type === 'LinearGradient') {
+                // Return gradient object that ECharts can understand
+                return {
+                    type: 'linear',
+                    x: gradient.x,
+                    y: gradient.y,
+                    x2: gradient.x2,
+                    y2: gradient.y2,
+                    colorStops: gradient.colorStops
+                };
+            }
+            return null;
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => deserializeObject(item, functions, gradients));
+        }
+
+        if (typeof obj === 'object') {
+            const result = {};
+            for (const [key, value] of Object.entries(obj)) {
+                result[key] = deserializeObject(value, functions, gradients);
+            }
+            return result;
+        }
+
+        return obj;
+    };
+
+    return deserializeObject(serializedConfig.options, serializedConfig.functions, serializedConfig.gradients);
+};
+
+/**
+ * Validate chart rendering and canvas content
+ */
+const validateChartRendering = async (page, requestId) => {
+    try {
+        const validationResult = await page.evaluate(() => {
+            const chartContainers = [
+                'revenuePlanVsActualContainer',
+                'occupancyGaugeContainer', 
+                'allHotelsRevenueContainer',
+                'allHotelsOccupancyContainer'
+            ];
+
+            const results = {};
+            let totalCanvases = 0;
+            let validCanvases = 0;
+
+            chartContainers.forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (container) {
+                    const canvases = container.querySelectorAll('canvas');
+                    const hasValidCanvas = canvases.length > 0 && 
+                        Array.from(canvases).some(canvas => {
+                            // Check if canvas has actual content (not just empty)
+                            const ctx = canvas.getContext('2d');
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            return imageData.data.some(pixel => pixel !== 0);
+                        });
+
+                    results[containerId] = {
+                        exists: true,
+                        canvasCount: canvases.length,
+                        hasValidCanvas: hasValidCanvas,
+                        dimensions: {
+                            width: container.offsetWidth,
+                            height: container.offsetHeight
+                        }
+                    };
+
+                    totalCanvases += canvases.length;
+                    if (hasValidCanvas) validCanvases++;
+                } else {
+                    results[containerId] = {
+                        exists: false,
+                        canvasCount: 0,
+                        hasValidCanvas: false
+                    };
+                }
+            });
+
+            return {
+                containers: results,
+                summary: {
+                    totalCanvases,
+                    validCanvases,
+                    renderingSuccess: validCanvases > 0
+                }
+            };
+        });
+
+        logger.debug('Chart validation completed', { 
+            requestId, 
+            validation: validationResult 
+        });
+
+        return validationResult;
+    } catch (error) {
+        logger.error('Chart validation failed', { 
+            requestId, 
+            error: error.message 
+        });
+        return {
+            containers: {},
+            summary: {
+                totalCanvases: 0,
+                validCanvases: 0,
+                renderingSuccess: false
+            }
+        };
+    }
+};
+
+/**
+ * Generate fallback content for failed chart rendering
+ */
+const generateFallbackContent = (chartType, error) => {
+    const fallbackMessages = {
+        'revenuePlanVsActual': '収益チャートの生成に失敗しました',
+        'occupancyGauge': '稼働率チャートの生成に失敗しました', 
+        'allHotelsRevenue': '施設別収益チャートの生成に失敗しました',
+        'allHotelsOccupancy': '施設別稼働率チャートの生成に失敗しました'
+    };
+
+    return `
+        <div style="
+            width: 100%; 
+            height: 300px; 
+            border: 2px dashed #ccc; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background-color: #f8f9fa;
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+        ">
+            <div>
+                <p>${fallbackMessages[chartType] || 'チャートの生成に失敗しました'}</p>
+                <p style="font-size: 12px; margin-top: 10px;">エラー: ${error}</p>
+            </div>
+        </div>
+    `;
+};
 
 const generatePdfReport = async (reportType, reqBody, requestId) => {
     logger.debug('PDF generation started', {
@@ -8,10 +212,19 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
         selectedView: reqBody.selectedView,
         hasKpiData: !!reqBody.kpiData,
         hasChartData: !!reqBody.chartData,
-        hasAllHotelsRevenueOptions: !!reqBody.allHotelsRevenueChartOptions
+        hasSerializedChartConfigs: !!reqBody.serializedChartConfigs
     });
 
-    const { selectedView, periodMaxDate, allHotelNames, kpiData, chartData, allHotelsRevenueChartOptions } = reqBody;
+    const { 
+        selectedView, 
+        periodMaxDate, 
+        allHotelNames, 
+        kpiData, 
+        chartData, 
+        serializedChartConfigs,
+        // Legacy support for old format
+        allHotelsRevenueChartOptions 
+    } = reqBody;
     
     // Debug: Log the actual received data
     logger.debug('Received request body data', {
@@ -62,25 +275,66 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                 requestId,
                 hasKpiData: !!kpiData,
                 hasChartData: !!chartData,
+                hasSerializedChartConfigs: !!serializedChartConfigs,
                 kpiDataKeys: kpiData ? Object.keys(kpiData) : null,
                 chartDataKeys: chartData ? Object.keys(chartData) : null,
+                serializedConfigKeys: serializedChartConfigs ? Object.keys(serializedChartConfigs) : null,
                 selectedView,
                 periodMaxDate,
                 allHotelNames
             });
 
-            logger.debug('Building chart generation script', { requestId });
+            logger.debug('Building enhanced chart generation script', { requestId });
             
-            // Validate data before JSON.stringify
+            // Validate and deserialize chart configurations
+            let deserializedConfigs = {};
             try {
+                if (serializedChartConfigs) {
+                    Object.keys(serializedChartConfigs).forEach(chartType => {
+                        try {
+                            deserializedConfigs[chartType] = deserializeChartConfig(serializedChartConfigs[chartType]);
+                            logger.debug(`Successfully deserialized ${chartType} config`, { requestId });
+                            
+                            // Validate the deserialized configuration
+                            const validation = styleValidator.validateChartConfig(
+                                deserializedConfigs[chartType], 
+                                chartType, 
+                                requestId
+                            );
+                            
+                            if (!validation.isValid) {
+                                logger.warn(`Chart configuration validation failed for ${chartType}`, {
+                                    requestId,
+                                    errors: validation.errors,
+                                    warnings: validation.warnings
+                                });
+                            } else {
+                                logger.debug(`Chart configuration validation passed for ${chartType}`, {
+                                    requestId,
+                                    metrics: validation.metrics
+                                });
+                            }
+                        } catch (error) {
+                            logger.error(`Failed to deserialize ${chartType} config`, { 
+                                requestId, 
+                                error: error.message 
+                            });
+                            deserializedConfigs[chartType] = null;
+                        }
+                    });
+                }
+                
+                // Validate data serialization for injection into HTML
                 const testKpiData = JSON.stringify(kpiData || {});
                 const testChartData = JSON.stringify(chartData || {});
-                const testAllHotelsRevenueChartOptions = JSON.stringify(allHotelsRevenueChartOptions || {});
+                const testDeserializedConfigs = JSON.stringify(deserializedConfigs);
+                
                 logger.debug('Data serialization test passed', { 
                     requestId,
                     kpiDataLength: testKpiData.length,
                     chartDataLength: testChartData.length,
-                    allHotelsRevenueChartOptionsLength: testAllHotelsRevenueChartOptions.length
+                    deserializedConfigsLength: testDeserializedConfigs.length,
+                    availableChartTypes: Object.keys(deserializedConfigs)
                 });
             } catch (error) {
                 logger.error('Data serialization failed', { requestId, error: error.message });
@@ -88,41 +342,107 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             }
 
             const chartGenerationScript = `
-                document.addEventListener('DOMContentLoaded', function () {
-                    console.log('[${requestId}] DOM loaded, starting chart generation');
+                // Wait for both DOM and all scripts to load
+                window.addEventListener('load', async function () {
+                    console.log('[${requestId}] Window loaded, waiting for scripts to initialize...');
                     
-                    // Set a timeout to ensure we don't wait forever
+                    // Give additional time for scripts to initialize
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    console.log('[${requestId}] Starting enhanced chart generation');
+                    
+                    // Enhanced timeout with partial content support
                     const timeoutId = setTimeout(() => {
-                        console.log('[${requestId}] Chart generation timeout, setting fallback attribute');
+                        console.log('[${requestId}] Chart generation timeout, proceeding with partial content');
                         document.body.setAttribute('data-charts-rendered', 'true');
-                    }, 15000);
+                        document.body.setAttribute('data-charts-timeout', 'true');
+                    }, 30000);
 
                     try {
                         console.log('[${requestId}] Starting data parsing');
                         const kpiData = ${JSON.stringify(kpiData || {}, null, 2)};
                         const chartData = ${JSON.stringify(chartData || {}, null, 2)};
-                        const allHotelsRevenueChartOptions = ${JSON.stringify(allHotelsRevenueChartOptions || {}, null, 2)};
+                        const chartConfigs = ${JSON.stringify(deserializedConfigs, null, 2)};
                         const isCumulative = ${isCumulative};
+                        
                         console.log('[${requestId}] Data parsed successfully', { 
                             hasKpiData: !!kpiData, 
                             hasChartData: !!chartData,
+                            hasChartConfigs: !!chartConfigs,
+                            availableConfigs: chartConfigs ? Object.keys(chartConfigs) : null,
                             chartDataKeys: chartData ? Object.keys(chartData) : null,
                             hasAggregateData: !!(chartData && chartData.aggregateData),
                             hasAllHotelsRevenueData: !!(chartData && chartData.allHotelsRevenueData),
                             hasAllHotelsOccupancyData: !!(chartData && chartData.allHotelsOccupancyData)
                         });
 
-                        // Check if ECharts is available
+                        // Define fallback content generator function
+                        const generateFallbackContent = (chartType, error) => {
+                            const fallbackMessages = {
+                                'revenuePlanVsActual': '収益チャートの生成に失敗しました',
+                                'occupancyGauge': '稼働率チャートの生成に失敗しました', 
+                                'allHotelsRevenue': '施設別収益チャートの生成に失敗しました',
+                                'allHotelsOccupancy': '施設別稼働率チャートの生成に失敗しました',
+                                'echarts': 'EChartsライブラリの読み込みに失敗しました'
+                            };
+
+                            return '<div style="' +
+                                'width: 100%; ' +
+                                'height: 300px; ' +
+                                'border: 2px dashed #ccc; ' +
+                                'display: flex; ' +
+                                'align-items: center; ' +
+                                'justify-content: center; ' +
+                                'background-color: #f8f9fa; ' +
+                                'color: #666; ' +
+                                'font-size: 14px; ' +
+                                'text-align: center;' +
+                                '">' +
+                                '<div>' +
+                                '<p>' + (fallbackMessages[chartType] || 'チャートの生成に失敗しました') + '</p>' +
+                                '<p style="font-size: 12px; margin-top: 10px;">エラー: ' + error + '</p>' +
+                                '</div>' +
+                                '</div>';
+                        };
+
+                        // Verify ECharts is available (should be immediate since it's embedded)
+                        console.log('[${requestId}] Checking ECharts availability...');
+                        console.log('[${requestId}] typeof echarts:', typeof echarts);
+                        console.log('[${requestId}] echarts object:', echarts);
+                        console.log('[${requestId}] echarts.init:', typeof (echarts && echarts.init));
+                        console.log('[${requestId}] echarts.setOption:', typeof (echarts && echarts.setOption));
+                        
                         if (typeof echarts === 'undefined') {
-                            console.error('[${requestId}] ECharts library not loaded');
+                            console.error('[${requestId}] ECharts is undefined');
+                            console.error('[${requestId}] Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('chart')));
+                            const errorMessage = generateFallbackContent('echarts', 'ECharts is undefined');
+                            document.body.innerHTML += errorMessage;
                             clearTimeout(timeoutId);
                             document.body.setAttribute('data-charts-rendered', 'true');
+                            document.body.setAttribute('data-charts-error', 'echarts-undefined');
                             return;
                         }
-                        console.log('[${requestId}] ECharts library loaded successfully');
+                        
+                        if (!echarts.init) {
+                            console.error('[${requestId}] ECharts.init method not available');
+                            console.error('[${requestId}] ECharts methods:', Object.keys(echarts));
+                            const errorMessage = generateFallbackContent('echarts', 'ECharts.init method not available');
+                            document.body.innerHTML += errorMessage;
+                            clearTimeout(timeoutId);
+                            document.body.setAttribute('data-charts-rendered', 'true');
+                            document.body.setAttribute('data-charts-error', 'echarts-no-init');
+                            return;
+                        }
+                        
+                        console.log('[${requestId}] ECharts library verified and ready');
                         console.log('[${requestId}] ECharts version:', echarts.version || 'unknown');
+                        console.log('[${requestId}] ECharts methods:', {
+                            init: typeof echarts.init,
+                            setOption: typeof echarts.setOption,
+                            dispose: typeof echarts.dispose
+                        });
 
-                        // Chart initialization functions
+                        // Chart initialization functions using serialized configurations
                         const initRevenuePlanVsActualChart = () => new Promise((resolve) => {
                             console.log('[${requestId}] Initializing RevenuePlanVsActual chart');
                             const chartContainer = document.getElementById('revenuePlanVsActualContainer');
@@ -131,119 +451,102 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 resolve();
                                 return;
                             }
-                            const chart = echarts.init(chartContainer);
                             
-                            const data = chartData.aggregateData;
-                            const { total_forecast_revenue, total_period_accommodation_revenue } = data;
-                            const varianceAmount = total_period_accommodation_revenue - total_forecast_revenue;
-
-                            let displayVariancePercent;
-                            if (total_forecast_revenue === 0 || total_forecast_revenue === null) {
-                                displayVariancePercent = (total_period_accommodation_revenue === 0 || total_period_accommodation_revenue === null) ? "0.00%" : "N/A";
-                            } else {
-                                const percent = (varianceAmount / total_forecast_revenue) * 100;
-                                displayVariancePercent = percent.toFixed(2) + "%";
-                            }
-
-                            const variancePositiveColor = '#4CAF50';
-                            const varianceNegativeColor = '#F44336';
-                            const forecastColor = '#3498db';
-                            const actualColor = '#2ecc71';
-
-                            const options = {
-                                animation: false,
-                                tooltip: {
-                                    trigger: 'axis',
-                                    axisPointer: { type: 'shadow' },
-                                    formatter: (params) => {
-                                        const valueParam = params.find(p => p.seriesName === '売上');
-                                        if (!valueParam) return '';
-
-                                        let tooltipText = valueParam.name + '<br/>';
-                                        if (valueParam.name === '分散') {
-                                            tooltipText += valueParam.marker + ' 金額: ' + (varianceAmount / 10000).toLocaleString('ja-JP') + '万円<br/>';
-                                            tooltipText += '率: ' + displayVariancePercent;
-                                        } else {
-                                            tooltipText += valueParam.marker + ' 金額: ' + (valueParam.value / 10000).toLocaleString('ja-JP') + '万円';
-                                        }
-                                        return tooltipText;
-                                    }
-                                },
-                                grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
-                                xAxis: [{
-                                    type: 'category',
-                                    data: ['計画売上', '分散', '実績売上'],
-                                    splitLine: { show: false },
-                                    axisLabel: { interval: 0 }
-                                }],
-                                yAxis: [{
-                                    type: 'value',
-                                    name: '金額 (万円)',
-                                    axisLabel: { formatter: (value) => (value / 10000).toLocaleString('ja-JP') },
-                                    splitLine: { show: true }
-                                }],
-                                series: [
-                                    {
-                                        name: 'PlaceholderBase',
-                                        type: 'bar',
-                                        stack: 'total',
-                                        barWidth: '60%',
-                                        itemStyle: { borderColor: 'transparent', color: 'transparent' },
-                                        emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' } },
-                                        data: [
-                                            0,
-                                            varianceAmount >= 0 ? total_forecast_revenue : total_period_accommodation_revenue,
-                                            0
-                                        ]
-                                    },
-                                    {
-                                        name: '売上',
-                                        type: 'bar',
-                                        stack: 'total',
-                                        barWidth: '60%',
-                                        label: {
-                                            show: true,
-                                            formatter: (params) => {
-                                                if (params.name === '分散') {
-                                                    return displayVariancePercent;
-                                                }
-                                                return (params.value / 10000).toLocaleString('ja-JP') + '万円';
-                                            }
-                                        },
-                                        data: [
-                                            {
-                                                value: total_forecast_revenue,
-                                                itemStyle: { color: forecastColor },
-                                                label: { position: 'top' }
-                                            },
-                                            {
-                                                value: Math.abs(varianceAmount),
-                                                itemStyle: { color: varianceAmount >= 0 ? variancePositiveColor : varianceNegativeColor },
-                                                label: { position: 'top' }
-                                            },
-                                            {
-                                                value: total_period_accommodation_revenue,
-                                                itemStyle: { color: actualColor },
-                                                label: { position: 'top' }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            };
-
-                            chart.setOption(options);
-                            chart.resize();
+                            try {
+                                console.log('[${requestId}] Attempting to initialize RevenuePlanVsActual chart');
+                                console.log('[${requestId}] Container dimensions:', {
+                                    width: chartContainer.offsetWidth,
+                                    height: chartContainer.offsetHeight,
+                                    clientWidth: chartContainer.clientWidth,
+                                    clientHeight: chartContainer.clientHeight
+                                });
+                                
+                                const chart = echarts.init(chartContainer);
+                                console.log('[${requestId}] ECharts instance created successfully');
+                                
+                                // Use serialized configuration if available, otherwise fallback to basic chart
+                                let options = chartConfigs.revenuePlanVsActual;
+                                
+                                if (!options) {
+                                    console.warn('[${requestId}] No serialized config for RevenuePlanVsActual, using fallback');
+                                    // Fallback basic chart
+                                    options = {
+                                        animation: false,
+                                        title: { text: '売上 (計画 vs 実績)', left: 'center' },
+                                        series: [{
+                                            type: 'bar',
+                                            data: [100, 50, 80],
+                                            itemStyle: { color: '#3498db' }
+                                        }],
+                                        xAxis: { type: 'category', data: ['計画売上', '分散', '実績売上'] },
+                                        yAxis: { type: 'value' }
+                                    };
+                                } else {
+                                    console.log('[${requestId}] Using serialized config for RevenuePlanVsActual');
+                                }
+                                
+                                // Ensure animation is disabled for PDF
+                                options.animation = false;
+                                
+                                console.log('[${requestId}] Setting chart options:', JSON.stringify(options, null, 2));
+                                chart.setOption(options);
+                                console.log('[${requestId}] Chart options set, calling resize');
+                                chart.resize();
+                                
+                                console.log('[${requestId}] RevenuePlanVsActual chart initialization completed successfully');
                             
                             const chartTimeout = setTimeout(() => {
-                                console.log('[${requestId}] RevenuePlanVsActual chart rendering timeout');
+                                console.warn('[${requestId}] RevenuePlanVsActual chart rendering timeout - checking canvas content');
+                                
+                                // Check if canvas was created
+                                const canvases = chartContainer.querySelectorAll('canvas');
+                                console.log('[${requestId}] Canvas count after timeout:', canvases.length);
+                                
+                                if (canvases.length > 0) {
+                                    console.log('[${requestId}] Canvas found, checking content');
+                                    const canvas = canvases[0];
+                                    const ctx = canvas.getContext('2d');
+                                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                    const hasContent = imageData.data.some(pixel => pixel !== 0);
+                                    console.log('[${requestId}] Canvas has content:', hasContent);
+                                }
+                                
+                                try {
+                                    chart.dispose();
+                                } catch (disposeError) {
+                                    console.error('[${requestId}] Error disposing timed-out chart:', disposeError);
+                                }
+                                
                                 resolve();
                             }, 5000);
-                            
-                            chart.on('finished', () => {
-                                clearTimeout(chartTimeout);
-                                console.log('[${requestId}] RevenuePlanVsActual chart finished rendering');
-                                setTimeout(resolve, 100);
-                            });
+                                
+                                chart.on('finished', () => {
+                                    clearTimeout(chartTimeout);
+                                    console.log('[${requestId}] RevenuePlanVsActual chart finished rendering');
+                                    
+                                    // Verify canvas content
+                                    const canvases = chartContainer.querySelectorAll('canvas');
+                                    console.log('[${requestId}] Canvas count after finished:', canvases.length);
+                                    if (canvases.length > 0) {
+                                        const canvas = canvases[0];
+                                        console.log('[${requestId}] Canvas dimensions:', canvas.width, 'x', canvas.height);
+                                    }
+                                    
+                                    setTimeout(resolve, 100);
+                                });
+                                
+                                chart.on('error', (error) => {
+                                    clearTimeout(chartTimeout);
+                                    console.error('[${requestId}] RevenuePlanVsActual chart rendering error:', error);
+                                    chartContainer.innerHTML = generateFallbackContent('revenuePlanVsActual', 'Chart rendering error: ' + error.message);
+                                    resolve();
+                                });
+                                
+                            } catch (error) {
+                                console.error('[${requestId}] Error initializing RevenuePlanVsActual chart:', error);
+                                chartContainer.innerHTML = generateFallbackContent('revenuePlanVsActual', 'Chart initialization error: ' + error.message);
+                                resolve();
+                            }
                         });
 
                         const initOccupancyGaugeChart = () => new Promise((resolve) => {
@@ -254,38 +557,59 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 resolve();
                                 return;
                             }
-                            const chart = echarts.init(chartContainer);
                             
-                            const data = chartData.aggregateData;
-                            const occupancyRate = data.total_available_rooms > 0 ? 
-                                (data.total_sold_rooms / data.total_available_rooms * 100) : 0;
-                            
-                            const options = {
-                                animation: false,
-                                series: [{
-                                    name: '稼働率',
-                                    type: 'gauge',
-                                    detail: { formatter: '{value}%' },
-                                    data: [{ value: occupancyRate.toFixed(1), name: '稼働率' }],
-                                    max: 100,
-                                    axisLine: {
-                                        lineStyle: {
-                                            width: 20,
-                                            color: [
-                                                [0.3, '#ff4757'],
-                                                [0.7, '#ffa502'],
-                                                [1, '#2ed573']
-                                            ]
-                                        }
-                                    }
-                                }]
-                            };
-
-                            chart.setOption(options);
-                            chart.resize();
-                            
-                            const chartTimeout = setTimeout(() => {
-                                console.log('[${requestId}] OccupancyGauge chart rendering timeout');
+                            try {
+                                const chart = echarts.init(chartContainer);
+                                
+                                // Use serialized configuration if available, otherwise fallback to basic chart
+                                let options = chartConfigs.occupancyGauge;
+                                
+                                if (!options) {
+                                    console.warn('[${requestId}] No serialized config for OccupancyGauge, using fallback');
+                                    // Fallback basic gauge chart
+                                    const data = chartData.aggregateData || {};
+                                    const occupancyRate = data.total_available_rooms > 0 ? 
+                                        (data.total_sold_rooms / data.total_available_rooms * 100) : 0;
+                                    
+                                    options = {
+                                        animation: false,
+                                        series: [{
+                                            name: '稼働率',
+                                            type: 'gauge',
+                                            detail: { formatter: '{value}%' },
+                                            data: [{ value: occupancyRate.toFixed(1), name: '稼働率' }],
+                                            max: 100,
+                                            axisLine: {
+                                                lineStyle: {
+                                                    width: 20,
+                                                    color: [
+                                                        [0.3, '#ff4757'],
+                                                        [0.7, '#ffa502'],
+                                                        [1, '#2ed573']
+                                                    ]
+                                                }
+                                            }
+                                        }]
+                                    };
+                                }
+                                
+                                // Ensure animation is disabled for PDF
+                                options.animation = false;
+                                
+                                chart.setOption(options);
+                                chart.resize();
+                                
+                                console.log('[${requestId}] OccupancyGauge chart options set successfully');
+                                
+                                const chartTimeout = setTimeout(() => {
+                                console.warn('[${requestId}] OccupancyGauge chart rendering timeout - proceeding with fallback');
+                                try {
+                                    chart.dispose();
+                                } catch (disposeError) {
+                                    console.error('[${requestId}] Error disposing timed-out chart:', disposeError);
+                                }
+                                
+                                chartContainer.innerHTML = generateFallbackContent('occupancyGauge', 'Chart rendering timeout');
                                 resolve();
                             }, 5000);
                             
@@ -294,6 +618,19 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 console.log('[${requestId}] OccupancyGauge chart finished rendering');
                                 setTimeout(resolve, 100);
                             });
+                            
+                            chart.on('error', (error) => {
+                                clearTimeout(chartTimeout);
+                                console.error('[${requestId}] OccupancyGauge chart rendering error:', error);
+                                chartContainer.innerHTML = generateFallbackContent('occupancyGauge', 'Chart rendering error: ' + error.message);
+                                resolve();
+                            });
+                            
+                            } catch (error) {
+                                console.error('[${requestId}] Error initializing OccupancyGauge chart:', error);
+                                chartContainer.innerHTML = generateFallbackContent('occupancyGauge', 'Chart initialization error: ' + error.message);
+                                resolve();
+                            }
                         });
 
                         const initAllHotelsRevenueChart = () => new Promise((resolve) => {
@@ -304,24 +641,59 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 resolve();
                                 return;
                             }
-                            const chart = echarts.init(chartContainer);
                             
-                            // Use the options passed from frontend
-                            const options = allHotelsRevenueChartOptions;
-                            
-                            chart.setOption(options);
-                            chart.resize();
-                            
-                            const chartTimeout = setTimeout(() => {
-                                console.log('[${requestId}] AllHotelsRevenue chart rendering timeout');
+                            try {
+                                const chart = echarts.init(chartContainer);
+                                
+                                // Use serialized configuration if available, otherwise fallback to legacy options
+                                let options = chartConfigs.allHotelsRevenue || allHotelsRevenueChartOptions;
+                                
+                                if (!options) {
+                                    console.warn('[${requestId}] No config for AllHotelsRevenue, using basic fallback');
+                                    options = {
+                                        animation: false,
+                                        title: { text: '施設別収益', left: 'center' },
+                                        series: [{
+                                            type: 'bar',
+                                            data: [],
+                                            itemStyle: { color: '#3498db' }
+                                        }],
+                                        xAxis: { type: 'value' },
+                                        yAxis: { type: 'category', data: [] }
+                                    };
+                                }
+                                
+                                // Ensure animation is disabled for PDF
+                                options.animation = false;
+                                
+                                chart.setOption(options);
+                                chart.resize();
+                                
+                                console.log('[${requestId}] AllHotelsRevenue chart options set successfully');
+                                
+                                const chartTimeout = setTimeout(() => {
+                                    console.log('[${requestId}] AllHotelsRevenue chart rendering timeout');
+                                    resolve();
+                                }, 5000);
+                                
+                                chart.on('finished', () => {
+                                    clearTimeout(chartTimeout);
+                                    console.log('[${requestId}] AllHotelsRevenue chart finished rendering');
+                                    setTimeout(resolve, 100);
+                                });
+                                
+                                chart.on('error', (error) => {
+                                    clearTimeout(chartTimeout);
+                                    console.error('[${requestId}] AllHotelsRevenue chart rendering error:', error);
+                                    chartContainer.innerHTML = generateFallbackContent('allHotelsRevenue', 'Chart rendering error: ' + error.message);
+                                    resolve();
+                                });
+                                
+                            } catch (error) {
+                                console.error('[${requestId}] Error initializing AllHotelsRevenue chart:', error);
+                                chartContainer.innerHTML = generateFallbackContent('allHotelsRevenue', 'Chart initialization error: ' + error.message);
                                 resolve();
-                            }, 5000);
-                            
-                            chart.on('finished', () => {
-                                clearTimeout(chartTimeout);
-                                console.log('[${requestId}] AllHotelsRevenue chart finished rendering');
-                                setTimeout(resolve, 100);
-                            });
+                            }
                         });
 
                         const initAllHotelsOccupancyChart = () => new Promise((resolve) => {
@@ -332,78 +704,94 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 resolve();
                                 return;
                             }
-                            const chart = echarts.init(chartContainer);
                             
-                            const occupancyData = chartData.allHotelsOccupancyData;
-                            const hotels = [...new Set(occupancyData.map(d => d.hotel_name))].sort();
-                            
-                            const options = {
-                                animation: false,
-                                tooltip: {
-                                    trigger: 'axis',
-                                    axisPointer: { type: 'cross' }
-                                },
-                                legend: { 
-                                    data: ['計画販売室数', '実績販売室数', '計画稼働率 (%)', '実績稼働率 (%)'], 
-                                    top: 'bottom' 
-                                },
-                                grid: { containLabel: true, left: '3%', right: '4%', bottom: '15%' },
-                                xAxis: { type: 'category', data: hotels, boundaryGap: true },
-                                yAxis: [
-                                    { type: 'value', name: '販売室数', position: 'left' },
-                                    { type: 'value', name: '稼働率', position: 'right', max: 100 }
-                                ],
-                                series: [
-                                    {
-                                        name: '計画販売室数',
-                                        type: 'bar',
-                                        yAxisIndex: 0,
-                                        data: hotels.map(h => occupancyData.find(d => d.hotel_name === h)?.fc_sold_rooms || 0),
-                                        itemStyle: { color: '#3498db' }
-                                    },
-                                    {
-                                        name: '実績販売室数',
-                                        type: 'bar',
-                                        yAxisIndex: 0,
-                                        data: hotels.map(h => occupancyData.find(d => d.hotel_name === h)?.sold_rooms || 0),
-                                        itemStyle: { color: '#2ecc71' }
-                                    },
-                                    {
-                                        name: '計画稼働率 (%)',
-                                        type: 'line',
-                                        yAxisIndex: 1,
-                                        data: hotels.map(h => {
-                                            const item = occupancyData.find(d => d.hotel_name === h);
-                                            return item?.fc_occ ? parseFloat(item.fc_occ.toFixed(2)) : 0;
-                                        }),
-                                        itemStyle: { color: '#f39c12' }
-                                    },
-                                    {
-                                        name: '実績稼働率 (%)',
-                                        type: 'line',
-                                        yAxisIndex: 1,
-                                        data: hotels.map(h => {
-                                            const item = occupancyData.find(d => d.hotel_name === h);
-                                            return item?.occ ? parseFloat(item.occ.toFixed(2)) : 0;
-                                        }),
-                                        itemStyle: { color: '#e74c3c' }
+                            try {
+                                const chart = echarts.init(chartContainer);
+                                
+                                // Use serialized configuration if available, otherwise fallback to basic chart
+                                let options = chartConfigs.allHotelsOccupancy;
+                                
+                                if (!options) {
+                                    console.warn('[${requestId}] No serialized config for AllHotelsOccupancy, using fallback');
+                                    // Fallback basic chart
+                                    const occupancyData = chartData.allHotelsOccupancyData || [];
+                                    const hotels = [...new Set(occupancyData.map(d => d.hotel_name))].sort();
+                                    
+                                    options = {
+                                        animation: false,
+                                        title: { text: '施設別稼働率', left: 'center' },
+                                        tooltip: {
+                                            trigger: 'axis',
+                                            axisPointer: { type: 'cross' }
+                                        },
+                                        legend: { 
+                                            data: ['計画稼働率', '実績稼働率'], 
+                                            top: 'bottom' 
+                                        },
+                                        grid: { containLabel: true, left: '3%', right: '4%', bottom: '15%' },
+                                        xAxis: { type: 'value' },
+                                        yAxis: { type: 'category', data: hotels, inverse: true },
+                                        series: [
+                                            {
+                                                name: '計画稼働率',
+                                                type: 'bar',
+                                                data: hotels.map(h => {
+                                                    const item = occupancyData.find(d => d.hotel_name === h);
+                                                    return item?.fc_occ ? parseFloat(item.fc_occ.toFixed(2)) : 0;
+                                                }),
+                                                itemStyle: { color: '#3498db' }
+                                            },
+                                            {
+                                                name: '実績稼働率',
+                                                type: 'bar',
+                                                data: hotels.map(h => {
+                                                    const item = occupancyData.find(d => d.hotel_name === h);
+                                                    return item?.occ ? parseFloat(item.occ.toFixed(2)) : 0;
+                                                }),
+                                                itemStyle: { color: '#2ecc71' }
+                                            }
+                                        ]
+                                    };
+                                }
+                                
+                                // Ensure animation is disabled for PDF
+                                options.animation = false;
+                                
+                                chart.setOption(options);
+                                chart.resize();
+                                
+                                console.log('[${requestId}] AllHotelsOccupancy chart options set successfully');
+                                
+                                const chartTimeout = setTimeout(() => {
+                                    console.warn('[${requestId}] AllHotelsOccupancy chart rendering timeout - proceeding with fallback');
+                                    try {
+                                        chart.dispose();
+                                    } catch (disposeError) {
+                                        console.error('[${requestId}] Error disposing timed-out chart:', disposeError);
                                     }
-                                ]
-                            };
-                            
-                            chart.setOption(options);
-                            chart.resize();
-                            
-                            const chartTimeout = setTimeout(() => {
-                                console.log('[${requestId}] AllHotelsOccupancy chart rendering timeout');
+                                    
+                                    chartContainer.innerHTML = generateFallbackContent('allHotelsOccupancy', 'Chart rendering timeout');
+                                    resolve();
+                                }, 5000);
+                                
+                                chart.on('finished', () => {
+                                    clearTimeout(chartTimeout);
+                                    console.log('[${requestId}] AllHotelsOccupancy chart finished rendering');
+                                    setTimeout(resolve, 100);
+                                });
+                                
+                                chart.on('error', (error) => {
+                                    clearTimeout(chartTimeout);
+                                    console.error('[${requestId}] AllHotelsOccupancy chart rendering error:', error);
+                                    chartContainer.innerHTML = generateFallbackContent('allHotelsOccupancy', 'Chart rendering error: ' + error.message);
+                                    resolve();
+                                });
+                                
+                            } catch (error) {
+                                console.error('[${requestId}] Error initializing AllHotelsOccupancy chart:', error);
+                                chartContainer.innerHTML = generateFallbackContent('allHotelsOccupancy', 'Chart initialization error: ' + error.message);
                                 resolve();
-                            }, 5000);
-                            
-                            chart.on('finished', () => {
-                                clearTimeout(chartTimeout);
-                                console.log('[${requestId}] AllHotelsOccupancy chart finished rendering');
-                                setTimeout(resolve, 100);
-                            });
+                            }
                         });
 
 
@@ -525,7 +913,13 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                         .chart-half h3 { margin-bottom: 15px; }
                     </style>
                     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-                    <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.3/dist/echarts.min.js"></script>
+                    <script>
+                        // ECharts library embedded directly
+                        ${loadEChartsLibrary()}
+                    </script>
+                    <script>
+                        console.log('ECharts embedded successfully, version:', echarts ? echarts.version : 'not available');
+                    </script>
                 </head>
                 <body>
                     <h1>${reportTitle}</h1>
@@ -615,6 +1009,9 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                     <p><strong>表示モード:</strong> ${selectedView === 'graph' ? 'グラフ' : 'テーブル'}</p>
             `;
 
+            const revenueData = chartData?.allHotelsRevenueData || [];
+            const occupancyData = chartData?.allHotelsOccupancyData || [];
+            
             if (revenueData && revenueData.length > 0) {
                 htmlContent += `<div class="section-title">収益データ</div>`;
                 htmlContent += `<table><thead><tr><th>ホテル名</th><th>月度</th><th>計画売上</th><th>実績売上</th></tr></thead><tbody>`;
@@ -642,10 +1039,48 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             htmlContent += `</body></html>`;
         }
 
-        logger.debug('Launching browser', { requestId });
-        browser = await chromium.launch();
+        logger.debug('Launching browser with enhanced configuration', { requestId });
+        
+        // Enhanced browser launch with resource management
+        browser = await chromium.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu',
+                '--memory-pressure-off',
+                '--max_old_space_size=4096'
+            ]
+        });
+        
         const page = await browser.newPage();
-        logger.debug('Browser and page created', { requestId });
+        
+        // Set page resource limits
+        await page.setViewportSize({ width: 1200, height: 800 });
+        await page.setDefaultTimeout(30000);
+        
+        // Monitor page errors and resource usage
+        page.on('error', (error) => {
+            logger.error('Page error detected', {
+                requestId,
+                error: error.message,
+                stack: error.stack
+            });
+        });
+        
+        page.on('pageerror', (error) => {
+            logger.error('Page JavaScript error', {
+                requestId,
+                error: error.message,
+                stack: error.stack
+            });
+        });
+        
+        logger.debug('Browser and page created with enhanced monitoring', { requestId });
 
         logger.debug('Setting page content', { 
             requestId, 
@@ -653,7 +1088,7 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             selectedView,
             htmlPreview: htmlContent.substring(0, 500)
         });
-        await page.setContent(htmlContent, { waitUntil: 'networkidle' });
+        await page.setContent(htmlContent, { waitUntil: 'load' });
         logger.debug('Page content set, network idle reached', { requestId });
 
         if (selectedView === 'graph') {
@@ -670,69 +1105,86 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             });
             
             try {
+                // Enhanced timeout handling with partial content support
                 await page.waitForSelector('body[data-charts-rendered="true"]', { timeout: 30000 });
                 logger.debug('Charts rendered successfully', { requestId });
                 
-                // Debug: Check if images are actually loaded
-                const chartInfo = await page.evaluate(() => {
-                    const revenueContainer = document.getElementById('revenuePlanVsActualContainer');
-                    const occupancyContainer = document.getElementById('occupancyGaugeContainer');
-                    const allHotelsRevenueContainer = document.getElementById('allHotelsRevenueContainer');
-                    const allHotelsOccupancyContainer = document.getElementById('allHotelsOccupancyContainer');
-                    
-                    // Get all elements with IDs for debugging
-                    const allElementsWithIds = Array.from(document.querySelectorAll('[id]')).map(el => ({
-                        id: el.id,
-                        tagName: el.tagName,
-                        className: el.className,
-                        hasChildren: el.children.length > 0
-                    }));
-                    
-                    // Get body content for debugging
-                    const bodyHTML = document.body.innerHTML.substring(0, 1000);
-                    
-                    return {
-                        revenueContainerExists: !!revenueContainer,
-                        revenueContainerHasContent: revenueContainer ? revenueContainer.children.length > 0 : false,
-                        revenueContainerInnerHTML: revenueContainer ? revenueContainer.innerHTML.substring(0, 200) : null,
-                        occupancyContainerExists: !!occupancyContainer,
-                        occupancyContainerHasContent: occupancyContainer ? occupancyContainer.children.length > 0 : false,
-                        occupancyContainerInnerHTML: occupancyContainer ? occupancyContainer.innerHTML.substring(0, 200) : null,
-                        allHotelsRevenueExists: !!allHotelsRevenueContainer,
-                        allHotelsOccupancyExists: !!allHotelsOccupancyContainer,
-                        allElementsWithIds: allElementsWithIds,
-                        bodyHTMLPreview: bodyHTML
-                    };
+                // Perform comprehensive chart validation using StyleConsistencyValidator
+                const validationResult = await validateChartRendering(page, requestId);
+                
+                // Validate each chart container using StyleConsistencyValidator
+                const chartContainers = ['revenuePlanVsActualContainer', 'occupancyGaugeContainer', 'allHotelsRevenueContainer', 'allHotelsOccupancyContainer'];
+                const canvasValidations = {};
+                
+                for (const containerId of chartContainers) {
+                    if (validationResult.containers[containerId]) {
+                        const canvasValidation = styleValidator.validateCanvasContent(
+                            validationResult.containers[containerId],
+                            containerId.replace('Container', ''),
+                            requestId
+                        );
+                        canvasValidations[containerId] = canvasValidation;
+                        
+                        if (!canvasValidation.isValid) {
+                            logger.warn(`Canvas validation failed for ${containerId}`, {
+                                requestId,
+                                validation: canvasValidation
+                            });
+                        }
+                    }
+                }
+                
+                // Log overall validation summary
+                const validCanvasCount = Object.values(canvasValidations).filter(v => v.isValid).length;
+                const totalExpectedCharts = chartContainers.length;
+                
+                logger.info('Chart rendering validation summary', {
+                    requestId,
+                    validCanvases: validCanvasCount,
+                    totalExpected: totalExpectedCharts,
+                    renderingSuccess: validationResult.summary.renderingSuccess,
+                    canvasValidations
                 });
-                logger.debug('Chart status before PDF generation', { requestId, chartInfo });
                 
                 // Give a small delay to ensure charts are fully processed
                 await page.waitForTimeout(2000);
                 logger.debug('Additional delay completed', { requestId });
                 
-                // Final check of chart content
-                const finalChartInfo = await page.evaluate(() => {
-                    const revenueContainer = document.getElementById('revenuePlanVsActualContainer');
-                    const occupancyContainer = document.getElementById('occupancyGaugeContainer');
-                    const allHotelsRevenueContainer = document.getElementById('allHotelsRevenueContainer');
-                    const allHotelsOccupancyContainer = document.getElementById('allHotelsOccupancyContainer');
-                    return {
-                        revenueHasCanvas: revenueContainer ? !!revenueContainer.querySelector('canvas') : false,
-                        revenueCanvasCount: revenueContainer ? revenueContainer.querySelectorAll('canvas').length : 0,
-                        occupancyHasCanvas: occupancyContainer ? !!occupancyContainer.querySelector('canvas') : false,
-                        occupancyCanvasCount: occupancyContainer ? occupancyContainer.querySelectorAll('canvas').length : 0,
-                        allHotelsRevenueHasCanvas: allHotelsRevenueContainer ? !!allHotelsRevenueContainer.querySelector('canvas') : false,
-                        allHotelsOccupancyHasCanvas: allHotelsOccupancyContainer ? !!allHotelsOccupancyContainer.querySelector('canvas') : false,
-                        bodyDataAttribute: document.body.getAttribute('data-charts-rendered')
-                    };
-                });
-                logger.debug('Final chart canvas check', { requestId, finalChartInfo });
-                
             } catch (error) {
-                logger.debug('Chart rendering timeout, proceeding anyway', { 
+                logger.warn('Chart rendering timeout, proceeding with partial content', { 
                     requestId, 
-                    error: error.message 
+                    error: error.message,
+                    timeoutDuration: 30000
                 });
+                
+                // Check if we have any partial chart content
+                try {
+                    const partialValidation = await validateChartRendering(page, requestId);
+                    const partialCanvasCount = partialValidation.summary.validCanvases;
+                    
+                    logger.info('Partial chart content detected', {
+                        requestId,
+                        partialCanvases: partialCanvasCount,
+                        totalExpected: 4
+                    });
+                    
+                    if (partialCanvasCount > 0) {
+                        logger.info('Proceeding with partial chart content', {
+                            requestId,
+                            availableCharts: partialCanvasCount
+                        });
+                    } else {
+                        logger.warn('No chart content available, generating PDF with placeholders', {
+                            requestId
+                        });
+                    }
+                } catch (validationError) {
+                    logger.error('Failed to validate partial chart content', {
+                        requestId,
+                        error: validationError.message
+                    });
+                }
+                
                 // Continue with PDF generation even if charts timeout
             }
         }
@@ -749,10 +1201,30 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             }
         });
 
-        logger.debug('PDF generated successfully', { 
+        // Collect final metrics
+        const generationTime = (() => {
+            try {
+                // Handle both string and number requestIds
+                const requestIdStr = String(requestId);
+                if (requestIdStr.includes('-')) {
+                    return Date.now() - new Date(requestIdStr.split('-')[0]).getTime();
+                }
+                return Date.now(); // Fallback if no timestamp in requestId
+            } catch (error) {
+                return Date.now(); // Fallback on any error
+            }
+        })();
+        
+        logger.info('PDF generated successfully', { 
             requestId, 
-            pdfSize: pdf.length 
+            pdfSize: pdf.length,
+            generationTime,
+            selectedView,
+            reportType,
+            hasSerializedConfigs: !!serializedChartConfigs,
+            configCount: serializedChartConfigs ? Object.keys(serializedChartConfigs).length : 0
         });
+        
         return pdf;
 
     } catch (error) {
@@ -761,16 +1233,132 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             error: error.message,
             stack: error.stack,
             selectedView,
-            reportType
+            reportType,
+            browserActive: !!browser
         });
+        
+        // Enhanced error handling with fallback content
+        if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
+            logger.warn('PDF generation timeout detected, attempting partial content return', {
+                requestId,
+                selectedView,
+                reportType
+            });
+            
+            // Try to generate a simplified PDF with available content
+            try {
+                if (browser && page) {
+                    const partialPdf = await page.pdf({
+                        format: 'A4',
+                        printBackground: true,
+                        margin: {
+                            top: '20mm',
+                            right: '20mm',
+                            bottom: '20mm',
+                            left: '20mm'
+                        }
+                    });
+                    
+                    logger.info('Partial PDF generated successfully after timeout', {
+                        requestId,
+                        pdfSize: partialPdf.length
+                    });
+                    
+                    return partialPdf;
+                }
+            } catch (partialError) {
+                logger.error('Failed to generate partial PDF', {
+                    requestId,
+                    error: partialError.message
+                });
+            }
+        }
+        
+        // Circuit breaker pattern for resource exhaustion
+        if (error.message.includes('memory') || error.message.includes('resource')) {
+            logger.error('Resource exhaustion detected, implementing circuit breaker', {
+                requestId,
+                error: error.message
+            });
+            
+            // Force cleanup and throw specific error
+            if (browser) {
+                try {
+                    await browser.close();
+                } catch (cleanupError) {
+                    logger.error('Failed to cleanup browser after resource exhaustion', {
+                        requestId,
+                        cleanupError: cleanupError.message
+                    });
+                }
+            }
+            
+            throw new Error('PDF generation temporarily unavailable due to resource constraints');
+        }
+        
         console.error(`[${requestId}] Error generating PDF report:`, error);
         throw new Error('Failed to generate PDF report: ' + error.message);
     } finally {
+        // Enhanced cleanup with proper error handling
         if (browser) {
-            logger.debug('Closing browser', { requestId });
-            await browser.close();
-            logger.debug('Browser closed', { requestId });
+            try {
+                logger.debug('Starting browser cleanup', { requestId });
+                
+                // Close browser with timeout - Playwright handles page/context cleanup automatically
+                const closePromise = browser.close();
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Browser close timeout')), 10000);
+                });
+                
+                await Promise.race([closePromise, timeoutPromise]);
+                logger.debug('Browser closed successfully', { requestId });
+                
+            } catch (cleanupError) {
+                logger.error('Error during browser cleanup', {
+                    requestId,
+                    error: cleanupError.message,
+                    stack: cleanupError.stack
+                });
+                
+                // Force close if normal close fails
+                try {
+                    if (browser && typeof browser.close === 'function') {
+                        await browser.close();
+                    }
+                } catch (forceCloseError) {
+                    logger.warn('Force close also failed, Playwright will handle process cleanup', { 
+                        requestId,
+                        error: forceCloseError.message 
+                    });
+                }
+            } finally {
+                browser = null;
+                logger.debug('Browser cleanup completed', { requestId });
+            }
         }
+        
+        // Log final resource cleanup metrics
+        const finalTime = Date.now();
+        const startTime = (() => {
+            try {
+                // Handle both string and number requestIds
+                const requestIdStr = String(requestId);
+                if (requestIdStr.includes('-')) {
+                    return new Date(requestIdStr.split('-')[0]).getTime();
+                }
+                return finalTime; // Fallback if no timestamp in requestId
+            } catch (error) {
+                return finalTime; // Fallback on any error
+            }
+        })();
+        
+        logger.info('PDF generation process completed', {
+            requestId,
+            totalTime: finalTime - startTime,
+            browserCleaned: !browser,
+            selectedView,
+            reportType
+        });
     }
 };
 

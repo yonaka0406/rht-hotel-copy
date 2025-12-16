@@ -189,6 +189,9 @@ import FutureOutlookTable from './tables/FutureOutlookTable.vue';
 // Composables
 import { useReportStore } from '@/composables/useReportStore';
 
+// Services
+import chartConfigService from '../../services/ChartConfigurationService';
+
 // Utilities
 import {
     formatCurrencyForReporting as formatCurrency,
@@ -535,7 +538,41 @@ const downloadPdf = async () => {
 
     isDownloadingPdf.value = true;
 
+    // Generate serialized chart configurations using the service
+    let serializedChartConfigs = {};
+
     try {
+        
+        try {
+            // Serialize RevenuePlanVsActual chart configuration
+            if (aggregateHotelZeroData.value) {
+                const revenuePlanVsActualConfig = chartConfigService.getRevenuePlanVsActualConfig(aggregateHotelZeroData.value);
+                serializedChartConfigs.revenuePlanVsActual = chartConfigService.serializeConfig(revenuePlanVsActualConfig, 'revenuePlanVsActual');
+            }
+            
+            // Serialize OccupancyGauge chart configuration
+            if (aggregateHotelZeroData.value) {
+                const occupancyGaugeConfig = chartConfigService.getOccupancyGaugeConfig(aggregateHotelZeroData.value);
+                serializedChartConfigs.occupancyGauge = chartConfigService.serializeConfig(occupancyGaugeConfig, 'occupancyGauge');
+            }
+            
+            // Serialize AllHotelsRevenue chart configuration
+            if (hasAllHotelsRevenueData.value && allHotelsRevenueChartData.value.length > 0) {
+                const allHotelsRevenueConfig = chartConfigService.getAllHotelsRevenueConfig(allHotelsRevenueChartData.value);
+                serializedChartConfigs.allHotelsRevenue = chartConfigService.serializeConfig(allHotelsRevenueConfig, 'allHotelsRevenue');
+            }
+            
+            // Serialize AllHotelsOccupancy chart configuration
+            if (hasAllHotelsOccupancyData.value) {
+                const occupancyDataFiltered = props.occupancyData.filter(item => item.hotel_id !== 0);
+                const allHotelsOccupancyConfig = chartConfigService.getAllHotelsOccupancyConfig(occupancyDataFiltered);
+                serializedChartConfigs.allHotelsOccupancy = chartConfigService.serializeConfig(allHotelsOccupancyConfig, 'allHotelsOccupancy');
+            }
+        } catch (serializationError) {
+            console.error('Error serializing chart configurations:', serializationError);
+            // Continue with empty serialized configs - the backend will handle fallbacks
+        }
+
         const pdfRequestData = {
             selectedView: selectedView.value,
             periodMaxDate: periodMaxDate.value,
@@ -555,11 +592,21 @@ const downloadPdf = async () => {
                 allHotelsRevenueData: allHotelsRevenueChartData.value,
                 allHotelsOccupancyData: props.occupancyData.filter(item => item.hotel_id !== 0)
             },
-            // Chart options for the all hotels revenue chart
+            // Send serialized chart configurations instead of raw options
+            serializedChartConfigs: serializedChartConfigs,
+            // Keep legacy support for now
             allHotelsRevenueChartOptions: hasAllHotelsRevenueData.value ? allHotelsRevenueChartOptions.value : null
         };
 
         console.log('PDF Request Data:', pdfRequestData);
+        console.log('Debug - Serialized Chart Configurations:', {
+            serializedConfigKeys: Object.keys(serializedChartConfigs),
+            configCount: Object.keys(serializedChartConfigs).length,
+            hasRevenuePlanVsActual: !!serializedChartConfigs.revenuePlanVsActual,
+            hasOccupancyGauge: !!serializedChartConfigs.occupancyGauge,
+            hasAllHotelsRevenue: !!serializedChartConfigs.allHotelsRevenue,
+            hasAllHotelsOccupancy: !!serializedChartConfigs.allHotelsOccupancy
+        });
         console.log('Debug - Props data:', {
             revenueDataLength: props.revenueData ? props.revenueData.length : 0,
             occupancyDataLength: props.occupancyData ? props.occupancyData.length : 0,
@@ -575,7 +622,7 @@ const downloadPdf = async () => {
             allHotelsRevenueChartData: allHotelsRevenueChartData.value,
             occupancyDataFiltered: props.occupancyData.filter(item => item.hotel_id !== 0),
             hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
-            allHotelsRevenueChartOptions: allHotelsRevenueChartOptions.value
+            hasAllHotelsOccupancyData: hasAllHotelsOccupancyData.value
         });
 
         const responseBlob = await generatePdfReportApi(
@@ -596,7 +643,35 @@ const downloadPdf = async () => {
         console.log('PDF download initiated successfully!');
     } catch (error) {
         console.error('Error generating PDF:', error);
-        // Optionally show a toast notification for error
+        
+        // Enhanced error handling with user feedback
+        let errorMessage = 'PDFの生成中にエラーが発生しました。';
+        
+        if (error.message.includes('timeout')) {
+            errorMessage = 'PDFの生成がタイムアウトしました。しばらく待ってから再試行してください。';
+        } else if (error.message.includes('network')) {
+            errorMessage = 'ネットワークエラーが発生しました。接続を確認してください。';
+        } else if (error.message.includes('serialization')) {
+            errorMessage = 'チャート設定の処理中にエラーが発生しました。';
+        } else if (error.message.includes('resource')) {
+            errorMessage = 'サーバーリソースが不足しています。しばらく待ってから再試行してください。';
+        }
+        
+        // Show user-friendly error message (you can replace this with your toast notification system)
+        alert(errorMessage);
+        
+        // Log detailed error for debugging
+        console.error('Detailed PDF generation error:', {
+            message: error.message,
+            stack: error.stack,
+            requestData: {
+                selectedView: selectedView.value,
+                hasAggregateData: !!aggregateHotelZeroData.value,
+                hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
+                hasAllHotelsOccupancyData: hasAllHotelsOccupancyData.value,
+                serializedConfigCount: serializedChartConfigs ? Object.keys(serializedChartConfigs).length : 0
+            }
+        });
     } finally {
         isDownloadingPdf.value = false;
     }

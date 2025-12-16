@@ -15,8 +15,7 @@ import {
 } from 'echarts/components';
 import { GaugeChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
-import { formatPercentage } from '@/utils/formatUtils';
-import { colorScheme } from '@/utils/reportingUtils';
+import ChartConfigurationService from '../../../services/ChartConfigurationService';
 
 echarts.use([
   TitleComponent,
@@ -48,101 +47,10 @@ const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
 
 const chartOptions = computed(() => {
-  const {
-    total_sold_rooms = 0,
-    total_available_rooms = 0,
-    total_fc_sold_rooms = 0,
-    total_fc_available_rooms = 0,
-  } = props.occupancyData;
-
-  // Simplify to use total_rooms directly.
-  // TODO: If net capacity support is reintroduced, re-evaluate this logic.
-  const actualTotalRooms = total_available_rooms;
-  const forecastTotalRooms = total_fc_available_rooms;
-
-  // Guard against division by zero
-  const totalActualOccupancy = actualTotalRooms > 0 ? total_sold_rooms / actualTotalRooms : 0;
-  const totalForecastOccupancy = forecastTotalRooms > 0 ? total_fc_sold_rooms / forecastTotalRooms : 0;
-
-  //console.log('[GaugeChart] Props Data:', props.occupancyData);
-  //console.log('[GaugeChart] Actual:', { total_sold_rooms, actualTotalRooms, totalActualOccupancy });
-  //console.log('[GaugeChart] Forecast:', { total_fc_sold_rooms, forecastTotalRooms, totalForecastOccupancy });
-  //console.log('[GaugeChart] Prev:', props.previousYearOccupancy);
-
-  return {
-    tooltip: {
-      formatter: (params) => {
-        if (params.seriesName === '実績稼働率') {
-          return `実績稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
-        }
-        return '';
-      },
-    },
-    series: [{
-      type: 'gauge',
-      radius: '100%',
-      center: ['50%', '80%'],
-      startAngle: 180,
-      endAngle: 0,
-      min: 0,
-      max: 1,
-      splitNumber: 4,
-      axisLine: {
-        lineStyle: {
-          width: 22,
-          color: [
-            [1, '#E0E0E0'],
-          ],
-        },
-      },
-      progress: {
-        show: true,
-        width: 22,
-        itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: colorScheme.actual_gradient_bottom },
-            { offset: 1, color: colorScheme.actual_gradient_top },
-          ]),
-        },
-      },
-      pointer: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: false },
-      axisLabel: {
-        show: true,
-        distance: 5,
-        formatter: function (value) { return (value * 100).toFixed(0) + '%'; },
-        fontSize: 10,
-        color: '#555',
-      },
-      title: {
-        offsetCenter: [0, '25%'],
-        fontSize: 14,
-        color: '#333',
-        fontWeight: 'normal',
-      },
-      detail: {
-        width: '70%',
-        lineHeight: 22,
-        offsetCenter: [0, '-10%'],
-        valueAnimation: true,
-        formatter: function (value) {
-          let forecastText = `計画: ${formatPercentage(totalForecastOccupancy)}`;
-          let prevYearText = props.previousYearOccupancy !== null ? `前年度同月度: ${formatPercentage(props.previousYearOccupancy)}` : '';
-          return `{actual|${formatPercentage(value)}}
-{forecast|${forecastText}}
-{prev|${prevYearText}}`;
-        },
-        rich: {
-          actual: { fontSize: 24, fontWeight: 'bold', color: colorScheme.actual },
-          forecast: { fontSize: 13, color: colorScheme.forecast, paddingTop: 8 },
-          prev: { fontSize: 13, color: '#999', paddingTop: 4 },
-        },
-      },
-      data: [{ value: totalActualOccupancy, name: '実績稼働率' }],
-    }
-    ],
-  };
+  return ChartConfigurationService.getOccupancyGaugeConfig(props.occupancyData, { 
+    height: props.height,
+    previousYearOccupancy: props.previousYearOccupancy 
+  });
 });
 
 const initOrUpdateChart = () => {
