@@ -137,7 +137,7 @@
             <div class="items-center flex">
                 <span class="font-bold">種類：</span>
                 <template v-if="reservationType === '通常予約' || reservationType === '社員'">
-                    <SelectButton v-model="reservationTypeSelected" :options="reservationTypeOptions"
+                    <SelectButton v-model="reservationTypeSelected" :options="filteredReservationTypeOptions"
                         optionLabel="label" optionValue="value" @change="updateReservationType"
                         :disabled="reservationStatus === 'キャンセル'" />
                 </template>
@@ -455,7 +455,7 @@ import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 import { validate as uuidValidate } from 'uuid';
-import { reservationTypeOptions, reservationPaymentTimingOptions, translateReservationStatus, translateReservationType, translateReservationPaymentTiming } from '@/utils/reservationUtils';
+import { reservationTypeOptions, reservationPaymentTimingOptions, translateReservationStatus, translateReservationType } from '@/utils/reservationUtils';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 
 import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
@@ -516,6 +516,8 @@ const { setReservationType, setReservationStatus, setRoomPlan, setRoomPattern,
     setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming, setReservationId } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
+
+const filteredReservationTypeOptions = reservationTypeOptions.filter(option => ['default', 'employee'].includes(option.value));
 
 const reservationTypeSelected = ref(null);
 const paymentTimingSelected = ref(null);
@@ -1099,9 +1101,6 @@ const openChangeClientDialog = () => {
     // Always set selectedClient to the latest client_id from reservationInfo
     selectedClient.value = reservationInfo.value?.client_id;
     visibleClientChangeDialog.value = true;
-};
-const closeChangeClientDialog = () => {
-    visibleClientChangeDialog.value = false;
 };
 
 // Dialog: Reservation
