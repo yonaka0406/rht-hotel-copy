@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 const selectForecastData = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);
@@ -13,7 +14,8 @@ const selectForecastData = async (requestId, hotelId, dateStart, dateEnd, dbClie
       SUM(rooms_sold_nights) AS rooms_sold_nights
     FROM du_forecast
     WHERE hotel_id = $1
-      AND forecast_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+      AND date_trunc('month', (forecast_month AT TIME ZONE 'Asia/Tokyo')::date) 
+          BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
     GROUP BY hotel_id, forecast_month
   `;
   const values = [hotelId, dateStart, dateEnd];
@@ -42,7 +44,8 @@ const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd, dbCl
       SUM(rooms_sold_nights) AS rooms_sold_nights
     FROM du_accounting
     WHERE hotel_id = $1
-      AND accounting_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+      AND date_trunc('month', (accounting_month AT TIME ZONE 'Asia/Tokyo')::date) 
+          BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
     GROUP BY hotel_id, accounting_month
   `;
   const values = [hotelId, dateStart, dateEnd];

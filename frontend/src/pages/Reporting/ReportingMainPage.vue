@@ -29,30 +29,7 @@
                 :target-month="firstDayOfMonthForApi"
                 :trigger-fetch="reportTriggerKey"
             />
-            <ChannelSummarySingleMonthAllHotels
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'month' && selectedHotels.length > 1"
-                :selected-hotels="selectedHotels"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />
-            <ChannelSummarySingleMonthHotel
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'month' && selectedHotels.length === 1"
-                :hotel-id="selectedHotelIdForReport"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />
-            <ChannelSummaryYearCumulativeAllHotels
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'year' && selectedHotels.length > 1"
-                :selected-hotels="selectedHotels"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />
-            <ChannelSummaryYearCumulativeHotel
-                v-else-if="selectedReportType === 'reservationAnalysis' && period === 'year' && selectedHotels.length === 1"
-                :hotel-id="selectedHotelIdForReport"
-                :trigger-fetch="reportTriggerKey"
-                :selected-date="selectedDate"
-            />            
+            
             
             <div v-else> 
                 <div v-if="loading" class="flex justify-content-center align-items-center h-full">
@@ -96,7 +73,8 @@
 </template>
 <script setup>
     // Vue
-    import { ref, computed, onMounted } from 'vue';   
+    import { ref, computed, onMounted } from 'vue';
+    import { useRouter } from 'vue-router';   
 
     import ReportingTopMenu from './components/ReportingTopMenu.vue';
     import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
@@ -106,11 +84,7 @@
     // Import New Report Components
     import ChangeInActiveReservationsReport from './components/ChangeInActiveReservationsReport.vue';
     import MonthlyReservationEvolutionReport from './components/MonthlyReservationEvolutionReport.vue';
-    import ChannelSummarySingleMonthAllHotels from './components/ChannelSummarySingleMonthAllHotels.vue';
-    import ChannelSummarySingleMonthHotel from './components/ChannelSummarySingleMonthHotel.vue';
-    import ChannelSummaryYearCumulativeAllHotels from './components/ChannelSummaryYearCumulativeAllHotels.vue';
     import DailyReportDownloader from './components/DailyReportDownloader.vue';
-    import ChannelSummaryYearCumulativeHotel from './components/ChannelSummaryYearCumulativeHotel.vue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
@@ -119,7 +93,13 @@
     // Primevue
     import { ProgressSpinner } from 'primevue';
 
+    // Router
+    const router = useRouter();
+
     const pmsFallbackCapacities = ref({}); // To store fallback capacities per hotel
+
+    // --- State for initial data loading control ---
+    const isInitialized = ref(false); // Flag to control initial data fetch
 
     // -- Helper Functions --
     function formatDate(date) {
@@ -581,6 +561,10 @@
     });
 
     const fetchData = async () => {
+        if (!isInitialized.value) {
+            return;
+        }
+
         // Prevent fetching summary data if a new specialized report type is selected
         if (selectedReportType.value === 'activeReservationsChange' || 
             selectedReportType.value === 'monthlyReservationEvolution' ||
@@ -710,6 +694,7 @@
                 if (!pmsTotalData.value[hotelKey]) pmsTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform PMS', details: error };
                 if (!forecastTotalData.value[hotelKey]) forecastTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform Forecast', details: error };
                 if (!accountingTotalData.value[hotelKey]) accountingTotalData.value[hotelKey] = { error: true, message: 'Failed to load/transform Accounting', details: error };
+                if (!reservationListViewData.value[hotelKey]) reservationListViewData.value[hotelKey] = { error: true, message: 'Failed to load/transform Reservation List View', details: error };
             }
         } finally {
             loading.value = false;
@@ -744,6 +729,13 @@
     const handleReportTypeChange = (newReportType) => {
         // console.log('RMP: Report type changed to', newReportType);
         selectedReportType.value = newReportType;
+        
+        // Auto-route to channel summary page when reservationAnalysis is selected
+        if (newReportType === 'reservationAnalysis') {
+            router.push('/reporting/channel-summary');
+            return;
+        }
+        
         debouncedFetch();
     };
 
@@ -762,11 +754,10 @@
     }
 
     onMounted(async () => {
-        // console.log('RMP: onMounted. Initial selectedReportType:', selectedReportType.value);
-        // Initial data fetch is triggered by ReportingTopMenu emitting changes on its mount,
-        // which then calls the handlers (like handleHotelChange) in this component.
-        // If ReportingTopMenu does not emit all necessary initial values,
-        // an explicit call to fetchData() might be needed here, guarded by selectedReportType.
-        // However, ReportingTopMenu was modified to emit all values on its mount.
+        // Initial data fetch is triggered by ReportingTopMenu emitting changes on its mount.
+        // We set isInitialized to true and trigger fetchData() to ensure data is fetched
+        // after all initial parameters from ReportingTopMenu are available.
+        isInitialized.value = true;
+        fetchData();
     });
 </script>

@@ -105,11 +105,12 @@ async function createNextReceiptVersion(requestId, hotelId, receiptNumber, recei
             WHERE hotel_id = $1 AND receipt_number = $2;
         `;
         // Acquire an advisory lock for the specific receipt number within the transaction
-        // Use two integer keys for the advisory lock: hotelId and a numeric representation of receiptNumber
-        // Assuming receiptNumber is always numeric for this purpose.
-        // Convert receiptNumber to integer for the advisory lock.
-        const receiptNumIntForLock = parseInt(receiptNumber, 10);
-        await client.query(`SELECT pg_advisory_xact_lock($1, $2)`, [hotelId, receiptNumIntForLock]);
+        // Use hotelId and a hash of receiptNumber to create a unique lock key
+        // This avoids integer overflow issues with large receipt numbers
+        const crypto = require('crypto');
+        const receiptHash = crypto.createHash('md5').update(receiptNumber.toString()).digest('hex');
+        const receiptHashInt = parseInt(receiptHash.substring(0, 8), 16); // Use first 8 hex chars as int
+        await client.query(`SELECT pg_advisory_xact_lock($1, $2)`, [hotelId, receiptHashInt]);
         const maxVerResult = await client.query(maxVerQuery, [hotelId, receiptNumber]);
         const nextVersion = (maxVerResult.rows[0].max_ver || 0) + 1;
 

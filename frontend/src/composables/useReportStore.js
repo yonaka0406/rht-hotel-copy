@@ -34,17 +34,13 @@ export function useReportStore() {
         }
     };
 
-    const getDailyReportData = async (metricDate) => {
-        isLoading.value = true;
-        reportData.value = [];
+    const fetchDailyReportData = async (metricDate) => {
         try {
             const data = await api.get(`/report/daily/data/${metricDate}`);
-            reportData.value = data;
+            return data;
         } catch (error) {
             console.error('Error fetching daily report data:', error);
-            reportData.value = [];
-        } finally {
-            isLoading.value = false;
+            throw error;
         }
     };
 
@@ -257,6 +253,66 @@ export function useReportStore() {
         } catch (error) {
             console.error('Failed to fetch batch occupation breakdown data:', error);
             return {};
+        }
+    };
+
+    /**
+     * Batch fetch future outlook data (6 months) for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string|Date} referenceDate - (Optional) Pivot date to start 6-month window
+     * @returns {Object} Object with month labels as keys, each containing hotel data
+     */
+    const fetchBatchFutureOutlook = async (hotelIds, referenceDate = null) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/future-outlook', {
+                hotelIds,
+                referenceDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch future outlook data:', error);
+            return {};
+        }
+    };
+
+    /**
+     * Fetch daily report data aggregated by hotel for a specific date and hotel IDs.
+     * @param {string} date - Metric date in YYYY-MM-DD format
+     * @param {Array<number>} hotelIds - Array of hotel IDs (optional)
+     * @returns {Array} Array of aggregated data objects
+     */
+    const fetchDailyReportDataByHotel = async (date, hotelIds = []) => {
+        try {
+            if (limitedFunctionality.value) return [];
+            const data = await api.post('/report/daily/data-by-hotel', {
+                date,
+                hotelIds
+            });
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch daily report data by hotel:', error);
+            return [];
+        }
+    };
+
+    /**
+     * Fetch the latest available daily report date
+     * @returns {string|null} YYYY-MM-DD string or null
+     */
+    const fetchLatestDailyReportDate = async () => {
+        try {
+            if (limitedFunctionality.value) return null;
+            const data = await api.get('/report/daily/latest-date');
+            return data; // should be YYYY-MM-DD or null
+        } catch (error) {
+            console.error('Failed to fetch latest daily report date:', error);
+            return null;
         }
     };
 
@@ -851,6 +907,33 @@ export function useReportStore() {
         }
     };
 
+    /**
+     * Batch fetch booker type breakdown data for multiple hotels
+     * @param {Array<number>} hotelIds - Array of hotel IDs
+     * @param {string} startDate - Start date in YYYY-MM-DD format
+     * @param {string} endDate - End date in YYYY-MM-DD format
+     * @returns {Object} Object with hotel IDs as keys and data arrays as values
+     */
+    const fetchBatchBookerTypeBreakdown = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return {};
+            }
+
+            const response = await api.post('/report/batch/booker-type', {
+                hotelIds,
+                startDate,
+                endDate
+            });
+
+            return response?.results || {};
+        } catch (error) {
+            console.error('Failed to fetch batch booker type breakdown data:', error);
+            return {};
+        }
+    };
+
 
 
     const fetchChannelSummary = async (hotelIds, startDate, endDate) => {
@@ -893,7 +976,7 @@ export function useReportStore() {
         }
     };
 
-    const generatePdfReport = async (reportType, { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }) => {
+    const generatePdfReport = async (reportType, requestData) => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, PDF generation limited');
@@ -919,25 +1002,55 @@ export function useReportStore() {
                     throw new Error('Invalid report type provided for PDF generation.');
             }
 
-            const response = await api.post(url, {
-                selectedView,
-                revenueData,
-                occupancyData,
-                periodMaxDate,
-                allHotelNames,
-            }, {
+            const response = await api.post(url, requestData, {
                 responseType: 'blob' // Important: receive response as a binary blob
             });
 
             return response; // This will be the blob
-
         } catch (error) {
             console.error('Failed to generate PDF report:', error);
             throw error;
         }
     };
 
-    // ... (existing functions)
+    /**
+     * Batch fetch reservation list data for multiple hotels.
+     * @param {Array<number>} hotelIds - Array of hotel IDs.
+     * @param {string} startDate - Start date in YYYY-MM-DD format.
+     * @param {string} endDate - End date in YYYY-MM-DD format.
+     * @param {string} searchType - Type of search (e.g., 'stay_period', 'check_in').
+     * @returns {Array<Object>} A flat array of reservation list items.
+     */
+    const fetchBatchReservationListView = async (hotelIds, startDate, endDate, searchType = 'stay_period') => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, report functionality limited');
+                return [];
+            }
+
+            const data = await api.post('/report/batch/res-list', {
+                hotelIds,
+                startDate,
+                endDate,
+                searchType
+            });
+
+            // Convert clients_json and payers_json fields from string to JSON
+            if (Array.isArray(data)) {
+                return data.map(reservation => ({
+                    ...reservation,
+                    clients_json: reservation.clients_json ? JSON.parse(reservation.clients_json) : [],
+                    payers_json: reservation.payers_json ? JSON.parse(reservation.payers_json) : []
+                }));
+            } else {
+                console.warn('Batch reservation list data is not an array:', data);
+                return [];
+            }
+        } catch (error) {
+            console.error('Failed to fetch batch reservation list data:', error);
+            throw error;
+        }
+    };
 
     return {
         reservationList,
@@ -946,12 +1059,12 @@ export function useReportStore() {
         reportData,
         isLoading,
         getAvailableMetricDates,
-        getDailyReportData,
+        fetchDailyReportData,
         downloadDailyReportExcel,
         fetchCountReservation,
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
-        fetchReservationListView,
+        fetchReservationListView, // Keep old one for now if still used elsewhere
         fetchForecastData,
         fetchAccountingData,
         exportReservationList,
@@ -978,6 +1091,11 @@ export function useReportStore() {
         fetchBatchForecastData,
         fetchBatchAccountingData,
         fetchBatchOccupationBreakdown,
-        generatePdfReport, // Add to the return object
+        generatePdfReport,
+        fetchBatchReservationListView, // Add new batch function
+        fetchBatchBookerTypeBreakdown,
+        fetchBatchFutureOutlook,
+        fetchLatestDailyReportDate,
+        fetchDailyReportDataByHotel,
     };
 }

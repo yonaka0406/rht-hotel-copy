@@ -3,12 +3,15 @@
         <template #title>
             <div class="flex justify-between items-center">
                 <p>稼働率内訳</p>
-                <SelectButton v-model="occupationBreakdownViewMode" :options="occupationBreakdownViewOptions" optionLabel="name" optionValue="value" />
+                <SelectButton v-model="occupationBreakdownViewMode" :options="occupationBreakdownViewOptions"
+                    optionLabel="name" optionValue="value" />
             </div>
         </template>
         <template #content>
-            <div v-if="occupationBreakdownViewMode === 'chart'" ref="occupationBreakdownChart" class="w-full h-96"></div>
-            <DataTable v-else-if="filteredOccupationBreakdownData && filteredOccupationBreakdownData.length > 0" :value="filteredOccupationBreakdownData" responsiveLayout="scroll">
+            <div v-if="occupationBreakdownViewMode === 'chart'" ref="occupationBreakdownChart" class="w-full h-96">
+            </div>
+            <DataTable v-else-if="filteredOccupationBreakdownData && filteredOccupationBreakdownData.length > 0"
+                :value="filteredOccupationBreakdownData" responsiveLayout="scroll">
                 <Column field="plan_name" header="プラン名"></Column>
                 <Column field="undecided_nights" header="未確定泊数" bodyStyle="text-align:right">
                     <template #body="slotProps">
@@ -37,27 +40,32 @@
                 </Column>
                 <ColumnGroup type="footer">
                     <Row>
-                        <Column footer="合計:" :colspan="1" footerStyle="text-align:right"/>
-                        <Column :footer="occupationBreakdownTotals.undecided_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
-                        <Column :footer="occupationBreakdownTotals.confirmed_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
-                        <Column :footer="occupationBreakdownTotals.employee_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
-                        <Column :footer="occupationBreakdownTotals.blocked_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
-                        <Column :footer="occupationBreakdownTotals.total_occupied_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                        <Column footer="合計:" :colspan="1" footerStyle="text-align:right" />
+                        <Column :footer="occupationBreakdownTotals.undecided_nights.toLocaleString('ja-JP')"
+                            footerStyle="text-align:right" />
+                        <Column :footer="occupationBreakdownTotals.confirmed_nights.toLocaleString('ja-JP')"
+                            footerStyle="text-align:right" />
+                        <Column :footer="occupationBreakdownTotals.employee_nights.toLocaleString('ja-JP')"
+                            footerStyle="text-align:right" />
+                        <Column :footer="occupationBreakdownTotals.blocked_nights.toLocaleString('ja-JP')"
+                            footerStyle="text-align:right" />
+                        <Column :footer="occupationBreakdownTotals.total_occupied_nights.toLocaleString('ja-JP')"
+                            footerStyle="text-align:right" />
                     </Row>
                     <Row>
-                        <Column footer="合計利用可能泊数:" :colspan="5" footerStyle="text-align:right"/>
-                        <Column :footer="occupationBreakdownTotals.total_bookable_room_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                        <Column footer="合計利用可能泊数:" :colspan="5" footerStyle="text-align:right" />
+                        <Column :footer="occupationBreakdownTotals.total_bookable_room_nights.toLocaleString('ja-JP')"
+                            footerStyle="text-align:right" />
                     </Row>
                     <Row>
-                        <Column footer="確定泊数 / 正味利用可能泊数:" :colspan="5" footerStyle="text-align:right"/>
-                        <Column :footer="
-                            (() => {
+                        <Column footer="確定泊数 / 正味利用可能泊数:" :colspan="5" footerStyle="text-align:right" />
+                        <Column :footer="(() => {
                                 const confirmed = confirmedOccupancyNights;
                                 const netAvailable = occupationBreakdownTotals.net_available_room_nights;
                                 if (netAvailable <= 0) return 'N/A';
                                 return ((confirmed / netAvailable) * 100).toFixed(2) + '%';
                             })()
-                        " footerStyle="text-align:right"/>
+                            " footerStyle="text-align:right" />
                     </Row>
                 </ColumnGroup>
             </DataTable>
@@ -65,11 +73,11 @@
                 <p>稼働率内訳データがありません。</p>
             </div>
         </template>
-    </Card>            
+    </Card>
 </template>
 
 <script setup>
-import { defineProps, ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { Card, SelectButton, DataTable, Column, ColumnGroup, Row } from 'primevue';
 import * as echarts from 'echarts/core';
 import {
@@ -149,7 +157,7 @@ const occupationBreakdownTotals = computed(() => {
 const confirmedOccupancyNights = computed(() => {
     if (!props.occupationBreakdownData) return 0;
     return props.occupationBreakdownData
-        .filter(item => 
+        .filter(item =>
             item.plan_name !== 'Total Available' &&
             item.sales_category !== 'employee' &&
             item.sales_category !== 'block'
@@ -159,7 +167,7 @@ const confirmedOccupancyNights = computed(() => {
 
 const filteredOccupationBreakdownData = computed(() => {
     if (!props.occupationBreakdownData) return [];
-    return props.occupationBreakdownData.filter(item => 
+    return props.occupationBreakdownData.filter(item =>
         item.plan_name !== 'Total Available' &&
         item.sales_category !== 'employee' &&
         item.sales_category !== 'block'
@@ -176,14 +184,14 @@ const initOccupationBreakdownChart = () => {
     if (!occupationBreakdownChart.value || !props.occupationBreakdownData || !Array.isArray(props.occupationBreakdownData)) return;
 
     const chartData = props.occupationBreakdownData;
-    
+
     // Find the total bookable room nights from the 'Total Available' row
     const totalAvailableRow = chartData.find(row => row.plan_name === 'Total Available');
     const totalBookableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.total_bookable_room_nights || '0') : 0;
-    
+
     // Filter out the 'Total Available' row from plan data
     const planData = chartData.filter(row => row.plan_name !== 'Total Available');
-    
+
     // If no plan data, show empty chart
     if (!planData.length) {
         const option = {
@@ -199,29 +207,29 @@ const initOccupationBreakdownChart = () => {
         myOccupationBreakdownChart.setOption(option, true);
         return;
     }
-    
+
     // Define Y-axis categories
     const yAxisCategories = ['確定', '確定 (その他)', 'ブロック', '未予約'];
-    
+
     // Get unique plan names and process them
     const planMap = new Map();
     let totalOccupiedNights = 0;
-    
+
     planData.forEach(plan => {
         let planName = plan.plan_name;
-        
+
         // Check if this is an employee reservation and rename it
         if (plan.employee_nights && parseInt(plan.employee_nights) > 0) {
             planName = '社員';
         }
-        
+
         // Skip 未定 plans - they will be counted in "not booked"
         if (planName === '未定') {
             const undecidedNights = parseInt(plan.undecided_nights || '0');
             totalOccupiedNights += undecidedNights;
             return;
         }
-        
+
         if (!planMap.has(planName)) {
             planMap.set(planName, {
                 '確定': 0,
@@ -230,30 +238,30 @@ const initOccupationBreakdownChart = () => {
                 '未予約': 0
             });
         }
-        
+
         const planEntry = planMap.get(planName);
-        
+
         // Add confirmed nights (accommodation)
         const confirmed = parseInt(plan.confirmed_nights || '0');
         planEntry['確定'] += confirmed;
-        
+
         // Add non-accommodation nights
         const nonAccommodation = parseInt(plan.non_accommodation_nights || '0');
         planEntry['確定 (その他)'] += nonAccommodation;
-        
+
         // Add blocked nights
         planEntry['ブロック'] += parseInt(plan.blocked_nights || '0');
-        
+
         // Count total occupied nights for this plan
         totalOccupiedNights += confirmed;
         totalOccupiedNights += nonAccommodation;
         totalOccupiedNights += parseInt(plan.blocked_nights || '0');
         totalOccupiedNights += parseInt(plan.employee_nights || '0');
     });
-    
+
     // Calculate total not booked nights
     const totalNotBookedNights = totalBookableRoomNights - totalOccupiedNights;
-    
+
     // Add "not booked" as a separate series if there are unbooked nights
     if (totalNotBookedNights > 0) {
         planMap.set('未予約', {
@@ -263,7 +271,7 @@ const initOccupationBreakdownChart = () => {
             '未予約': totalNotBookedNights
         });
     }
-    
+
     // Convert map to array and sort by total nights (descending)
     const processedPlans = Array.from(planMap.entries()).map(([planName, data]) => ({
         planName,
@@ -274,8 +282,8 @@ const initOccupationBreakdownChart = () => {
     // Calculate the actual total for the '確定' (宿泊) category from the processed data
     const totalConfirmedAccommodationNights = processedPlans.reduce((sum, plan) => sum + plan['確定'], 0);
 
-    
-    
+
+
     // Create series data for each plan
     const series = processedPlans.map(plan => ({
         name: plan.planName,
@@ -290,7 +298,7 @@ const initOccupationBreakdownChart = () => {
             formatter: (params) => {
                 const value = params.value;
                 if (value === 0) return '';
-                
+
                 // Calculate percentage of total bookable nights
                 const percentage = totalBookableRoomNights > 0 ? ((value / totalBookableRoomNights) * 100) : 0;
                 // Only show label if percentage is 10% or higher
@@ -350,7 +358,7 @@ const initOccupationBreakdownChart = () => {
                 const categoryName = params[0].axisValue;
                 let tooltipContent = `${categoryName}<br/>`;
                 let totalForCategory = 0;
-                
+
                 // Filter out the markPoint series from params for total calculation and prevent it from showing in the main tooltip list
                 const filteredParams = params.filter(item => item.seriesName !== '確定（宿泊）合計');
 

@@ -19,9 +19,11 @@ router.get('/report/download/accommodation-tax/:hid/:sdate/:edate', authMiddlewa
 
 // Daily Report
 router.get('/report/daily/available-dates', authMiddleware, reportController.getAvailableMetricDates);
+router.get('/report/daily/latest-date', authMiddleware, reportController.getLatestDailyReportDate);
 router.get('/report/daily/data/:date', authMiddleware, reportController.getDailyReportData);
 router.get('/report/daily/download-excel/:date1/:date2', authMiddleware, reportController.getExportDailyReportExcel);
 router.post('/report/daily/generate-for-today', authMiddleware, reportController.generateDailyMetrics);
+router.post('/report/daily/data-by-hotel', authMiddleware, reportController.getDailyReportDataByHotel);
 
 // Internal route
 router.get('/report/res/inventory/:hid/:sdate/:edate', reportController.getReservationsInventory);
@@ -49,5 +51,8 @@ router.post('/report/batch/count', authMiddleware, reportController.getBatchCoun
 router.post('/report/batch/forecast', authMiddleware, reportController.getBatchForecastData);
 router.post('/report/batch/accounting', authMiddleware, reportController.getBatchAccountingData);
 router.post('/report/batch/occupation-breakdown', authMiddleware, reportController.getBatchOccupationBreakdown);
+router.post('/report/batch/res-list', authMiddleware, reportController.getBatchReservationListView);
+router.post('/report/batch/booker-type', authMiddleware, reportController.getBatchBookerTypeBreakdown);
+router.post('/report/batch/future-outlook', authMiddleware, reportController.getBatchFutureOutlook);
 
 module.exports = router;

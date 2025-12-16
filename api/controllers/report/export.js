@@ -680,10 +680,9 @@ const generateSingleMonthSingleHotelPdf = async (req, res) => {
 };
 
 const generateSingleMonthMultipleHotelsPdf = async (req, res) => {
-    const { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames } = req.body;
     const requestId = req.requestId;
     try {
-        const pdfBuffer = await generatePdfServiceReport('singleMonthMultipleHotels', { selectedView, revenueData, occupancyData, periodMaxDate, allHotelNames }, requestId);
+        const pdfBuffer = await generatePdfServiceReport('singleMonthMultipleHotels', req.body, requestId);
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="monthly_summary_report_multiple_hotels_${requestId}.pdf"`);
         res.send(pdfBuffer);
@@ -727,7 +726,6 @@ module.exports = {
     getExportReservationDetails,
     getExportMealCount,
     getDailyReport,
-    getDailyReportData,
     getAvailableMetricDates,
     generateDailyMetrics,
     getExportDailyReportExcel,

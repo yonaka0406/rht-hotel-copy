@@ -3,6 +3,7 @@ const exportQueries = require('./export');
 const forecastQueries = require('./forecast');
 const googleQueries = require('./google');
 const occupationQueries = require('./occupation');
+const dailyQueries = require('./daily');
 
 module.exports = {
   ...main,
@@ -10,4 +11,5 @@ module.exports = {
   ...forecastQueries,
   ...googleQueries,
   ...occupationQueries,
+  ...dailyQueries,
 };

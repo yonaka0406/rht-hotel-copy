@@ -8,7 +8,6 @@ const { format } = require('fast-csv');
 async function getPrefilledTemplate(req, res) {
   try {
     const { type, month1, month2 } = req.query;
-
     // Validate parameters
     const validatedType = validationUtils.validateNonEmptyStringParam(type, 'Template type');
     const allowedTypes = ['forecast', 'accounting'];
@@ -51,9 +50,11 @@ async function getPrefilledTemplate(req, res) {
       filename = `accounting_template_${formattedMonth1}_to_${formattedMonth2}.csv`;
     }
 
-    res.header('Content-Type', 'text/csv');
+    res.header('Content-Type', 'text/csv; charset=utf-8');
     res.header('Content-Disposition', `attachment; filename="${filename}"`);
-    res.status(200).send(csvContent);
+    // Add BOM for proper UTF-8 encoding in Excel
+    const csvWithBOM = '\uFEFF' + csvContent;
+    res.status(200).send(csvWithBOM);
   } catch (error) {
     console.error('Error generating pre-filled template:', error);
     res.status(500).json({ message: 'Error generating pre-filled template', error: error.message });
