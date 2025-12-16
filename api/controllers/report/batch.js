@@ -56,7 +56,7 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
             // Debug logging: Show sample data from the batch
             const allRows = [];
             let totalRows = 0;
-            
+
             for (const [hotelId, data] of Object.entries(results)) {
                 if (Array.isArray(data) && data.length > 0) {
                     totalRows += data.length;
@@ -67,41 +67,6 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
                     }));
                     allRows.push(...rowsWithHotelId);
                 }
-            }
-            
-            if (allRows.length > 0) {
-                const sampleRows = allRows.slice(0, 2);
-                logger.debug(`[${operationName}] Batch completed. Request ID: ${req.requestId}, Total rows: ${totalRows}, Sample data (first 2 rows):`, {
-                    dateRange: `${startDate} to ${endDate}`,
-                    hotelIds: hotelIds,
-                    sampleRows: sampleRows.map(row => {
-                        // Different fields based on operation type
-                        if (operationName === 'getBatchCountReservation') {
-                            return {
-                                hotel_id: row.hotel_id,
-                                date: row.date,
-                                total_rooms: row.total_rooms,
-                                room_count: row.room_count,
-                                accommodation_price: row.accommodation_price,
-                                other_price: row.other_price,
-                                price: row.price
-                            };
-                        } else if (operationName === 'getBatchAccountingData') {
-                            return {
-                                hotel_id: row.hotel_id,
-                                accounting_month: row.accounting_month,
-                                accommodation_revenue: row.accommodation_revenue,
-                                operating_days: row.operating_days,
-                                available_room_nights: row.available_room_nights,
-                                rooms_sold_nights: row.rooms_sold_nights
-                            };
-                        } else {
-                            return row; // For other operation types, return full row
-                        }
-                    })
-                });
-            } else {
-                logger.debug(`[${operationName}] Batch completed. Request ID: ${req.requestId}, No data returned for any hotel in date range ${startDate} to ${endDate}`);
             }
 
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
