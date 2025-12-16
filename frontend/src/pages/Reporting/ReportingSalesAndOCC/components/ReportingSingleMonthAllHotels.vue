@@ -2,8 +2,8 @@
     <div>
         <div class="flex justify-end mb-2">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
-            <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2" @click="downloadPdf"
-                :loading="isDownloadingPdf" :disabled="isDownloadingPdf" />
+            <!-- <Button icon="pi pi-file-pdf" label="PDFをダウンロード" class="p-button-secondary ml-2" @click="downloadPdf"
+                :loading="isDownloadingPdf" :disabled="isDownloadingPdf" /> -->
         </div>
 
         <div v-if="selectedView === 'graph'">
