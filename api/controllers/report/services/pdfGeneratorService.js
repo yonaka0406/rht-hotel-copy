@@ -491,6 +491,69 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 // Ensure animation is disabled for PDF
                                 options.animation = false;
                                 
+                                // Fix formatters for revenue chart
+                                if (options.series && Array.isArray(options.series)) {
+                                    console.log('[${requestId}] FORMATTING: Fixing revenue chart formatters');
+                                    options.series.forEach((series, index) => {
+                                        if (series.label && series.label.formatter) {
+                                            console.log('[${requestId}] FORMATTING: Fixing revenue label formatter for series', index);
+                                            series.label.formatter = function(params) {
+                                                const formatted = formatYenInTenThousandsNoDecimal(params.value);
+                                                console.log('[${requestId}] FORMATTING: Revenue label - input:', params.value, 'output:', formatted);
+                                                return formatted;
+                                            };
+                                        }
+                                        
+                                        // Add label formatter if it doesn't exist
+                                        if (!series.label) {
+                                            series.label = {
+                                                show: true,
+                                                position: 'top',
+                                                formatter: function(params) {
+                                                    const formatted = formatYenInTenThousandsNoDecimal(params.value);
+                                                    console.log('[${requestId}] FORMATTING: Added revenue label - input:', params.value, 'output:', formatted);
+                                                    return formatted;
+                                                }
+                                            };
+                                        }
+                                    });
+                                }
+                                
+                                // Fix yAxis formatter
+                                if (options.yAxis && options.yAxis.axisLabel) {
+                                    console.log('[${requestId}] FORMATTING: Fixing revenue yAxis formatter');
+                                    options.yAxis.axisLabel.formatter = function(value) {
+                                        const formatted = formatYenInTenThousands(value);
+                                        console.log('[${requestId}] FORMATTING: Revenue YAxis - input:', value, 'output:', formatted);
+                                        return formatted;
+                                    };
+                                } else if (options.yAxis) {
+                                    options.yAxis.axisLabel = {
+                                        formatter: function(value) {
+                                            return formatYenInTenThousands(value);
+                                        }
+                                    };
+                                }
+                                
+                                // Fix tooltip formatter
+                                if (options.tooltip && options.tooltip.formatter) {
+                                    console.log('[${requestId}] FORMATTING: Fixing revenue tooltip formatter');
+                                    options.tooltip.formatter = function(params) {
+                                        if (Array.isArray(params)) {
+                                            let tooltip = params[0].name + '<br/>';
+                                            params.forEach(param => {
+                                                const formattedValue = formatYenInTenThousands(param.value);
+                                                tooltip += param.marker + ' ' + param.seriesName + ': ' + formattedValue + '<br/>';
+                                            });
+                                            return tooltip;
+                                        } else {
+                                            return params.name + '<br/>' + params.marker + ' ' + params.seriesName + ': ' + formatYenInTenThousands(params.value);
+                                        }
+                                    };
+                                }
+                                
+                                console.log('[${requestId}] FORMATTING: Setting revenue chart options');
+                                
                                 chart.setOption(options);
                                 chart.resize();
                             
@@ -775,10 +838,63 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                 // Ensure animation is disabled for PDF
                                 options.animation = false;
                                 
+                                // Fix percentage formatting for occupancy chart
+                                if (options.series && Array.isArray(options.series)) {
+                                    console.log('[${requestId}] FORMATTING: Fixing AllHotelsOccupancy percentage formatting');
+                                    options.series.forEach((series, index) => {
+                                        if (series.label && series.label.formatter) {
+                                            console.log('[${requestId}] FORMATTING: Fixing occupancy label formatter for series', index);
+                                            series.label.formatter = function(params) {
+                                                const formatted = (params.value / 100).toFixed(2) + '%';
+                                                console.log('[${requestId}] FORMATTING: Occupancy label - input:', params.value, 'output:', formatted);
+                                                return formatted;
+                                            };
+                                        }
+                                        
+                                        // Add label formatter if it doesn't exist
+                                        if (!series.label) {
+                                            series.label = {
+                                                show: true,
+                                                position: 'right',
+                                                formatter: function(params) {
+                                                    const formatted = (params.value / 100).toFixed(2) + '%';
+                                                    console.log('[${requestId}] FORMATTING: Added occupancy label - input:', params.value, 'output:', formatted);
+                                                    return formatted;
+                                                }
+                                            };
+                                        }
+                                    });
+                                }
+                                
+                                // Fix tooltip formatter for percentages
+                                if (options.tooltip && options.tooltip.formatter) {
+                                    console.log('[${requestId}] FORMATTING: Fixing occupancy tooltip formatter');
+                                    options.tooltip.formatter = function(params) {
+                                        if (Array.isArray(params)) {
+                                            let tooltip = params[0].name + '<br/>';
+                                            params.forEach(param => {
+                                                const formattedValue = (param.value / 100).toFixed(2) + '%';
+                                                tooltip += param.marker + ' ' + param.seriesName + ': ' + formattedValue + '<br/>';
+                                            });
+                                            return tooltip;
+                                        } else {
+                                            const formattedValue = (params.value / 100).toFixed(2) + '%';
+                                            return params.name + '<br/>' + params.marker + ' ' + params.seriesName + ': ' + formattedValue;
+                                        }
+                                    };
+                                }
+                                
+                                // Fix xAxis formatter for percentages
+                                if (options.xAxis && options.xAxis.axisLabel) {
+                                    options.xAxis.axisLabel.formatter = function(value) {
+                                        return (value / 100).toFixed(0) + '%';
+                                    };
+                                }
+                                
+                                console.log('[${requestId}] FORMATTING: Setting AllHotelsOccupancy options with series count:', options.series ? options.series.length : 0);
+                                
                                 chart.setOption(options);
                                 chart.resize();
-                                
-                                console.log('[${requestId}] AllHotelsOccupancy chart options set successfully');
                                 
                                 const chartTimeout = setTimeout(() => {
                                     console.warn('[${requestId}] AllHotelsOccupancy chart rendering timeout - proceeding with fallback');
@@ -968,11 +1084,29 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                                         <h4 style="font-size: 0.9em; color: #666; margin: 0 0 10px 0; font-weight: 500;">ADR</h4>
                                         <p style="font-size: 1.4em; font-weight: bold; color: #333; margin: 0;">${kpiData.actualADR ? kpiData.actualADR.toLocaleString('ja-JP') : 'N/A'}円</p>
                                         <p style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">(計画: ${kpiData.forecastADR ? kpiData.forecastADR.toLocaleString('ja-JP') : 'N/A'}円)</p>
+                                        ${(() => {
+                                            if (kpiData.actualADR && kpiData.forecastADR) {
+                                                const diff = kpiData.actualADR - kpiData.forecastADR;
+                                                const color = diff >= 0 ? '#10b981' : '#ef4444'; // green or red
+                                                const sign = diff >= 0 ? '+' : '';
+                                                return `<p style="font-size: 0.8em; color: ${color}; margin: 5px 0 0 0; font-weight: bold;">${sign}${diff.toLocaleString('ja-JP')}円</p>`;
+                                            }
+                                            return '';
+                                        })()}
                                     </div>
                                     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e9ecef;">
                                         <h4 style="font-size: 0.9em; color: #666; margin: 0 0 10px 0; font-weight: 500;">RevPAR</h4>
                                         <p style="font-size: 1.4em; font-weight: bold; color: #333; margin: 0;">${kpiData.actualRevPAR ? kpiData.actualRevPAR.toLocaleString('ja-JP') : 'N/A'}円</p>
                                         <p style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">(計画: ${kpiData.forecastRevPAR ? kpiData.forecastRevPAR.toLocaleString('ja-JP') : 'N/A'}円)</p>
+                                        ${(() => {
+                                            if (kpiData.actualRevPAR && kpiData.forecastRevPAR) {
+                                                const diff = kpiData.actualRevPAR - kpiData.forecastRevPAR;
+                                                const color = diff >= 0 ? '#10b981' : '#ef4444'; // green or red
+                                                const sign = diff >= 0 ? '+' : '';
+                                                return `<p style="font-size: 0.8em; color: ${color}; margin: 5px 0 0 0; font-weight: bold;">${sign}${diff.toLocaleString('ja-JP')}円</p>`;
+                                            }
+                                            return '';
+                                        })()}
                                     </div>
                                 </div>
                             </div>
@@ -984,11 +1118,11 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
                         <div class="chart-row">
                             <div class="chart-half">
                                 <h3>施設別 売上合計（計画 vs 実績）</h3>
-                                <div id="allHotelsRevenueContainer" style="width: 400px; height: 900px; margin: 0 auto;"></div>
+                                <div id="allHotelsRevenueContainer" style="width: 400px; height: 1200px; margin: 0 auto;"></div>
                             </div>
                             <div class="chart-half">
                                 <h3>施設別 稼働率（計画 vs 実績）</h3>
-                                <div id="allHotelsOccupancyContainer" style="width: 400px; height: 900px; margin: 0 auto;"></div>
+                                <div id="allHotelsOccupancyContainer" style="width: 400px; height: 1200px; margin: 0 auto;"></div>
                             </div>
                         </div>
                     </div>
