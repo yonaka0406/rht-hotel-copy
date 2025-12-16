@@ -55,7 +55,8 @@ const {
   isPreparingForPrint, 
   optimizeChartForPrint, 
   restoreChartFromPrint, 
-  getPrintChartDimensions 
+  getPrintChartDimensions,
+  forceChartResize
 } = usePrintOptimization();
 
 const hasAllHotelsRevenueData = computed(() => props.revenueData && props.revenueData.length > 0);
@@ -76,7 +77,7 @@ const allHotelsChartHeight = computed(() => {
     // Optimize for print mode
     if (isPrintMode.value) {
         // For print, use a fixed height that fits on one page
-        return 600; // Fixed height for print mode
+        return 750; // Fixed height for print mode
     }
     
     // Normal screen display logic
@@ -141,9 +142,16 @@ onBeforeUnmount(() => {
 watch(isPrintMode, (newPrintMode) => {
     if (allHotelsRevenueChartInstance.value && originalOptions.value) {
         if (newPrintMode) {
-            optimizeChartForPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            // Wait for CSS to apply, then optimize for print
+            nextTick(() => {
+                setTimeout(() => {
+                    optimizeChartForPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+                    forceChartResize(allHotelsRevenueChartInstance.value);
+                }, 100);
+            });
         } else {
             restoreChartFromPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
+            forceChartResize(allHotelsRevenueChartInstance.value);
         }
     }
 });
@@ -164,21 +172,25 @@ watch(() => props.revenueData, () => {
     page-break-inside: avoid !important;
     page-break-after: always !important;
     margin-bottom: 0 !important;
-    border: 1px solid #ddd !important;
-    padding: 8pt !important;
+    border: none !important; /* Remove border to maximize width */
+    padding: 0 !important; /* Remove padding to maximize width */
     background: white !important;
-    height: 600px !important;
-    max-height: 600px !important;
+    height: 750px !important;
+    max-height: 750px !important;
+    width: 100% !important;
     position: relative !important;
     clear: both !important;
     display: block !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
   }
   
   .hotel-sales-comparison-print-optimized.print-mode {
-    height: 600px !important;
-    max-height: 600px !important;
-    overflow: hidden !important;
+    height: 750px !important;
+    max-height: 750px !important;
+    width: 100% !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 }
 </style>

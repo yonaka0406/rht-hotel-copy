@@ -367,9 +367,17 @@
   .hotel-sales-chart canvas,
   .hotel-occupancy-chart canvas {
     max-width: 100% !important;
-    max-height: 580px !important; /* Slightly less than container to account for padding */
+    max-height: 750px !important; /* Match container height */
     width: 100% !important;
-    height: 580px !important;
+    height: 750px !important; /* Fixed height to use full canvas */
+    object-fit: fill !important; /* Fill the entire canvas */
+  }
+  
+  /* Force chart containers to use full width */
+  .hotel-sales-comparison-print-optimized,
+  .all-hotels-occupancy-print-optimized {
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   /* Chart titles and legends */
@@ -822,29 +830,33 @@
   
   .hotel-sales-chart {
     width: 100% !important;
-    height: 600px !important; /* Fixed height to fit on one page */
+    height: 750px !important; /* Fixed height to fit on one page */
     margin-bottom: 0 !important;
+    padding: 0 !important; /* Remove padding to maximize width */
     page-break-inside: avoid !important;
     page-break-after: always !important; /* Force page break after first chart */
     page-break-before: auto !important;
     position: relative !important;
     clear: both !important;
     display: block !important;
-    overflow: hidden !important; /* Prevent content overflow */
+    overflow: visible !important; /* Allow content to use full space */
+    box-sizing: border-box !important;
   }
   
   .hotel-occupancy-chart {
     width: 100% !important;
-    height: 600px !important; /* Fixed height to fit on one page */
+    height: 750px !important; /* Fixed height to fit on one page */
     margin-bottom: 20pt !important;
     margin-top: 0 !important; /* No extra margin since we have page break */
+    padding: 0 !important; /* Remove padding to maximize width */
     page-break-inside: avoid !important;
     page-break-before: always !important; /* Force page break before second chart */
     page-break-after: auto !important;
     position: relative !important;
     clear: both !important;
     display: block !important;
-    overflow: hidden !important; /* Prevent content overflow */
+    overflow: visible !important; /* Allow content to use full space */
+    box-sizing: border-box !important;
   }
   
   /* Message and info boxes */
