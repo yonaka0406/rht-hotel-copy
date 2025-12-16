@@ -1,4 +1,5 @@
 const { getPool } = require('../../config/database');
+const logger = require('../../config/logger');
 
 const selectForecastData = async (requestId, hotelId, dateStart, dateEnd, dbClient = null) => {
   const pool = getPool(requestId);

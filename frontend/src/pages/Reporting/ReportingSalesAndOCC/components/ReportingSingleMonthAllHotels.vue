@@ -246,10 +246,46 @@ const aggregateHotelZeroData = computed(() => {
     const prevYearRevenueEntry = props.prevYearRevenueData?.find(item => item.hotel_id === 0);
     const prevYearOccupancyEntry = props.prevYearOccupancyData?.find(item => item.hotel_id === 0);
 
-    //console.log('[ReportingSingleMonthAllHotels] revenueEntry (hotel_id=0):', revenueEntry);
-    //console.log('[ReportingSingleMonthAllHotels] occupancyEntry (hotel_id=0):', occupancyEntry);
+    // Log current and previous year data to verify correct months
+    console.log('[ReportingSingleMonthAllHotels] Current year data:', {
+        revenueEntry: revenueEntry,
+        occupancyEntry: occupancyEntry,
+        currentMonth: revenueEntry?.month,
+        currentYear: revenueEntry?.month ? new Date(revenueEntry.month).getFullYear() : 'N/A'
+    });
+    
+    console.log('[ReportingSingleMonthAllHotels] Previous year data:', {
+        prevYearRevenueEntry: prevYearRevenueEntry,
+        prevYearOccupancyEntry: prevYearOccupancyEntry,
+        prevYearMonth: prevYearRevenueEntry?.month,
+        prevYearYear: prevYearRevenueEntry?.month ? new Date(prevYearRevenueEntry.month).getFullYear() : 'N/A'
+    });
 
-    return {
+    // Verify that we're comparing the same month but different years
+    if (revenueEntry?.month && prevYearRevenueEntry?.month) {
+        const currentDate = new Date(revenueEntry.month);
+        const prevYearDate = new Date(prevYearRevenueEntry.month);
+        const currentMonth = currentDate.getMonth();
+        const prevYearMonth = prevYearDate.getMonth();
+        const yearDiff = currentDate.getFullYear() - prevYearDate.getFullYear();
+        
+        console.log('[ReportingSingleMonthAllHotels] Month comparison:', {
+            currentMonth: currentMonth,
+            prevYearMonth: prevYearMonth,
+            yearDifference: yearDiff,
+            isSameMonth: currentMonth === prevYearMonth,
+            isOneYearDiff: yearDiff === 1
+        });
+        
+        if (currentMonth !== prevYearMonth) {
+            console.warn('[ReportingSingleMonthAllHotels] WARNING: Current month and previous year month do not match!');
+        }
+        if (yearDiff !== 1) {
+            console.warn('[ReportingSingleMonthAllHotels] WARNING: Year difference is not exactly 1 year!');
+        }
+    }
+
+    const result = {
         total_forecast_revenue: revenueEntry?.forecast_revenue || 0,
         total_period_accommodation_revenue: revenueEntry?.accommodation_revenue || 0,
         total_prev_year_accommodation_revenue: prevYearRevenueEntry?.accommodation_revenue || 0,
@@ -262,6 +298,16 @@ const aggregateHotelZeroData = computed(() => {
         total_prev_year_available_rooms: prevYearOccupancyEntry?.total_rooms || 0,
         prevYearOccupancy: prevYearOccupancyEntry?.total_rooms > 0 ? prevYearOccupancyEntry.sold_rooms / prevYearOccupancyEntry.total_rooms : null
     };
+
+    console.log('[ReportingSingleMonthAllHotels] aggregateHotelZeroData result:', {
+        result,
+        revenueEntryMonth: revenueEntry?.month,
+        prevYearRevenueEntryMonth: prevYearRevenueEntry?.month,
+        occupancyEntryMonth: occupancyEntry?.month,
+        prevYearOccupancyEntryMonth: prevYearOccupancyEntry?.month
+    });
+
+    return result;
 });
 
 const actualADR = computed(() => {

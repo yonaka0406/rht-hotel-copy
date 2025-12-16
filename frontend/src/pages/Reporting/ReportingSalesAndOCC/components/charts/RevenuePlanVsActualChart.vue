@@ -56,6 +56,16 @@ const chartOptions = computed(() => {
   const varianceAmount = total_period_accommodation_revenue - total_forecast_revenue;
   const prevYearAmount = total_prev_year_accommodation_revenue || 0;
 
+  // Log the revenue data being used in the chart
+  console.log('[RevenuePlanVsActualChart] Chart data:', {
+    total_forecast_revenue,
+    total_period_accommodation_revenue,
+    total_prev_year_accommodation_revenue: total_prev_year_accommodation_revenue,
+    prevYearAmount,
+    varianceAmount,
+    fullRevenueData: props.revenueData
+  });
+
   let displayVariancePercent;
   if (total_forecast_revenue === 0 || total_forecast_revenue === null) {
     displayVariancePercent = (total_period_accommodation_revenue === 0 || total_period_accommodation_revenue === null) ? "0.00%" : "N/A";

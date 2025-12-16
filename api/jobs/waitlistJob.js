@@ -24,7 +24,6 @@ const runWaitlistExpirationJob = async () => {
     throw err;
   } finally {
     client.release();
-    logger.info('[WaitlistJob] Database client released.');
   }
 };
 

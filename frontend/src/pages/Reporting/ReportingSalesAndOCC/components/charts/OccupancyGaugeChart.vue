@@ -64,10 +64,10 @@ const chartOptions = computed(() => {
   const totalActualOccupancy = actualTotalRooms > 0 ? total_sold_rooms / actualTotalRooms : 0;
   const totalForecastOccupancy = forecastTotalRooms > 0 ? total_fc_sold_rooms / forecastTotalRooms : 0;
 
-  console.log('[GaugeChart] Props Data:', props.occupancyData);
-  console.log('[GaugeChart] Actual:', { total_sold_rooms, actualTotalRooms, totalActualOccupancy });
-  console.log('[GaugeChart] Forecast:', { total_fc_sold_rooms, forecastTotalRooms, totalForecastOccupancy });
-  console.log('[GaugeChart] Prev:', props.previousYearOccupancy);
+  //console.log('[GaugeChart] Props Data:', props.occupancyData);
+  //console.log('[GaugeChart] Actual:', { total_sold_rooms, actualTotalRooms, totalActualOccupancy });
+  //console.log('[GaugeChart] Forecast:', { total_fc_sold_rooms, forecastTotalRooms, totalForecastOccupancy });
+  //console.log('[GaugeChart] Prev:', props.previousYearOccupancy);
 
   return {
     tooltip: {

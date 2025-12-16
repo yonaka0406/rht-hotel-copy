@@ -36,7 +36,6 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
 
         const pool = getPool(req.requestId);
         const client = await pool.connect();
-        logger.debug(`[${operationName}] Database client connected. Request ID: ${req.requestId}`);
 
         try {
             const results = {};
@@ -54,10 +53,60 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
                 }
             }
 
+            // Debug logging: Show sample data from the batch
+            const allRows = [];
+            let totalRows = 0;
+            
+            for (const [hotelId, data] of Object.entries(results)) {
+                if (Array.isArray(data) && data.length > 0) {
+                    totalRows += data.length;
+                    // Add hotel_id to each row for context and take first few rows
+                    const rowsWithHotelId = data.slice(0, 2).map(row => ({
+                        hotel_id: hotelId,
+                        ...row
+                    }));
+                    allRows.push(...rowsWithHotelId);
+                }
+            }
+            
+            if (allRows.length > 0) {
+                const sampleRows = allRows.slice(0, 2);
+                logger.debug(`[${operationName}] Batch completed. Request ID: ${req.requestId}, Total rows: ${totalRows}, Sample data (first 2 rows):`, {
+                    dateRange: `${startDate} to ${endDate}`,
+                    hotelIds: hotelIds,
+                    sampleRows: sampleRows.map(row => {
+                        // Different fields based on operation type
+                        if (operationName === 'getBatchCountReservation') {
+                            return {
+                                hotel_id: row.hotel_id,
+                                date: row.date,
+                                total_rooms: row.total_rooms,
+                                room_count: row.room_count,
+                                accommodation_price: row.accommodation_price,
+                                other_price: row.other_price,
+                                price: row.price
+                            };
+                        } else if (operationName === 'getBatchAccountingData') {
+                            return {
+                                hotel_id: row.hotel_id,
+                                accounting_month: row.accounting_month,
+                                accommodation_revenue: row.accommodation_revenue,
+                                operating_days: row.operating_days,
+                                available_room_nights: row.available_room_nights,
+                                rooms_sold_nights: row.rooms_sold_nights
+                            };
+                        } else {
+                            return row; // For other operation types, return full row
+                        }
+                    })
+                });
+            } else {
+                logger.debug(`[${operationName}] Batch completed. Request ID: ${req.requestId}, No data returned for any hotel in date range ${startDate} to ${endDate}`);
+            }
+
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
         } finally {
             client.release();
-            logger.debug(`[${operationName}] Database client released. Request ID: ${req.requestId}`);
         }
     } catch (err) {
         logger.error(`[${operationName}] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });
@@ -176,7 +225,6 @@ const getBatchFutureOutlook = async (req, res) => {
 
         const pool = getPool(req.requestId);
         const client = await pool.connect();
-        logger.debug(`[${operationName}] Database client connected. Fetching 6 months of data. Request ID: ${req.requestId}`);
 
         try {
             const results = {};
@@ -215,14 +263,15 @@ const getBatchFutureOutlook = async (req, res) => {
             }
 
             logger.debug('Summarized Outlook Data Keys:', Object.keys(results));
+            /*
             Object.keys(results).forEach(m => {
                 logger.debug(`Month: ${m}, Hotels: ${Object.keys(results[m])}`);
             });
+            */
 
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
         } finally {
             client.release();
-            logger.debug(`[${operationName}] Database client released. Request ID: ${req.requestId}`);
         }
     } catch (err) {
         logger.error(`[${operationName}] Failed for Request ID: ${req.requestId}. Error: ${err.message}`, { stack: err.stack });

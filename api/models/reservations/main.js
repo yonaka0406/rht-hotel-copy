@@ -944,7 +944,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         ORDER BY date ASC LIMIT 1
       `;
       const sourceResult = await client.query(sourceDetailQuery, [reservationIdForDetails, hotel_id, old_room_id]);
-    
+
       if (sourceResult.rows.length > 0) {
         const sourceDetailId = sourceResult.rows[0].id;
         //logger.debug(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
@@ -957,7 +957,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         //logger.debug(`Found ${addonsToCopy.length} addons to copy.`);
       }
       // --- NEW LOGIC: END ---
-    
+
       // 2. Delete old records
       const deleteOldQuery = `
         DELETE FROM reservation_details 
@@ -1015,7 +1015,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
           FROM unnest($12::date[]) as date_series(date)
           RETURNING id;
         `;
-    
+
         const insertDetailsValues = [
           hotel_id,
           newReservationId,
@@ -1030,11 +1030,11 @@ const updateRoomByCalendar = async (requestId, roomData) => {
           updated_by,
           datesToCreate
         ];
-    
+
         const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
         const newReservationDetails = insertedDetails.rows;
         //logger.debug(`Inserted ${newReservationDetails.length} new reservation_details records.`);
-    
+
         // --- MODIFIED LOGIC: START ---
         // 4. Copy clients/addons to new records using the data fetched earlier
         if (newReservationDetails.length > 0) {
@@ -1119,7 +1119,6 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     throw new Error(`Failed to update reservation: ${err.message}`);
   } finally {
     client.release();
-    //logger.debug('Database client released.');
   }
 };
 
@@ -2636,44 +2635,44 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               SELECT id, date FROM reservation_details
               WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
           `;
-          const detailsResult = await internalClient.query(detailsQuery, [reservationId, hotel_id, firstRoomId]);
-          const detailsForRoom = detailsResult.rows;
+        const detailsResult = await internalClient.query(detailsQuery, [reservationId, hotel_id, firstRoomId]);
+        const detailsForRoom = detailsResult.rows;
 
-          if (detailsForRoom.length > 0) {
-              const checkIn = BasicInformation.CheckInDate;
-              const checkOut = BasicInformation.CheckOutDate;
+        if (detailsForRoom.length > 0) {
+          const checkIn = BasicInformation.CheckInDate;
+          const checkOut = BasicInformation.CheckOutDate;
 
-              const availableSpot = await selectAndLockAvailableParkingSpot(
-                  requestId,
-                  hotel_id,
-                  checkIn,
-                  checkOut,
-                  100, // capacity_units_required
-                  internalClient
-              );
+          const availableSpot = await selectAndLockAvailableParkingSpot(
+            requestId,
+            hotel_id,
+            checkIn,
+            checkOut,
+            100, // capacity_units_required
+            internalClient
+          );
 
-              if (availableSpot) {
-                  const parkingSpotId = availableSpot.parking_spot_id;
+          if (availableSpot) {
+            const parkingSpotId = availableSpot.parking_spot_id;
 
-                  const parkingInsertPromises = detailsForRoom.map(async detail => {
-                      const addonToInsert = {
-                          hotel_id: hotel_id,
-                          reservation_detail_id: detail.id,
-                          addons_global_id: 3, // Assuming 3 is the global ID for parking
-                          addons_hotel_id: null, // Parking is global in this context
-                          addon_name: '駐車場',
-                          addon_type: 'parking',
-                          quantity: 1,
-                          price: 0,
-                          tax_type_id: 3, // Assuming 3 is the tax_type_id for 10% tax
-                          tax_rate: 0.1, // Assuming 0.1 is the tax_rate
-                          created_by: 1,
-                          updated_by: 1
-                      };
-                      const createdAddon = await addonsModels.addReservationAddon(requestId, addonToInsert, internalClient);
-                      const reservationAddonId = createdAddon.id;
+            const parkingInsertPromises = detailsForRoom.map(async detail => {
+              const addonToInsert = {
+                hotel_id: hotel_id,
+                reservation_detail_id: detail.id,
+                addons_global_id: 3, // Assuming 3 is the global ID for parking
+                addons_hotel_id: null, // Parking is global in this context
+                addon_name: '駐車場',
+                addon_type: 'parking',
+                quantity: 1,
+                price: 0,
+                tax_type_id: 3, // Assuming 3 is the tax_type_id for 10% tax
+                tax_rate: 0.1, // Assuming 0.1 is the tax_rate
+                created_by: 1,
+                updated_by: 1
+              };
+              const createdAddon = await addonsModels.addReservationAddon(requestId, addonToInsert, internalClient);
+              const reservationAddonId = createdAddon.id;
 
-                      const parkingQuery = `
+              const parkingQuery = `
                           INSERT INTO reservation_parking (
                               hotel_id,
                               reservation_details_id,
@@ -4183,7 +4182,7 @@ module.exports = {
   addReservationDetailsBatch,
   addRoomToReservation,
   updateReservationDetail,
-  updateReservationStatus,  
+  updateReservationStatus,
   updateReservationComment,
   updateReservationCommentFlag,
   updateReservationTime,
@@ -4192,7 +4191,7 @@ module.exports = {
   updateReservationRoomGuestNumber,
   updateReservationGuest,
   updateClientInReservation,
-  updateReservationDetailPlan,  
+  updateReservationDetailPlan,
   updateReservationDetailRoom,
   updateReservationRoom,
   updateReservationRoomWithCreate,
