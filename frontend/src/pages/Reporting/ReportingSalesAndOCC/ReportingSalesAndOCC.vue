@@ -54,7 +54,7 @@ import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllH
 import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
 import ReportingSingleMonthHotel from './components/ReportingSingleMonthHotel.vue';
 import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHotel.vue';
-import { formatDateToYMD } from '@/utils/dateUtils';
+import { formatDateToYMD, formatDate } from '@/utils/dateUtils';
 
 // Stores
 import { useReportStore } from '@/composables/useReportStore';
@@ -75,31 +75,47 @@ const pmsFallbackCapacities = ref({}); // To store fallback capacities per hotel
 const isInitialized = ref(false); // Flag to control initial data fetch
 
 // -- Helper Functions --
-// Helper to format a Date object to YYYY-MM-DD using UTC values
-function formatDate(date) {
+// Helper to get first day of month
+const getFirstDayOfMonth = (date) => {
     if (!date) return null;
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-// Helper to format a Date object to YYYY-MM using UTC values
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+};
+
+// Helper to get last day of month  
+const getLastDayOfMonth = (date) => {
+    if (!date) return null;
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+};
+
+// Helper to get first day of year
+const getFirstDayOfYear = (date) => {
+    if (!date) return null;
+    return new Date(date.getFullYear(), 0, 1);
+};
+
+// Helper to get last day of year
+const getLastDayOfYear = (date) => {
+    if (!date) return null;
+    return new Date(date.getFullYear(), 11, 31);
+};
+
+// Helper to format a Date object to YYYY-MM
 function formatDateMonth(date) {
     if (!date) return null;
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
 }
-// Helper to normalize a Date object to UTC midnight (00:00:00)
+// Helper to normalize a Date object to local midnight (00:00:00)
 const normalizeDate = (date) => {
     if (!date) return null;
-    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 };
-// Helper to get the number of days in a given month (1-indexed) of a year, using UTC
+// Helper to get the number of days in a given month (1-indexed) of a year
 function getDaysInMonth(year, month) {
     if (typeof year !== 'number' || typeof month !== 'number') return 0;
     // month - 1 because Date constructor expects 0-indexed month
-    return new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return new Date(year, month, 0).getDate();
 }
 
 // --- Reactive State for the Parent Component ---
@@ -116,42 +132,22 @@ const firstDayofFetch = computed(() => {
     if (!selectedDate.value) {
         return null;
     }
-    let date;
-    if (period.value === 'year') {
-        date = new Date(selectedDate.value);
-        date.setMonth(0);
-        date.setDate(1);
-    } else {
-        date = new Date(selectedDate.value);
-        date.setDate(1);
-    }
-    
-    console.log('[ReportingSalesAndOCC] firstDayofFetch calculation:', {
-        selectedDate: selectedDate.value,
-        period: period.value,
-        calculatedFirstDay: date,
-        selectedDateMonth: selectedDate.value.getMonth(),
-        selectedDateYear: selectedDate.value.getFullYear()
-    });
-    
+
+    const date = period.value === 'year'
+        ? getFirstDayOfYear(selectedDate.value)
+        : getFirstDayOfMonth(selectedDate.value);
+
     return date;
 });
 const lastDayofFetch = computed(() => {
     if (!selectedDate.value) {
         return null;
     }
-    const date = new Date(selectedDate.value);
-    date.setMonth(date.getMonth() + 1);
-    date.setDate(0);
-    
-    console.log('[ReportingSalesAndOCC] lastDayofFetch calculation:', {
-        selectedDate: selectedDate.value,
-        period: period.value,
-        calculatedLastDay: date,
-        selectedDateMonth: selectedDate.value.getMonth(),
-        selectedDateYear: selectedDate.value.getFullYear()
-    });
-    
+
+    const date = period.value === 'year'
+        ? getLastDayOfYear(selectedDate.value)
+        : getLastDayOfMonth(selectedDate.value);
+
     return date;
 });
 
@@ -210,17 +206,11 @@ const prevYearRevenueData = computed(() => {
     const monthlyAggregates = {};
     // Calculate date range for previous year
     let currentIterMonth = new Date(firstDayofFetch.value);
-    currentIterMonth.setUTCFullYear(currentIterMonth.getUTCFullYear() - 1);
+    currentIterMonth.setFullYear(currentIterMonth.getFullYear() - 1);
     const lastIterMonthDate = new Date(lastDayofFetch.value);
-    lastIterMonthDate.setUTCFullYear(lastIterMonthDate.getUTCFullYear() - 1);
+    lastIterMonthDate.setFullYear(lastIterMonthDate.getFullYear() - 1);
 
-    console.log('[ReportingSalesAndOCC] prevYearRevenueData computed - Date range:', {
-        originalFirstDay: firstDayofFetch.value,
-        originalLastDay: lastDayofFetch.value,
-        prevYearFirstDay: currentIterMonth,
-        prevYearLastDay: lastIterMonthDate,
-        selectedView: selectedView.value
-    });
+
 
     while (currentIterMonth <= lastIterMonthDate) {
         const monthKey = formatDateMonth(normalizeDate(currentIterMonth));
@@ -229,7 +219,7 @@ const prevYearRevenueData = computed(() => {
         selectedHotels.value.forEach(hotelId => {
             monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
         });
-        currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
+        currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
     }
 
     const aggregateDataSource = (sourceDataByHotel, revenueKey) => {
@@ -254,30 +244,18 @@ const prevYearRevenueData = computed(() => {
     };
 
     const aggregatePmsDataSource = (sourceDataByHotel) => {
-        console.log('[ReportingSalesAndOCC] prevYearRevenueData - aggregatePmsDataSource processing:', {
-            availableMonthKeys: Object.keys(monthlyAggregates),
-            sourceDataKeys: Object.keys(sourceDataByHotel)
-        });
-        
+
+
         for (const stringHotelIdKey in sourceDataByHotel) {
             const hotelDataArray = sourceDataByHotel[stringHotelIdKey];
             if (Array.isArray(hotelDataArray)) {
                 hotelDataArray.forEach((record, index) => {
                     if (record && record.date) {
                         const monthKey = formatDateMonth(new Date(record.date));
-                        
+
                         // Log first few records to see what dates are being processed
-                        if (index < 3) {
-                            console.log(`[ReportingSalesAndOCC] prevYearRevenueData - Processing record ${index} for hotel ${stringHotelIdKey}:`, {
-                                originalDate: record.date,
-                                parsedDate: new Date(record.date),
-                                monthKey: monthKey,
-                                monthKeyExists: !!monthlyAggregates[monthKey],
-                                revenue: record.revenue,
-                                accommodation_revenue: record.accommodation_revenue
-                            });
-                        }
-                        
+
+
                         if (monthlyAggregates[monthKey]) {
                             if (monthlyAggregates[monthKey][stringHotelIdKey]) {
                                 if (typeof record.revenue === 'number') {
@@ -302,7 +280,7 @@ const prevYearRevenueData = computed(() => {
                                 }
                             }
                         } else if (index < 3) {
-                            console.warn(`[ReportingSalesAndOCC] prevYearRevenueData - Month key ${monthKey} not found in monthlyAggregates for record:`, record);
+
                         }
                     }
                 });
@@ -310,18 +288,7 @@ const prevYearRevenueData = computed(() => {
         }
     };
 
-    console.log('[ReportingSalesAndOCC] prevYearRevenueData - Raw data before aggregation:', {
-        prevYearPmsTotalDataKeys: Object.keys(prevYearPmsTotalData.value),
-        prevYearAccountingTotalDataKeys: Object.keys(prevYearAccountingTotalData.value),
-        prevYearPmsSample: Object.keys(prevYearPmsTotalData.value).map(hotelId => ({
-            hotelId,
-            sampleRecords: (prevYearPmsTotalData.value[hotelId] || []).slice(0, 3)
-        })),
-        prevYearAccountingSample: Object.keys(prevYearAccountingTotalData.value).map(hotelId => ({
-            hotelId,
-            sampleRecords: (prevYearAccountingTotalData.value[hotelId] || []).slice(0, 3)
-        }))
-    });
+
 
     aggregatePmsDataSource(prevYearPmsTotalData.value);
     aggregateDataSource(prevYearAccountingTotalData.value, 'acc_revenue');
@@ -362,12 +329,7 @@ const prevYearRevenueData = computed(() => {
         }
     });
 
-    console.log('[ReportingSalesAndOCC] prevYearRevenueData computed - Final result:', {
-        resultLength: result.length,
-        sampleData: result.slice(0, 3),
-        allMonths: result.map(r => r.month),
-        allCurrentYearMonths: result.map(r => r.current_year_month)
-    });
+
 
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
@@ -396,7 +358,7 @@ const revenueData = computed(() => {
         selectedHotels.value.forEach(hotelId => {
             monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
         });
-        currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
+        currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
     }
     const aggregateDataSource = (sourceDataByHotel, revenueKey) => {
         for (const stringHotelIdKey in sourceDataByHotel) {
@@ -513,20 +475,20 @@ const occupancyData = computed(() => {
         const monthKey = formatDateMonth(iterDateForMonthKey);
         monthlyOccupancyAggregates[monthKey] = {};
         monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
-        const year = iterDateForMonthKey.getUTCFullYear();
-        const monthIndex = iterDateForMonthKey.getUTCMonth();
+        const year = iterDateForMonthKey.getFullYear();
+        const monthIndex = iterDateForMonthKey.getMonth();
         const daysInCalendarMonth = getDaysInMonth(year, monthIndex + 1);
         const firstDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, 1));
         const lastDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, daysInCalendarMonth));
 
         if (!firstDayOfCurrentProcessingMonth || !lastDayOfCurrentProcessingMonth) {
-            const currentMonthLoop = currentIterMonth.getUTCMonth();
-            currentIterMonth.setUTCMonth(currentMonthLoop + 1);
-            if (currentIterMonth.getUTCMonth() === (currentMonthLoop + 2) % 12) {
-                currentIterMonth.setUTCDate(0);
-                currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 2);
+            const currentMonthLoop = currentIterMonth.getMonth();
+            currentIterMonth.setMonth(currentMonthLoop + 1);
+            if (currentIterMonth.getMonth() === (currentMonthLoop + 2) % 12) {
+                currentIterMonth.setDate(0);
+                currentIterMonth.setMonth(currentIterMonth.getMonth() + 2);
             }
-            currentIterMonth.setUTCDate(1);
+            currentIterMonth.setDate(1);
             continue;
         }
         selectedHotels.value.forEach(hotelId => {
@@ -537,7 +499,7 @@ const occupancyData = computed(() => {
                 const openDate = normalizeDate(new Date(hotelInfo.open_date));
                 if (openDate && !isNaN(openDate.getTime())) {
                     if (openDate > lastDayOfCurrentProcessingMonth) effectiveDaysForHotelInMonth = 0;
-                    else if (openDate > firstDayOfCurrentProcessingMonth) effectiveDaysForHotelInMonth = lastDayOfCurrentProcessingMonth.getUTCDate() - openDate.getUTCDate() + 1;
+                    else if (openDate > firstDayOfCurrentProcessingMonth) effectiveDaysForHotelInMonth = lastDayOfCurrentProcessingMonth.getDate() - openDate.getDate() + 1;
                 }
             }
             effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
@@ -547,7 +509,7 @@ const occupancyData = computed(() => {
             }
             monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
         });
-        currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
+        currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
     }
 
     if (pmsTotalData.value) {
@@ -649,8 +611,8 @@ const occupancyData = computed(() => {
             const daysInCurrentMonth = getDaysInMonth(year, monthJS + 1);
 
             for (let day = 1; day <= daysInCurrentMonth; day++) {
-                const utcDateForDay = new Date(Date.UTC(year, monthJS, day));
-                const currentDateStr = formatDate(utcDateForDay);
+                const dateForDay = new Date(year, monthJS, day);
+                const currentDateStr = formatDateToYMD(dateForDay);
 
                 total_available_rooms_for_month_calc += dailyRealRoomsMap.has(currentDateStr) ? dailyRealRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
                 total_gross_rooms_for_month_calc += dailyGrossRoomsMap.has(currentDateStr) ? dailyGrossRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
@@ -726,29 +688,29 @@ const prevYearOccupancyData = computed(() => {
 
     const monthlyOccupancyAggregates = {};
     let currentIterMonth = new Date(firstDayofFetch.value);
-    currentIterMonth.setUTCFullYear(currentIterMonth.getUTCFullYear() - 1);
+    currentIterMonth.setFullYear(currentIterMonth.getFullYear() - 1);
     const lastIterMonthDate = new Date(lastDayofFetch.value);
-    lastIterMonthDate.setUTCFullYear(lastIterMonthDate.getUTCFullYear() - 1);
+    lastIterMonthDate.setFullYear(lastIterMonthDate.getFullYear() - 1);
 
     while (currentIterMonth <= lastIterMonthDate) {
         const iterDateForMonthKey = normalizeDate(currentIterMonth);
         const monthKey = formatDateMonth(iterDateForMonthKey);
         monthlyOccupancyAggregates[monthKey] = {};
         monthlyOccupancyAggregates[monthKey]['0'] = { total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
-        const year = iterDateForMonthKey.getUTCFullYear();
-        const monthIndex = iterDateForMonthKey.getUTCMonth();
+        const year = iterDateForMonthKey.getFullYear();
+        const monthIndex = iterDateForMonthKey.getMonth();
         const daysInCalendarMonth = getDaysInMonth(year, monthIndex + 1);
         const firstDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, 1));
         const lastDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, daysInCalendarMonth));
 
         if (!firstDayOfCurrentProcessingMonth || !lastDayOfCurrentProcessingMonth) {
-            const currentMonthLoop = currentIterMonth.getUTCMonth();
-            currentIterMonth.setUTCMonth(currentMonthLoop + 1);
-            if (currentIterMonth.getUTCMonth() === (currentMonthLoop + 2) % 12) {
-                currentIterMonth.setUTCDate(0);
-                currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 2);
+            const currentMonthLoop = currentIterMonth.getMonth();
+            currentIterMonth.setMonth(currentMonthLoop + 1);
+            if (currentIterMonth.getMonth() === (currentMonthLoop + 2) % 12) {
+                currentIterMonth.setDate(0);
+                currentIterMonth.setMonth(currentIterMonth.getMonth() + 2);
             }
-            currentIterMonth.setUTCDate(1);
+            currentIterMonth.setDate(1);
             continue;
         }
 
@@ -761,10 +723,10 @@ const prevYearOccupancyData = computed(() => {
                 if (openDate && !isNaN(openDate.getTime())) {
                     // Adjust openDate to previous year
                     const prevYearOpenDate = new Date(openDate);
-                    prevYearOpenDate.setUTCFullYear(prevYearOpenDate.getUTCFullYear() - 1);
+                    prevYearOpenDate.setFullYear(prevYearOpenDate.getFullYear() - 1);
 
                     if (prevYearOpenDate > lastDayOfCurrentProcessingMonth) effectiveDaysForHotelInMonth = 0;
-                    else if (prevYearOpenDate > firstDayOfCurrentProcessingMonth) effectiveDaysForHotelInMonth = lastDayOfCurrentProcessingMonth.getUTCDate() - prevYearOpenDate.getUTCDate() + 1;
+                    else if (prevYearOpenDate > firstDayOfCurrentProcessingMonth) effectiveDaysForHotelInMonth = lastDayOfCurrentProcessingMonth.getDate() - prevYearOpenDate.getDate() + 1;
                 }
             }
             effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
@@ -774,7 +736,7 @@ const prevYearOccupancyData = computed(() => {
             }
             monthlyOccupancyAggregates[monthKey][String(hotelId)] = { total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, non_accommodation_stays: 0, roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 };
         });
-        currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
+        currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
     }
 
     if (prevYearPmsTotalData.value) {
@@ -863,57 +825,42 @@ const fetchData = async () => {
     let currentProcessingHotelId = null;
 
     // Dates for Current Year
-    const yearOfSelectedDate = selectedDate.value.getUTCFullYear();
-    const pmsFetchStartDate = formatDate(new Date(Date.UTC(yearOfSelectedDate, 0, 1)));
-    const pmsFetchEndDate = formatDate(lastDayofFetch.value);
-    const startDateFormatted = formatDate(firstDayofFetch.value);
-    const endDateFormatted = formatDate(lastDayofFetch.value);
-    const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
-    const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
+    const yearOfSelectedDate = selectedDate.value.getFullYear();
+    // For monthly reports, PMS should use the same date range as forecast/accounting
+    // For yearly reports, PMS should start from Jan 1st for full year context
+    const pmsFetchStartDate = period.value === 'year'
+        ? formatDateToYMD(new Date(yearOfSelectedDate, 0, 1))
+        : formatDateToYMD(firstDayofFetch.value);
+    const pmsFetchEndDate = formatDateToYMD(lastDayofFetch.value);
+    const startDateFormatted = formatDateToYMD(firstDayofFetch.value);
+    const endDateFormatted = formatDateToYMD(lastDayofFetch.value);
+    const forecastAndAccountingStartDate = formatDateToYMD(firstDayofFetch.value);
+    const forecastAndAccountingEndDate = formatDateToYMD(lastDayofFetch.value);
 
     // Dates for Previous Year
     const prevYearStart = new Date(firstDayofFetch.value);
-    prevYearStart.setUTCFullYear(prevYearStart.getUTCFullYear() - 1);
+    prevYearStart.setFullYear(prevYearStart.getFullYear() - 1);
     const prevYearEnd = new Date(lastDayofFetch.value);
-    prevYearEnd.setUTCFullYear(prevYearEnd.getUTCFullYear() - 1);
+    prevYearEnd.setFullYear(prevYearEnd.getFullYear() - 1);
+
+
 
     // For PMS Prev Year, we might need full year context if we do YTD? 
     // Usually 'Previous Year Same Month' implies comparing Nov 2022 to Nov 2023.
     // If we view 'Cumulative', we need Prev Year Cumulative.
     // period='year' means Jan-Dec. So PmsFetchStartDate equivalent for prev year is Jan 1, PrevYear.
     const prevYearOfSelectedDate = yearOfSelectedDate - 1;
-    const prevPmsFetchStartDate = formatDate(new Date(Date.UTC(prevYearOfSelectedDate, 0, 1)));
-    const prevPmsFetchEndDate = formatDate(prevYearEnd);
-    const prevStartDateFormatted = formatDate(prevYearStart);
-    const prevEndDateFormatted = formatDate(prevYearEnd);
+    // For monthly reports, previous year PMS should use the same date range as current year
+    // For yearly reports, previous year PMS should start from Jan 1st for full year context
+    const prevPmsFetchStartDate = period.value === 'year'
+        ? formatDateToYMD(new Date(prevYearOfSelectedDate, 0, 1))
+        : formatDateToYMD(prevYearStart);
+    const prevPmsFetchEndDate = formatDateToYMD(prevYearEnd);
+    const prevStartDateFormatted = formatDateToYMD(prevYearStart);
+    const prevEndDateFormatted = formatDateToYMD(prevYearEnd);
 
     // Log the date calculations for debugging
-    console.log('[ReportingSalesAndOCC] Date calculations:', {
-        selectedDate: selectedDate.value,
-        selectedDateString: selectedDate.value.toString(),
-        selectedDateISO: selectedDate.value.toISOString(),
-        period: period.value,
-        currentYear: {
-            firstDayofFetch: firstDayofFetch.value,
-            firstDayofFetchString: firstDayofFetch.value?.toString(),
-            lastDayofFetch: lastDayofFetch.value,
-            lastDayofFetchString: lastDayofFetch.value?.toString(),
-            pmsFetchStartDate,
-            pmsFetchEndDate,
-            forecastAndAccountingStartDate,
-            forecastAndAccountingEndDate
-        },
-        previousYear: {
-            prevYearStart,
-            prevYearStartString: prevYearStart.toString(),
-            prevYearEnd,
-            prevYearEndString: prevYearEnd.toString(),
-            prevPmsFetchStartDate,
-            prevPmsFetchEndDate,
-            prevStartDateFormatted,
-            prevEndDateFormatted
-        }
-    });
+
 
     pmsFallbackCapacities.value = {};
 
@@ -935,39 +882,10 @@ const fetchData = async () => {
             fetchBatchOccupationBreakdown(selectedHotels.value, prevStartDateFormatted, prevEndDateFormatted)
         ]);
 
-        console.log('[RMP] Fetch Dates:', {
-            pmsFetchStartDate, pmsFetchEndDate,
-            forecastAndAccountingStartDate, forecastAndAccountingEndDate,
-            prevPmsFetchStartDate, prevPmsFetchEndDate,
-            prevStartDateFormatted, prevEndDateFormatted
-        });
-        console.log('[RMP] Batch Data Keys:', {
-            pms: Object.keys(batchPmsData || {}),
-            forecast: Object.keys(batchForecastData || {}),
-            prevPms: Object.keys(batchPrevPmsData || {}),
-            // prevForecast: Object.keys(batchPrevForecastData || {}) // This uses dummy though?
-        });
+
 
         // Log sample of previous year data to see what dates are actually returned
-        console.log('[RMP] Previous Year Raw Data Sample:', {
-            batchPrevPmsDataSample: Object.keys(batchPrevPmsData || {}).map(hotelId => ({
-                hotelId,
-                sampleRecords: (batchPrevPmsData[hotelId] || []).slice(0, 3).map(record => ({
-                    date: record.date,
-                    formattedDate: formatDateToYMD(record.date),
-                    price: record.price,
-                    accommodation_price: record.accommodation_price
-                }))
-            })),
-            batchPrevAccountingDataSample: Object.keys(batchPrevAccountingData || {}).map(hotelId => ({
-                hotelId,
-                sampleRecords: (batchPrevAccountingData[hotelId] || []).slice(0, 3).map(record => ({
-                    accounting_month: record.accounting_month,
-                    formattedDate: formatDateToYMD(record.accounting_month),
-                    accommodation_revenue: record.accommodation_revenue
-                }))
-            }))
-        });
+
 
         // Process Current Year Data (Existing logic...)
         // ... (Keep existing logic for newPmsTotalData etc)
@@ -1027,14 +945,14 @@ const fetchData = async () => {
                 const latestDateStrRaw = await fetchLatestDailyReportDate();
                 if (latestDateStrRaw) {
                     const latestDate = new Date(latestDateStrRaw);
-                    const latestDateStr = formatDate(latestDate);
+                    const latestDateStr = formatDateToYMD(latestDate);
 
                     // Find previous date (Assume previous day for now as finding sorted list is expensive without available-dates)
                     // Or since we only need DoD for one hotel, we can just fetch the daily report for the previous calendar day.
                     // If no report exists, it's 0 or null.
                     const previousDate = new Date(latestDate);
                     previousDate.setDate(previousDate.getDate() - 1);
-                    const previousDateStr = formatDate(previousDate);
+                    const previousDateStr = formatDateToYMD(previousDate);
 
                     const [latestData, previousData] = await Promise.all([
                         fetchDailyReportData(latestDateStr),
@@ -1082,7 +1000,7 @@ const fetchData = async () => {
 
                     // Use fetchDailyReportDataByHotel for optimized aggregated data
                     const [futureData, prevDayData] = await Promise.all([
-                        fetchBatchFutureOutlook(hotelIds, formatDate(firstDayofFetch.value)),
+                        fetchBatchFutureOutlook(hotelIds, formatDateToYMD(firstDayofFetch.value)),
                         latestDateStrRaw ? fetchDailyReportDataByHotel(latestDateStrRaw, hotelIds) : Promise.resolve([])
                     ]);
 
@@ -1283,6 +1201,8 @@ const debouncedFetch = () => {
 };
 
 const handleDateChange = (newDate) => {
+
+
     selectedDate.value = newDate;
     debouncedFetch();
 };
