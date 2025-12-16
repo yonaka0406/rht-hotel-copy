@@ -50,8 +50,7 @@ const {
   isPreparingForPrint, 
   optimizeChartForPrint, 
   restoreChartFromPrint, 
-  getPrintChartDimensions,
-  forceChartResize
+  getPrintChartDimensions 
 } = usePrintOptimization();
 
 const chartHeight = computed(() => {
@@ -70,7 +69,7 @@ const chartHeight = computed(() => {
   // Optimize for print mode
   if (isPrintMode.value) {
     // For print, use a fixed height that fits on one page
-    return 750; // Fixed height for print mode
+    return 600; // Fixed height for print mode
   }
   
   // Normal screen display logic
@@ -127,16 +126,9 @@ onBeforeUnmount(() => {
 watch(isPrintMode, (newPrintMode) => {
   if (chartInstance.value && originalOptions.value) {
     if (newPrintMode) {
-      // Wait for CSS to apply, then optimize for print
-      nextTick(() => {
-        setTimeout(() => {
-          optimizeChartForPrint(chartInstance.value, originalOptions.value);
-          forceChartResize(chartInstance.value);
-        }, 100);
-      });
+      optimizeChartForPrint(chartInstance.value, originalOptions.value);
     } else {
       restoreChartFromPrint(chartInstance.value, originalOptions.value);
-      forceChartResize(chartInstance.value);
     }
   }
 });
@@ -157,25 +149,21 @@ watch(() => props.occupancyData, () => {
     page-break-before: always !important;
     margin-bottom: 20pt !important;
     margin-top: 0 !important;
-    border: none !important; /* Remove border to maximize width */
-    padding: 0 !important; /* Remove padding to maximize width */
+    border: 1px solid #ddd !important;
+    padding: 8pt !important;
     background: white !important;
-    height: 750px !important;
-    max-height: 750px !important;
-    width: 100% !important;
+    height: 600px !important;
+    max-height: 600px !important;
     position: relative !important;
     clear: both !important;
     display: block !important;
-    overflow: visible !important;
-    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   .all-hotels-occupancy-print-optimized.print-mode {
-    height: 750px !important;
-    max-height: 750px !important;
-    width: 100% !important;
-    padding: 0 !important;
-    overflow: visible !important;
+    height: 600px !important;
+    max-height: 600px !important;
+    overflow: hidden !important;
   }
 }
 </style>

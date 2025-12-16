@@ -23,11 +23,6 @@ export function usePrintOptimization() {
   const optimizeChartForPrint = (chartInstance, originalOptions) => {
     if (!chartInstance || !originalOptions) return;
 
-    // Force a resize first to ensure proper dimensions
-    setTimeout(() => {
-      chartInstance.resize();
-    }, 100);
-
     // Create print-optimized options
     const printOptions = {
       ...originalOptions,
@@ -50,12 +45,12 @@ export function usePrintOptimization() {
           fontSize: 10
         }
       },
-      // Optimize grid for print to use full width
+      // Optimize grid for print
       grid: {
         ...originalOptions.grid,
         containLabel: true,
-        left: '3%',
-        right: '3%',
+        left: '5%',
+        right: '5%',
         top: '10%',
         bottom: '10%'
       }
@@ -72,27 +67,18 @@ export function usePrintOptimization() {
           borderColor: '#000000',
           borderWidth: 1
         },
-        // Optimize labels for print with better sizing
+        // Optimize labels for print
         label: {
           ...series.label,
           color: '#000000',
-          fontSize: 8,
-          fontWeight: 'normal'
+          fontSize: 9
         }
       }));
     }
 
     // Apply the print-optimized options
     chartInstance.setOption(printOptions, true);
-    
-    // Force multiple resizes to ensure proper rendering
-    setTimeout(() => {
-      chartInstance.resize();
-    }, 200);
-    
-    setTimeout(() => {
-      chartInstance.resize();
-    }, 500);
+    chartInstance.resize();
   };
 
   // Restore original chart options after print
@@ -100,15 +86,7 @@ export function usePrintOptimization() {
     if (!chartInstance || !originalOptions) return;
     
     chartInstance.setOption(originalOptions, true);
-    
-    // Force multiple resizes to ensure proper restoration
-    setTimeout(() => {
-      chartInstance.resize();
-    }, 100);
-    
-    setTimeout(() => {
-      chartInstance.resize();
-    }, 300);
+    chartInstance.resize();
   };
 
   // Get print-friendly chart dimensions
@@ -173,28 +151,12 @@ export function usePrintOptimization() {
     }
   });
 
-  // Force chart resize to fix proportions
-  const forceChartResize = (chartInstance) => {
-    if (!chartInstance) return;
-    
-    // Multiple resize attempts with different timings to ensure proper rendering
-    const resizeAttempts = [50, 100, 200, 500];
-    resizeAttempts.forEach(delay => {
-      setTimeout(() => {
-        if (chartInstance && !chartInstance.isDisposed?.()) {
-          chartInstance.resize();
-        }
-      }, delay);
-    });
-  };
-
   return {
     isPrintMode,
     isPreparingForPrint,
     optimizeChartForPrint,
     restoreChartFromPrint,
     getPrintChartDimensions,
-    supportsPrintMediaQueries,
-    forceChartResize
+    supportsPrintMediaQueries
   };
 }
