@@ -273,10 +273,16 @@ const currentHotelPrevYearRevenueData = computed(() => {
 // Aggregate revenue data for the RevenuePlanVsActualChart
 const aggregateRevenueDataForChart = computed(() => {
     const agg = aggregatedCurrentHotelRevenue.value;
+    
+    // Calculate previous year revenue from currentHotelPrevYearRevenueData
+    const prevYearRevenue = currentHotelPrevYearRevenueData.value.reduce((acc, item) => {
+        return acc + (item.accommodation_revenue || item.period_revenue || 0);
+    }, 0);
+    
     return {
         total_forecast_revenue: agg.total_forecast_revenue,
         total_period_accommodation_revenue: agg.total_period_accommodation_revenue,
-        total_prev_year_accommodation_revenue: 0 // No prev year aggregate in this view
+        total_prev_year_accommodation_revenue: prevYearRevenue
     };
 });
 

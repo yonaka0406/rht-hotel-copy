@@ -307,10 +307,16 @@ const filteredOccupancyForChart = computed(() => {
 const aggregateRevenueDataForChart = computed(() => {
     const data = filteredRevenueForChart.value;
     if (!data.length) return { total_forecast_revenue: 0, total_period_accommodation_revenue: 0, total_prev_year_accommodation_revenue: 0 };
+    
+    // Calculate previous year revenue from filteredPrevYearRevenueForChart
+    const prevYearRevenue = filteredPrevYearRevenueForChart.value.reduce((sum, item) => {
+        return sum + (item.accommodation_revenue || item.period_revenue || 0);
+    }, 0);
+    
     return {
         total_forecast_revenue: data.reduce((sum, item) => sum + (item.forecast_revenue || 0), 0),
         total_period_accommodation_revenue: data.reduce((sum, item) => sum + (item.period_revenue || 0), 0),
-        total_prev_year_accommodation_revenue: 0 // No prev year data in this view
+        total_prev_year_accommodation_revenue: prevYearRevenue
     };
 });
 
