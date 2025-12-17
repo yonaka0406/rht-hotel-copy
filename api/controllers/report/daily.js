@@ -1,4 +1,4 @@
-const { selectLatestDailyReportDate, selectDailyReportDataByHotel } = require('../../models/report');
+const { selectLatestDailyReportDate, selectDailyReportDataByHotel, selectDailyReportData } = require('../../models/report');
 const logger = require('../../config/logger');
 const { processSalesRow } = require('./services/salesProcessor'); // New import
 
@@ -26,8 +26,8 @@ const getDailyReportData = async (req, res) => {
     const { date } = req.params;
 
     try {
-        // Use the aggregated query by hotel
-        const data = await selectDailyReportDataByHotel(req.requestId, date);
+        // Use the plan-level query to include plan names
+        const data = await selectDailyReportData(req.requestId, date);
         const processedData = data.map(processSalesRow);
         res.json(processedData);
     } catch (error) {
