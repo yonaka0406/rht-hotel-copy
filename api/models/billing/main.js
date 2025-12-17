@@ -34,10 +34,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         END AS balance
         ,GREATEST(
           0, 
-          LEAST(
-            (details.plan_period_price + details.addon_period_price), 
-            (details.plan_price + details.addon_price - details.payment)
-          )
+          (details.plan_upto_price + details.addon_upto_price - details.payment)
         ) AS period_payable
         ,details.clients_json
         ,details.payers_json
@@ -77,6 +74,19 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
                 COALESCE(ra.addon_sum,0)
               ELSE 0 END
             ) AS addon_period_price
+            ,SUM(
+              CASE WHEN reservation_details.date <= $3 AND reservation_details.billable = TRUE THEN
+                CASE WHEN reservation_details.plan_type = 'per_room' 
+                    THEN reservation_details.price
+                    ELSE reservation_details.price * reservation_details.number_of_people 
+                END
+              ELSE 0 END
+            ) AS plan_upto_price
+            ,SUM(
+              CASE WHEN reservation_details.date <= $3 AND reservation_details.billable = TRUE THEN
+                COALESCE(ra.addon_sum,0)
+              ELSE 0 END
+            ) AS addon_upto_price
           FROM
             reservation_details 
 
@@ -172,7 +182,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         AND reservations.id = details.reservation_id
         AND reservations.hotel_id = details.hotel_id
         AND reservations.hotel_id = hotels.id
-        AND (details.plan_price + details.addon_price - details.payment) > 0
+        AND (details.plan_upto_price + details.addon_upto_price - details.payment) > 0
       ORDER BY 5, 7;
     `;
   const values = [hotelId, dateStart, dateEnd];

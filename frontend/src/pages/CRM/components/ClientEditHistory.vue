@@ -126,6 +126,11 @@
             return loyaltyLabels[value] || value;
         }
 
+        // Handle boolean values
+        if (typeof value === 'boolean') {
+            return value ? 'あり' : 'なし';
+        }
+
         return value;
     };
 

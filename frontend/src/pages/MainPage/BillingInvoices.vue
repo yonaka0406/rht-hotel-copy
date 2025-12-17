@@ -83,10 +83,10 @@
                             <span>{{ translateReservationPaymentTiming(slotProps.data.payment_timing) }}</span>
                         </template>
                     </Column>                
-                    <Column field="period_price" header="期間請求額" sortable style="width:1%">
+                    <Column field="period_payable" header="期間請求額" sortable style="width:1%">
                         <template #body="slotProps">
                             <div class="flex justify-end mr-2">
-                                <span class="items-end">{{ formatCurrency(slotProps.data.period_price) }}</span>
+                                <span class="items-end">{{ formatCurrency(slotProps.data.period_payable) }}</span>
                             </div>                        
                         </template>                    
                     </Column>
@@ -397,11 +397,11 @@
     const periodPrice = computed(() => {
         if(!selectedReservations.value){ return 0;}        
         return selectedReservations.value.reduce((sum, reservation) => {
-            const price = Number(reservation.period_price);
+            const price = Number(reservation.period_payable);
             if (!isNaN(price)) {
                 return sum + price;
             } else {
-                console.warn(`Invalid price encountered: ${reservation.period_price}`);
+                console.warn(`Invalid price encountered: ${reservation.period_payable}`);
                 return sum;
             }
         }, 0);
