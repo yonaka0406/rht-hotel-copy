@@ -28,7 +28,7 @@
             <div class="result-header">
               <span class="result-id">{{ reservation.reservation_id }}</span>
               <span class="result-status" :class="getStatusClass(reservation.status)">
-              {{ translateReservationStatus(reservation.status) }}
+                {{ translateReservationStatus(reservation.status) }}
               </span>
             </div>
 

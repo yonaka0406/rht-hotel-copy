@@ -23,14 +23,13 @@
                     </template>
                     <template #content>
                         <Accordion :activeIndex="0">
-                            <AccordionPanel v-for="group in summarizedBilledList" :key="group.id"
-                                :value="group.id">
+                            <AccordionPanel v-for="group in summarizedBilledList" :key="group.id" :value="group.id">
                                 <AccordionHeader>
                                     <div class="grid grid-cols-6 gap-4 w-full">
                                         <div class="col-span-3 text-left">
                                             {{ `${group.client_kanji || group.client_name}` }}
                                             <small>{{ `${group.client_kana ? '(' + group.client_kana + ')' : ''}`
-                                                }}</small>
+                                            }}</small>
                                         </div>
                                         <div class="flex items-center justify-center">
                                             {{ group.total_value.toLocaleString() }} 円
@@ -41,7 +40,8 @@
                                                     translatePreference(group.billing_preference) }}</Badge>
                                             <Badge v-if="group.invoice_number" severity="contrast" class="mr-2">{{
                                                 group.invoice_number }}</Badge>
-                                            <Badge severity="secondary" class="mr-2">{{ translateBillingStatus(group.status) }}
+                                            <Badge severity="secondary" class="mr-2">{{
+                                                translateBillingStatus(group.status) }}
                                             </Badge>
                                             <Button icon="pi pi-pencil" label="編集" class="p-button-sm"
                                                 @click="openInvoiceDialog(group)" />
@@ -54,7 +54,7 @@
                                         <Column header="予約期間">
                                             <template #body="slotProps">
                                                 <span>{{ slotProps.data.check_in }}～{{ slotProps.data.check_out
-                                                    }}</span>
+                                                }}</span>
                                             </template>
                                         </Column>
                                         <Column field="room_type_name" header="部屋タイプ"></Column>
