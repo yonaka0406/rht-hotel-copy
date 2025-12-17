@@ -1,5 +1,5 @@
 <template>
-    <Dialog v-model="model" :header="'顧客変更'" :closable="true" :modal="true" :style="{ width: '60vw' }">
+    <Dialog v-model:visible="model" :header="'顧客変更'" :closable="true" :modal="true" :style="{ width: '60vw' }">
         <div v-if="!client_id" class="p-4 text-center text-gray-500">
             選択された顧客がいません。
         </div>
