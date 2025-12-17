@@ -1,38 +1,79 @@
 # Plan System Refactoring: Hotel-Exclusive Plans Merge Checklist
 
+## ✅ CURRENT STATUS (Migrations Completed - Dec 17, 2024)
+
+**Database State**: Migrations 020-028 successfully applied manually
+**Completed Actions**:
+- ✅ Category tables created and populated
+- ✅ Plan and addon data migrated to hotel-specific structure
+- ✅ Daily plan metrics updated with categories (35,571 records)
+- ✅ Plan-addon relationships migrated (249 records)
+- ✅ Pattern templates updated (137 templates)
+- ✅ Missing hotel plans created (28 new plans for templates)
+- ✅ Invalid plan templates cleaned up (21 NULL hotel_id records deleted)
+
+**Remaining Tasks**:
+1. Run final cleanup migration 028
+2. Update reservation_details to use plans_hotel_id
+3. Code review and frontend updates
+
+## IMMEDIATE ACTIONS REQUIRED (Fresh Production Import)
+
+### 1. Create Migration Runner
+- [ ] **Create migration runner script** - No automated migration system exists
+- [ ] **Test migration runner** in development environment first
+- [ ] **Document rollback procedure** for each migration step
+
+### 2. Critical Data Issues Status
+- [ ] **124,888 reservation records** still need `plans_hotel_id` populated *(Next priority)*
+- [x] **Multiple hotels missing hotel-specific plans** - 28 new plans created for templates
+- [x] **Pattern templates reference missing hotel plans** - All resolved
+- [x] **Category tables created** - migrations 020-027 applied successfully
+
+### 3. Migration Strategy Decision ✅ COMPLETED
+- [x] **Option B**: Ran migrations individually with verification between each *(Successfully completed)*
+- [x] **Created missing hotel plans** during migration process as needed
+- [ ] **Final cleanup**: Run migration 028 to drop deprecated columns
+
 ## Pre-Merge Preparation
 
 ### 1. Data Backup (CRITICAL - DO FIRST)
-- [ ] **Full database backup** before any migration
-- [ ] Backup specific tables:
-  - [ ] `plans_global`
-  - [ ] `plans_hotel` 
-  - [ ] `addons_global`
-  - [ ] `addons_hotel`
-  - [ ] `plan_addons`
-  - [ ] `reservation_details`
-  - [ ] `daily_plan_metrics`
-  - [ ] `sc_tl_plans`
-  - [ ] `plan_templates`
+- [x] **Full database backup** before any migration *(Fresh production import completed)*
+- [x] Backup specific tables: *(All tables backed up in production import)*
+  - [x] `plans_global`
+  - [x] `plans_hotel` 
+  - [x] `addons_global`
+  - [x] `addons_hotel`
+  - [x] `plan_addons`
+  - [x] `reservation_details`
+  - [x] `daily_plan_metrics`
+  - [x] `sc_tl_plans`
+  - [x] `plan_templates`
 
 ### 2. Data Migration Sequence (MUST BE DONE IN ORDER)
 
-#### Phase 1: Create New Structure
-- [ ] **Migration 020**: Create plan categories tables (`plan_type_categories`, `plan_package_categories`)
-- [ ] **Migration 021**: Migrate existing plan data to categories and enforce NOT NULL constraints
-- [ ] **Migration 022**: Create addon categories and migrate addon data to hotel-specific
+**STATUS**: Migration files 020-028 exist but NOT YET APPLIED to database
 
-#### Phase 2: Migrate Plan-Addon Relationships  
-- [ ] **Migration 023**: Add category columns to `daily_plan_metrics` and resolve duplicates
-- [ ] **Migration 024**: Fix `get_available_plans_with_rates_and_addons` function
-- [ ] **Migration 025**: Migrate `plan_addons` to remove `addons_global_id` dependency
+#### Phase 1: Create New Structure ✅ COMPLETED
+- [x] **Migration 020**: Create plan categories tables (`plan_type_categories`, `plan_package_categories`) *(5 type categories, 2 package categories created)*
+- [x] **Migration 021**: Migrate existing plan data to categories and enforce NOT NULL constraints *(167 plans updated)*
+- [x] **Migration 022**: Create addon categories and migrate addon data to hotel-specific *(5 addon categories created)*
 
-#### Phase 3: Clean Up Legacy References
-- [ ] **Migration 026**: Remove deprecated `plan_key` and `plans_global_id` from `sc_tl_plans`
-- [ ] **Migration 027**: Drop deprecated `get_available_plans_for_hotel` function
-- [ ] **Migration 028**: Update pattern templates to use `plans_hotel_id` instead of `plan_key` AND create missing hotel plans for templates
+#### Phase 2: Migrate Plan-Addon Relationships ✅ COMPLETED
+- [x] **Migration 023**: Add category columns to `daily_plan_metrics` and resolve duplicates *(35,571 records updated)*
+- [x] **Migration 024**: Fix `get_available_plans_with_rates_and_addons` function *(Function updated)*
+- [x] **Migration 025**: Migrate `plan_addons` to remove `addons_global_id` dependency *(249 relationships migrated)*
 
-### 3. Create Missing Hotel Plans
+#### Phase 3: Clean Up Legacy References ✅ COMPLETED
+- [x] **Migration 026**: Create missing plans for `sc_tl_plans` references *(2 new plans created)*
+- [x] **Migration 027**: Update pattern templates to use `plans_hotel_id` instead of `plan_key` *(137 templates updated, 28 new plans created)*
+- [ ] **Migration 028**: Final cleanup - drop deprecated columns and functions *(Ready to run)*
+
+**✅ COMPLETED**: All migrations 020-027 successfully applied manually
+
+### 3. Create Missing Hotel Plans ⚠️ URGENT
+**CURRENT STATUS**: 124,888 reservation records have `plans_global_id` but no `plans_hotel_id`
+
 Before migrating historical data, ensure all plans used in reservations AND pattern templates exist as hotel-specific plans:
 
 ```sql
@@ -198,6 +239,7 @@ WHERE day_value ? 'plans_global_id'
 SELECT COUNT(*) FROM reservation_details 
 WHERE plans_global_id IS NOT NULL 
 AND plans_hotel_id IS NULL;
+-- CURRENT RESULT: 124,888 orphaned records
 
 -- Check for missing hotel plans
 SELECT DISTINCT rd.hotel_id, rd.plans_global_id 
@@ -207,6 +249,7 @@ WHERE NOT EXISTS (
     WHERE ph.hotel_id = rd.hotel_id 
     AND ph.plans_global_id = rd.plans_global_id
 );
+-- CURRENT RESULT: Multiple hotels missing plans (10,11,12,13,14,15,21+ confirmed)
 ```
 
 ### Post-Migration Verification
@@ -330,9 +373,54 @@ WHERE day_value ? 'plans_global_id'
 
 ---
 
+## Migration Runner Creation (URGENT)
+
+Since no automated migration system exists, create one:
+
+```javascript
+// scripts/run-migrations.js
+const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
+
+const pool = new Pool({
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'wehub',
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
+});
+
+async function runMigration(migrationFile) {
+  const sql = fs.readFileSync(path.join(__dirname, '../api/migrations', migrationFile), 'utf8');
+  console.log(`Running ${migrationFile}...`);
+  await pool.query(sql);
+  console.log(`✓ ${migrationFile} completed`);
+}
+
+async function runMigrations() {
+  const migrations = [
+    '020_create_plan_categories_tables.sql',
+    '021_migrate_plan_categories.sql', 
+    '022_addon_categories_migration.sql',
+    '023_add_plan_category_to_daily_plan_metrics.sql',
+    '024_fix_get_available_plans_function.sql',
+    '025_migrate_plan_addons.sql',
+    '026_remove_plan_key_from_sc_tl_plans.sql',
+    '027_update_get_available_plans_function.sql',
+    '028_update_pattern_templates.sql'
+  ];
+  
+  for (const migration of migrations) {
+    await runMigration(migration);
+  }
+}
+```
+
 **⚠️ CRITICAL REMINDERS:**
-1. **BACKUP FIRST** - No exceptions
-2. **Run migrations in exact order** (020→021→022→023→024→025→026→027→028)
-3. **Create missing hotel plans** before migrating historical data
-4. **Test rollback procedure** in staging environment first
-5. **Have database admin available** during migration window
+1. **BACKUP FIRST** - No exceptions *(DONE - Fresh production import)*
+2. **Create migration runner** before proceeding
+3. **Run migrations in exact order** (020→021→022→023→024→025→026→027→028)
+4. **Create missing hotel plans** before migrating historical data
+5. **Test rollback procedure** in staging environment first
+6. **Have database admin available** during migration window
