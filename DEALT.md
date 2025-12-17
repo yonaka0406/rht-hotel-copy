@@ -2,6 +2,20 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### December 17, 2025
+
+#### Add Client ID and Telephone to Reservation List Exports
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: Feature Request
+- **Description**:
+  - The reservation list export needs to include client ID and telephone number
+  - This will help with customer service and follow-up communications
+- **Expected Behavior**:
+  - Add client ID and telephone number columns to the reservation list export
+  - Include both booker and guest contact information
+  - Ensure proper formatting of phone numbers
+
 ### December 5, 2025
 
 #### 宿泊税 (Accommodation Tax) Report Download
