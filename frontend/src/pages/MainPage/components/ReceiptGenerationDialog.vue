@@ -14,6 +14,9 @@
         </div>
       </div>
     </template>
+    <p class="text-sm text-gray-600 mb-4">
+      ※ 支払金額は、どの税区分に割り当てられるか指定されません。税区分の配分は、領収書を作成する方が適切に判断し、入力してください。
+    </p>
     <div class="p-fluid grid">
       <div class="field col-span-12 my-2">
         <p><strong>合計支払額: {{ formatCurrency(displayTotalAmount) }}</strong></p>
@@ -38,6 +41,9 @@
                 <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0)
                   }}%)</label>
               </FloatLabel>
+              <small class="text-gray-500 mt-1 block">
+                （予約内訳: {{ formatCurrency(getReservationTaxAmount(taxType.percentage)) }}）
+              </small>
             </div>
           </div>
         </template>
@@ -211,10 +217,29 @@ const displayTotalAmount = computed(() => {
   return existingBreakdownTotal.value > 0 ? existingBreakdownTotal.value : props.totalAmount;
 });
 
+// Helper to get the total amount for a specific tax rate from reservation_tax_breakdown
+const getReservationTaxAmount = (taxPercentage) => {
+  if (props.paymentData && props.paymentData.reservation_tax_breakdown) {
+    const taxItem = props.paymentData.reservation_tax_breakdown.find(
+      item => Math.abs(parseFloat(item.tax_rate) - taxPercentage) < 0.0001
+    );
+    return taxItem ? taxItem.total_amount : 0;
+  }
+  return 0;
+};
+
 // Helper functions
 const formatCurrency = (value) => {
   if (value == null || isNaN(Number(value))) return '';
   return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
+};
+
+const calculatePayableTax = (taxableAmount, percentage) => {
+  if (taxableAmount == null || isNaN(Number(taxableAmount)) || percentage == null || isNaN(Number(percentage))) return 0;
+  // Formula: tax = amount - (amount / (1 + rate))
+  // Example: For ¥10,000 at 8%: tax = 10000 - (10000 / 1.08) = 740.74 ≈ 740
+  const taxValue = Math.floor(taxableAmount - (taxableAmount / (1 + parseFloat(percentage))));
+  return taxValue;
 };
 
 const formatDate = (dateString) => {

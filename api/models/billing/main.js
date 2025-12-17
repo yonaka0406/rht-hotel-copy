@@ -396,6 +396,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
       ,TO_CHAR(latest_r.receipt_date, 'YYYY-MM-DD') as existing_receipt_date
       ,latest_r.version as version
       ,latest_r.tax_breakdown as existing_tax_breakdown
+      ,rtb.reservation_tax_breakdown
     FROM
       reservation_payments p
         JOIN
@@ -414,6 +415,67 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
             ORDER BY r_latest.version DESC
             LIMIT 1
         ) latest_r ON r_linked.id IS NOT NULL -- Only join if r_linked exists
+        LEFT JOIN LATERAL (
+            WITH tax_rates_data AS (
+                SELECT
+                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4) AS tax_rate,
+                    SUM(rr.price) AS total_amount
+                FROM
+                    reservation_details rd
+                JOIN
+                    reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+                WHERE
+                    rd.reservation_id = p.reservation_id
+                    AND rd.hotel_id = p.hotel_id
+                    AND rd.date >= res.check_in AND rd.date < res.check_out
+                GROUP BY
+                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4)
+                HAVING
+                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4) IS NOT NULL
+            ),
+            tax_addons_data AS (
+                SELECT
+                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4) AS tax_rate,
+                    SUM(ra.price * ra.quantity) AS total_amount
+                FROM
+                    reservation_details rd
+                JOIN
+                    reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+                WHERE
+                    rd.reservation_id = p.reservation_id
+                    AND rd.hotel_id = p.hotel_id
+                    AND rd.date >= res.check_in AND rd.date < res.check_out
+                GROUP BY
+                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4)
+                HAVING
+                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4) IS NOT NULL
+            ),
+            combined_tax_data AS (
+                SELECT tax_rate, total_amount FROM tax_rates_data
+                UNION ALL
+                SELECT tax_rate, total_amount FROM tax_addons_data
+            ),
+            final_aggregated_tax AS (
+                SELECT
+                    tax_rate,
+                    SUM(total_amount) AS total_amount
+                FROM
+                    combined_tax_data
+                GROUP BY
+                    tax_rate
+                HAVING
+                    SUM(total_amount) IS NOT NULL
+            )
+            SELECT
+                json_agg(
+                    json_build_object(
+                        'tax_rate', fat.tax_rate,
+                        'total_amount', fat.total_amount
+                    ) ORDER BY fat.tax_rate
+                ) AS reservation_tax_breakdown
+            FROM
+                final_aggregated_tax fat
+        ) rtb ON TRUE
     WHERE
       p.hotel_id = $1 AND
       p.date >= $2 AND

@@ -233,7 +233,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
             // Temp blocks are temporary holds (is_accommodation = TRUE)
             // System blocks (non-temp) are permanent blocks (is_accommodation = FALSE)
             const isAccommodation = block_type === 'temp';
-            
+
             await client.query(
               `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, is_accommodation, created_by, updated_by)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -451,7 +451,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
     if (parking_combos_processed && parking_combos_processed.length > 0) {
       // Move require inside the function, but outside the loop
       const { selectAvailableParkingSpots } = require('../reservations/select');
-      const { saveParkingAssignments } = require('../models/parking'); // Import saveParkingAssignments 
+      const { saveParkingAssignments } = require('../models/parking');
 
       logger.debug(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
       for (const parkingCombo of parking_combos_processed) {
