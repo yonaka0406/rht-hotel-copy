@@ -7,7 +7,7 @@ const { authorize, appendDataToSheet, createSheet } = require('../../utils/googl
 
 const logger = require('../../config/logger');
 
-const { formatDate, translateStatus, translateReservationPaymentTiming, translateType, translatePlanType, translateMealType } = require('../../utils/reportUtils');
+const { formatDate } = require('../../utils/reportUtils');
 
 const getCountReservation = async (req, res) => {
   const hotelId = req.params.hid;

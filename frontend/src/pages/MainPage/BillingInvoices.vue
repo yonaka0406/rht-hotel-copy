@@ -65,6 +65,23 @@
                         <template #filter="{}">
                             <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
                         </template>
+                    </Column>
+                    <Column field="payment_timing" filterField="payment_timing" header="支払時期" sortable style="width:1%" :showFilterMenu="false">
+                        <template #filter="{ filterModel: _filterModel, filterCallback }">                        
+                            <Select 
+                                v-model="_filterModel.value" 
+                                :options="reservationPaymentTimingOptions" 
+                                optionLabel="label"
+                                optionValue="value" 
+                                @change="filterCallback" 
+                                placeholder="選択"
+                                showClear 
+                                fluid
+                            />                        
+                        </template>                    
+                        <template #body="slotProps">
+                            <span>{{ translateReservationPaymentTiming(slotProps.data.payment_timing) }}</span>
+                        </template>
                     </Column>                
                     <Column field="period_price" header="期間請求額" sortable style="width:1%">
                         <template #body="slotProps">
@@ -328,6 +345,8 @@
     import { useReservationStore } from '@/composables/useReservationStore';
     const { addBulkReservationPayment } = useReservationStore();
 
+    import { translateReservationPaymentTiming, reservationPaymentTimingOptions } from '@/utils/reservationUtils';
+
     // Helper function
     const formatDate = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
@@ -579,6 +598,7 @@
     const expandedRows = ref({});    
     const filters = ref({        
         status: { value: null, matchMode: FilterMatchMode.CONTAINS },        
+        payment_timing: { value: null, matchMode: FilterMatchMode.CONTAINS },
     });    
     const openDrawer = (event) => {    
         selectedReservation.value = event.data;    
