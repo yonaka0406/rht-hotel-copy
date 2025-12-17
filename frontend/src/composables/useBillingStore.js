@@ -220,10 +220,21 @@ export function useBillingStore() {
                 },
             });
 
-            const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch payments for receipts');
+                let errorDetail = `HTTP error! Status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.message || errorData.error || errorDetail;
+                } catch (err) {
+                    // If response is not JSON, get plain text
+                    const errorText = await response.text();
+                    console.error('Failed to parse error response as JSON, got text:', errorText, err);
+                    errorDetail = errorText || response.statusText || 'Failed to fetch payments for receipts.';
+                }
+                throw new Error(errorDetail);
             }
+
+            const data = await response.json(); // Only parse JSON if response is OK
 
             paymentsList.value = data.map(payment => ({
                 ...payment,                
