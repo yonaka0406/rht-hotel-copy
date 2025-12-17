@@ -55,7 +55,7 @@
             <Column field="type" header="種類">
                  <template #body="{data}">
                     <Tag v-if="data.dataType === 'action'" style="background: transparent;" :value="translateActionType(data.type)" :severity="getActionTypeSeverity(data.type)" />
-                    <span v-else>{{ translateType(data.type) }}</span>
+                    <span v-else>{{ translateReservationType(data.type) }}</span>
                 </template>
             </Column>
             <Column field="check_in" header="チェックイン" sortable></Column>
@@ -125,6 +125,7 @@
 
     // Primevue
     import { Panel, DataTable, Column, Tag, SelectButton, Button, Menu } from 'primevue';
+    import { translateReservationStatus, translateReservationType } from '@/utils/reservationUtils';
 
 
     // Client
@@ -216,14 +217,13 @@
     };
 
     const translateActionType = (typeKey) => actionTypeTranslations[typeKey] || typeKey;
-    const translateType = (typeKey) => reservationTypeTranslations[typeKey] || typeKey; // For reservation types
 
     const translateStatus = (status, dueDate, dataType) => {
         if (dataType === 'action') {
             const eStatus = getEffectiveActionStatus(status, dueDate);
             return statusTranslations[eStatus] || status;
         } else { // dataType === 'reservation'
-            return reservationStatusTranslations[status] || status;
+            return translateReservationStatus(status) || status; // Use imported function
         }
     };
 
