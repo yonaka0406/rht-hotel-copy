@@ -450,7 +450,7 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
     // --- Parking Spot Blocking Logic ---
     if (parking_combos_processed && parking_combos_processed.length > 0) {
       // Move require inside the function, but outside the loop
-      const { selectAvailableParkingSpots } = require('../models/reservations');
+      const { selectAvailableParkingSpots } = require('../reservations/select');
       const { saveParkingAssignments } = require('../models/parking'); // Import saveParkingAssignments 
 
       logger.debug(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
