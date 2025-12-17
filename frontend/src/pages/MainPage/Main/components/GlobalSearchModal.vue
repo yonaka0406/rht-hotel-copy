@@ -28,7 +28,7 @@
             <div class="result-header">
               <span class="result-id">{{ reservation.reservation_id }}</span>
               <span class="result-status" :class="getStatusClass(reservation.status)">
-              {{ translateReservationStatus(reservation.status) }}
+                {{ translateReservationStatus(reservation.status) }}
               </span>
             </div>
 
@@ -139,6 +139,8 @@ const selectedResultIndex = ref(-1);
 
 // Add a ref for the ReservationSearchBar
 const searchBarRef = ref(null);
+
+let removeGlobalShortcutFn = null; // Declare the variable here
 
 const onDialogShow = () => {
   nextTick(() => {
@@ -361,16 +363,15 @@ const handleCloseModal = () => {
 // Lifecycle hooks
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown);
-  const removeGlobalShortcut = registerKeyboardShortcut();
-
-  return () => {
-    document.removeEventListener('keydown', handleKeydown);
-    removeGlobalShortcut();
-  };
+  removeGlobalShortcutFn = registerKeyboardShortcut(); // Assign to the outer variable
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeydown);
+  if (removeGlobalShortcutFn) { // Null-check
+    removeGlobalShortcutFn();
+    removeGlobalShortcutFn = null; // Set to null after calling
+  }
 });
 </script>
 
