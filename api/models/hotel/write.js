@@ -2,6 +2,10 @@ const { getPool } = require('../../config/database');
 const format = require('pg-format');
 const logger = require('../../config/logger');
 
+const { selectAvailableParkingSpots } = require('../reservations/select');
+const { saveParkingAssignments } = require('../parking/main');
+const { getVehicleCategoryCapacity } = require('./read');
+
 const createHotel = async (requestId, hotelData, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -450,15 +454,12 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
     // --- Parking Spot Blocking Logic ---
     if (parking_combos_processed && parking_combos_processed.length > 0) {
       // Move require inside the function, but outside the loop
-      const { selectAvailableParkingSpots } = require('../reservations/select');
-      const { saveParkingAssignments } = require('../models/parking/main'); // Direct import
 
       logger.debug(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
       for (const parkingCombo of parking_combos_processed) {
         const { vehicle_category_id, number_of_rooms: requestedSpots } = parkingCombo;
         logger.debug(`[${requestId}] Processing parking combo: vehicle_category_id=${vehicle_category_id}, requestedSpots=${requestedSpots}`);
 
-        const { getVehicleCategoryCapacity } = require('../models/hotel/read'); // Assuming this is now in read.js
         const capacity_units_required = await getVehicleCategoryCapacity(requestId, vehicle_category_id);
         logger.debug(`[${requestId}] Capacity units required for vehicle_category_id ${vehicle_category_id}: ${capacity_units_required}`);
         if (capacity_units_required === 0) {
