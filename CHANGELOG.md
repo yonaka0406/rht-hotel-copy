@@ -688,6 +688,17 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.3.2] - 2025-12-17
+
+- Feature: Added year-over-year (YoY) comparison for the same month in the reporting module
+- Feature: Enhanced page printing functionality with improved formatting options
+- Feature: Implemented Day-over-Day (DoD) comparison for sales and occupancy (OCC) metrics
+- Feature: Added client ID and phone number to reservation list exports for better client tracking
+- Feature: Added payment form indicator to billable list datatable for easy payment method identification
+- Feature: Modified billing page filter to exclude fully settled reservations until the selected end date
+
+---
+
 ## Version History
 - **1.3.0** (2025-12-04) - Enhanced reporting with sales categories and materialized CTEs for better performance. Fixed addon duplication and billing calculation issues.
 - **1.2.4** (2025-12-03) - Fixed addon duplication in day detail dialog and resolved billing calculation issues for cancelled dates. Refactored addon management into a dedicated module for better code organization and maintainability.

@@ -3,6 +3,10 @@ const format = require('pg-format');
 const logger = require('../../config/logger');
 const { insertReservationDetails } = require('../reservations/details');
 
+const { selectAvailableParkingSpots } = require('../reservations/select');
+const { saveParkingAssignments } = require('../parking/main');
+const { getVehicleCategoryCapacity } = require('./read');
+
 const createHotel = async (requestId, hotelData, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -234,7 +238,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
             // Temp blocks are temporary holds (is_accommodation = TRUE)
             // System blocks (non-temp) are permanent blocks (is_accommodation = FALSE)
             const isAccommodation = block_type === 'temp';
-            
+
             await client.query(
               `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, is_accommodation, created_by, updated_by)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -455,15 +459,12 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
     // --- Parking Spot Blocking Logic ---
     if (parking_combos_processed && parking_combos_processed.length > 0) {
       // Move require inside the function, but outside the loop
-      const { selectAvailableParkingSpots } = require('../models/reservations');
-      const { saveParkingAssignments } = require('../models/parking'); // Import saveParkingAssignments 
 
       logger.debug(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
       for (const parkingCombo of parking_combos_processed) {
         const { vehicle_category_id, number_of_rooms: requestedSpots } = parkingCombo;
         logger.debug(`[${requestId}] Processing parking combo: vehicle_category_id=${vehicle_category_id}, requestedSpots=${requestedSpots}`);
 
-        const { getVehicleCategoryCapacity } = require('../models/hotel/read'); // Assuming this is now in read.js
         const capacity_units_required = await getVehicleCategoryCapacity(requestId, vehicle_category_id);
         logger.debug(`[${requestId}] Capacity units required for vehicle_category_id ${vehicle_category_id}: ${capacity_units_required}`);
         if (capacity_units_required === 0) {

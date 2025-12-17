@@ -650,6 +650,26 @@
         { "type": "bugfix", "description": "キャンセルされた日付の請求計算に関する問題を修正しました。" },
         { "type": "refactor", "description": "アドオン管理を専用モジュールにリファクタリングし、コードの整理と保守性を向上させました。" }
       ]
+    },
+    {
+      "version": "1.3.1",
+      "date": "2025-12-05",
+      "changes": [
+        { "type": "feature", "description": "宿泊税レポートのダウンロード機能を追加しました。" },
+        { "type": "bugfix", "description": "OTA予約でアドオン価格が二重にカウントされる問題を修正しました。OTA予約では価格が確定していても、addOTAReservationとeditOTAReservationでアドオン価格を0に設定するように変更しました。" }        
+      ]
+    },
+    {
+      "version": "1.3.2",
+      "date": "2025-12-17",
+      "changes": [
+        { "type": "feature", "description": "レポート：前年同月比較（YoY）機能を追加し、月次の売上と稼働率の比較が可能になりました。" },
+        { "type": "feature", "description": "ページ印刷機能を強化し、見やすくフォーマットされた印刷用レイアウトを実装しました。" },
+        { "type": "feature", "description": "前日比（DoD）比較機能を追加し、売上と稼働率の日次変動を確認できるようになりました。" },
+        { "type": "feature", "description": "予約リストのエクスポートにクライアントIDと電話番号を追加し、クライアント管理を効率化しました。" },
+        { "type": "feature", "description": "請求一覧に支払い方法の表示を追加し、支払い状況の確認を容易にしました。" },
+        { "type": "feature", "description": "請求ページのフィルターを更新し、選択した終了日までの完全に決済済みの予約を非表示にする機能を追加しました。" }
+      ]
     }
   ],
   "backlog": [

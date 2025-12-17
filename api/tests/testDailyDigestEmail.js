@@ -6,7 +6,7 @@ const defaultLogger = require('../config/logger');
 const { getProdPool } = require('../config/database');
 const systemLogsModel = require('../models/system_logs');
 const hotelModel = require('../models/hotel');
-const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
+const { formatDate, translateReservationStatus, translateReservationType } = require('../utils/reportUtils');
 const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
 const appConfig = require('../config/appConfig'); // Import appConfig
 
@@ -219,7 +219,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
             <tr>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">ステータス:</td>
               <td style="padding: 5px 0; width: 25%;">${(() => {
-                const statusText = translateStatus(currentStatus);
+                const statusText = translateReservationStatus(currentStatus);
                 let style = '';
                 if (currentStatus === 'cancelled') {
                   style = 'color: red; padding: 2px 5px; border-radius: 3px;'; // Red color only, with padding and rounded edges
@@ -235,7 +235,7 @@ const generateTestEmailContent = async (requestId, hotelId, date) => {
                 return `<span style="${style}">${statusText}</span>`;
               })()}</td>
               <td style="padding: 5px 0; font-weight: bold; width: 25%;">タイプ:</td>
-              <td style="padding: 5px 0; width: 25%;">${translateType(currentType) || 'N/A'}</td>
+              <td style="padding: 5px 0; width: 25%;">${translateReservationType(currentType) || 'N/A'}</td>
             </tr>
             <tr>
               <td style="padding: 5px 0; font-weight: bold;">宿泊期間:</td>

@@ -56,7 +56,6 @@ const getPaymentsForReceipts = async (req, res) => {
     if (!data) {
       return res.status(404).json({ error: 'No payment data found for the specified criteria or an error occurred.' });
     }
-
     res.json(data);
   } catch (err) {
     logger.error('Error in getPaymentsForReceipts controller:', err);

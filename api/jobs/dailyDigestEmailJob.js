@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const defaultLogger = require('../config/logger');
 const { sendGenericEmail } = require('../utils/emailUtils');
-const { formatDate, translateStatus, translateType } = require('../utils/reportUtils');
+const { formatDate, translateReservationStatus, translateReservationType } = require('../utils/reportUtils');
 const { transformLogs } = require('../controllers/system_logs/service/logTransformer');
 const appConfig = require('../config/appConfig'); // Import appConfig
 const hotelModel = require('../models/hotel');
@@ -182,7 +182,7 @@ const sendDailyDigestEmails = async (requestId) => {
               <tr>
                 <td style="padding: 5px 0; font-weight: bold; width: 25%;">ステータス:</td>
                 <td style="padding: 5px 0; width: 25%;">${(() => {
-                  const statusText = translateStatus(currentStatus);
+                  const statusText = translateReservationStatus(currentStatus);
                   let style = '';
                   if (currentStatus === 'cancelled') {
                     style = 'color: red; padding: 2px 5px; border-radius: 3px;'; // Red color only, with padding and rounded edges
@@ -198,7 +198,7 @@ const sendDailyDigestEmails = async (requestId) => {
                   return `<span style="${style}">${statusText}</span>`;
                 })()}</td>
                 <td style="padding: 5px 0; font-weight: bold; width: 25%;">タイプ:</td>
-                <td style="padding: 5px 0; width: 25%;">${translateType(currentType) || 'N/A'}</td>
+                <td style="padding: 5px 0; width: 25%;">${translateReservationType(currentType) || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 5px 0; font-weight: bold; width: 120px;">宿泊期間:</td>

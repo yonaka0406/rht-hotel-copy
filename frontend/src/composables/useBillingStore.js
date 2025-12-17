@@ -220,16 +220,27 @@ export function useBillingStore() {
                 },
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {                
-                console.error('Failed to fetch payments for receipts:', data.error || response.statusText);
-                throw new Error(data.error || 'Failed to fetch payments for receipts');
+            if (!response.ok) {
+                let errorDetail = `HTTP error! Status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.message || errorData.error || errorDetail;
+                } catch (err) {
+                    // If response is not JSON, get plain text
+                    const errorText = await response.text();
+                    console.error('Failed to parse error response as JSON, got text:', errorText, err);
+                    errorDetail = errorText || response.statusText || 'Failed to fetch payments for receipts.';
+                }
+                throw new Error(errorDetail);
             }
+
+            const data = await response.json(); // Only parse JSON if response is OK
 
             paymentsList.value = data.map(payment => ({
                 ...payment,                
-                amount: parseFloat(payment.amount),                
+                amount: parseFloat(payment.amount),
+                // reservation_tax_breakdown is already a JSON object from the backend
+                reservation_tax_breakdown: payment.reservation_tax_breakdown,
             }));
 
         } catch (error) {

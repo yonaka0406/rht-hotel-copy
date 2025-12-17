@@ -9,6 +9,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         ,hotels.formal_name
         ,reservations.id
         ,reservations.status
+        ,reservations.payment_timing
         ,reservations.reservation_client_id AS booker_id
         ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
         ,booker.name_kana AS booker_name_kana
@@ -33,10 +34,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         END AS balance
         ,GREATEST(
           0, 
-          LEAST(
-            (details.plan_period_price + details.addon_period_price), 
-            (details.plan_price + details.addon_price - details.payment)
-          )
+          (details.plan_upto_price + details.addon_upto_price - details.payment)
         ) AS period_payable
         ,details.clients_json
         ,details.payers_json
@@ -76,6 +74,19 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
                 COALESCE(ra.addon_sum,0)
               ELSE 0 END
             ) AS addon_period_price
+            ,SUM(
+              CASE WHEN reservation_details.date <= $3 AND reservation_details.billable = TRUE THEN
+                CASE WHEN reservation_details.plan_type = 'per_room' 
+                    THEN reservation_details.price
+                    ELSE reservation_details.price * reservation_details.number_of_people 
+                END
+              ELSE 0 END
+            ) AS plan_upto_price
+            ,SUM(
+              CASE WHEN reservation_details.date <= $3 AND reservation_details.billable = TRUE THEN
+                COALESCE(ra.addon_sum,0)
+              ELSE 0 END
+            ) AS addon_upto_price
           FROM
             reservation_details 
 
@@ -171,7 +182,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         AND reservations.id = details.reservation_id
         AND reservations.hotel_id = details.hotel_id
         AND reservations.hotel_id = hotels.id
-        AND (details.plan_price + details.addon_price - details.payment) > 0
+        AND (details.plan_upto_price + details.addon_upto_price - details.payment) > 0
       ORDER BY 5, 7;
     `;
   const values = [hotelId, dateStart, dateEnd];
@@ -405,6 +416,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
       ,TO_CHAR(latest_r.receipt_date, 'YYYY-MM-DD') as existing_receipt_date
       ,latest_r.version as version
       ,latest_r.tax_breakdown as existing_tax_breakdown
+      ,rtb.reservation_tax_breakdown
     FROM
       reservation_payments p
         JOIN
@@ -423,6 +435,67 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
             ORDER BY r_latest.version DESC
             LIMIT 1
         ) latest_r ON r_linked.id IS NOT NULL -- Only join if r_linked exists
+        LEFT JOIN LATERAL (
+            WITH tax_rates_data AS (
+                SELECT
+                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4) AS tax_rate,
+                    SUM(rr.price) AS total_amount
+                FROM
+                    reservation_details rd
+                JOIN
+                    reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+                WHERE
+                    rd.reservation_id = p.reservation_id
+                    AND rd.hotel_id = p.hotel_id
+                    AND rd.date >= res.check_in AND rd.date < res.check_out
+                GROUP BY
+                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4)
+                HAVING
+                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4) IS NOT NULL
+            ),
+            tax_addons_data AS (
+                SELECT
+                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4) AS tax_rate,
+                    SUM(ra.price * ra.quantity) AS total_amount
+                FROM
+                    reservation_details rd
+                JOIN
+                    reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+                WHERE
+                    rd.reservation_id = p.reservation_id
+                    AND rd.hotel_id = p.hotel_id
+                    AND rd.date >= res.check_in AND rd.date < res.check_out
+                GROUP BY
+                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4)
+                HAVING
+                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4) IS NOT NULL
+            ),
+            combined_tax_data AS (
+                SELECT tax_rate, total_amount FROM tax_rates_data
+                UNION ALL
+                SELECT tax_rate, total_amount FROM tax_addons_data
+            ),
+            final_aggregated_tax AS (
+                SELECT
+                    tax_rate,
+                    SUM(total_amount) AS total_amount
+                FROM
+                    combined_tax_data
+                GROUP BY
+                    tax_rate
+                HAVING
+                    SUM(total_amount) IS NOT NULL
+            )
+            SELECT
+                json_agg(
+                    json_build_object(
+                        'tax_rate', fat.tax_rate,
+                        'total_amount', fat.total_amount
+                    ) ORDER BY fat.tax_rate
+                ) AS reservation_tax_breakdown
+            FROM
+                final_aggregated_tax fat
+        ) rtb ON TRUE
     WHERE
       p.hotel_id = $1 AND
       p.date >= $2 AND

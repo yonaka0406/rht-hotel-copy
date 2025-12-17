@@ -113,6 +113,10 @@
             return translateReservationPaymentTiming(value);
         }
 
+        if (typeof value === 'boolean') {
+            return value ? 'あり' : 'なし';
+        }
+
         if (key === 'number_of_people') {
             return `${value}人`;
         }
