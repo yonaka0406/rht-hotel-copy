@@ -78,9 +78,46 @@ FROM plans_hotel ph
 WHERE dpm.plans_hotel_id = ph.id 
   AND dpm.hotel_id = ph.hotel_id;
 
+-- VERIFICATION QUERIES: Run these to verify migration success
+/*
+-- 1. Check that plans_hotel_id was populated correctly:
+SELECT COUNT(*) as total_metrics,
+       COUNT(plans_hotel_id) as with_hotel_id,
+       COUNT(plans_global_id) as with_global_id
+FROM daily_plan_metrics;
+
+-- 2. Check that category columns were populated:
+SELECT COUNT(*) as total_metrics,
+       COUNT(plan_type_category_id) as with_type_category,
+       COUNT(plan_package_category_id) as with_package_category
+FROM daily_plan_metrics;
+
+-- 3. Verify no orphaned records (should be 0):
+SELECT COUNT(*) as orphaned_records
+FROM daily_plan_metrics dpm
+WHERE dpm.plans_hotel_id IS NOT NULL 
+  AND NOT EXISTS (
+    SELECT 1 FROM plans_hotel ph 
+    WHERE ph.id = dpm.plans_hotel_id 
+      AND ph.hotel_id = dpm.hotel_id
+  );
+
+-- 4. Sample the data to see categories:
+SELECT dpm.hotel_id, 
+       dpm.metric_date,
+       ph.name as plan_name,
+       ptc.name as type_category,
+       ppc.name as package_category
+FROM daily_plan_metrics dpm
+JOIN plans_hotel ph ON dpm.plans_hotel_id = ph.id AND dpm.hotel_id = ph.hotel_id
+LEFT JOIN plan_type_categories ptc ON dpm.plan_type_category_id = ptc.id
+LEFT JOIN plan_package_categories ppc ON dpm.plan_package_category_id = ppc.id
+LIMIT 10;
+*/
+
 -- DOWN: Remove category columns from daily_plan_metrics
 -- Note: The data merging in the UP script is irreversible.
-ALTER TABLE daily_plan_metrics DROP COLUMN IF EXISTS plan_type_category_id;
-ALTER TABLE daily_plan_metrics DROP COLUMN IF EXISTS plan_package_category_id;
-DROP INDEX IF EXISTS idx_daily_plan_metrics_type_category;
-DROP INDEX IF EXISTS idx_daily_plan_metrics_package_category;
+--ALTER TABLE daily_plan_metrics DROP COLUMN IF EXISTS plan_type_category_id;
+--ALTER TABLE daily_plan_metrics DROP COLUMN IF EXISTS plan_package_category_id;
+--DROP INDEX IF EXISTS idx_daily_plan_metrics_type_category;
+--DROP INDEX IF EXISTS idx_daily_plan_metrics_package_category;

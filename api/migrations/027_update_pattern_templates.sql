@@ -3,7 +3,10 @@
 -- to using plans_hotel_id for plan identification
 -- It also ensures all global plans referenced in templates have hotel counterparts
 
--- First, create missing hotel plans for any global plans referenced in templates
+-- Step 1: Clean up invalid plan_templates with NULL hotel_id (data integrity cleanup)
+DELETE FROM plan_templates WHERE hotel_id IS NULL;
+
+-- Step 2: Create missing hotel plans for any global plans referenced in templates
 -- that don't have hotel-specific counterparts
 INSERT INTO plans_hotel (
     hotel_id,
