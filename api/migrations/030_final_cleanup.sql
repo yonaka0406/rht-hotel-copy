@@ -16,7 +16,23 @@ ALTER TABLE plan_addons DROP COLUMN IF EXISTS addons_global_id;
 ALTER TABLE sc_tl_plans DROP COLUMN IF EXISTS plan_key;
 ALTER TABLE sc_tl_plans DROP COLUMN IF EXISTS plans_global_id;
 
--- Drop plans_global_id column from plans_hotel if no longer needed
--- (Uncomment when ready to fully remove global plan references)
+-- Drop plans_global_id columns from all tables (after migration to plans_hotel_id)
+-- (Uncomment when all records have been migrated to use plans_hotel_id)
+
+-- Drop from main tables
+-- ALTER TABLE reservation_details DROP COLUMN IF EXISTS plans_global_id;
+-- ALTER TABLE daily_plan_metrics DROP COLUMN IF EXISTS plans_global_id;
+-- ALTER TABLE plans_rates DROP COLUMN IF EXISTS plans_global_id;
+-- ALTER TABLE plan_addons DROP COLUMN IF EXISTS plans_global_id;
+
+-- Drop from plans_hotel (keep for reference or drop when fully migrated)
 -- ALTER TABLE plans_hotel DROP CONSTRAINT IF EXISTS plans_hotel_plans_global_id_fkey;
 -- ALTER TABLE plans_hotel DROP COLUMN IF EXISTS plans_global_id;
+
+-- Note: Partitioned tables (plans_hotel_XX, reservation_details_XX) will inherit 
+-- the column drops from their parent tables automatically
+
+-- Note: sc_tl_plans already handled above (plan_key and plans_global_id)
+-- Note: addons_hotel and plan_addons addons_global_id already handled above
+
+-- Views will be handled in migration 031

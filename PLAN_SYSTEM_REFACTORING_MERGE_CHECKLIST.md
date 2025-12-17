@@ -67,9 +67,15 @@
 #### Phase 3: Clean Up Legacy References ✅ COMPLETED
 - [x] **Migration 026**: Create missing plans for `sc_tl_plans` references *(2 new plans created)*
 - [x] **Migration 027**: Update pattern templates to use `plans_hotel_id` instead of `plan_key` *(137 templates updated, 28 new plans created)*
-- [ ] **Migration 028**: Final cleanup - drop deprecated columns and functions *(Ready to run)*
 
-**✅ COMPLETED**: All migrations 020-027 successfully applied manually
+#### Phase 4: Historical Data Migration 🔄 READY
+- [ ] **Migration 028**: Migrate `reservation_details` historical data *(124,888+ records to migrate)*
+- [ ] **Migration 029**: Complete `daily_plan_metrics` migration *(Remaining records with NULL plans_hotel_id)*
+- [ ] **Migration 030**: Drop deprecated columns from all tables *(After all data migrated)*
+- [ ] **Migration 031**: Update `vw_booking_for_google` view to use hotel-specific plans *(Remove plans_global references)*
+
+**✅ COMPLETED**: Migrations 020-027 successfully applied manually
+**🔄 NEXT**: Run migrations 028-030 for historical data and final cleanup
 
 ### 3. Create Missing Hotel Plans ⚠️ URGENT
 **CURRENT STATUS**: 124,888 reservation records have `plans_global_id` but no `plans_hotel_id`
