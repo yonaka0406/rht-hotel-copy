@@ -5,19 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### December 9, 2025
-
-#### Billable List Payment Form Indicator
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: Feature Request
-- **Description**:
-  - The billable list datatable needs to display the payment form indicator
-  - This will help staff quickly identify the payment method for each billable item
-- **Expected Behavior**:
-  - Add a column showing the payment form (e.g., credit card, cash, bank transfer)
-  - Ensure the indicator is clearly visible in the datatable view
-
 ### December 1, 2025
 
 #### Monthly Report Tax Value Issue

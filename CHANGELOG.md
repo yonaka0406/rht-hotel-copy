@@ -694,6 +694,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Enhanced page printing functionality with improved formatting options
 - Feature: Implemented Day-over-Day (DoD) comparison for sales and occupancy (OCC) metrics
 - Feature: Added client ID and phone number to reservation list exports for better client tracking
+- Feature: Added payment form indicator to billable list datatable for easy payment method identification
+- Feature: Modified billing page filter to exclude fully settled reservations until the selected end date
 
 ---
 
