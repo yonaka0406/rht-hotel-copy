@@ -116,6 +116,7 @@ const selectHotelPlans = async (requestId, hotel_id, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
     const query = `
         SELECT ph.*, 
+               COALESCE(ph.plans_global_id::TEXT, '') || 'h' || ph.id::TEXT AS plan_key,
                ptc.name as plan_type_category_name, ptc.color as plan_type_category_color,
                ppc.name as plan_package_category_name, ppc.color as plan_package_category_color
         FROM plans_hotel ph

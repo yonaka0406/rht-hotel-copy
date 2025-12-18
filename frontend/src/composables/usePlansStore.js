@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 const plans = ref([]);
+const hotelPlans = ref([]);
 const addons = ref([]);
 const patterns = ref([]);
 
@@ -68,6 +69,29 @@ export function usePlansStore() {
             const data = await response.json();
             plans.value = data;
             return plans.value;
+        } catch (error) {
+            console.error('Failed to fetch hotel plans', error);
+            return [];
+        }
+    };
+    const fetchHotelPlans = async (hotel_id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/hotel/${hotel_id}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            hotelPlans.value = data;
+            return hotelPlans.value;
         } catch (error) {
             console.error('Failed to fetch hotel plans', error);
             return [];
@@ -522,11 +546,13 @@ export function usePlansStore() {
 
     return {
         plans,
+        hotelPlans,
         addons,
         patterns,
         fetchPlansGlobal,
         fetchPlansHotel,
         fetchPlansForHotel,
+        fetchHotelPlans,
         createGlobalPlan,
         updateGlobalPlan,
         createHotelPlan,

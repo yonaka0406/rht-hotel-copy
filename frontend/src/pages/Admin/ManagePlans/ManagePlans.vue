@@ -23,6 +23,12 @@
         </TabList>
         <TabPanels>
           <TabPanel value="0">
+            <Message>
+              <template #icon>
+                <i class="pi pi-info-circle"></i>
+              </template>
+              グローバルプランは、未使用になる予定です。
+            </Message>
             <div id="globalTabPanel" v-show="!showGlobalRatePanel">
               <div class="flex justify-end mb-2">
                 <Button @click="showGlobalDialog = true" icon="pi pi-plus" label="プラン追加"
@@ -275,7 +281,7 @@ import ManageHotelPlansTable from './components/ManageHotelPlansTable.vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels, fetchHotels } = useHotelStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, fetchPlansGlobal, fetchPlansHotel, createGlobalPlan, updateGlobalPlan, createHotelPlan, updateHotelPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
+const { plans, fetchPlansGlobal, fetchPlansHotel, fetchHotelPlans, createGlobalPlan, updateGlobalPlan, createHotelPlan, updateHotelPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -284,6 +290,7 @@ import Panel from 'primevue/panel';
 import FloatLabel from 'primevue/floatlabel';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
+import Message from 'primevue/message';
 import {
   Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column,
   InputText, ColorPicker, Textarea, SelectButton, Badge
@@ -450,9 +457,9 @@ const openEditHotelDialog = async (data) => {
 
 const onPlanModified = async () => {
   if (selectedHotelId.value) {
-    await fetchPlansHotel(selectedHotelId.value, true);
-    hotelPlans.value = plans.value;
-    await reindexPlans(); // Reindex after plans are modified (full sort)
+    const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
+    hotelPlans.value = fetchedPlans || [];
+    await reindexPlans();
   }
 };
 
@@ -505,13 +512,19 @@ const reindexPlans = async (preserveCurrentOrder = false) => { // Added paramete
     display_order: index,
   }));
 
+  // Prepare data for backend - use plans_hotel_id as id
+  const backendPlans = reindexedPlans.map(plan => ({
+    ...plan,
+    id: plan.plans_hotel_id, // Use plans_hotel_id as the id for backend operations
+  }));
+
   // Update local state and then send to backend
   hotelPlans.value = reindexedPlans;
 
-  console.log('reindexPlans: Sending to backend:', reindexedPlans); // Add this log
+  console.log('reindexPlans: Sending to backend:', backendPlans); // Add this log
 
   try {
-    await updatePlansOrderBulk(selectedHotelId.value, reindexedPlans);
+    await updatePlansOrderBulk(selectedHotelId.value, backendPlans);
     toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
   } catch (error) {
     toast.add({ severity: 'error', summary: '失敗', detail: 'プランの表示順序の更新に失敗しました。', life: 3000 });
@@ -549,8 +562,8 @@ const saveHotelPlan = async () => {
   }
   try {
     await createHotelPlan(newHotelPlan.value);
-    await fetchPlansHotel();
-    hotelPlans.value = plans.value;
+    const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
+    hotelPlans.value = fetchedPlans || [];
     showHotelDialog.value = false;
     newHotelPlan.value = {
       hotel_id: null,
@@ -590,8 +603,8 @@ const updateHotel = async () => {
 
   try {
     await updateHotelPlan(editHotelPlan.value.id, editHotelPlan.value);
-    await fetchPlansHotel();
-    hotelPlans.value = plans.value;
+    const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
+    hotelPlans.value = fetchedPlans || [];
     showEditHotelDialog.value = false;
     editHotelPlan.value = {
       id: null,
@@ -637,14 +650,12 @@ onMounted(async () => {
   try {
     await fetchPlansGlobal();
     globalPlans.value = plans.value;
-    await fetchPlansHotel();
-    hotelPlans.value = plans.value;
     await fetchHotels();
     planTypeCategories.value = await fetchPlanTypeCategories();
     planPackageCategories.value = await fetchPlanPackageCategories();
 
     if (hotels.value.length > 0) {
-      selectedHotelId.value = hotels.value[0].id; // Initialize selectedHotelId
+      selectedHotelId.value = hotels.value[0].id; // Initialize selectedHotelId - watcher will handle fetching plans
     }
   } catch (error) {
     console.error('Error in ManagePlans mounted hook:', error);
@@ -658,11 +669,12 @@ onMounted(async () => {
 watch(selectedHotelId, async (newVal) => {
   if (newVal) {
     loading.value = true;
-    await fetchPlansHotel(newVal, true);
+    const fetchedPlans = await fetchHotelPlans(newVal);
     // Enhance hotelPlans with category names
-    hotelPlans.value = plans.value.map(plan => ({
+    hotelPlans.value = (fetchedPlans || []).map(plan => ({
       ...plan,
-      id: plan.plan_key, // Map plan_id to plan_key for DataTable dataKey
+      plans_hotel_id: plan.id, // Preserve the original id as plans_hotel_id
+      id: plan.plan_key, // Map plan_key for DataTable dataKey
       plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
       plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
     }));

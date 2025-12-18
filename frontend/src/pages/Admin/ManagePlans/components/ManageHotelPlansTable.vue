@@ -14,7 +14,7 @@
         <div v-show="activeTab === 0">
             <DataTable :value="activePlans" editMode="row" dataKey="id" @rowReorder="onRowReorder">
                 <Column :rowReorder="true" headerStyle="width: 3rem" :reorderableColumn="false" />
-                <Column field="plan_name" header="名称"></Column>
+                <Column field="name" header="名称"></Column>
                 <Column field="plan_type" headerClass="text-center">
                     <template #header>
                         <span class="font-bold text-center w-full block">プランタイプ</span>
@@ -26,8 +26,8 @@
 
                 <Column header="カテゴリー">
                     <template #body="slotProps">
-                        <PlanCategoryBadges :typeCategory="slotProps.data.type_category"
-                            :packageCategory="slotProps.data.package_category" />
+                        <PlanCategoryBadges :typeCategory="slotProps.data.plan_type_category_name"
+                            :packageCategory="slotProps.data.plan_package_category_name" />
                     </template>
                 </Column>
                 <Column headerClass="text-center">
@@ -44,7 +44,7 @@
         </div>
         <div v-show="activeTab === 1">
             <DataTable :value="inactivePlans" dataKey="id">
-                <Column field="plan_name" header="名称"></Column>
+                <Column field="name" header="名称"></Column>
                 <Column field="plan_type" headerClass="text-center">
                     <template #header>
                         <span class="font-bold text-center w-full block">プランタイプ</span>
@@ -56,8 +56,8 @@
 
                 <Column header="カテゴリー">
                     <template #body="slotProps">
-                        <PlanCategoryBadges :typeCategory="slotProps.data.type_category"
-                            :packageCategory="slotProps.data.package_category" />
+                        <PlanCategoryBadges :typeCategory="slotProps.data.plan_type_category_name"
+                            :packageCategory="slotProps.data.plan_package_category_name" />
                     </template>
                 </Column>
                 <Column headerClass="text-center">
@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -141,7 +141,7 @@ const PlanActions = {
 const props = defineProps({
     hotelPlans: Array,
     showHotelRatePanel: Boolean,
-    selectedHotelId: Number, // Needed for onRowReorder
+    selectedHotelId: Number,
 });
 
 const emit = defineEmits([
@@ -149,18 +149,58 @@ const emit = defineEmits([
     'openCopyPlansDialog',
     'openEditPlanDialog',
     'switchEditHotelPlanRate',
-    'orderChanged', // Emitted from onRowReorder
+    'orderChanged',
 ]);
 
-const activeTab = ref(0); // Changed to numeric index
+const activeTab = ref(0);
 
-const activePlans = computed(() => Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => plan.is_active) : []);
-const inactivePlans = computed(() => Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => !plan.is_active) : []);
+const activePlans = computed(() => {
+    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => plan.is_active) : [];
+    console.log('ManageHotelPlansTable - activePlans computed:', {
+        selectedHotelId: props.selectedHotelId,
+        totalHotelPlans: props.hotelPlans?.length || 0,
+        activePlansCount: filtered.length,
+        activePlans: filtered.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id }))
+    });
+    return filtered;
+});
+
+const inactivePlans = computed(() => {
+    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => !plan.is_active) : [];
+    console.log('ManageHotelPlansTable - inactivePlans computed:', {
+        selectedHotelId: props.selectedHotelId,
+        inactivePlansCount: filtered.length,
+        inactivePlans: filtered.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id }))
+    });
+    return filtered;
+});
 
 const onRowReorder = (event) => {
-    // Emit 'orderChanged' to parent for bulk update
+    console.log('ManageHotelPlansTable - onRowReorder:', {
+        selectedHotelId: props.selectedHotelId,
+        reorderedPlans: event.value.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id, display_order: p.display_order }))
+    });
     emit('orderChanged', event.value);
 };
+
+// Watch for changes in hotelPlans prop
+watch(() => props.hotelPlans, (newPlans, oldPlans) => {
+    console.log('ManageHotelPlansTable - hotelPlans prop changed:', {
+        selectedHotelId: props.selectedHotelId,
+        oldPlansCount: oldPlans?.length || 0,
+        newPlansCount: newPlans?.length || 0,
+        newPlans: newPlans?.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id, is_active: p.is_active })) || []
+    });
+}, { deep: true });
+
+// Watch for changes in selectedHotelId prop
+watch(() => props.selectedHotelId, (newHotelId, oldHotelId) => {
+    console.log('ManageHotelPlansTable - selectedHotelId changed:', {
+        oldHotelId,
+        newHotelId,
+        currentPlansCount: props.hotelPlans?.length || 0
+    });
+});
 </script>
 
 <style scoped>
