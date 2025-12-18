@@ -137,11 +137,69 @@ const updatePackageCategory = async (req, res) => {
     }
 };
 
+const deleteTypeCategory = async (req, res) => {
+    const { id } = req.params;
+
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid category ID' });
+    }
+
+    try {
+        const deletedCategory = await planCategoriesModel.deletePlanTypeCategory(req.requestId, id);
+        if (!deletedCategory) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+        res.json({ message: 'Category deleted successfully', category: deletedCategory });
+    } catch (error) {
+        console.error('Error deleting plan type category:', error);
+        if (error.inUse) {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+const deletePackageCategory = async (req, res) => {
+    const { id } = req.params;
+
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid category ID' });
+    }
+
+    try {
+        const deletedCategory = await planCategoriesModel.deletePlanPackageCategory(req.requestId, id);
+        if (!deletedCategory) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+        res.json({ message: 'Category deleted successfully', category: deletedCategory });
+    } catch (error) {
+        console.error('Error deleting plan package category:', error);
+        if (error.inUse) {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     getTypeCategories,
     createTypeCategory,
     updateTypeCategory,
+    deleteTypeCategory,
     getPackageCategories,
     createPackageCategory,
     updatePackageCategory,
+    deletePackageCategory,
 };

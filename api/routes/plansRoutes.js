@@ -48,9 +48,11 @@ router.delete('/plans/patterns/:id', authMiddleware_manageDB, plansControllers.d
 router.get('/plans/categories/type', authMiddleware, plansControllers.getTypeCategories);
 router.post('/plans/categories/type', authMiddleware_manageDB, plansControllers.createTypeCategory);
 router.put('/plans/categories/type/:id', authMiddleware_manageDB, plansControllers.updateTypeCategory);
+router.delete('/plans/categories/type/:id', authMiddleware_manageDB, plansControllers.deleteTypeCategory);
 router.get('/plans/categories/package', authMiddleware, plansControllers.getPackageCategories);
 router.post('/plans/categories/package', authMiddleware_manageDB, plansControllers.createPackageCategory);
 router.put('/plans/categories/package/:id', authMiddleware_manageDB, plansControllers.updatePackageCategory);
+router.delete('/plans/categories/package/:id', authMiddleware_manageDB, plansControllers.deletePackageCategory);
 
 // Plan Copy Between Hotels
 router.post('/plans/copy', authMiddleware_manageDB, plansControllers.copyPlanToHotel);

@@ -304,6 +304,52 @@ export function usePlansStore() {
             throw error;
         }
     };
+
+    // Delete Plan Type Category
+    const deletePlanTypeCategory = async (id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/categories/type/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to delete plan type category', error);
+            throw error;
+        }
+    };
+
+    // Delete Plan Package Category
+    const deletePlanPackageCategory = async (id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/categories/package/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to delete plan package category', error);
+            throw error;
+        }
+    };
     // Plan Display Order
     const updatePlansOrderBulk = async (hotelId, plans) => {
         try {
@@ -581,9 +627,11 @@ export function usePlansStore() {
         fetchPlanTypeCategories,
         createPlanTypeCategory,
         updatePlanTypeCategory,
+        deletePlanTypeCategory,
         fetchPlanPackageCategories,
         createPlanPackageCategory,
         updatePlanPackageCategory,
+        deletePlanPackageCategory,
         updatePlansOrderBulk,
         copyPlanToHotel,
         bulkCopyPlansToHotel,

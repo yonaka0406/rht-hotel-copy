@@ -108,6 +108,8 @@
     <ManagePlansPatterns :selectedHotelId="selectedHotelId" :selectedHotelName="selectedHotelName"
       v-if="!showHotelRatePanel" />
 
+    <ManagePlanCategories v-if="!showHotelRatePanel" />
+
     <AddGlobalPlanDialog :visible="showGlobalDialog" @update:visible="showGlobalDialog = $event"
       @planAdded="onGlobalPlanAdded" :sb_options="sb_options" :globalPlans="globalPlans" />
 
@@ -172,6 +174,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 
 import ManagePlansRates from './components/ManagePlansRates.vue';
 import ManagePlansPatterns from './components/ManagePlansPatterns.vue';
+import ManagePlanCategories from './components/ManagePlanCategories.vue';
 import CopyPlansDialog from './components/dialogs/CopyPlansDialog.vue';
 import AddGlobalPlanDialog from './components/dialogs/AddGlobalPlanDialog.vue';
 import AddHotelPlanDialog from './components/dialogs/AddHotelPlanDialog.vue';

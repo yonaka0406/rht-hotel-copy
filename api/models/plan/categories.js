@@ -94,15 +94,32 @@ const updatePlanTypeCategory = async (requestId, id, name, description, color, d
 
 const deletePlanTypeCategory = async (requestId, id, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const query = 'DELETE FROM plan_type_categories WHERE id = $1 RETURNING *';
-
+    
     try {
+        // Check if category is in use
+        const usageCheckQuery = `
+            SELECT COUNT(*) as usage_count 
+            FROM plans_hotel 
+            WHERE plan_type_category_id = $1
+        `;
+        const usageResult = await client.query(usageCheckQuery, [id]);
+        
+        if (parseInt(usageResult.rows[0].usage_count) > 0) {
+            const error = new Error('Cannot delete category: it is currently in use by existing plans');
+            error.statusCode = 400;
+            error.inUse = true;
+            throw error;
+        }
+        
+        // Delete the category
+        const query = 'DELETE FROM plan_type_categories WHERE id = $1 RETURNING *';
         const result = await client.query(query, [id]);
+        
         if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error deleting plan type category:', err);
-        throw new Error('Database error');
+        throw err;
     } finally {
         if (!dbClient) client.release();
     }
@@ -203,15 +220,32 @@ const updatePlanPackageCategory = async (requestId, id, name, description, color
 
 const deletePlanPackageCategory = async (requestId, id, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const query = 'DELETE FROM plan_package_categories WHERE id = $1 RETURNING *';
-
+    
     try {
+        // Check if category is in use
+        const usageCheckQuery = `
+            SELECT COUNT(*) as usage_count 
+            FROM plans_hotel 
+            WHERE plan_package_category_id = $1
+        `;
+        const usageResult = await client.query(usageCheckQuery, [id]);
+        
+        if (parseInt(usageResult.rows[0].usage_count) > 0) {
+            const error = new Error('Cannot delete category: it is currently in use by existing plans');
+            error.statusCode = 400;
+            error.inUse = true;
+            throw error;
+        }
+        
+        // Delete the category
+        const query = 'DELETE FROM plan_package_categories WHERE id = $1 RETURNING *';
         const result = await client.query(query, [id]);
+        
         if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error deleting plan package category:', err);
-        throw new Error('Database error');
+        throw err;
     } finally {
         if (!dbClient) client.release();
     }
