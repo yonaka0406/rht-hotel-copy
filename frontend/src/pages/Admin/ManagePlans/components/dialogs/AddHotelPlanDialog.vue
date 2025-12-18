@@ -172,7 +172,7 @@ const saveHotelPlan = async () => {
     }
 
     const isDuplicate = (props.hotelPlans || []).some(plan =>
-        plan.plan_name.trim().toLowerCase() === trimmedPlanName.toLowerCase()
+        plan.name?.trim().toLowerCase() === trimmedPlanName.toLowerCase()
     );
 
     if (isDuplicate) {

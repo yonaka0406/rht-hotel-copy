@@ -54,11 +54,26 @@ const fetchAllHotelPlans = async (req, res) => {
 
 // POST
 const createGlobalPlan = async (req, res) => {
-    const { name, description, plan_type, colorHEX } = req.body;
+    const { name, description, plan_type, colorHEX, color: receivedColor } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
-    const color = '#' + colorHEX;
+    // Handle both colorHEX (without #) and color (with #) formats
+    let color;
+    if (receivedColor) {
+        // If color is provided, ensure it starts with #
+        color = receivedColor.startsWith('#') ? receivedColor : '#' + receivedColor;
+    } else if (colorHEX) {
+        // If colorHEX is provided, add # prefix
+        color = colorHEX.startsWith('#') ? colorHEX : '#' + colorHEX;
+    } else {
+        color = '#D3D3D3'; // Default color
+    }
+
+    // Ensure color is exactly 7 characters (#RRGGBB)
+    if (color.length > 7) {
+        color = color.substring(0, 7);
+    }
 
     try {
         const newPlan = await planModels.insertGlobalPlan(req.requestId, name, description, plan_type, color, created_by, updated_by);
@@ -121,7 +136,16 @@ const editGlobalPlan = async (req, res) => {
     const { name, description, plan_type, colorHEX } = req.body;
     const updated_by = req.user.id;
 
-    const color = '#' + colorHEX;
+    // Handle colorHEX format and ensure proper # prefix
+    let color = colorHEX;
+    if (color && !color.startsWith('#')) {
+        color = '#' + color;
+    }
+    
+    // Ensure color is exactly 7 characters (#RRGGBB)
+    if (color && color.length > 7) {
+        color = color.substring(0, 7);
+    }
 
     try {
         const updatedPlan = await planModels.updateGlobalPlan(req.requestId, id, name, description, plan_type, color, updated_by);
