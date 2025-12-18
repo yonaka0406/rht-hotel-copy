@@ -54,6 +54,11 @@ CREATE INDEX idx_du_forecast_plan_package_category ON du_forecast(plan_package_c
 CREATE INDEX idx_du_accounting_plan_type_category ON du_accounting(plan_type_category_id);
 CREATE INDEX idx_du_accounting_plan_package_category ON du_accounting(plan_package_category_id);
 
+--Check 
+SELECT plan_global_id, plan_type_category_id, plan_package_category_id
+FROM du_forecast
+GROUP BY plan_global_id, plan_type_category_id, plan_package_category_id
+
 -- Drop the old unique constraints that reference plan_global_id
 ALTER TABLE du_forecast DROP CONSTRAINT uq_hotel_month_plan_forecast;
 ALTER TABLE du_accounting DROP CONSTRAINT uq_hotel_month_plan_accounting;

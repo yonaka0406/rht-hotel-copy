@@ -182,7 +182,10 @@ const combinedSalesByPlan = computed(() => {
     });
 
     props.forecastDataByPlan.forEach(forecastItem => {
-        const planName = forecastItem.plan_name;
+        // Handle both old plan-based and new category-based data structure
+        const planName = forecastItem.plan_name || 
+                        `${forecastItem.type_category_name || '未設定'} - ${forecastItem.package_category_name || '未設定'}`;
+        
         if (!combined[planName]) {
             combined[planName] = {
                 plan_name: planName,
@@ -194,7 +197,11 @@ const combinedSalesByPlan = computed(() => {
                 forecast_sales: 0
             };
         }
-        combined[planName].forecast_sales += parseFloat(forecastItem.accommodation_revenue || 0);
+        
+        // Handle both accommodation and non-accommodation revenue
+        const accommodationRevenue = parseFloat(forecastItem.accommodation_revenue || 0);
+        const nonAccommodationRevenue = parseFloat(forecastItem.non_accommodation_revenue || 0);
+        combined[planName].forecast_sales += accommodationRevenue + nonAccommodationRevenue;
     });
 
     const result = Object.values(combined);

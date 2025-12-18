@@ -1,8 +1,10 @@
 const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod,
-  selectReservationListView, selectForecastData, selectAccountingData, selectForecastDataByPlan, selectAccountingDataByPlan,
+  selectReservationListView, selectForecastData, selectAccountingData, selectForecastDataByCategory, selectAccountingDataByCategory,
   selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle,
   selectActiveReservationsChange,
-  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport } = require('../../models/report');
+  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary, selectCheckInOutReport,
+  // Backward compatibility aliases
+  selectForecastDataByPlan, selectAccountingDataByPlan } = require('../../models/report');
 const { authorize, appendDataToSheet, createSheet } = require('../../utils/googleUtils');
 
 const logger = require('../../config/logger');
@@ -147,33 +149,39 @@ const getAccountingData = async (req, res) => {
   }
 };
 
-const getForecastDataByPlan = async (req, res) => {
+const getForecastDataByCategory = async (req, res) => {
   const { hid, sdate, edate } = req.params;
   try {
-    const data = await selectForecastDataByPlan(req.requestId, hid, sdate, edate);
+    const data = await selectForecastDataByCategory(req.requestId, hid, sdate, edate);
     if (!data || data.length === 0) {
       return res.status(200).json([]);
     }
     res.json(data);
   } catch (error) {
-    logger.error(`[getForecastDataByPlan] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack });
-    res.status(500).json({ message: 'Error fetching forecast data by plan' });
+    logger.error(`[getForecastDataByCategory] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack });
+    res.status(500).json({ message: 'Error fetching forecast data by category' });
   }
 };
 
-const getAccountingDataByPlan = async (req, res) => {
+// Backward compatibility - keep old function name
+const getForecastDataByPlan = getForecastDataByCategory;
+
+const getAccountingDataByCategory = async (req, res) => {
   const { hid, sdate, edate } = req.params;
   try {
-    const data = await selectAccountingDataByPlan(req.requestId, hid, sdate, edate);
+    const data = await selectAccountingDataByCategory(req.requestId, hid, sdate, edate);
     if (!data || data.length === 0) {
       return res.status(200).json([]);
     }
     res.json(data);
   } catch (error) {
-    logger.error(`[getAccountingDataByPlan] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack });
-    res.status(500).json({ message: 'Error fetching accounting data by plan' });
+    logger.error(`[getAccountingDataByCategory] Failed for Request ID: ${req.requestId}. Error: ${error.message}`, { stack: error.stack });
+    res.status(500).json({ message: 'Error fetching accounting data by category' });
   }
 };
+
+// Backward compatibility - keep old function name
+const getAccountingDataByPlan = getAccountingDataByCategory;
 
 const getReservationsInventory = async (req, res) => {
   const hotelId = req.params.hid;
@@ -520,6 +528,10 @@ module.exports = {
   getOccupationBreakdown,
   getChannelSummary,
   getCheckInOutReport,
+  // New category-based functions
+  getForecastDataByCategory,
+  getAccountingDataByCategory,
+  // Backward compatibility - keep old function names
   getForecastDataByPlan,
   getAccountingDataByPlan,
 }
