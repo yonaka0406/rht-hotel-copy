@@ -8,6 +8,31 @@ export const formatCurrency = (value) => {
   }).format(value);
 };
 
+export const formatNumber = (value, style) => {
+  let thisValue = value;
+  if (value === null || value === undefined) { // Handle null/undefined explicitly for consistency
+    thisValue = 0;
+  }
+  if (style === 'currency') {
+    return new Intl.NumberFormat('ja-JP', {
+      style: 'currency',
+      currency: 'JPY',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(thisValue);
+  }
+  if (style === 'decimal') {
+    return new Intl.NumberFormat('ja-JP', {
+      style: 'decimal',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(thisValue);
+  }
+  // Default or throw error if style is not recognized
+  return thisValue.toString();
+};
+
+
 // Reporting-specific currency formatter with custom null handling
 export const formatCurrencyForReporting = (value) => {
   if (value === null || value === undefined) return '- 円';
