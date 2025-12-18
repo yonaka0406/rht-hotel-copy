@@ -39,7 +39,6 @@ WHERE plan_type_category_id IS NULL AND name ILIKE '%荷物%';
 ALTER TABLE plans_hotel
 ALTER COLUMN plan_type_category_id SET NOT NULL;
 
-
 -- 5. Update get_available_plans_for_hotel function
 DROP FUNCTION IF EXISTS get_available_plans_for_hotel(INT); 
 CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(p_hotel_id INT)
@@ -98,3 +97,50 @@ BEGIN
         );
 END;
 $$ LANGUAGE plpgsql;
+
+-- 6. Create 荷物キープ plan for each hotel with category type 5 and package category 1
+INSERT INTO plans_hotel (
+    hotel_id,
+    name,
+    description,
+    plan_type,
+    color,
+    plan_type_category_id,
+    plan_package_category_id,
+    display_order,
+    is_active,
+    created_by,
+    updated_by
+)
+SELECT 
+    h.id AS hotel_id,
+    '荷物キープ' AS name,
+    '荷物預かりサービス' AS description,
+    'per_person' AS plan_type,
+    '#D3D3D3' AS color,
+    5 AS plan_type_category_id,  -- 荷物キープ category
+    1 AS plan_package_category_id,  -- スタンダード package
+    999 AS display_order,  -- Put at end
+    true AS is_active,
+    1 AS created_by,  -- System user
+    1 AS updated_by   -- System user
+FROM hotels h
+WHERE NOT EXISTS (
+    -- Only create if hotel doesn't already have a 荷物キープ plan
+    SELECT 1 FROM plans_hotel ph 
+    WHERE ph.hotel_id = h.id 
+    AND ph.name = '荷物キープ'
+);
+
+-- 7. Normalize display_order after adding new plans
+WITH ranked AS (
+    SELECT 
+        hotel_id, 
+        id, 
+        ROW_NUMBER() OVER (PARTITION BY hotel_id ORDER BY display_order, id) as rn
+    FROM plans_hotel
+)
+UPDATE plans_hotel ph
+SET display_order = r.rn - 1  -- Start from 0
+FROM ranked r
+WHERE ph.hotel_id = r.hotel_id AND ph.id = r.id;

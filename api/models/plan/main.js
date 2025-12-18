@@ -203,6 +203,19 @@ const selectPatternsByHotel = async (requestId, hotel_id, dbClient = null) => {
 
 const insertHotelPlan = async (requestId, hotel_id, plan_type_category_id, plan_package_category_id, name, description, plan_type, color, display_order, is_active, available_from, available_until, created_by, updated_by, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
+    
+    // Auto-calculate display_order if not provided or is 0
+    let finalDisplayOrder = display_order;
+    if (!display_order || display_order === 0) {
+        const maxOrderQuery = `
+            SELECT COALESCE(MAX(display_order), -1) + 1 as next_order 
+            FROM plans_hotel 
+            WHERE hotel_id = $1
+        `;
+        const maxOrderResult = await client.query(maxOrderQuery, [hotel_id]);
+        finalDisplayOrder = maxOrderResult.rows[0].next_order;
+    }
+    
     const query = `
         INSERT INTO plans_hotel (
             hotel_id, plan_type_category_id, plan_package_category_id, 
@@ -214,7 +227,7 @@ const insertHotelPlan = async (requestId, hotel_id, plan_type_category_id, plan_
     `;
     const values = [
         hotel_id, plan_type_category_id, plan_package_category_id,
-        name, description, plan_type, color, display_order, is_active, available_from, available_until,
+        name, description, plan_type, color, finalDisplayOrder, is_active, available_from, available_until,
         created_by, updated_by
     ];
 
