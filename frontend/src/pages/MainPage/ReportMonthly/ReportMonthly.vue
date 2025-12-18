@@ -1,9 +1,16 @@
 <template>
     <div class="min-h-screen p-2">
-        <div class="grid grid-cols-12 gap-4">
+        <!-- Loading State -->
+        <div v-if="isLoading" class="flex flex-col items-center justify-center min-h-96 space-y-4">
+            <ProgressSpinner size="large" />
+            <div class="text-lg font-medium text-gray-700">レポートデータを読み込み中...</div>
+            <div class="text-sm text-gray-500">{{ loadingStatus }}</div>
+        </div>
+
+        <!-- Main Content -->
+        <div v-else class="grid grid-cols-12 gap-4">
             <ReportSelectionCard v-model:selectedMonth="selectedMonth" v-model:viewMode="viewMode"
                 :viewOptions="viewOptions" />
-
 
             <KPIMetricsPanel :viewMode="viewMode" :displayedCumulativeSales="displayedCumulativeSales"
                 :forecastSales="forecastSales" :salesDifference="salesDifference" :ADR="ADR" :forecastADR="forecastADR"
@@ -36,6 +43,7 @@
 <script setup>
 // Vue
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ProgressSpinner } from 'primevue';
 
 
 
@@ -119,6 +127,10 @@ const occupationBreakdownData = ref([]);
 const bookingSourceData = ref([]);
 const paymentTimingData = ref([]);
 const forecastDataByPlan = ref([]);
+
+// Loading state
+const isLoading = ref(false);
+const loadingStatus = ref('');
 
 const dataFetchStartDate = computed(() => startOfYear.value);
 const dataFetchEndDate = computed(() => { // For heatmap range, ending last day of selectedMonth + 2 months
@@ -288,23 +300,44 @@ const handleResize = () => {
 // --- Data Fetching and Processing ---
 const fetchDataAndProcess = async () => {
     if (!selectedHotelId.value) {
-
         allReservationsData.value = []; // Clear data
         // Call processors to clear charts/metrics
         calculateMetrics();
         return;
     }
+    
     try {
-        // Fetch data for the widest necessary range            
+        isLoading.value = true;
+        
+        // Fetch data for the widest necessary range
+        loadingStatus.value = '予約データを取得中...';
         const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+        
+        loadingStatus.value = '予算データを取得中...';
         const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+        
+        loadingStatus.value = '実績データを取得中...';
         const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+        
+        loadingStatus.value = 'プラン別売上データを取得中...';
         const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+        
+        loadingStatus.value = '稼働率データを取得中...';
         const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+        
+        loadingStatus.value = '予約チャネルデータを取得中...';
         const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+        
+        loadingStatus.value = '決済タイミングデータを取得中...';
         const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value); // New fetch
+        
+        loadingStatus.value = '予約者タイプデータを取得中...';
+        const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+        
+        loadingStatus.value = 'プラン別予算データを取得中...';
         const forecastDataByPlanResult = await fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+        
+        loadingStatus.value = '予約詳細データを取得中...';
         // Fetch reservation list for booker type and length of stay
         const reservationListViewResult = await fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
 
@@ -382,6 +415,7 @@ const fetchDataAndProcess = async () => {
 
     } catch (error) {
         console.error("Error fetching reservation data:", error);
+        loadingStatus.value = 'データ取得エラーが発生しました';
         allReservationsData.value = []; // Clear data on error
         forecastData.value = [];
         accountingData.value = [];
@@ -392,11 +426,13 @@ const fetchDataAndProcess = async () => {
         bookerTypeBreakdownData.value = [];
         forecastDataByPlan.value = [];
         reservationListData.value = [];
+    } finally {
+        loadingStatus.value = 'データを処理中...';
+        // Process data for all components        
+        await nextTick();
+        calculateMetrics();
+        isLoading.value = false;
     }
-
-    // Process data for all components        
-    await nextTick();
-    calculateMetrics();
 };
 
 // --- Lifecycle and Watchers ---

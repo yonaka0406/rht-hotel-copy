@@ -3,7 +3,7 @@
         <template #title>
             <div class="flex justify-between items-center">
                 <div>
-                    <p>プラン別宿泊売上内訳</p>
+                    <p>カテゴリー別宿泊売上内訳</p>
                     <small v-if="salesByPlanChartMode === 'tax_included'">（税込み）</small>
                     <small v-else>（税抜き）</small>
                 </div>
@@ -16,7 +16,7 @@
         <template #content>
             <div v-if="salesByPlanViewMode === 'chart'" ref="salesByPlanChart" class="w-full h-96"></div>
             <DataTable v-else :value="processedSalesByPlan" responsiveLayout="scroll">
-                <Column field="plan_name" header="プラン名">
+                <Column field="plan_name" header="カテゴリー名">
                     <template #body="slotProps">
                         {{ slotProps.data.plan_name }}
                         <Badge v-if="slotProps.data.sales_category === 'other'" value="宿泊以外" severity="warn"
@@ -155,41 +155,39 @@ const salesByPlanChartOptions = ref([
 
 const combinedSalesByPlan = computed(() => {
     const combined = {};
-
-    //console.log('[SalesByPlan] Raw salesByPlan data:', props.salesByPlan);
-
-    props.salesByPlan.forEach(item => {
-        const planName = item.plan_name;
-        if (!combined[planName]) {
-            combined[planName] = {
-                plan_name: planName,
-                sales_category: item.sales_category,
-                regular_sales: 0,
-                cancelled_sales: 0,
-                regular_net_sales: 0,
-                cancelled_net_sales: 0,
-                forecast_sales: 0
-            };
-        }
-        if (item.is_cancelled_billable) {
-            combined[planName].cancelled_sales += parseFloat(item.accommodation_sales || 0) + parseFloat(item.other_sales || 0);
-            combined[planName].cancelled_net_sales += parseFloat(item.accommodation_sales_net || 0) + parseFloat(item.other_sales_net || 0);
+    
+    // Process both sales and forecast data using consistent category-based grouping
+    [...props.salesByPlan, ...props.forecastDataByPlan].forEach(item => {
+        let categoryKey;
+        let displayName;
+        
+        // Check if this is forecast data or sales data
+        const isForecastData = item.hasOwnProperty('accommodation_revenue') || item.hasOwnProperty('non_accommodation_revenue');
+        
+        // Try multiple possible field names for category IDs
+        const typeCategoryId = item.plan_type_category_id || item.type_category_id;
+        const packageCategoryId = item.plan_package_category_id || item.package_category_id;
+        const typeCategoryName = item.type_category_name || item.plan_type_category_name;
+        const packageCategoryName = item.package_category_name || item.plan_package_category_name;
+        
+        if (typeCategoryId && packageCategoryId) {
+            // New category-based structure - use ID combination as key
+            categoryKey = `${typeCategoryId}_${packageCategoryId}`;
+            displayName = `${typeCategoryName || '未設定'} - ${packageCategoryName || '未設定'}`;
+        } else if (item.plan_name) {
+            // Fallback to plan name for backward compatibility or addons
+            categoryKey = item.plan_name;
+            displayName = item.plan_name;
         } else {
-            // 通常売上 should only include accommodation_sales, not other_sales
-            combined[planName].regular_sales += parseFloat(item.accommodation_sales || 0);
-            combined[planName].regular_net_sales += parseFloat(item.accommodation_sales_net || 0);
+            // Fallback for data without category IDs or plan names
+            categoryKey = 'unset_unset';
+            displayName = '未設定 - 未設定';
         }
-    });
-
-    props.forecastDataByPlan.forEach(forecastItem => {
-        // Handle both old plan-based and new category-based data structure
-        const planName = forecastItem.plan_name || 
-                        `${forecastItem.type_category_name || '未設定'} - ${forecastItem.package_category_name || '未設定'}`;
         
-        if (!combined[planName]) {
-            combined[planName] = {
-                plan_name: planName,
-                sales_category: 'forecast', // Assign a category for forecast items if needed
+        if (!combined[categoryKey]) {
+            combined[categoryKey] = {
+                plan_name: displayName,
+                sales_category: item.sales_category || 'forecast',
                 regular_sales: 0,
                 cancelled_sales: 0,
                 regular_net_sales: 0,
@@ -198,19 +196,39 @@ const combinedSalesByPlan = computed(() => {
             };
         }
         
-        // Handle both accommodation and non-accommodation revenue
-        const accommodationRevenue = parseFloat(forecastItem.accommodation_revenue || 0);
-        const nonAccommodationRevenue = parseFloat(forecastItem.non_accommodation_revenue || 0);
-        combined[planName].forecast_sales += accommodationRevenue + nonAccommodationRevenue;
+        if (isForecastData) {
+            // Handle forecast data
+            const accommodationRevenue = parseFloat(item.accommodation_revenue || 0);
+            const nonAccommodationRevenue = parseFloat(item.non_accommodation_revenue || 0);
+            combined[categoryKey].forecast_sales += accommodationRevenue + nonAccommodationRevenue;
+        } else {
+            // Handle sales data
+            if (item.is_cancelled_billable) {
+                combined[categoryKey].cancelled_sales += parseFloat(item.accommodation_sales || 0) + parseFloat(item.other_sales || 0);
+                combined[categoryKey].cancelled_net_sales += parseFloat(item.accommodation_sales_net || 0) + parseFloat(item.other_sales_net || 0);
+            } else {
+                // 通常売上 should only include accommodation_sales, not other_sales
+                combined[categoryKey].regular_sales += parseFloat(item.accommodation_sales || 0);
+                combined[categoryKey].regular_net_sales += parseFloat(item.accommodation_sales_net || 0);
+            }
+        }
     });
 
-    const result = Object.values(combined);
-    //console.log('[SalesByPlan] Combined data:', result);
-    return result;
+    return Object.values(combined);
 });
 
 const processedSalesByPlan = computed(() => {
-    const sortedData = [...combinedSalesByPlan.value];
+    // Filter out categories with zero total sales
+    const filteredData = combinedSalesByPlan.value.filter(item => {
+        const totalSales = item.regular_sales + item.cancelled_sales;
+        const totalNetSales = item.regular_net_sales + item.cancelled_net_sales;
+        const totalForecastSales = item.forecast_sales;
+        
+        // Include if any of the sales values are greater than 0
+        return totalSales > 0 || totalNetSales > 0 || totalForecastSales > 0;
+    });
+
+    const sortedData = [...filteredData];
     sortedData.sort((a, b) => {
         // Primary sort by regular_sales (descending)
         if (b.regular_sales !== a.regular_sales) {
@@ -254,8 +272,15 @@ const processSalesByPlanChartData = () => {
 const initSalesByPlanChart = () => {
     if (!salesByPlanChart.value) return;
 
-    const chartData = processedSalesByPlan.value;
-    const planNames = chartData.map(item => item.plan_name);
+    // Filter out categories with zero total sales for the chart
+    const filteredChartData = processedSalesByPlan.value.filter(item => {
+        const totalSales = salesByPlanChartMode.value === 'tax_included' 
+            ? (item.regular_sales + item.cancelled_sales)
+            : (item.regular_net_sales + item.cancelled_net_sales);
+        return totalSales > 0;
+    });
+
+    const planNames = filteredChartData.map(item => item.plan_name);
 
     let regularSalesData;
     let cancelledSalesData;
@@ -264,15 +289,15 @@ const initSalesByPlanChart = () => {
     let axisLabel;
 
     if (salesByPlanChartMode.value === 'tax_included') {
-        regularSalesData = chartData.map(item => item.regular_sales);
-        cancelledSalesData = chartData.map(item => item.cancelled_sales);
-        forecastSalesData = chartData.map(item => item.forecast_sales);
+        regularSalesData = filteredChartData.map(item => item.regular_sales);
+        cancelledSalesData = filteredChartData.map(item => item.cancelled_sales);
+        forecastSalesData = filteredChartData.map(item => item.forecast_sales);
         valueLabel = ' 万円 (税込み)';
         axisLabel = '売上 (税込み)';
     } else {
-        regularSalesData = chartData.map(item => item.regular_net_sales);
-        cancelledSalesData = chartData.map(item => item.cancelled_net_sales);
-        forecastSalesData = chartData.map(item => item.forecast_sales);
+        regularSalesData = filteredChartData.map(item => item.regular_net_sales);
+        cancelledSalesData = filteredChartData.map(item => item.cancelled_net_sales);
+        forecastSalesData = filteredChartData.map(item => item.forecast_sales);
         valueLabel = ' 万円 (税抜き)';
         axisLabel = '売上 (税抜き)';
     }
