@@ -85,6 +85,21 @@
               @openCopyPlansDialog="showCopyPlansDialog = true" @openEditPlanDialog="openEditHotelDialog"
               @switchEditHotelPlanRate="switchEditHotelPlanRate" @orderChanged="handleOrderChange"
               v-if="!showHotelRatePanel" />
+            
+            <!-- Hotel Rates Panel -->
+            <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
+              <div class="grid xs:grid-cols-1 grid-cols-3 gap-2">
+                <div class="flex justify-start mb-2">
+                  <Button @click="switchEditHotelPlanRate({})" icon="pi pi-arrow-left" label="前へ"
+                    class="p-button-secondary mb-2" />
+                </div>
+                <div class="flex justify-start mb-2">
+                  <span class="font-bold text-lg">{{ selectedPlan.name }}</span>
+                </div>
+              </div>
+
+              <ManagePlansRates :plan="selectedPlan" v-if="showHotelRatePanel" />
+            </div>
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -409,8 +424,20 @@ const switchEditGlobalPlanRate = (plan, context = 'global') => {
     showGlobalRatePanel.value = false;
     selectedPlan.value = {};
   } else {
+    // Ensure the plan has the correct structure for rates component
+    const planForRates = {
+      ...plan,
+      context,
+      // For global plans, we need to set hotel_id to the currently selected hotel
+      hotel_id: selectedHotelId.value,
+      // Global plans use their id as plans_global_id and 0 for plans_hotel_id
+      plans_global_id: plan.id,
+      plans_hotel_id: 0,
+    };
+    console.log('switchEditGlobalPlanRate: Plan data for rates:', planForRates);
+    console.log('switchEditGlobalPlanRate: Numeric IDs - plans_global_id:', planForRates.plans_global_id, 'plans_hotel_id:', planForRates.plans_hotel_id, 'hotel_id:', planForRates.hotel_id);
     showGlobalRatePanel.value = true;
-    selectedPlan.value = { ...plan, context };
+    selectedPlan.value = planForRates;
   }
 };
 const switchEditHotelPlanRate = (plan, context = 'hotel') => {
@@ -418,8 +445,20 @@ const switchEditHotelPlanRate = (plan, context = 'hotel') => {
     showHotelRatePanel.value = false;
     selectedPlan.value = {};
   } else {
+    // Ensure the plan has the correct structure for rates component
+    const planForRates = {
+      ...plan,
+      context,
+      // Override id with the numeric plans_hotel_id for rates component
+      id: plan.plans_hotel_id, // Use numeric plans_hotel_id instead of plan_key
+      // Use the parsed values for API calls
+      plans_global_id: plan.plans_global_id || 0, // Use 0 if null for API compatibility
+      plans_hotel_id: plan.plans_hotel_id, // Use numeric plans_hotel_id
+    };
+    console.log('switchEditHotelPlanRate: Plan data for rates:', planForRates);
+    console.log('switchEditHotelPlanRate: Numeric IDs - plans_global_id:', planForRates.plans_global_id, 'plans_hotel_id:', planForRates.plans_hotel_id, 'hotel_id:', planForRates.hotel_id);
     showHotelRatePanel.value = true;
-    selectedPlan.value = { ...plan, context };
+    selectedPlan.value = planForRates;
   }
 };
 
@@ -451,14 +490,22 @@ watch(selectedHotelId, async (newVal) => {
     const fetchedPlans = await fetchHotelPlans(newVal);
     // Enhance hotelPlans with category names
     hotelPlans.value = (fetchedPlans || []).map(plan => {
+      // Parse plan_key to extract plans_global_id and plans_hotel_id for rates component
+      const match = plan.plan_key?.match(/^(\d*)h(\d+)?$/);
+      const parsed_plans_global_id = match?.[1] ? parseInt(match[1]) : null;
+      const parsed_plans_hotel_id = match?.[2] ? parseInt(match[2]) : null;
+      
       const enhanced = {
         ...plan,
         plans_hotel_id: plan.id, // Preserve the original id as plans_hotel_id
         id: plan.plan_key, // Map plan_key for DataTable dataKey
+        // Add parsed values for rates component compatibility
+        plans_global_id: plan.plans_global_id || parsed_plans_global_id,
+        parsed_plans_hotel_id: parsed_plans_hotel_id,
         plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
         plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
       };
-      console.log('Enhanced plan:', enhanced.name, 'plans_hotel_id:', enhanced.plans_hotel_id, 'id:', enhanced.id);
+      console.log('Enhanced plan:', enhanced.name, 'plans_hotel_id:', enhanced.plans_hotel_id, 'parsed_plans_hotel_id:', enhanced.parsed_plans_hotel_id, 'plans_global_id:', enhanced.plans_global_id);
       return enhanced;
     });
     loading.value = false;

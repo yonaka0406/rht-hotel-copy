@@ -696,8 +696,8 @@
     // Panel    
     const selectedDate = ref(new Date().toISOString().split('T')[0]);
     const planId = ref({                
-        plans_global_id: props.plan.context === 'global' ? props.plan.id : 0,
-        plans_hotel_id: props.plan.context === 'hotel' ? props.plan.id : 0,
+        plans_global_id: props.plan.context === 'global' ? props.plan.id : (props.plan.plans_global_id || 0),
+        plans_hotel_id: props.plan.context === 'hotel' ? props.plan.plans_hotel_id : 0,
         hotel_id: props.plan.context === 'hotel' ? props.plan.hotel_id : 0, 
         date: selectedDate,
     });
@@ -781,8 +781,8 @@
             newAdjustment.value.plans_global_id = props.plan.id;
             newAdjustment.value.plans_hotel_id = null;
         } else if (props.plan.context === 'hotel') {
-            newAdjustment.value.plans_global_id = null;
-            newAdjustment.value.plans_hotel_id = props.plan.id;
+            newAdjustment.value.plans_global_id = props.plan.plans_global_id || 0;
+            newAdjustment.value.plans_hotel_id = props.plan.plans_hotel_id;
             newAdjustment.value.hotel_id = props.plan.hotel_id;
         }
         showAdjustmentDialog.value = true;
@@ -887,7 +887,12 @@
         // console.log('[saveAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/${props.plan.id}/rates`, {
+            // Use the correct numeric IDs for the API call
+            const globalId = props.plan.context === 'global' ? props.plan.id : (props.plan.plans_global_id || 0);
+            const hotelId = props.plan.context === 'hotel' ? props.plan.plans_hotel_id : 0;
+            const hotelIdParam = props.plan.context === 'hotel' ? props.plan.hotel_id : 0;
+            
+            const response = await fetch(`/api/plans/${globalId}/${hotelId}/${hotelIdParam}/rates`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -1198,7 +1203,8 @@
                 startDate.setHours(0, 0, 0, 0);
                 const endDate = condition.date_end ? new Date(condition.date_end) : null;
                 if (endDate) endDate.setHours(0, 0, 0, 0);
-                return startDate < selectedDateObj && endDate != null;
+                // A condition is "past" only if it has an end date AND the end date is before the selected date
+                return endDate && endDate < selectedDateObj;
             });
     });    
             
