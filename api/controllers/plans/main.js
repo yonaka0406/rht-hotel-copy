@@ -19,6 +19,7 @@ const getHotelsPlans = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
 const getHotelPlans = async (req, res) => {
     const hotel_id = parseInt(req.params.hotel_id);
 
@@ -34,6 +35,7 @@ const getHotelPlans = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
 const fetchAllHotelPlans = async (req, res) => {
     const hotel_id = parseInt(req.params.hotel_id);
 
@@ -49,41 +51,6 @@ const fetchAllHotelPlans = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
-const getGlobalPatterns = async (req, res) => {
-    try {
-        const patterns = await planModels.selectGlobalPatterns(req.requestId);
-        res.json(patterns);
-    } catch (error) {
-        console.error('Error getting global patterns:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
-const getHotelPatterns = async (req, res) => {
-    try {
-        const patterns = await planModels.selectAllHotelPatterns(req.requestId);
-        res.json(patterns);
-    } catch (error) {
-        console.error('Error getting hotel patterns:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
-const fetchAllHotelPatterns = async (req, res) => {
-    const hotel_id = parseInt(req.params.hotel_id);
-
-    if (!hotel_id) {
-        return res.status(400).json({ error: 'Hotel ID is required' });
-    }
-
-    try {
-        const Plans = await planModels.selectPatternsByHotel(req.requestId, hotel_id);
-        res.json(Plans);
-    } catch (error) {
-        console.error('Error getting hotel patterns:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
-
 
 // POST
 const createGlobalPlan = async (req, res) => {
@@ -102,35 +69,54 @@ const createGlobalPlan = async (req, res) => {
     }
 };
 const createHotelPlan = async (req, res) => {
-    const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
+    const {
+        hotel_id,
+        plan_type_category_id,
+        plan_package_category_id,
+        name,
+        description,
+        plan_type,
+        color: receivedColor, // Destructure 'color' and rename to avoid shadowing
+        display_order,
+        is_active,
+        available_from,
+        available_until
+    } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
-    const color = '#' + colorHEX;
+    // Ensure color has a '#' prefix
+    let color = receivedColor;
+    if (color && !color.startsWith('#')) {
+        color = '#' + color;
+    }
 
     try {
-        const newPlan = await planModels.insertHotelPlan(req.requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by);
+        const newPlan = await planModels.insertHotelPlan(
+            req.requestId,
+            hotel_id,
+            plan_type_category_id,
+            plan_package_category_id,
+            name,
+            description,
+            plan_type,
+            color,
+            display_order,
+            is_active,
+            available_from,
+            available_until,
+            created_by,
+            updated_by
+        );
         res.json(newPlan);
     } catch (err) {
         console.error('Error creating hotel Plan:', err);
         res.status(500).json({ error: 'Failed to create hotel Plan' });
     }
 };
-const createPlanPattern = async (req, res) => {
-    const { hotel_id, name, template } = req.body;
-    const user_id = req.user.id;    
-
-    try {
-        const newData = await planModels.insertPlanPattern(req.requestId, hotel_id, name, template, user_id);
-        res.json(newData);
-    } catch (err) {
-        console.error('Error creating plan pattern:', err);
-        res.status(500).json({ error: 'Failed to create plan pattern' });
-    }
-};
 
 // PUT
-const editGlobalPlan = async (req, res) => {    
+const editGlobalPlan = async (req, res) => {
     const { id } = req.params;
     const { name, description, plan_type, colorHEX } = req.body;
     const updated_by = req.user.id;
@@ -147,30 +133,79 @@ const editGlobalPlan = async (req, res) => {
 };
 const editHotelPlan = async (req, res) => {
     const { id } = req.params;
-    const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
+    const {
+        hotel_id,
+        plan_type_category_id,
+        plan_package_category_id,
+        plan_name,
+        description,
+        plan_type,
+        color: receivedColor,
+        display_order,
+        is_active,
+        available_from,
+        available_until
+    } = req.body;
     const updated_by = req.user.id;
 
-    const color = '#' + colorHEX;
+    // Ensure color has a '#' prefix
+    let color = receivedColor;
+    if (color && !color.startsWith('#')) {
+        color = '#' + color;
+    }
+
+    // Map plan_name to name for consistency with model function
+    const name = plan_name;
+
+    // Ensure name is not empty or null
+    if (name === undefined || name === null || (typeof name === 'string' && name.trim() === '')) {
+        return res.status(400).json({ error: 'Plan name cannot be empty.' });
+    }
 
     try {
-        const updatedPlan = await planModels.updateHotelPlan(req.requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by);
+        const updatedPlan = await planModels.updateHotelPlan(
+            req.requestId,
+            id,
+            hotel_id,
+            plan_type_category_id,
+            plan_package_category_id,
+            name,
+            description,
+            plan_type,
+            color,
+            display_order,
+            is_active,
+            available_from,
+            available_until,
+            updated_by
+        );
         res.json(updatedPlan);
     } catch (err) {
         console.error('Error updating hotel Plan:', err);
         res.status(500).json({ error: 'Failed to update hotel Plan' });
     }
 };
-const editPlanPattern = async (req, res) => {
-    const { id } = req.params;
-    const { name, template } = req.body;
-    const user_id = req.user.id;    
+const updatePlansOrderBulk = async (req, res) => {
+    const { hotel_id } = req.params; // Correctly extract hotel_id from req.params
+    let plans = req.body; // Incoming plans data
+    const updated_by = req.user.id;
+
+    // Ensure plans is an array, convert from object if necessary (happens with some body-parser setups)
+    if (!Array.isArray(plans)) {
+        plans = Object.values(plans);
+    }
 
     try {
-        const newData = await planModels.editPlanPattern(req.requestId, id, name, template, user_id);
-        res.json(newData);
-    } catch (err) {
-        console.error('Error editing plan pattern:', err);
-        res.status(500).json({ error: 'Failed to edit plan pattern' });
+        const updatedPlans = await planModels.updatePlansOrderBulk(
+            req.requestId,
+            parseInt(hotel_id), // Ensure hotel_id is an integer
+            plans,
+            updated_by
+        );
+        res.json(updatedPlans);
+    } catch (error) {
+        console.error('Error updating plan display order:', error);
+        res.status(500).json({ error: error.message });
     }
 };
 
@@ -179,13 +214,9 @@ module.exports = {
     getHotelsPlans,
     getHotelPlans,
     fetchAllHotelPlans,
-    getGlobalPatterns,
-    getHotelPatterns,
-    fetchAllHotelPatterns,
     createGlobalPlan,
     createHotelPlan,
-    createPlanPattern,
     editGlobalPlan,
     editHotelPlan,
-    editPlanPattern,
+    updatePlansOrderBulk,
 };
