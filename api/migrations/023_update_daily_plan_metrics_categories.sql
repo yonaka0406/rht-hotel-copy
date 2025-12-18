@@ -21,23 +21,12 @@ COMMENT ON COLUMN daily_plan_metrics.other_net_sales IS 'Net sales from other (n
 COMMENT ON COLUMN daily_plan_metrics.accommodation_net_sales_cancelled IS 'Net sales from accommodation rates and addons (cancelled)';
 COMMENT ON COLUMN daily_plan_metrics.other_net_sales_cancelled IS 'Net sales from other (non-accommodation) rates and addons (cancelled)';
 
--- Migrate existing data to use categories from plans_hotel
-UPDATE daily_plan_metrics dpm
-SET 
-    plan_type_category_id = ph.plan_type_category_id,
-    plan_package_category_id = ph.plan_package_category_id
-FROM plans_hotel ph
-WHERE dpm.plans_hotel_id = ph.id 
-AND dpm.hotel_id = ph.hotel_id
-AND ph.plan_type_category_id IS NOT NULL 
-AND ph.plan_package_category_id IS NOT NULL;
-
 -- For records that don't have hotel plans but have global plans, we'll leave categories as NULL
 -- since global plans don't have categories in our current structure
 
 -- Drop the old unique constraint
 ALTER TABLE daily_plan_metrics 
-DROP CONSTRAINT daily_plan_metrics_metric_date_month_hotel_id_plans_global_i_key;
+DROP CONSTRAINT daily_plan_metrics_metric_date_month_hotel_id_plans_global__key;
 
 -- Add new unique constraint with categories
 ALTER TABLE daily_plan_metrics 
