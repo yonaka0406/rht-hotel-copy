@@ -155,31 +155,16 @@ const emit = defineEmits([
 const activeTab = ref(0);
 
 const activePlans = computed(() => {
-    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => plan.is_active) : [];
-    console.log('ManageHotelPlansTable - activePlans computed:', {
-        selectedHotelId: props.selectedHotelId,
-        totalHotelPlans: props.hotelPlans?.length || 0,
-        activePlansCount: filtered.length,
-        activePlans: filtered.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id }))
-    });
+    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => plan.is_active) : [];    
     return filtered;
 });
 
 const inactivePlans = computed(() => {
-    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => !plan.is_active) : [];
-    console.log('ManageHotelPlansTable - inactivePlans computed:', {
-        selectedHotelId: props.selectedHotelId,
-        inactivePlansCount: filtered.length,
-        inactivePlans: filtered.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id }))
-    });
+    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => !plan.is_active) : [];    
     return filtered;
 });
 
-const onRowReorder = (event) => {
-    console.log('ManageHotelPlansTable - onRowReorder:', {
-        selectedHotelId: props.selectedHotelId,
-        reorderedPlans: event.value.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id, display_order: p.display_order }))
-    });
+const onRowReorder = (event) => {    
     emit('orderChanged', event.value);
 };
 

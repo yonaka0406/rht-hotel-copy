@@ -35,7 +35,6 @@ const copyPlanToHotel = async (req, res) => {
             sourceHotelId,
             targetHotelId
         });
-        console.error('Error copying plan to hotel:', error);
         res.status(500).json({ error: 'Failed to copy plan to hotel' });
     }
 };
@@ -74,7 +73,6 @@ const bulkCopyPlansToHotel = async (req, res) => {
             sourceHotelId,
             targetHotelId
         });
-        console.error('Error bulk copying plans to hotel:', error);
         res.status(500).json({ error: 'Failed to bulk copy plans to hotel' });
     }
 };

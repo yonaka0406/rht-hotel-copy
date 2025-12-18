@@ -202,8 +202,7 @@ const saveHotelPlan = async () => {
         toast.add({ severity: 'error', summary: 'エラー', detail: '利用可能日 (開始)は利用可能日 (終了)より前に設定してください。', life: 3000 });
         return;
     }
-
-    console.log('AddHotelPlanDialog.vue: newHotelPlan.value.colorHEX before planData construction', newHotelPlan.value.colorHEX); // Debug log
+    
     try {
         const planData = { ...newHotelPlan.value, color: `#${newHotelPlan.value.colorHEX}` };
         delete planData.colorHEX; // Remove colorHEX as 'color' is sent instead

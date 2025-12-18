@@ -5,8 +5,8 @@ const getGlobalPatterns = async (req, res) => {
         const patterns = await planModels.selectGlobalPatterns(req.requestId);
         res.json(patterns);
     } catch (error) {
-        console.error('Error getting global patterns:', error);
-        res.status(500).json({ error: error.message });
+        console.error(`${req.requestId} - Error getting global patterns:`, error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
@@ -15,7 +15,7 @@ const getHotelPatterns = async (req, res) => {
         const patterns = await planModels.selectAllHotelPatterns(req.requestId);
         res.json(patterns);
     } catch (error) {
-        console.error('Error getting hotel patterns:', error);
+        console.error(`${req.requestId} - Error getting hotel patterns:`, error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -32,7 +32,7 @@ const fetchAllHotelPatterns = async (req, res) => {
         const Plans = await planModels.selectPatternsByHotel(req.requestId, hotel_id);
         res.json(Plans);
     } catch (error) {
-        console.error('Error getting hotel patterns:', error);
+        console.error(`${req.requestId} - Error getting hotel patterns:`, error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -53,7 +53,7 @@ const createPlanPattern = async (req, res) => {
         const newData = await planModels.insertPlanPattern(req.requestId, hotel_id, name, template, user_id);
         res.json(newData);
     } catch (err) {
-        console.error('Error creating plan pattern:', err);
+        console.error(`${req.requestId} - Error creating plan pattern:`, err);
         res.status(500).json({ error: 'Failed to create plan pattern' });
     }
 };
@@ -82,7 +82,7 @@ const editPlanPattern = async (req, res) => {
         const newData = await planModels.updatePlanPattern(req.requestId, id, name, template, user_id);
         res.json(newData);
     } catch (err) {
-        console.error('Error editing plan pattern:', err);
+        console.error(`${req.requestId} - Error editing plan pattern:`, err);
         res.status(500).json({ error: 'Failed to edit plan pattern' });
     }
 };
@@ -102,7 +102,7 @@ const deletePlanPattern = async (req, res) => {
         }
         res.json({ message: 'Plan pattern deleted successfully', deletedPattern });
     } catch (err) {
-        console.error('Error deleting plan pattern:', err);
+        console.error(`${req.requestId} - Error deleting plan pattern:`, err);
         res.status(500).json({ error: 'Failed to delete plan pattern' });
     }
 };
