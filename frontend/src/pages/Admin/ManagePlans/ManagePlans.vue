@@ -1,6 +1,14 @@
 <template>
   <div class="p-4">
-    <Panel header="プラン">
+    <Panel :header="`プラン (${selectedHotelName})`" class="mb-4">
+      <div class="mb-4 mt-6" v-if="!showHotelRatePanel">
+        <FloatLabel>
+          <Select v-model="selectedHotelId" :options="hotels" optionLabel="name" optionValue="id" placeholder="ホテルを選択"
+            class="w-full" />
+          <label>ホテル選択</label>
+        </FloatLabel>
+      </div>
+
       <Tabs :value="activeTab" @update:value="onTabChange">
         <TabList>
           <Tab value="0">
@@ -65,81 +73,12 @@
             </div>
           </TabPanel>
           <TabPanel value="1">
-            <DataTable :value="hotels">
-              <Column field="name" header="名称"></Column>
-              <Column>
-                <template #header>
-                  <span class="font-bold">プランカウント</span>
-                </template>
-                <template #body="slotProps">
-                  <Badge :value="getPlansCount(slotProps.data.id)" severity="secondary"></Badge>
-                </template>
-              </Column>
-              <Column header="操作">
-                <template #body="slotProps">
-                  <Button @click="selectHotel(slotProps.data)" severity="info" rounded>選択する</Button>
-                </template>
-              </Column>
-            </DataTable>
-          </TabPanel>
-          <TabPanel v-if="selectedHotel" :value="2">
-            <div id="hotelTabPanel" v-show="!showHotelRatePanel">
-              <div class="flex justify-end mb-2">
-                <Button @click="showHotelDialog = true" icon="pi pi-plus" label="プラン追加" class="p-button-right"></Button>
-              </div>
-              <DataTable :value="filteredHotelPlans">
-                <Column field="name" header="名称" style="width: 20%"></Column>
-                <Column field="plan_type" headerClass="text-center" style="width: 10%">
-                  <template #header>
-                    <span class="font-bold text-center w-full block">プランタイプ</span>
-                  </template>
-                  <template #body="slotProps">
-                    <div class="flex items-center justify-center">
-                      <i v-if="slotProps.data.plan_type === 'per_person'" class="pi pi-id-card"
-                        style="color: darkgoldenrod;"></i>
-                      <i v-if="slotProps.data.plan_type === 'per_room'" class="pi pi-shop" style="color: brown;"></i>
-                    </div>
-                  </template>
-                </Column>
-                <Column field="description" header="詳細" style="width: 20%"></Column>
-                <Column headerClass="text-center" style="width: 10%">
-                  <template #header>
-                    <span class="font-bold text-center w-full block">ステータス</span>
-                  </template>
-                  <template #body="slotProps">
-                    <div class="flex items-center justify-center">
-                      <i v-if="slotProps.data.plans_global_id" class="pi pi-link" style="color: blue;"></i>
-                    </div>
-                  </template>
-                </Column>
-                <Column headerClass="text-center" style="width: 10%">
-                  <template #header>
-                    <span class="font-bold text-center w-full block">操作</span>
-                  </template>
-                  <template #body="slotProps">
-                    <div class="flex items-center justify-center">
-                      <Button icon="pi pi-pencil" class="p-button-text p-button-sm"
-                        @click="openEditHotelDialog(slotProps.data)" v-tooltip="'プラン編集'" />
-                      <Button icon="pi pi-dollar" class="p-button-text p-button-sm"
-                        @click="switchEditHotelPlanRate(slotProps.data)" v-tooltip="'料金編集'" />
-                    </div>
-                  </template>
-                </Column>
-              </DataTable>
-            </div>
-            <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
-              <div class="grid xs:grid-cols-1 grid-cols-3 gap-2">
-                <div class="flex justify-start mb-2">
-                  <Button @click="switchEditHotelPlanRate({})" icon="pi pi-arrow-left" label="前へ"
-                    class="p-button-secondary mb-2" />
-                </div>
-                <div class="flex justify-start mb-2">
-                  <span class="font-bold text-lg">{{ selectedPlan.name }}</span>
-                </div>
-              </div>
-
-              <ManagePlansRates :plan="selectedPlan" v-if="showHotelRatePanel" />
-            </div>
+            <!-- Extracted Plans Table Component -->
+            <ManageHotelPlansTable :hotelPlans="hotelPlans" :showHotelRatePanel="showHotelRatePanel"
+              :selectedHotelId="selectedHotelId" @openAddPlanDialog="showHotelDialog = true"
+              @openCopyPlansDialog="showCopyPlansDialog = true" @openEditPlanDialog="openEditHotelDialog"
+              @switchEditHotelPlanRate="switchEditHotelPlanRate" @orderChanged="handleOrderChange"
+              v-if="!showHotelRatePanel" />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -323,23 +262,31 @@
 
 <script setup>
 // Vue
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 
 import ManagePlansRates from './components/ManagePlansRates.vue';
 import ManagePlansPatterns from './components/ManagePlansPatterns.vue';
+import CopyPlansDialog from './components/dialogs/CopyPlansDialog.vue';
+import AddHotelPlanDialog from './components/dialogs/AddHotelPlanDialog.vue';
+import EditHotelPlanDialog from './components/dialogs/EditHotelPlanDialog.vue';
+import ManageHotelPlansTable from './components/ManageHotelPlansTable.vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels, fetchHotels } = useHotelStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, fetchPlansGlobal, fetchPlansHotel, createGlobalPlan, updateGlobalPlan, createHotelPlan, updateHotelPlan } = usePlansStore();
+const { plans, fetchPlansGlobal, fetchPlansHotel, createGlobalPlan, updateGlobalPlan, createHotelPlan, updateHotelPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
+import Panel from 'primevue/panel';
+import FloatLabel from 'primevue/floatlabel';
+import Select from 'primevue/select';
+import Button from 'primevue/button';
 import {
-  Panel, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column,
-  FloatLabel, InputText, ColorPicker, Textarea, Select, SelectButton, Button, Badge
+  Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column,
+  InputText, ColorPicker, Textarea, SelectButton, Badge
 } from 'primevue'
 
 // Helper
@@ -347,17 +294,28 @@ const isEmptyObject = (obj) => {
   return Object.keys(obj).length === 0 && obj.constructor === Object;
 };
 
-// Tabs
-const activeTab = ref(0);
-const selectedHotel = ref(null);
 const globalPlans = ref([]);
 const hotelPlans = ref([]);
 const loading = ref(false);
+const selectedHotelId = ref(null);
+
+const selectedHotelName = computed(() => {
+  const hotel = hotels.value.find(h => h.id === selectedHotelId.value);
+  return hotel ? hotel.name : 'ホテル選択';
+});
 
 const sb_options = ref([
   { label: '部屋', value: 'per_room' },
   { label: '１人当たり', value: 'per_person' },
 ]);
+
+const planTypeCategories = ref([]);
+const planPackageCategories = ref([]);
+
+// Tabs
+const activeTab = ref(0);
+const selectedHotel = ref(null);
+
 const onTabChange = (newTabValue) => {
   activeTab.value = newTabValue; // Update activeTab value when tab changes
 };
@@ -469,13 +427,97 @@ const newHotelPlan = ref({
 const editHotelPlan = ref({
   id: null,
   hotel_id: null,
-  plans_global_id: null,
   name: '',
   description: '',
-  colorHEX: 'D3D3D3'
+  plan_type: 'per_room',
+  colorHEX: 'D3D3D3',
+  plan_type_category_id: null,
+  plan_package_category_id: null,
+  display_order: 0,
+  is_active: true,
+  available_from: null,
+  available_until: null,
 });
 const showHotelDialog = ref(false);
 const showEditHotelDialog = ref(false);
+const openEditHotelDialog = async (data) => {
+  editHotelPlan.value = {
+    ...data
+    , colorHEX: data.color.replace('#', '')
+  };
+  showEditHotelDialog.value = true;
+};
+
+const onPlanModified = async () => {
+  if (selectedHotelId.value) {
+    await fetchPlansHotel(selectedHotelId.value, true);
+    hotelPlans.value = plans.value;
+    await reindexPlans(); // Reindex after plans are modified (full sort)
+  }
+};
+
+const onRowReorder = async (event) => {
+  hotelPlans.value = event.value; // The reordered list from DataTable
+  const plansWithNewOrder = hotelPlans.value.map((plan, index) => ({
+    ...plan,
+    display_order: index,
+  }));
+  try {
+    await updatePlansOrderBulk(selectedHotelId.value, plansWithNewOrder);
+    toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
+  } catch (error) {
+    toast.add({ severity: 'error', summary: '失敗', detail: 'プランの表示順序の更新に失敗しました。', life: 3000 });
+  }
+};
+
+const handleOrderChange = async (updatedPlansArray) => { // This will now receive the reordered array from child component
+  console.log('handleOrderChange: updatedPlansArray type:', typeof updatedPlansArray, 'value:', updatedPlansArray); // Debug log
+  if (!Array.isArray(updatedPlansArray)) {
+    console.error('handleOrderChange: updatedPlansArray is not an array!', updatedPlansArray);
+    toast.add({ severity: 'error', summary: 'エラー', detail: 'プランの順序更新に失敗しました: 無効なデータを受信しました。', life: 3000 });
+    return;
+  }
+  // Assuming updatedPlansArray is the new ordered array of plans from the child DataTable
+  hotelPlans.value = updatedPlansArray; // Update parent's hotelPlans
+  await reindexPlans(true); // Call reindexing logic, preserving current order
+};
+
+// New function to reindex plans and update them in bulk
+const reindexPlans = async (preserveCurrentOrder = false) => { // Added parameter
+  let plansToReindex = [...hotelPlans.value]; // Start with current plans
+
+  if (!preserveCurrentOrder) {
+    // Separate active and inactive plans
+    const active = plansToReindex.filter(plan => plan.is_active);
+    const inactive = plansToReindex.filter(plan => !plan.is_active);
+
+    // Sort active plans by their current display_order or name if order is same
+    active.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || a.plan_name.localeCompare(b.plan_name));
+    // Sort inactive plans by their current display_order or name
+    inactive.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || a.plan_name.localeCompare(b.plan_name));
+
+    plansToReindex = [...active, ...inactive];
+  }
+
+  // Combine and re-assign display_order sequentially based on plansToReindex
+  const reindexedPlans = plansToReindex.map((plan, index) => ({
+    ...plan,
+    display_order: index,
+  }));
+
+  // Update local state and then send to backend
+  hotelPlans.value = reindexedPlans;
+
+  console.log('reindexPlans: Sending to backend:', reindexedPlans); // Add this log
+
+  try {
+    await updatePlansOrderBulk(selectedHotelId.value, reindexedPlans);
+    toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
+  } catch (error) {
+    toast.add({ severity: 'error', summary: '失敗', detail: 'プランの表示順序の更新に失敗しました。', life: 3000 });
+  }
+};
+
 const filteredHotelPlans = computed(() => {
   if (selectedHotel.value) {
     const filtered = hotelPlans.value.filter(plan => plan.hotel_id === selectedHotel.value.id);
@@ -486,13 +528,6 @@ const filteredHotelPlans = computed(() => {
 });
 const getPlansCount = (hotel_id) => {
   return hotelPlans.value.filter(plan => plan.hotel_id === hotel_id).length;
-};
-const openEditHotelDialog = async (data) => {
-  editHotelPlan.value = {
-    ...data
-    , colorHEX: data.color.replace('#', '')
-  };
-  showEditHotelDialog.value = true;
 };
 const saveHotelPlan = async () => {
   newHotelPlan.value.hotel_id = selectedHotel.value.id;
@@ -599,15 +634,39 @@ const switchEditHotelPlanRate = (plan, context = 'hotel') => {
 onMounted(async () => {
   loading.value = true
 
-  await fetchPlansGlobal();
-  globalPlans.value = plans.value;
-  await fetchPlansHotel();
-  hotelPlans.value = plans.value;
-  await fetchHotels();
+  try {
+    await fetchPlansGlobal();
+    globalPlans.value = plans.value;
+    await fetchPlansHotel();
+    hotelPlans.value = plans.value;
+    await fetchHotels();
+    planTypeCategories.value = await fetchPlanTypeCategories();
+    planPackageCategories.value = await fetchPlanPackageCategories();
 
-  loading.value = false
-  // console.log('onMounted ManagePlans:', globalPlans.value);
-  // console.log('onMounted ManagePlans:', hotelPlans.value);
+    if (hotels.value.length > 0) {
+      selectedHotelId.value = hotels.value[0].id; // Initialize selectedHotelId
+    }
+  } catch (error) {
+    console.error('Error in ManagePlans mounted hook:', error);
+    toast.add({ severity: 'error', summary: 'エラー', detail: '初期データの読み込みに失敗しました。', life: 5000 });
+  } finally {
+    loading.value = false;
+  }
+});
 
+// Watcher for selectedHotelId
+watch(selectedHotelId, async (newVal) => {
+  if (newVal) {
+    loading.value = true;
+    await fetchPlansHotel(newVal, true);
+    // Enhance hotelPlans with category names
+    hotelPlans.value = plans.value.map(plan => ({
+      ...plan,
+      id: plan.plan_key, // Map plan_id to plan_key for DataTable dataKey
+      plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
+      plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
+    }));
+    loading.value = false;
+  }
 });
 </script>
