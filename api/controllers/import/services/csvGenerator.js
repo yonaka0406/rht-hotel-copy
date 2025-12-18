@@ -30,13 +30,45 @@ const generateForecastCsv = async (month1, month2, prefilledData = [], hotels = 
   const sortedTypeCategories = [...typeCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
   const sortedPackageCategories = [...packageCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
 
-  sortedHotels.forEach(hotel => {
-    sortedTypeCategories.forEach(typeCategory => {
-      sortedPackageCategories.forEach(packageCategory => {
-        budgetItems.forEach(item => {
-          // For '売上' and '販売客室数', create separate rows for accommodation and non-accommodation
-          if (item === '売上' || item === '販売客室数') {
-            salesCategories.forEach(salesCategory => {
+  // Helper function to check if there's any non-zero data for a sales category
+  const hasNonZeroData = (hotel, typeCategory, packageCategory, salesCategory, item) => {
+    return monthHeaders.some(header => {
+      const [hYear, hMonth] = header.split('-').map(Number);
+      const prefilledRow = prefilledData.find(dataRow => {
+        const dataMonth = new Date(dataRow.month);
+        const isMonthMatch = dataMonth.getFullYear() === hYear && dataMonth.getMonth() + 1 === hMonth;
+        const isHotelMatch = Number(dataRow.hotel_id) === hotel.id;
+        const isTypeCategoryMatch = dataRow.plan_type_category_id === typeCategory.id;
+        const isPackageCategoryMatch = dataRow.plan_package_category_id === packageCategory.id;
+        return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
+      });
+
+      if (!prefilledRow) return false;
+
+      if (item === '売上') {
+        const value = salesCategory.id === 0 ? prefilledRow.accommodation_revenue : prefilledRow.non_accommodation_revenue;
+        return value && parseFloat(value) !== 0;
+      } else if (item === '販売客室数') {
+        const value = salesCategory.id === 0 ? prefilledRow.rooms_sold_nights : prefilledRow.non_accommodation_sold_rooms;
+        return value && parseFloat(value) !== 0;
+      }
+      return false;
+    });
+  };
+
+  // Generate rows for 売上区分=0 (accommodation) first, then 売上区分=1 (non-accommodation)
+  salesCategories.forEach(salesCategory => {
+    sortedHotels.forEach(hotel => {
+      sortedTypeCategories.forEach(typeCategory => {
+        sortedPackageCategories.forEach(packageCategory => {
+          budgetItems.forEach(item => {
+            // For '売上' and '販売客室数', create rows for current sales category
+            if (item === '売上' || item === '販売客室数') {
+              // For 売上区分=1 (non-accommodation), only create row if there's non-zero data
+              if (salesCategory.id === 1 && !hasNonZeroData(hotel, typeCategory, packageCategory, salesCategory, item)) {
+                return; // Skip this row if no non-zero data
+              }
+
               const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, salesCategory.id, item];
               monthHeaders.forEach(header => {
                 const [hYear, hMonth] = header.split('-').map(Number);
@@ -60,33 +92,33 @@ const generateForecastCsv = async (month1, month2, prefilledData = [], hotels = 
                 }
               });
               csvRows.push(row);
-            });
-          } else {
-            // For '営業日数' and '客室数', create single row with sales_category = 0 (accommodation)
-            const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, 0, item];
-            monthHeaders.forEach(header => {
-              const [hYear, hMonth] = header.split('-').map(Number);
-              const prefilledRow = prefilledData.find(dataRow => {
-                const dataMonth = new Date(dataRow.month);
-                const isMonthMatch = dataMonth.getFullYear() === hYear && dataMonth.getMonth() + 1 === hMonth;
-                const isHotelMatch = Number(dataRow.hotel_id) === hotel.id;
-                const isTypeCategoryMatch = dataRow.plan_type_category_id === typeCategory.id;
-                const isPackageCategoryMatch = dataRow.plan_package_category_id === packageCategory.id;
-                return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
-              });
+            } else if (salesCategory.id === 0) {
+              // For '営業日数' and '客室数', only create rows for sales_category = 0 (accommodation)
+              const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, 0, item];
+              monthHeaders.forEach(header => {
+                const [hYear, hMonth] = header.split('-').map(Number);
+                const prefilledRow = prefilledData.find(dataRow => {
+                  const dataMonth = new Date(dataRow.month);
+                  const isMonthMatch = dataMonth.getFullYear() === hYear && dataMonth.getMonth() + 1 === hMonth;
+                  const isHotelMatch = Number(dataRow.hotel_id) === hotel.id;
+                  const isTypeCategoryMatch = dataRow.plan_type_category_id === typeCategory.id;
+                  const isPackageCategoryMatch = dataRow.plan_package_category_id === packageCategory.id;
+                  return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
+                });
 
-              if (item === '営業日数') {
-                row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
-              } else if (item === '客室数') {
-                const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);
-                const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
-                  ? hotel.total_rooms * daysInCurrentMonth
-                  : 0;
-                row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
-              }
-            });
-            csvRows.push(row);
-          }
+                if (item === '営業日数') {
+                  row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
+                } else if (item === '客室数') {
+                  const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);
+                  const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
+                    ? hotel.total_rooms * daysInCurrentMonth
+                    : 0;
+                  row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
+                }
+              });
+              csvRows.push(row);
+            }
+          });
         });
       });
     });
@@ -135,13 +167,45 @@ const generateAccountingCsv = async (month1, month2, prefilledData = [], hotels 
   const sortedTypeCategories = [...typeCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
   const sortedPackageCategories = [...packageCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
 
-  sortedHotels.forEach(hotel => {
-    sortedTypeCategories.forEach(typeCategory => {
-      sortedPackageCategories.forEach(packageCategory => {
-        budgetItems.forEach(item => {
-          // For '売上' and '販売客室数', create separate rows for accommodation and non-accommodation
-          if (item === '売上' || item === '販売客室数') {
-            salesCategories.forEach(salesCategory => {
+  // Helper function to check if there's any non-zero data for a sales category (accounting)
+  const hasNonZeroDataAccounting = (hotel, typeCategory, packageCategory, salesCategory, item) => {
+    return monthHeaders.some(header => {
+      const [hYear, hMonth] = header.split('-').map(Number);
+      const prefilledRow = prefilledData.find(dataRow => {
+        const dataMonth = new Date(dataRow.month);
+        const isMonthMatch = dataMonth.getFullYear() === hYear && (dataMonth.getMonth() + 1) === hMonth;
+        const isHotelMatch = Number(dataRow.hotel_id) === hotel.id;
+        const isTypeCategoryMatch = dataRow.plan_type_category_id === typeCategory.id;
+        const isPackageCategoryMatch = dataRow.plan_package_category_id === packageCategory.id;
+        return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
+      });
+
+      if (!prefilledRow) return false;
+
+      if (item === '売上') {
+        const value = salesCategory.id === 0 ? prefilledRow.accommodation_revenue : prefilledRow.non_accommodation_revenue;
+        return value && parseFloat(value) !== 0;
+      } else if (item === '販売客室数') {
+        const value = salesCategory.id === 0 ? prefilledRow.rooms_sold_nights : prefilledRow.non_accommodation_sold_rooms;
+        return value && parseFloat(value) !== 0;
+      }
+      return false;
+    });
+  };
+
+  // Generate rows for 売上区分=0 (accommodation) first, then 売上区分=1 (non-accommodation)
+  salesCategories.forEach(salesCategory => {
+    sortedHotels.forEach(hotel => {
+      sortedTypeCategories.forEach(typeCategory => {
+        sortedPackageCategories.forEach(packageCategory => {
+          budgetItems.forEach(item => {
+            // For '売上' and '販売客室数', create rows for current sales category
+            if (item === '売上' || item === '販売客室数') {
+              // For 売上区分=1 (non-accommodation), only create row if there's non-zero data
+              if (salesCategory.id === 1 && !hasNonZeroDataAccounting(hotel, typeCategory, packageCategory, salesCategory, item)) {
+                return; // Skip this row if no non-zero data
+              }
+
               const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, salesCategory.id, item];
               monthHeaders.forEach(header => {
                 const [hYear, hMonth] = header.split('-').map(Number);
@@ -168,36 +232,36 @@ const generateAccountingCsv = async (month1, month2, prefilledData = [], hotels 
                 }
               });
               csvRows.push(row);
-            });
-          } else {
-            // For '営業日数' and '客室数', create single row with sales_category = 0 (accommodation)
-            const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, 0, item];
-            monthHeaders.forEach(header => {
-              const [hYear, hMonth] = header.split('-').map(Number);
-              
-              const prefilledRow = prefilledData.find(dataRow => {
-                const dataMonth = new Date(dataRow.month);
-                // Database stores end-of-month dates, compare by year and month only
-                const isMonthMatch = dataMonth.getFullYear() === hYear && (dataMonth.getMonth() + 1) === hMonth;
-                const isHotelMatch = Number(dataRow.hotel_id) === hotel.id;
-                const isTypeCategoryMatch = dataRow.plan_type_category_id === typeCategory.id;
-                const isPackageCategoryMatch = dataRow.plan_package_category_id === packageCategory.id;
+            } else if (salesCategory.id === 0) {
+              // For '営業日数' and '客室数', only create rows for sales_category = 0 (accommodation)
+              const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, 0, item];
+              monthHeaders.forEach(header => {
+                const [hYear, hMonth] = header.split('-').map(Number);
                 
-                return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
-              });
+                const prefilledRow = prefilledData.find(dataRow => {
+                  const dataMonth = new Date(dataRow.month);
+                  // Database stores end-of-month dates, compare by year and month only
+                  const isMonthMatch = dataMonth.getFullYear() === hYear && (dataMonth.getMonth() + 1) === hMonth;
+                  const isHotelMatch = Number(dataRow.hotel_id) === hotel.id;
+                  const isTypeCategoryMatch = dataRow.plan_type_category_id === typeCategory.id;
+                  const isPackageCategoryMatch = dataRow.plan_package_category_id === packageCategory.id;
+                  
+                  return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
+                });
 
-              if (item === '営業日数') {
-                row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
-              } else if (item === '客室数') {
-                const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);
-                const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
-                  ? hotel.total_rooms * daysInCurrentMonth
-                  : 0;
-                row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
-              }
-            });
-            csvRows.push(row);
-          }
+                if (item === '営業日数') {
+                  row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
+                } else if (item === '客室数') {
+                  const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);
+                  const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
+                    ? hotel.total_rooms * daysInCurrentMonth
+                    : 0;
+                  row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
+                }
+              });
+              csvRows.push(row);
+            }
+          });
         });
       });
     });

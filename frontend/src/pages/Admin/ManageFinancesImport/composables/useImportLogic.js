@@ -85,16 +85,50 @@ export function useImportLogic() {
         const sortedTypeCategories = [...typeCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
         const sortedPackageCategories = [...packageCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
 
-        sortedHotels.forEach(hotel => {
-            sortedTypeCategories.forEach(typeCategory => {
-                sortedPackageCategories.forEach(packageCategory => {
-                    itemsForProcessing.forEach(item => {
-                        // For '売上' and '販売客室数', create separate rows for accommodation and non-accommodation
-                        if (item === '売上' || item === '販売客室数') {
-                            // For regular template, only show accommodation (売上区分=0)
-                            // For prefilled template, show both accommodation and non-accommodation
-                            const categoriesToShow = prefilledData ? salesCategories : [salesCategories[0]]; // Only accommodation for regular template
-                            categoriesToShow.forEach(salesCategory => {
+        // For regular template, only show accommodation (売上区分=0)
+        // For prefilled template, show both accommodation and non-accommodation
+        const categoriesToShow = prefilledData ? salesCategories : [salesCategories[0]]; // Only accommodation for regular template
+        
+        // Helper function to check if there's any non-zero data for a sales category
+        const hasNonZeroDataFrontend = (hotel, typeCategory, packageCategory, salesCategory, item) => {
+            if (!prefilledData) return true; // For regular templates, always include
+            
+            return monthHeaders.some(header => {
+                const [hYear, hMonth] = header.split('-').map(Number);
+                const prefilledRow = prefilledData.find(row => {
+                    const isMonthMatch = new Date(row.month).getFullYear() === hYear && new Date(row.month).getMonth() + 1 === hMonth;
+                    const isHotelMatch = Number(row.hotel_id) === hotel.id;
+                    const isTypeCategoryMatch = row.plan_type_category_id === typeCategory.id;
+                    const isPackageCategoryMatch = row.plan_package_category_id === packageCategory.id;
+                    return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
+                });
+
+                if (!prefilledRow) return false;
+
+                if (item === '売上') {
+                    const value = salesCategory.id === 0 ? prefilledRow.accommodation_revenue : prefilledRow.non_accommodation_revenue;
+                    return value && parseFloat(value) !== 0;
+                } else if (item === '販売客室数') {
+                    const value = salesCategory.id === 0 ? prefilledRow.rooms_sold_nights : prefilledRow.non_accommodation_sold_rooms;
+                    return value && parseFloat(value) !== 0;
+                }
+                return false;
+            });
+        };
+        
+        // Generate rows for 売上区分=0 (accommodation) first, then 売上区分=1 (non-accommodation)
+        categoriesToShow.forEach(salesCategory => {
+            sortedHotels.forEach(hotel => {
+                sortedTypeCategories.forEach(typeCategory => {
+                    sortedPackageCategories.forEach(packageCategory => {
+                        itemsForProcessing.forEach(item => {
+                            // For '売上' and '販売客室数', create rows for current sales category
+                            if (item === '売上' || item === '販売客室数') {
+                                // For 売上区分=1 (non-accommodation), only create row if there's non-zero data
+                                if (salesCategory.id === 1 && !hasNonZeroDataFrontend(hotel, typeCategory, packageCategory, salesCategory, item)) {
+                                    return; // Skip this row if no non-zero data
+                                }
+
                                 const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, salesCategory.id, item];
                                 monthHeaders.forEach(header => {
                                     const [hYear, hMonth] = header.split('-').map(Number);
@@ -118,33 +152,33 @@ export function useImportLogic() {
                                     }
                                 });
                                 csvRows.push(row.join(','));
-                            });
-                        } else {
-                            // For '営業日数' and '客室数', create single row with sales_category = 0 (accommodation)
-                            const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, 0, item];
-                            monthHeaders.forEach(header => {
-                                const [hYear, hMonth] = header.split('-').map(Number);
-                                const prefilledRow = prefilledData ? prefilledData.find(row => {
-                                    const isMonthMatch = new Date(row.month).getFullYear() === hYear && new Date(row.month).getMonth() + 1 === hMonth;
-                                    const isHotelMatch = Number(row.hotel_id) === hotel.id;
-                                    const isTypeCategoryMatch = row.plan_type_category_id === typeCategory.id;
-                                    const isPackageCategoryMatch = row.plan_package_category_id === packageCategory.id;
+                            } else if (salesCategory.id === 0) {
+                                // For '営業日数' and '客室数', only create rows for sales_category = 0 (accommodation)
+                                const row = [hotel.id, hotel.name, typeCategory.id, typeCategory.name, packageCategory.id, packageCategory.name, 0, item];
+                                monthHeaders.forEach(header => {
+                                    const [hYear, hMonth] = header.split('-').map(Number);
+                                    const prefilledRow = prefilledData ? prefilledData.find(row => {
+                                        const isMonthMatch = new Date(row.month).getFullYear() === hYear && new Date(row.month).getMonth() + 1 === hMonth;
+                                        const isHotelMatch = Number(row.hotel_id) === hotel.id;
+                                        const isTypeCategoryMatch = row.plan_type_category_id === typeCategory.id;
+                                        const isPackageCategoryMatch = row.plan_package_category_id === packageCategory.id;
 
-                                    return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
-                                }) : null;
+                                        return isMonthMatch && isHotelMatch && isTypeCategoryMatch && isPackageCategoryMatch;
+                                    }) : null;
 
-                                if (item === '営業日数') {
-                                    row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
-                                } else if (item === '客室数') {
-                                    const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);
-                                    const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
-                                        ? hotel.total_rooms * daysInCurrentMonth
-                                        : 0;
-                                    row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
-                                }
-                            });
-                            csvRows.push(row.join(','));
-                        }
+                                    if (item === '営業日数') {
+                                        row.push(prefilledRow ? prefilledRow.operating_days : getDaysInMonth(hYear, hMonth - 1));
+                                    } else if (item === '客室数') {
+                                        const daysInCurrentMonth = getDaysInMonth(hYear, hMonth - 1);
+                                        const totalRoomsForMonth = (hotel.total_rooms && typeof hotel.total_rooms === 'number')
+                                            ? hotel.total_rooms * daysInCurrentMonth
+                                            : 0;
+                                        row.push(prefilledRow ? prefilledRow.available_room_nights : totalRoomsForMonth);
+                                    }
+                                });
+                                csvRows.push(row.join(','));
+                            }
+                        });
                     });
                 });
             });
@@ -305,6 +339,13 @@ export function useImportLogic() {
             monthDateHeaders.forEach((monthString, monthIndex) => {
                 const valueString = parts[monthIndex + 8]; // Skip first 8 columns
                 const value = valueString && valueString.trim() !== '' ? parseFloat(valueString) : 0;
+                
+                // Skip processing if value is 0 or empty to avoid unnecessary records
+                if (value === 0 && (budgetItemFromCsv === '売上' || budgetItemFromCsv === '販売客室数')) {
+                    return;
+                }
+                
+                // Use the same key for all sales categories to aggregate them into one record
                 const mapKey = `${hotelId}_${monthString}_${typeCategoryId}_${packageCategoryId}`;
 
                 if (!hotelMonthDataMap[mapKey]) {
@@ -340,11 +381,14 @@ export function useImportLogic() {
                     }
                 } else {
                     // For '営業日数' and '客室数', use the direct mapping (these are always sales_category=0)
-                    const englishKey = budgetItemKeyMap[budgetItemFromCsv];
-                    if (englishKey) {
-                        hotelMonthDataMap[mapKey][englishKey] = value;
-                    } else {
-                        console.warn(`CSVからの不明な予算項目: '${budgetItemFromCsv}' ホテルID ${hotelId}, 月 ${monthString}. 対応する英語キーが見つかりません。`);
+                    // Only process these for sales_category=0 to avoid duplicates
+                    if (salesCategory === 0) {
+                        const englishKey = budgetItemKeyMap[budgetItemFromCsv];
+                        if (englishKey) {
+                            hotelMonthDataMap[mapKey][englishKey] = value;
+                        } else {
+                            console.warn(`CSVからの不明な予算項目: '${budgetItemFromCsv}' ホテルID ${hotelId}, 月 ${monthString}. 対応する英語キーが見つかりません。`);
+                        }
                     }
                 }
             });
