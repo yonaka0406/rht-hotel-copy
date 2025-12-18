@@ -114,7 +114,16 @@ const selectAllHotelsPlans = async (requestId, dbClient = null) => {
 };
 const selectHotelPlans = async (requestId, hotel_id, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 ORDER BY name ASC';
+    const query = `
+        SELECT ph.*, 
+               ptc.name as plan_type_category_name, ptc.color as plan_type_category_color,
+               ppc.name as plan_package_category_name, ppc.color as plan_package_category_color
+        FROM plans_hotel ph
+        JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
+        JOIN plan_package_categories ppc ON ph.plan_package_category_id = ppc.id
+        WHERE ph.hotel_id = $1 
+        ORDER BY ph.display_order, ph.name ASC
+    `;
     const values = [hotel_id];
 
     try {
