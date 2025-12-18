@@ -94,7 +94,7 @@
       <ManagePlansPatterns />
     </Panel>
 
-    <Dialog header="グローバルプラン追加" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '50vw' }"
+    <Dialog header="グローバルプラン追加" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '70vw' }"
       class="p-fluid" :closable="true">
       <div class="grid grid-cols-2 gap-2 pt-6">
         <div class="col-span-1 mb-6">
@@ -105,7 +105,7 @@
         </div>
         <div class="col-span-1 mb-6">
           <div class="flex grid-cols-2 justify-center items-center">
-            <FloatLabel>
+            <FloatLabel class="flex-1">
               <InputText v-model="newGlobalPlan.colorHEX" fluid />
               <label>プラン表示HEX</label>
             </FloatLabel>
@@ -135,7 +135,7 @@
       </template>
     </Dialog>
 
-    <Dialog header="グローバルプラン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '50vw' }"
+    <Dialog header="グローバルプラン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '70vw' }"
       class="p-fluid" :closable="true">
       <div class="grid grid-cols-2 gap-2 pt-6">
         <div class="col-span-1 mb-6">
@@ -146,7 +146,7 @@
         </div>
         <div class="col-span-1 mb-6">
           <div class="flex grid-cols-2 justify-center items-center">
-            <FloatLabel>
+            <FloatLabel class="flex-1">
               <InputText v-model="editGlobalPlan.colorHEX" fluid />
               <label>プラン表示HEX</label>
             </FloatLabel>
@@ -175,94 +175,18 @@
       </template>
     </Dialog>
 
-    <Dialog header="ホテルプラン追加" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '50vw' }" class="p-fluid"
-      :closable="true">
-      <div class="grid grid-cols-2 gap-2 pt-6">
-        <div class="col-span-1 mb-6">
-          <FloatLabel>
-            <InputText v-model="newHotelPlan.name" fluid />
-            <label>名称</label>
-          </FloatLabel>
-        </div>
-        <div class="col-span-1 mb-6">
-          <div class="flex grid-cols-2 justify-center items-center">
-            <FloatLabel>
-              <InputText v-model="newHotelPlan.colorHEX" fluid />
-              <label>プラン表示HEX</label>
-            </FloatLabel>
-            <ColorPicker v-model="newHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
-          </div>
-        </div>
-        <div class="col-span-2">
-          <div class="p-float-label flex align-items-center gap-2">
-            <span class="inline-block align-middle font-bold">請求種類：</span>
-            <SelectButton v-model="newHotelPlan.plan_type" :options="sb_options" optionLabel="label"
-              optionValue="value" />
-          </div>
-        </div>
-        <div class="col-span-2 pt-6 mb-2">
-          <FloatLabel>
-            <Textarea v-model="newHotelPlan.description" fluid />
-            <label>詳細</label>
-          </FloatLabel>
-        </div>
-        <div class="col-span-2 pt-2">
-          <label for="globalPlanSelect" class="block mb-2">グローバルプランにリンクする（任意）</label>
-          <Select id="globalPlanSelect" v-model="newHotelPlan.plans_global_id" :options="globalPlans" optionLabel="name"
-            optionValue="id" placeholder="グローバルプランを選択" class="w-full" showClear filter />
-        </div>
-      </div>
-      <template #footer>
-        <Button label="保存" icon="pi pi-check" @click="saveHotelPlan"
-          class="p-button-success p-button-text p-button-sm" />
-        <Button label="閉じる" icon="pi pi-times" @click="showHotelDialog = false"
-          class="p-button-danger p-button-text p-button-sm" text />
-      </template>
-    </Dialog>
+    <AddHotelPlanDialog :visible="showHotelDialog" @update:visible="showHotelDialog = $event"
+      @planAdded="onPlanModified" :selectedHotelId="selectedHotelId" :planTypeCategories="planTypeCategories"
+      :planPackageCategories="planPackageCategories" :sb_options="sb_options" :hotelPlans="hotelPlans" />
 
-    <Dialog header="ホテルプラン編集" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '50vw' }"
-      class="p-fluid" :closable="true">
-      <div class="grid grid-cols-2 gap-2 pt-6">
-        <div class="col-span-1 mb-6">
-          <FloatLabel>
-            <InputText v-model="editHotelPlan.name" fluid />
-            <label>名称</label>
-          </FloatLabel>
-        </div>
-        <div class="col-span-1 mb-6">
-          <div class="flex grid-cols-2 justify-center items-center">
-            <FloatLabel>
-              <InputText v-model="editHotelPlan.colorHEX" fluid />
-              <label>プラン表示HEX</label>
-            </FloatLabel>
-            <ColorPicker v-model="editHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
-          </div>
-        </div>
-        <div class="col-span-2">
-          <div class="p-float-label flex align-items-center gap-2">
-            <span class="inline-block align-middle font-bold">請求種類：</span>
-            <SelectButton v-model="editHotelPlan.plan_type" :options="sb_options" optionLabel="label"
-              optionValue="value" />
-          </div>
-        </div>
-        <div class="col-span-2 pt-6 mb-2">
-          <FloatLabel>
-            <Textarea v-model="editHotelPlan.description" fluid />
-            <label>詳細</label>
-          </FloatLabel>
-        </div>
-        <div class="col-span-2 pt-2">
-          <label for="globalPlanSelectEdit" class="block mb-2">グローバルプランにリンクする（任意）</label>
-          <Select id="globalPlanSelectEdit" v-model="editHotelPlan.plans_global_id" :options="globalPlans"
-            optionLabel="name" optionValue="id" placeholder="グローバルプランを選択する" class="w-full" showClear filter />
-        </div>
-      </div>
-      <template #footer>
-        <Button label="保存" icon="pi pi-check" @click="updateHotel" class="p-button-success p-button-text p-button-sm" />
-        <Button label="閉じる" icon="pi pi-times" @click="showEditHotelDialog = false"
-          class="p-button-danger p-button-text p-button-sm" />
-      </template>
-    </Dialog>
+    <EditHotelPlanDialog :visible="showEditHotelDialog" @update:visible="showEditHotelDialog = $event"
+      @planUpdated="onPlanModified" @orderChanged="handleOrderChange" :selectedHotelId="selectedHotelId"
+      :selectedHotelName="selectedHotelName" :planTypeCategories="planTypeCategories"
+      :planPackageCategories="planPackageCategories" :sb_options="sb_options" :hotelPlans="hotelPlans"
+      :initialEditHotelPlan="editHotelPlan" />
+
+    <CopyPlansDialog :visible="showCopyPlansDialog" @update:visible="showCopyPlansDialog = $event"
+      @planCopied="onPlanCopied" />
   </div>
 </template>
 
@@ -281,7 +205,7 @@ import ManageHotelPlansTable from './components/ManageHotelPlansTable.vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels, fetchHotels } = useHotelStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, fetchPlansGlobal, fetchPlansHotel, fetchHotelPlans, createGlobalPlan, updateGlobalPlan, createHotelPlan, updateHotelPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
+const { plans, fetchPlansGlobal, fetchHotelPlans, createGlobalPlan, updateGlobalPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -423,14 +347,6 @@ const updateGlobal = async () => {
 };
 
 // Hotel Dialog
-const newHotelPlan = ref({
-  hotel_id: null,
-  name: '',
-  description: '',
-  plan_type: 'per_room',
-  colorHEX: 'D3D3D3',
-  plans_global_id: null
-});
 const editHotelPlan = ref({
   id: null,
   hotel_id: null,
@@ -447,11 +363,14 @@ const editHotelPlan = ref({
 });
 const showHotelDialog = ref(false);
 const showEditHotelDialog = ref(false);
+const showCopyPlansDialog = ref(false);
 const openEditHotelDialog = async (data) => {
+  console.log('openEditHotelDialog: Received data:', data);
   editHotelPlan.value = {
-    ...data
-    , colorHEX: data.color.replace('#', '')
+    ...data,
+    colorHEX: data.color ? data.color.replace('#', '') : 'D3D3D3'
   };
+  console.log('openEditHotelDialog: Set editHotelPlan.value:', editHotelPlan.value);
   showEditHotelDialog.value = true;
 };
 
@@ -460,6 +379,15 @@ const onPlanModified = async () => {
     const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
     hotelPlans.value = fetchedPlans || [];
     await reindexPlans();
+  }
+};
+
+const onPlanCopied = async () => {
+  // Refresh plans after copy operation
+  if (selectedHotelId.value) {
+    const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
+    hotelPlans.value = fetchedPlans || [];
+    await reindexPlans(); // Reindex after plans are copied (full sort)
   }
 };
 
@@ -499,9 +427,9 @@ const reindexPlans = async (preserveCurrentOrder = false) => { // Added paramete
     const inactive = plansToReindex.filter(plan => !plan.is_active);
 
     // Sort active plans by their current display_order or name if order is same
-    active.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || a.plan_name.localeCompare(b.plan_name));
+    active.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || (a.name || '').localeCompare(b.name || ''));
     // Sort inactive plans by their current display_order or name
-    inactive.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || a.plan_name.localeCompare(b.plan_name));
+    inactive.sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || (a.name || '').localeCompare(b.name || ''));
 
     plansToReindex = [...active, ...inactive];
   }
@@ -542,84 +470,7 @@ const filteredHotelPlans = computed(() => {
 const getPlansCount = (hotel_id) => {
   return hotelPlans.value.filter(plan => plan.hotel_id === hotel_id).length;
 };
-const saveHotelPlan = async () => {
-  newHotelPlan.value.hotel_id = selectedHotel.value.id;
 
-  // Check for duplicate keys
-  const PlanSet = new Set();
-  const newPlanKey = `${newHotelPlan.value.name}-${newHotelPlan.value.hotel_id}`;
-  for (const plan of hotelPlans.value) {
-    const planKey = `${plan.name}-${plan.hotel_id}`;
-    PlanSet.add(planKey);
-    if (PlanSet.has(newPlanKey)) {
-      toast.add({
-        severity: 'error',
-        summary: 'エラー',
-        detail: '選択したホテルに対してプラン名はユニークである必要があります。', life: 3000
-      });
-      return;
-    }
-  }
-  try {
-    await createHotelPlan(newHotelPlan.value);
-    const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
-    hotelPlans.value = fetchedPlans || [];
-    showHotelDialog.value = false;
-    newHotelPlan.value = {
-      hotel_id: null,
-      name: '',
-      description: '',
-      plan_type: 'per_room',
-      colorHEX: 'D3D3D3',
-      plans_global_id: null
-    };
-    toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン追加されました。', life: 3000 });
-  } catch (err) {
-    console.error('ホテルプランの保存エラー:', err);
-    toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルプランの保存に失敗しました', life: 3000 });
-  }
-};
-const updateHotel = async () => {
-  editHotelPlan.value.hotel_id = selectedHotel.value.id;
-
-  // Filter out the current id from hotelPlans
-  const filteredPlans = hotelPlans.value.filter(plan => plan.id !== editHotelPlan.value.id);
-
-  // Check for duplicate keys
-  const PlanSet = new Set();
-  const newPlanKey = `${editHotelPlan.value.name}-${editHotelPlan.value.hotel_id}`;
-  for (const plan of filteredPlans) {
-    const planKey = `${plan.name}-${plan.hotel_id}`;
-    PlanSet.add(planKey);
-    if (PlanSet.has(newPlanKey)) {
-      toast.add({
-        severity: 'error',
-        summary: 'エラー',
-        detail: '選択したホテルに対してプラン名はユニークである必要があります。', life: 3000
-      });
-      return;
-    }
-  }
-
-  try {
-    await updateHotelPlan(editHotelPlan.value.id, editHotelPlan.value);
-    const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
-    hotelPlans.value = fetchedPlans || [];
-    showEditHotelDialog.value = false;
-    editHotelPlan.value = {
-      id: null,
-      hotel_id: null,
-      plans_global_id: null,
-      name: '',
-      description: '',
-      colorHEX: 'D3D3D3'
-    };
-    toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン更新されました。', life: 3000 });
-  } catch (err) {
-    console.error('ホテルプランの更新エラー:', err);
-    toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルプランの更新に失敗しました', life: 3000 });
-  }
-};
 
 // Rates
 const showGlobalRatePanel = ref(false);
@@ -671,13 +522,17 @@ watch(selectedHotelId, async (newVal) => {
     loading.value = true;
     const fetchedPlans = await fetchHotelPlans(newVal);
     // Enhance hotelPlans with category names
-    hotelPlans.value = (fetchedPlans || []).map(plan => ({
-      ...plan,
-      plans_hotel_id: plan.id, // Preserve the original id as plans_hotel_id
-      id: plan.plan_key, // Map plan_key for DataTable dataKey
-      plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
-      plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
-    }));
+    hotelPlans.value = (fetchedPlans || []).map(plan => {
+      const enhanced = {
+        ...plan,
+        plans_hotel_id: plan.id, // Preserve the original id as plans_hotel_id
+        id: plan.plan_key, // Map plan_key for DataTable dataKey
+        plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
+        plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
+      };
+      console.log('Enhanced plan:', enhanced.name, 'plans_hotel_id:', enhanced.plans_hotel_id, 'id:', enhanced.id);
+      return enhanced;
+    });
     loading.value = false;
   }
 });

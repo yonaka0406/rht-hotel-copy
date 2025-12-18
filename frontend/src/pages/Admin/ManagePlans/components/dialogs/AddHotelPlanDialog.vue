@@ -1,5 +1,5 @@
 <template>
-    <Dialog header="ホテルプラン追加" :visible="visible" :modal="true" :style="{ width: '50vw' }" class="p-fluid"
+    <Dialog header="ホテルプラン追加" :visible="visible" :modal="true" :style="{ width: '70vw' }" class="p-fluid"
         :closable="true" @update:visible="$emit('update:visible', $event)">
         <div class="grid grid-cols-2 gap-2 pt-6">
             <div class="col-span-1 mb-6">
@@ -10,7 +10,7 @@
             </div>
             <div class="col-span-1 mb-6">
                 <div class="flex grid-cols-2 justify-center items-center">
-                    <FloatLabel>
+                    <FloatLabel class="flex-1">
                         <InputText v-model="newHotelPlan.colorHEX" fluid />
                         <label>プラン表示HEX</label>
                     </FloatLabel>
@@ -29,26 +29,26 @@
             <div class="col-span-1 pt-6">
                 <FloatLabel>
                     <Select v-model="newHotelPlan.plan_type_category_id" :options="planTypeCategories"
-                        optionLabel="name" optionValue="id" placeholder="タイプカテゴリーを選択" class="w-full" />
+                        optionLabel="name" optionValue="id" placeholder="タイプカテゴリーを選択" fluid />
                     <label>タイプカテゴリー</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 pt-6">
                 <FloatLabel>
                     <Select v-model="newHotelPlan.plan_package_category_id" :options="planPackageCategories"
-                        optionLabel="name" optionValue="id" placeholder="パッケージカテゴリーを選択" class="w-full" />
+                        optionLabel="name" optionValue="id" placeholder="パッケージカテゴリーを選択" fluid />
                     <label>パッケージカテゴリー</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 pt-6">
                 <FloatLabel>
-                    <DatePicker v-model="newHotelPlan.available_from" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                    <DatePicker v-model="newHotelPlan.available_from" dateFormat="yy/mm/dd" showIcon fluid />
                     <label>利用可能日 (開始)</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 pt-6">
                 <FloatLabel>
-                    <DatePicker v-model="newHotelPlan.available_until" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                    <DatePicker v-model="newHotelPlan.available_until" dateFormat="yy/mm/dd" showIcon fluid />
                     <label>利用可能日 (終了)</label>
                 </FloatLabel>
             </div>

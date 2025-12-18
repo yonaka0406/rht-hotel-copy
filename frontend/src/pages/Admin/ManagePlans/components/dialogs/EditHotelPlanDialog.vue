@@ -1,16 +1,16 @@
 <template>
     <Dialog :header="`ホテルプラン編集 (${props.selectedHotelName})`" :visible="visible" :modal="true"
-        :style="{ width: '50vw' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
+        :style="{ width: '70vw' }" class="p-fluid" :closable="true" @update:visible="$emit('update:visible', $event)">
         <div class="grid grid-cols-2 gap-2 pt-6">
             <div class="col-span-1 mb-6">
                 <FloatLabel>
-                    <InputText v-model="editHotelPlan.plan_name" fluid />
+                    <InputText v-model="editHotelPlan.name" fluid />
                     <label>名称</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 mb-6">
                 <div class="flex grid-cols-2 justify-center items-center">
-                    <FloatLabel>
+                    <FloatLabel class="flex-1">
                         <InputText v-model="editHotelPlan.colorHEX" fluid />
                         <label>プラン表示HEX</label>
                     </FloatLabel>
@@ -29,20 +29,20 @@
             <div class="col-span-1 pt-6">
                 <FloatLabel>
                     <Select v-model="editHotelPlan.plan_type_category_id" :options="planTypeCategories"
-                        optionLabel="name" optionValue="id" placeholder="タイプカテゴリーを選択" class="w-full" />
+                        optionLabel="name" optionValue="id" placeholder="タイプカテゴリーを選択" fluid />
                     <label>タイプカテゴリー</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 pt-6">
                 <FloatLabel>
                     <Select v-model="editHotelPlan.plan_package_category_id" :options="planPackageCategories"
-                        optionLabel="name" optionValue="id" placeholder="パッケージカテゴリーを選択" class="w-full" />
+                        optionLabel="name" optionValue="id" placeholder="パッケージカテゴリーを選択" fluid />
                     <label>パッケージカテゴリー</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 pt-6">
                 <FloatLabel>
-                    <InputNumber v-model="editHotelPlan.display_order" class="w-full" />
+                    <InputNumber v-model="editHotelPlan.display_order" fluid />
                     <label>表示順</label>
                 </FloatLabel>
             </div>
@@ -52,13 +52,13 @@
             </div>
             <div class="col-span-1 pt-6">
                 <FloatLabel>
-                    <DatePicker v-model="editHotelPlan.available_from" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                    <DatePicker v-model="editHotelPlan.available_from" dateFormat="yy/mm/dd" showIcon fluid />
                     <label>利用可能日 (開始)</label>
                 </FloatLabel>
             </div>
             <div class="col-span-1 pt-6">
                 <FloatLabel>
-                    <DatePicker v-model="editHotelPlan.available_until" dateFormat="yy/mm/dd" showIcon class="w-full" />
+                    <DatePicker v-model="editHotelPlan.available_until" dateFormat="yy/mm/dd" showIcon fluid />
                     <label>利用可能日 (終了)</label>
                 </FloatLabel>
             </div>
@@ -124,9 +124,14 @@ watch(() => props.visible, (newVal) => {
         editHotelPlan.value = {
             ...initialData,
             colorHEX: initialData.color ? initialData.color.replace('#', '') : '',
-            plan_type_category_id: props.planTypeCategories.find(cat => cat.name === initialData.type_category)?.id || null,
-            plan_package_category_id: props.planPackageCategories.find(cat => cat.name === initialData.package_category)?.id || null,
+            // Use the existing category IDs directly from the data
+            plan_type_category_id: initialData.plan_type_category_id || null,
+            plan_package_category_id: initialData.plan_package_category_id || null,
+            // Ensure plans_hotel_id is set - use plans_hotel_id if it exists, otherwise use id
+            plans_hotel_id: initialData.plans_hotel_id || initialData.id,
         };
+        console.log('EditHotelPlanDialog: Initialized editHotelPlan:', editHotelPlan.value);
+        console.log('EditHotelPlanDialog: plans_hotel_id set to:', editHotelPlan.value.plans_hotel_id);
     }
 }, { immediate: true });
 
@@ -161,7 +166,7 @@ watch([() => editHotelPlan.value.available_from, () => editHotelPlan.value.avail
 const updateHotel = async () => {
     editHotelPlan.value.hotel_id = props.selectedHotelId;
 
-    const trimmedPlanName = editHotelPlan.value.plan_name?.trim();
+    const trimmedPlanName = editHotelPlan.value.name?.trim();
     if (!trimmedPlanName) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '名称を記入してください。', life: 3000 });
         return;
@@ -169,7 +174,7 @@ const updateHotel = async () => {
 
     const isDuplicate = (props.hotelPlans || []).some(plan =>
         plan.id !== editHotelPlan.value.id &&
-        plan.plan_name.trim().toLowerCase() === trimmedPlanName.toLowerCase()
+        plan.name.trim().toLowerCase() === trimmedPlanName.toLowerCase()
     );
 
     if (isDuplicate) {
@@ -192,10 +197,13 @@ const updateHotel = async () => {
         return;
     }
 
-    // Check if plan ID is valid, using plan_id consistently
-    if (editHotelPlan.value.plan_id === undefined || editHotelPlan.value.plan_id === null) {
+    // Check if plan ID is valid, using plans_hotel_id consistently
+    console.log('updateHotel: editHotelPlan.value before validation:', editHotelPlan.value);
+    console.log('updateHotel: plans_hotel_id value:', editHotelPlan.value.plans_hotel_id);
+    
+    if (editHotelPlan.value.plans_hotel_id === undefined || editHotelPlan.value.plans_hotel_id === null) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '編集対象のプランIDが見つかりません。', life: 3000 });
-        console.error('Error: Plan ID is undefined or null when trying to update hotel plan.');
+        console.error('Error: Plan ID is undefined or null when trying to update hotel plan. Full object:', editHotelPlan.value);
         return;
     }
 
@@ -209,8 +217,15 @@ const updateHotel = async () => {
     }
 
     try {
-        // Pass plan_id to the updateHotelPlan action
-        await updateHotelPlan(editHotelPlan.value.plan_id, editHotelPlan.value);
+        // Pass plans_hotel_id to the updateHotelPlan action
+        const planData = { 
+            ...editHotelPlan.value, 
+            plan_name: editHotelPlan.value.name, // Map name to plan_name for backend
+            color: `#${editHotelPlan.value.colorHEX}` 
+        };
+        delete planData.colorHEX; // Remove colorHEX as 'color' is sent instead
+        delete planData.name; // Remove name as plan_name is sent instead
+        await updateHotelPlan(editHotelPlan.value.plans_hotel_id, planData);
         emit('planUpdated');
         emit('update:visible', false);
         toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン更新されました。', life: 3000 });
