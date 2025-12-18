@@ -425,13 +425,37 @@ const getExportDailyReportExcel = async (req, res) => {
     try {
         const groupedReportData = {};
 
+        console.log(`[DEBUG] Excel Export - Fetching data for dates: ${date1}, ${date2}`);
+        
         const dailyData1 = await reportModel.selectDailyReportData(req.requestId, date1);
+        console.log(`[DEBUG] Daily data for ${date1}:`, dailyData1?.length || 0, 'records');
+        
+        // Debug specific record with cancelled sales
+        const debugRecord = dailyData1?.find(r => 
+            r.accommodation_sales_cancelled > 0 && 
+            r.hotel_id == 10 && 
+            r.plan_type_category_id == 3 && 
+            r.plan_package_category_id == 1
+        );
+        if (debugRecord) {
+            console.log(`[DEBUG] Found record with cancelled sales:`, {
+                hotel_id: debugRecord.hotel_id,
+                plan_name: debugRecord.plan_name,
+                month: debugRecord.month,
+                accommodation_sales_cancelled: debugRecord.accommodation_sales_cancelled,
+                accommodation_net_sales_cancelled: debugRecord.accommodation_net_sales_cancelled,
+                plan_type_category_id: debugRecord.plan_type_category_id,
+                plan_package_category_id: debugRecord.plan_package_category_id
+            });
+        }
+        
         if (dailyData1 && dailyData1.length > 0) {
             groupedReportData[date1] = dailyData1;
         }
 
         if (date1 !== date2) {
             const dailyData2 = await reportModel.selectDailyReportData(req.requestId, date2);
+            console.log(`[DEBUG] Daily data for ${date2}:`, dailyData2?.length || 0, 'records');
             if (dailyData2 && dailyData2.length > 0) {
                 groupedReportData[date2] = dailyData2;
             }
@@ -468,6 +492,8 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: 'ホテルID', key: 'hotel_id', width: 10 },
             { header: 'ホテル名', key: 'hotel_name', width: 20 },
             { header: '月', key: 'month', width: 15 },
+            { header: 'プランタイプカテゴリーID', key: 'plan_type_category_id', width: 20 },
+            { header: 'プランパッケージカテゴリーID', key: 'plan_package_category_id', width: 20 },
             { header: 'プラン名', key: 'plan_name', width: 30 },
             { header: '確定', key: 'confirmed_stays', width: 10 },
             { header: '非宿泊数', key: 'non_accommodation_stays', width: 10 },
@@ -482,6 +508,10 @@ const getExportDailyReportExcel = async (req, res) => {
             { header: 'その他売上(税込)', key: 'other_sales', width: 15 },
             { header: '宿泊売上キャンセル(税込)', key: 'accommodation_sales_cancelled', width: 20 },
             { header: 'その他売上キャンセル(税込)', key: 'other_sales_cancelled', width: 20 },
+            { header: '宿泊売上(税抜)', key: 'accommodation_net_sales', width: 15 },
+            { header: 'その他売上(税抜)', key: 'other_net_sales', width: 15 },
+            { header: '宿泊売上キャンセル(税抜)', key: 'accommodation_net_sales_cancelled', width: 20 },
+            { header: 'その他売上キャンセル(税抜)', key: 'other_net_sales_cancelled', width: 20 },
             { header: '作成日時', key: 'created_at', width: 20 },
         ];
 
@@ -591,25 +621,48 @@ const getExportDailyReportExcel = async (req, res) => {
             const worksheet = workbook.addWorksheet(`${dateKey}`);
             worksheet.columns = columns;
 
-            groupedReportData[dateKey].forEach(row => {
+            console.log(`[DEBUG] Creating worksheet for ${dateKey} with ${groupedReportData[dateKey].length} rows`);
+
+            groupedReportData[dateKey].forEach((row, index) => {
+                // Debug the specific record we're interested in
+                if (row.hotel_id == 10 && row.plan_type_category_id == 3 && row.plan_package_category_id == 1 && row.plan_name === '2食付き') {
+                    console.log(`[DEBUG] Row ${index} - Adding to Excel:`, {
+                        hotel_id: row.hotel_id,
+                        plan_name: row.plan_name,
+                        month: row.month,
+                        accommodation_sales_cancelled: row.accommodation_sales_cancelled,
+                        accommodation_sales_cancelled_type: typeof row.accommodation_sales_cancelled,
+                        accommodation_net_sales_cancelled: row.accommodation_net_sales_cancelled,
+                        accommodation_net_sales_cancelled_type: typeof row.accommodation_net_sales_cancelled,
+                        plan_type_category_id: row.plan_type_category_id,
+                        plan_package_category_id: row.plan_package_category_id
+                    });
+                }
+
                 worksheet.addRow({
                     hotel_id: row.hotel_id,
                     hotel_name: row.hotel_name,
                     month: formatDate(row.month),
+                    plan_type_category_id: row.plan_type_category_id || null,
+                    plan_package_category_id: row.plan_package_category_id || null,
                     plan_name: row.plan_name,
-                    confirmed_stays: parseInt(row.confirmed_stays || 0),
-                    non_accommodation_stays: parseInt(row.non_accommodation_stays || 0),
-                    pending_stays: parseInt(row.pending_stays || 0),
-                    in_talks_stays: parseInt(row.in_talks_stays || 0),
-                    cancelled_stays: parseInt(row.cancelled_stays || 0),
-                    non_billable_cancelled_stays: parseInt(row.non_billable_cancelled_stays || 0),
-                    employee_stays: parseInt(row.employee_stays || 0),
-                    normal_sales: parseInt(row.normal_sales || 0),
-                    cancellation_sales: parseInt(row.cancellation_sales || 0),
-                    accommodation_sales: parseInt(row.accommodation_sales || 0),
-                    other_sales: parseInt(row.other_sales || 0),
-                    accommodation_sales_cancelled: parseInt(row.accommodation_sales_cancelled || 0),
-                    other_sales_cancelled: parseInt(row.other_sales_cancelled || 0),
+                    confirmed_stays: row.confirmed_stays || 0,
+                    non_accommodation_stays: row.non_accommodation_stays || 0,
+                    pending_stays: row.pending_stays || 0,
+                    in_talks_stays: row.in_talks_stays || 0,
+                    cancelled_stays: row.cancelled_stays || 0,
+                    non_billable_cancelled_stays: row.non_billable_cancelled_stays || 0,
+                    employee_stays: row.employee_stays || 0,
+                    normal_sales: row.normal_sales || 0,
+                    cancellation_sales: row.cancellation_sales || 0,
+                    accommodation_sales: row.accommodation_sales || 0,
+                    other_sales: row.other_sales || 0,
+                    accommodation_sales_cancelled: row.accommodation_sales_cancelled || 0,
+                    other_sales_cancelled: row.other_sales_cancelled || 0,
+                    accommodation_net_sales: row.accommodation_net_sales || 0,
+                    other_net_sales: row.other_net_sales || 0,
+                    accommodation_net_sales_cancelled: row.accommodation_net_sales_cancelled || 0,
+                    other_net_sales_cancelled: row.other_net_sales_cancelled || 0,
                     created_at: formatDateTime(row.created_at),
                 });
             });

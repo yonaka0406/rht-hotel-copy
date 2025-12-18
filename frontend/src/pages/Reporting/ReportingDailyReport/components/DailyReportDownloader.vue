@@ -9,7 +9,8 @@
                 </TabList>
                 <TabPanels>
                     <TabPanel value="0">
-                        <Message severity="info" :closable="false">データは毎日16時30分に更新されますが、「ロード」ボタンをクリックすることでそれ以前に手動で更新できます。</Message>
+                        <Message severity="info" :closable="false">
+                            データは毎日16時30分に更新されますが、「ロード」ボタンをクリックすることでそれ以前に手動で更新できます。</Message>
                         <Card class="mt-4">
                             <template #content>
                                 <div class="grid grid-cols-12 gap-4 items-end">
@@ -28,7 +29,8 @@
                         </Card>
                     </TabPanel>
                     <TabPanel value="1">
-                        <Message severity="info" :closable="false" v-if="showComparisonDataNotReadyMessage">本日のデータはまだ利用できません。「日次レポート」タブで手動で更新できます。</Message>
+                        <Message severity="info" :closable="false" v-if="showComparisonDataNotReadyMessage">
+                            本日のデータはまだ利用できません。「日次レポート」タブで手動で更新できます。</Message>
                         <Card :class="{ 'mt-4': showComparisonDataNotReadyMessage }">
                             <template #content>
                                 <div class="grid grid-cols-12 gap-4 items-end">
@@ -55,7 +57,8 @@
                     </TabPanel>
                 </TabPanels>
             </Tabs>
-            <Message severity="warn" :closable="false" v-if="showNoReportDataMessage" class="mt-4">レポートの種類を選択してください。</Message>
+            <Message severity="warn" :closable="false" v-if="showNoReportDataMessage" class="mt-4">レポートの種類を選択してください。
+            </Message>
         </div>
 
         <div class="col-span-12" v-if="isLoading">
@@ -74,14 +77,16 @@
                             currentPageReportTemplate="{first}-{last} of {totalRecords}"
                             :exportFilename="`daily_report_${loadedDate}`">
                             <template #paginatorend> <!-- Use #paginatorend slot -->
-                                <Button type="button" icon="pi pi-download" text @click="dt.exportCSV()"
+                                <Button type="button" icon="pi pi-download" text @click="handleCSVDownload"
                                     :disabled="!reportData.length" label="CSVダウンロード" />
                             </template>
-                            <Column field="hotel_id" header="ホテルID" class="hidden"></Column>
+                            <Column field="hotel_id" header="ホテルID"></Column>
                             <Column field="hotel_name" header="ホテル名"></Column>
                             <Column field="month" header="月"></Column>
-                            <Column field="plans_global_id" header="グローバルプランID" class="hidden"></Column>
-                            <Column field="plans_hotel_id" header="ホテルプランID" class="hidden"></Column>
+                            <Column field="plans_global_id" header="グローバルプランID"></Column>
+                            <Column field="plans_hotel_id" header="ホテルプランID"></Column>
+                            <Column field="plan_type_category_id" header="プランタイプカテゴリーID"></Column>
+                            <Column field="plan_package_category_id" header="プランパッケージカテゴリーID"></Column>
                             <Column field="plan_name" header="プラン名"></Column>
                             <Column field="confirmed_stays" header="確定宿泊数"></Column>
                             <Column field="non_accommodation_stays" header="非宿泊数"></Column>
@@ -90,35 +95,54 @@
                             <Column field="cancelled_stays" header="キャンセル"></Column>
                             <Column field="non_billable_cancelled_stays" header="キャンセル(請求対象外)"></Column>
                             <Column field="employee_stays" header="社員"></Column>
-                            <Column field="accommodation_sales" header="宿泊売上" class="hidden">
+                            <Column field="accommodation_sales" header="宿泊売上">
                                 <template #body="{ data }">
                                     {{ (data.accommodation_sales || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="other_sales" header="その他売上" class="hidden">
+                            <Column field="other_sales" header="その他売上">
                                 <template #body="{ data }">
                                     {{ (data.other_sales || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="accommodation_sales_cancelled" header="宿泊売上(キャンセル)" class="hidden">
+                            <Column field="accommodation_sales_cancelled" header="宿泊売上(キャンセル)">
                                 <template #body="{ data }">
                                     {{ (data.accommodation_sales_cancelled || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="other_sales_cancelled" header="その他売上(キャンセル)" class="hidden">
+                            <Column field="other_sales_cancelled" header="その他売上(キャンセル)">
                                 <template #body="{ data }">
                                     {{ (data.other_sales_cancelled || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="created_at" header="作成日時" class="hidden"></Column>
+                            <Column field="accommodation_net_sales" header="宿泊売上(税抜)">
+                                <template #body="{ data }">
+                                    {{ (data.accommodation_net_sales || 0).toLocaleString() }}
+                                </template>
+                            </Column>
+                            <Column field="other_net_sales" header="その他売上(税抜)">
+                                <template #body="{ data }">
+                                    {{ (data.other_net_sales || 0).toLocaleString() }}
+                                </template>
+                            </Column>
+                            <Column field="accommodation_net_sales_cancelled" header="宿泊売上(キャンセル・税抜)">
+                                <template #body="{ data }">
+                                    {{ (data.accommodation_net_sales_cancelled || 0).toLocaleString() }}
+                                </template>
+                            </Column>
+                            <Column field="other_net_sales_cancelled" header="その他売上(キャンセル・税抜)">
+                                <template #body="{ data }">
+                                    {{ (data.other_net_sales_cancelled || 0).toLocaleString() }}
+                                </template>
+                            </Column>
+                            <Column field="created_at" header="作成日時"></Column>
                         </DataTable>
                     </template>
                 </Card>
             </div>
 
             <div class="col-span-12">
-                <DailyReportConfirmedReservationsChart :reportData="reportData"
-                    :metricDate="loadedDate" />
+                <DailyReportConfirmedReservationsChart :reportData="reportData" :metricDate="loadedDate" />
             </div>
         </div>
 
@@ -182,10 +206,11 @@
                                     <div class="col-span-1">
                                         {{ (slotProps.data.accommodation_sales_date2 || 0).toLocaleString() }}
                                         <br /><small>{{ (slotProps.data.accommodation_sales_date1 || 0).toLocaleString()
-                                            }}</small>
+                                        }}</small>
                                     </div>
                                     <div class="col-span-1">
-                                        <Badge v-bind="getBadgeProps(slotProps.data.accommodation_sales_change || 0)"></Badge>
+                                        <Badge v-bind="getBadgeProps(slotProps.data.accommodation_sales_change || 0)">
+                                        </Badge>
                                     </div>
                                 </div>
                             </template>
@@ -196,7 +221,7 @@
                                     <div class="col-span-1">
                                         {{ (slotProps.data.other_sales_date2 || 0).toLocaleString() }}
                                         <br /><small>{{ (slotProps.data.other_sales_date1 || 0).toLocaleString()
-                                            }}</small>
+                                        }}</small>
                                     </div>
                                     <div class="col-span-1">
                                         <Badge v-bind="getBadgeProps(slotProps.data.other_sales_change || 0)"></Badge>
@@ -210,7 +235,7 @@
                                     <div class="col-span-1">
                                         {{ (slotProps.data.total_sales_date2 || 0).toLocaleString() }}
                                         <br /><small>{{ (slotProps.data.total_sales_date1 || 0).toLocaleString()
-                                            }}</small>
+                                        }}</small>
                                     </div>
                                     <div class="col-span-1">
                                         <Badge v-bind="getBadgeProps(slotProps.data.total_sales_change || 0)"></Badge>
@@ -359,7 +384,7 @@ const compareDates = async () => {
             const cancelledStaysChange = item1 ? calculateChange(item2.cancelled_stays, item1.cancelled_stays) : (item2.cancelled_stays !== 0 ? Infinity : 0);
             const accommodationSalesChange = item1 ? calculateChange(item2.accommodation_sales, item1.accommodation_sales) : (item2.accommodation_sales !== 0 ? Infinity : 0);
             const otherSalesChange = item1 ? calculateChange(item2.other_sales, item1.other_sales) : (item2.other_sales !== 0 ? Infinity : 0);
-            const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);        
+            const totalSalesChange = item1 ? calculateChange(item2.total_sales, item1.total_sales) : (item2.total_sales !== 0 ? Infinity : 0);
 
             processed.push({
                 hotel_name: item2.hotel_name,
@@ -429,6 +454,30 @@ const loadReport = async () => { // Made async to await fetchDailyReportData
 
     try {
         let data = await fetchDailyReportData(date); // Attempt to load data
+        
+        // Debug: Log the raw data received from backend
+        const debugRecord = data.find(r => 
+            r.accommodation_sales_cancelled > 0 && 
+            r.hotel_id == 10 && 
+            r.plan_type_category_id == 3 && 
+            r.plan_package_category_id == 1 &&
+            r.plan_name === '2食付き'
+        );
+        
+        if (debugRecord) {
+            console.log('[DEBUG] loadReport - RAW data received from backend:', {
+                hotel_id: debugRecord.hotel_id,
+                plan_name: debugRecord.plan_name,
+                month: debugRecord.month,
+                accommodation_sales_cancelled: debugRecord.accommodation_sales_cancelled,
+                accommodation_net_sales_cancelled: debugRecord.accommodation_net_sales_cancelled,
+                plan_type_category_id: debugRecord.plan_type_category_id,
+                plan_package_category_id: debugRecord.plan_package_category_id,
+                data_type_cancelled: typeof debugRecord.accommodation_sales_cancelled,
+                data_type_net_cancelled: typeof debugRecord.accommodation_net_sales_cancelled
+            });
+        }
+        
         reportData.value = data;
 
         // If no data is available for today's date, generate it
@@ -441,7 +490,7 @@ const loadReport = async () => { // Made async to await fetchDailyReportData
                 console.error('Failed to generate daily metrics:', result.error);
             }
         }
-                        
+
         loadedDateTitle.value = `日次レポート - ${date}`; // Update title after data is loaded
         loadedDate.value = date;
     } catch (error) {
@@ -489,4 +538,54 @@ const showComparisonDataNotReadyMessage = computed(() => {
 const showNoReportDataMessage = computed(() => {
     return !reportData.value.length && !comparisonData.value.length;
 });
+
+const handleCSVDownload = async () => {
+    try {
+        // Log the CSV download action to backend
+        console.log('[DEBUG] CSV Download initiated for date:', loadedDate.value);
+        console.log('[DEBUG] Number of records:', processedReportData.value.length);
+        
+        // Find the specific record we're tracking for debugging
+        const debugRecord = processedReportData.value.find(r => 
+            r.accommodation_sales_cancelled > 0 && 
+            r.hotel_id == 10 && 
+            r.plan_type_category_id == 3 && 
+            r.plan_package_category_id == 1 &&
+            r.plan_name === '2食付き'
+        );
+        
+        if (debugRecord) {
+            console.log('[DEBUG] CSV Export - Found target record:', {
+                hotel_id: debugRecord.hotel_id,
+                plan_name: debugRecord.plan_name,
+                month: debugRecord.month,
+                accommodation_sales_cancelled: debugRecord.accommodation_sales_cancelled,
+                accommodation_net_sales_cancelled: debugRecord.accommodation_net_sales_cancelled,
+                plan_type_category_id: debugRecord.plan_type_category_id,
+                plan_package_category_id: debugRecord.plan_package_category_id,
+                data_type_cancelled: typeof debugRecord.accommodation_sales_cancelled,
+                data_type_net_cancelled: typeof debugRecord.accommodation_net_sales_cancelled
+            });
+        }
+        
+        // Call the original DataTable CSV export
+        dt.value.exportCSV();
+        
+        // Optional: Send logging request to backend
+        // await api.post('/report/log-csv-download', {
+        //     date: loadedDate.value,
+        //     recordCount: processedReportData.value.length,
+        //     timestamp: new Date().toISOString()
+        // });
+        
+    } catch (error) {
+        console.error('Error during CSV download:', error);
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: 'CSVダウンロード中にエラーが発生しました。', 
+            life: 3000 
+        });
+    }
+};
 </script>
