@@ -39,14 +39,15 @@ async function getPrefilledTemplate(req, res) {
     // Fetch prefilled data from the database
     const prefilledData = await getPrefilledData(req.requestId, validatedType, formattedMonth1, formattedMonth2);
     const hotels = await getAllHotels(req.requestId);
-    const plans = await planModels.selectGlobalPlans(req.requestId);
-    plans.unshift({ id: null, name: 'プランなし' }); // Add a 'No Plan' option
+    const planCategoriesModel = require('../../models/plan/categories');
+    const typeCategories = await planCategoriesModel.selectAllPlanTypeCategories(req.requestId);
+    const packageCategories = await planCategoriesModel.selectAllPlanPackageCategories(req.requestId);
 
     if (validatedType === 'forecast') {
-      csvContent = await csvGenerator.generateForecastCsv(formattedMonth1, formattedMonth2, prefilledData, hotels, plans);
+      csvContent = await csvGenerator.generateForecastCsv(formattedMonth1, formattedMonth2, prefilledData, hotels, typeCategories, packageCategories);
       filename = `forecast_template_${formattedMonth1}_to_${formattedMonth2}.csv`;
     } else if (validatedType === 'accounting') {
-      csvContent = await csvGenerator.generateAccountingCsv(formattedMonth1, formattedMonth2, prefilledData, hotels, plans);
+      csvContent = await csvGenerator.generateAccountingCsv(formattedMonth1, formattedMonth2, prefilledData, hotels, typeCategories, packageCategories);
       filename = `accounting_template_${formattedMonth1}_to_${formattedMonth2}.csv`;
     }
 

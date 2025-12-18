@@ -708,8 +708,8 @@
     const filteredAddonSum = computed(() => {
         return addons.value.reduce((sum, addon) => sum + (addon.price || 0), 0);
     });
-    const handleFilteredAddons = (addons) => {
-        addons.value = addons;
+    const handleFilteredAddons = (payload) => {
+        addons.value = payload;
     };
     const allRates = ref([]);
 
@@ -926,6 +926,7 @@
             });
         } catch (error) {
             console.error('調整保存エラー:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: '調整の保存に失敗しました', life: 3000 });
         }
     };
     const updateAdjustment = async () => {
