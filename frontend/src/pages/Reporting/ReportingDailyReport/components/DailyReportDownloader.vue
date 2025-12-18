@@ -66,7 +66,7 @@
         </div>
 
         <!-- Daily Report -->
-        <div class="col-span-12" v-if="reportData.length && Number(activeTab) === 0">
+        <div class="col-span-12" v-if="reportData.length && Number(activeTab) === 0 && loadedDate">
             <div class="col-span-12 mb-4">
                 <Card>
                     <template #title>{{ loadedDateTitle }}</template>
@@ -83,10 +83,10 @@
                             <Column field="hotel_id" header="ホテルID"></Column>
                             <Column field="hotel_name" header="ホテル名"></Column>
                             <Column field="month" header="月"></Column>
-                            <Column field="plans_global_id" header="グローバルプランID"></Column>
-                            <Column field="plans_hotel_id" header="ホテルプランID"></Column>
-                            <Column field="plan_type_category_id" header="プランタイプカテゴリーID"></Column>
-                            <Column field="plan_package_category_id" header="プランパッケージカテゴリーID"></Column>
+                            <Column field="plans_global_id" header="グローバルプランID" class="hidden"></Column>
+                            <Column field="plans_hotel_id" header="ホテルプランID" class="hidden"></Column>
+                            <Column field="plan_type_category_id" header="プランタイプカテゴリーID" class="hidden"></Column>
+                            <Column field="plan_package_category_id" header="プランパッケージカテゴリーID" class="hidden"></Column>
                             <Column field="plan_name" header="プラン名"></Column>
                             <Column field="confirmed_stays" header="確定宿泊数"></Column>
                             <Column field="non_accommodation_stays" header="非宿泊数"></Column>
@@ -95,42 +95,42 @@
                             <Column field="cancelled_stays" header="キャンセル"></Column>
                             <Column field="non_billable_cancelled_stays" header="キャンセル(請求対象外)"></Column>
                             <Column field="employee_stays" header="社員"></Column>
-                            <Column field="accommodation_sales" header="宿泊売上">
+                            <Column field="accommodation_sales" header="宿泊売上" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.accommodation_sales || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="other_sales" header="その他売上">
+                            <Column field="other_sales" header="その他売上" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.other_sales || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="accommodation_sales_cancelled" header="宿泊売上(キャンセル)">
+                            <Column field="accommodation_sales_cancelled" header="宿泊売上(キャンセル)" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.accommodation_sales_cancelled || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="other_sales_cancelled" header="その他売上(キャンセル)">
+                            <Column field="other_sales_cancelled" header="その他売上(キャンセル)" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.other_sales_cancelled || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="accommodation_net_sales" header="宿泊売上(税抜)">
+                            <Column field="accommodation_net_sales" header="宿泊売上(税抜)" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.accommodation_net_sales || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="other_net_sales" header="その他売上(税抜)">
+                            <Column field="other_net_sales" header="その他売上(税抜)" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.other_net_sales || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="accommodation_net_sales_cancelled" header="宿泊売上(キャンセル・税抜)">
+                            <Column field="accommodation_net_sales_cancelled" header="宿泊売上(キャンセル・税抜)" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.accommodation_net_sales_cancelled || 0).toLocaleString() }}
                                 </template>
                             </Column>
-                            <Column field="other_net_sales_cancelled" header="その他売上(キャンセル・税抜)">
+                            <Column field="other_net_sales_cancelled" header="その他売上(キャンセル・税抜)" class="hidden">
                                 <template #body="{ data }">
                                     {{ (data.other_net_sales_cancelled || 0).toLocaleString() }}
                                 </template>
@@ -200,7 +200,7 @@
                                 </div>
                             </template>
                         </Column>
-                        <Column header="宿泊売上" bodyStyle="text-align: right" headerClass="text-center">
+                        <Column header="宿泊売上" bodyStyle="text-align: right" headerClass="text-center" class="hidden">
                             <template #body="slotProps">
                                 <div class="grid grid-cols-2">
                                     <div class="col-span-1">
@@ -215,7 +215,7 @@
                                 </div>
                             </template>
                         </Column>
-                        <Column header="その他売上" bodyStyle="text-align: right" headerClass="text-center">
+                        <Column header="その他売上" bodyStyle="text-align: right" headerClass="text-center" class="hidden">
                             <template #body="slotProps">
                                 <div class="grid grid-cols-2">
                                     <div class="col-span-1">
@@ -229,7 +229,7 @@
                                 </div>
                             </template>
                         </Column>
-                        <Column header="売上合計" bodyStyle="text-align: right" headerClass="text-center">
+                        <Column header="売上合計" bodyStyle="text-align: right" headerClass="text-center" class="hidden">
                             <template #body="slotProps">
                                 <div class="grid grid-cols-2">
                                     <div class="col-span-1">
@@ -247,7 +247,7 @@
                 </template>
                 <template #footer>
                     <div class="text-right">
-                        売上は税込み、単位は円です。
+                        売上単位は円です。
                     </div>
                 </template>
             </Card>
@@ -256,7 +256,12 @@
 </template>
 
 <script setup>
+// Vue
 import { ref, onMounted, computed } from 'vue';
+
+import DailyReportConfirmedReservationsChart from './charts/DailyReportConfirmedReservationsChart.vue';
+
+// PrimeVue
 import Tabs from 'primevue/tabs';
 import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
@@ -273,20 +278,11 @@ import Badge from 'primevue/badge';
 import MultiSelect from 'primevue/multiselect';
 import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
-import Toast from 'primevue/toast';
-import DailyReportConfirmedReservationsChart from './charts/DailyReportConfirmedReservationsChart.vue'; // Import Card component
-import { useReportStore } from '@/composables/useReportStore';
-import { formatDate, formatDateTime } from '@/utils/dateUtils';
+const toast = useToast();
 import { FilterMatchMode } from '@primevue/core/api';
 
-const toast = useToast();
-
-const filters = ref({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    hotel_name: { value: null, matchMode: FilterMatchMode.IN },
-    month: { value: null, matchMode: FilterMatchMode.IN },
-});
-
+// Stores
+import { useReportStore } from '@/composables/useReportStore';
 const {
     availableDates,
     reportData,
@@ -297,6 +293,15 @@ const {
     downloadDailyReportExcel,
 } = useReportStore();
 
+// Utils
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
+
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    hotel_name: { value: null, matchMode: FilterMatchMode.IN },
+    month: { value: null, matchMode: FilterMatchMode.IN },
+});
+
 const selectedDate = ref(new Date());
 const minDateDailyReport = ref(null);
 const maxDateDailyReport = ref(new Date());
@@ -304,7 +309,7 @@ const minDateComparison = ref(null);
 const maxDateComparison = ref(new Date());
 const dt = ref();
 const loadedDateTitle = ref('レポートデータ');
-const loadedDate = ref(''); // New reactive variable for card title
+const loadedDate = ref('');
 const activeTab = ref(0);
 const comparisonData = ref([]);
 
@@ -454,9 +459,9 @@ const loadReport = async () => { // Made async to await fetchDailyReportData
 
     try {
         let data = await fetchDailyReportData(date); // Attempt to load data
-        
 
-        
+
+
         reportData.value = data;
 
         // If no data is available for today's date, generate it
@@ -521,24 +526,24 @@ const showNoReportDataMessage = computed(() => {
 const handleCSVDownload = async () => {
     try {
 
-        
+
         // Call the original DataTable CSV export
         dt.value.exportCSV();
-        
+
         // Optional: Send logging request to backend
         // await api.post('/report/log-csv-download', {
         //     date: loadedDate.value,
         //     recordCount: processedReportData.value.length,
         //     timestamp: new Date().toISOString()
         // });
-        
+
     } catch (error) {
         console.error('Error during CSV download:', error);
-        toast.add({ 
-            severity: 'error', 
-            summary: 'エラー', 
-            detail: 'CSVダウンロード中にエラーが発生しました。', 
-            life: 3000 
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: 'CSVダウンロード中にエラーが発生しました。',
+            life: 3000
         });
     }
 };

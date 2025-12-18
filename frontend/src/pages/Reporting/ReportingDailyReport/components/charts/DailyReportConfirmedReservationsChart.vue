@@ -1,6 +1,6 @@
 <template>
   <Card>
-    <template #title>ホテル別確定予約数 ({{ metricDate }})</template>
+    <template #title>ホテル別確定予約数{{ metricDate ? ` (${metricDate})` : '' }}</template>
     <template #content>
       <div class="h-96">
         <VChart :option="chartOption" autoresize />
