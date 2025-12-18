@@ -203,43 +203,52 @@ const selectPatternsByHotel = async (requestId, hotel_id, dbClient = null) => {
 
 const insertHotelPlan = async (requestId, hotel_id, plan_type_category_id, plan_package_category_id, name, description, plan_type, color, display_order, is_active, available_from, available_until, created_by, updated_by, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
+    const shouldManageTransaction = !dbClient;
     
-    // Auto-calculate display_order if not provided or is 0
-    let finalDisplayOrder = display_order;
-    if (!display_order || display_order === 0) {
-        const maxOrderQuery = `
-            SELECT COALESCE(MAX(display_order), -1) + 1 as next_order 
-            FROM plans_hotel 
-            WHERE hotel_id = $1
-        `;
-        const maxOrderResult = await client.query(maxOrderQuery, [hotel_id]);
-        finalDisplayOrder = maxOrderResult.rows[0].next_order;
-    }
-    
-    const query = `
-        INSERT INTO plans_hotel (
-            hotel_id, plan_type_category_id, plan_package_category_id, 
-            name, description, plan_type, color, display_order, is_active, available_from, available_until, 
-            created_by, updated_by
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING *;
-    `;
-    const values = [
-        hotel_id, plan_type_category_id, plan_package_category_id,
-        name, description, plan_type, color, finalDisplayOrder, is_active, available_from, available_until,
-        created_by, updated_by
-    ];
-
-    logger.debug(`[DB] insertHotelPlan values:`, values);
     try {
+        if (shouldManageTransaction) await client.query('BEGIN');
+
+        // Lock relevant rows for this hotel to serialize display_order calculation
+        await client.query('SELECT 1 FROM hotels WHERE id = $1 FOR UPDATE', [hotel_id]);
+
+        // Auto-calculate display_order if not provided or is 0
+        let finalDisplayOrder = display_order;
+        if (!display_order || display_order === 0) {
+            const maxOrderQuery = `
+                SELECT COALESCE(MAX(display_order), -1) + 1 as next_order 
+                FROM plans_hotel 
+                WHERE hotel_id = $1
+            `;
+            const maxOrderResult = await client.query(maxOrderQuery, [hotel_id]);
+            finalDisplayOrder = maxOrderResult.rows[0].next_order;
+        }
+        
+        const query = `
+            INSERT INTO plans_hotel (
+                hotel_id, plan_type_category_id, plan_package_category_id, 
+                name, description, plan_type, color, display_order, is_active, available_from, available_until, 
+                created_by, updated_by
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING *;
+        `;
+        const values = [
+            hotel_id, plan_type_category_id, plan_package_category_id,
+            name, description, plan_type, color, finalDisplayOrder, is_active, available_from, available_until,
+            created_by, updated_by
+        ];
+
+        logger.debug(`[DB] insertHotelPlan values:`, values);
         const result = await client.query(query, values);
+        
+        if (shouldManageTransaction) await client.query('COMMIT');
         return result.rows[0];
     } catch (err) {
+        if (shouldManageTransaction) await client.query('ROLLBACK');
         logger.error('Error adding hotel Plan:', err);
         throw new Error('Database error');
     } finally {
-        if (!dbClient) client.release();
+        if (shouldManageTransaction) client.release();
     }
 };
 const insertPlanPattern = async (requestId, hotel_id, name, template, user_id, dbClient = null) => {

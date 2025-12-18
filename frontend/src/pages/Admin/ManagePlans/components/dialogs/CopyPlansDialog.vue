@@ -79,7 +79,7 @@ const props = defineProps({
 
 const toast = useToast();
 const { hotels, fetchHotels } = useHotelStore();
-const { fetchPlansForHotel, createHotelPlan, bulkCopyPlansToHotel } = usePlansStore();
+const { fetchPlansForHotel, bulkCopyPlansToHotel } = usePlansStore();
 
 const sourceHotelId = ref(null);
 const targetHotelId = ref(null);
@@ -268,8 +268,8 @@ onMounted(async () => {
     await fetchHotels();
 });
 
-watch(props, (newProps) => {
-    if (newProps.visible) {
+watch(() => props.visible, (visible) => {
+    if (visible) {
         resetForm();
     }
 });

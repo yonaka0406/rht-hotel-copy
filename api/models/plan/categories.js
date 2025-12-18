@@ -60,7 +60,6 @@ const insertPlanTypeCategory = async (requestId, name, description, color, displ
 
     try {
         const result = await client.query(query, values);
-        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error inserting plan type category:', err);
@@ -94,8 +93,11 @@ const updatePlanTypeCategory = async (requestId, id, name, description, color, d
 
 const deletePlanTypeCategory = async (requestId, id, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
+    const shouldManageTransaction = !dbClient;
     
     try {
+        if (shouldManageTransaction) await client.query('BEGIN');
+
         // Check if category is in use
         const usageCheckQuery = `
             SELECT COUNT(*) as usage_count 
@@ -115,13 +117,16 @@ const deletePlanTypeCategory = async (requestId, id, dbClient = null) => {
         const query = 'DELETE FROM plan_type_categories WHERE id = $1 RETURNING *';
         const result = await client.query(query, [id]);
         
+        if (shouldManageTransaction) await client.query('COMMIT');
+        
         if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
+        if (shouldManageTransaction) await client.query('ROLLBACK');
         console.error('Error deleting plan type category:', err);
         throw err;
     } finally {
-        if (!dbClient) client.release();
+        if (shouldManageTransaction) client.release();
     }
 };
 
@@ -186,7 +191,6 @@ const insertPlanPackageCategory = async (requestId, name, description, color, di
 
     try {
         const result = await client.query(query, values);
-        if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
         console.error('Error inserting plan package category:', err);
@@ -220,8 +224,11 @@ const updatePlanPackageCategory = async (requestId, id, name, description, color
 
 const deletePlanPackageCategory = async (requestId, id, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
+    const shouldManageTransaction = !dbClient;
     
     try {
+        if (shouldManageTransaction) await client.query('BEGIN');
+
         // Check if category is in use
         const usageCheckQuery = `
             SELECT COUNT(*) as usage_count 
@@ -241,13 +248,16 @@ const deletePlanPackageCategory = async (requestId, id, dbClient = null) => {
         const query = 'DELETE FROM plan_package_categories WHERE id = $1 RETURNING *';
         const result = await client.query(query, [id]);
         
+        if (shouldManageTransaction) await client.query('COMMIT');
+        
         if (result.rowCount === 0) return null;
         return result.rows[0];
     } catch (err) {
+        if (shouldManageTransaction) await client.query('ROLLBACK');
         console.error('Error deleting plan package category:', err);
         throw err;
     } finally {
-        if (!dbClient) client.release();
+        if (shouldManageTransaction) client.release();
     }
 };
 

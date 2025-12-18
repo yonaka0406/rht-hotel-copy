@@ -392,15 +392,17 @@ const reindexPlans = async (preserveCurrentOrder = false) => { // Added paramete
     id: plan.plans_hotel_id, // Use plans_hotel_id as the id for backend operations
   }));
 
-  // Update local state and then send to backend
+  const previousPlans = [...hotelPlans.value];
+  // Optimistically update local state
   hotelPlans.value = reindexedPlans;
-
-  console.log('reindexPlans: Sending to backend:', backendPlans); // Add this log
 
   try {
     await updatePlansOrderBulk(selectedHotelId.value, backendPlans);
     toast.add({ severity: 'success', summary: '成功', detail: 'プランの表示順序が更新されました。', life: 3000 });
   } catch (error) {
+    console.error('reindexPlans error:', error);
+    // Revert local state on failure
+    hotelPlans.value = previousPlans;
     toast.add({ severity: 'error', summary: '失敗', detail: 'プランの表示順序の更新に失敗しました。', life: 3000 });
   }
 };
@@ -490,28 +492,34 @@ onMounted(async () => {
 watch(selectedHotelId, async (newVal) => {
   if (newVal) {
     loading.value = true;
-    const fetchedPlans = await fetchHotelPlans(newVal);
-    // Enhance hotelPlans with category names
-    hotelPlans.value = (fetchedPlans || []).map(plan => {
-      // Parse plan_key to extract plans_global_id and plans_hotel_id for rates component
-      const match = plan.plan_key?.match(/^(\d*)h(\d+)?$/);
-      const parsed_plans_global_id = match?.[1] ? parseInt(match[1]) : null;
-      const parsed_plans_hotel_id = match?.[2] ? parseInt(match[2]) : null;
-      
-      const enhanced = {
-        ...plan,
-        plans_hotel_id: plan.id, // Preserve the original id as plans_hotel_id
-        id: plan.plan_key, // Map plan_key for DataTable dataKey
-        // Add parsed values for rates component compatibility
-        plans_global_id: plan.plans_global_id || parsed_plans_global_id,
-        parsed_plans_hotel_id: parsed_plans_hotel_id,
-        plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
-        plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
-      };
-      console.log('Enhanced plan:', enhanced.name, 'plans_hotel_id:', enhanced.plans_hotel_id, 'parsed_plans_hotel_id:', enhanced.parsed_plans_hotel_id, 'plans_global_id:', enhanced.plans_global_id);
-      return enhanced;
-    });
-    loading.value = false;
+    try {
+      const fetchedPlans = await fetchHotelPlans(newVal);
+      // Enhance hotelPlans with category names
+      hotelPlans.value = (fetchedPlans || []).map(plan => {
+        // Parse plan_key to extract plans_global_id and plans_hotel_id for rates component
+        const match = plan.plan_key?.match(/^(\d*)h(\d+)?$/);
+        const parsed_plans_global_id = match?.[1] ? parseInt(match[1]) : null;
+        const parsed_plans_hotel_id = match?.[2] ? parseInt(match[2]) : null;
+        
+        const enhanced = {
+          ...plan,
+          plans_hotel_id: plan.id, // Preserve the original id as plans_hotel_id
+          id: plan.plan_key, // Map plan_key for DataTable dataKey
+          // Add parsed values for rates component compatibility
+          plans_global_id: plan.plans_global_id || parsed_plans_global_id,
+          parsed_plans_hotel_id: parsed_plans_hotel_id,
+          plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
+          plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
+        };
+        console.log('Enhanced plan:', enhanced.name, 'plans_hotel_id:', enhanced.plans_hotel_id, 'parsed_plans_hotel_id:', enhanced.parsed_plans_hotel_id, 'plans_global_id:', enhanced.plans_global_id);
+        return enhanced;
+      });
+    } catch (error) {
+      console.error('Error fetching hotel plans:', error);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルプランの取得に失敗しました。', life: 3000 });
+    } finally {
+      loading.value = false;
+    }
   }
 });
 </script>

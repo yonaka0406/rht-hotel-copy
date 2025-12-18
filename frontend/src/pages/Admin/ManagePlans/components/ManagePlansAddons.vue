@@ -296,10 +296,12 @@
     const editAddon = ref(null);
     const addonNetPrice = computed(() => {
         const targetAddon = showEditAddonDialog.value ? editAddon.value : newAddon.value;
+        if (!targetAddon) return 0;
 
-        if (!targetAddon.price || !targetAddon.tax_rate) return 0;   
         const price = Number(targetAddon.price);
         const taxRate = Number(targetAddon.tax_rate);
+
+        if (isNaN(price) || isNaN(taxRate)) return 0;
         return Math.floor(price / (1 + taxRate));
     });
     const showAddonDialog = ref(false);
@@ -355,6 +357,15 @@
     };       
     const addAddon = async () => {
         // Validation
+            if (!newAddon.value.addons_id) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: 'アドオンを選択してください。',
+                    life: 3000
+                });
+                return;
+            }
             if (newAddon.value.date_end && new Date(newAddon.value.date_end) < new Date(newAddon.value.date_start)) {                    
                 toast.add({ 
                     severity: 'error', 
@@ -392,7 +403,7 @@
                 throw new Error('アドオンの保存に失敗しました');
             } 
 
-            fetchPlanAddons();
+            await fetchPlanAddons();
             showAddonDialog.value = false;
             newAddonReset();
 
@@ -460,7 +471,7 @@
                 throw new Error('アドオンの更新に失敗しました');
             }
 
-            fetchPlanAddons(); // Refresh the rates
+            await fetchPlanAddons(); // Refresh the rates
             showEditAddonDialog.value = false; // Close the dialog
             editAddonReset();
 
@@ -528,11 +539,11 @@
 
         return planAddons.value
             .filter(condition => {
-                const startDate = new Date(condition.date_start);
-                startDate.setHours(0, 0, 0, 0);
                 const endDate = condition.date_end ? new Date(condition.date_end) : null;
-                if (endDate) endDate.setHours(0, 0, 0, 0);
-                return startDate < selectedDateObj && endDate != null;
+                if (!endDate) return false;
+                
+                endDate.setHours(0, 0, 0, 0);
+                return endDate < selectedDateObj;
             });
     });
     const sendFilteredConditions = () => {
@@ -577,7 +588,7 @@
     };
 
     onMounted( async () => {
-        fetchPlanAddons();
+        await fetchPlanAddons();
         newAddonReset();
         editAddonReset();
     });

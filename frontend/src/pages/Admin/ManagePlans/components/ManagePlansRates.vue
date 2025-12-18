@@ -332,11 +332,14 @@
                 <div class="col-span-2">
                     <FloatLabel>
                         <Select v-model="newAdjustment.adjustment_type"
-                        :options="adjustmentTypes"
-                        optionLabel="label"
-                        optionValue="value"
-                        fluid
-                        required />
+                            inputId="newAdjustmentType"
+                            :options="adjustmentTypes"
+                            optionLabel="label"
+                            optionValue="value"
+                            fluid
+                            required 
+                        />
+                        <label for="newAdjustmentType">調整種類</label>
                     </FloatLabel>
                 </div>
                 <div class="col-span-2">
@@ -470,12 +473,14 @@
                 <div class="col-span-2">
                     <FloatLabel>
                         <Select v-model="editAdjustment.adjustment_type"
+                            inputId="editAdjustmentType"
                             :options="adjustmentTypes"
                             optionLabel="label"
                             optionValue="value"
                             fluid
                             required 
                         />
+                        <label for="editAdjustmentType">調整種類</label>
                     </FloatLabel>
                 </div>
                 <div class="col-span-2">
@@ -858,7 +863,7 @@
             });
             return;
         }
-        if (newAdjustment.value.adjustment_value === 0) {
+        if (newAdjustment.value.adjustment_value == null || newAdjustment.value.adjustment_value === '' || Number(newAdjustment.value.adjustment_value) === 0) {
             toast.add({
                 severity: 'error',
                 summary: 'エラー',
@@ -906,17 +911,7 @@
 
             fetchRates();
             showAdjustmentDialog.value = false;
-            newAdjustment.value = {
-                hotel_id: null,
-                plans_global_id: null,
-                plans_hotel_id: null,
-                adjustment_type: 'base_rate',
-                adjustment_value: 0,
-                condition_type: 'no_restriction',
-                condition_value: [],
-                date_start: null,
-                date_end: null,
-            };
+            newAdjustmentReset();
 
             toast.add({
                 severity: 'success',
