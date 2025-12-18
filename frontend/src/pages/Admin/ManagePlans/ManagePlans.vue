@@ -90,50 +90,11 @@
       </Tabs>
     </Panel>
 
-    <Panel header="プランパターン" class="mt-4">
-      <ManagePlansPatterns />
-    </Panel>
+    <ManagePlansPatterns :selectedHotelId="selectedHotelId" :selectedHotelName="selectedHotelName"
+      v-if="!showHotelRatePanel" />
 
-    <Dialog header="グローバルプラン追加" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '70vw' }"
-      class="p-fluid" :closable="true">
-      <div class="grid grid-cols-2 gap-2 pt-6">
-        <div class="col-span-1 mb-6">
-          <FloatLabel>
-            <InputText v-model="newGlobalPlan.name" fluid />
-            <label>名称</label>
-          </FloatLabel>
-        </div>
-        <div class="col-span-1 mb-6">
-          <div class="flex grid-cols-2 justify-center items-center">
-            <FloatLabel class="flex-1">
-              <InputText v-model="newGlobalPlan.colorHEX" fluid />
-              <label>プラン表示HEX</label>
-            </FloatLabel>
-            <ColorPicker v-model="newGlobalPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
-          </div>
-        </div>
-        <div class="col-span-2">
-          <div class="p-float-label flex align-items-center gap-2">
-            <span class="inline-block align-middle font-bold">請求種類：</span>
-            <SelectButton v-model="newGlobalPlan.plan_type" :options="sb_options" optionLabel="label"
-              optionValue="value" />
-          </div>
-        </div>
-        <div class="col-span-2 pt-6">
-          <FloatLabel>
-            <Textarea v-model="newGlobalPlan.description" fluid />
-            <label>詳細</label>
-          </FloatLabel>
-        </div>
-      </div>
-
-      <template #footer>
-        <Button label="保存" icon="pi pi-check" @click="saveGlobalPlan"
-          class="p-button-success p-button-text p-button-sm" />
-        <Button label="閉じる" icon="pi pi-times" @click="showGlobalDialog = false"
-          class="p-button-danger p-button-text p-button-sm" text />
-      </template>
-    </Dialog>
+    <AddGlobalPlanDialog :visible="showGlobalDialog" @update:visible="showGlobalDialog = $event"
+      @planAdded="onGlobalPlanAdded" :sb_options="sb_options" :globalPlans="globalPlans" />
 
     <Dialog header="グローバルプラン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '70vw' }"
       class="p-fluid" :closable="true">
@@ -197,6 +158,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import ManagePlansRates from './components/ManagePlansRates.vue';
 import ManagePlansPatterns from './components/ManagePlansPatterns.vue';
 import CopyPlansDialog from './components/dialogs/CopyPlansDialog.vue';
+import AddGlobalPlanDialog from './components/dialogs/AddGlobalPlanDialog.vue';
 import AddHotelPlanDialog from './components/dialogs/AddHotelPlanDialog.vue';
 import EditHotelPlanDialog from './components/dialogs/EditHotelPlanDialog.vue';
 import ManageHotelPlansTable from './components/ManageHotelPlansTable.vue';
@@ -257,12 +219,6 @@ const selectHotel = (hotel) => {
 };
 
 // Global Dialog
-const newGlobalPlan = ref({
-  name: '',
-  description: '',
-  plan_type: 'per_room',
-  colorHEX: 'D3D3D3'
-});
 const editGlobalPlan = ref({
   id: null,
   name: '',
@@ -278,37 +234,9 @@ const openEditGlobalPlan = async (data) => {
   };
   showEditGlobalDialog.value = true;
 };
-const saveGlobalPlan = async () => {
-  // Check for duplicate keys
-  const PlanSet = new Set();
-  for (const plan of globalPlans.value) {
-    PlanSet.add(plan.name);
-    if (PlanSet.has(newGlobalPlan.value.name)) {
-      toast.add({
-        severity: 'error',
-        summary: 'エラー',
-        detail: 'プラン名はユニークである必要があります。', life: 3000
-      });
-      return;
-    }
-  }
-
-  try {
-    await createGlobalPlan(newGlobalPlan.value);
-    await fetchPlansGlobal();
-    globalPlans.value = plans.value;
-    showGlobalDialog.value = false;
-    newGlobalPlan.value = {
-      name: '',
-      description: '',
-      plan_type: 'per_room',
-      colorHEX: 'D3D3D3'
-    };
-    toast.add({ severity: 'success', summary: '成功', detail: 'グローバルプラン追加されました。', life: 3000 });
-  } catch (err) {
-    console.error('グローバルプランの保存エラー:', err);
-    toast.add({ severity: 'error', summary: 'エラー', detail: 'グローバルプランの保存に失敗しました', life: 3000 });
-  }
+const onGlobalPlanAdded = async () => {
+  await fetchPlansGlobal();
+  globalPlans.value = plans.value;
 };
 const updateGlobal = async () => {
   // Filter out the current id from globalPlans
