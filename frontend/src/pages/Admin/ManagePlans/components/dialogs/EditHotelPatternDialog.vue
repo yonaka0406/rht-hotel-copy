@@ -1,5 +1,5 @@
 <template>
-    <Dialog header="ホテルパターン編集" :visible="visible" :modal="true" :style="{ width: '600px' }" class="p-fluid"
+    <Dialog header="ホテルパターン編集" :visible="visible" :modal="true" :style="{ width: '70vw' }" class="p-fluid"
         :closable="true" @update:visible="$emit('update:visible', $event)">
         <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
             <div class="col-span-2">
@@ -14,8 +14,8 @@
                 </div>
                 <div>
                     <FloatLabel>
-                        <Select v-model="dayPlanSelections[day.value]" :options="hotelPlans" optionLabel="plan_name"
-                            optionValue="plan_id" class="w-full" />
+                        <Select v-model="dayPlanSelections[day.value]" :options="hotelPlans" optionLabel="name"
+                            optionValue="plan_key" fluid />
                         <label class="font-semibold mb-1 block"></label>
                     </FloatLabel>
                 </div>
@@ -100,12 +100,12 @@ watch(() => props.visible, (newVal) => {
             const templateEntry = editHotelPattern.value.template?.[day.value];
             console.log(`EditHotelPatternDialog - Day ${day.value} (${day.label}) template entry:`, templateEntry);
 
-            if (templateEntry && templateEntry.plans_hotel_id) {
-                dayPlanSelections.value[day.value] = templateEntry.plans_hotel_id;
-                console.log(`EditHotelPatternDialog - Set ${day.value} to plans_hotel_id:`, templateEntry.plans_hotel_id);
+            if (templateEntry && templateEntry.plan_key) {
+                dayPlanSelections.value[day.value] = templateEntry.plan_key;
+                console.log(`EditHotelPatternDialog - Set ${day.value} to plan_key:`, templateEntry.plan_key);
             } else {
                 dayPlanSelections.value[day.value] = null;
-                console.log(`EditHotelPatternDialog - Set ${day.value} to null (no template entry or plans_hotel_id)`);
+                console.log(`EditHotelPatternDialog - Set ${day.value} to null (no template entry or plan_key)`);
             }
         }
 
@@ -131,13 +131,25 @@ const updateHotelPattern = async () => {
 
     const template = {};
     for (const day of props.daysOfWeek) {
-        const planId = dayPlanSelections.value[day.value];
-        if (!planId) {
+        const planKey = dayPlanSelections.value[day.value];
+        if (!planKey) {
             toast.add({ severity: 'error', summary: 'エラー', detail: `全曜日にプランを設定してください (${day.label})。`, life: 3000 });
             return;
         }
+        
+        // Parse plan_key to extract plans_global_id and plans_hotel_id
+        const match = planKey.match(/^(\d*)h(\d+)?$/);
+        if (!match) {
+            console.warn(`Invalid plan key format for ${day.value}:`, planKey);
+            continue;
+        }
+        const plans_global_id = match[1] || null;
+        const plans_hotel_id = match[2] || null;
+        
         template[day.value] = {
-            plans_hotel_id: planId,
+            plan_key: planKey,
+            plans_global_id,
+            plans_hotel_id
         };
     }
 
