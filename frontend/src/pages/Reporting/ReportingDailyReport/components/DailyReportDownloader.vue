@@ -1,5 +1,4 @@
 <template>
-    <Toast />
     <div class="grid grid-cols-12 gap-4">
         <div class="col-span-12">
             <Tabs v-model:value="activeTab">
@@ -206,7 +205,7 @@
                                     <div class="col-span-1">
                                         {{ (slotProps.data.accommodation_sales_date2 || 0).toLocaleString() }}
                                         <br /><small>{{ (slotProps.data.accommodation_sales_date1 || 0).toLocaleString()
-                                        }}</small>
+                                            }}</small>
                                     </div>
                                     <div class="col-span-1">
                                         <Badge v-bind="getBadgeProps(slotProps.data.accommodation_sales_change || 0)">
@@ -221,7 +220,7 @@
                                     <div class="col-span-1">
                                         {{ (slotProps.data.other_sales_date2 || 0).toLocaleString() }}
                                         <br /><small>{{ (slotProps.data.other_sales_date1 || 0).toLocaleString()
-                                        }}</small>
+                                            }}</small>
                                     </div>
                                     <div class="col-span-1">
                                         <Badge v-bind="getBadgeProps(slotProps.data.other_sales_change || 0)"></Badge>
@@ -235,7 +234,7 @@
                                     <div class="col-span-1">
                                         {{ (slotProps.data.total_sales_date2 || 0).toLocaleString() }}
                                         <br /><small>{{ (slotProps.data.total_sales_date1 || 0).toLocaleString()
-                                        }}</small>
+                                            }}</small>
                                     </div>
                                     <div class="col-span-1">
                                         <Badge v-bind="getBadgeProps(slotProps.data.total_sales_change || 0)"></Badge>
