@@ -14,7 +14,7 @@
       </Button>
     </div>
 
-    <ReservationAddRoom v-if="!hasReservation"
+    <ReservationAddRoom v-if="!hasReservation && selectedRoomID"
       :room_id="selectedRoomID"
       :date="selectedDate"
       @temp-block-close="handleTempBlock"

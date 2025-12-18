@@ -45,8 +45,9 @@
         </Card>
 
         <!-- Client For Reservation Dialog -->
-        <ClientForReservationDialog v-model="dialogVisible" :reservation-details="reservationDetails" :client="client"            
-            @save="handleReservationSave"
+
+        <ClientForReservationDialog v-if="dialogVisible" v-model="dialogVisible"
+            :reservation-details="reservationDetails" :client="client" @save="handleReservationSave"
             @close="closeDialog" />
     </div>
 </template>
@@ -79,7 +80,7 @@ import { Card, FloatLabel, DatePicker, InputNumber, Button } from 'primevue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, applyCalendarSettings } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, applyCalendarSettings, selectedHotel } = useHotelStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
 import { useClientStore } from '@/composables/useClientStore';
@@ -153,9 +154,6 @@ const formatDate = (date) => {
 
 // Dialog
 const openDialog = () => {
-    if (clients.value.length === 0) {
-        fetchAllClientsForFiltering();
-    }
     if (!reservationDetails.value.number_of_people) {
         toast.add({
             severity: 'warn',
@@ -269,9 +267,9 @@ const submitTempBlock = async () => {
 
 onMounted(async () => {
     // Filter the selected room            
-    selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id === props.room_id);
+    selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id == props.room_id);
 
-    if (!selectedRoom.value || !selectedRoom.value.id) {
+    if (!selectedRoom.value || !selectedRoom.value.room_id) {
         toast.add({
             severity: 'error',
             summary: 'エラー',
@@ -281,10 +279,10 @@ onMounted(async () => {
         return;
     }
 
-    drawerHeader.value = selectedRoom.value.name + '：' + selectedRoom.value.room_number + '号室 ' + selectedRoom.value.room_type_name;
+    drawerHeader.value = selectedHotel.value?.name + '：' + selectedRoom.value.room_number + '号室 ' + selectedRoom.value.room_type_name;
     maxNumberOfPeople.value = selectedRoom.value.room_capacity;
 
-    const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
+    const datesResult = await getAvailableDatesForChange(selectedRoom.value.hotel_id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
 
     if (datesResult && datesResult.earliestCheckIn) {
         minDateRange.value = new Date(datesResult.earliestCheckIn);
