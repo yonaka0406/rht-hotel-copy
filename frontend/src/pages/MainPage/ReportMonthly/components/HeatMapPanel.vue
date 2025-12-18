@@ -3,7 +3,7 @@
         <Card class="flex col-span-12">
             <template #title>
 
-            </template>                
+            </template>
             <template #subtitle>
                 <div class="flex justify-between items-center">
                     <p>曜日毎の予約数ヒートマップ ({{ selectedMonth.getFullYear() }}年 {{ selectedMonth.getMonth() + 1 }}月基点)</p>
@@ -11,9 +11,9 @@
                 </div>
             </template>
             <template #content>
-                <div ref="heatMap" class="w-full h-96"></div>             
+                <div ref="heatMap" class="w-full h-96"></div>
             </template>
-        </Card> 
+        </Card>
     </Panel>
 </template>
 
@@ -75,21 +75,21 @@ const props = defineProps({
 });
 
 const heatMap = ref(null);
-let myHeatMap; 
+let myHeatMap;
 
 const heatMapAxisX = computed(() => {
     const start = new Date(props.heatMapDisplayStartDate);
     const end = new Date(props.heatMapDisplayEndDate);
     const weekIntervals = [];
     let current = new Date(start);
-    
+
     while (current <= end) {
         const month = current.getMonth() + 1;
         const day = current.getDate();
         weekIntervals.push(`${month}月${day}日の週`);
         current.setDate(current.getDate() + 7);
     }
-    
+
     return weekIntervals;
 });
 
@@ -101,17 +101,17 @@ const heatMapData = ref([]);
 
 const processHeatMapData = () => {
     // DEBUG LOG: Initial props
-    console.log('[HeatMapPanel] Initial allReservationsData:', props.allReservationsData);
-    
+    //console.log('[HeatMapPanel] Initial allReservationsData:', props.allReservationsData);
+
     if (!props.allReservationsData || !heatMap.value) {
         heatMapData.value = [];
         initHeatMap(); // Initialize with empty data if needed
         return;
     }
-    
+
     const start = props.normalizeDate(new Date(props.heatMapDisplayStartDate));
     const end = props.normalizeDate(new Date(props.heatMapDisplayEndDate));
-           
+
     // Filter relevant reservations for the heatmap's specific display window
     let relevantReservations = props.allReservationsData.filter(r => {
         const rDate = props.normalizeDate(new Date(r.date));
@@ -119,25 +119,25 @@ const processHeatMapData = () => {
     });
 
     // DEBUG LOG: Before occCalcMode filtering
-    console.log('[HeatMapPanel] occCalcMode:', occCalcMode.value);
-    console.log('[HeatMapPanel] relevantReservations (before mode filter):', relevantReservations);
+    //console.log('[HeatMapPanel] occCalcMode:', occCalcMode.value);
+    //console.log('[HeatMapPanel] relevantReservations (before mode filter):', relevantReservations);
 
     // Apply filtering based on occCalcMode
     if (occCalcMode.value === 'accommodation') {
         relevantReservations = relevantReservations.filter(r => parseFloat(r.accommodation_price || 0) > 0);
     }
-            
-    // DEBUG LOG: After occCalcMode filtering
-    console.log('[HeatMapPanel] relevantReservations (after mode filter):', relevantReservations);
 
-    if(relevantReservations && relevantReservations.length > 0){
-        heatMapMax.value = relevantReservations[0].total_rooms; 
+    // DEBUG LOG: After occCalcMode filtering
+    //console.log('[HeatMapPanel] relevantReservations (after mode filter):', relevantReservations);
+
+    if (relevantReservations && relevantReservations.length > 0) {
+        heatMapMax.value = relevantReservations[0].total_rooms;
     } else {
         heatMapMax.value = 0;
     }
-            
+
     // DEBUG LOG: heatMapMax.value
-    console.log('[HeatMapPanel] heatMapMax.value:', heatMapMax.value);
+    //console.log('[HeatMapPanel] heatMapMax.value:', heatMapMax.value);
 
     const datePositionMap = {};
     let currentMapDate = start;
@@ -145,19 +145,19 @@ const processHeatMapData = () => {
     let dayIdx = 0; // Monday is 6, Sunday is 0 (matching Y-axis)
 
     while (currentMapDate <= end) {
-        
+
         const formattedDate = props.formatDate(new Date(currentMapDate));
         dayIdx = (7 - currentMapDate.getUTCDay()) % 7;
 
         datePositionMap[formattedDate] = { week: weekIdx, day: dayIdx };
-        
+
         if (currentMapDate.getUTCDay() === 0) {
             weekIdx++;
         }
-        
+
         currentMapDate = props.addDaysUTC(currentMapDate, 1);
     }
-    
+
     const processedData = [];
     relevantReservations.forEach(reservation => {
         const reservationDateISO = props.formatDate(new Date(reservation.date));
@@ -179,9 +179,8 @@ const processHeatMapData = () => {
     });
     heatMapData.value = processedData;
 
-    // DEBUG LOG: processedData
-    console.log('[HeatMapPanel] processedData:', processedData);
-    
+    //console.log('[HeatMapPanel] processedData:', processedData);
+
     initHeatMap();
 };
 const initHeatMap = () => {
@@ -193,11 +192,11 @@ const initHeatMap = () => {
             type: 'category',
             data: heatMapAxisX.value,
             splitArea: { show: true },
-            axisLabel: { 
+            axisLabel: {
                 formatter: function (value) {
                     return value.split('').join('\n'); // Split each character and add a newline
                 },
-                
+
             }
         },
         yAxis: { type: 'category', data: heatMapAxisY.value, splitArea: { show: true } },
@@ -212,7 +211,7 @@ const initHeatMap = () => {
                 color: ['#FFFFF0', '#FFFACD', '#FFEFD5', '#FFE4B5', '#FFDAB9', '#F08080', '#CD5C5C', '#B22222'] // 8 pale yellow to red gradient colors
             }
         },
-        series: [{ 
+        series: [{
             name: '予約数',
             type: 'heatmap',
             data: heatMapData.value,
