@@ -90,7 +90,7 @@ const saveGlobalPlan = async () => {
     }
 
     const isDuplicate = (props.globalPlans || []).some(plan =>
-        plan.name.trim().toLowerCase() === trimmedPlanName.toLowerCase()
+        (plan.name ?? "").trim().toLowerCase() === trimmedPlanName.toLowerCase()
     );
 
     if (isDuplicate) {
