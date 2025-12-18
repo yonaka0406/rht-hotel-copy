@@ -30,6 +30,8 @@
                 :trigger-fetch="reportTriggerKey"
             />
             
+            <!-- Router view for child routes -->
+            <router-view v-if="$route.path !== '/reporting'" />
             
             <div v-else> 
                 <div v-if="loading" class="flex justify-content-center align-items-center h-full">
@@ -77,14 +79,14 @@
     import { useRouter } from 'vue-router';   
 
     import ReportingTopMenu from './components/ReportingTopMenu.vue';
-    import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
-    import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
-    import ReportingSingleMonthHotel from './components/ReportingSingleMonthHotel.vue';
-    import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHotel.vue';
+    import ReportingSingleMonthAllHotels from './ReportingSalesAndOCC/components/ReportingSingleMonthAllHotels.vue';
+    import ReportingYearCumulativeAllHotels from './ReportingSalesAndOCC/components/ReportingYearCumulativeAllHotels.vue';
+    import ReportingSingleMonthHotel from './ReportingSalesAndOCC/components/ReportingSingleMonthHotel.vue';
+    import ReportingYearCumulativeHotel from './ReportingSalesAndOCC/components/ReportingYearCumulativeHotel.vue';
     // Import New Report Components
-    import ChangeInActiveReservationsReport from './components/ChangeInActiveReservationsReport.vue';
-    import MonthlyReservationEvolutionReport from './components/MonthlyReservationEvolutionReport.vue';
-    import DailyReportDownloader from './components/DailyReportDownloader.vue';
+    import ChangeInActiveReservationsReport from './ReportingActiveReservationsChange/components/ChangeInActiveReservationsReport.vue';
+    import MonthlyReservationEvolutionReport from './ReportingMonthlyReservationEvolution/components/MonthlyReservationEvolutionReport.vue';
+    import DailyReportDownloader from './ReportingDailyReport/components/DailyReportDownloader.vue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
