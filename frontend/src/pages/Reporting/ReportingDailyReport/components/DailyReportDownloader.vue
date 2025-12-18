@@ -455,28 +455,7 @@ const loadReport = async () => { // Made async to await fetchDailyReportData
     try {
         let data = await fetchDailyReportData(date); // Attempt to load data
         
-        // Debug: Log the raw data received from backend
-        const debugRecord = data.find(r => 
-            r.accommodation_sales_cancelled > 0 && 
-            r.hotel_id == 10 && 
-            r.plan_type_category_id == 3 && 
-            r.plan_package_category_id == 1 &&
-            r.plan_name === '2食付き'
-        );
-        
-        if (debugRecord) {
-            console.log('[DEBUG] loadReport - RAW data received from backend:', {
-                hotel_id: debugRecord.hotel_id,
-                plan_name: debugRecord.plan_name,
-                month: debugRecord.month,
-                accommodation_sales_cancelled: debugRecord.accommodation_sales_cancelled,
-                accommodation_net_sales_cancelled: debugRecord.accommodation_net_sales_cancelled,
-                plan_type_category_id: debugRecord.plan_type_category_id,
-                plan_package_category_id: debugRecord.plan_package_category_id,
-                data_type_cancelled: typeof debugRecord.accommodation_sales_cancelled,
-                data_type_net_cancelled: typeof debugRecord.accommodation_net_sales_cancelled
-            });
-        }
+
         
         reportData.value = data;
 
@@ -541,32 +520,7 @@ const showNoReportDataMessage = computed(() => {
 
 const handleCSVDownload = async () => {
     try {
-        // Log the CSV download action to backend
-        console.log('[DEBUG] CSV Download initiated for date:', loadedDate.value);
-        console.log('[DEBUG] Number of records:', processedReportData.value.length);
-        
-        // Find the specific record we're tracking for debugging
-        const debugRecord = processedReportData.value.find(r => 
-            r.accommodation_sales_cancelled > 0 && 
-            r.hotel_id == 10 && 
-            r.plan_type_category_id == 3 && 
-            r.plan_package_category_id == 1 &&
-            r.plan_name === '2食付き'
-        );
-        
-        if (debugRecord) {
-            console.log('[DEBUG] CSV Export - Found target record:', {
-                hotel_id: debugRecord.hotel_id,
-                plan_name: debugRecord.plan_name,
-                month: debugRecord.month,
-                accommodation_sales_cancelled: debugRecord.accommodation_sales_cancelled,
-                accommodation_net_sales_cancelled: debugRecord.accommodation_net_sales_cancelled,
-                plan_type_category_id: debugRecord.plan_type_category_id,
-                plan_package_category_id: debugRecord.plan_package_category_id,
-                data_type_cancelled: typeof debugRecord.accommodation_sales_cancelled,
-                data_type_net_cancelled: typeof debugRecord.accommodation_net_sales_cancelled
-            });
-        }
+
         
         // Call the original DataTable CSV export
         dt.value.exportCSV();
