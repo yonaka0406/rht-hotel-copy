@@ -1,7 +1,11 @@
 const mainQueries = require('./main');
-const globalQueries = require('./global');
+const categoriesQueries = require('./categories');
+const copyQueries = require('./copy');
+const patternQueries = require('./pattern');
 
 module.exports = {
   ...mainQueries,
-  ...globalQueries,
+  ...categoriesQueries,
+  ...copyQueries,
+  ...patternQueries
 };
