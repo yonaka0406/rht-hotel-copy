@@ -25,6 +25,8 @@
                                 <div class="flex items-center justify-center">
                                     <Button icon="pi pi-pencil" class="p-button-text p-button-sm"
                                         @click="openEditGlobalPattern(slotProps.data)" v-tooltip="'パターン編集'" />
+                                    <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+                                        @click="deleteGlobalPattern(slotProps.data)" v-tooltip="'パターン削除'" />
                                 </div>
                             </template>
                         </Column>
@@ -45,6 +47,8 @@
                                 <div class="flex items-center justify-center">
                                     <Button icon="pi pi-pencil" class="p-button-text p-button-sm"
                                         @click="openEditHotelPattern(slotProps.data)" v-tooltip="'パターン編集'" />
+                                    <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+                                        @click="deleteHotelPattern(slotProps.data)" v-tooltip="'パターン削除'" />
                                 </div>
                             </template>
                         </Column>
@@ -98,6 +102,8 @@ const props = defineProps({
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
+import { useConfirm } from 'primevue/useconfirm';
+const confirm = useConfirm();
 import {
     Tabs, TabList, Tab, TabPanels, TabPanel, Dialog,
     FloatLabel, InputText, Select, Badge
@@ -109,7 +115,7 @@ import Panel from 'primevue/panel';
 
 // Note: Hotels are managed by parent component
 import { usePlansStore } from '@/composables/usePlansStore';
-const { patterns, plans, fetchGlobalPatterns, fetchHotelPatterns, fetchPatternsForHotel, fetchPlansGlobal, fetchPlansForHotel } = usePlansStore();
+const { patterns, plans, fetchGlobalPatterns, fetchHotelPatterns, fetchPatternsForHotel, fetchPlansGlobal, fetchPlansForHotel, deletePlanPattern } = usePlansStore();
 
 // Utils
 import { daysOfWeek } from '@/utils/dateUtils';
@@ -136,6 +142,33 @@ const openEditGlobalPattern = async (data) => {
 const onGlobalPatternModified = async () => {
     await fetchGlobalPatterns();
     globalPatterns.value = patterns.value;
+};
+
+const deleteGlobalPattern = async (pattern) => {
+    confirm.require({
+        message: `パターン「${pattern.name}」を削除しますか？この操作は取り消せません。`,
+        header: 'パターン削除確認',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'キャンセル',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: '削除',
+            severity: 'danger'
+        },
+        accept: async () => {
+            try {
+                await deletePlanPattern(pattern.id);
+                await onGlobalPatternModified();
+                toast.add({ severity: 'success', summary: '成功', detail: 'グローバルパターンが削除されました。', life: 3000 });
+            } catch (error) {
+                console.error('グローバルパターンの削除エラー:', error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: 'グローバルパターンの削除に失敗しました。', life: 3000 });
+            }
+        }
+    });
 };
 
 // Tabs Hotel
@@ -171,6 +204,33 @@ const onPatternModified = async () => {
         allHotelPatterns.value = patterns.value;
         toast.add({ severity: 'success', summary: '成功', detail: 'パターンが更新されました。', life: 3000 });
     }
+};
+
+const deleteHotelPattern = async (pattern) => {
+    confirm.require({
+        message: `パターン「${pattern.name}」を削除しますか？この操作は取り消せません。`,
+        header: 'パターン削除確認',
+        icon: 'pi pi-exclamation-triangle',
+        rejectProps: {
+            label: 'キャンセル',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: '削除',
+            severity: 'danger'
+        },
+        accept: async () => {
+            try {
+                await deletePlanPattern(pattern.id);
+                await onPatternModified();
+                toast.add({ severity: 'success', summary: '成功', detail: 'ホテルパターンが削除されました。', life: 3000 });
+            } catch (error) {
+                console.error('ホテルパターンの削除エラー:', error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルパターンの削除に失敗しました。', life: 3000 });
+            }
+        }
+    });
 };
 
 onMounted(async () => {

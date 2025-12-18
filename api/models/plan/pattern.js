@@ -80,9 +80,33 @@ const updatePlanPattern = async (requestId, id, name, template, user_id, dbClien
     }
 };
 
+const deletePlanPattern = async (requestId, id, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const query = `
+        DELETE FROM plan_templates
+        WHERE id = $1
+        RETURNING *;
+    `;
+    const values = [id];
+
+    try {
+        const result = await client.query(query, values);
+        if (result.rows.length === 0) {
+            return null;
+        }
+        return result.rows[0];
+    } catch (err) {
+        console.error(`[${requestId}] Error deleting plan pattern id=${id}:`, err);
+        throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
+    }
+};
+
 module.exports = {
     selectAllHotelPatterns,
     selectPatternsByHotel,
     insertPlanPattern,
     updatePlanPattern,
+    deletePlanPattern,
 };

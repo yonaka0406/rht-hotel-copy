@@ -82,7 +82,16 @@ const selectHotelPlanById = async (requestId, hotel_id, id, client = null) => {
     const pool = getPool(requestId);
     const dbClient = client || await pool.connect();
     const shouldReleaseClient = !client;
-    const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 AND id = $2';
+    const query = `
+        SELECT ph.*, 
+            COALESCE(ph.plans_global_id::TEXT, '') || 'h' || ph.id::TEXT AS plan_key,
+            ptc.name as type_category_name, ptc.color as type_category_color, 
+            ppc.name as package_category_name, ppc.color as package_category_color 
+        FROM plans_hotel ph 
+        JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id 
+        JOIN plan_package_categories ppc ON ph.plan_package_category_id = ppc.id 
+        WHERE ph.hotel_id = $1 AND ph.id = $2
+    `;
     const values = [hotel_id, id];
 
     try {

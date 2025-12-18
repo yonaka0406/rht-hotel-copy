@@ -42,6 +42,7 @@ router.get('/plans/patterns/hotel', authMiddleware, plansControllers.getHotelPat
 router.get('/plans/patterns/all/:hotel_id', authMiddleware, plansControllers.fetchAllHotelPatterns);
 router.post('/plans/patterns', authMiddleware_manageDB, plansControllers.createPlanPattern);
 router.put('/plans/patterns/:id', authMiddleware_manageDB, plansControllers.editPlanPattern);
+router.delete('/plans/patterns/:id', authMiddleware_manageDB, plansControllers.deletePlanPattern);
 
 // Plan Category routes
 router.get('/plans/categories/type', authMiddleware, plansControllers.getTypeCategories);

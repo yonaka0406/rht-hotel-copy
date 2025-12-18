@@ -45,7 +45,7 @@ const createPlanPattern = async (req, res) => {
         return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (!hotel_id || !name || !template) {
+    if (hotel_id === undefined || !name || !template) {
         return res.status(400).json({ error: 'Missing required fields: hotel_id, name, template' });
     }
 
@@ -87,10 +87,31 @@ const editPlanPattern = async (req, res) => {
     }
 };
 
+const deletePlanPattern = async (req, res) => {
+    const { id } = req.params;
+
+    if (!req.user || !req.user.id) {
+        console.warn(`${req.requestId} - Unauthorized attempt to delete plan pattern: user not authenticated.`);
+        return res.status(401).json({ error: 'Authentication required to delete plan pattern' });
+    }
+
+    try {
+        const deletedPattern = await planModels.deletePlanPattern(req.requestId, id);
+        if (!deletedPattern) {
+            return res.status(404).json({ error: 'Plan pattern not found' });
+        }
+        res.json({ message: 'Plan pattern deleted successfully', deletedPattern });
+    } catch (err) {
+        console.error('Error deleting plan pattern:', err);
+        res.status(500).json({ error: 'Failed to delete plan pattern' });
+    }
+};
+
 module.exports = {
     getGlobalPatterns,
     getHotelPatterns,
     fetchAllHotelPatterns,
     createPlanPattern,
     editPlanPattern,
+    deletePlanPattern,
 };

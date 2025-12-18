@@ -544,6 +544,27 @@ export function usePlansStore() {
         }
     };
 
+    const deletePlanPattern = async (id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/patterns/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to delete plan pattern', error);
+            throw error;
+        }
+    };
+
     return {
         plans,
         hotelPlans,
@@ -575,5 +596,6 @@ export function usePlansStore() {
         fetchPatternsForHotel,
         createPlanPattern,
         updatePlanPattern,
+        deletePlanPattern,
     };
 }

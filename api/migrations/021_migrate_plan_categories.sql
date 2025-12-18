@@ -38,3 +38,63 @@ WHERE plan_type_category_id IS NULL AND name ILIKE '%荷物%';
 -- 4. Enforce NOT NULL constraint on plan_type_category_id
 ALTER TABLE plans_hotel
 ALTER COLUMN plan_type_category_id SET NOT NULL;
+
+
+-- 5. Update get_available_plans_for_hotel function
+DROP FUNCTION IF EXISTS get_available_plans_for_hotel(INT); 
+CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(p_hotel_id INT)
+RETURNS TABLE(
+    plans_global_id INT,
+    plans_hotel_id INT,
+    plan_key TEXT,
+    name TEXT,
+    description TEXT,
+    plan_type TEXT,
+    color VARCHAR(7),
+    plan_type_category_id INT,
+    plan_package_category_id INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        ph.plans_global_id,
+        ph.id AS plans_hotel_id,
+        COALESCE(ph.plans_global_id::TEXT, '') || 'h' || ph.id::TEXT AS plan_key,
+        ph.name,
+        ph.description,
+        ph.plan_type,
+        ph.color,
+        ph.plan_type_category_id,
+        ph.plan_package_category_id
+    FROM
+        plans_hotel AS ph
+    WHERE
+        ph.hotel_id = p_hotel_id
+
+    UNION ALL
+
+    SELECT
+        pg.id AS plans_global_id,
+        NULL::INT AS plans_hotel_id,
+        pg.id::TEXT || 'h' AS plan_key,
+        pg.name,
+        pg.description,
+        pg.plan_type,
+        pg.color,
+        NULL::INT AS plan_type_category_id,
+        NULL::INT AS plan_package_category_id 
+    FROM
+        plans_global AS pg
+    WHERE
+        NOT EXISTS (
+            SELECT 1
+            FROM hotel_plan_exclusions hpe
+            WHERE hpe.global_plan_id = pg.id AND hpe.hotel_id = p_hotel_id
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM plans_hotel ph
+            WHERE ph.plans_global_id = pg.id AND ph.hotel_id = p_hotel_id
+        );
+END;
+$$ LANGUAGE plpgsql;

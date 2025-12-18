@@ -128,10 +128,11 @@ const updateGlobalPattern = async () => {
         };
     }
 
-    editGlobalPattern.value.template = template;
-
     try {
-        await updatePlanPattern(editGlobalPattern.value.id, editGlobalPattern.value);
+        await updatePlanPattern(editGlobalPattern.value.id, {
+            name: editGlobalPattern.value.name,
+            template: JSON.stringify(template)
+        });
         emit('patternUpdated');
         emit('update:visible', false);
         toast.add({ severity: 'success', summary: '成功', detail: 'パターン編集成功', life: 3000 });

@@ -130,10 +130,16 @@ const saveGlobalPattern = async () => {
         };
     }
 
-    newGlobalPattern.value.template = template;
+    const patternData = {
+        hotel_id: newGlobalPattern.value.hotel_id,
+        name: newGlobalPattern.value.name,
+        template: JSON.stringify(template)
+    };
+    
+    console.log('AddGlobalPatternDialog: Sending pattern data:', patternData);
 
     try {
-        await createPlanPattern(newGlobalPattern.value);
+        await createPlanPattern(patternData);
         emit('patternAdded');
         emit('update:visible', false);
         toast.add({ severity: 'success', summary: '成功', detail: 'パターン追加成功', life: 3000 });
