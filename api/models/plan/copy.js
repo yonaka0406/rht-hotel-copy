@@ -2,9 +2,6 @@ const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
 
 const copyPlanToHotel = async (requestId, sourcePlanId, sourceHotelId, targetHotelId, options = {}, dbClient = null) => {
-    const client = dbClient || await getPool(requestId).connect();
-    const shouldReleaseClient = !dbClient;
-
     // Validate required parameters
     if (!sourcePlanId || sourcePlanId === null || sourcePlanId === undefined) {
         throw new Error(`Invalid sourcePlanId: ${sourcePlanId}`);
@@ -12,6 +9,9 @@ const copyPlanToHotel = async (requestId, sourcePlanId, sourceHotelId, targetHot
     if (!sourceHotelId || !targetHotelId) {
         throw new Error(`Invalid hotel IDs: source=${sourceHotelId}, target=${targetHotelId}`);
     }
+
+    const client = dbClient || await getPool(requestId).connect();
+    const shouldReleaseClient = !dbClient;
 
     logger.debug('copyPlanToHotel model function called', {
         requestId,
@@ -208,8 +208,6 @@ const copyPlanToHotel = async (requestId, sourcePlanId, sourceHotelId, targetHot
 };
 
 const bulkCopyPlansToHotel = async (requestId, sourcePlanIds, sourceHotelId, targetHotelId, options = {}) => {
-    const client = await getPool(requestId).connect();
-
     // Validate input parameters
     if (!sourcePlanIds || !Array.isArray(sourcePlanIds) || sourcePlanIds.length === 0) {
         throw new Error('sourcePlanIds must be a non-empty array');
@@ -220,6 +218,8 @@ const bulkCopyPlansToHotel = async (requestId, sourcePlanIds, sourceHotelId, tar
     if (validPlanIds.length === 0) {
         throw new Error('No valid plan IDs provided');
     }
+
+    const client = await getPool(requestId).connect();
 
     logger.debug('bulkCopyPlansToHotel model function called', {
         requestId,
