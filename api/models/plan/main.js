@@ -326,14 +326,16 @@ const updateHotelPlan = async (requestId, id, hotel_id, plan_type_category_id, p
 };
 const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const shouldReleaseClient = !dbClient;
+    const shouldManageTransaction = !dbClient;
 
     logger.debug(`[DB] updatePlansOrderBulk: requestId=${requestId}, hotelId=${hotelId}, plansCount=${plans.length}, updated_by=${updated_by}`);
     logger.debug(`[DB] updatePlansOrderBulk: plans =`, plans);
 
     try {
-        await client.query('BEGIN');
-        logger.debug('[DB] updatePlansOrderBulk: Transaction BEGIN');
+        if (shouldManageTransaction) {
+            await client.query('BEGIN');
+            logger.debug('[DB] updatePlansOrderBulk: Transaction BEGIN');
+        }
 
         for (const plan of plans) {
             const query = `
@@ -348,15 +350,20 @@ const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbCli
             const updateResult = await client.query(query, values);
             logger.debug(`[DB] updatePlansOrderBulk: Update result for plan.id=${plan.id}: rowsAffected=${updateResult.rowCount}`);
         }
-        await client.query('COMMIT');
-        logger.debug('[DB] updatePlansOrderBulk: Transaction COMMIT');
+        
+        if (shouldManageTransaction) {
+            await client.query('COMMIT');
+            logger.debug('[DB] updatePlansOrderBulk: Transaction COMMIT');
+        }
         return { success: true };
     } catch (err) {
-        await client.query('ROLLBACK');
-        logger.error('[DB] updatePlansOrderBulk: Transaction ROLLBACK due to error:', err);
+        if (shouldManageTransaction) {
+            await client.query('ROLLBACK');
+            logger.error('[DB] updatePlansOrderBulk: Transaction ROLLBACK due to error:', err);
+        }
         throw new Error('Database error');
     } finally {
-        if (shouldReleaseClient) {
+        if (shouldManageTransaction) {
             client.release();
         }
     }
@@ -434,11 +441,19 @@ const checkHotelPlanUsage = async (requestId, planHotelId, dbClient = null) => {
 // Delete a hotel plan (only if not in use)
 const deleteHotelPlan = async (requestId, planHotelId, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const shouldReleaseClient = !dbClient;
+    const shouldManageTransaction = !dbClient;
 
     try {
-        await client.query('BEGIN');
-        logger.debug('[DB] deleteHotelPlan: Transaction BEGIN');
+        // Check if the plan is in use
+        const usageCheck = await checkHotelPlanUsage(requestId, planHotelId, client);
+        if (usageCheck.isInUse) {
+            throw new Error(`Plan is in use and cannot be deleted. Usage: ${JSON.stringify(usageCheck.usage)}`);
+        }
+
+        if (shouldManageTransaction) {
+            await client.query('BEGIN');
+            logger.debug('[DB] deleteHotelPlan: Transaction BEGIN');
+        }
 
         // Delete related rates (addons will be deleted automatically via CASCADE)
         await client.query('DELETE FROM plans_rates WHERE plans_hotel_id = $1', [planHotelId]);
@@ -455,19 +470,23 @@ const deleteHotelPlan = async (requestId, planHotelId, dbClient = null) => {
             throw new Error('Plan not found');
         }
 
-        await client.query('COMMIT');
-        logger.debug('[DB] deleteHotelPlan: Transaction COMMIT');
+        if (shouldManageTransaction) {
+            await client.query('COMMIT');
+            logger.debug('[DB] deleteHotelPlan: Transaction COMMIT');
+        }
 
         return {
             success: true,
             deletedPlan: result.rows[0]
         };
     } catch (err) {
-        await client.query('ROLLBACK');
-        logger.error('[DB] deleteHotelPlan: Transaction ROLLBACK due to error:', err);
+        if (shouldManageTransaction) {
+            await client.query('ROLLBACK');
+            logger.error('[DB] deleteHotelPlan: Transaction ROLLBACK due to error:', err);
+        }
         throw err;
     } finally {
-        if (shouldReleaseClient) {
+        if (shouldManageTransaction) {
             client.release();
         }
     }
@@ -571,11 +590,19 @@ const checkGlobalPlanUsage = async (requestId, planGlobalId, dbClient = null) =>
 // Delete a global plan (only if not in use and not protected)
 const deleteGlobalPlan = async (requestId, planGlobalId, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const shouldReleaseClient = !dbClient;
+    const shouldManageTransaction = !dbClient;
 
     try {
-        await client.query('BEGIN');
-        logger.debug('[DB] deleteGlobalPlan: Transaction BEGIN');
+        // Check if the plan is in use
+        const usageCheck = await checkGlobalPlanUsage(requestId, planGlobalId, client);
+        if (usageCheck.isInUse) {
+            throw new Error(`Plan is in use and cannot be deleted. Usage: ${JSON.stringify(usageCheck.usage)}`);
+        }
+
+        if (shouldManageTransaction) {
+            await client.query('BEGIN');
+            logger.debug('[DB] deleteGlobalPlan: Transaction BEGIN');
+        }
 
         // Delete related rates (addons will be deleted automatically via CASCADE)
         await client.query('DELETE FROM plans_rates WHERE plans_global_id = $1', [planGlobalId]);
@@ -592,19 +619,23 @@ const deleteGlobalPlan = async (requestId, planGlobalId, dbClient = null) => {
             throw new Error('Plan not found');
         }
 
-        await client.query('COMMIT');
-        logger.debug('[DB] deleteGlobalPlan: Transaction COMMIT');
+        if (shouldManageTransaction) {
+            await client.query('COMMIT');
+            logger.debug('[DB] deleteGlobalPlan: Transaction COMMIT');
+        }
 
         return {
             success: true,
             deletedPlan: result.rows[0]
         };
     } catch (err) {
-        await client.query('ROLLBACK');
-        logger.error('[DB] deleteGlobalPlan: Transaction ROLLBACK due to error:', err);
+        if (shouldManageTransaction) {
+            await client.query('ROLLBACK');
+            logger.error('[DB] deleteGlobalPlan: Transaction ROLLBACK due to error:', err);
+        }
         throw err;
     } finally {
-        if (shouldReleaseClient) {
+        if (shouldManageTransaction) {
             client.release();
         }
     }
