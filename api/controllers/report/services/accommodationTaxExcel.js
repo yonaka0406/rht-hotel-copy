@@ -66,7 +66,7 @@ const createAccommodationTaxWorkbook = (data, startDate, endDate) => {
 
     // 4. Tax Amount Field (E3, F3)
     const taxAmountLabelCell = worksheet.getCell('E3');
-    taxAmountLabelCell.value = '税額';
+    taxAmountLabelCell.value = '1人当たり税額';
     taxAmountLabelCell.font = { bold: true };
     taxAmountLabelCell.alignment = { horizontal: 'center', vertical: 'middle' };
     taxAmountLabelCell.border = {
