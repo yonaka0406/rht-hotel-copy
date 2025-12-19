@@ -48,17 +48,25 @@ export function usePlansStore() {
             console.error('Failed to fetch global plans', error);
         }
     };
-    const fetchPlansForHotel = async (hotel_id, includeInactive = false) => { // Added parameter
+    const fetchPlansForHotel = async (hotel_id, targetDate = null, dateEnd = null, includeInactive = false) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/plans/all/${hotel_id}`;
             const queryParams = new URLSearchParams();
-            if (includeInactive) {
-                queryParams.append('includeInactive', 'true');
+            
+            if (targetDate) {
+                queryParams.append('target_date', targetDate);
             }
+            if (dateEnd) {
+                queryParams.append('date_end', dateEnd);
+            }
+            if (includeInactive) {
+                queryParams.append('include_inactive', 'true');
+            }
+            
             const fullUrl = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
 
-            const response = await fetch(fullUrl, { // Use fullUrl
+            const response = await fetch(fullUrl, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,

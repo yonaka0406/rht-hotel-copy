@@ -86,9 +86,10 @@ After deployment, you should see:
 - [ ] **API Tests**: Verify that plans are created/updated with category information.
 - [ ] **Backward Compatibility**: Ensure existing plan operations still work without category data.
 
-### 5. Frontend (UI) - Future
-- [ ] **Plan Management**: Update UI to allow selecting type/package categories.
-- [ ] **Plan List**: Add filters or badges for plan categories.
+### 5. Frontend (UI)
+- [x] **Plan Management**: Update UI to allow selecting type/package categories.
+- [x] **Plan List**: Add badges for plan categories.
+- [x] **Plan Copy**: Implemented "Plan Copy Between Hotels" feature (`CopyPlansDialog.vue`).
 
 ## Rollback Plan
 

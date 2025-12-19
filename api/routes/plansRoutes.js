@@ -19,6 +19,7 @@ router.put('/plans/reorder/hotel/:hotel_id', authMiddleware_manageDB, plansContr
 
 // Available Plans routes
 router.get('/plans/all/:hotel_id', authMiddleware, plansControllers.fetchAllHotelPlans);
+router.get('/plans/available/:hotel_id/:check_date', authMiddleware, plansControllers.fetchAvailablePlansForDate);
 
 // Plan Rates routes
 router.get('/plans/:gid/:hid/:hotel_id/rates', authMiddleware, plansRateController.getPlanRates);

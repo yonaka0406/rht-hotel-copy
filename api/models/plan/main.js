@@ -146,17 +146,50 @@ const selectHotelPlans = async (requestId, hotel_id, dbClient = null) => {
         if (!dbClient) client.release();
     }
 };
-const selectAvailablePlansByHotel = async (requestId, hotel_id, dbClient = null) => {
+const selectAvailablePlansByHotel = async (requestId, hotel_id, target_date = null, date_end = null, include_inactive = false, dbClient = null) => {
     const client = dbClient || await getPool(requestId).connect();
-    const query = `SELECT * FROM get_available_plans_for_hotel($1)
-ORDER BY plan_type, name;`;
-    const values = [hotel_id];
+    
+    let query, values;
+    
+    // Always use the full function with explicit type casting to avoid ambiguity
+    query = `SELECT * FROM get_available_plans_for_hotel($1::INT, $2::DATE, $3::DATE, $4::BOOLEAN)
+ORDER BY display_order ASC, plan_type ASC, name ASC;`;
+    values = [
+        hotel_id, 
+        target_date || new Date().toISOString().split('T')[0], // Default to current date
+        date_end, // Can be null
+        include_inactive
+    ];
 
     try {
         const result = await client.query(query, values);
         return result.rows;
     } catch (err) {
         logger.error('Error retrieving hotel plans:', err);
+        throw new Error('Database error');
+    } finally {
+        if (!dbClient) client.release();
+    }
+};
+
+// Enhanced function that includes rates and addons data (for future use when you want to reduce database calls)
+const selectAvailablePlansWithRatesAndAddons = async (requestId, hotel_id, target_date = null, date_end = null, include_inactive = false, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    
+    const query = `SELECT * FROM get_available_plans_with_rates_and_addons($1::INT, $2::DATE, $3::DATE, $4::BOOLEAN)
+ORDER BY display_order ASC, plan_type ASC, plan_name ASC;`;
+    const values = [
+        hotel_id, 
+        target_date || new Date().toISOString().split('T')[0], // Default to current date
+        date_end, 
+        include_inactive
+    ];
+
+    try {
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error retrieving hotel plans with rates and addons:', err);
         throw new Error('Database error');
     } finally {
         if (!dbClient) client.release();

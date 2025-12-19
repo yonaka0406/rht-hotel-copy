@@ -38,16 +38,64 @@ const getHotelPlans = async (req, res) => {
 
 const fetchAllHotelPlans = async (req, res) => {
     const hotel_id = parseInt(req.params.hotel_id);
+    const target_date = req.query.target_date || req.query.check_date; // Support both parameter names for backward compatibility
+    const date_end = req.query.date_end || req.query.checkout_date; // Support both parameter names
+    const include_inactive = req.query.include_inactive === 'true'; // Optional parameter to include inactive plans
 
     if (!hotel_id) {
         return res.status(400).json({ error: 'Hotel ID is required' });
     }
 
+    // Validate date formats if provided
+    if (target_date && !/^\d{4}-\d{2}-\d{2}$/.test(target_date)) {
+        return res.status(400).json({ error: 'Invalid target_date format. Use YYYY-MM-DD' });
+    }
+    if (date_end && !/^\d{4}-\d{2}-\d{2}$/.test(date_end)) {
+        return res.status(400).json({ error: 'Invalid date_end format. Use YYYY-MM-DD' });
+    }
+
+    // Validate date range if both dates are provided
+    if (target_date && date_end && new Date(target_date) > new Date(date_end)) {
+        return res.status(400).json({ error: 'target_date must be before or equal to date_end' });
+    }
+
     try {
-        const Plans = await planModels.selectAvailablePlansByHotel(req.requestId, hotel_id);
+        const Plans = await planModels.selectAvailablePlansByHotel(req.requestId, hotel_id, target_date, date_end, include_inactive);
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel Plans:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const fetchAvailablePlansForDate = async (req, res) => {
+    const hotel_id = parseInt(req.params.hotel_id);
+    const target_date = req.params.check_date; // Using check_date from URL parameter for backward compatibility
+    const date_end = req.query.date_end; // Optional end date from query parameter
+    const include_inactive = req.query.include_inactive === 'true';
+
+    if (!hotel_id) {
+        return res.status(400).json({ error: 'Hotel ID is required' });
+    }
+
+    if (!target_date || !/^\d{4}-\d{2}-\d{2}$/.test(target_date)) {
+        return res.status(400).json({ error: 'Valid check_date is required (YYYY-MM-DD format)' });
+    }
+
+    if (date_end && !/^\d{4}-\d{2}-\d{2}$/.test(date_end)) {
+        return res.status(400).json({ error: 'Invalid date_end format. Use YYYY-MM-DD' });
+    }
+
+    // Validate date range if both dates are provided
+    if (date_end && new Date(target_date) > new Date(date_end)) {
+        return res.status(400).json({ error: 'check_date must be before or equal to date_end' });
+    }
+
+    try {
+        const Plans = await planModels.selectAvailablePlansByHotel(req.requestId, hotel_id, target_date, date_end, include_inactive);
+        res.json(Plans);
+    } catch (error) {
+        console.error('Error getting available plans for date:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -238,6 +286,7 @@ module.exports = {
     getHotelsPlans,
     getHotelPlans,
     fetchAllHotelPlans,
+    fetchAvailablePlansForDate,
     createGlobalPlan,
     createHotelPlan,
     editGlobalPlan,
