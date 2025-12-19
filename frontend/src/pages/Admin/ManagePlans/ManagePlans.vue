@@ -16,10 +16,7 @@
           </Tab>
           <Tab value="1">
             <i class="pi pi-building"></i> ホテル
-          </Tab>
-          <Tab v-if="selectedHotel" :value="2">
-            <i class="pi pi-building-columns"></i> {{ selectedHotel.name }}
-          </Tab>
+          </Tab>          
         </TabList>
         <TabPanels>
           <TabPanel value="0">
