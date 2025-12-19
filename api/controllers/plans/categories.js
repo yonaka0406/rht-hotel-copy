@@ -19,11 +19,12 @@ const getTypeCategories = async (req, res) => {
 
 const createTypeCategory = async (req, res) => {
     const { name, description, color, display_order } = req.body;
-    const created_by = req.user.id;
 
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
+    const created_by = req.user.id;
+
     if (!name || typeof name !== 'string') {
         return res.status(400).json({ error: 'Invalid or missing name' });
     }
@@ -46,11 +47,12 @@ const createTypeCategory = async (req, res) => {
 const updateTypeCategory = async (req, res) => {
     const { id } = req.params;
     const { name, description, color, display_order } = req.body;
-    const updated_by = req.user.id;
 
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
+    const updated_by = req.user.id;
+
     if (!id || isNaN(id)) {
         return res.status(400).json({ error: 'Invalid category ID' });
     }
@@ -92,6 +94,15 @@ const getPackageCategories = async (req, res) => {
 
 const createPackageCategory = async (req, res) => {
     const { name, description, color, display_order } = req.body;
+
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'Invalid or missing name' });
+    }
+
     const created_by = req.user.id;
 
     try {
@@ -116,8 +127,13 @@ const updatePackageCategory = async (req, res) => {
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
-    if (!name || typeof name !== 'string') {
-        return res.status(400).json({ error: 'Invalid or missing name' });
+
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid category ID' });
+    }
+
+    if (name !== undefined && typeof name !== 'string') {
+        return res.status(400).json({ error: 'Invalid name' });
     }
 
     const updated_by = req.user.id;
