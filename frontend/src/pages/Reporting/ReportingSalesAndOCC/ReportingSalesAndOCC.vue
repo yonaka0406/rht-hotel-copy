@@ -1005,17 +1005,28 @@ const fetchData = async () => {
                     ]);
 
                     const prevByMonth = {};
+                    console.log('[DEBUG] Previous day data for comparison:', prevDayData);
                     if (Array.isArray(prevDayData)) {
                         prevDayData.forEach(item => {
                             // Backend already filters by hotelIds and aggregates data
                             const mk = formatDateMonth(new Date(item.month));
                             if (!prevByMonth[mk]) prevByMonth[mk] = { sales: 0, stays: 0, rooms: 0 };
 
-                            const dailySales = (Number(item.accommodation_sales) || 0) + (Number(item.other_sales) || 0);
+                            const dailySales = (Number(item.accommodation_net_sales) || 0) + (Number(item.other_net_sales) || 0) + (Number(item.accommodation_net_sales_cancelled) || 0) + (Number(item.other_net_sales_cancelled) || 0);
+                            console.log(`[DEBUG] Previous data for ${mk}:`, {
+                                accommodation_net_sales: item.accommodation_net_sales,
+                                other_net_sales: item.other_net_sales,
+                                accommodation_net_sales_cancelled: item.accommodation_net_sales_cancelled,
+                                other_net_sales_cancelled: item.other_net_sales_cancelled,
+                                dailySales: dailySales,
+                                accommodation_sales: item.accommodation_sales, // For comparison
+                                other_sales: item.other_sales // For comparison
+                            });
                             prevByMonth[mk].sales += dailySales;
                             prevByMonth[mk].stays += Number(item.confirmed_stays) || 0;
                         });
                     }
+                    console.log('[DEBUG] Aggregated prevByMonth:', prevByMonth);
 
                     const outlook = [];
                     for (const [monthLabel, hotelDataMap] of Object.entries(futureData)) {
@@ -1026,7 +1037,7 @@ const fetchData = async () => {
                         let accommodationBlockedNights = 0;
                         let accommodationNetAvailableRoomNights = 0;
 
-                        for (const data of Object.values(hotelDataMap)) {
+                        for (const [hotelId, data] of Object.entries(hotelDataMap)) {
                             if (Array.isArray(data.occupation)) {
                                 let hotelBookable = 0;
                                 let hotelNetAvailable = 0;
@@ -1058,6 +1069,7 @@ const fetchData = async () => {
                                 if (accSum > 0) {
                                     hotelActualSales = accSum;
                                     hasAccounting = true;
+                                    console.log(`[DEBUG] Hotel ${hotelId} using accounting data:`, { accSum, hotelActualSales });
                                 }
                             }
 
@@ -1065,6 +1077,7 @@ const fetchData = async () => {
                                 // Fallback to PMS. Note: Backend now aggregates into `pms` key.
                                 if (data.pms && typeof data.pms.revenue === 'number') {
                                     hotelActualSales = data.pms.revenue;
+                                    console.log(`[DEBUG] Hotel ${hotelId} using PMS data:`, { pmsRevenue: data.pms.revenue, hotelActualSales });
                                 }
                             }
 
@@ -1079,12 +1092,20 @@ const fetchData = async () => {
                         // prevOcc is not specific to accommodation here, as prevByMonth doesn't have sales_category breakdown.
                         const prevOcc = accommodationNetAvailableRoomNights > 0 ? (prev.stays / accommodationNetAvailableRoomNights) * 100 : 0;
 
+                        const salesDiff = hasPrevData ? totalActualSales - prev.sales : null;
+                        console.log(`[DEBUG] Sales comparison for ${monthLabel}:`, {
+                            totalActualSales,
+                            prevSales: prev.sales,
+                            salesDiff,
+                            hasPrevData
+                        });
+
                         outlook.push({
                             metric_date: latestDateStrRaw, // Added for export
                             month: monthLabel,
                             forecast_sales: totalForecastSales,
                             sales: totalActualSales,
-                            sales_diff: hasPrevData ? totalActualSales - prev.sales : null,
+                            sales_diff: salesDiff,
                             prev_sales: prev.sales, // Added for hidden column
                             forecast_occ: forecastOcc,
                             occ: actualOccAccommodation, // This is now accommodation specific
