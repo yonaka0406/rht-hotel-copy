@@ -588,24 +588,11 @@ const selectExportAccommodationTax = async (requestId, hotelId, dateStart, dateE
       h.formal_name as hotel_name,
       rd.date,
       COUNT(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as accommodation_count,
-      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as non_accommodation_count,
-      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN 
-          (CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END)
-          ELSE 0 END) as plan_price_accom,
-      SUM(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN 
-          (CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END)
-          ELSE 0 END) as plan_price_other,
-      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN COALESCE(ra_sum.price, 0) ELSE 0 END) as addon_price_accom,
-      SUM(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN COALESCE(ra_sum.price, 0) ELSE 0 END) as addon_price_other
+      SUM(CASE WHEN COALESCE(rd.is_accommodation, TRUE) THEN rd.number_of_people ELSE 0 END) as number_of_people,
+      COUNT(CASE WHEN NOT COALESCE(rd.is_accommodation, TRUE) THEN 1 END) as non_accommodation_count
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN hotels h ON rd.hotel_id = h.id
-    LEFT JOIN (
-      SELECT reservation_detail_id, SUM(price * quantity) as price
-      FROM reservation_addons
-      WHERE hotel_id = $1
-      GROUP BY reservation_detail_id
-    ) ra_sum ON rd.id = ra_sum.reservation_detail_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
       AND rd.cancelled IS NULL
