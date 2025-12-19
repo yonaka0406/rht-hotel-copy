@@ -956,7 +956,7 @@
             });
             return;
         }
-        if (editAdjustment.value.adjustment_value === 0) {
+        if (editAdjustment.value.adjustment_value == null || editAdjustment.value.adjustment_value === '' || Number(editAdjustment.value.adjustment_value) === 0) {
             toast.add({
                 severity: 'error',
                 summary: 'エラー',
@@ -1001,18 +1001,7 @@
 
             fetchRates(); // Refresh the rates
             showEditAdjustmentDialog.value = false; // Close the dialog
-            editAdjustment.value = {
-                hotel_id: null,
-                plans_global_id: null,
-                plans_hotel_id: null,
-                adjustment_type: 'base_rate',
-                adjustment_value: 0,
-                condition_type: 'no_restriction',
-                condition_value: [],
-                date_start: null,
-                date_end: null,
-                id: null // Reset the ID after updating
-            };
+            editAdjustmentReset();
 
             toast.add({
                 severity: 'success',
