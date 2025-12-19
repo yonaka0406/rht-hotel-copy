@@ -122,7 +122,7 @@ import Message from 'primevue/message';
 
 // Note: Hotels are managed by parent component
 import { usePlansStore } from '@/composables/usePlansStore';
-const { patterns, plans, fetchGlobalPatterns, fetchHotelPatterns, fetchPatternsForHotel, fetchPlansGlobal, fetchPlansForHotel, deletePlanPattern } = usePlansStore();
+const { patterns, plans, hotelPlans, fetchGlobalPatterns, fetchHotelPatterns, fetchPatternsForHotel, fetchPlansGlobal, fetchHotelPlans, deletePlanPattern } = usePlansStore();
 
 // Utils
 import { daysOfWeek } from '@/utils/dateUtils';
@@ -187,7 +187,7 @@ const hotelPatterns = computed(() => {
     // Filter hotel patterns based on selected hotel
     return allHotelPatterns.value.filter(pattern => pattern.hotel_id === props.selectedHotelId);
 });
-const hotelPlans = ref([]);
+// hotelPlans is now imported from the store
 const editHotelPattern = ref(null);
 const showHotelDialog = ref(false);
 const showEditHotelDialog = ref(false);
@@ -247,8 +247,7 @@ watch(() => props.selectedHotelId, async (newVal, oldVal) => {
         await fetchPatternsForHotel(newVal);
         allHotelPatterns.value = patterns.value;
         // Fetch combined global + hotel plans for hotel patterns
-        const fetchedPlans = await fetchPlansForHotel(newVal);
-        hotelPlans.value = fetchedPlans || [];
+        await fetchHotelPlans(newVal);
     }
 }, { immediate: true });
 

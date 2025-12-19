@@ -29,79 +29,33 @@ This deployment adds **plan categories** to the existing system without breaking
 - [ ] **Test database connection**
 - [ ] **Confirm low-traffic time window**
 
-## Deployment Steps
-
-### 1. Run Deployment Script
-```bash
-# Set environment variables
-export DB_HOST=your_host
-export DB_NAME=your_database  
-export DB_USER=your_user
-export DB_PASSWORD=your_password
-
-# Run deployment
-npm run deploy:plan-categories
-```
-
-### 2. Verify Deployment
-The script automatically verifies:
-- Category tables created with data
-- New columns added to plans_hotel
-- Existing plans linked to categories
-- No data loss occurred
-
-### 3. Test Critical Paths
-- [ ] **Plan Management**: Admin can view/edit plans
-- [ ] **Reservations**: New reservations work normally
-- [ ] **Existing Data**: Historical reservations display correctly
-
-## Expected Results
-
-After deployment, you should see:
-- **5+ type categories** (seeded from existing plans_global)
-- **2 package categories** (スタンダード, マンスリー)
-- **All existing plans_hotel records** have category assignments
-- **Zero downtime** - existing functionality unchanged
-
 ## Task List
 
 ### 1. Database & Infrastructure
-- [x] **Migrations**: Verify `api/migrations/020_create_plan_categories_tables.sql` through `api/migrations/023_update_daily_plan_metrics_categories.sql`. (Manually Applied)
+- [x] **Migrations**: Verify `api/migrations/020_create_plan_categories_tables.sql` through `api/migrations/024_update_get_available_plans_for_hotel_with_filtering.sql`. (Manually Applied)
 - [ ] **Deployment Script**: (Not needed - Manual migration performed)
 - [ ] **Package.json**: (Not needed - Manual migration performed)
 
 ### 2. Backend Model Layer
 - [x] **New Category Model**: Create `api/models/plan/categories.js` for `plan_type_categories` and `plan_package_categories`.
-- [x] **Update Main Plan Model**: Update `api/models/plan/main.js` (`insertHotelPlan`, `updateHotelPlan`, `selectHotelPlanById`) with new fields.
+- [x] **Update Main Plan Model**: Update `api/models/plan/main.js` (`insertHotelPlan`, `updateHotelPlan`, `selectHotelPlanById`, `selectAvailablePlansByHotel`) with new fields and date filtering.
 - [x] **Model Aggregation**: Export new category functions from `api/models/plan/index.js`.
 - [x] **Financial Models**: Update `api/models/import.js` and `api/models/report/forecast.js` to use category fields and net sales.
 
 ### 3. Backend Controller & API
-- [x] **Update Plan Controller**: Update `api/controllers/plans/main.js` to handle category IDs and new plan metadata.
-- [x] **Validation**: Update controllers to validate category IDs.
+- [x] **Update Plan Controller**: Update `api/controllers/plans/main.js` to handle category IDs, new plan metadata, and date-based filtering.
+- [x] **Validation**: Update controllers to validate category IDs and date parameters.
 - [x] **New Endpoints**: Added routes for categories in `api/routes/plansRoutes.js`.
 
 ### 4. Verification & Testing
-- [ ] **Dry Run**: Test the deployment script against a local copy of the database.
-- [ ] **API Tests**: Verify that plans are created/updated with category information.
-- [ ] **Backward Compatibility**: Ensure existing plan operations still work without category data.
+- [x] **Date-Aware Filtering**: Verified `get_available_plans_for_hotel` correctly filters by `available_from`, `available_until`, and `is_active`.
 
 ### 5. Frontend (UI)
 - [x] **Plan Management**: Update UI to allow selecting type/package categories.
 - [x] **Plan List**: Add badges for plan categories.
 - [x] **Plan Copy**: Implemented "Plan Copy Between Hotels" feature (`CopyPlansDialog.vue`).
-
-## Rollback Plan
-
-If issues occur:
-```bash
-npm run rollback:plan-categories
-```
-
-This removes:
-- New category tables
-- New columns from plans_hotel
-- Returns system to exact previous state
+- [x] **Reservation Edit**: Updated `ReservationDayDetail.vue`, `ReservationPanel.vue`, and `ReservationRoomsView.vue` to be plan date aware (only shows plans available for the specific reservation or stay date range).
+- [x] **Admin Tools**: Updated `otaPlanMaster.vue` and `ManagePlansPatterns.vue` to use unfiltered plan fetching (`fetchHotelPlans`) to allow mapping/pattern creation for all plans regardless of current availability.
 
 ## Post-Deployment
 
