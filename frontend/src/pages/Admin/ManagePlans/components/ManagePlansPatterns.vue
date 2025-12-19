@@ -11,6 +11,12 @@
             </TabList>
             <TabPanels>
                 <TabPanel value="0">
+                <Message class="mt-2">
+                    <template #icon>
+                        <i class="pi pi-info-circle"></i>
+                    </template>
+                    ホテルパターンの使用を推奨します。
+                </Message>
                     <div class="flex justify-end mb-2">
                         <Button @click="showGlobalDialog = true" icon="pi pi-plus" label="パターン追加"
                             class="p-button-right"></Button>
@@ -112,6 +118,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import Panel from 'primevue/panel';
+import Message from 'primevue/message';
 
 // Note: Hotels are managed by parent component
 import { usePlansStore } from '@/composables/usePlansStore';

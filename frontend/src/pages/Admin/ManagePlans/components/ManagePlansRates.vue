@@ -638,7 +638,7 @@
      // Helper
     const formatNumber = (value, style) => {
         let thisValue = value;
-        if(!thisValue){
+        if(!thisValue || isNaN(thisValue)){
             thisValue = 0;
         } 
         if(style === 'currency'){
@@ -711,7 +711,10 @@
         return addons.value.length;
     });
     const filteredAddonSum = computed(() => {
-        return addons.value.reduce((sum, addon) => sum + (addon.price || 0), 0);
+        return addons.value.reduce((sum, addon) => {
+            const price = Number(addon.price) || 0;
+            return sum + price;
+        }, 0);
     });
     const handleFilteredAddons = (payload) => {
         addons.value = payload;

@@ -21,14 +21,14 @@
         <DataTable :value="plansToCopy" :dataKey="getDataKey" :rowHover="true" v-model:selection="selectedPlans"
             class="p-datatable-sm">
             <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-            <Column field="plan_name" header="プラン名" style="width: 20%">
+            <Column field="name" header="プラン名" style="width: 20%">
                 <template #body="{ data }">
-                    <span :class="{ 'line-through text-400': data.conflict }">{{ data.plan_name }}</span>
+                    <span :class="{ 'line-through text-400': data.conflict }">{{ data.name || data.plan_name }}</span>
                 </template>
             </Column>
             <Column header="新しいプラン名 (任意)" style="width: 25%">
                 <template #body="{ data }">
-                    <InputText v-model="data.newName" :placeholder="data.plan_name" class="w-full"
+                    <InputText v-model="data.newName" :placeholder="data.name || data.plan_name" class="w-full"
                         :disabled="!selectedPlans.includes(data)" />
                 </template>
             </Column>
@@ -151,11 +151,11 @@ const checkConflicts = () => {
     const usedNames = new Set();
 
     plansToCopy.value.forEach(plan => {
-        const nameToCheck = plan.newName?.trim() || plan.plan_name || plan.name;
+        const nameToCheck = plan.newName?.trim() || plan.name || plan.plan_name;
 
         // Check against existing plans in target hotel
         const existsInTarget = targetHotelPlans.value.some(targetPlan =>
-            (targetPlan.plan_name || targetPlan.name) === nameToCheck
+            (targetPlan.name || targetPlan.plan_name) === nameToCheck
         );
 
         // Check against other plans being copied (duplicate names within selection)
@@ -182,7 +182,7 @@ const executeCopy = async () => {
     // Check for conflicts and warn user
     const conflictedPlans = selectedPlans.value.filter(plan => plan.conflict);
     if (conflictedPlans.length > 0) {
-        const conflictNames = conflictedPlans.map(p => p.plan_name || p.name).join(', ');
+        const conflictNames = conflictedPlans.map(p => p.name || p.plan_name).join(', ');
         toast.add({
             severity: 'warn',
             summary: '名前の競合',

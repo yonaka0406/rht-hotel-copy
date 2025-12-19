@@ -28,7 +28,7 @@
                 <i class="pi pi-info-circle"></i>
               </template>
               グローバルプランは、未使用になる予定です。
-            </Message>
+            </Message>            
             <div id="globalTabPanel" v-show="!showGlobalRatePanel">
               <div class="flex justify-end mb-2">
                 <Button @click="showGlobalDialog = true" icon="pi pi-plus" label="プラン追加"
