@@ -296,8 +296,3 @@ BEGIN
     ORDER BY display_order ASC, plan_type ASC, plan_name ASC;
 END;
 $$ LANGUAGE plpgsql STABLE;
-
--- Add comments
-COMMENT ON FUNCTION get_available_plans_for_hotel(INT, DATE, BOOLEAN) IS 'Returns available plans for a hotel on a specific date, filtered by is_active and date availability, with option to include inactive plans';
-COMMENT ON FUNCTION get_available_plans_for_hotel(INT) IS 'Returns available plans for a hotel for current date (backward compatibility)';
-COMMENT ON FUNCTION get_available_plans_with_rates_and_addons(INT, DATE, DATE, BOOLEAN) IS 'Enhanced function that returns available plans with rates and addons data included, supporting both global and hotel-specific plans/addons';
