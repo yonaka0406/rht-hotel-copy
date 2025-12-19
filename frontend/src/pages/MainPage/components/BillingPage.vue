@@ -362,13 +362,19 @@ const openInvoiceDialog = (data) => {
     });
 
     const stayDetailsByDate = {};
+    const cancellationsByDate = {};
     let totalCancellationFees = 0;
 
     relevantDailyDetails.forEach(day => {
+        const dateStr = formatDate(new Date(day.date));
+        
         if (day.cancelled && day.billable) {
             totalCancellationFees++;
+            if (!cancellationsByDate[dateStr]) {
+                cancellationsByDate[dateStr] = 0;
+            }
+            cancellationsByDate[dateStr] += day.number_of_people;
         } else if (!day.cancelled) {
-            const dateStr = formatDate(new Date(day.date));
             if (!stayDetailsByDate[dateStr]) {
                 stayDetailsByDate[dateStr] = 0;
             }
@@ -376,39 +382,40 @@ const openInvoiceDialog = (data) => {
         }
     });
 
-    const sortedDates = Object.keys(stayDetailsByDate).sort();
+    // Get all dates (both stay and cancellation dates) and sort them
+    const allDates = [...new Set([...Object.keys(stayDetailsByDate), ...Object.keys(cancellationsByDate)])].sort();
     const stayPeriods = [];
     
-    if (sortedDates.length > 0) {
+    if (allDates.length > 0) {
         // Create a working copy of people count per date
         const workingPeopleByDate = { ...stayDetailsByDate };
         
         // Find consecutive date groups and process them
         while (Object.values(workingPeopleByDate).some(count => count > 0)) {
-            // Find consecutive date ranges
+            // Find consecutive date ranges (including gaps with cancellations)
             const consecutiveGroups = [];
             let i = 0;
             
-            while (i < sortedDates.length) {
-                if (workingPeopleByDate[sortedDates[i]] > 0) {
-                    let groupStart = sortedDates[i];
-                    let groupEnd = sortedDates[i];
-                    let groupDates = [sortedDates[i]];
+            while (i < allDates.length) {
+                if (workingPeopleByDate[allDates[i]] > 0) {
+                    let groupStart = allDates[i];
+                    let groupEnd = allDates[i];
+                    let groupDates = [allDates[i]];
                     
-                    // Find consecutive dates with people > 0
+                    // Find consecutive dates (including cancelled dates in between)
                     let j = i + 1;
-                    while (j < sortedDates.length && workingPeopleByDate[sortedDates[j]] > 0) {
-                        const [currentYear, currentMonth, currentDay] = sortedDates[j].split('-').map(Number);
+                    while (j < allDates.length) {
+                        const [currentYear, currentMonth, currentDay] = allDates[j].split('-').map(Number);
                         const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
                         
-                        const [prevYear, prevMonth, prevDay] = sortedDates[j - 1].split('-').map(Number);
+                        const [prevYear, prevMonth, prevDay] = allDates[j - 1].split('-').map(Number);
                         const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
                         
                         const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
                         
                         if (diff === 1) {
-                            groupEnd = sortedDates[j];
-                            groupDates.push(sortedDates[j]);
+                            groupEnd = allDates[j];
+                            groupDates.push(allDates[j]);
                             j++;
                         } else {
                             break;
@@ -429,24 +436,52 @@ const openInvoiceDialog = (data) => {
             
             // Process each consecutive group
             consecutiveGroups.forEach(group => {
-                // Find minimum number of people in this group
-                const minPeople = Math.min(...group.dates.map(date => workingPeopleByDate[date]));
+                // Find minimum number of people in this group (only from non-cancelled dates)
+                const nonCancelledDates = group.dates.filter(date => workingPeopleByDate[date] > 0);
                 
-                if (minPeople > 0) {
-                    // Create a period entry for this group with min people
-                    const totalNights = minPeople * group.dates.length;
+                if (nonCancelledDates.length > 0) {
+                    const minPeople = Math.min(...nonCancelledDates.map(date => workingPeopleByDate[date]));
                     
-                    stayPeriods.push({
-                        start: group.start,
-                        end: group.end,
-                        people: minPeople,
-                        totalNights: totalNights
-                    });
-                    
-                    // Subtract min people from each date in the group
-                    group.dates.forEach(date => {
-                        workingPeopleByDate[date] -= minPeople;
-                    });
+                    if (minPeople > 0) {
+                        // Calculate total nights and cancellation nights for this period
+                        const totalNights = minPeople * nonCancelledDates.length;
+                        
+                        // Create entry for actual stay nights
+                        const actualStayStart = nonCancelledDates[0];
+                        const actualStayEnd = nonCancelledDates[nonCancelledDates.length - 1];
+                        
+                        stayPeriods.push({
+                            start: actualStayStart,
+                            end: actualStayEnd,
+                            people: minPeople,
+                            totalNights: totalNights,
+                            type: 'stay'
+                        });
+                        
+                        // Create separate entry for cancellation fees if any
+                        const cancellationDates = group.dates.filter(date => 
+                            cancellationsByDate[date] && cancellationsByDate[date] >= minPeople
+                        );
+                        
+                        if (cancellationDates.length > 0) {
+                            const cancellationStart = cancellationDates[0];
+                            const cancellationEnd = cancellationDates[cancellationDates.length - 1];
+                            const cancellationNights = minPeople * cancellationDates.length;
+                            
+                            stayPeriods.push({
+                                start: cancellationStart,
+                                end: cancellationEnd,
+                                people: minPeople,
+                                totalNights: cancellationNights,
+                                type: 'cancellation'
+                            });
+                        }
+                        
+                        // Subtract min people from each non-cancelled date in the group
+                        nonCancelledDates.forEach(date => {
+                            workingPeopleByDate[date] -= minPeople;
+                        });
+                    }
                 }
             });
         }
@@ -469,12 +504,20 @@ const openInvoiceDialog = (data) => {
         const checkOutDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
         const checkOutDateStr = formatDate(checkOutDate);
         
-        return `・滞在期間：${period.start.replace(/-/g, '/')} ～ ${checkOutDateStr.replace(/-/g, '/')} 、${period.people}名、宿泊日数：${period.totalNights}泊`;
+        // Use different text for cancellation vs stay periods
+        const nightsLabel = period.type === 'cancellation' ? 'キャンセル料' : '宿泊日数';
+        const nightsUnit = period.type === 'cancellation' ? '泊' : '泊';
+        
+        return `・滞在期間：${period.start.replace(/-/g, '/')} ～ ${checkOutDateStr.replace(/-/g, '/')} 、${period.people}名、${nightsLabel}：${period.totalNights}${nightsUnit}`;
     }).join('\r\n');
 
+    // Check if there are any remaining cancellation fees not accounted for in periods
+    const accountedCancellations = stayPeriods.filter(p => p.type === 'cancellation').reduce((sum, period) => sum + period.totalNights, 0);
+    const remainingCancellations = totalCancellationFees - accountedCancellations;
+    
     let cancellationComment = '';
-    if (totalCancellationFees > 0) {
-        cancellationComment = `・キャンセル料：${totalCancellationFees}日分`;
+    if (remainingCancellations > 0) {
+        cancellationComment = `・キャンセル料：${remainingCancellations}日分`;
     }
 
     const finalComment = `【宿泊明細】\r\n${formattedDateGroups}${formattedDateGroups && cancellationComment ? '\r\n' : ''}${cancellationComment}`;
