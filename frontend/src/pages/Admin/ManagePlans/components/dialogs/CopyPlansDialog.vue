@@ -87,7 +87,7 @@ const sourcePlans = ref([]);
 const plansToCopy = ref([]); // This will hold plans from source, with copy options and conflict status
 const selectedPlans = ref([]); // Plans selected for copying
 
-// Computed property to filter target hotel's existing plans for conflict detection
+// Reactive ref for target hotel plans to filter conflicts
 const targetHotelPlans = ref([]);
 
 // Function to get unique data key for each row
@@ -96,7 +96,12 @@ const getDataKey = (data) => {
     return data.uniqueId || data.id || `${data.hotel_id}_${data.plan_name}`;
 };
 
-const canExecuteCopy = computed(() => selectedPlans.value.length > 0 && targetHotelId.value !== null);
+const canExecuteCopy = computed(() => {
+    return selectedPlans.value.length > 0 &&
+        targetHotelId.value !== null &&
+        sourceHotelId.value !== null &&
+        sourceHotelId.value !== targetHotelId.value;
+});
 
 const closeDialog = () => {
     emit('update:visible', false);
@@ -208,16 +213,21 @@ const executeCopy = async () => {
             return planId;
         });
         const copyOptions = {
-            copyRates: selectedPlans.value.some(plan => plan.copyRates),
-            copyAddons: selectedPlans.value.some(plan => plan.copyAddons),
-            // Handle individual plan names if they have custom names
-            planNames: selectedPlans.value.reduce((acc, plan) => {
-                if (plan.newName && plan.newName.trim()) {
-                    acc[plan.id] = plan.newName.trim();
-                }
-                return acc;
-            }, {})
+            copyRates: {},
+            copyAddons: {},
+            planNames: {}
         };
+
+        selectedPlans.value.forEach(plan => {
+            const pid = plan.id || plan.plan_id || plan.plans_hotel_id;
+            if (pid) {
+                copyOptions.copyRates[pid] = !!plan.copyRates;
+                copyOptions.copyAddons[pid] = !!plan.copyAddons;
+                if (plan.newName && plan.newName.trim()) {
+                    copyOptions.planNames[pid] = plan.newName.trim();
+                }
+            }
+        });
 
         // Validate that we have valid plan IDs
         const validPlanIds = sourcePlanIds.filter(id => id != null && id !== undefined);
