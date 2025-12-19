@@ -431,6 +431,8 @@ const fetchDataAndProcess = async () => {
         // Process data for all components        
         await nextTick();
         calculateMetrics();
+        // Add a small delay so the processing message is visible
+        await new Promise(resolve => setTimeout(resolve, 300));
         isLoading.value = false;
     }
 };

@@ -103,7 +103,11 @@ const saveGlobalPlan = async () => {
     }
 
     try {
-        const planData = { ...newGlobalPlan.value, color: `#${newGlobalPlan.value.colorHEX}` };
+        const planData = { 
+            ...newGlobalPlan.value, 
+            name: trimmedPlanName,
+            color: `#${newGlobalPlan.value.colorHEX}` 
+        };
         delete planData.colorHEX; // Remove colorHEX as 'color' is sent instead
         
         await createGlobalPlan(planData);

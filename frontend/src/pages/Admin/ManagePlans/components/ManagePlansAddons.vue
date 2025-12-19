@@ -366,6 +366,15 @@
                 });
                 return;
             }
+            if (!newAddon.value.date_start) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: '開始日を入力してください。',
+                    life: 3000
+                });
+                return;
+            }
             if (newAddon.value.date_end && new Date(newAddon.value.date_end) < new Date(newAddon.value.date_start)) {                    
                 toast.add({ 
                     severity: 'error', 

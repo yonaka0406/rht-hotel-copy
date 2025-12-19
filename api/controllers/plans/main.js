@@ -46,17 +46,41 @@ const fetchAllHotelPlans = async (req, res) => {
         return res.status(400).json({ error: 'Hotel ID is required' });
     }
 
+    // Helper function to validate date format and components
+    const isValidDate = (dateString) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
+        
+        const [year, month, day] = dateString.split('-').map(Number);
+        if (month < 1 || month > 12) return false;
+        
+        const daysInMonth = new Date(year, month, 0).getDate();
+        if (day < 1 || day > daysInMonth) return false;
+        
+        // Verify UTC date construction matches
+        const date = new Date(Date.UTC(year, month - 1, day));
+        return date.getUTCFullYear() === year && 
+               date.getUTCMonth() === month - 1 && 
+               date.getUTCDate() === day;
+    };
+
     // Validate date formats if provided
-    if (target_date && !/^\d{4}-\d{2}-\d{2}$/.test(target_date)) {
-        return res.status(400).json({ error: 'Invalid target_date format. Use YYYY-MM-DD' });
+    if (target_date && !isValidDate(target_date)) {
+        return res.status(400).json({ error: 'Invalid target_date format or value. Use YYYY-MM-DD' });
     }
-    if (date_end && !/^\d{4}-\d{2}-\d{2}$/.test(date_end)) {
-        return res.status(400).json({ error: 'Invalid date_end format. Use YYYY-MM-DD' });
+    if (date_end && !isValidDate(date_end)) {
+        return res.status(400).json({ error: 'Invalid date_end format or value. Use YYYY-MM-DD' });
     }
 
     // Validate date range if both dates are provided
-    if (target_date && date_end && new Date(target_date) > new Date(date_end)) {
-        return res.status(400).json({ error: 'target_date must be before or equal to date_end' });
+    if (target_date && date_end) {
+        const [tYear, tMonth, tDay] = target_date.split('-').map(Number);
+        const [eYear, eMonth, eDay] = date_end.split('-').map(Number);
+        const targetUTC = Date.UTC(tYear, tMonth - 1, tDay);
+        const endUTC = Date.UTC(eYear, eMonth - 1, eDay);
+        
+        if (targetUTC > endUTC) {
+            return res.status(400).json({ error: 'target_date must be before or equal to date_end' });
+        }
     }
 
     try {
@@ -78,17 +102,41 @@ const fetchAvailablePlansForDate = async (req, res) => {
         return res.status(400).json({ error: 'Hotel ID is required' });
     }
 
-    if (!target_date || !/^\d{4}-\d{2}-\d{2}$/.test(target_date)) {
+    // Helper function to validate date format and components
+    const isValidDate = (dateString) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
+        
+        const [year, month, day] = dateString.split('-').map(Number);
+        if (month < 1 || month > 12) return false;
+        
+        const daysInMonth = new Date(year, month, 0).getDate();
+        if (day < 1 || day > daysInMonth) return false;
+        
+        // Verify UTC date construction matches
+        const date = new Date(Date.UTC(year, month - 1, day));
+        return date.getUTCFullYear() === year && 
+               date.getUTCMonth() === month - 1 && 
+               date.getUTCDate() === day;
+    };
+
+    if (!target_date || !isValidDate(target_date)) {
         return res.status(400).json({ error: 'Valid check_date is required (YYYY-MM-DD format)' });
     }
 
-    if (date_end && !/^\d{4}-\d{2}-\d{2}$/.test(date_end)) {
-        return res.status(400).json({ error: 'Invalid date_end format. Use YYYY-MM-DD' });
+    if (date_end && !isValidDate(date_end)) {
+        return res.status(400).json({ error: 'Invalid date_end format or value. Use YYYY-MM-DD' });
     }
 
     // Validate date range if both dates are provided
-    if (date_end && new Date(target_date) > new Date(date_end)) {
-        return res.status(400).json({ error: 'check_date must be before or equal to date_end' });
+    if (date_end) {
+        const [tYear, tMonth, tDay] = target_date.split('-').map(Number);
+        const [eYear, eMonth, eDay] = date_end.split('-').map(Number);
+        const targetUTC = Date.UTC(tYear, tMonth - 1, tDay);
+        const endUTC = Date.UTC(eYear, eMonth - 1, eDay);
+        
+        if (targetUTC > endUTC) {
+            return res.status(400).json({ error: 'check_date must be before or equal to date_end' });
+        }
     }
 
     try {

@@ -1478,12 +1478,17 @@ const openRoomEditDialog = async (group) => {
     const endDate = reservationInfo.value.check_out;
 
     // Calculate the actual stay date range for this specific room group
-    const roomDates = group.details.map(detail => new Date(detail.date)).sort((a, b) => a - b);
-    const roomStartDate = roomDates[0];
-    const roomEndDate = roomDates[roomDates.length - 1]; // Last stay date, not checkout date
-    
-    const roomStartDateStr = formatDate(roomStartDate);
-    const roomEndDateStr = formatDate(roomEndDate);
+    let roomStartDateStr = startDate;
+    let roomEndDateStr = endDate;
+
+    if (Array.isArray(group.details) && group.details.length > 0) {
+        const roomDates = group.details.map(detail => new Date(detail.date)).sort((a, b) => a - b);
+        const roomStartDate = roomDates[0];
+        const roomEndDate = roomDates[roomDates.length - 1]; // Last stay date, not checkout date
+        
+        roomStartDateStr = formatDate(roomStartDate);
+        roomEndDateStr = formatDate(roomEndDate);
+    }
 
     await fetchAvailableRooms(hotelId, startDate, endDate);
     // Fetch plans available for the specific room's stay date range
@@ -1773,9 +1778,9 @@ const openGuestListDialog = async (group, isGroup = false) => {
         const assignedParkingData = await fetchParkingReservations(reservationDetails.hotel_id, reservationDetails.reservation_id);
         const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
 
-        await fetchPlansForHotel(reservationDetails.hotel_id, checkInDate, checkOutDate);
-
         const { checkInDate, checkOutDate } = getRoomStayDates(group.details, reservationInfo.value.check_in, reservationInfo.value.check_out);
+
+        await fetchPlansForHotel(reservationDetails.hotel_id, checkInDate, checkOutDate);
 
         selectedReservationForGuestList.value = {
             id: reservationDetails.reservation_id,
