@@ -4,6 +4,15 @@ const logger = require('../../config/logger');
 // Plan Copy Between Hotels
 const copyPlanToHotel = async (req, res) => {
     const { sourcePlanId, sourceHotelId, targetHotelId, options } = req.body;
+
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!sourcePlanId || !sourceHotelId || !targetHotelId) {
+        return res.status(400).json({ error: 'Missing required fields: sourcePlanId, sourceHotelId, and targetHotelId are required.' });
+    }
+
     const userId = req.user.id;
 
     logger.debug('copyPlanToHotel called', {
@@ -41,6 +50,19 @@ const copyPlanToHotel = async (req, res) => {
 
 const bulkCopyPlansToHotel = async (req, res) => {
     const { sourcePlanIds, sourceHotelId, targetHotelId, options } = req.body;
+
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!Array.isArray(sourcePlanIds) || sourcePlanIds.length === 0) {
+        return res.status(400).json({ error: 'Invalid or empty sourcePlanIds' });
+    }
+
+    if (!sourceHotelId || !targetHotelId) {
+        return res.status(400).json({ error: 'Missing required fields: sourceHotelId and targetHotelId are required.' });
+    }
+
     const userId = req.user.id;
 
     logger.debug('bulkCopyPlansToHotel called', {
