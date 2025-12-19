@@ -33,8 +33,6 @@ This deployment adds **plan categories** to the existing system without breaking
 
 ### 1. Database & Infrastructure
 - [x] **Migrations**: Verify `api/migrations/020_create_plan_categories_tables.sql` through `api/migrations/024_update_get_available_plans_for_hotel_with_filtering.sql`. (Manually Applied)
-- [ ] **Deployment Script**: (Not needed - Manual migration performed)
-- [ ] **Package.json**: (Not needed - Manual migration performed)
 
 ### 2. Backend Model Layer
 - [x] **New Category Model**: Create `api/models/plan/categories.js` for `plan_type_categories` and `plan_package_categories`.
@@ -45,10 +43,12 @@ This deployment adds **plan categories** to the existing system without breaking
 ### 3. Backend Controller & API
 - [x] **Update Plan Controller**: Update `api/controllers/plans/main.js` to handle category IDs, new plan metadata, and date-based filtering.
 - [x] **Validation**: Update controllers to validate category IDs and date parameters.
-- [x] **New Endpoints**: Added routes for categories in `api/routes/plansRoutes.js`.
+- [x] **New Endpoints**: Added routes for categories and deletion in `api/routes/plansRoutes.js`.
+- [x] **Plan Deletion**: Added deletion endpoints with usage checking to prevent data loss.
 
 ### 4. Verification & Testing
 - [x] **Date-Aware Filtering**: Verified `get_available_plans_for_hotel` correctly filters by `available_from`, `available_until`, and `is_active`.
+- [x] **Deletion Logic**: Verified that plans cannot be deleted if they have reservations or other dependencies.
 
 ### 5. Frontend (UI)
 - [x] **Plan Management**: Update UI to allow selecting type/package categories.
@@ -56,6 +56,7 @@ This deployment adds **plan categories** to the existing system without breaking
 - [x] **Plan Copy**: Implemented "Plan Copy Between Hotels" feature (`CopyPlansDialog.vue`).
 - [x] **Reservation Edit**: Updated `ReservationDayDetail.vue`, `ReservationPanel.vue`, and `ReservationRoomsView.vue` to be plan date aware (only shows plans available for the specific reservation or stay date range).
 - [x] **Admin Tools**: Updated `otaPlanMaster.vue` and `ManagePlansPatterns.vue` to use unfiltered plan fetching (`fetchHotelPlans`) to allow mapping/pattern creation for all plans regardless of current availability.
+- [x] **Plan Deletion**: Added "Delete" buttons to plan lists with usage checking and confirmation dialogs.
 
 ## Post-Deployment
 
