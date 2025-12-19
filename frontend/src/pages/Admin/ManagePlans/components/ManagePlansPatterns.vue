@@ -41,7 +41,8 @@
                 <TabPanel value="1">
                     <div class="flex justify-end mb-2">
                         <Button @click="showHotelDialog = true" icon="pi pi-plus" label="パターン追加"
-                            class="p-button-right"></Button>
+                            class="p-button-right" :disabled="hotelPlans.length === 0" 
+                            v-tooltip="hotelPlans.length === 0 ? 'プランが登録されていないため、パターンを作成できません。' : ''"></Button>
                     </div>
                     <DataTable :value="hotelPatterns">
                         <Column field="name" header="名称"></Column>
@@ -52,7 +53,9 @@
                             <template #body="slotProps">
                                 <div class="flex items-center justify-center">
                                     <Button icon="pi pi-pencil" class="p-button-text p-button-sm"
-                                        @click="openEditHotelPattern(slotProps.data)" v-tooltip="'パターン編集'" />
+                                        @click="openEditHotelPattern(slotProps.data)" 
+                                        :disabled="hotelPlans.length === 0"
+                                        v-tooltip="hotelPlans.length === 0 ? 'プランが登録されていないため、編集できません。' : 'パターン編集'" />
                                     <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
                                         @click="deleteHotelPattern(slotProps.data)" v-tooltip="'パターン削除'" />
                                 </div>
@@ -74,12 +77,12 @@
         :daysOfWeek="daysOfWeek" :initialEditGlobalPattern="editGlobalPattern" />
 
     <!-- Hotel Pattern Dialogs - Use combined global + hotel plans -->
-    <AddHotelPatternDialog v-if="showHotelDialog && hotelPlans.length > 0" :visible="showHotelDialog"
+    <AddHotelPatternDialog v-if="showHotelDialog" :visible="showHotelDialog"
         @update:visible="showHotelDialog = $event" @patternAdded="onPatternModified"
         :selectedHotelId="props.selectedHotelId" :hotelPlans="hotelPlans" :allHotelPatterns="allHotelPatterns"
         :daysOfWeek="daysOfWeek" />
     
-    <EditHotelPatternDialog v-if="showEditHotelDialog && hotelPlans.length > 0" :visible="showEditHotelDialog"
+    <EditHotelPatternDialog v-if="showEditHotelDialog" :visible="showEditHotelDialog"
         @update:visible="showEditHotelDialog = $event" @patternUpdated="onPatternModified"
         :selectedHotelId="props.selectedHotelId" :hotelPlans="hotelPlans" :allHotelPatterns="allHotelPatterns"
         :initialEditHotelPattern="editHotelPattern" :daysOfWeek="daysOfWeek" />

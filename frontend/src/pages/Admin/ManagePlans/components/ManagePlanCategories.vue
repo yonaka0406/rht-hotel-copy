@@ -221,7 +221,7 @@ const deleteTypeCategory = async (id) => {
     await loadData();
   } catch (error) {
     console.error('Error deleting type category:', error);
-    if (error.message.includes('currently in use')) {
+    if (error?.message?.includes('currently in use')) {
       toast.add({ severity: 'error', summary: 'エラー', detail: 'このカテゴリーは使用中のため削除できません', life: 5000 });
     } else {
       toast.add({ severity: 'error', summary: 'エラー', detail: 'タイプカテゴリーの削除に失敗しました', life: 3000 });
@@ -285,7 +285,7 @@ const deletePackageCategory = async (id) => {
     await loadData();
   } catch (error) {
     console.error('Error deleting package category:', error);
-    if (error.message.includes('currently in use')) {
+    if (error?.message?.includes('currently in use')) {
       toast.add({ severity: 'error', summary: 'エラー', detail: 'このカテゴリーは使用中のため削除できません', life: 5000 });
     } else {
       toast.add({ severity: 'error', summary: 'エラー', detail: 'パッケージカテゴリーの削除に失敗しました', life: 3000 });

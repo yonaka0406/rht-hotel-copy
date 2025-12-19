@@ -117,8 +117,8 @@ const saveGlobalPattern = async () => {
 
         const match = planKey.match(/^(\d*)h(\d+)?$/);
         if (!match) {
-            console.warn(`Invalid plan key format for ${day.value}:`, planKey);
-            continue; // Skip invalid values
+            toast.add({ severity: 'error', summary: 'エラー', detail: `無効なプラン形式です (${day.label})。`, life: 3000 });
+            return;
         }
         const plans_global_id = match[1];
         const plans_hotel_id = match[2] ?? null;
