@@ -83,6 +83,8 @@
         @update:visible="showEditHotelDialog = $event" @patternUpdated="onPatternModified"
         :selectedHotelId="props.selectedHotelId" :hotelPlans="hotelPlans" :allHotelPatterns="allHotelPatterns"
         :initialEditHotelPattern="editHotelPattern" :daysOfWeek="daysOfWeek" />
+        
+    <ConfirmDialog group="delete-pattern" />
 </template>
 <script setup>
 // Vue
@@ -112,7 +114,7 @@ import { useConfirm } from 'primevue/useconfirm';
 const confirm = useConfirm();
 import {
     Tabs, TabList, Tab, TabPanels, TabPanel, Dialog,
-    FloatLabel, InputText, Select, Badge
+    FloatLabel, InputText, Select, Badge, ConfirmDialog
 } from 'primevue'
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -153,6 +155,7 @@ const onGlobalPatternModified = async () => {
 
 const deleteGlobalPattern = async (pattern) => {
     confirm.require({
+        group: 'delete-pattern',
         message: `パターン「${pattern.name}」を削除しますか？この操作は取り消せません。`,
         header: 'パターン削除確認',
         icon: 'pi pi-exclamation-triangle',
@@ -208,6 +211,7 @@ const onPatternModified = async () => {
 
 const deleteHotelPattern = async (pattern) => {
     confirm.require({
+        group: 'delete-pattern',
         message: `パターン「${pattern.name}」を削除しますか？この操作は取り消せません。`,
         header: 'パターン削除確認',
         icon: 'pi pi-exclamation-triangle',

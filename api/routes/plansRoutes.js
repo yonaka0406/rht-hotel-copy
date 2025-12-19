@@ -9,6 +9,8 @@ const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authM
 router.get('/plans/global', authMiddleware, plansControllers.getGlobalPlans);
 router.post('/plans/global', authMiddleware_manageDB, plansControllers.createGlobalPlan);
 router.put('/plans/global/:id', authMiddleware_manageDB, plansControllers.editGlobalPlan);
+router.delete('/plans/global/:id/check', authMiddleware, plansControllers.checkGlobalPlanDeletion);
+router.delete('/plans/global/:id', authMiddleware_manageDB, plansControllers.deleteGlobalPlan);
 
 // Hotel-specific Plans routes
 router.get('/plans/hotel', authMiddleware, plansControllers.getHotelsPlans);

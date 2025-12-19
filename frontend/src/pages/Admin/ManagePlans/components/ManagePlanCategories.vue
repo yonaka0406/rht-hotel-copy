@@ -86,7 +86,7 @@
     />
 
     <!-- Confirm Delete Dialog -->
-    <ConfirmDialog />
+    <ConfirmDialog group="delete-category" />
   </div>
 </template>
 
@@ -201,6 +201,7 @@ const saveTypeCategory = async (categoryData) => {
 
 const confirmDeleteType = (event, category) => {
   confirm.require({
+    group: 'delete-category',
     target: event.currentTarget,
     message: `タイプカテゴリー「${category.name}」を削除しますか？`,
     header: '削除確認',
@@ -264,6 +265,7 @@ const savePackageCategory = async (categoryData) => {
 
 const confirmDeletePackage = (event, category) => {
   confirm.require({
+    group: 'delete-category',
     target: event.currentTarget,
     message: `パッケージカテゴリー「${category.name}」を削除しますか？`,
     header: '削除確認',

@@ -59,6 +59,8 @@
                         @click="openEditGlobalPlan(slotProps.data)" v-tooltip="'プラン編集'" />
                       <Button icon="pi pi-dollar" class="p-button-text p-button-sm"
                         @click="switchEditGlobalPlanRate(slotProps.data)" v-tooltip="'料金編集'" />
+                      <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+                        @click="handleDeleteGlobalPlan(slotProps.data)" v-tooltip="'プラン削除'" />
                     </div>
                   </template>
                 </Column>
@@ -165,6 +167,8 @@
 
     <CopyPlansDialog :visible="showCopyPlansDialog" @update:visible="showCopyPlansDialog = $event"
       @planCopied="onPlanCopied" />
+      
+    <ConfirmDialog group="delete-plan" />
   </div>
 </template>
 
@@ -185,7 +189,7 @@ import ManageHotelPlansTable from './components/ManageHotelPlansTable.vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels, fetchHotels } = useHotelStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, fetchPlansGlobal, fetchHotelPlans, createGlobalPlan, updateGlobalPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories, checkHotelPlanDeletion, deleteHotelPlan } = usePlansStore();
+const { plans, fetchPlansGlobal, fetchHotelPlans, createGlobalPlan, updateGlobalPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories, checkHotelPlanDeletion, deleteHotelPlan, checkGlobalPlanDeletion, deleteGlobalPlan } = usePlansStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -199,7 +203,7 @@ import Button from 'primevue/button';
 import Message from 'primevue/message';
 import {
   Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column,
-  InputText, ColorPicker, Textarea, SelectButton, Badge
+  InputText, ColorPicker, Textarea, SelectButton, Badge, ConfirmDialog
 } from 'primevue'
 
 // Helper
@@ -507,14 +511,15 @@ const handleDeletePlan = async (plan) => {
       toast.add({
         severity: 'error',
         summary: 'プラン削除不可',
-        detail: `プラン「${plan.name}」は使用中のため削除できません。\n使用状況: ${usageDetails.join(', ')}`,
-        life: 5000
+        detail: `プラン「${plan.name}」は使用中のため削除できません。\n使用状況: ${usageDetails.join(', ')}\n\n代替案: プランを「無効」に設定することで非表示にできます。`,
+        life: 8000
       });
       return;
     }
 
     // Show confirmation dialog
     confirm.require({
+      group: 'delete-plan',
       message: `プラン「${plan.name}」を削除しますか？この操作は取り消せません。`,
       header: 'プラン削除確認',
       icon: 'pi pi-exclamation-triangle',
@@ -546,6 +551,9 @@ const handleDeletePlan = async (plan) => {
             life: 5000
           });
         }
+      },
+      reject: () => {
+        // Dialog will close automatically on reject
       }
     });
   } catch (error) {
@@ -554,6 +562,113 @@ const handleDeletePlan = async (plan) => {
       severity: 'error',
       summary: 'エラー',
       detail: 'プランの削除チェックに失敗しました。',
+      life: 3000
+    });
+  }
+};
+
+// Handle global plan deletion with confirmation
+const handleDeleteGlobalPlan = async (plan) => {
+  console.log('handleDeleteGlobalPlan: Received plan data:', plan);
+  
+  const planId = plan.id;
+  
+  if (!planId) {
+    console.error('handleDeleteGlobalPlan: No valid plan ID found in plan data:', plan);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: 'プランIDが見つかりません。',
+      life: 3000
+    });
+    return;
+  }
+  
+  try {
+    // First check if the plan can be deleted
+    const usageCheck = await checkGlobalPlanDeletion(planId);
+    
+    if (!usageCheck.canDelete) {
+      // Show usage details in the error message
+      const usageDetails = [];
+      
+      if (usageCheck.isProtected) {
+        toast.add({
+          severity: 'error',
+          summary: 'プラン削除不可',
+          detail: `プラン「${plan.name}」は保護されたプランのため削除できません。\n\n最初の5つのプランは削除できません。`,
+          life: 8000
+        });
+        return;
+      }
+      
+      if (usageCheck.usage.hotelPlans > 0) {
+        usageDetails.push(`ホテルプラン: ${usageCheck.usage.hotelPlans}件`);
+      }
+      if (usageCheck.usage.reservations > 0) {
+        usageDetails.push(`予約: ${usageCheck.usage.reservations}件`);
+      }
+      if (usageCheck.usage.ota > 0) {
+        usageDetails.push(`OTA連携: ${usageCheck.usage.ota}件`);
+      }
+      if (usageCheck.usage.dailyMetrics > 0) {
+        usageDetails.push(`日次メトリクス: ${usageCheck.usage.dailyMetrics}件`);
+      }
+      
+      toast.add({
+        severity: 'error',
+        summary: 'プラン削除不可',
+        detail: `プラン「${plan.name}」は使用中のため削除できません。\n使用状況: ${usageDetails.join(', ')}\n\n代替案: プランを「無効」に設定することで非表示にできます。`,
+        life: 8000
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    confirm.require({
+      group: 'delete-plan',
+      message: `グローバルプラン「${plan.name}」を削除しますか？この操作は取り消せません。`,
+      header: 'グローバルプラン削除確認',
+      icon: 'pi pi-exclamation-triangle',
+      rejectProps: {
+        label: 'キャンセル',
+        severity: 'secondary',
+        outlined: true
+      },
+      acceptProps: {
+        label: '削除',
+        severity: 'danger'
+      },
+      accept: async () => {
+        try {
+          await deleteGlobalPlan(planId);
+          await onGlobalPlanAdded(); // Refresh the global plans list
+          toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: `グローバルプラン「${plan.name}」が削除されました。`,
+            life: 3000
+          });
+        } catch (error) {
+          console.error('グローバルプラン削除エラー:', error);
+          toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: `グローバルプランの削除に失敗しました: ${error.message}`,
+            life: 5000
+          });
+        }
+      },
+      reject: () => {
+        // Dialog will close automatically on reject
+      }
+    });
+  } catch (error) {
+    console.error('グローバルプラン削除チェックエラー:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: 'グローバルプランの削除チェックに失敗しました。',
       life: 3000
     });
   }

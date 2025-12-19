@@ -471,6 +471,51 @@ export function usePlansStore() {
         }
     };
 
+    // Check if a global plan can be deleted
+    const checkGlobalPlanDeletion = async (planGlobalId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/global/${planGlobalId}/check`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to check global plan deletion', error);
+            throw error;
+        }
+    };
+
+    // Delete a global plan
+    const deleteGlobalPlan = async (planGlobalId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/global/${planGlobalId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to delete global plan', error);
+            throw error;
+        }
+    };
+
     // Addons
     const fetchPlanAddons = async (gid, hid, hotel_id) => {
         try {
@@ -690,6 +735,8 @@ export function usePlansStore() {
         bulkCopyPlansToHotel,
         checkHotelPlanDeletion,
         deleteHotelPlan,
+        checkGlobalPlanDeletion,
+        deleteGlobalPlan,
         fetchPlanAddons,
         fetchAllAddons,
         fetchPlanRate,

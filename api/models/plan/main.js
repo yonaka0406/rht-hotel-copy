@@ -473,6 +473,143 @@ const deleteHotelPlan = async (requestId, planHotelId, dbClient = null) => {
     }
 };
 
+// Check if a global plan is in use (has hotel plans, reservations, rates, or addons)
+const checkGlobalPlanUsage = async (requestId, planGlobalId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const shouldReleaseClient = !dbClient;
+
+    try {
+        logger.debug('[DB] checkGlobalPlanUsage: Checking usage for plan_global_id:', planGlobalId);
+
+        // Check if this is one of the first 5 protected plans
+        if (planGlobalId <= 5) {
+            return {
+                isInUse: true,
+                isProtected: true,
+                usage: {
+                    protected: true
+                }
+            };
+        }
+
+        // Check for hotel plans using this global plan
+        const hotelPlansQuery = `
+            SELECT COUNT(*) as count 
+            FROM plans_hotel 
+            WHERE plans_global_id = $1
+        `;
+        const hotelPlansResult = await client.query(hotelPlansQuery, [planGlobalId]);
+        const hotelPlansCount = parseInt(hotelPlansResult.rows[0].count);
+
+        // Check for reservations using this plan (through hotel plans)
+        const reservationQuery = `
+            SELECT COUNT(*) as count 
+            FROM reservation_details rd
+            JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id
+            WHERE ph.plans_global_id = $1
+        `;
+        const reservationResult = await client.query(reservationQuery, [planGlobalId]);
+        const reservationCount = parseInt(reservationResult.rows[0].count);
+
+        // Check for OTA plan master associations (through hotel plans)
+        const otaQuery = `
+            SELECT COUNT(*) as count 
+            FROM sc_tl_plans stp
+            JOIN plans_hotel ph ON stp.plans_hotel_id = ph.id
+            WHERE ph.plans_global_id = $1
+        `;
+        const otaResult = await client.query(otaQuery, [planGlobalId]);
+        const otaCount = parseInt(otaResult.rows[0].count);
+
+        // Check for daily metrics (if the table exists)
+        let dailyMetricsCount = 0;
+        try {
+            const dailyMetricsQuery = `
+                SELECT COUNT(*) as count 
+                FROM daily_metrics dm
+                JOIN plans_hotel ph ON dm.plans_hotel_id = ph.id
+                WHERE ph.plans_global_id = $1
+            `;
+            const dailyMetricsResult = await client.query(dailyMetricsQuery, [planGlobalId]);
+            dailyMetricsCount = parseInt(dailyMetricsResult.rows[0].count);
+        } catch (err) {
+            // Table might not exist, ignore this check
+            logger.debug('[DB] checkGlobalPlanUsage: daily_metrics table not found, skipping check');
+        }
+
+        const isInUse = hotelPlansCount > 0 || reservationCount > 0 || otaCount > 0 || dailyMetricsCount > 0;
+
+        logger.debug('[DB] checkGlobalPlanUsage: Usage check results:', {
+            planGlobalId,
+            hotelPlansCount,
+            reservationCount,
+            otaCount,
+            dailyMetricsCount,
+            isInUse
+        });
+
+        return {
+            isInUse,
+            isProtected: false,
+            usage: {
+                hotelPlans: hotelPlansCount,
+                reservations: reservationCount,
+                ota: otaCount,
+                dailyMetrics: dailyMetricsCount
+            }
+        };
+    } catch (err) {
+        logger.error('[DB] checkGlobalPlanUsage: Error checking plan usage:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldReleaseClient) {
+            client.release();
+        }
+    }
+};
+
+// Delete a global plan (only if not in use and not protected)
+const deleteGlobalPlan = async (requestId, planGlobalId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const shouldReleaseClient = !dbClient;
+
+    try {
+        await client.query('BEGIN');
+        logger.debug('[DB] deleteGlobalPlan: Transaction BEGIN');
+
+        // Delete related rates (addons will be deleted automatically via CASCADE)
+        await client.query('DELETE FROM plans_rates WHERE plans_global_id = $1', [planGlobalId]);
+
+        // Delete the plan
+        const deleteQuery = `
+            DELETE FROM plans_global 
+            WHERE id = $1
+            RETURNING id, name
+        `;
+        const result = await client.query(deleteQuery, [planGlobalId]);
+
+        if (result.rows.length === 0) {
+            throw new Error('Plan not found');
+        }
+
+        await client.query('COMMIT');
+        logger.debug('[DB] deleteGlobalPlan: Transaction COMMIT');
+
+        return {
+            success: true,
+            deletedPlan: result.rows[0]
+        };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error('[DB] deleteGlobalPlan: Transaction ROLLBACK due to error:', err);
+        throw err;
+    } finally {
+        if (shouldReleaseClient) {
+            client.release();
+        }
+    }
+};
+
 module.exports = {
     selectPlanByKey,
     selectGlobalPlanById,
@@ -488,4 +625,6 @@ module.exports = {
     updatePlansOrderBulk,
     checkHotelPlanUsage,
     deleteHotelPlan,
+    checkGlobalPlanUsage,
+    deleteGlobalPlan,
 };
