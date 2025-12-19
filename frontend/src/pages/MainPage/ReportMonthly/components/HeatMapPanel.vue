@@ -1,9 +1,6 @@
 <template>
     <Panel header="稼働率" toggleable :collapsed="false" class="col-span-12">
-        <Card class="flex col-span-12">
-            <template #title>
-
-            </template>
+        <Card class="flex col-span-12">            
             <template #subtitle>
                 <div class="flex justify-between items-center">
                     <p>曜日毎の予約数ヒートマップ ({{ selectedMonth.getFullYear() }}年 {{ selectedMonth.getMonth() + 1 }}月基点)</p>
