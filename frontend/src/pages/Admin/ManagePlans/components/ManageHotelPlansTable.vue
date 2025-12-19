@@ -37,7 +37,8 @@
                     <template #body="slotProps">
                         <PlanActions :planData="slotProps.data" :ButtonComponent="Button"
                             @openEditPlanDialog="emit('openEditPlanDialog', $event)"
-                            @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)" />
+                            @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)"
+                            @deletePlan="emit('deletePlan', $event)" />
                     </template>
                 </Column>
             </DataTable>
@@ -67,7 +68,8 @@
                     <template #body="slotProps">
                         <PlanActions :planData="slotProps.data" :ButtonComponent="Button"
                             @openEditPlanDialog="emit('openEditPlanDialog', $event)"
-                            @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)" />
+                            @switchEditHotelPlanRate="emit('switchEditHotelPlanRate', $event)"
+                            @deletePlan="emit('deletePlan', $event)" />
                     </template>
                 </Column>
             </DataTable>
@@ -119,7 +121,7 @@ const PlanActions = {
         planData: Object,
         ButtonComponent: Object, // Accept Button as a prop
     },
-    emits: ['openEditPlanDialog', 'switchEditHotelPlanRate'],
+    emits: ['openEditPlanDialog', 'switchEditHotelPlanRate', 'deletePlan'],
     template: `
     <div class="flex items-center justify-center">
       <component :is="ButtonComponent"
@@ -133,6 +135,12 @@ const PlanActions = {
         class="p-button-text p-button-sm"
         @click="$emit('switchEditHotelPlanRate', planData)"
         v-tooltip="'料金編集'"
+      />
+      <component :is="ButtonComponent"
+        icon="pi pi-trash"
+        class="p-button-text p-button-sm p-button-danger"
+        @click="$emit('deletePlan', planData)"
+        v-tooltip="'プラン削除'"
       />
     </div>
   `,
@@ -150,6 +158,7 @@ const emit = defineEmits([
     'openEditPlanDialog',
     'switchEditHotelPlanRate',
     'orderChanged',
+    'deletePlan',
 ]);
 
 const activeTab = ref(0);

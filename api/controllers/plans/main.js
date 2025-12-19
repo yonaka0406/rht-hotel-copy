@@ -281,6 +281,53 @@ const updatePlansOrderBulk = async (req, res) => {
     }
 };
 
+// Check if a hotel plan can be deleted (not in use)
+const checkHotelPlanDeletion = async (req, res) => {
+    const planHotelId = parseInt(req.params.id);
+
+    if (!planHotelId) {
+        return res.status(400).json({ error: 'Plan ID is required' });
+    }
+
+    try {
+        const usageCheck = await planModels.checkHotelPlanUsage(req.requestId, planHotelId);
+        res.json({
+            canDelete: !usageCheck.isInUse,
+            usage: usageCheck.usage
+        });
+    } catch (error) {
+        console.error('Error checking plan deletion:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Delete a hotel plan
+const deleteHotelPlan = async (req, res) => {
+    const planHotelId = parseInt(req.params.id);
+
+    if (!planHotelId) {
+        return res.status(400).json({ error: 'Plan ID is required' });
+    }
+
+    try {
+        const result = await planModels.deleteHotelPlan(req.requestId, planHotelId);
+        res.json({
+            success: true,
+            message: 'Plan deleted successfully',
+            deletedPlan: result.deletedPlan
+        });
+    } catch (error) {
+        console.error('Error deleting hotel plan:', error);
+        if (error.message === 'Plan is currently in use and cannot be deleted') {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error.message === 'Plan not found') {
+            return res.status(404).json({ error: error.message });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     getGlobalPlans,
     getHotelsPlans,
@@ -292,4 +339,6 @@ module.exports = {
     editGlobalPlan,
     editHotelPlan,
     updatePlansOrderBulk,
+    checkHotelPlanDeletion,
+    deleteHotelPlan,
 };

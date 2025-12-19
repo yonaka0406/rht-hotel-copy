@@ -362,6 +362,117 @@ const updatePlansOrderBulk = async (requestId, hotelId, plans, updated_by, dbCli
     }
 };
 
+// Check if a hotel plan is in use (has reservations, rates, or addons)
+const checkHotelPlanUsage = async (requestId, planHotelId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const shouldReleaseClient = !dbClient;
+
+    try {
+        logger.debug('[DB] checkHotelPlanUsage: Checking usage for plan_hotel_id:', planHotelId);
+
+        // Check for reservations using this plan
+        const reservationQuery = `
+            SELECT COUNT(*) as count 
+            FROM reservation_details 
+            WHERE plans_hotel_id = $1
+        `;
+        const reservationResult = await client.query(reservationQuery, [planHotelId]);
+        const reservationCount = parseInt(reservationResult.rows[0].count);
+
+        // Check for OTA plan master associations
+        const otaQuery = `
+            SELECT COUNT(*) as count 
+            FROM sc_tl_plans 
+            WHERE plans_hotel_id = $1
+        `;
+        const otaResult = await client.query(otaQuery, [planHotelId]);
+        const otaCount = parseInt(otaResult.rows[0].count);
+
+        // Check for daily metrics (if the table exists)
+        let dailyMetricsCount = 0;
+        try {
+            const dailyMetricsQuery = `
+                SELECT COUNT(*) as count 
+                FROM daily_metrics 
+                WHERE plans_hotel_id = $1
+            `;
+            const dailyMetricsResult = await client.query(dailyMetricsQuery, [planHotelId]);
+            dailyMetricsCount = parseInt(dailyMetricsResult.rows[0].count);
+        } catch (err) {
+            // Table might not exist, ignore this check
+            logger.debug('[DB] checkHotelPlanUsage: daily_metrics table not found, skipping check');
+        }
+
+        const isInUse = reservationCount > 0 || otaCount > 0 || dailyMetricsCount > 0;
+
+        logger.debug('[DB] checkHotelPlanUsage: Usage check results:', {
+            planHotelId,
+            reservationCount,
+            otaCount,
+            dailyMetricsCount,
+            isInUse
+        });
+
+        return {
+            isInUse,
+            usage: {
+                reservations: reservationCount,
+                ota: otaCount,
+                dailyMetrics: dailyMetricsCount
+            }
+        };
+    } catch (err) {
+        logger.error('[DB] checkHotelPlanUsage: Error checking plan usage:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldReleaseClient) {
+            client.release();
+        }
+    }
+};
+
+// Delete a hotel plan (only if not in use)
+const deleteHotelPlan = async (requestId, planHotelId, dbClient = null) => {
+    const client = dbClient || await getPool(requestId).connect();
+    const shouldReleaseClient = !dbClient;
+
+    try {
+        await client.query('BEGIN');
+        logger.debug('[DB] deleteHotelPlan: Transaction BEGIN');
+
+        // Delete related rates (addons will be deleted automatically via CASCADE)
+        await client.query('DELETE FROM plans_rates WHERE plans_hotel_id = $1', [planHotelId]);
+
+        // Delete the plan
+        const deleteQuery = `
+            DELETE FROM plans_hotel 
+            WHERE id = $1
+            RETURNING id, name, hotel_id
+        `;
+        const result = await client.query(deleteQuery, [planHotelId]);
+
+        if (result.rows.length === 0) {
+            throw new Error('Plan not found');
+        }
+
+        await client.query('COMMIT');
+        logger.debug('[DB] deleteHotelPlan: Transaction COMMIT');
+
+        return {
+            success: true,
+            deletedPlan: result.rows[0]
+        };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error('[DB] deleteHotelPlan: Transaction ROLLBACK due to error:', err);
+        throw err;
+    } finally {
+        if (shouldReleaseClient) {
+            client.release();
+        }
+    }
+};
+
 module.exports = {
     selectPlanByKey,
     selectGlobalPlanById,
@@ -375,4 +486,6 @@ module.exports = {
     insertPlanPattern,
     updateHotelPlan,
     updatePlansOrderBulk,
+    checkHotelPlanUsage,
+    deleteHotelPlan,
 };

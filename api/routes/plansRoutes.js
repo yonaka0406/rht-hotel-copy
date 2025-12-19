@@ -15,6 +15,8 @@ router.get('/plans/hotel', authMiddleware, plansControllers.getHotelsPlans);
 router.get('/plans/hotel/:hotel_id', authMiddleware, plansControllers.getHotelPlans);
 router.post('/plans/hotel', authMiddleware_manageDB, plansControllers.createHotelPlan);
 router.put('/plans/hotel/:id', authMiddleware_manageDB, plansControllers.editHotelPlan);
+router.delete('/plans/hotel/:id/check', authMiddleware, plansControllers.checkHotelPlanDeletion);
+router.delete('/plans/hotel/:id', authMiddleware_manageDB, plansControllers.deleteHotelPlan);
 router.put('/plans/reorder/hotel/:hotel_id', authMiddleware_manageDB, plansControllers.updatePlansOrderBulk);
 
 // Available Plans routes

@@ -84,7 +84,7 @@
               :selectedHotelId="selectedHotelId" @openAddPlanDialog="showHotelDialog = true"
               @openCopyPlansDialog="showCopyPlansDialog = true" @openEditPlanDialog="openEditHotelDialog"
               @switchEditHotelPlanRate="switchEditHotelPlanRate" @orderChanged="handleOrderChange"
-              v-if="!showHotelRatePanel" />
+              @deletePlan="handleDeletePlan" v-if="!showHotelRatePanel" />
             
             <!-- Hotel Rates Panel -->
             <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
@@ -185,11 +185,13 @@ import ManageHotelPlansTable from './components/ManageHotelPlansTable.vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels, fetchHotels } = useHotelStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, fetchPlansGlobal, fetchHotelPlans, createGlobalPlan, updateGlobalPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories } = usePlansStore();
+const { plans, fetchPlansGlobal, fetchHotelPlans, createGlobalPlan, updateGlobalPlan, updatePlansOrderBulk, fetchPlanTypeCategories, fetchPlanPackageCategories, checkHotelPlanDeletion, deleteHotelPlan } = usePlansStore();
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
+import { useConfirm } from 'primevue/useconfirm';
+const confirm = useConfirm();
 import Panel from 'primevue/panel';
 import FloatLabel from 'primevue/floatlabel';
 import Select from 'primevue/select';
@@ -467,6 +469,96 @@ const switchEditHotelPlanRate = (plan, context = 'hotel') => {
   }
 };
 
+// Handle plan deletion with confirmation
+const handleDeletePlan = async (plan) => {
+  console.log('handleDeletePlan: Received plan data:', plan);
+  
+  // Determine the correct plan ID to use
+  const planId = plan.plans_hotel_id || plan.id;
+  
+  if (!planId) {
+    console.error('handleDeletePlan: No valid plan ID found in plan data:', plan);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: 'プランIDが見つかりません。',
+      life: 3000
+    });
+    return;
+  }
+  
+  try {
+    // First check if the plan can be deleted
+    const usageCheck = await checkHotelPlanDeletion(planId);
+    
+    if (!usageCheck.canDelete) {
+      // Show usage details in the error message
+      const usageDetails = [];
+      if (usageCheck.usage.reservations > 0) {
+        usageDetails.push(`予約: ${usageCheck.usage.reservations}件`);
+      }
+      if (usageCheck.usage.ota > 0) {
+        usageDetails.push(`OTA連携: ${usageCheck.usage.ota}件`);
+      }
+      if (usageCheck.usage.dailyMetrics > 0) {
+        usageDetails.push(`日次メトリクス: ${usageCheck.usage.dailyMetrics}件`);
+      }
+      
+      toast.add({
+        severity: 'error',
+        summary: 'プラン削除不可',
+        detail: `プラン「${plan.name}」は使用中のため削除できません。\n使用状況: ${usageDetails.join(', ')}`,
+        life: 5000
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    confirm.require({
+      message: `プラン「${plan.name}」を削除しますか？この操作は取り消せません。`,
+      header: 'プラン削除確認',
+      icon: 'pi pi-exclamation-triangle',
+      rejectProps: {
+        label: 'キャンセル',
+        severity: 'secondary',
+        outlined: true
+      },
+      acceptProps: {
+        label: '削除',
+        severity: 'danger'
+      },
+      accept: async () => {
+        try {
+          await deleteHotelPlan(planId);
+          await onPlanModified(); // Refresh the plans list
+          toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: `プラン「${plan.name}」が削除されました。`,
+            life: 3000
+          });
+        } catch (error) {
+          console.error('プラン削除エラー:', error);
+          toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: `プランの削除に失敗しました: ${error.message}`,
+            life: 5000
+          });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('プラン削除チェックエラー:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: 'プランの削除チェックに失敗しました。',
+      life: 3000
+    });
+  }
+};
+
 onMounted(async () => {
   loading.value = true
 
@@ -511,7 +603,7 @@ watch(selectedHotelId, async (newVal) => {
           plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
           plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
         };
-        console.log('Enhanced plan:', enhanced.name, 'plans_hotel_id:', enhanced.plans_hotel_id, 'parsed_plans_hotel_id:', enhanced.parsed_plans_hotel_id, 'plans_global_id:', enhanced.plans_global_id);
+        console.log('Enhanced plan:', enhanced.name, 'original plan.id:', plan.id, 'plans_hotel_id:', enhanced.plans_hotel_id, 'plan_key:', enhanced.id);
         return enhanced;
       });
     } catch (error) {
