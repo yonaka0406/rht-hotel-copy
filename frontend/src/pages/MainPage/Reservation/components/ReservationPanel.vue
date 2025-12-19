@@ -1112,8 +1112,27 @@ const openReservationBulkEditDialog = async () => {
     const startDate = reservationInfo.value.check_in;
     const endDate = reservationInfo.value.check_out;
 
+    // Calculate the actual date range across all rooms (including cancelled dates)
+    const allDates = [];
+    groupedRooms.value.forEach(room => {
+        room.details.forEach(detail => {
+            allDates.push(new Date(detail.date));
+        });
+    });
+
+    let actualStartDate = startDate;
+    let actualEndDate = endDate;
+
+    if (allDates.length > 0) {
+        // Sort dates and get the actual range from first to last date
+        allDates.sort((a, b) => a - b);
+        actualStartDate = formatDate(allDates[0]);
+        actualEndDate = formatDate(allDates[allDates.length - 1]);
+    }
+
     await fetchAvailableRooms(hotelId, startDate, endDate);
-    await fetchPlansForHotel(hotelId);
+    // Fetch plans available for the complete date range (first to last date, including cancelled)
+    await fetchPlansForHotel(hotelId, actualStartDate, actualEndDate);
     await fetchPatternsForHotel(hotelId);
     // Addons
     const allAddons = await fetchAllAddons(hotelId);

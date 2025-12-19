@@ -1477,8 +1477,17 @@ const openRoomEditDialog = async (group) => {
     const startDate = reservationInfo.value.check_in;
     const endDate = reservationInfo.value.check_out;
 
+    // Calculate the actual stay date range for this specific room group
+    const roomDates = group.details.map(detail => new Date(detail.date)).sort((a, b) => a - b);
+    const roomStartDate = roomDates[0];
+    const roomEndDate = roomDates[roomDates.length - 1]; // Last stay date, not checkout date
+    
+    const roomStartDateStr = formatDate(roomStartDate);
+    const roomEndDateStr = formatDate(roomEndDate);
+
     await fetchAvailableRooms(hotelId, startDate, endDate);
-    await fetchPlansForHotel(hotelId);
+    // Fetch plans available for the specific room's stay date range
+    await fetchPlansForHotel(hotelId, roomStartDateStr, roomEndDateStr);
     await fetchPatternsForHotel(hotelId);
     // Addons
     const allAddons = await fetchAllAddons(hotelId);
@@ -1575,8 +1584,11 @@ const closeDayDetailDialog = async () => {
 
 onMounted(async () => {
     const hotelId = reservationInfo.value.hotel_id;
-    await fetchPlansForHotel(hotelId);
-
+    const startDate = reservationInfo.value.check_in;
+    const endDate = reservationInfo.value.check_out;
+    
+    // Fetch plans available for the entire reservation period
+    await fetchPlansForHotel(hotelId, startDate, endDate);
 });
 
 const impedimentStatus = computed(() => {
@@ -1761,7 +1773,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
         const assignedParkingData = await fetchParkingReservations(reservationDetails.hotel_id, reservationDetails.reservation_id);
         const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
 
-        await fetchPlansForHotel(reservationDetails.hotel_id);
+        await fetchPlansForHotel(reservationDetails.hotel_id, checkInDate, checkOutDate);
 
         const { checkInDate, checkOutDate } = getRoomStayDates(group.details, reservationInfo.value.check_in, reservationInfo.value.check_out);
 
