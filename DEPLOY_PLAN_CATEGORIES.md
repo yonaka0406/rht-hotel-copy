@@ -66,19 +66,20 @@ After deployment, you should see:
 ## Task List
 
 ### 1. Database & Infrastructure
-- [ ] **Migrations**: Verify `api/migrations/020_create_plan_categories_tables.sql` and `api/migrations/021_migrate_plan_categories.sql`.
-- [ ] **Deployment Script**: Create `api/scripts/deployPlanCategories.js` to run migrations and verify data.
-- [ ] **Package.json**: Add `deploy:plan-categories` and `rollback:plan-categories` to root `package.json`.
+- [x] **Migrations**: Verify `api/migrations/020_create_plan_categories_tables.sql` through `api/migrations/023_update_daily_plan_metrics_categories.sql`. (Manually Applied)
+- [ ] **Deployment Script**: (Not needed - Manual migration performed)
+- [ ] **Package.json**: (Not needed - Manual migration performed)
 
 ### 2. Backend Model Layer
-- [ ] **New Category Model**: Create `api/models/plan/categories.js` for `plan_type_categories` and `plan_package_categories`.
-- [ ] **Update Main Plan Model**: Update `api/models/plan/main.js` (`insertHotelPlan`, `updateHotelPlan`, `selectHotelPlanById`) with new fields.
-- [ ] **Model Aggregation**: Export new category functions from `api/models/plan/index.js`.
+- [x] **New Category Model**: Create `api/models/plan/categories.js` for `plan_type_categories` and `plan_package_categories`.
+- [x] **Update Main Plan Model**: Update `api/models/plan/main.js` (`insertHotelPlan`, `updateHotelPlan`, `selectHotelPlanById`) with new fields.
+- [x] **Model Aggregation**: Export new category functions from `api/models/plan/index.js`.
+- [x] **Financial Models**: Update `api/models/import.js` and `api/models/report/forecast.js` to use category fields and net sales.
 
 ### 3. Backend Controller & API
-- [ ] **Update Plan Controller**: Update `api/controllers/plans/main.js` to handle category IDs and new plan metadata.
-- [ ] **Validation**: Update `api/middleware/validators.js` or controllers to validate category IDs.
-- [ ] **New Endpoints**: (Optional) Add routes to fetch available categories if needed for the frontend.
+- [x] **Update Plan Controller**: Update `api/controllers/plans/main.js` to handle category IDs and new plan metadata.
+- [x] **Validation**: Update controllers to validate category IDs.
+- [x] **New Endpoints**: Added routes for categories in `api/routes/plansRoutes.js`.
 
 ### 4. Verification & Testing
 - [ ] **Dry Run**: Test the deployment script against a local copy of the database.
