@@ -378,42 +378,98 @@ const openInvoiceDialog = (data) => {
 
     const sortedDates = Object.keys(stayDetailsByDate).sort();
     const stayPeriods = [];
+    
     if (sortedDates.length > 0) {
-        let currentPeriod = {
-            start: sortedDates[0],
-            end: sortedDates[0],
-            people: stayDetailsByDate[sortedDates[0]],
-            totalNights: stayDetailsByDate[sortedDates[0]]
-        };
-
-        for (let i = 1; i < sortedDates.length; i++) {
-            const [currentYear, currentMonth, currentDay] = sortedDates[i].split('-').map(Number);
-            const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
-
-            const [prevYear, prevMonth, prevDay] = sortedDates[i - 1].split('-').map(Number);
-            const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
-
-            const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
-            const currentPeople = stayDetailsByDate[sortedDates[i]];
-
-            if (diff === 1 && currentPeople === currentPeriod.people) {
-                currentPeriod.end = sortedDates[i];
-                currentPeriod.totalNights += currentPeople;
-            } else {
-                stayPeriods.push(currentPeriod);
-                currentPeriod = {
-                    start: sortedDates[i],
-                    end: sortedDates[i],
-                    people: currentPeople,
-                    totalNights: currentPeople
-                };
+        // Create a working copy of people count per date
+        const workingPeopleByDate = { ...stayDetailsByDate };
+        
+        // Find consecutive date groups and process them
+        while (Object.values(workingPeopleByDate).some(count => count > 0)) {
+            // Find consecutive date ranges
+            const consecutiveGroups = [];
+            let i = 0;
+            
+            while (i < sortedDates.length) {
+                if (workingPeopleByDate[sortedDates[i]] > 0) {
+                    let groupStart = sortedDates[i];
+                    let groupEnd = sortedDates[i];
+                    let groupDates = [sortedDates[i]];
+                    
+                    // Find consecutive dates with people > 0
+                    let j = i + 1;
+                    while (j < sortedDates.length && workingPeopleByDate[sortedDates[j]] > 0) {
+                        const [currentYear, currentMonth, currentDay] = sortedDates[j].split('-').map(Number);
+                        const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
+                        
+                        const [prevYear, prevMonth, prevDay] = sortedDates[j - 1].split('-').map(Number);
+                        const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
+                        
+                        const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+                        
+                        if (diff === 1) {
+                            groupEnd = sortedDates[j];
+                            groupDates.push(sortedDates[j]);
+                            j++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    consecutiveGroups.push({
+                        start: groupStart,
+                        end: groupEnd,
+                        dates: groupDates
+                    });
+                    
+                    i = j;
+                } else {
+                    i++;
+                }
             }
+            
+            // Process each consecutive group
+            consecutiveGroups.forEach(group => {
+                // Find minimum number of people in this group
+                const minPeople = Math.min(...group.dates.map(date => workingPeopleByDate[date]));
+                
+                if (minPeople > 0) {
+                    // Create a period entry for this group with min people
+                    const totalNights = minPeople * group.dates.length;
+                    
+                    stayPeriods.push({
+                        start: group.start,
+                        end: group.end,
+                        people: minPeople,
+                        totalNights: totalNights
+                    });
+                    
+                    // Subtract min people from each date in the group
+                    group.dates.forEach(date => {
+                        workingPeopleByDate[date] -= minPeople;
+                    });
+                }
+            });
         }
-        stayPeriods.push(currentPeriod);
     }
 
+    // Sort periods by start date, then by end date, then by people count (descending)
+    stayPeriods.sort((a, b) => {
+        const startCompare = new Date(a.start) - new Date(b.start);
+        if (startCompare !== 0) return startCompare;
+        
+        const endCompare = new Date(a.end) - new Date(b.end);
+        if (endCompare !== 0) return endCompare;
+        
+        return b.people - a.people;
+    });
+
     const formattedDateGroups = stayPeriods.map(period => {
-        return `・滞在期間：${period.start.replace(/-/g, '/')} ～ ${period.end.replace(/-/g, '/')} 、${period.people}名、宿泊日数：${period.totalNights}泊`;
+        // Convert end date to check-out date (add 1 day)
+        const endDate = new Date(period.end);
+        const checkOutDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+        const checkOutDateStr = formatDate(checkOutDate);
+        
+        return `・滞在期間：${period.start.replace(/-/g, '/')} ～ ${checkOutDateStr.replace(/-/g, '/')} 、${period.people}名、宿泊日数：${period.totalNights}泊`;
     }).join('\r\n');
 
     let cancellationComment = '';
