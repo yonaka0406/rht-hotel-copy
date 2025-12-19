@@ -23,7 +23,8 @@
                     v-if="(slotProps.data.adjustment_type === 'flat_fee' || slotProps.data.adjustment_type === 'percentage') && slotProps.data.include_in_cancel_fee"
                     value="キャンセル料対象" severity="danger" class="ml-1">
                 </Badge>
-                <Badge :value="formatSalesCategory(slotProps.data.sales_category)"
+                <Badge v-if="slotProps.data.sales_category"
+                    :value="formatSalesCategory(slotProps.data.sales_category)"
                     :severity="slotProps.data.sales_category === 'other' ? 'warn' : 'success'" class="ml-1">
                 </Badge>
             </template>
@@ -45,7 +46,7 @@
         <Column header="操作">
             <template #body="slotProps">
                 <Button icon="pi pi-pencil" class="p-button-text p-button-sm"
-                    @click="$emit('editAdjustment', slotProps.data)" />
+                    @click="$emit('editAdjustment', slotProps.data)" aria-label="調整を編集" />
             </template>
         </Column>
     </DataTable>
