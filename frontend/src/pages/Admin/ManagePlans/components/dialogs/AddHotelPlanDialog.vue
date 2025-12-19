@@ -111,7 +111,7 @@ const newHotelPlan = ref({
 });
 
 const selectedTypeCategoryColor = computed(() => {
-    const category = props.planTypeCategories.find(cat => cat.id === newHotelPlan.value.plan_type_category_id);
+    const category = (props.planTypeCategories || []).find(cat => cat.id === newHotelPlan.value.plan_type_category_id);
     return category ? category.color : 'カテゴリー色なし';
 });
 
@@ -135,32 +135,39 @@ watch(() => props.visible, (newVal) => {
 }, { immediate: true });
 
 // Watcher for automatic date adjustment
+let isAdjusting = false;
 watch([() => newHotelPlan.value.available_from, () => newHotelPlan.value.available_until], ([newFrom, newUntil], [oldFrom, oldUntil]) => {
+    if (isAdjusting) return;
     const fromDate = newFrom ? new Date(newFrom) : null;
     const untilDate = newUntil ? new Date(newUntil) : null;
 
-    if (fromDate && untilDate && fromDate > untilDate) {
-        // Determine which date was changed to decide which one to adjust
-        // If newFrom is different from oldFrom, assume available_from was changed
-        if (newFrom && newFrom !== oldFrom) {
-            // available_from was changed and is now after available_until
-            // Adjust available_until to be available_from + 1 day
-            const newUntilDate = new Date(fromDate);
-            newUntilDate.setDate(newUntilDate.getDate() + 1);
-            newHotelPlan.value.available_until = newUntilDate;
-            toast.add({ severity: 'info', summary: '自動調整', detail: '利用可能日 (終了)は利用可能日 (開始)の翌日に自動調整されました。', life: 3000 });
-        }
-        // If newUntil is different from oldUntil, assume available_until was changed
-        else if (newUntil && newUntil !== oldUntil) {
-            // available_until was changed and is now before available_from
-            // Adjust available_from to be available_until - 1 day
-            const newFromDate = new Date(untilDate);
-            newFromDate.setDate(newFromDate.getDate() - 1);
-            newHotelPlan.value.available_from = newFromDate;
-            toast.add({ severity: 'info', summary: '自動調整', detail: '利用可能日 (開始)は利用可能日 (終了)の前日に自動調整されました。', life: 3000 });
+    if (fromDate && untilDate && fromDate.getTime() > untilDate.getTime()) {
+        isAdjusting = true;
+        try {
+            // Determine which date was changed to decide which one to adjust
+            const newFromTime = fromDate.getTime();
+            const oldFromTime = oldFrom ? new Date(oldFrom).getTime() : null;
+            const newUntilTime = untilDate.getTime();
+            const oldUntilTime = oldUntil ? new Date(oldUntil).getTime() : null;
+
+            if (newFromTime !== oldFromTime) {
+                // available_from was changed and is now after available_until
+                const newUntilDate = new Date(fromDate);
+                newUntilDate.setDate(newUntilDate.getDate() + 1);
+                newHotelPlan.value.available_until = newUntilDate;
+                toast.add({ severity: 'info', summary: '自動調整', detail: '利用可能日 (終了)は利用可能日 (開始)の翌日に自動調整されました。', life: 3000 });
+            } else if (newUntilTime !== oldUntilTime) {
+                // available_until was changed and is now before available_from
+                const newFromDate = new Date(untilDate);
+                newFromDate.setDate(newFromDate.getDate() - 1);
+                newHotelPlan.value.available_from = newFromDate;
+                toast.add({ severity: 'info', summary: '自動調整', detail: '利用可能日 (開始)は利用可能日 (終了)の前日に自動調整されました。', life: 3000 });
+            }
+        } finally {
+            isAdjusting = false;
         }
     }
-}, { immediate: true });
+});
 
 const saveHotelPlan = async () => {
     newHotelPlan.value.hotel_id = props.selectedHotelId;

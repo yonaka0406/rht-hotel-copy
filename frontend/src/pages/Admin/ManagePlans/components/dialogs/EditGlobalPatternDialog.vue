@@ -83,6 +83,18 @@ watch(() => props.visible, (newVal) => {
         }
         
         console.log('EditGlobalPatternDialog: dayPlanSelections set to:', dayPlanSelections.value);
+    } else if (!newVal) {
+        // Reset state when closing
+        editGlobalPattern.value = {};
+        dayPlanSelections.value = {
+            mon: null,
+            tue: null,
+            wed: null,
+            thu: null,
+            fri: null,
+            sat: null,
+            sun: null
+        };
     }
 });
 
@@ -115,8 +127,8 @@ const updateGlobalPattern = async () => {
 
         const match = planKey.match(/^(\d*)h(\d+)?$/);
         if (!match) {
-            console.warn(`Invalid plan key format for ${day.value}:`, planKey);
-            continue; // Skip invalid values
+            toast.add({ severity: 'error', summary: 'エラー', detail: `無効なプラン形式です (${day.label}): ${planKey}`, life: 3000 });
+            return;
         }
         const plans_global_id = match[1];
         const plans_hotel_id = match[2] ?? null;
