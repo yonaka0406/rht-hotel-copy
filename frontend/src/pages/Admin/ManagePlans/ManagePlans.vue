@@ -16,7 +16,7 @@
           </Tab>
           <Tab value="1">
             <i class="pi pi-building"></i> ホテル
-          </Tab>          
+          </Tab>
         </TabList>
         <TabPanels>
           <TabPanel value="0">
@@ -25,7 +25,7 @@
                 <i class="pi pi-info-circle"></i>
               </template>
               グローバルプランは、未使用になる予定です。
-            </Message>            
+            </Message>
             <div id="globalTabPanel" v-show="!showGlobalRatePanel">
               <div class="flex justify-end mb-2">
                 <Button @click="showGlobalDialog = true" icon="pi pi-plus" label="プラン追加"
@@ -84,7 +84,7 @@
               @openCopyPlansDialog="showCopyPlansDialog = true" @openEditPlanDialog="openEditHotelDialog"
               @switchEditHotelPlanRate="switchEditHotelPlanRate" @orderChanged="handleOrderChange"
               @deletePlan="handleDeletePlan" v-if="!showHotelRatePanel" />
-            
+
             <!-- Hotel Rates Panel -->
             <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
               <div class="grid xs:grid-cols-1 grid-cols-3 gap-2">
@@ -164,7 +164,7 @@
 
     <CopyPlansDialog :visible="showCopyPlansDialog" @update:visible="showCopyPlansDialog = $event"
       @planCopied="onPlanCopied" />
-      
+
     <ConfirmDialog group="delete-plan" />
   </div>
 </template>
@@ -323,10 +323,31 @@ const openEditHotelDialog = async (data) => {
   showEditHotelDialog.value = true;
 };
 
+const processHotelPlans = (plans) => {
+  return (plans || []).map(plan => {
+    // Parse plan_key to extract plans_global_id and plans_hotel_id for rates component
+    const match = plan.plan_key?.match(/^(\d*)h(\d+)?$/);
+    const parsed_plans_global_id = match?.[1] ? parseInt(match[1]) : null;
+    const parsed_plans_hotel_id = match?.[2] ? parseInt(match[2]) : null;
+
+    const enhanced = {
+      ...plan,
+      plans_hotel_id: plan.id,
+      id: plan.plan_key,
+      plans_global_id: plan.plans_global_id || parsed_plans_global_id,
+      parsed_plans_hotel_id: parsed_plans_hotel_id,
+      plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
+      plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
+    };
+
+    return enhanced;
+  });
+};
+
 const onPlanModified = async () => {
   if (selectedHotelId.value) {
     const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
-    hotelPlans.value = fetchedPlans || [];
+    hotelPlans.value = processHotelPlans(fetchedPlans);
     await reindexPlans();
   }
 };
@@ -335,7 +356,7 @@ const onPlanCopied = async () => {
   // Refresh plans after copy operation
   if (selectedHotelId.value) {
     const fetchedPlans = await fetchHotelPlans(selectedHotelId.value);
-    hotelPlans.value = fetchedPlans || [];
+    hotelPlans.value = processHotelPlans(fetchedPlans);
     await reindexPlans(); // Reindex after plans are copied (full sort)
   }
 };
@@ -442,8 +463,7 @@ const switchEditGlobalPlanRate = (plan, context = 'global') => {
       plans_global_id: plan.id,
       plans_hotel_id: 0,
     };
-    console.log('switchEditGlobalPlanRate: Plan data for rates:', planForRates);
-    console.log('switchEditGlobalPlanRate: Numeric IDs - plans_global_id:', planForRates.plans_global_id, 'plans_hotel_id:', planForRates.plans_hotel_id, 'hotel_id:', planForRates.hotel_id);
+
     showGlobalRatePanel.value = true;
     selectedPlan.value = planForRates;
   }
@@ -473,10 +493,10 @@ const switchEditHotelPlanRate = (plan, context = 'hotel') => {
 // Handle plan deletion with confirmation
 const handleDeletePlan = async (plan) => {
   console.log('handleDeletePlan: Received plan data:', plan);
-  
+
   // Determine the correct plan ID to use
   const planId = plan.plans_hotel_id || plan.id;
-  
+
   if (!planId) {
     console.error('handleDeletePlan: No valid plan ID found in plan data:', plan);
     toast.add({
@@ -487,11 +507,11 @@ const handleDeletePlan = async (plan) => {
     });
     return;
   }
-  
+
   try {
     // First check if the plan can be deleted
     const usageCheck = await checkHotelPlanDeletion(planId);
-    
+
     if (!usageCheck.canDelete) {
       // Show usage details in the error message
       const usageDetails = [];
@@ -504,7 +524,7 @@ const handleDeletePlan = async (plan) => {
       if (usageCheck.usage.dailyMetrics > 0) {
         usageDetails.push(`日次メトリクス: ${usageCheck.usage.dailyMetrics}件`);
       }
-      
+
       toast.add({
         severity: 'error',
         summary: 'プラン削除不可',
@@ -567,9 +587,9 @@ const handleDeletePlan = async (plan) => {
 // Handle global plan deletion with confirmation
 const handleDeleteGlobalPlan = async (plan) => {
   console.log('handleDeleteGlobalPlan: Received plan data:', plan);
-  
+
   const planId = plan.id;
-  
+
   if (!planId) {
     console.error('handleDeleteGlobalPlan: No valid plan ID found in plan data:', plan);
     toast.add({
@@ -580,15 +600,15 @@ const handleDeleteGlobalPlan = async (plan) => {
     });
     return;
   }
-  
+
   try {
     // First check if the plan can be deleted
     const usageCheck = await checkGlobalPlanDeletion(planId);
-    
+
     if (!usageCheck.canDelete) {
       // Show usage details in the error message
       const usageDetails = [];
-      
+
       if (usageCheck.isProtected) {
         toast.add({
           severity: 'error',
@@ -598,7 +618,7 @@ const handleDeleteGlobalPlan = async (plan) => {
         });
         return;
       }
-      
+
       if (usageCheck.usage.hotelPlans > 0) {
         usageDetails.push(`ホテルプラン: ${usageCheck.usage.hotelPlans}件`);
       }
@@ -611,7 +631,7 @@ const handleDeleteGlobalPlan = async (plan) => {
       if (usageCheck.usage.dailyMetrics > 0) {
         usageDetails.push(`日次メトリクス: ${usageCheck.usage.dailyMetrics}件`);
       }
-      
+
       toast.add({
         severity: 'error',
         summary: 'プラン削除不可',
@@ -698,26 +718,7 @@ watch(selectedHotelId, async (newVal) => {
     loading.value = true;
     try {
       const fetchedPlans = await fetchHotelPlans(newVal);
-      // Enhance hotelPlans with category names
-      hotelPlans.value = (fetchedPlans || []).map(plan => {
-        // Parse plan_key to extract plans_global_id and plans_hotel_id for rates component
-        const match = plan.plan_key?.match(/^(\d*)h(\d+)?$/);
-        const parsed_plans_global_id = match?.[1] ? parseInt(match[1]) : null;
-        const parsed_plans_hotel_id = match?.[2] ? parseInt(match[2]) : null;
-        
-        const enhanced = {
-          ...plan,
-          plans_hotel_id: plan.id, // Preserve the original id as plans_hotel_id
-          id: plan.plan_key, // Map plan_key for DataTable dataKey
-          // Add parsed values for rates component compatibility
-          plans_global_id: plan.plans_global_id || parsed_plans_global_id,
-          parsed_plans_hotel_id: parsed_plans_hotel_id,
-          plan_type_category_name: planTypeCategories.value.find(cat => cat.id === plan.plan_type_category_id)?.name,
-          plan_package_category_name: planPackageCategories.value.find(cat => cat.id === plan.plan_package_category_id)?.name,
-        };
-        console.log('Enhanced plan:', enhanced.name, 'original plan.id:', plan.id, 'plans_hotel_id:', enhanced.plans_hotel_id, 'plan_key:', enhanced.id);
-        return enhanced;
-      });
+      hotelPlans.value = processHotelPlans(fetchedPlans);
     } catch (error) {
       console.error('Error fetching hotel plans:', error);
       toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルプランの取得に失敗しました。', life: 3000 });

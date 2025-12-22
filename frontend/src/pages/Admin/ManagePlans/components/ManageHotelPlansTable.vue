@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -164,37 +164,20 @@ const emit = defineEmits([
 const activeTab = ref(0);
 
 const activePlans = computed(() => {
-    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => plan.is_active) : [];    
+    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => plan.is_active) : [];
     return filtered;
 });
 
 const inactivePlans = computed(() => {
-    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => !plan.is_active) : [];    
+    const filtered = Array.isArray(props.hotelPlans) ? props.hotelPlans.filter(plan => !plan.is_active) : [];
     return filtered;
 });
 
-const onRowReorder = (event) => {    
+const onRowReorder = (event) => {
     emit('orderChanged', event.value);
 };
 
-// Watch for changes in hotelPlans prop
-watch(() => props.hotelPlans, (newPlans, oldPlans) => {
-    console.log('ManageHotelPlansTable - hotelPlans prop changed:', {
-        selectedHotelId: props.selectedHotelId,
-        oldPlansCount: oldPlans?.length || 0,
-        newPlansCount: newPlans?.length || 0,
-        newPlans: newPlans?.map(p => ({ id: p.id, name: p.name, hotel_id: p.hotel_id, is_active: p.is_active })) || []
-    });
-}, { deep: true });
 
-// Watch for changes in selectedHotelId prop
-watch(() => props.selectedHotelId, (newHotelId, oldHotelId) => {
-    console.log('ManageHotelPlansTable - selectedHotelId changed:', {
-        oldHotelId,
-        newHotelId,
-        currentPlansCount: props.hotelPlans?.length || 0
-    });
-});
 </script>
 
 <style scoped>
