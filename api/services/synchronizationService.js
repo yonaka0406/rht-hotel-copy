@@ -31,7 +31,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
     }
 
     if (!user.google_calendar_id) {
-        logger.warn(`User ${userId} does not have a google_calendar_id configured. Aborting sync.`);
+        logger.debug(`User ${userId} does not have a google_calendar_id configured. Aborting sync.`);
         return { success: false, message: 'ユーザーのカレンダー設定が見つかりません。GoogleカレンダーIDが設定されているか確認してください。(User calendar configuration not found. Please ensure a Google Calendar ID is set.)' };
     }
     const calendarIdForSync = user.google_calendar_id;

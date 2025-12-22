@@ -43,7 +43,7 @@ const getAvailableRooms = async (req, res) => {
 
     return res.status(200).json({ availableRooms });
   } catch (error) {
-    console.error('Error fetching available rooms:', error);
+    logger.error('Error fetching available rooms:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching available rooms.' });
   }
 };
@@ -86,7 +86,7 @@ const getReservedRooms = async (req, res) => {
 
     return res.status(200).json({ reservedRooms });
   } catch (error) {
-    console.error('Error fetching reserved rooms:', error);
+    logger.error('Error fetching reserved rooms:', error);
     if (error.message.includes('Invalid date format')) {
       return res.status(400).json({
         error: error.message,
@@ -136,7 +136,7 @@ const getReservationDetails = async (req, res) => {
 
     return res.status(200).json({ reservation });
   } catch (error) {
-    console.error('Error fetching reservation:', error);
+    logger.error('Error fetching reservation:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching reservation.' });
   }
 }
@@ -150,7 +150,7 @@ const getMyHoldReservations = async (req, res) => {
     // Return empty array with 200 status if no reservations found
     return res.status(200).json({ reservations: reservations || [] });
   } catch (error) {
-    console.error('Error fetching reservations:', error);
+    logger.error('Error fetching reservations:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching reservations.' });
   }
 };
@@ -172,7 +172,7 @@ const getReservationsToday = async (req, res) => {
     const reservations = await selectReservationsToday(req.requestId, hotelId, date);
     return res.status(200).json({ reservations: reservations || [] });
   } catch (error) {
-    console.error('Error fetching reservations:', error);
+    logger.error('Error fetching reservations:', error);
     return res.status(500).json({
       error: 'Database error occurred while fetching reservations.',
       details: error.message
@@ -197,7 +197,7 @@ const getRoomsForIndicator = async (req, res) => {
     const rooms = await selectRoomsForIndicator(req.requestId, hotelId, date);
     return res.status(200).json({ rooms: rooms || [] });
   } catch (error) {
-    console.error('Error fetching rooms for indicator:', error);
+    logger.error('Error fetching rooms for indicator:', error);
     return res.status(500).json({
       error: 'Database error occurred while fetching rooms for indicator.',
       details: error.message
@@ -206,7 +206,7 @@ const getRoomsForIndicator = async (req, res) => {
 };
 
 const getAvailableDatesForChange = async (req, res) => {
-  logger.warn(`[${req.requestId}] getAvailableDatesForChange - Received parameters: hid=${req.params.hid}, rid=${req.params.rid}, ci=${req.params.ci}, co=${req.params.co}`);
+  logger.debug(`[${req.requestId}] getAvailableDatesForChange - Received parameters: hid=${req.params.hid}, rid=${req.params.rid}, ci=${req.params.ci}, co=${req.params.co}`);
   try {
     const { hid, rid, ci, co } = req.params;
 
@@ -219,19 +219,19 @@ const getAvailableDatesForChange = async (req, res) => {
 
     const hotelId = validateNumericParam(hid, 'hid');
     const roomId = validateNumericParam(rid, 'rid');
-    
+
     const checkIn = validateDateStringParam(ci, 'ci');
     const checkOut = validateDateStringParam(co, 'co');
 
     if (!checkIn || !checkOut) {
-         logger.warn(`[${req.requestId}] getAvailableDatesForChange - Invalid date parameters: ci=${ci}, co=${co}`);
-         return res.status(400).json({ error: 'Invalid date format for check-in or check-out. Use YYYY-MM-DD.' });
+      logger.warn(`[${req.requestId}] getAvailableDatesForChange - Invalid date parameters: ci=${ci}, co=${co}`);
+      return res.status(400).json({ error: 'Invalid date format for check-in or check-out. Use YYYY-MM-DD.' });
     }
 
-    logger.warn(`[${req.requestId}] getAvailableDatesForChange - Validated parameters: hotelId=${hotelId}, roomId=${roomId}, checkIn=${checkIn}, checkOut=${checkOut}`);
+    logger.debug(`[${req.requestId}] getAvailableDatesForChange - Validated parameters: hotelId=${hotelId}, roomId=${roomId}, checkIn=${checkIn}, checkOut=${checkOut}`);
 
     const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hotelId, roomId, checkIn, checkOut);
-    logger.warn(`[${req.requestId}] getAvailableDatesForChange - Found available dates: earliestCheckIn=${earliestCheckIn}, latestCheckOut=${latestCheckOut}`);
+    logger.debug(`[${req.requestId}] getAvailableDatesForChange - Found available dates: earliestCheckIn=${earliestCheckIn}, latestCheckOut=${latestCheckOut}`);
     res.status(200).json({ earliestCheckIn, latestCheckOut });
   } catch (error) {
     if (error instanceof ValidationError) {
@@ -250,7 +250,7 @@ const getReservationClientIds = async (req, res) => {
     const clients = await selectReservationClientIds(req.requestId, hid, id);
     res.status(200).json({ clients });
   } catch (error) {
-    console.error('Error getting clients:', error);
+    logger.error('Error getting clients:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -262,7 +262,7 @@ const getReservationPayments = async (req, res) => {
     const payments = await selectReservationPayments(req.requestId, hid, id);
     res.status(200).json({ payments });
   } catch (error) {
-    console.error('Error getting payments:', error);
+    logger.error('Error getting payments:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -285,7 +285,7 @@ const getReservationParking = async (req, res) => {
 
     return res.status(200).json({ parking: parkingReservations });
   } catch (error) {
-    console.error('Error fetching reservation parking:', error);
+    logger.error('Error fetching reservation parking:', error);
     return res.status(500).json({
       error: 'An error occurred while fetching reservation parking',
       details: error.message
@@ -309,7 +309,7 @@ const getParkingSpotAvailability = async (req, res) => {
 
     return res.status(200).json({ parkingSpotAvailability });
   } catch (error) {
-    console.error('Error fetching parking spot availability:', error);
+    logger.error('Error fetching parking spot availability:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching parking spot availability.' });
   }
 };
@@ -330,7 +330,7 @@ const getHotelIdForReservation = async (req, res) => {
 
     return res.status(200).json({ hotel_id: hotelId });
   } catch (error) {
-    console.error('Error fetching hotel ID for reservation:', error);
+    logger.error('Error fetching hotel ID for reservation:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching hotel ID.' });
   }
 };
@@ -646,15 +646,15 @@ const createReservationDetails = async (req, res) => {
       return res.status(500).json({ error: 'Failed to create reservation detail: Invalid response from addReservationDetail.' });
     }
 
-    // console.log('newReservationDetail:', newReservationDetail);
-    // console.log('ogm_id:', ogm_id);
+    // logger.debug('newReservationDetail:', newReservationDetail);
+    // logger.debug('ogm_id:', ogm_id);
     const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id, hotel_id, client);
-    // console.log('ogmReservationAddons:', ogmReservationAddons);
+    // logger.debug('ogmReservationAddons:', ogmReservationAddons);
 
     // Update reservation guests
     for (let i = 0; i < number_of_people; i++) {
       await updateReservationGuest(req.requestId, ogm_id, newReservationDetail.id, client);
-      // console.log('Updated ', i + 1,' of number of guests: ',number_of_people);
+      // logger.debug('Updated ', i + 1,' of number of guests: ',number_of_people);
     }
 
     if (ogmReservationAddons && ogmReservationAddons.length > 0) {
@@ -734,7 +734,7 @@ const createReservationAddons = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error creating reservation addon:', err);
+    logger.error('Error creating reservation addon:', err);
     res.status(500).json({ error: 'Failed to create reservation addon' });
   }
 };
@@ -766,7 +766,7 @@ const createReservationClient = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error creating reservation client:', err);
+    logger.error('Error creating reservation client:', err);
     res.status(500).json({ error: 'Failed to create reservation client' });
   }
 }
@@ -782,7 +782,7 @@ const addNewRoomToReservation = async (req, res) => {
       data: newRoom
     });
   } catch (err) {
-    console.error('Error adding new room to reservation:', err);
+    logger.error('Error adding new room to reservation:', err);
     res.status(500).json({
       message: 'Database error',
       error: err.message
@@ -811,7 +811,7 @@ const alterReservationRoom = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error('Error moving room:', err);
+    logger.error('Error moving room:', err);
     res.status(500).json({
       message: 'Database error',
       error: err.message
@@ -831,7 +831,7 @@ const createReservationPayment = async (req, res) => {
       data: newPMT
     });
   } catch (err) {
-    console.error('Error adding payment:', err);
+    logger.error('Error adding payment:', err);
     res.status(500).json({
       message: 'Database error',
       error: err.message
@@ -849,7 +849,7 @@ const createBulkReservationPayment = async (req, res) => {
       data: newPMT
     });
   } catch (err) {
-    console.error('Error adding payment:', err);
+    logger.error('Error adding payment:', err);
     res.status(500).json({
       message: 'Database error',
       error: err.message
@@ -878,7 +878,7 @@ const editReservationDetail = async (req, res) => {
   let calcPrice = { value: price };
   let planChange = false;
 
-  // console.log('Body parameters:', req.body);
+  // logger.debug('Body parameters:', req.body);
   if (!uuidValidate(id)) {
     return res.status(400).json({ error: 'Invalid UUID format' });
   }
@@ -909,10 +909,10 @@ const editReservationDetail = async (req, res) => {
 
       if (newPrice !== undefined) {
         calcPrice.value = newPrice;
-        //console.log('Calculated newPrice:', newPrice);
+        //logger.debug('Calculated newPrice:', newPrice);
       } else {
         // Handle the case where newPrice is undefined (fallback value)
-        // console.log('Error: newPrice is undefined. Falling back to default value.');
+        // logger.debug('Error: newPrice is undefined. Falling back to default value.');
         calcPrice.value = 0;  // You can set a default fallback value if needed
       }
     }
@@ -937,7 +937,7 @@ const editReservationDetail = async (req, res) => {
     // Add the reservation add-ons if any
     if (addons && addons.length > 0) {
       // const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, updated_by);
-      // console.log(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
+      // logger.debug(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
       const addOnPromises = addons.map(addon =>
         addReservationAddon(req.requestId, {
@@ -1034,7 +1034,7 @@ const editReservationGuests = async (req, res) => {
             };
             await addReservationClient(req.requestId, guestInfo);
           } else {
-            //console.log("Client ID was empty after add client by name");
+            //logger.debug("Client ID was empty after add client by name");
           }
         }
       }
@@ -1043,7 +1043,7 @@ const editReservationGuests = async (req, res) => {
     res.status(200).json({ message: "Guests updated successfully" }); // Send a success response
 
   } catch (err) {
-    console.error("Error updating guests:", err);
+    logger.error("Error updating guests:", err);
     res.status(500).json({ error: "Failed to update guests" }); // Send an error response
 
   }
@@ -1058,7 +1058,7 @@ const editReservationPlan = async (req, res) => {
     const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, plan, rates, price, user_id, disableRounding);
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    logger.error('Error updating reservation detail:', err);
     res.status(500).json({ error: 'Failed to update reservation detail' });
   }
 };
@@ -1068,7 +1068,7 @@ const editReservationAddon = async (req, res) => {
   const addons = req.body;
   const user_id = req.user.id;
 
-  //console.log('[reservationsController] editReservationAddon', {
+  //logger.debug('[reservationsController] editReservationAddon', {
   //  'id': id,
   //  'hotel_id': hid
   //})
@@ -1077,7 +1077,7 @@ const editReservationAddon = async (req, res) => {
     const updatedReservation = await updateReservationDetailAddon(req.requestId, id, hid, addons, user_id);
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    logger.error('Error updating reservation detail:', err);
     res.status(500).json({ error: 'Failed to update reservation detail' });
   }
 };
@@ -1091,7 +1091,7 @@ const editReservationRoom = async (req, res) => {
     const updatedReservation = await updateReservationDetailRoom(req.requestId, id, room_id, user_id);
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    logger.error('Error updating reservation detail:', err);
     res.status(500).json({ error: 'Failed to update reservation detail' });
   }
 };
@@ -1113,12 +1113,12 @@ const editReservationRoomPlan = async (req, res) => {
       userId: user_id,
       disableRounding
     };
-    //console.log('DEBUGGING editReservationRoomPlan ARGS:', updateData);
+    //logger.debug('DEBUGGING editReservationRoomPlan ARGS:', updateData);
 
     const updatedReservation = await updateReservationRoomPlan(req.requestId, updateData);
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    logger.error('Error updating reservation detail:', err);
     if (err.name === 'NotFoundError') {
       return res.status(404).json({ error: 'Reservation not found' });
     }
@@ -1138,7 +1138,7 @@ const editReservationRoomPattern = async (req, res) => {
     const updatedReservation = await updateReservationRoomPattern(req.requestId, id, hid, rid, pattern, user_id, disableRounding);
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
+    logger.error('Error updating reservation detail:', err);
     res.status(500).json({ error: 'Failed to update reservation detail' });
   }
 };
@@ -1160,7 +1160,7 @@ const editReservationStatus = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation status:', err);
+    logger.error('Error updating reservation status:', err);
     res.status(500).json({ error: 'Failed to update reservation status' });
   }
 };
@@ -1182,7 +1182,7 @@ const editReservationDetailStatus = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation status:', err);
+    logger.error('Error updating reservation status:', err);
     res.status(500).json({ error: 'Failed to update reservation status' });
   }
 };
@@ -1204,7 +1204,7 @@ const editReservationComment = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation comment:', err);
+    logger.error('Error updating reservation comment:', err);
     res.status(500).json({ error: 'Failed to update reservation comment' });
   }
 };
@@ -1223,7 +1223,7 @@ const editReservationCommentFlag = async (req, res) => {
 
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating important comment flag:', err);
+    logger.error('Error updating important comment flag:', err);
     res.status(500).json({ error: 'Failed to update important comment flag' });
   }
 };
@@ -1245,7 +1245,7 @@ const editReservationTime = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation time:', err);
+    logger.error('Error updating reservation time:', err);
     res.status(500).json({ error: 'Failed to update reservation time' });
   }
 }
@@ -1267,7 +1267,7 @@ const editReservationType = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation type:', err);
+    logger.error('Error updating reservation type:', err);
     res.status(500).json({ error: 'Failed to update reservation type' });
   }
 };
@@ -1281,7 +1281,7 @@ const editReservationResponsible = async (req, res) => {
     await updateReservationResponsible(req.requestId, id, updatedFields, user_id);
     res.json({ message: 'Reservation updated successfully' });
   } catch (err) {
-    console.error('Error updating client:', err);
+    logger.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update reservation' });
   }
 };
@@ -1316,7 +1316,7 @@ const editRoomFromCalendar = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(`Error updating room reservation ${id}:`, err);
+    logger.error(`Error updating room reservation ${id}:`, err);
 
     // Handle different types of errors
     if (err.name === 'ValidationError') {
@@ -1355,7 +1355,7 @@ const editCalendarFreeChange = async (req, res) => {
     // Respond with the updated reservation details
     res.json({ success: 'Edit made with success.' });
   } catch (err) {
-    console.error('Error updating room:', err);
+    logger.error('Error updating room:', err);
     res.status(500).json({ error: 'Failed to update room' });
   }
 };
@@ -1372,7 +1372,7 @@ const editRoomGuestNumber = async (req, res) => {
     await updateReservationRoomGuestNumber(req.requestId, roomArray.details, user_id);
     res.status(200).json({ message: "Room updating successfully" });
   } catch (err) {
-    console.error("Error updating room:", err);
+    logger.error("Error updating room:", err);
     res.status(500).json({ error: "Failed to delete room" });
   }
 };
@@ -1405,7 +1405,7 @@ const deleteHoldReservation = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error(`[${req.requestId}] Error in deleteHoldReservation:`, {
+    logger.error(`[${req.requestId}] Error in deleteHoldReservation:`, {
       error: err.message,
       stack: err.stack,
       reservation_id: id,
@@ -1432,7 +1432,7 @@ const deleteRoomFromReservation = async (req, res) => {
     }
     res.status(200).json({ message: "Room deleted successfully" });
   } catch (err) {
-    console.error("Error deleting room:", err);
+    logger.error("Error deleting room:", err);
     res.status(500).json({ error: "Failed to delete room" });
   }
 };
@@ -1450,7 +1450,7 @@ const delReservationPayment = async (req, res) => {
 
     res.status(200).json({ message: "Payment deleted successfully" });
   } catch (err) {
-    console.error("Error deleting payment:", err);
+    logger.error("Error deleting payment:", err);
     res.status(500).json({ error: "Failed to delete payment" });
   }
 
@@ -1480,7 +1480,7 @@ const getFailedOtaReservations = async (req, res) => {
     const reservations = await selectFailedOtaReservations(req.requestId);
     return res.status(200).json({ reservations: reservations || [] });
   } catch (error) {
-    console.error('Error fetching failed OTA reservations:', error);
+    logger.error('Error fetching failed OTA reservations:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching failed OTA reservations.' });
   }
 };
@@ -1497,7 +1497,7 @@ const handleDeleteParkingReservation = async (req, res) => {
     await deleteParkingReservation(req.requestId, id, userId);
     return res.status(200).json({ message: 'Parking reservation deleted successfully' });
   } catch (error) {
-    console.error('Error deleting parking reservation:', error);
+    logger.error('Error deleting parking reservation:', error);
     return res.status(500).json({ error: 'Failed to delete parking reservation' });
   }
 };
@@ -1514,7 +1514,7 @@ const handleBulkDeleteParkingReservations = async (req, res) => {
     await deleteBulkParkingReservations(req.requestId, ids, userId);
     return res.status(200).json({ message: 'Parking reservations deleted successfully' });
   } catch (error) {
-    console.error('Error bulk deleting parking reservations:', error);
+    logger.error('Error bulk deleting parking reservations:', error);
     return res.status(500).json({ error: 'Failed to delete parking reservations' });
   }
 };
@@ -1601,7 +1601,7 @@ const cancelReservationRooms = async (req, res) => {
       data: result
     });
   } catch (err) {
-    console.error("Error cancelling rooms:", err);
+    logger.error("Error cancelling rooms:", err);
     res.status(500).json({ error: "Failed to cancel rooms" });
   }
 };
@@ -1617,7 +1617,7 @@ const editPaymentTiming = async (req, res) => {
     const updatedReservation = await updatePaymentTiming(req.requestId, id, hotel_id, paymentTimingValue, updated_by);
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating payment timing:', err);
+    logger.error('Error updating payment timing:', err);
     // Send a more informative error response
     res.status(err.statusCode || 500).json({ error: err.message || 'Failed to update payment timing' });
   }
@@ -1648,7 +1648,7 @@ const changeReservationRoomsPeriod = async (req, res) => {
     });
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error changing reservation period:', error);
+    logger.error('Error changing reservation period:', error);
     res.status(500).json({ error: 'Failed to change reservation period' });
   }
 };
