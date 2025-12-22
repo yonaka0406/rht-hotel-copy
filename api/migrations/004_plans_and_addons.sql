@@ -91,8 +91,8 @@ CREATE TABLE plans_hotel (
     description TEXT,
     plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room',
     color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3',
-    plan_type_category_id INT REFERENCES plan_type_categories(id) ON DELETE SET NULL,
-    plan_package_category_id INT REFERENCES plan_package_categories(id) ON DELETE SET NULL,
+    plan_type_category_id INT NOT NULL REFERENCES plan_type_categories(id),
+    plan_package_category_id INT NOT NULL DEFAULT 1 REFERENCES plan_package_categories(id),
     display_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     available_from DATE DEFAULT NULL, -- NULL = always available
