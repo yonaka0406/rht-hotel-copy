@@ -93,7 +93,7 @@ describe('reservationsMainModel', () => {
                 if (/SELECT \* FROM reservation_rates/.test(query)) {
                     return Promise.resolve({
                         rows: [
-                            { adjustment_type: 'base_rate', adjustment_value: 5000, include_in_cancel_fee: false, tax_rate: 0.1, price: 5000 },
+                            { adjustment_type: 'base_rate', adjustment_value: 5000, include_in_cancel_fee: true, tax_rate: 0.1, price: 5000 },
                             { adjustment_type: 'flat_fee', adjustment_value: 2000, include_in_cancel_fee: false, tax_rate: 0.1, price: 2000 },
                         ]
                     });
