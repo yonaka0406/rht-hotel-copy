@@ -25,7 +25,7 @@
         </div>
         <template #footer>
             <Button label="保存" icon="pi pi-check" @click="saveHotelPattern"
-                class="p-button-success p-button-text p-button-sm" />
+                class="p-button-success p-button-text p-button-sm" :disabled="isSaving" :loading="isSaving" />
             <Button label="閉じる" icon="pi pi-times" @click="$emit('update:visible', false)"
                 class="p-button-danger p-button-text p-button-sm" text />
         </template>
@@ -55,6 +55,8 @@ const emit = defineEmits(['update:visible', 'patternAdded']);
 const toast = useToast();
 const { createPlanPattern } = usePlansStore();
 
+const isSaving = ref(false);
+
 const newHotelPattern = ref({
     hotel_id: null,
     name: '',
@@ -79,6 +81,8 @@ watch(() => props.visible, (newVal) => {
 }, { immediate: true });
 
 const saveHotelPattern = async () => {
+    if (isSaving.value) return;
+
     // Validation
     if (!newHotelPattern.value.name?.trim()) {
         toast.add({ severity: 'error', summary: 'エラー', detail: '名称記入してください。', life: 3000 });
@@ -117,6 +121,7 @@ const saveHotelPattern = async () => {
         };
     }
 
+    isSaving.value = true;
     try {
         await createPlanPattern({
             hotel_id: newHotelPattern.value.hotel_id,
@@ -129,6 +134,8 @@ const saveHotelPattern = async () => {
     } catch (error) {
         console.error('パターン保存エラー:', error);
         toast.add({ severity: 'error', summary: 'エラー', detail: 'パターン保存失敗', life: 3000 });
+    } finally {
+        isSaving.value = false;
     }
 };
 </script>
