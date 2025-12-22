@@ -504,11 +504,62 @@ export function useImportLogic() {
         }
     };
 
+    const downloadCategoriesDictionary = async () => {
+        try {
+            const dictionary = await getCategoriesDictionary();
+            const csvRows = [];
+            
+            // Header for Type Categories
+            csvRows.push('--- タイプカテゴリー (Plan Type Categories) ---');
+            csvRows.push('ID,名称,説明');
+            dictionary.typeCategories.forEach(cat => {
+                csvRows.push(`${cat.id},"${cat.name}","${cat.description || ''}"`);
+            });
+            
+            csvRows.push(''); // Empty line
+            
+            // Header for Package Categories
+            csvRows.push('--- パッケージカテゴリー (Plan Package Categories) ---');
+            csvRows.push('ID,名称,説明');
+            dictionary.packageCategories.forEach(cat => {
+                csvRows.push(`${cat.id},"${cat.name}","${cat.description || ''}"`);
+            });
+            
+            csvRows.push(''); // Empty line
+            
+            // Header for Sales Categories
+            csvRows.push('--- 売上区分 (Sales Categories) ---');
+            csvRows.push('ID,名称,説明');
+            dictionary.salesCategories.forEach(cat => {
+                csvRows.push(`${cat.id},"${cat.name}","${cat.description || ''}"`);
+            });
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `import_categories_dictionary_${new Date().toISOString().slice(0,10)}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                toast.add({ severity: 'success', summary: '成功', detail: 'カテゴリー辞書がダウンロードされました。', life: 3000 });
+            }
+        } catch (error) {
+            console.error('Error downloading categories dictionary:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: 'カテゴリー辞書のダウンロードに失敗しました。', life: 3000 });
+        }
+    };
+
     return {
         maxFileSize,
         downloadTemplate,
         handleFileUpload,
         downloadPrefilledTemplate,
         getCategoriesDictionary,
+        downloadCategoriesDictionary,
     };
 }

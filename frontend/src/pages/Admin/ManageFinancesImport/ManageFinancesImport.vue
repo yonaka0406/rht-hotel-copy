@@ -10,44 +10,54 @@
                     <ProgressSpinner size="small" />
                     <p class="mt-2">カテゴリーを読み込み中...</p>
                 </div>
-                <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Type Categories -->
-                    <div>
-                        <h4 class="font-semibold mb-2 text-blue-600">タイプカテゴリー</h4>
-                        <div class="space-y-1">
-                            <div v-for="category in categories.typeCategories" :key="category.id" 
-                                 class="flex items-center text-sm p-2 bg-blue-50 rounded">
-                                <span class="font-mono text-xs bg-blue-200 px-1 rounded mr-2">{{ category.id }}</span>
-                                <span class="font-medium">{{ category.name }}</span>
-                                <span v-if="category.description" class="text-gray-600 ml-2">- {{ category.description }}</span>
+                <div v-else>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <!-- Type Categories -->
+                        <div>
+                            <h4 class="font-semibold mb-2 text-blue-600">タイプカテゴリー</h4>
+                            <div class="space-y-1">
+                                <div v-for="category in categories.typeCategories" :key="category.id" 
+                                    class="flex items-center text-sm p-2 bg-blue-50 rounded">
+                                    <span class="font-mono text-xs bg-blue-200 px-1 rounded mr-2">{{ category.id }}</span>
+                                    <span class="font-medium">{{ category.name }}</span>
+                                    <span v-if="category.description" class="text-gray-600 ml-2">- {{ category.description }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Package Categories -->
+                        <div>
+                            <h4 class="font-semibold mb-2 text-green-600">パッケージカテゴリー</h4>
+                            <div class="space-y-1">
+                                <div v-for="category in categories.packageCategories" :key="category.id" 
+                                    class="flex items-center text-sm p-2 bg-green-50 rounded">
+                                    <span class="font-mono text-xs bg-green-200 px-1 rounded mr-2">{{ category.id }}</span>
+                                    <span class="font-medium">{{ category.name }}</span>
+                                    <span v-if="category.description" class="text-gray-600 ml-2">- {{ category.description }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sales Categories -->
+                        <div>
+                            <h4 class="font-semibold mb-2 text-purple-600">売上区分</h4>
+                            <div class="space-y-1">
+                                <div v-for="category in categories.salesCategories" :key="category.id" 
+                                    class="flex items-center text-sm p-2 bg-purple-50 rounded">
+                                    <span class="font-mono text-xs bg-purple-200 px-1 rounded mr-2">{{ category.id }}</span>
+                                    <span class="font-medium">{{ category.name }}</span>
+                                    <span v-if="category.description" class="text-gray-600 ml-2">- {{ category.description }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Package Categories -->
-                    <div>
-                        <h4 class="font-semibold mb-2 text-green-600">パッケージカテゴリー</h4>
-                        <div class="space-y-1">
-                            <div v-for="category in categories.packageCategories" :key="category.id" 
-                                 class="flex items-center text-sm p-2 bg-green-50 rounded">
-                                <span class="font-mono text-xs bg-green-200 px-1 rounded mr-2">{{ category.id }}</span>
-                                <span class="font-medium">{{ category.name }}</span>
-                                <span v-if="category.description" class="text-gray-600 ml-2">- {{ category.description }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Sales Categories -->
-                    <div>
-                        <h4 class="font-semibold mb-2 text-purple-600">売上区分</h4>
-                        <div class="space-y-1">
-                            <div v-for="category in categories.salesCategories" :key="category.id" 
-                                 class="flex items-center text-sm p-2 bg-purple-50 rounded">
-                                <span class="font-mono text-xs bg-purple-200 px-1 rounded mr-2">{{ category.id }}</span>
-                                <span class="font-medium">{{ category.name }}</span>
-                                <span v-if="category.description" class="text-gray-600 ml-2">- {{ category.description }}</span>
-                            </div>
-                        </div>
+                    <div class="flex justify-end border-t pt-4">
+                        <Button
+                            label="カテゴリー辞書をダウンロード"
+                            icon="pi pi-download"
+                            class="p-button-secondary"
+                            @click="downloadCategoriesDictionary()"
+                        />
                     </div>
                 </div>
             </Panel>
@@ -72,7 +82,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { Tabs, TabList, Tab, TabPanels, TabPanel, Panel, Toast, ProgressSpinner } from 'primevue';
+import { Tabs, TabList, Tab, TabPanels, TabPanel, Panel, Toast, ProgressSpinner, Button } from 'primevue';
 import ForecastImportPanel from './components/ForecastImportPanel.vue';
 import AccountingImportPanel from './components/AccountingImportPanel.vue';
 import { useImportLogic } from './composables/useImportLogic';
@@ -85,7 +95,7 @@ const categories = ref({
 });
 const categoriesLoading = ref(true);
 
-const { getCategoriesDictionary } = useImportLogic();
+const { getCategoriesDictionary, downloadCategoriesDictionary } = useImportLogic();
 
 onMounted(async () => {
     try {
