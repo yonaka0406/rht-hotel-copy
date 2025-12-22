@@ -30,6 +30,7 @@ router.get('/plans/:gid/:hid/:hotel_id/rates', authMiddleware, plansRateControll
 router.get('/plans/rates/:id', authMiddleware, plansRateController.getPlanRate);
 router.get('/plan/rate/:gid/:hid/:hotel_id/:date', authMiddleware, plansRateController.getPlanRateByDay);
 router.get('/plan/rate-detail/:gid/:hid/:hotel_id/:date', authMiddleware, plansRateController.getPlanRatesByDay);
+router.post('/plans/:gid/:hid/:hotel_id/rates', authMiddleware_manageDB, plansRateController.createNewPlanRate);
 router.post('/plans/:planId/rates', authMiddleware_manageDB, plansRateController.createNewPlanRate);
 router.put('/plans/rates/:id', authMiddleware_manageDB, plansRateController.updateExistingPlanRate);
 //router.delete('/plans/rates/:id', authMiddleware_manageDB, plansRateController.deletePlanRate);

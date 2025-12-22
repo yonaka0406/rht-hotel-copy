@@ -306,13 +306,18 @@ const createPlansRate = async (requestId, plansRate) => {
         RETURNING *
     `;
 
+    // Backend guards to ensure data integrity
+    // Convert 0 to null for plans_global_id and plans_hotel_id to satisfy database constraints
+    const plans_global_id = plansRate.plans_global_id === 0 ? null : plansRate.plans_global_id;
+    const plans_hotel_id = plansRate.plans_hotel_id === 0 ? null : plansRate.plans_hotel_id;
+    
     // For base_rate, always set include_in_cancel_fee to true
     const includeInCancelFee = plansRate.adjustment_type === 'base_rate' ? true : (plansRate.include_in_cancel_fee || false);
 
     const values = [
         plansRate.hotel_id,
-        plansRate.plans_global_id,
-        plansRate.plans_hotel_id,
+        plans_global_id,
+        plans_hotel_id,
         plansRate.adjustment_type,
         plansRate.adjustment_value,
         plansRate.tax_type_id,
@@ -362,13 +367,18 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         RETURNING *
     `;
 
+    // Backend guards to ensure data integrity
+    // Convert 0 to null for plans_global_id and plans_hotel_id to satisfy database constraints
+    const plans_global_id = plansRate.plans_global_id === 0 ? null : plansRate.plans_global_id;
+    const plans_hotel_id = plansRate.plans_hotel_id === 0 ? null : plansRate.plans_hotel_id;
+    
     // For base_rate, always set include_in_cancel_fee to true
     const includeInCancelFee = plansRate.adjustment_type === 'base_rate' ? true : (plansRate.include_in_cancel_fee || false);
 
     const values = [
         plansRate.hotel_id,
-        plansRate.plans_global_id,
-        plansRate.plans_hotel_id,
+        plans_global_id,
+        plans_hotel_id,
         plansRate.adjustment_type,
         plansRate.adjustment_value,
         plansRate.tax_type_id,

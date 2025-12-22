@@ -789,7 +789,7 @@
             newAdjustment.value.plans_global_id = props.plan.id;
             newAdjustment.value.plans_hotel_id = null;
         } else if (props.plan.context === 'hotel') {
-            newAdjustment.value.plans_global_id = props.plan.plans_global_id || 0;
+            newAdjustment.value.plans_global_id = props.plan.plans_global_id || null;
             newAdjustment.value.plans_hotel_id = props.plan.plans_hotel_id;
             newAdjustment.value.hotel_id = props.plan.hotel_id;
         }
