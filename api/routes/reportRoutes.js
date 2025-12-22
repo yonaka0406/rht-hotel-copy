@@ -10,6 +10,10 @@ router.get('/report/occ/:period/:hid/:rdate', authMiddleware, reportController.g
 router.get('/report/res/list/:search_type/:hid/:sdate/:edate', authMiddleware, reportController.getReservationListView);
 router.get('/report/forecast/:hid/:sdate/:edate', authMiddleware, reportController.getForecastData);
 router.get('/report/accounting/:hid/:sdate/:edate', authMiddleware, reportController.getAccountingData);
+// Category-based endpoints (new)
+router.get('/report/forecast-by-category/:hid/:sdate/:edate', authMiddleware, reportController.getForecastDataByCategory);
+router.get('/report/accounting-by-category/:hid/:sdate/:edate', authMiddleware, reportController.getAccountingDataByCategory);
+// Backward compatibility endpoints (deprecated but maintained)
 router.get('/report/forecast-by-plan/:hid/:sdate/:edate', authMiddleware, reportController.getForecastDataByPlan);
 router.get('/report/accounting-by-plan/:hid/:sdate/:edate', authMiddleware, reportController.getAccountingDataByPlan);
 router.get('/report/download/res/list/:hid/:sdate/:edate', authMiddleware, reportController.getExportReservationList);

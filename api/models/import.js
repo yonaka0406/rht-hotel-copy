@@ -423,31 +423,22 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
     try {
         await client.query('BEGIN');        
 
-        // Handle NULL plan_global_id separately: delete existing entries for the same hotel_id and forecast_month
-        // where plan_global_id is NULL, before inserting new ones.
-        const nullPlanForecasts = forecasts.filter(f => f.plan_global_id === null);
-        if (nullPlanForecasts.length > 0) {
-            const deleteQuery = `
-                DELETE FROM du_forecast
-                WHERE hotel_id = $1 AND forecast_month = $2 AND plan_global_id IS NULL;
-            `;
-            for (const forecast of nullPlanForecasts) {
-                await client.query(deleteQuery, [parseInt(forecast.hotel_id, 10), forecast.month]);
-            }
-        }
-
         const query = `
             INSERT INTO du_forecast (
                 hotel_id, forecast_month,
-                accommodation_revenue, operating_days,
-                available_room_nights, rooms_sold_nights,
-                plan_global_id,
+                accommodation_revenue, non_accommodation_revenue, operating_days,
+                available_room_nights, rooms_sold_nights, non_accommodation_sold_rooms,
+                plan_type_category_id, plan_package_category_id,
                 created_by                    
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            ON CONFLICT (hotel_id, forecast_month, plan_global_id) DO UPDATE SET
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (hotel_id, forecast_month, plan_type_category_id, plan_package_category_id) DO UPDATE SET
                 accommodation_revenue = CASE
                                             WHEN EXCLUDED.accommodation_revenue IS NOT NULL THEN EXCLUDED.accommodation_revenue
                                             ELSE du_forecast.accommodation_revenue
+                                        END,
+                non_accommodation_revenue = CASE
+                                            WHEN EXCLUDED.non_accommodation_revenue IS NOT NULL THEN EXCLUDED.non_accommodation_revenue
+                                            ELSE du_forecast.non_accommodation_revenue
                                         END,
                 operating_days = CASE
                                     WHEN EXCLUDED.operating_days IS NOT NULL THEN EXCLUDED.operating_days
@@ -461,10 +452,10 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                                         WHEN EXCLUDED.rooms_sold_nights IS NOT NULL THEN EXCLUDED.rooms_sold_nights
                                         ELSE du_forecast.rooms_sold_nights
                                     END,
-                plan_global_id = CASE
-                                    WHEN EXCLUDED.plan_global_id IS NOT NULL THEN EXCLUDED.plan_global_id
-                                    ELSE du_forecast.plan_global_id
-                                END,
+                non_accommodation_sold_rooms = CASE
+                                        WHEN EXCLUDED.non_accommodation_sold_rooms IS NOT NULL THEN EXCLUDED.non_accommodation_sold_rooms
+                                        ELSE du_forecast.non_accommodation_sold_rooms
+                                    END,
                 created_by = EXCLUDED.created_by                    
             RETURNING id;
         `;
@@ -477,10 +468,13 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 parseInt(forecast.hotel_id, 10),
                 forecast.month, // Assuming this is a date string like 'YYYY/MM/DD' or 'YYYY-MM-DD'
                 forecast.accommodation_revenue !== undefined && forecast.accommodation_revenue !== null ? parseFloat(forecast.accommodation_revenue) : null,
+                forecast.non_accommodation_revenue !== undefined && forecast.non_accommodation_revenue !== null ? parseFloat(forecast.non_accommodation_revenue) : null,
                 forecast.operating_days !== undefined && forecast.operating_days !== null ? parseInt(forecast.operating_days, 10) : null,
                 forecast.available_room_nights !== undefined && forecast.available_room_nights !== null ? parseInt(forecast.available_room_nights, 10) : null,
                 forecast.rooms_sold_nights !== undefined && forecast.rooms_sold_nights !== null ? parseInt(forecast.rooms_sold_nights, 10) : null,
-                forecast.plan_global_id !== undefined && forecast.plan_global_id !== null ? parseInt(forecast.plan_global_id, 10) : null,
+                forecast.non_accommodation_sold_rooms !== undefined && forecast.non_accommodation_sold_rooms !== null ? parseInt(forecast.non_accommodation_sold_rooms, 10) : null,
+                forecast.plan_type_category_id !== undefined && forecast.plan_type_category_id !== null ? parseInt(forecast.plan_type_category_id, 10) : null,
+                forecast.plan_package_category_id !== undefined && forecast.plan_package_category_id !== null ? parseInt(forecast.plan_package_category_id, 10) : null,
                 user_id
             ];
 
@@ -521,31 +515,22 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
     try {
         await client.query('BEGIN');
 
-        // Handle NULL plan_global_id separately: delete existing entries for the same hotel_id and accounting_month
-        // where plan_global_id is NULL, before inserting new ones.
-        const nullPlanAccountingEntries = accountingEntries.filter(e => e.plan_global_id === null);
-        if (nullPlanAccountingEntries.length > 0) {
-            const deleteQuery = `
-                DELETE FROM du_accounting
-                WHERE hotel_id = $1 AND accounting_month = $2 AND plan_global_id IS NULL;
-            `;
-            for (const entry of nullPlanAccountingEntries) {
-                await client.query(deleteQuery, [parseInt(entry.hotel_id, 10), entry.month]);
-            }
-        }
-
         const query = `
             INSERT INTO du_accounting (
                 hotel_id, accounting_month,
-                accommodation_revenue, operating_days,
-                available_room_nights, rooms_sold_nights,
-                plan_global_id,
+                accommodation_revenue, non_accommodation_revenue, operating_days,
+                available_room_nights, rooms_sold_nights, non_accommodation_sold_rooms,
+                plan_type_category_id, plan_package_category_id,
                 created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            ON CONFLICT (hotel_id, accounting_month, plan_global_id) DO UPDATE SET
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (hotel_id, accounting_month, plan_type_category_id, plan_package_category_id) DO UPDATE SET
                 accommodation_revenue = CASE
                                           WHEN EXCLUDED.accommodation_revenue IS NOT NULL THEN EXCLUDED.accommodation_revenue
                                           ELSE du_accounting.accommodation_revenue -- Keep existing if new value is null
+                                        END,
+                non_accommodation_revenue = CASE
+                                          WHEN EXCLUDED.non_accommodation_revenue IS NOT NULL THEN EXCLUDED.non_accommodation_revenue
+                                          ELSE du_accounting.non_accommodation_revenue
                                         END,
                 operating_days = CASE
                                     WHEN EXCLUDED.operating_days IS NOT NULL THEN EXCLUDED.operating_days
@@ -559,10 +544,10 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
                                         WHEN EXCLUDED.rooms_sold_nights IS NOT NULL THEN EXCLUDED.rooms_sold_nights
                                         ELSE du_accounting.rooms_sold_nights
                                     END,
-                plan_global_id = CASE
-                                    WHEN EXCLUDED.plan_global_id IS NOT NULL THEN EXCLUDED.plan_global_id
-                                    ELSE du_accounting.plan_global_id
-                                END,
+                non_accommodation_sold_rooms = CASE
+                                        WHEN EXCLUDED.non_accommodation_sold_rooms IS NOT NULL THEN EXCLUDED.non_accommodation_sold_rooms
+                                        ELSE du_accounting.non_accommodation_sold_rooms
+                                    END,
                 created_by = EXCLUDED.created_by              
             RETURNING id;
         `;
@@ -575,10 +560,13 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
                 parseInt(entry.hotel_id, 10),
                 entry.month, // Assuming this is a date string like 'YYYY-MM-DD' and the DB column is DATE
                 entry.accommodation_revenue !== undefined && entry.accommodation_revenue !== null ? parseFloat(entry.accommodation_revenue) : null,
+                entry.non_accommodation_revenue !== undefined && entry.non_accommodation_revenue !== null ? parseFloat(entry.non_accommodation_revenue) : null,
                 entry.operating_days !== undefined && entry.operating_days !== null ? parseInt(entry.operating_days, 10) : null,
                 entry.available_room_nights !== undefined && entry.available_room_nights !== null ? parseInt(entry.available_room_nights, 10) : null,
                 entry.rooms_sold_nights !== undefined && entry.rooms_sold_nights !== null ? parseInt(entry.rooms_sold_nights, 10) : null,
-                entry.plan_global_id !== undefined && entry.plan_global_id !== null ? parseInt(entry.plan_global_id, 10) : null,
+                entry.non_accommodation_sold_rooms !== undefined && entry.non_accommodation_sold_rooms !== null ? parseInt(entry.non_accommodation_sold_rooms, 10) : null,
+                entry.plan_type_category_id !== undefined && entry.plan_type_category_id !== null ? parseInt(entry.plan_type_category_id, 10) : null,
+                entry.plan_package_category_id !== undefined && entry.plan_package_category_id !== null ? parseInt(entry.plan_package_category_id, 10) : null,
                 user_id
             ];
 
@@ -623,8 +611,10 @@ const getPrefilledData = async (requestId, type, month1, month2) => {
 
         const query = `
             SELECT 
-                hotel_id, ${monthColumn} as month, accommodation_revenue, operating_days, 
-                available_room_nights, rooms_sold_nights, plan_global_id
+                hotel_id, ${monthColumn} as month, 
+                accommodation_revenue, non_accommodation_revenue, operating_days, 
+                available_room_nights, rooms_sold_nights, non_accommodation_sold_rooms,
+                plan_type_category_id, plan_package_category_id
             FROM ${table}
             WHERE ${monthColumn} >= $1 AND ${monthColumn} < $2
         `;

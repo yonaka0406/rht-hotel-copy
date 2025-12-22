@@ -951,6 +951,10 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     -- Plan Sales
     SELECT
       COALESCE(pg.name, ph.name, 'プラン未設定') AS plan_name,
+      ph.plan_type_category_id,
+      ph.plan_package_category_id,
+      COALESCE(ptc.name, '未設定') AS plan_type_category_name,
+      COALESCE(ppc.name, '未設定') AS plan_package_category_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(COALESCE(rr.accommodation_price, 0)) AS accommodation_sales,
       SUM(COALESCE(rr.other_price, 0)) AS other_sales,
@@ -960,6 +964,8 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
     LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+    LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
+    LEFT JOIN plan_package_categories ppc ON ph.plan_package_category_id = ppc.id
     LEFT JOIN (
         SELECT
             rd_inner.hotel_id,
@@ -1024,7 +1030,8 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       AND r.status NOT IN ('hold', 'block')
       AND r.type <> 'employee'
     GROUP BY
-      pg.name, ph.name, is_cancelled_billable
+      pg.name, ph.name, ph.plan_type_category_id, ph.plan_package_category_id, 
+      ptc.name, ppc.name, is_cancelled_billable
 
     UNION ALL
 
@@ -1038,6 +1045,17 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         WHEN 'other' THEN 'その他'
         ELSE ra.addon_type
       END || '(' || (ra.tax_rate * 100)::integer || '%)' AS plan_name,
+      NULL AS plan_type_category_id,
+      NULL AS plan_package_category_id,
+      'アドオン' AS plan_type_category_name,
+      CASE ra.addon_type
+        WHEN 'breakfast' THEN '朝食'
+        WHEN 'lunch' THEN '昼食'
+        WHEN 'dinner' THEN '夕食'
+        WHEN 'parking' THEN '駐車場'
+        WHEN 'other' THEN 'その他'
+        ELSE ra.addon_type
+      END AS plan_package_category_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_sales,
       SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_sales,

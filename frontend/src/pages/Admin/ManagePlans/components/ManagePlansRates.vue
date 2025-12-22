@@ -332,11 +332,14 @@
                 <div class="col-span-2">
                     <FloatLabel>
                         <Select v-model="newAdjustment.adjustment_type"
-                        :options="adjustmentTypes"
-                        optionLabel="label"
-                        optionValue="value"
-                        fluid
-                        required />
+                            inputId="newAdjustmentType"
+                            :options="adjustmentTypes"
+                            optionLabel="label"
+                            optionValue="value"
+                            fluid
+                            required 
+                        />
+                        <label for="newAdjustmentType">調整種類</label>
                     </FloatLabel>
                 </div>
                 <div class="col-span-2">
@@ -470,12 +473,14 @@
                 <div class="col-span-2">
                     <FloatLabel>
                         <Select v-model="editAdjustment.adjustment_type"
+                            inputId="editAdjustmentType"
                             :options="adjustmentTypes"
                             optionLabel="label"
                             optionValue="value"
                             fluid
                             required 
                         />
+                        <label for="editAdjustmentType">調整種類</label>
                     </FloatLabel>
                 </div>
                 <div class="col-span-2">
@@ -633,7 +638,7 @@
      // Helper
     const formatNumber = (value, style) => {
         let thisValue = value;
-        if(!thisValue){
+        if(!thisValue || isNaN(thisValue)){
             thisValue = 0;
         } 
         if(style === 'currency'){
@@ -696,8 +701,8 @@
     // Panel    
     const selectedDate = ref(new Date().toISOString().split('T')[0]);
     const planId = ref({                
-        plans_global_id: props.plan.context === 'global' ? props.plan.id : 0,
-        plans_hotel_id: props.plan.context === 'hotel' ? props.plan.id : 0,
+        plans_global_id: props.plan.context === 'global' ? props.plan.id : (props.plan.plans_global_id || 0),
+        plans_hotel_id: props.plan.context === 'hotel' ? props.plan.plans_hotel_id : 0,
         hotel_id: props.plan.context === 'hotel' ? props.plan.hotel_id : 0, 
         date: selectedDate,
     });
@@ -706,10 +711,13 @@
         return addons.value.length;
     });
     const filteredAddonSum = computed(() => {
-        return addons.value.reduce((sum, addon) => sum + (addon.price || 0), 0);
+        return addons.value.reduce((sum, addon) => {
+            const price = Number(addon.price) || 0;
+            return sum + price;
+        }, 0);
     });
-    const handleFilteredAddons = (addons) => {
-        addons.value = addons;
+    const handleFilteredAddons = (payload) => {
+        addons.value = payload;
     };
     const allRates = ref([]);
 
@@ -781,8 +789,8 @@
             newAdjustment.value.plans_global_id = props.plan.id;
             newAdjustment.value.plans_hotel_id = null;
         } else if (props.plan.context === 'hotel') {
-            newAdjustment.value.plans_global_id = null;
-            newAdjustment.value.plans_hotel_id = props.plan.id;
+            newAdjustment.value.plans_global_id = props.plan.plans_global_id || null;
+            newAdjustment.value.plans_hotel_id = props.plan.plans_hotel_id;
             newAdjustment.value.hotel_id = props.plan.hotel_id;
         }
         showAdjustmentDialog.value = true;
@@ -858,7 +866,7 @@
             });
             return;
         }
-        if (newAdjustment.value.adjustment_value === 0) {
+        if (newAdjustment.value.adjustment_value == null || newAdjustment.value.adjustment_value === '' || Number(newAdjustment.value.adjustment_value) === 0) {
             toast.add({
                 severity: 'error',
                 summary: 'エラー',
@@ -887,7 +895,12 @@
         // console.log('[saveAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/plans/${props.plan.id}/rates`, {
+            // Use the correct numeric IDs for the API call
+            const globalId = props.plan.context === 'global' ? props.plan.id : (props.plan.plans_global_id || 0);
+            const hotelId = props.plan.context === 'hotel' ? props.plan.plans_hotel_id : 0;
+            const hotelIdParam = props.plan.context === 'hotel' ? props.plan.hotel_id : 0;
+            
+            const response = await fetch(`/api/plans/${globalId}/${hotelId}/${hotelIdParam}/rates`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -901,17 +914,7 @@
 
             fetchRates();
             showAdjustmentDialog.value = false;
-            newAdjustment.value = {
-                hotel_id: null,
-                plans_global_id: null,
-                plans_hotel_id: null,
-                adjustment_type: 'base_rate',
-                adjustment_value: 0,
-                condition_type: 'no_restriction',
-                condition_value: [],
-                date_start: null,
-                date_end: null,
-            };
+            newAdjustmentReset();
 
             toast.add({
                 severity: 'success',
@@ -921,6 +924,7 @@
             });
         } catch (error) {
             console.error('調整保存エラー:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: '調整の保存に失敗しました', life: 3000 });
         }
     };
     const updateAdjustment = async () => {
@@ -952,7 +956,7 @@
             });
             return;
         }
-        if (editAdjustment.value.adjustment_value === 0) {
+        if (editAdjustment.value.adjustment_value == null || editAdjustment.value.adjustment_value === '' || Number(editAdjustment.value.adjustment_value) === 0) {
             toast.add({
                 severity: 'error',
                 summary: 'エラー',
@@ -997,18 +1001,7 @@
 
             fetchRates(); // Refresh the rates
             showEditAdjustmentDialog.value = false; // Close the dialog
-            editAdjustment.value = {
-                hotel_id: null,
-                plans_global_id: null,
-                plans_hotel_id: null,
-                adjustment_type: 'base_rate',
-                adjustment_value: 0,
-                condition_type: 'no_restriction',
-                condition_value: [],
-                date_start: null,
-                date_end: null,
-                id: null // Reset the ID after updating
-            };
+            editAdjustmentReset();
 
             toast.add({
                 severity: 'success',
@@ -1198,7 +1191,8 @@
                 startDate.setHours(0, 0, 0, 0);
                 const endDate = condition.date_end ? new Date(condition.date_end) : null;
                 if (endDate) endDate.setHours(0, 0, 0, 0);
-                return startDate < selectedDateObj && endDate != null;
+                // A condition is "past" only if it has an end date AND the end date is before the selected date
+                return endDate && endDate < selectedDateObj;
             });
     });    
             

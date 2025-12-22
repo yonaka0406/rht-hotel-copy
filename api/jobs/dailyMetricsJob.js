@@ -28,7 +28,7 @@ const performDailyMetricsCalculation = async () => {
             const lastDate = hotel.last_date;
 
             const query = `
-                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, non_accommodation_stays, normal_sales, cancellation_sales, accommodation_sales, other_sales, accommodation_sales_cancelled, other_sales_cancelled)
+                INSERT INTO daily_plan_metrics (metric_date, month, hotel_id, plans_global_id, plans_hotel_id, plan_type_category_id, plan_package_category_id, plan_name, confirmed_stays, pending_stays, in_talks_stays, cancelled_stays, non_billable_cancelled_stays, employee_stays, non_accommodation_stays, normal_sales, cancellation_sales, accommodation_sales, other_sales, accommodation_sales_cancelled, other_sales_cancelled, accommodation_net_sales, other_net_sales, accommodation_net_sales_cancelled, other_net_sales_cancelled)
                 WITH months AS (
                     SELECT generate_series(
                         date_trunc('month', $1::date),
@@ -41,7 +41,9 @@ const performDailyMetricsCalculation = async () => {
                         rr.hotel_id,
                         rr.reservation_details_id,
                         SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END) AS accommodation_rate_price,
-                        SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS other_rate_price
+                        SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS other_rate_price,
+                        SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.net_price ELSE 0 END) AS accommodation_rate_net_price,
+                        SUM(CASE WHEN rr.sales_category = 'other' THEN rr.net_price ELSE 0 END) AS other_rate_net_price
                     FROM
                         reservation_rates rr
                     GROUP BY
@@ -53,7 +55,9 @@ const performDailyMetricsCalculation = async () => {
                         ra.reservation_detail_id,
                         SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_addon_price,
                         SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_addon_price,
-                        SUM(ra.price * ra.quantity) AS total_addon_price
+                        SUM(ra.price * ra.quantity) AS total_addon_price,
+                        SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_addon_net_price,
+                        SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_addon_net_price
                     FROM
                         reservation_addons ra
                     GROUP BY
@@ -65,6 +69,8 @@ const performDailyMetricsCalculation = async () => {
                     $3 AS hotel_id,
                     rd.plans_global_id,
                     rd.plans_hotel_id,
+                    ph.plan_type_category_id,
+                    ph.plan_package_category_id,
                     COALESCE(ph.name, pg.name, '未設定') AS plan_name,
                     COUNT(CASE WHEN r.status IN('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable IS TRUE AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS confirmed_stays,
                     COUNT(CASE WHEN r.status = 'provisory' AND rd.cancelled IS NULL AND r.type <> 'employee' AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS pending_stays,
@@ -78,7 +84,11 @@ const performDailyMetricsCalculation = async () => {
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_price, 0) + COALESCE(ads.accommodation_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_sales,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.other_rate_price, 0) + COALESCE(ads.other_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS other_sales,
                     COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_price, 0) + COALESCE(ads.accommodation_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_sales_cancelled,
-                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (COALESCE(rs.other_rate_price, 0) + COALESCE(ads.other_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS other_sales_cancelled
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (COALESCE(rs.other_rate_price, 0) + COALESCE(ads.other_addon_price, 0)) ELSE 0 END), 0)::BIGINT AS other_sales_cancelled,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_net_price, 0) + COALESCE(ads.accommodation_addon_net_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_net_sales,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NULL AND rd.billable IS TRUE THEN (COALESCE(rs.other_rate_net_price, 0) + COALESCE(ads.other_addon_net_price, 0)) ELSE 0 END), 0)::BIGINT AS other_net_sales,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (COALESCE(rs.accommodation_rate_net_price, 0) + COALESCE(ads.accommodation_addon_net_price, 0)) ELSE 0 END), 0)::BIGINT AS accommodation_net_sales_cancelled,
+                    COALESCE(SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable IS TRUE THEN (COALESCE(rs.other_rate_net_price, 0) + COALESCE(ads.other_addon_net_price, 0)) ELSE 0 END), 0)::BIGINT AS other_net_sales_cancelled
                 FROM
                     months m
                 CROSS JOIN
@@ -98,7 +108,7 @@ const performDailyMetricsCalculation = async () => {
                     AND r.status <> 'block'
                     AND date_trunc('month', rd.date) = m.month
                 GROUP BY
-                    m.month, rd.plans_global_id, rd.plans_hotel_id, ph.name, pg.name;
+                    m.month, rd.plans_global_id, rd.plans_hotel_id, ph.plan_type_category_id, ph.plan_package_category_id, ph.name, pg.name;
             `;
 
             await client.query(query, [metricDate, lastDate, hotelId]);

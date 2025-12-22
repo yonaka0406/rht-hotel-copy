@@ -14,7 +14,7 @@
                         <template #body="slotProps">
                             <Select
                                 v-model="slotProps.data.plan_key" 
-                                :options="plans"
+                                :options="hotelPlans"
                                 optionLabel="name" 
                                 optionValue="plan_key" 
                             >                            
@@ -46,7 +46,7 @@
     import { useXMLStore } from '@/composables/useXMLStore';
     const { template, tlPlanMaster, fetchXMLTemplate, insertXMLResponse, fetchTLPlanMaster, insertTLPlanMaster } = useXMLStore();
     import { usePlansStore } from '@/composables/usePlansStore';
-    const { plans, fetchPlansForHotel } = usePlansStore();
+    const { hotelPlans, fetchHotelPlans } = usePlansStore();
     
     // Primevue
     import { useToast } from 'primevue/usetoast';
@@ -61,7 +61,7 @@
         const filteredData = data.filter(item => Number.isInteger(item.plangroupcode * 1));
                 
         const updatedFilteredData = filteredData.map(item => {
-            const matchingPlan = plans.value.find(plan => plan.plan_key === item.plan_key);
+            const matchingPlan = hotelPlans.value.find(plan => plan.plan_key === item.plan_key);
 
             return {
                 ...item,
@@ -136,10 +136,10 @@
         await fetchTLPlanMaster(props.hotel_id);
         planMaster.value = tlPlanMaster.value;
 
-        roomTypes.value = await fetchPlansForHotel(props.hotel_id);        
+        await fetchHotelPlans(props.hotel_id);        
         
         console.log('onMounted プランマスター', planMaster.value);
-        console.log('onMounted プラン', plans.value);
+        console.log('onMounted プラン', hotelPlans.value);
         
         
     });

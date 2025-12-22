@@ -636,8 +636,8 @@ onMounted(async () => {
             ...addon,
         }));
 
-    // Fetch Options
-    await fetchPlansForHotel(props.reservation_details.hotel_id);
+    // Fetch Options - only get plans available for this specific date
+    await fetchPlansForHotel(props.reservation_details.hotel_id, props.reservation_details.date);
     const allAddons = await fetchAllAddons(props.reservation_details.hotel_id);
     addonOptions.value = allAddons.filter(addon => addon.addon_type !== 'parking');
 

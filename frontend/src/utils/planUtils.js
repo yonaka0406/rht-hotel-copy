@@ -23,3 +23,15 @@ export function translateConditionType(conditionType) {
         default: return conditionType;
     }
 }
+
+export const adjustmentTypes = [
+    { label: '基本料金', value: 'base_rate' },
+    { label: 'パーセント', value: 'percentage' },
+    { label: '定額料金', value: 'flat_fee' },
+];
+
+export const conditionTypes = [
+    { label: '条件なし', value: 'no_restriction' },
+    { label: '曜日毎', value: 'day_of_week' },
+    { label: '月毎', value: 'month' },
+];

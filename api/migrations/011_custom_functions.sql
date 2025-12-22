@@ -231,6 +231,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP FUNCTION IF EXISTS get_available_plans_for_hotel(INT); 
 CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(p_hotel_id INT)
 RETURNS TABLE(
     plans_global_id INT,
@@ -239,7 +240,9 @@ RETURNS TABLE(
     name TEXT,
     description TEXT,
     plan_type TEXT,
-    color VARCHAR(7)
+    color VARCHAR(7),
+    plan_type_category_id INT,
+    plan_package_category_id INT
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -250,7 +253,9 @@ BEGIN
         ph.name,
         ph.description,
         ph.plan_type,
-        ph.color
+        ph.color,
+        ph.plan_type_category_id,
+        ph.plan_package_category_id
     FROM
         plans_hotel AS ph
     WHERE
@@ -265,7 +270,9 @@ BEGIN
         pg.name,
         pg.description,
         pg.plan_type,
-        pg.color
+        pg.color,
+        NULL::INT AS plan_type_category_id,
+        NULL::INT AS plan_package_category_id 
     FROM
         plans_global AS pg
     WHERE
