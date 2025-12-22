@@ -1,16 +1,4 @@
-const {
-  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
-  selectRoomsForIndicator, selectFailedOtaReservations, selectParkingSpotAvailability, getHotelIdByReservationId, addReservationHold, addReservationDetail,
-  addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPaymentWithInvoice, insertBulkReservationPayment,
-  updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime,
-  updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest,
-  updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom,
-  updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
-  updateReservationMemberCount,
-  deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
-  insertCopyReservation, selectReservationParking, deleteParkingReservation, deleteBulkParkingReservations, cancelReservationRooms: cancelReservationRoomsModel,
-  updatePaymentTiming, updateReservationRoomsPeriod, splitReservation, selectReservationAddonByDetail,
-} = require('../models/reservations');
+﻿const reservationsModel = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
@@ -277,7 +265,7 @@ const getReservationParking = async (req, res) => {
   }
 
   try {
-    const parkingReservations = await selectReservationParking(
+    const parkingReservations = await reservationsModel.selectReservationParking(
       req.requestId,
       hotel_id,
       reservation_id
@@ -931,12 +919,12 @@ const editReservationDetail = async (req, res) => {
       updated_by,
     }, client);
     if (planChange) {
-      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by, client);
+      const deletedAddonsCount = await reservationsModel.deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by, client);
     }
 
     // Add the reservation add-ons if any
     if (addons && addons.length > 0) {
-      // const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, updated_by);
+      // const deletedAddonsCount = await reservationsModel.deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, updated_by);
       // logger.debug(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
       const addOnPromises = addons.map(addon =>
@@ -1016,7 +1004,7 @@ const editReservationGuests = async (req, res) => {
 
     for (const reservationDetail of filteredReservations) {
       // Delete existing clients for this reservation detail
-      await deleteReservationClientsByDetailId(req.requestId, reservationDetail.id, updated_by);
+      await reservationsModel.deleteReservationClientsByDetailId(req.requestId, reservationDetail.id, updated_by);
 
       // Add the new clients
       if (guestDataArray.guestsToAdd && guestDataArray.guestsToAdd.length > 0) {
@@ -1383,7 +1371,7 @@ const deleteHoldReservation = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const result = await deleteHoldReservationById(req.requestId, id, hid, user_id);
+    const result = await reservationsModel.deleteHoldReservationById(req.requestId, id, hid, user_id);
 
     // Handle case where result is undefined
     if (!result) {
@@ -1423,7 +1411,7 @@ const deleteRoomFromReservation = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const result = await deleteReservationRoom(req.requestId, hotelId, roomId, reservationId, numberOfPeople, user_id);
+    const result = await reservationsModel.deleteReservationRoom(req.requestId, hotelId, roomId, reservationId, numberOfPeople, user_id);
     if (!result.success) {
       return res.status(400).json({
         error: result.message,
@@ -1442,7 +1430,7 @@ const delReservationPayment = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const result = await deleteReservationPayment(req.requestId, id, user_id);
+    const result = await reservationsModel.deleteReservationPayment(req.requestId, id, user_id);
 
     if (result && result.success === false) {
       return res.status(404).json({ error: result.message || 'Payment not found' });
@@ -1466,7 +1454,7 @@ const copyReservation = async (req, res) => {
       throw new Error('Hotel ID not found for the original reservation.');
     }
     // Use the model's copyReservation which copies plans and addons
-    const newReservation = await insertCopyReservation(req.requestId, original_reservation_id, new_client_id, room_mapping, user_id, hotel_id);
+    const newReservation = await reservationsModel.insertCopyReservation(req.requestId, original_reservation_id, new_client_id, room_mapping, user_id, hotel_id);
 
     res.status(201).json({ message: 'Reservation copied successfully', reservation: newReservation });
   } catch (error) {
@@ -1494,7 +1482,7 @@ const handleDeleteParkingReservation = async (req, res) => {
   }
 
   try {
-    await deleteParkingReservation(req.requestId, id, userId);
+    await reservationsModel.deleteParkingReservation(req.requestId, id, userId);
     return res.status(200).json({ message: 'Parking reservation deleted successfully' });
   } catch (error) {
     logger.error('Error deleting parking reservation:', error);
@@ -1511,7 +1499,7 @@ const handleBulkDeleteParkingReservations = async (req, res) => {
   }
 
   try {
-    await deleteBulkParkingReservations(req.requestId, ids, userId);
+    await reservationsModel.deleteBulkParkingReservations(req.requestId, ids, userId);
     return res.status(200).json({ message: 'Parking reservations deleted successfully' });
   } catch (error) {
     logger.error('Error bulk deleting parking reservations:', error);
@@ -1563,7 +1551,7 @@ const convertBlockToReservation = async (req, res) => {
     const updatedReservation = await updateBlockToReservation(req.requestId, id, finalClientId, user_id, dbClient);
 
     // Recalculate and update the number of people based on the reservation details
-    const finalReservation = await updateReservationMemberCount(req.requestId, id, user_id, dbClient);
+    const finalReservation = await reservationsModel.updateReservationMemberCount(req.requestId, id, user_id, dbClient);
 
     await dbClient.query('COMMIT');
 
@@ -1592,7 +1580,7 @@ const cancelReservationRooms = async (req, res) => {
   }
 
   try {
-    const result = await cancelReservationRoomsModel(req.requestId, hotelId, reservationId, detailIds, user_id, billable);
+    const result = await reservationsModel.cancelReservationRooms(req.requestId, hotelId, reservationId, detailIds, user_id, billable);
     if (!result.success) {
       return res.status(404).json({ message: result.message });
     }
@@ -1614,7 +1602,7 @@ const editPaymentTiming = async (req, res) => {
   try {
     // Ensure payment_timing has a default value if it's null or undefined
     const paymentTimingValue = payment_timing || 'not_set';
-    const updatedReservation = await updatePaymentTiming(req.requestId, id, hotel_id, paymentTimingValue, updated_by);
+    const updatedReservation = await reservationsModel.updatePaymentTiming(req.requestId, id, hotel_id, paymentTimingValue, updated_by);
     res.json(updatedReservation);
   } catch (err) {
     logger.error('Error updating payment timing:', err);
@@ -1637,7 +1625,7 @@ const changeReservationRoomsPeriod = async (req, res) => {
       allRoomsSelected = originalRoomIds.length === roomIds.length && originalRoomIds.every(id => roomIds.includes(id));
     }
 
-    const result = await updateReservationRoomsPeriod(req.requestId, {
+    const result = await reservationsModel.updateReservationRoomsPeriod(req.requestId, {
       originalReservationId: reservationId,
       hotelId,
       newCheckIn,
@@ -1662,7 +1650,7 @@ const actionSplitReservation = async (req, res) => {
   }
 
   try {
-    const newReservationId = await splitReservation(req.requestId, originalReservationId, hotelId, reservationDetailIdsToMove, userId, isFullPeriodSplit, isFullRoomSplit);
+    const newReservationId = await reservationsModel.splitReservation(req.requestId, originalReservationId, hotelId, reservationDetailIdsToMove, userId, isFullPeriodSplit, isFullRoomSplit);
     res.status(201).json({ message: 'Reservation split successfully.', newReservationId });
   } catch (error) {
     logger.error(`[${req.requestId}] actionSplitReservation - Error splitting reservation: ${error.message}`, {
@@ -1677,6 +1665,26 @@ const actionSplitReservation = async (req, res) => {
     res.status(500).json({ error: 'Failed to split reservation.' });
   }
 };
+const getReservationsByClient = async (req, res) => {
+  const { hid, clientId } = req.params;
+
+  if (!hid || !clientId) {
+    return res.status(400).json({ error: 'Missing hotel ID or client ID.' });
+  }
+
+  try {
+    const reservations = await reservationsModel.selectReservationsByClientId(req.requestId, hid, clientId);
+    res.status(200).json({ reservations });
+  } catch (error) {
+    logger.error('Error fetching reservations by client:', error);
+    res.status(500).json({ error: 'Failed to fetch client reservations.' });
+  }
+};
+
+const actionMergeReservations = async (req, res) => {
+  // TODO: Implement actionMergeReservations
+  res.status(501).json({ error: 'Not implemented' });
+};
 
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getRoomsForIndicator,
@@ -1688,5 +1696,6 @@ module.exports = {
   editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber,
   deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations,
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
-  editPaymentTiming, changeReservationRoomsPeriod, actionSplitReservation,
+  editPaymentTiming, changeReservationRoomsPeriod, actionSplitReservation, actionMergeReservations, getReservationsByClient,
 };
+

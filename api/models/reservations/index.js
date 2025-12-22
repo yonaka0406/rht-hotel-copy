@@ -10,6 +10,7 @@ const addonsModels = require('./addons');
 const clientsModels = require('./clients');
 const ratesModels = require('./rates');
 const parkingModels = require('./parking');
+const mergeModels = require('./merge');
 
 module.exports = {
   ...main,
@@ -24,4 +25,5 @@ module.exports = {
   ...clientsModels,
   ...ratesModels,
   ...parkingModels,
+  ...mergeModels,
 };
