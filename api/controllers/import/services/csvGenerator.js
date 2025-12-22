@@ -27,8 +27,36 @@ const generateForecastCsv = async (month1, month2, prefilledData = [], hotels = 
   csvRows.push(['ID', '施設', 'タイプカテゴリーID', 'タイプカテゴリー名', 'パッケージカテゴリーID', 'パッケージカテゴリー名', '売上区分', '予算項目', ...monthHeaders]);
 
   const sortedHotels = [...hotels].sort((a, b) => a.id - b.id);
+  
   const sortedTypeCategories = [...typeCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
   const sortedPackageCategories = [...packageCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
+
+  if (prefilledData && prefilledData.length > 0) {
+    const existingTypeIds = new Set(sortedTypeCategories.map(c => c.id));
+    const existingPackageIds = new Set(sortedPackageCategories.map(c => c.id));
+
+    prefilledData.forEach(row => {
+        // Handle Type Categories
+        const typeId = row.plan_type_category_id;
+        if (!existingTypeIds.has(typeId)) {
+            sortedTypeCategories.push({
+                id: typeId,
+                name: row.plan_type_category_name || (typeId === null ? 'なし' : `ID:${typeId}`)
+            });
+            existingTypeIds.add(typeId);
+        }
+
+        // Handle Package Categories
+        const packageId = row.plan_package_category_id;
+        if (!existingPackageIds.has(packageId)) {
+            sortedPackageCategories.push({
+                id: packageId,
+                name: row.plan_package_category_name || (packageId === null ? 'なし' : `ID:${packageId}`)
+            });
+            existingPackageIds.add(packageId);
+        }
+    });
+  }
 
   // Helper function to check if there's any non-zero data for a sales category
   const hasNonZeroData = (hotel, typeCategory, packageCategory, salesCategory, item) => {
@@ -164,8 +192,36 @@ const generateAccountingCsv = async (month1, month2, prefilledData = [], hotels 
   csvRows.push(['ID', '施設', 'タイプカテゴリーID', 'タイプカテゴリー名', 'パッケージカテゴリーID', 'パッケージカテゴリー名', '売上区分', '会計項目', ...monthHeaders]);
 
   const sortedHotels = [...hotels].sort((a, b) => a.id - b.id);
+  
   const sortedTypeCategories = [...typeCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
   const sortedPackageCategories = [...packageCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
+
+  if (prefilledData && prefilledData.length > 0) {
+    const existingTypeIds = new Set(sortedTypeCategories.map(c => c.id));
+    const existingPackageIds = new Set(sortedPackageCategories.map(c => c.id));
+
+    prefilledData.forEach(row => {
+        // Handle Type Categories
+        const typeId = row.plan_type_category_id;
+        if (!existingTypeIds.has(typeId)) {
+            sortedTypeCategories.push({
+                id: typeId,
+                name: row.plan_type_category_name || (typeId === null ? 'なし' : `ID:${typeId}`)
+            });
+            existingTypeIds.add(typeId);
+        }
+
+        // Handle Package Categories
+        const packageId = row.plan_package_category_id;
+        if (!existingPackageIds.has(packageId)) {
+            sortedPackageCategories.push({
+                id: packageId,
+                name: row.plan_package_category_name || (packageId === null ? 'なし' : `ID:${packageId}`)
+            });
+            existingPackageIds.add(packageId);
+        }
+    });
+  }
 
   // Helper function to check if there's any non-zero data for a sales category (accounting)
   const hasNonZeroDataAccounting = (hotel, typeCategory, packageCategory, salesCategory, item) => {

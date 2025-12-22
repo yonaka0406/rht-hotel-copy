@@ -82,8 +82,31 @@ export function useImportLogic() {
         }
 
         const sortedHotels = [...hotels.value].sort((a, b) => a.id - b.id);
-        const sortedTypeCategories = [...typeCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
-        const sortedPackageCategories = [...packageCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
+        
+        let sortedTypeCategories = [...typeCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
+        let sortedPackageCategories = [...packageCategories].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
+
+        if (prefilledData) {
+            const existingTypeIds = new Set(sortedTypeCategories.map(c => c.id));
+            const existingPackageIds = new Set(sortedPackageCategories.map(c => c.id));
+
+            prefilledData.forEach(row => {
+                if (!existingTypeIds.has(row.plan_type_category_id)) {
+                    sortedTypeCategories.push({
+                        id: row.plan_type_category_id,
+                        name: row.plan_type_category_name || (row.plan_type_category_id === null ? 'なし' : `ID:${row.plan_type_category_id}`)
+                    });
+                    existingTypeIds.add(row.plan_type_category_id);
+                }
+                if (!existingPackageIds.has(row.plan_package_category_id)) {
+                    sortedPackageCategories.push({
+                        id: row.plan_package_category_id,
+                        name: row.plan_package_category_name || (row.plan_package_category_id === null ? 'なし' : `ID:${row.plan_package_category_id}`)
+                    });
+                    existingPackageIds.add(row.plan_package_category_id);
+                }
+            });
+        }
 
         // For regular template, only show accommodation (売上区分=0)
         // For prefilled template, show both accommodation and non-accommodation
