@@ -1,4 +1,4 @@
-﻿const reservationsModel = require('../models/reservations');
+const reservationsModel = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
@@ -23,7 +23,7 @@ const getAvailableRooms = async (req, res) => {
   }
 
   try {
-    const availableRooms = await selectAvailableRooms(req.requestId, hotel_id, start_date, end_date);
+    const availableRooms = await reservationsModel.selectAvailableRooms(req.requestId, hotel_id, start_date, end_date);
 
     if (availableRooms.length === 0) {
       return res.status(201).json({ message: 'No available rooms for the specified period.' });
@@ -66,7 +66,7 @@ const getReservedRooms = async (req, res) => {
     const formattedStartDate = formatDate(start_date);
     const formattedEndDate = formatDate(end_date);
 
-    const reservedRooms = await selectReservedRooms(req.requestId, hotel_id, formattedStartDate, formattedEndDate);
+    const reservedRooms = await reservationsModel.selectReservedRooms(req.requestId, hotel_id, formattedStartDate, formattedEndDate);
 
     if (reservedRooms.length === 0) {
       return res.status(201).json({ message: 'No reserved rooms for the specified period.' });
@@ -95,7 +95,7 @@ const getReservation = async (req, res) => {
   }
 
   try {
-    const reservation = await selectReservation(req.requestId, id, hotel_id);
+    const reservation = await reservationsModel.selectReservation(req.requestId, id, hotel_id);
 
     if (reservation.length === 0) {
       return res.status(404).json({ message: 'No reservation for the provided id.' });
@@ -116,7 +116,7 @@ const getReservationDetails = async (req, res) => {
   const { id, hotel_id } = req.query;
 
   try {
-    const reservation = await selectReservationDetail(req.requestId, id, hotel_id);
+    const reservation = await reservationsModel.selectReservationDetail(req.requestId, id, hotel_id);
 
     if (reservation.length === 0) {
       return res.status(404).json({ message: 'No reservation detail for the provided id.' });
@@ -133,7 +133,7 @@ const getMyHoldReservations = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const reservations = await selectMyHoldReservations(req.requestId, user_id);
+    const reservations = await reservationsModel.selectMyHoldReservations(req.requestId, user_id);
 
     // Return empty array with 200 status if no reservations found
     return res.status(200).json({ reservations: reservations || [] });
@@ -157,7 +157,7 @@ const getReservationsToday = async (req, res) => {
 
   try {
     const hotelId = parseInt(hid, 10);
-    const reservations = await selectReservationsToday(req.requestId, hotelId, date);
+    const reservations = await reservationsModel.selectReservationsToday(req.requestId, hotelId, date);
     return res.status(200).json({ reservations: reservations || [] });
   } catch (error) {
     logger.error('Error fetching reservations:', error);
@@ -182,7 +182,7 @@ const getRoomsForIndicator = async (req, res) => {
 
   try {
     const hotelId = parseInt(hid, 10);
-    const rooms = await selectRoomsForIndicator(req.requestId, hotelId, date);
+    const rooms = await reservationsModel.selectRoomsForIndicator(req.requestId, hotelId, date);
     return res.status(200).json({ rooms: rooms || [] });
   } catch (error) {
     logger.error('Error fetching rooms for indicator:', error);
@@ -218,7 +218,7 @@ const getAvailableDatesForChange = async (req, res) => {
 
     logger.debug(`[${req.requestId}] getAvailableDatesForChange - Validated parameters: hotelId=${hotelId}, roomId=${roomId}, checkIn=${checkIn}, checkOut=${checkOut}`);
 
-    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hotelId, roomId, checkIn, checkOut);
+    const { earliestCheckIn, latestCheckOut } = await reservationsModel.selectAvailableDatesForChange(req.requestId, hotelId, roomId, checkIn, checkOut);
     logger.debug(`[${req.requestId}] getAvailableDatesForChange - Found available dates: earliestCheckIn=${earliestCheckIn}, latestCheckOut=${latestCheckOut}`);
     res.status(200).json({ earliestCheckIn, latestCheckOut });
   } catch (error) {
@@ -235,7 +235,7 @@ const getReservationClientIds = async (req, res) => {
   const { hid, id } = req.params;
 
   try {
-    const clients = await selectReservationClientIds(req.requestId, hid, id);
+    const clients = await reservationsModel.selectReservationClientIds(req.requestId, hid, id);
     res.status(200).json({ clients });
   } catch (error) {
     logger.error('Error getting clients:', error);
@@ -247,7 +247,7 @@ const getReservationPayments = async (req, res) => {
   const { hid, id } = req.params;
 
   try {
-    const payments = await selectReservationPayments(req.requestId, hid, id);
+    const payments = await reservationsModel.selectReservationPayments(req.requestId, hid, id);
     res.status(200).json({ payments });
   } catch (error) {
     logger.error('Error getting payments:', error);
@@ -289,7 +289,7 @@ const getParkingSpotAvailability = async (req, res) => {
   }
 
   try {
-    const parkingSpotAvailability = await selectParkingSpotAvailability(req.requestId, hotelId, startDate, endDate);
+    const parkingSpotAvailability = await reservationsModel.selectParkingSpotAvailability(req.requestId, hotelId, startDate, endDate);
 
     if (parkingSpotAvailability.length === 0) {
       return res.status(200).json({ message: 'No parking spot availability data for the specified period.', parkingSpotAvailability: [] });
@@ -310,7 +310,7 @@ const getHotelIdForReservation = async (req, res) => {
   }
 
   try {
-    const hotelId = await getHotelIdByReservationId(req.requestId, id);
+    const hotelId = await reservationsModel.getHotelIdByReservationId(req.requestId, id);
 
     if (hotelId === null) {
       return res.status(404).json({ message: 'Hotel ID not found for the provided reservation ID.' });
@@ -369,10 +369,10 @@ const createReservationHold = async (req, res) => {
       created_by,
       updated_by
     };
-    const newReservation = await addReservationHold(req.requestId, reservationData, client);
+    const newReservation = await reservationsModel.addReservationHold(req.requestId, reservationData, client);
 
     // --- Step 3: Get available rooms ---
-    let availableRooms = await selectAvailableRooms(req.requestId, hotel_id, check_in, check_out, client);
+    let availableRooms = await reservationsModel.selectAvailableRooms(req.requestId, hotel_id, check_in, check_out, client);
 
     // Filter rooms if needed
     if (room_type_id) {
@@ -424,7 +424,7 @@ const createReservationHold = async (req, res) => {
     }
 
     // --- Step 5: Batch insert reservation details ---
-    const createdReservationDetails = await addReservationDetailsBatch(req.requestId, reservationDetails, client);
+    const createdReservationDetails = await reservationsModel.addReservationDetailsBatch(req.requestId, reservationDetails, client);
 
     await client.query('COMMIT');
     res.status(201).json({ reservation: newReservation });
@@ -484,10 +484,10 @@ const createHoldReservationCombo = async (req, res) => {
       created_by: user_id,
       updated_by: user_id
     };
-    const newReservation = await addReservationHold(req.requestId, reservationData, client);
+    const newReservation = await reservationsModel.addReservationHold(req.requestId, reservationData, client);
 
     // --- Step 3: Get available rooms ---
-    let availableRooms = await selectAvailableRooms(req.requestId, header.hotel_id, header.check_in, header.check_out, client);
+    let availableRooms = await reservationsModel.selectAvailableRooms(req.requestId, header.hotel_id, header.check_in, header.check_out, client);
 
     const reservationDetails = [];
 
@@ -565,7 +565,7 @@ const createHoldReservationCombo = async (req, res) => {
     }
 
     // --- Step 5: Batch insert reservation details ---
-    const createdReservationDetails = await addReservationDetailsBatch(req.requestId, reservationDetails, client);
+    const createdReservationDetails = await reservationsModel.addReservationDetailsBatch(req.requestId, reservationDetails, client);
 
     await client.query('COMMIT');
 
@@ -622,7 +622,7 @@ const createReservationDetails = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationDetail = await addReservationDetail(req.requestId, reservationData, client);
+    const newReservationDetail = await reservationsModel.addReservationDetail(req.requestId, reservationData, client);
 
     if (!newReservationDetail || !newReservationDetail.id) {
       logger.error('Failed to create reservation detail: Invalid response from addReservationDetail.', {
@@ -636,18 +636,18 @@ const createReservationDetails = async (req, res) => {
 
     // logger.debug('newReservationDetail:', newReservationDetail);
     // logger.debug('ogm_id:', ogm_id);
-    const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id, hotel_id, client);
+    const ogmReservationAddons = await reservationsModel.selectReservationAddons(req.requestId, ogm_id, hotel_id, client);
     // logger.debug('ogmReservationAddons:', ogmReservationAddons);
 
     // Update reservation guests
     for (let i = 0; i < number_of_people; i++) {
-      await updateReservationGuest(req.requestId, ogm_id, newReservationDetail.id, client);
+      await reservationsModel.updateReservationGuest(req.requestId, ogm_id, newReservationDetail.id, client);
       // logger.debug('Updated ', i + 1,' of number of guests: ',number_of_people);
     }
 
     if (ogmReservationAddons && ogmReservationAddons.length > 0) {
       const addOnPromises = ogmReservationAddons.map(addon =>
-        addReservationAddon(req.requestId, {
+        reservationsModel.addReservationAddon(req.requestId, {
           hotel_id: addon.hotel_id,
           reservation_detail_id: newReservationDetail.id,
           addons_global_id: addon.addons_global_id,
@@ -715,7 +715,7 @@ const createReservationAddons = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationAddon = await addReservationAddon(req.requestId, reservationData);
+    const newReservationAddon = await reservationsModel.addReservationAddon(req.requestId, reservationData);
 
     res.status(201).json({
       addons: newReservationAddon,
@@ -747,7 +747,7 @@ const createReservationClient = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationClient = await addReservationClient(req.requestId, reservationData);
+    const newReservationClient = await reservationsModel.addReservationClient(req.requestId, reservationData);
 
     res.status(201).json({
       clients: newReservationClient,
@@ -764,7 +764,7 @@ const addNewRoomToReservation = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const newRoom = await addRoomToReservation(req.requestId, reservationId, numberOfPeople, roomId, userId);
+    const newRoom = await reservationsModel.addRoomToReservation(req.requestId, reservationId, numberOfPeople, roomId, userId);
     res.status(200).json({
       message: 'Room added to reservation successfully',
       data: newRoom
@@ -785,14 +785,14 @@ const alterReservationRoom = async (req, res) => {
 
   try {
     if (numberOfPeopleToMove === numberOfPeopleOGM) {
-      const newRoom = await updateReservationRoom(req.requestId, reservationId, roomIdOld, roomIdNew, userId);
+      const newRoom = await reservationsModel.updateReservationRoom(req.requestId, reservationId, roomIdOld, roomIdNew, userId);
       res.status(200).json({
         message: 'Room changed in reservation successfully',
         data: newRoom
       });
     }
     if (numberOfPeopleToMove < numberOfPeopleOGM) {
-      const newRoom = await updateReservationRoomWithCreate(req.requestId, reservationId, roomIdOld, roomIdNew, numberOfPeopleToMove, userId);
+      const newRoom = await reservationsModel.updateReservationRoomWithCreate(req.requestId, reservationId, roomIdOld, roomIdNew, numberOfPeopleToMove, userId);
       res.status(200).json({
         message: 'Room added to reservation successfully',
         data: newRoom
@@ -813,7 +813,7 @@ const createReservationPayment = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const newPMT = await insertReservationPaymentWithInvoice(req.requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
+    const newPMT = await reservationsModel.insertReservationPaymentWithInvoice(req.requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
     res.status(200).json({
       message: 'Payment added to reservation successfully',
       data: newPMT
@@ -831,7 +831,7 @@ const createBulkReservationPayment = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const newPMT = await insertBulkReservationPayment(req.requestId, data, userId);
+    const newPMT = await reservationsModel.insertBulkReservationPayment(req.requestId, data, userId);
     res.status(200).json({
       message: 'Payments added to reservation successfully',
       data: newPMT
@@ -878,7 +878,7 @@ const editReservationDetail = async (req, res) => {
     await client.query('BEGIN');
 
     // Fetch the existing reservation detail from the database to compare with the new data
-    const existingReservation = await selectReservationDetail(req.requestId, id, hotel_id, client);
+    const existingReservation = await reservationsModel.selectReservationDetail(req.requestId, id, hotel_id, client);
 
     // Check if the plans_global_id and plans_hotel_id has changed
     if (
@@ -906,7 +906,7 @@ const editReservationDetail = async (req, res) => {
     }
 
     // Call the function to update reservation detail in the database
-    const updatedReservation = await updateReservationDetail(req.requestId, {
+    const updatedReservation = await reservationsModel.updateReservationDetail(req.requestId, {
       id,
       hotel_id,
       room_id,
@@ -928,7 +928,7 @@ const editReservationDetail = async (req, res) => {
       // logger.debug(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
       const addOnPromises = addons.map(addon =>
-        addReservationAddon(req.requestId, {
+        reservationsModel.addReservationAddon(req.requestId, {
           hotel_id,
           reservation_detail_id: updatedReservation.id,
           addons_global_id: addon.addons_global_id,
@@ -995,7 +995,7 @@ const editReservationGuests = async (req, res) => {
       guestDataArray.guestsToAdd = guestsToAdd;
     }
 
-    const existingReservation = await selectReservation(req.requestId, id, guestDataArray.hotel_id);
+    const existingReservation = await reservationsModel.selectReservation(req.requestId, id, guestDataArray.hotel_id);
     if (existingReservation.length === 0) {
       return res.status(404).json({ error: "Reservation not found or no details associated with it." });
     }
@@ -1020,7 +1020,7 @@ const editReservationGuests = async (req, res) => {
               created_by,
               updated_by,
             };
-            await addReservationClient(req.requestId, guestInfo);
+            await reservationsModel.addReservationClient(req.requestId, guestInfo);
           } else {
             //logger.debug("Client ID was empty after add client by name");
           }
@@ -1043,7 +1043,7 @@ const editReservationPlan = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, plan, rates, price, user_id, disableRounding);
+    const updatedReservation = await reservationsModel.updateReservationDetailPlan(req.requestId, id, hotel_id, plan, rates, price, user_id, disableRounding);
     res.json(updatedReservation);
   } catch (err) {
     logger.error('Error updating reservation detail:', err);
@@ -1062,7 +1062,7 @@ const editReservationAddon = async (req, res) => {
   //})
 
   try {
-    const updatedReservation = await updateReservationDetailAddon(req.requestId, id, hid, addons, user_id);
+    const updatedReservation = await reservationsModel.updateReservationDetailAddon(req.requestId, id, hid, addons, user_id);
     res.json(updatedReservation);
   } catch (err) {
     logger.error('Error updating reservation detail:', err);
@@ -1076,7 +1076,7 @@ const editReservationRoom = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailRoom(req.requestId, id, room_id, user_id);
+    const updatedReservation = await reservationsModel.updateReservationDetailRoom(req.requestId, id, room_id, user_id);
     res.json(updatedReservation);
   } catch (err) {
     logger.error('Error updating reservation detail:', err);
@@ -1103,7 +1103,7 @@ const editReservationRoomPlan = async (req, res) => {
     };
     //logger.debug('DEBUGGING editReservationRoomPlan ARGS:', updateData);
 
-    const updatedReservation = await updateReservationRoomPlan(req.requestId, updateData);
+    const updatedReservation = await reservationsModel.updateReservationRoomPlan(req.requestId, updateData);
     res.json(updatedReservation);
   } catch (err) {
     logger.error('Error updating reservation detail:', err);
@@ -1123,7 +1123,7 @@ const editReservationRoomPattern = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationRoomPattern(req.requestId, id, hid, rid, pattern, user_id, disableRounding);
+    const updatedReservation = await reservationsModel.updateReservationRoomPattern(req.requestId, id, hid, rid, pattern, user_id, disableRounding);
     res.json(updatedReservation);
   } catch (err) {
     logger.error('Error updating reservation detail:', err);
@@ -1138,7 +1138,7 @@ const editReservationStatus = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateReservationStatus(req.requestId, {
+    const updatedReservation = await reservationsModel.updateReservationStatus(req.requestId, {
       id,
       hotel_id,
       status,
@@ -1159,7 +1159,7 @@ const editReservationDetailStatus = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateReservationDetailStatus(req.requestId, {
+    const updatedReservation = await reservationsModel.updateReservationDetailStatus(req.requestId, {
       id,
       hotel_id,
       status,
@@ -1182,7 +1182,7 @@ const editReservationComment = async (req, res) => {
 
   try {
     // Call the function to update reservation comment in the database
-    const updatedReservation = await updateReservationComment(req.requestId, {
+    const updatedReservation = await reservationsModel.updateReservationComment(req.requestId, {
       id,
       hotelId,
       comment,
@@ -1202,7 +1202,7 @@ const editReservationCommentFlag = async (req, res) => {
   const updated_by = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationCommentFlag(req.requestId, {
+    const updatedReservation = await reservationsModel.updateReservationCommentFlag(req.requestId, {
       id,
       hotelId,
       has_important_comment,
@@ -1222,7 +1222,7 @@ const editReservationTime = async (req, res) => {
 
   try {
     // Call the function to update reservation comment in the database
-    const updatedReservation = await updateReservationTime(req.requestId, {
+    const updatedReservation = await reservationsModel.updateReservationTime(req.requestId, {
       id,
       hotelId,
       indicator,
@@ -1245,7 +1245,7 @@ const editReservationType = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateReservationType(req.requestId, {
+    const updatedReservation = await reservationsModel.updateReservationType(req.requestId, {
       id,
       hotel_id,
       type,
@@ -1266,7 +1266,7 @@ const editReservationResponsible = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    await updateReservationResponsible(req.requestId, id, updatedFields, user_id);
+    await reservationsModel.updateReservationResponsible(req.requestId, id, updatedFields, user_id);
     res.json({ message: 'Reservation updated successfully' });
   } catch (err) {
     logger.error('Error updating client:', err);
@@ -1292,7 +1292,7 @@ const editRoomFromCalendar = async (req, res) => {
       });
     }
 
-    const updatedReservation = await updateRoomByCalendar(req.requestId, {
+    const updatedReservation = await reservationsModel.updateRoomByCalendar(req.requestId, {
       id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out,
       old_room_id, new_room_id, number_of_people, mode, updated_by
     });
@@ -1338,7 +1338,7 @@ const editCalendarFreeChange = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateCalendarFreeChange(req.requestId, data, updated_by);
+    const updatedReservation = await reservationsModel.updateCalendarFreeChange(req.requestId, data, updated_by);
 
     // Respond with the updated reservation details
     res.json({ success: 'Edit made with success.' });
@@ -1357,7 +1357,7 @@ const editRoomGuestNumber = async (req, res) => {
   }
 
   try {
-    await updateReservationRoomGuestNumber(req.requestId, roomArray.details, user_id);
+    await reservationsModel.updateReservationRoomGuestNumber(req.requestId, roomArray.details, user_id);
     res.status(200).json({ message: "Room updating successfully" });
   } catch (err) {
     logger.error("Error updating room:", err);
@@ -1449,7 +1449,7 @@ const copyReservation = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const hotel_id = await getHotelIdByReservationId(req.requestId, original_reservation_id);
+    const hotel_id = await reservationsModel.getHotelIdByReservationId(req.requestId, original_reservation_id);
     if (!hotel_id) {
       throw new Error('Hotel ID not found for the original reservation.');
     }
@@ -1465,7 +1465,7 @@ const copyReservation = async (req, res) => {
 
 const getFailedOtaReservations = async (req, res) => {
   try {
-    const reservations = await selectFailedOtaReservations(req.requestId);
+    const reservations = await reservationsModel.selectFailedOtaReservations(req.requestId);
     return res.status(200).json({ reservations: reservations || [] });
   } catch (error) {
     logger.error('Error fetching failed OTA reservations:', error);
@@ -1548,7 +1548,7 @@ const convertBlockToReservation = async (req, res) => {
     }
 
     // Update the reservation with the client ID
-    const updatedReservation = await updateBlockToReservation(req.requestId, id, finalClientId, user_id, dbClient);
+    const updatedReservation = await reservationsModel.updateBlockToReservation(req.requestId, id, finalClientId, user_id, dbClient);
 
     // Recalculate and update the number of people based on the reservation details
     const finalReservation = await reservationsModel.updateReservationMemberCount(req.requestId, id, user_id, dbClient);
@@ -1620,7 +1620,7 @@ const changeReservationRoomsPeriod = async (req, res) => {
     let allRoomsSelected = allRoomsSelectedFromBody;
 
     if (allRoomsSelected === undefined) {
-      const originalReservationDetails = await selectReservationDetail(req.requestId, reservationId, hotelId);
+      const originalReservationDetails = await reservationsModel.selectReservationDetail(req.requestId, reservationId, hotelId);
       const originalRoomIds = [...new Set(originalReservationDetails.map(detail => detail.room_id))];
       allRoomsSelected = originalRoomIds.length === roomIds.length && originalRoomIds.every(id => roomIds.includes(id));
     }
@@ -1665,6 +1665,30 @@ const actionSplitReservation = async (req, res) => {
     res.status(500).json({ error: 'Failed to split reservation.' });
   }
 };
+
+const actionMergeReservations = async (req, res) => {
+  const { targetReservationId, sourceReservationId, hotelId } = req.body;
+  const userId = req.user.id;
+
+  if (!targetReservationId || !sourceReservationId || !hotelId) {
+    return res.status(400).json({ error: 'Missing required parameters: targetReservationId, sourceReservationId, hotelId.' });
+  }
+
+  try {
+    const resultId = await reservationsModel.mergeReservations(req.requestId, targetReservationId, sourceReservationId, hotelId, userId);
+    res.status(200).json({ message: 'Reservations merged successfully.', id: resultId });
+  } catch (error) {
+    logger.error(`[${req.requestId}] actionMergeReservations - Error merging reservations: ${error.message}`, {
+      stack: error.stack,
+      targetReservationId,
+      sourceReservationId,
+      hotelId,
+      userId
+    });
+    res.status(500).json({ error: error.message || 'Failed to merge reservations.' });
+  }
+};
+
 const getReservationsByClient = async (req, res) => {
   const { hid, clientId } = req.params;
 
@@ -1681,11 +1705,6 @@ const getReservationsByClient = async (req, res) => {
   }
 };
 
-const actionMergeReservations = async (req, res) => {
-  // TODO: Implement actionMergeReservations
-  res.status(501).json({ error: 'Not implemented' });
-};
-
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getRoomsForIndicator,
   getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability, getHotelIdForReservation,
@@ -1698,4 +1717,3 @@ module.exports = {
   handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
   editPaymentTiming, changeReservationRoomsPeriod, actionSplitReservation, actionMergeReservations, getReservationsByClient,
 };
-
