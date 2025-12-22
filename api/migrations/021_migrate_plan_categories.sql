@@ -116,7 +116,7 @@ SELECT
     h.id AS hotel_id,
     '荷物キープ' AS name,
     '荷物預かりサービス' AS description,
-    'per_person' AS plan_type,
+    'per_room' AS plan_type,
     '#D3D3D3' AS color,
     5 AS plan_type_category_id,  -- 荷物キープ category
     1 AS plan_package_category_id,  -- スタンダード package
