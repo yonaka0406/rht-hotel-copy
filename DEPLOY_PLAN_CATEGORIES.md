@@ -24,7 +24,7 @@ This deployment adds **plan categories** to the existing system without breaking
 
 ## Pre-Deployment Checklist
 
-- [ ] **Database backup completed** (automatic in script)
+- [ ] **Database backup completed**
 - [ ] **Verify plans_hotel table exists**
 - [ ] **Test database connection**
 - [ ] **Confirm low-traffic time window**
