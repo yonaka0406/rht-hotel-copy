@@ -159,8 +159,8 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     // Get the current rates for this reservation detail
     const rates = await selectRatesByDetailsId(requestId, id, hotel_id, client);
 
-    logger.debug(`[updateReservationDetailStatus] Processing detail ID: ${id}, Status: ${status}`);
-    logger.debug(`[updateReservationDetailStatus] Fetched rates: ${JSON.stringify(rates)}`);
+    logger.warn(`[updateReservationDetailStatus] Processing detail ID: ${id}, Status: ${status}`);
+    logger.warn(`[updateReservationDetailStatus] Fetched rates: ${JSON.stringify(rates)}`);
 
     let ratesToUse = [];
     let calculatedPrice;
@@ -169,13 +169,13 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       // When cancelling, only include rates that are flagged to be included.
       ratesToUse = rates.filter(rate => rate.include_in_cancel_fee);
       calculatedPrice = calculatePriceFromRates(ratesToUse, false);
-      logger.debug(`[updateReservationDetailStatus] Status is 'cancelled'. Filtered ratesToUse: ${JSON.stringify(ratesToUse)}`);
-      logger.debug(`[updateReservationDetailStatus] Calculated price for cancelled detail: ${calculatedPrice}`);
+      logger.warn(`[updateReservationDetailStatus] Status is 'cancelled'. Filtered ratesToUse: ${JSON.stringify(ratesToUse)}`);
+      logger.warn(`[updateReservationDetailStatus] Calculated price for cancelled detail: ${calculatedPrice}`);
     } else {
       // When recovering, use all rates for price calculation      
       calculatedPrice = calculatePriceFromRates(rates, false);
-      logger.debug(`[updateReservationDetailStatus] Status is '${status}'. Using all rates: ${JSON.stringify(rates)}`);
-      logger.debug(`[updateReservationDetailStatus] Calculated price for recovered/other detail: ${calculatedPrice}`);
+      logger.warn(`[updateReservationDetailStatus] Status is '${status}'. Using all rates: ${JSON.stringify(rates)}`);
+      logger.warn(`[updateReservationDetailStatus] Calculated price for recovered/other detail: ${calculatedPrice}`);
     }
 
     // 1. Update the reservation_details table based on the status
