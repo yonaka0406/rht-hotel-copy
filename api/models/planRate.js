@@ -306,6 +306,9 @@ const createPlansRate = async (requestId, plansRate) => {
         RETURNING *
     `;
 
+    // For base_rate, always set include_in_cancel_fee to true
+    const includeInCancelFee = plansRate.adjustment_type === 'base_rate' ? true : (plansRate.include_in_cancel_fee || false);
+
     const values = [
         plansRate.hotel_id,
         plansRate.plans_global_id,
@@ -320,7 +323,7 @@ const createPlansRate = async (requestId, plansRate) => {
         plansRate.date_end,
         plansRate.created_by,
         plansRate.updated_by,
-        plansRate.include_in_cancel_fee || false,
+        includeInCancelFee,
         plansRate.sales_category || 'accommodation',
         plansRate.comment
     ];
@@ -359,6 +362,9 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         RETURNING *
     `;
 
+    // For base_rate, always set include_in_cancel_fee to true
+    const includeInCancelFee = plansRate.adjustment_type === 'base_rate' ? true : (plansRate.include_in_cancel_fee || false);
+
     const values = [
         plansRate.hotel_id,
         plansRate.plans_global_id,
@@ -372,7 +378,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         plansRate.date_start,
         plansRate.date_end,
         plansRate.updated_by,
-        plansRate.include_in_cancel_fee || false,
+        includeInCancelFee,
         plansRate.sales_category || 'accommodation',
         plansRate.comment,
         id
