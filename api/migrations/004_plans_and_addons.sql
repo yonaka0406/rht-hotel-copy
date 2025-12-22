@@ -15,6 +15,43 @@ VALUES
     ('課税8%', 0.08, 1),
     ('課税10%', 0.10, 1);
 
+CREATE TABLE plan_type_categories (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,           -- e.g., 素泊まり, 1食, 2食, 3食
+    description TEXT,
+    color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3',
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id)
+);
+
+INSERT INTO plan_type_categories (name, description, color, display_order, created_by)
+VALUES
+    ('素泊まり', '', '#D3D3D3', 0, 1),
+    ('1食', '', '#D3D3D3', 0, 1),
+    ('2食', '', '#D3D3D3', 0, 1),
+    ('3食', '', '#D3D3D3', 0, 1),
+    ('荷物キープ', '', '#D3D3D3', 0, 1);
+
+CREATE TABLE plan_package_categories (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,           -- e.g., スタンダード, マンスリー, ツイン専用
+    description TEXT,
+    color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3',
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id)
+);
+
+-- Seed initial packages
+INSERT INTO plan_package_categories (name, description, created_by)
+VALUES 
+    ('スタンダード', '標準パッケージ', 1),
+    ('マンスリー', '月額パッケージ', 1)
+ON CONFLICT (name) DO NOTHING;
+
 CREATE TABLE plan_templates (
     id SERIAL PRIMARY KEY,
     hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE NULL,
@@ -54,6 +91,12 @@ CREATE TABLE plans_hotel (
     description TEXT,
     plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room',
     color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3',
+    plan_type_category_id INT REFERENCES plan_type_categories(id) ON DELETE SET NULL,
+    plan_package_category_id INT REFERENCES plan_package_categories(id) ON DELETE SET NULL,
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    available_from DATE DEFAULT NULL, -- NULL = always available
+    available_until DATE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -61,6 +104,23 @@ CREATE TABLE plans_hotel (
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
 
+-- Create indexes
+CREATE INDEX idx_plans_hotel_type_category ON plans_hotel(hotel_id, plan_type_category_id);
+CREATE INDEX idx_plans_hotel_package_category ON plans_hotel(hotel_id, plan_package_category_id);
+CREATE INDEX idx_plans_hotel_display_order ON plans_hotel(hotel_id, display_order);
+CREATE INDEX idx_plans_hotel_availability ON plans_hotel(hotel_id, is_active, available_from, available_until);
+
+/*
+-- Initialize display_order
+WITH ranked AS (
+    SELECT hotel_id, id, ROW_NUMBER() OVER (PARTITION BY hotel_id ORDER BY id) as rn
+    FROM plans_hotel
+)
+UPDATE plans_hotel ph
+SET display_order = r.rn
+FROM ranked r
+WHERE ph.hotel_id = r.hotel_id AND ph.id = r.id;
+*/
 -- Table to explicitly hide a global plan for a specific hotel.
 CREATE TABLE hotel_plan_exclusions (
     id SERIAL PRIMARY KEY,
