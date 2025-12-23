@@ -961,12 +961,10 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (error) {
-    console.error('Error fetching reservations by client:', error);
-    return [];
+    logger.error('Error fetching reservations by client:', error);
+    return [];    
   }
 };
-
-
 
 module.exports = {
   selectReservationById,
