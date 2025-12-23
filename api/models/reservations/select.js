@@ -175,9 +175,9 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
       reservation_details.reservation_id,
       clients.id AS client_id,
       COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS client_name,
-      reservations.check_in,
-      reservations.check_out,
-      reservations.number_of_people AS reservation_number_of_people,
+      eff.min_date AS check_in,
+      (eff.max_date + INTERVAL '1 day') AS check_out,
+      eff.total_people AS reservation_number_of_people,
       reservations.status,  
       reservations.type,
       reservations.agent,
@@ -213,6 +213,25 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
       JOIN reservations 
         ON reservations.id = reservation_details.reservation_id 
         AND reservations.hotel_id = reservation_details.hotel_id
+      JOIN (
+        SELECT 
+            reservation_id, 
+            hotel_id,
+            MIN(date) as min_date, 
+            MAX(date) as max_date,
+            MAX(daily_people) as total_people
+        FROM (
+            SELECT 
+                reservation_id, 
+                hotel_id, 
+                date, 
+                SUM(number_of_people) as daily_people
+            FROM reservation_details
+            WHERE cancelled IS NULL
+            GROUP BY reservation_id, hotel_id, date
+        ) sub
+        GROUP BY reservation_id, hotel_id
+      ) eff ON eff.reservation_id = reservations.id AND eff.hotel_id = reservations.hotel_id
       JOIN clients 
         ON clients.id = reservations.reservation_client_id
       JOIN rooms 
@@ -897,9 +916,9 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
       r.id,
       r.hotel_id,
       r.reservation_client_id,
-      r.check_in,
-      r.check_out,
-      r.number_of_people,
+      eff.check_in,
+      eff.check_out,
+      eff.total_people AS number_of_people,
       r.status,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
       COALESCE(
@@ -911,10 +930,29 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
       ) AS room_numbers
     FROM reservations r
     JOIN clients c ON c.id = r.reservation_client_id
+    JOIN (
+        SELECT 
+            reservation_id, 
+            hotel_id,
+            MIN(date) as check_in, 
+            (MAX(date) + INTERVAL '1 day') as check_out,
+            MAX(daily_people) as total_people
+        FROM (
+            SELECT 
+                reservation_id, 
+                hotel_id, 
+                date, 
+                SUM(number_of_people) as daily_people
+            FROM reservation_details
+            WHERE cancelled IS NULL
+            GROUP BY reservation_id, hotel_id, date
+        ) sub
+        GROUP BY reservation_id, hotel_id
+    ) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
     WHERE r.hotel_id = $1
       AND r.reservation_client_id = $2
       AND r.status NOT IN ('cancelled')
-    ORDER BY r.check_in DESC;
+    ORDER BY eff.check_in DESC;
   `;
   const values = [hotelId, clientId];
 
@@ -926,6 +964,7 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
     throw new Error('Database error');
   }
 };
+
 
 
 module.exports = {

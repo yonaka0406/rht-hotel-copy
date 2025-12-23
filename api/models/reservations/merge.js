@@ -77,12 +77,23 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
         /**
          * We need to check if they are "Same Dates" or "Contiguous".
          * As per requirement: "Same date check will consider the range of reservation_details including cancelled ones"
-         * So we fetch the MIN/MAX date of details for both.
+         * So we fetch the MIN/MAX date of details for both, and also calculate the effective daily people count.
          */
         const dateRangeQuery = `
-            SELECT reservation_id, MIN(date) as min_date, MAX(date) as max_date 
-            FROM reservation_details 
-            WHERE reservation_id IN ($1, $2) AND hotel_id = $3
+            SELECT 
+                reservation_id, 
+                MIN(date) as min_date, 
+                MAX(date) as max_date,
+                MAX(daily_people) as total_people
+            FROM (
+                SELECT 
+                    reservation_id, 
+                    date, 
+                    SUM(number_of_people) as daily_people
+                FROM reservation_details
+                WHERE reservation_id IN ($1, $2) AND hotel_id = $3 AND cancelled IS NULL
+                GROUP BY reservation_id, date
+            ) sub
             GROUP BY reservation_id
         `;
         const dateRangeResult = await client.query(dateRangeQuery, [targetReservationId, sourceReservationId, hotelId]);
@@ -91,13 +102,15 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
         const sourceRange = dateRangeResult.rows.find(r => r.reservation_id === sourceReservationId);
 
         if (!targetRange || !sourceRange) {
-            throw new Error('One of the reservations has no details, cannot validate dates.');
+            throw new Error('One of the reservations has no active details, cannot validate dates.');
         }
 
         const tMin = new Date(targetRange.min_date);
-        const tMax = new Date(targetRange.max_date); // Note: MAX(date) is the check-out - 1 day usually in terms of stay nights
+        const tMax = new Date(targetRange.max_date);
+        const tPeople = parseInt(targetRange.total_people);
         const sMin = new Date(sourceRange.min_date);
         const sMax = new Date(sourceRange.max_date);
+        const sPeople = parseInt(sourceRange.total_people);
 
         // Calculate "Next Day" for contiguous check
         // If R1 ends on date D (last night), check-out is D+1. 
@@ -119,8 +132,8 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
 
         if (isContiguous) {
             // For contiguous, number of people must be identical
-            // We use the current number_of_people from the reservation record for this check as a proxy/safeguard
-            if (targetRes.number_of_people !== sourceRes.number_of_people) {
+            // We use the effective people count calculated from active details
+            if (tPeople !== sPeople) {
                 throw new Error('For contiguous merge, number of people must be identical.');
             }
         } else if (!isSameDates) {
