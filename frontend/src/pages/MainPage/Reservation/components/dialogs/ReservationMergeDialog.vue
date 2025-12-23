@@ -1,11 +1,18 @@
 <template>
-    <Dialog v-model:visible="showDialog" header="予約結合" modal :style="{ width: '50vw' }">
+    <Dialog v-model:visible="showDialog" header="予約結合" modal :style="{ width: '65vw' }">
         <div class="p-fluid">
-            <p class="mb-4">
+            <p class="mb-2">
                 現在の予約（{{ formatReservationDate(currentReservation) }}）と結合する予約を選択してください。
-                <br>
-                <small class="text-gray-500">※同じ予約者、かつ期間が連続するか同一の予約のみ結合可能です。</small>
             </p>
+            <div class="text-sm text-gray-600 mb-4 p-3 bg-gray-100 rounded">
+                <p class="font-semibold mb-1">結合時の動作:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li><strong>現在の予約から維持:</strong> コメント、ステータス、予約タイプ、担当者情報</li>
+                    <li><strong>選択した予約から移動:</strong> 宿泊明細、アドオン、駐車場予約、入金情報</li>
+                </ul>
+                <p class="mt-2 text-xs text-gray-500">※選択した予約は結合後に削除されます。</p>
+            </div>
+
             
             <div v-if="loading" class="flex justify-center p-4">
                 <i class="pi pi-spin pi-spinner text-2xl"></i>
@@ -27,6 +34,7 @@
                             {{ formatReservationDate(slotProps.data) }}
                         </template>
                     </Column>
+                    <Column field="room_numbers" header="部屋"></Column>
                     <Column field="number_of_people" header="人数"></Column>
                     <Column field="status" header="ステータス">
                          <template #body="slotProps">
@@ -40,6 +48,7 @@
                     </Column>
                 </DataTable>
             </div>
+
         </div>
         <template #footer>
             <Button label="キャンセル" icon="pi pi-times" @click="showDialog = false" class="p-button-text" severity="danger" />
@@ -111,12 +120,12 @@ const translateStatus = (status) => {
 };
 
 const loadCandidates = async () => {
-    if (!props.reservation || !props.reservation.reservation_client_id) return;
+    if (!props.reservation || !props.reservation.client_id) return;
     
     loading.value = true;
     selectedReservation.value = null;
     try {
-        const allReservations = await fetchReservationsByClient(props.reservation.hotel_id, props.reservation.reservation_client_id);
+        const allReservations = await fetchReservationsByClient(props.reservation.hotel_id, props.reservation.client_id);
         
         // Filter out current reservation
         const others = allReservations.filter(r => r.id !== props.reservation.reservation_id);
@@ -139,11 +148,17 @@ const loadCandidates = async () => {
 };
 
 const checkMergeValidity = (target, source) => {
+    // Normalize dates to compare only the date portion (ignoring time/timezone)
+    const normalizeDate = (dateStr) => {
+        const d = new Date(dateStr);
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    };
+
     // 1. Same Dates
-    const tStart = new Date(target.check_in).getTime();
-    const tEnd = new Date(target.check_out).getTime();
-    const sStart = new Date(source.check_in).getTime();
-    const sEnd = new Date(source.check_out).getTime();
+    const tStart = normalizeDate(target.check_in);
+    const tEnd = normalizeDate(target.check_out);
+    const sStart = normalizeDate(source.check_in);
+    const sEnd = normalizeDate(source.check_out);
 
     if (tStart === sStart && tEnd === sEnd) {
         return 'same';
@@ -162,6 +177,7 @@ const checkMergeValidity = (target, source) => {
 
     return null;
 };
+
 
 const handleMerge = async () => {
     if (!selectedReservation.value) return;

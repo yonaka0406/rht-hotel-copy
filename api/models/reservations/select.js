@@ -890,6 +890,44 @@ const selectReservationParkingAddons = async (requestId, id, hotelId, client = n
   }
 };
 
+const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      r.id,
+      r.hotel_id,
+      r.reservation_client_id,
+      r.check_in,
+      r.check_out,
+      r.number_of_people,
+      r.status,
+      COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      COALESCE(
+        (SELECT STRING_AGG(DISTINCT rm.room_number, ', ' ORDER BY rm.room_number)
+         FROM reservation_details rd
+         JOIN rooms rm ON rm.id = rd.room_id AND rm.hotel_id = rd.hotel_id
+         WHERE rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id AND rd.cancelled IS NULL),
+        ''
+      ) AS room_numbers
+    FROM reservations r
+    JOIN clients c ON c.id = r.reservation_client_id
+    WHERE r.hotel_id = $1
+      AND r.reservation_client_id = $2
+      AND r.status NOT IN ('cancelled')
+    ORDER BY r.check_in DESC;
+  `;
+  const values = [hotelId, clientId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    logger.error('Error fetching reservations by client ID:', err);
+    throw new Error('Database error');
+  }
+};
+
+
 module.exports = {
   selectReservationById,
   selectReservation,
@@ -904,5 +942,6 @@ module.exports = {
   selectAvailableRooms,
   selectAvailableParkingSpots,
   selectAndLockAvailableParkingSpot,
-  selectReservationParkingAddons
+  selectReservationParkingAddons,
+  selectReservationsByClientId
 }

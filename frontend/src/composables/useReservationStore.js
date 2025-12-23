@@ -1599,6 +1599,63 @@ export function useReservationStore() {
         }
     };
 
+    const fetchReservationsByClient = async (hotelId, clientId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/client-list/${hotelId}/${clientId}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch reservations by client');
+            }
+
+            const data = await response.json();
+            return data.reservations || [];
+        } catch (error) {
+            console.error('Error fetching reservations by client:', error);
+            throw error;
+        }
+    };
+
+    const mergeReservations = async (targetReservationId, sourceReservationId, hotelId) => {
+        setReservationIsUpdating(true);
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/merge`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    targetReservationId,
+                    sourceReservationId,
+                    hotelId,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to merge reservations');
+            }
+
+            const result = await response.json();
+            return result.id;
+        } catch (error) {
+            console.error('Error merging reservations:', error);
+            throw error;
+        } finally {
+            setReservationIsUpdating(false);
+        }
+    };
+
 
     return {
         reservationIsUpdating,
@@ -1661,5 +1718,7 @@ export function useReservationStore() {
         setReservationRoomsPeriod,
         blockMultipleRooms,
         splitReservation,
+        fetchReservationsByClient,
+        mergeReservations,
     };
 }
