@@ -549,6 +549,7 @@ const occupancyData = computed(() => {
         }
     }
     if (forecastTotalData.value) {
+        // console.log('[DEBUG] Processing forecastTotalData:', forecastTotalData.value);
         for (const stringHotelIdKey in forecastTotalData.value) {
             const isSelectedHotel = selectedHotels.value.some(selHotelId => String(selHotelId) === stringHotelIdKey);
             if (stringHotelIdKey !== '0' && !isSelectedHotel) continue;
@@ -559,6 +560,7 @@ const occupancyData = computed(() => {
                         const recordDateObj = normalizeDate(new Date(record.date));
                         if (!recordDateObj) return; const monthKey = formatDateMonth(recordDateObj); if (!monthKey || !monthlyOccupancyAggregates[monthKey]) return;
                         if (monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
+                            console.log(`[DEBUG] Adding forecast to hotel ${stringHotelIdKey}, month ${monthKey}:`, { room_count: record.room_count, total_rooms: record.total_rooms });
                             monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_sold_rooms += record.room_count;
                             monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_total_rooms += record.total_rooms;
                         }
@@ -1013,15 +1015,15 @@ const fetchData = async () => {
                             if (!prevByMonth[mk]) prevByMonth[mk] = { sales: 0, stays: 0, rooms: 0 };
 
                             const dailySales = (Number(item.accommodation_net_sales) || 0) + (Number(item.other_net_sales) || 0) + (Number(item.accommodation_net_sales_cancelled) || 0) + (Number(item.other_net_sales_cancelled) || 0);
-                            console.log(`[DEBUG] Previous data for ${mk}:`, {
-                                accommodation_net_sales: item.accommodation_net_sales,
-                                other_net_sales: item.other_net_sales,
-                                accommodation_net_sales_cancelled: item.accommodation_net_sales_cancelled,
-                                other_net_sales_cancelled: item.other_net_sales_cancelled,
-                                dailySales: dailySales,
-                                accommodation_sales: item.accommodation_sales, // For comparison
-                                other_sales: item.other_sales // For comparison
-                            });
+                            //console.log(`[DEBUG] Previous data for ${mk}:`, {
+                            //    accommodation_net_sales: item.accommodation_net_sales,
+                            //    other_net_sales: item.other_net_sales,
+                            //    accommodation_net_sales_cancelled: item.accommodation_net_sales_cancelled,
+                            //    other_net_sales_cancelled: item.other_net_sales_cancelled,
+                            //    dailySales: dailySales,
+                            //    accommodation_sales: item.accommodation_sales, // For comparison
+                            //    other_sales: item.other_sales // For comparison
+                            //});
                             prevByMonth[mk].sales += dailySales;
                             prevByMonth[mk].stays += Number(item.confirmed_stays) || 0;
                         });
@@ -1093,12 +1095,12 @@ const fetchData = async () => {
                         const prevOcc = accommodationNetAvailableRoomNights > 0 ? (prev.stays / accommodationNetAvailableRoomNights) * 100 : 0;
 
                         const salesDiff = hasPrevData ? totalActualSales - prev.sales : null;
-                        console.log(`[DEBUG] Sales comparison for ${monthLabel}:`, {
-                            totalActualSales,
-                            prevSales: prev.sales,
-                            salesDiff,
-                            hasPrevData
-                        });
+                        //console.log(`[DEBUG] Sales comparison for ${monthLabel}:`, {
+                        //    totalActualSales,
+                        //    prevSales: prev.sales,
+                        //    salesDiff,
+                        //    hasPrevData
+                        //});
 
                         outlook.push({
                             metric_date: latestDateStrRaw, // Added for export
