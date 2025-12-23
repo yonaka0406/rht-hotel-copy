@@ -107,7 +107,9 @@ const currentReservation = computed(() => props.reservation);
 
 const formatReservationDate = (res) => {
     if (!res) return '';
-    return `${formatDate(new Date(res.check_in))} ～ ${formatDate(new Date(res.check_out))}`;
+    const start = res.details_min_date || res.check_in;
+    const end = res.details_max_date || res.check_out;
+    return `${formatDate(new Date(start))} ～ ${formatDate(new Date(end))}`;
 };
 
 const getBadgeSeverity = (status) => {
