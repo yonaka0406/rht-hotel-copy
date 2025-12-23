@@ -175,8 +175,10 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
       reservation_details.reservation_id,
       clients.id AS client_id,
       COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS client_name,
+      eff.min_date,
+      eff.max_date,
       eff.min_date AS check_in,
-      (eff.max_date + INTERVAL '1 day') AS check_out,
+      eff.max_date AS check_out,
       eff.total_people AS reservation_number_of_people,
       reservations.status,  
       reservations.type,
@@ -218,16 +220,15 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
             reservation_id, 
             hotel_id,
             MIN(date) as min_date, 
-            MAX(date) as max_date,
+            (MAX(date) + INTERVAL '1 day') as max_date,
             MAX(daily_people) as total_people
         FROM (
             SELECT 
                 reservation_id, 
                 hotel_id, 
                 date, 
-                SUM(number_of_people) as daily_people
+                SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
             FROM reservation_details
-            WHERE cancelled IS NULL
             GROUP BY reservation_id, hotel_id, date
         ) sub
         GROUP BY reservation_id, hotel_id
@@ -916,8 +917,10 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
       r.id,
       r.hotel_id,
       r.reservation_client_id,
-      eff.check_in,
-      eff.check_out,
+      eff.min_date,
+      eff.max_date,
+      eff.min_date AS check_in,
+      eff.max_date AS check_out,
       eff.total_people AS number_of_people,
       r.status,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
@@ -934,17 +937,16 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
         SELECT 
             reservation_id, 
             hotel_id,
-            MIN(date) as check_in, 
-            (MAX(date) + INTERVAL '1 day') as check_out,
+            MIN(date) as min_date, 
+            (MAX(date) + INTERVAL '1 day') as max_date,
             MAX(daily_people) as total_people
         FROM (
             SELECT 
                 reservation_id, 
                 hotel_id, 
                 date, 
-                SUM(number_of_people) as daily_people
+                SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
             FROM reservation_details
-            WHERE cancelled IS NULL
             GROUP BY reservation_id, hotel_id, date
         ) sub
         GROUP BY reservation_id, hotel_id

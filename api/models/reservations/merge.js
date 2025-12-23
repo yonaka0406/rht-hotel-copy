@@ -89,9 +89,9 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
                 SELECT 
                     reservation_id, 
                     date, 
-                    SUM(number_of_people) as daily_people
+                    SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
                 FROM reservation_details
-                WHERE reservation_id IN ($1, $2) AND hotel_id = $3 AND cancelled IS NULL
+                WHERE reservation_id IN ($1, $2) AND hotel_id = $3
                 GROUP BY reservation_id, date
             ) sub
             GROUP BY reservation_id
