@@ -1,6 +1,25 @@
 let getPool = require('../../config/database').getPool;
 const logger = require('../../config/logger');
 
+const EFF_SUBQUERY = `
+  SELECT 
+    reservation_id, 
+    hotel_id,
+    MIN(date) as min_date, 
+    (MAX(date) + INTERVAL '1 day') as max_date,
+    MAX(daily_people) as max_daily_people
+  FROM (
+    SELECT 
+      reservation_id, 
+      hotel_id, 
+      date, 
+      SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
+    FROM reservation_details
+    GROUP BY reservation_id, hotel_id, date
+  ) sub
+  GROUP BY reservation_id, hotel_id
+`;
+
 const selectReservationById = async (requestId, id, hotelId, dbClient = null) => {
   const pool = getPool(requestId);
   const executor = dbClient || pool;
@@ -30,7 +49,6 @@ const selectReservation = async (requestId, id, hotel_id) => {
   }
   const query = `
     SELECT
-      rd.id,
       rd.hotel_id,
       h.formal_name AS hotel_name,
       rd.reservation_id,
@@ -47,7 +65,7 @@ const selectReservation = async (requestId, id, hotel_id) => {
       r.number_of_people AS reservation_number_of_people,
       eff.min_date AS details_min_date,
       eff.max_date AS details_max_date,
-      eff.total_people AS details_number_of_people,
+      eff.max_daily_people AS details_number_of_people,
       r.status,
       r.type,
       r.payment_timing,
@@ -91,24 +109,7 @@ const selectReservation = async (requestId, id, hotel_id) => {
         rooms rm ON rm.id = rd.room_id AND rm.hotel_id = rd.hotel_id
     JOIN
         room_types rt ON rt.id = rm.room_type_id AND rt.hotel_id = rm.hotel_id
-    JOIN (
-        SELECT 
-            reservation_id, 
-            hotel_id,
-            MIN(date) as min_date, 
-            (MAX(date) + INTERVAL '1 day') as max_date,
-            MAX(daily_people) as total_people
-        FROM (
-            SELECT 
-                reservation_id, 
-                hotel_id, 
-                date, 
-                SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
-            FROM reservation_details
-            GROUP BY reservation_id, hotel_id, date
-        ) sub
-        GROUP BY reservation_id, hotel_id
-    ) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
+    JOIN (${EFF_SUBQUERY}) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
     LEFT JOIN LATERAL (
         SELECT
             SUM(ra.price * ra.quantity) AS total_price,
@@ -202,7 +203,7 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
       reservations.number_of_people AS reservation_number_of_people,
       eff.min_date AS details_min_date,
       eff.max_date AS details_max_date,
-      eff.total_people AS details_number_of_people,
+      eff.max_daily_people AS details_number_of_people,
       reservations.status,  
       reservations.type,
       reservations.agent,
@@ -238,24 +239,7 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
       JOIN reservations 
         ON reservations.id = reservation_details.reservation_id 
         AND reservations.hotel_id = reservation_details.hotel_id
-      JOIN (
-        SELECT 
-            reservation_id, 
-            hotel_id,
-            MIN(date) as min_date, 
-            (MAX(date) + INTERVAL '1 day') as max_date,
-            MAX(daily_people) as total_people
-        FROM (
-            SELECT 
-                reservation_id, 
-                hotel_id, 
-                date, 
-                SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
-            FROM reservation_details
-            GROUP BY reservation_id, hotel_id, date
-        ) sub
-        GROUP BY reservation_id, hotel_id
-      ) eff ON eff.reservation_id = reservations.id AND eff.hotel_id = reservations.hotel_id
+      JOIN (${EFF_SUBQUERY}) eff ON eff.reservation_id = reservations.id AND eff.hotel_id = reservations.hotel_id
       JOIN clients 
         ON clients.id = reservations.reservation_client_id
       JOIN rooms 
@@ -935,6 +919,14 @@ const selectReservationParkingAddons = async (requestId, id, hotelId, client = n
 
 const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
   const pool = getPool(requestId);
+  const { validate: uuidValidate } = require('uuid');
+
+  // Validate that clientId is a valid UUID
+  if (!clientId || clientId === 'null' || clientId === 'undefined' || !uuidValidate(clientId)) {
+    logger.error('[selectReservationsByClientId] Invalid client ID provided', { clientId });
+    throw new Error('Invalid client ID: ID must be a valid UUID');
+  }
+
   const query = `
     SELECT
       r.id,
@@ -945,7 +937,7 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
       r.number_of_people,
       eff.min_date AS details_min_date,
       eff.max_date AS details_max_date,
-      eff.total_people AS details_number_of_people,
+      eff.max_daily_people AS details_number_of_people,
       r.status,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
       COALESCE(
@@ -957,27 +949,10 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
       ) AS room_numbers
     FROM reservations r
     JOIN clients c ON c.id = r.reservation_client_id
-    JOIN (
-        SELECT 
-            reservation_id, 
-            hotel_id,
-            MIN(date) as min_date, 
-            (MAX(date) + INTERVAL '1 day') as max_date,
-            MAX(daily_people) as total_people
-        FROM (
-            SELECT 
-                reservation_id, 
-                hotel_id, 
-                date, 
-                SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
-            FROM reservation_details
-            GROUP BY reservation_id, hotel_id, date
-        ) sub
-        GROUP BY reservation_id, hotel_id
-    ) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
+    JOIN (${EFF_SUBQUERY}) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
     WHERE r.hotel_id = $1
       AND r.reservation_client_id = $2
-      AND r.status NOT IN ('cancelled')
+      AND r.status != 'cancelled'
     ORDER BY eff.min_date DESC;
   `;
   const values = [hotelId, clientId];
@@ -985,9 +960,9 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
   try {
     const result = await pool.query(query, values);
     return result.rows;
-  } catch (err) {
-    logger.error('Error fetching reservations by client ID:', err);
-    throw new Error('Database error');
+  } catch (error) {
+    console.error('Error fetching reservations by client:', error);
+    return [];
   }
 };
 

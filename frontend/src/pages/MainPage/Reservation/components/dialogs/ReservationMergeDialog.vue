@@ -24,8 +24,8 @@
 
             <div v-else class="field">
                 <DataTable :value="candidateReservations" v-model:selection="selectedReservation" selectionMode="single"
-                    dataKey="id" :metaKeySelection="false">
-                    <Column field="id" header="選択" style="width: 3rem">
+                    dataKey="reservation_id" :metaKeySelection="false">
+                    <Column field="reservation_id" header="選択" style="width: 3rem">
                         <template #body="slotProps">
                             <RadioButton :value="slotProps.data" v-model="selectedReservation" />
                         </template>
@@ -56,8 +56,7 @@
         <template #footer>
             <Button label="キャンセル" icon="pi pi-times" @click="showDialog = false" class="p-button-text"
                 severity="danger" />
-            <Button label="結合" icon="pi pi-check" @click="handleMerge" :loading="isSubmitting"
-                :disabled="!selectedReservation" />
+            <Button label="結合" icon="pi pi-check" @click="handleMerge" :disabled="!selectedReservation" />
         </template>
     </Dialog>
 </template>
@@ -75,6 +74,7 @@ import { useReservationStore } from '@/composables/useReservationStore';
 import { useToast } from 'primevue/usetoast';
 import { formatDate } from '@/utils/dateUtils';
 import { translateReservationStatus } from '@/utils/reservationUtils';
+import { useConfirm } from 'primevue/useconfirm';
 
 const props = defineProps({
     visible: {
@@ -84,6 +84,33 @@ const props = defineProps({
     reservation: {
         type: Object,
         required: true,
+        validator: (value) => {
+            if (!value || typeof value !== 'object') return false;
+
+            const checks = [
+                { field: 'reservation_id', types: ['string', 'number'] },
+                { field: 'hotel_id', types: ['string', 'number'] },
+                { field: 'client_id', types: ['string', 'number'] },
+                { field: 'check_in', types: ['string', 'object'] }, // string or Date
+                { field: 'check_out', types: ['string', 'object'] }
+            ];
+
+            const errors = [];
+            checks.forEach(check => {
+                const val = value[check.field];
+                if (val === undefined || val === null) {
+                    errors.push(`${check.field} is missing`);
+                } else if (!check.types.includes(typeof val) && !(check.types.includes('object') && val instanceof Date)) {
+                    errors.push(`${check.field} has invalid type (expected ${check.types.join(' or ')})`);
+                }
+            });
+
+            if (errors.length > 0) {
+                console.error(`[ReservationMergeDialog] Prop validation failed:`, errors, value);
+                return false;
+            }
+            return true;
+        }
     },
 });
 
@@ -91,6 +118,7 @@ const emit = defineEmits(['update:visible', 'merged']);
 
 const { fetchReservationsByClient, mergeReservations } = useReservationStore();
 const toast = useToast();
+const confirm = useConfirm();
 const router = useRouter();
 
 const isSubmitting = ref(false);
@@ -107,9 +135,18 @@ const currentReservation = computed(() => props.reservation);
 
 const formatReservationDate = (res) => {
     if (!res) return '';
-    const start = res.details_min_date || res.check_in;
-    const end = res.details_max_date || res.check_out;
-    return `${formatDate(new Date(start))} ～ ${formatDate(new Date(end))}`;
+    const startVal = res.details_min_date || res.check_in;
+    const endVal = res.details_max_date || res.check_out;
+
+    const startDate = startVal ? new Date(startVal) : null;
+    const endDate = endVal ? new Date(endVal) : null;
+
+    const isValidStart = startDate && !isNaN(startDate.getTime());
+    const isValidEnd = endDate && !isNaN(endDate.getTime());
+
+    if (!isValidStart || !isValidEnd) return '';
+
+    return `${formatDate(startDate)} ～ ${formatDate(endDate)}`;
 };
 
 const getBadgeSeverity = (status) => {
@@ -134,14 +171,25 @@ const loadCandidates = async () => {
     try {
         const allReservations = await fetchReservationsByClient(props.reservation.hotel_id, props.reservation.client_id);
 
-        // Filter out current reservation
-        const others = allReservations.filter(r => r.id !== props.reservation.reservation_id);
+        if (!allReservations || !Array.isArray(allReservations)) {
+            candidateReservations.value = [];
+            return;
+        }
 
-        // Filter valid candidates
+        // Filter out current reservation (Normalize IDs for comparison)
+        const currentId = String(props.reservation.reservation_id);
+        const others = allReservations.filter(r => String(r.id) !== currentId);
+
+        // Filter valid candidates and normalize IDs
         candidateReservations.value = others.map(r => {
-            const mergeType = checkMergeValidity(props.reservation, r);
-            return {
+            // Normalize ID to reservation_id for consistency with props
+            const normalizedRes = {
                 ...r,
+                reservation_id: r.id
+            };
+            const mergeType = checkMergeValidity(props.reservation, normalizedRes);
+            return {
+                ...normalizedRes,
                 mergeType
             };
         }).filter(r => r.mergeType !== null);
@@ -177,8 +225,12 @@ const checkMergeValidity = (target, source) => {
     // 2. Contiguous
     // Target End == Source Start OR Source End == Target Start
     // AND active number of people must match
-    const tPeople = Number(target.details_number_of_people || target.reservation_number_of_people || target.number_of_people);
-    const sPeople = Number(source.details_number_of_people || source.number_of_people);
+    const getPeopleCount = (res) => {
+        return Number(res.details_number_of_people || res.reservation_number_of_people || res.number_of_people || 0);
+    };
+
+    const tPeople = getPeopleCount(target);
+    const sPeople = getPeopleCount(source);
 
     if (tPeople !== sPeople) {
         return null;
@@ -196,26 +248,41 @@ const checkMergeValidity = (target, source) => {
 const handleMerge = async () => {
     if (!selectedReservation.value) return;
 
-    isSubmitting.value = true;
-    try {
-        // Merge SELECTED (Source) INTO CURRENT (Target)
-        const keptId = await mergeReservations(props.reservation.reservation_id, selectedReservation.value.id, props.reservation.hotel_id);
-
-        toast.add({ severity: 'success', summary: '成功', detail: '予約が結合されました。', life: 3000 });
-        showDialog.value = false;
-        emit('merged', keptId);
-
-        // Reload page or redirect to ensure data refresh
-        // If ID changed (unlikely here as we keep target), router push might be needed.
-        // Since we Merge INTO current, we are likely fine, but a refresh is good.
-        location.reload();
-
-    } catch (error) {
-        console.error('Merge failed', error);
-        toast.add({ severity: 'error', summary: 'エラー', detail: error.response?.data?.error || '予約の結合に失敗しました。', life: 3000 });
-    } finally {
-        isSubmitting.value = false;
-    }
+    confirm.require({
+        message: `予約（${formatReservationDate(selectedReservation.value)}）を現在の予約に結合しますか？選択した予約は結合後に削除されます。`,
+        header: '予約結合の確認',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: '結合',
+        rejectLabel: 'キャンセル',
+        acceptProps: {
+            severity: 'danger'
+        },
+        rejectProps: {
+            severity: 'secondary',
+            outlined: true
+        },
+        accept: async () => {
+            isSubmitting.value = true;
+            try {
+                // Merge SELECTED (Source) INTO CURRENT (Target)
+                const keptId = await mergeReservations(
+                    props.reservation.reservation_id,
+                    selectedReservation.value.reservation_id,
+                    props.reservation.hotel_id
+                );
+                toast.add({ severity: 'success', summary: '成功', detail: '予約が結合されました。', life: 3000 });
+                showDialog.value = false;
+                emit('merged', keptId);
+                // Navigate to the merged reservation detail
+                router.push({ name: 'ReservationDetail', params: { id: keptId } });
+            } catch (error) {
+                console.error('Merge failed', error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: error.response?.data?.error || '予約の結合に失敗しました。', life: 3000 });
+            } finally {
+                isSubmitting.value = false;
+            }
+        }
+    });
 };
 
 watch(() => props.visible, (newValue) => {

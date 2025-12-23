@@ -1600,6 +1600,12 @@ export function useReservationStore() {
     };
 
     const fetchReservationsByClient = async (hotelId, clientId) => {
+        // Validation
+        if (!hotelId || !clientId || (typeof clientId === 'string' && !clientId.trim())) {
+            console.warn('[fetchReservationsByClient] Missing or invalid hotelId or clientId', { hotelId, clientId });
+            return [];
+        }
+
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/client-list/${hotelId}/${clientId}`;
@@ -1612,18 +1618,25 @@ export function useReservationStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch reservations by client');
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Failed to fetch reservations by client:', errorData.message || errorData.error || response.statusText);
+                return [];
             }
 
             const data = await response.json();
-            return data.reservations || [];
+            return data.reservations ?? [];
         } catch (error) {
             console.error('Error fetching reservations by client:', error);
-            throw error;
+            return [];
         }
     };
 
     const mergeReservations = async (targetReservationId, sourceReservationId, hotelId) => {
+        // Validation (mirror splitReservation pattern)
+        if (!targetReservationId || !sourceReservationId || !hotelId) {
+            throw new Error('Missing required parameters for merge.');
+        }
+
         setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
@@ -1643,10 +1656,13 @@ export function useReservationStore() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to merge reservations');
+                throw new Error(errorData.message || errorData.error || 'Failed to merge reservations');
             }
 
             const result = await response.json();
+            if (!result || !result.id) {
+                throw new Error('Server did not return the merged reservation ID.');
+            }
             return result.id;
         } catch (error) {
             console.error('Error merging reservations:', error);

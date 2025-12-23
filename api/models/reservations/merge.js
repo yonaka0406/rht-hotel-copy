@@ -7,7 +7,7 @@ async function recalculateReservationMetrics(reservationId, hotelId, userId, dbC
         SELECT
             MIN(date) AS check_in,
             MAX(date) + INTERVAL '1 day' AS check_out,
-            MAX(daily_people) AS total_people
+            MAX(daily_people) AS max_daily_people
         FROM (
             SELECT
                 date,
@@ -18,18 +18,22 @@ async function recalculateReservationMetrics(reservationId, hotelId, userId, dbC
         ) AS daily_counts;
     `;
     const metricsResult = await dbClient.query(metricsQuery, [reservationId, hotelId]);
-    const { check_in, check_out, total_people } = metricsResult.rows[0];
+    const { check_in, check_out, max_daily_people } = metricsResult.rows[0];
 
     // If no details left (unlikely in merge target, but possible), these might be null.
     // However, we are merging INTO this reservation, so it should have details.
-    if (!check_in) return;
+    if (!check_in) {
+        const errorMsg = `[recalculateReservationMetrics] No active reservation details found for reservation ID: ${reservationId}. Cannot recalculate metrics.`;
+        logger.error(errorMsg);
+        throw new Error(errorMsg);
+    }
 
     const updateReservationQuery = `
         UPDATE reservations
         SET check_in = $1, check_out = $2, number_of_people = $3, updated_by = $4
         WHERE id = $5 AND hotel_id = $6;
     `;
-    await dbClient.query(updateReservationQuery, [check_in, check_out, total_people || 0, userId, reservationId, hotelId]);
+    await dbClient.query(updateReservationQuery, [check_in, check_out, max_daily_people || 0, userId, reservationId, hotelId]);
 }
 
 /**
@@ -63,12 +67,21 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
             throw new Error('One or both reservations not found.');
         }
 
-        const targetRes = result.rows.find(r => r.id === targetReservationId);
-        const sourceRes = result.rows.find(r => r.id === sourceReservationId);
+        const targetRes = result.rows.find(r => String(r.id) === String(targetReservationId));
+        const sourceRes = result.rows.find(r => String(r.id) === String(sourceReservationId));
 
         // 2. Validation
 
-        // 2a. Same Booker
+        // 2a. Status Validation
+        const disallowedStatuses = ['cancelled', 'checked_out', 'no_show'];
+        if (disallowedStatuses.includes(targetRes.status)) {
+            throw new Error(`Target reservation ${targetReservationId} has status '${targetRes.status}' and cannot be merged.`);
+        }
+        if (disallowedStatuses.includes(sourceRes.status)) {
+            throw new Error(`Source reservation ${sourceReservationId} has status '${sourceRes.status}' and cannot be merged.`);
+        }
+
+        // 2b. Same Booker
         if (targetRes.reservation_client_id !== sourceRes.reservation_client_id) {
             throw new Error('Reservations must have the same booker (client_id).');
         }
@@ -84,7 +97,7 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
                 reservation_id, 
                 MIN(date) as min_date, 
                 MAX(date) as max_date,
-                MAX(daily_people) as total_people
+                MAX(daily_people) as max_daily_people
             FROM (
                 SELECT 
                     reservation_id, 
@@ -98,19 +111,29 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
         `;
         const dateRangeResult = await client.query(dateRangeQuery, [targetReservationId, sourceReservationId, hotelId]);
 
-        const targetRange = dateRangeResult.rows.find(r => r.reservation_id === targetReservationId);
-        const sourceRange = dateRangeResult.rows.find(r => r.reservation_id === sourceReservationId);
+        const targetRange = dateRangeResult.rows.find(r => String(r.reservation_id) === String(targetReservationId));
+        const sourceRange = dateRangeResult.rows.find(r => String(r.reservation_id) === String(sourceReservationId));
 
-        if (!targetRange || !sourceRange) {
-            throw new Error('One of the reservations has no active details, cannot validate dates.');
+        if (!targetRange) {
+            throw new Error(`Target reservation ${targetReservationId} has no details, cannot validate dates.`);
+        }
+        if (!sourceRange) {
+            throw new Error(`Source reservation ${sourceReservationId} has no details, cannot validate dates.`);
         }
 
         const tMin = new Date(targetRange.min_date);
         const tMax = new Date(targetRange.max_date);
-        const tPeople = parseInt(targetRange.total_people);
+        const tPeople = parseInt(targetRange.max_daily_people, 10) || 0;
         const sMin = new Date(sourceRange.min_date);
         const sMax = new Date(sourceRange.max_date);
-        const sPeople = parseInt(sourceRange.total_people);
+        const sPeople = parseInt(sourceRange.max_daily_people, 10) || 0;
+
+        if (tPeople === 0) {
+            throw new Error(`Target reservation ${targetReservationId} has no active (non-cancelled) details or zero people, cannot validate dates.`);
+        }
+        if (sPeople === 0) {
+            throw new Error(`Source reservation ${sourceReservationId} has no active (non-cancelled) details or zero people, cannot validate dates.`);
+        }
 
         // Calculate "Next Day" for contiguous check
         // If R1 ends on date D (last night), check-out is D+1. 
@@ -155,9 +178,9 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
         const movePaymentsQuery = `
             UPDATE reservation_payments
             SET reservation_id = $1, updated_by = $2
-            WHERE reservation_id = $3
+            WHERE reservation_id = $3 AND hotel_id = $4
         `;
-        await client.query(movePaymentsQuery, [targetReservationId, userId, sourceReservationId]);
+        await client.query(movePaymentsQuery, [targetReservationId, userId, sourceReservationId, hotelId]);
 
         // 3c. Recalculate Metrics for Target
         await recalculateReservationMetrics(targetReservationId, hotelId, userId, client);

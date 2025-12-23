@@ -1669,9 +1669,14 @@ const actionSplitReservation = async (req, res) => {
 const actionMergeReservations = async (req, res) => {
   const { targetReservationId, sourceReservationId, hotelId } = req.body;
   const userId = req.user.id;
+  const { validate: uuidValidate } = require('uuid');
 
   if (!targetReservationId || !sourceReservationId || !hotelId) {
     return res.status(400).json({ error: 'Missing required parameters: targetReservationId, sourceReservationId, hotelId.' });
+  }
+
+  if (!uuidValidate(targetReservationId) || !uuidValidate(sourceReservationId)) {
+    return res.status(400).json({ error: 'Invalid reservation ID(s) provided. IDs must be valid UUIDs.' });
   }
 
   try {
@@ -1691,13 +1696,22 @@ const actionMergeReservations = async (req, res) => {
 
 const getReservationsByClient = async (req, res) => {
   const { hid, clientId } = req.params;
+  const { validate: uuidValidate } = require('uuid');
 
   if (!hid || !clientId) {
     return res.status(400).json({ error: 'Missing hotel ID or client ID.' });
   }
 
+  if (isNaN(parseInt(hid, 10))) {
+    return res.status(400).json({ error: 'Invalid hotel ID.' });
+  }
+
+  if (!uuidValidate(clientId)) {
+    return res.status(400).json({ error: 'Invalid client ID. ID must be a valid UUID.' });
+  }
+
   try {
-    const reservations = await reservationsModel.selectReservationsByClientId(req.requestId, hid, clientId);
+    const reservations = await reservationsModel.selectReservationsByClientId(req.requestId, parseInt(hid, 10), clientId);
     res.status(200).json({ reservations });
   } catch (error) {
     logger.error('Error fetching reservations by client:', error);
