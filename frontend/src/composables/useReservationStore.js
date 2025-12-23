@@ -1599,6 +1599,91 @@ export function useReservationStore() {
         }
     };
 
+    const fetchReservationsByClient = async (hotelId, clientId) => {
+        // Validation
+        if (!hotelId || !clientId || (typeof clientId === 'string' && !clientId.trim())) {
+            console.warn('[fetchReservationsByClient] Missing or invalid hotelId or clientId', { hotelId, clientId });
+            return [];
+        }
+
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/client-list/${hotelId}/${clientId}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Failed to fetch reservations by client:', errorData.message || errorData.error || response.statusText);
+                return [];
+            }
+
+            const data = await response.json();
+            return data.reservations ?? [];
+        } catch (error) {
+            console.error('Error fetching reservations by client:', error);
+            return [];
+        }
+    };
+
+    const mergeReservations = async (targetReservationId, sourceReservationId, hotelId) => {
+        // Early Input Validation
+        if (!targetReservationId || (typeof targetReservationId === 'string' && !targetReservationId.trim())) {
+            throw new Error('Target reservation ID is required.');
+        }
+        if (!sourceReservationId || (typeof sourceReservationId === 'string' && !sourceReservationId.trim())) {
+            throw new Error('Source reservation ID is required.');
+        }
+        if (String(targetReservationId).trim() === String(sourceReservationId).trim()) {
+            throw new Error('Target and source reservation IDs must be different.');
+        }
+        if (!hotelId) {
+            throw new Error('Hotel ID is required.');
+        }
+        if (typeof hotelId !== 'number' && (typeof hotelId !== 'string' || !hotelId.trim())) {
+            throw new Error('Hotel ID must be a number or a non-empty string.');
+        }
+
+        setReservationIsUpdating(true);
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/merge`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    targetReservationId,
+                    sourceReservationId,
+                    hotelId,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || errorData.error || 'Failed to merge reservations');
+            }
+
+            const result = await response.json();
+            if (!result || !result.id) {
+                throw new Error('Server did not return the merged reservation ID.');
+            }
+            return result.id;
+        } catch (error) {
+            console.error('Error merging reservations:', error);
+            throw error;
+        } finally {
+            setReservationIsUpdating(false);
+        }
+    };
+
 
     return {
         reservationIsUpdating,
@@ -1661,5 +1746,7 @@ export function useReservationStore() {
         setReservationRoomsPeriod,
         blockMultipleRooms,
         splitReservation,
+        fetchReservationsByClient,
+        mergeReservations,
     };
 }

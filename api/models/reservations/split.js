@@ -1,5 +1,6 @@
 const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
+const format = require('pg-format');
 
 // Helper functions
 async function createNewReservation(originalReservation, userId, dbClient) {
@@ -47,7 +48,7 @@ async function recalculateReservationMetrics(reservationId, hotelId, userId, dbC
         SELECT
             MIN(date) AS check_in,
             MAX(date) + INTERVAL '1 day' AS check_out,
-            MAX(daily_people) AS total_people
+            MAX(daily_people) AS max_daily_people
         FROM (
             SELECT
                 date,
@@ -58,14 +59,20 @@ async function recalculateReservationMetrics(reservationId, hotelId, userId, dbC
         ) AS daily_counts;
     `;
     const metricsResult = await dbClient.query(metricsQuery, [reservationId, hotelId]);
-    const { check_in, check_out, total_people } = metricsResult.rows[0];
+    const { check_in, check_out, max_daily_people } = metricsResult.rows[0];
+
+    if (!check_in) {
+        const errorMsg = `[recalculateReservationMetrics] No active reservation details found for reservation ID: ${reservationId}. Cannot recalculate metrics.`;
+        logger.error(errorMsg);
+        throw new Error(errorMsg);
+    }
 
     const updateReservationQuery = `
         UPDATE reservations
         SET check_in = $1, check_out = $2, number_of_people = $3, updated_by = $4
         WHERE id = $5 AND hotel_id = $6;
     `;
-    await dbClient.query(updateReservationQuery, [check_in, check_out, total_people, userId, reservationId, hotelId]);
+    await dbClient.query(updateReservationQuery, [check_in, check_out, max_daily_people || 0, userId, reservationId, hotelId]);
 }
 
 async function moveAssociatedPayments(targetReservationId, userId, originalReservationId, hotelId, movedDetails, dbClient) {
@@ -129,6 +136,11 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
         throw new Error('reservationDetailIdsToMove must be a non-empty array.');
     }
 
+    const { validate: uuidValidate } = require('uuid');
+    if (reservationDetailIdsToMove.some(id => !id || !uuidValidate(id))) {
+        throw new Error('All reservation detail IDs to move must be valid UUIDs.');
+    }
+
     // If both period and rooms are full, it means the entire reservation is selected.
     // This is not a split operation, so no action is performed, and no new reservation is created.
     if (isFullPeriodSplit && isFullRoomSplit) {
@@ -138,6 +150,9 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
 
     const client = await getPool(requestId).connect();
     try {
+        const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, userId);
+        await client.query(setSessionQuery);
+
         await client.query('BEGIN');
 
         // 1. Fetch the original reservation
@@ -218,7 +233,7 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
             const queue = [...initialSplitRoomIds];
             let head = 0;
 
-            while(head < queue.length) {
+            while (head < queue.length) {
                 const currentRoomId = queue[head++];
 
                 for (let i = 0; i < sortedAllOriginalDetails.length; i++) {
@@ -272,7 +287,7 @@ const splitReservation = async (requestId, originalReservationId, hotelId, reser
         await client.query('ROLLBACK');
         throw error;
     } finally {
-        client.release();        
+        client.release();
     }
 };
 

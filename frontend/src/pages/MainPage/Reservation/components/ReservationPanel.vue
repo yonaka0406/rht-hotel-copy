@@ -438,6 +438,8 @@
     <ReservationCommentDialog v-model:visible="commentDialogVisible" :comment="localCommentInput"
         :has-important-comment="reservationInfo.has_important_comment"
         @save="(newComment) => updateReservationComment(reservationInfo.reservation_id, reservationInfo.hotel_id, newComment)" />
+    
+    <ReservationMergeDialog :reservation="reservationInfo" v-model:visible="showMergeDialog" />
 
     <CancellationCalculatorDialog v-model:visible="showCancellationCalculator" :reservationDetails="reservation_details"
         v-if="reservation_details?.length > 0" />
@@ -465,6 +467,7 @@ import ReservationAddRoomDialog from '@/pages/MainPage/Reservation/components/di
 import ReservationAnnounceDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationAnnounceDialog.vue';
 import ReservationCancelDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCancelDialog.vue';
 import ReservationSplitDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationSplitDialog.vue';
+import ReservationMergeDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationMergeDialog.vue';
 import ReservationStatusButtons from '@/pages/MainPage/Reservation/components/ReservationStatusButtons.vue';
 import ReservationHistoryDialog from './dialogs/ReservationHistoryDialog.vue';
 import ChangeClientDialog from './dialogs/ChangeClientDialog.vue';
@@ -1220,6 +1223,7 @@ const showHistoryDialog = () => {
 const showCancellationCalculator = ref(false);
 const showCopyDialog = ref(false);
 const showSplitDialog = ref(false);
+const showMergeDialog = ref(false);
 const visibleSlackDialog = ref(false);
 
 // Tab Apply Plan
@@ -1540,6 +1544,11 @@ const actionOptions = [
         label: '予約分割',
         icon: 'pi pi-th-large',
         command: () => { showSplitDialog.value = true; }
+    },
+    {
+        label: '予約結合',
+        icon: 'pi pi-link',
+        command: () => { showMergeDialog.value = true; }
     }
 ];
 const onActionClick = () => {

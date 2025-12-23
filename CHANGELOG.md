@@ -699,7 +699,25 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.3.3] - 2025-12-22
+
+- Enhancement: Streamlined invoice generation with improved reservation details handling, enhanced payment processing with transaction management, and bulk payment support
+
+---
+
+## [1.3.4] - 2025-12-23
+
+- Feature: Added plan categories to help deprecate global plans, including sales category classification for plans and addons, inheritance of sales category by reservation rates and addons, and backend validation with DB schema updates
+- Feature: Added the merge reservations functionality to the reservation edit page
+- Bugfix: Resolved errors in split and merge reservation processes, including null IDs, metric recalculation crashes, and incorrect redirects
+
+---
+
 ## Version History
+- **1.3.4** (2025-12-23) - Added plan categories, merge reservations feature, and fixed split/merge reservation bugs (null IDs, metric crashes, redirect errors).
+- **1.3.3** (2025-12-22) - Streamlined invoice generation with improved reservation details handling, enhanced payment processing with transaction management, and bulk payment support
+- **1.3.2** (2025-12-17) - Added year-over-year (YoY) comparison for the same month in the reporting module
+- **1.3.1** (2025-12-05) - Added 宿泊税 (Accommodation Tax) Report Download functionality
 - **1.3.0** (2025-12-04) - Enhanced reporting with sales categories and materialized CTEs for better performance. Fixed addon duplication and billing calculation issues.
 - **1.2.4** (2025-12-03) - Fixed addon duplication in day detail dialog and resolved billing calculation issues for cancelled dates. Refactored addon management into a dedicated module for better code organization and maintainability.
 - **1.2.3** (2025-12-01) – Enhanced OTA notifications with failed XML queue, migrated to Playwright for more reliable PDF generation, and introduced receipt versioning with customizable templates. Fixed issues with parking addons during plan changes and improved handling of temporary room blocks.
