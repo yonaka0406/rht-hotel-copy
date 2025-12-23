@@ -956,7 +956,7 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
     WHERE r.hotel_id = $1
       AND r.reservation_client_id = $2
       AND r.status NOT IN ('cancelled')
-    ORDER BY eff.check_in DESC;
+    ORDER BY eff.min_date DESC;
   `;
   const values = [hotelId, clientId];
 
