@@ -1,17 +1,18 @@
 const { getPool } = require('../config/database');
+const logger = require('../config/logger');
 
 // Helper
-const transliterateKanaToRomaji = async (kanaString) => {  
+const transliterateKanaToRomaji = async (kanaString) => {
     const { toRomaji } = await import('../utils/japaneseUtils.mjs');
-  
+
     const halfWidthString = kanaString
-      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-      .replace(/　/g, ' ') // Replace full-width spaces
-      .replace(/[\uFF61-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0)); //convert half width katakana to half width
-  
+        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+        .replace(/　/g, ' ') // Replace full-width spaces
+        .replace(/[\uFF61-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0)); //convert half width katakana to half width
+
     let romaji = toRomaji(halfWidthString);
-    //console.log('Kana $1 became $2',[kanaString,romaji]);
-  
+    //logger.debug('Kana $1 became $2',[kanaString,romaji]);
+
     // Capitalize the first letter and return the result  
     romaji = romaji
         .split(' ')
@@ -28,69 +29,69 @@ const processNameString = async (nameString) => {
     const kanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // Kana
     const halfKanaRegex = /[\uFF65-\uFF9F]/; // Half-width Kana
     const { convertText } = await import('../utils/japaneseUtils.mjs');
-    
+
     const toFullWidthKana = (str) => {
         return str.normalize('NFKC').replace(/[\uFF61-\uFF9F]/g, (char) => {
             const code = char.charCodeAt(0) - 0xFF61 + 0x30A1;
             return String.fromCharCode(code);
-    });
-};
+        });
+    };
 
-const toKatakana = (str) => str.replace(/[\u3040-\u309F]/g, (char) =>
-    String.fromCharCode(char.charCodeAt(0) + 0x60)
-);
+    const toKatakana = (str) => str.replace(/[\u3040-\u309F]/g, (char) =>
+        String.fromCharCode(char.charCodeAt(0) + 0x60)
+    );
 
-let name = nameString; // Default
-let nameKana = null;
-let nameKanji = null;
+    let name = nameString; // Default
+    let nameKana = null;
+    let nameKanji = null;
 
-if(halfKanaRegex.test(nameString)){ 
-    //console.log('Half-width kana provided: ', nameString);
-    nameKana = toFullWidthKana(nameString);
-    //console.log('Half-width kana converted: ', nameKana);
-};
+    if (halfKanaRegex.test(nameString)) {
+        //logger.debug('Half-width kana provided: ', nameString);
+        nameKana = toFullWidthKana(nameString);
+        //logger.debug('Half-width kana converted: ', nameKana);
+    };
 
-if (kanjiRegex.test(nameString)) {
-    nameKanji = nameString;
-    nameKana = await convertText(nameString);
-    nameKana = toKatakana(nameKana);
-    name = await transliterateKanaToRomaji(nameKana);
-} else if (kanaRegex.test(nameString) || halfKanaRegex.test(nameString)) {
-    const fullKana = halfKanaRegex.test(nameString)
-    ? toFullWidthKana(nameString)
-    : nameString;
+    if (kanjiRegex.test(nameString)) {
+        nameKanji = nameString;
+        nameKana = await convertText(nameString);
+        nameKana = toKatakana(nameKana);
+        name = await transliterateKanaToRomaji(nameKana);
+    } else if (kanaRegex.test(nameString) || halfKanaRegex.test(nameString)) {
+        const fullKana = halfKanaRegex.test(nameString)
+            ? toFullWidthKana(nameString)
+            : nameString;
 
-    const halfWidthName = fullKana
-    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-    .replace(/　/g, ' ') // Replace full-width spaces
-    .replace(/[\uFF61-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
+        const halfWidthName = fullKana
+            .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+            .replace(/　/g, ' ') // Replace full-width spaces
+            .replace(/[\uFF61-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
 
-    nameKana = toKatakana(halfWidthName);
-    name = await transliterateKanaToRomaji(nameKana);
-} else {
-    // Handle full-width alphabet and spaces
-    name = nameString
-    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-    .replace(/　/g, ' ') // Replace full-width spaces
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
+        nameKana = toKatakana(halfWidthName);
+        name = await transliterateKanaToRomaji(nameKana);
+    } else {
+        // Handle full-width alphabet and spaces
+        name = nameString
+            .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+            .replace(/　/g, ' ') // Replace full-width spaces
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
 
-//console.log([name, nameKana, nameKanji]);
+    //logger.debug([name, nameKana, nameKanji]);
 
-return { name, nameKana, nameKanji };
+    return { name, nameKana, nameKanji };
 };
 
 const insertYadomasterClients = async (requestId, clients) => {
     const pool = getPool(requestId);
-    
+
     const client = await pool.connect();
 
     // Disable trigger
     await client.query('ALTER TABLE clients DISABLE TRIGGER log_clients_trigger;');
-    await client.query('ALTER TABLE addresses DISABLE TRIGGER log_addresses_trigger;');    
-  
+    await client.query('ALTER TABLE addresses DISABLE TRIGGER log_addresses_trigger;');
+
     try {
         await client.query('BEGIN');
 
@@ -126,8 +127,8 @@ const insertYadomasterClients = async (requestId, clients) => {
         await client.query('COMMIT');
         return { success: true, count: clients.length };
     } catch (err) {
-        await client.query('ROLLBACK'); 
-        console.error('Error adding clients (transaction rolled back):', err);
+        await client.query('ROLLBACK');
+        logger.error('Error adding clients (transaction rolled back):', err);
         throw new Error('Database error during client insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
@@ -138,14 +139,14 @@ const insertYadomasterClients = async (requestId, clients) => {
 };
 const insertYadomasterReservations = async (requestId, reservations) => {
     const pool = getPool(requestId);
-    
+
     const client = await pool.connect();
 
     // Disable trigger
     await client.query('ALTER TABLE reservations DISABLE TRIGGER log_reservations_trigger;');
-  
+
     try {
-        await client.query('BEGIN');        
+        await client.query('BEGIN');
 
         const valuePlaceholders = [];
         const values = [];
@@ -155,8 +156,8 @@ const insertYadomasterReservations = async (requestId, reservations) => {
             valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 parseInt(reservation.hotel_id, 10),
-                reservation.id,  
-                reservation.reservation_client_id,  
+                reservation.id,
+                reservation.reservation_client_id,
                 reservation.check_in,
                 reservation.check_in_time,
                 reservation.check_out,
@@ -176,15 +177,15 @@ const insertYadomasterReservations = async (requestId, reservations) => {
                 created_by
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
-        
+
         await client.query(query, values);
 
         await client.query('COMMIT');
-        
+
         return { success: true, count: reservations.length };
     } catch (err) {
-        await client.query('ROLLBACK'); 
-        console.error('Error adding reservations (transaction rolled back):', err);
+        await client.query('ROLLBACK');
+        logger.error('Error adding reservations (transaction rolled back):', err);
         throw new Error('Database error during reservation insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
@@ -199,7 +200,7 @@ const insertYadomasterDetails = async (requestId, details) => {
 
     // Disable trigger
     await client.query('ALTER TABLE reservation_details DISABLE TRIGGER log_reservation_details_trigger;');
-  
+
     try {
         await client.query('BEGIN');
 
@@ -239,11 +240,11 @@ const insertYadomasterDetails = async (requestId, details) => {
         await client.query('COMMIT');
         return { success: true, count: details.length };
     } catch (err) {
-        await client.query('ROLLBACK'); 
+        await client.query('ROLLBACK');
         if (err.code === '23514' && err.table === 'reservation_details') {
-            console.error(`Import Error: ${err.message}. ${err.detail}`);
+            logger.error(`Import Error: ${err.message}. ${err.detail}`);
         } else {
-            console.error('Error adding reservation details (transaction rolled back):', err);
+            logger.error('Error adding reservation details (transaction rolled back):', err);
         }
         throw new Error('Database error during reservation details insertion (transaction rolled back)');
     } finally {
@@ -259,7 +260,7 @@ const insertYadomasterPayments = async (requestId, payments) => {
 
     // Disable trigger
     await client.query('ALTER TABLE reservation_payments DISABLE TRIGGER log_reservation_payments_trigger;');
-  
+
     try {
         await client.query('BEGIN');
 
@@ -294,8 +295,8 @@ const insertYadomasterPayments = async (requestId, payments) => {
         await client.query('COMMIT');
         return { success: true, count: payments.length };
     } catch (err) {
-        await client.query('ROLLBACK'); 
-        console.error('Error adding reservation payments (transaction rolled back):', err);
+        await client.query('ROLLBACK');
+        logger.error('Error adding reservation payments (transaction rolled back):', err);
         throw new Error('Database error during reservation payments insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
@@ -310,7 +311,7 @@ const insertYadomasterAddons = async (requestId, addons) => {
 
     // Disable trigger
     await client.query('ALTER TABLE reservation_addons DISABLE TRIGGER log_reservation_addons_trigger;');
-  
+
     try {
         await client.query('BEGIN');
 
@@ -352,8 +353,8 @@ const insertYadomasterAddons = async (requestId, addons) => {
         await client.query('COMMIT');
         return { success: true, count: addons.length };
     } catch (err) {
-        await client.query('ROLLBACK'); 
-        console.error('Error adding reservation addons (transaction rolled back):', err);
+        await client.query('ROLLBACK');
+        logger.error('Error adding reservation addons (transaction rolled back):', err);
         throw new Error('Database error during reservation addons insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
@@ -368,7 +369,7 @@ const insertYadomasterRates = async (requestId, rates) => {
 
     // Disable trigger
     await client.query('ALTER TABLE reservation_rates DISABLE TRIGGER log_reservation_rates_trigger;');
-  
+
     try {
         await client.query('BEGIN');
 
@@ -400,8 +401,8 @@ const insertYadomasterRates = async (requestId, rates) => {
         await client.query('COMMIT');
         return { success: true, count: rates.length };
     } catch (err) {
-        await client.query('ROLLBACK'); 
-        console.error('Error adding reservation rates (transaction rolled back):', err);
+        await client.query('ROLLBACK');
+        logger.error('Error adding reservation rates (transaction rolled back):', err);
         throw new Error('Database error during reservation rates insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
@@ -413,15 +414,15 @@ const insertYadomasterRates = async (requestId, rates) => {
 const insertForecastData = async (requestId, forecasts, user_id) => {
     // Ensure forecasts is an array and not empty
     if (!Array.isArray(forecasts) || forecasts.length === 0) {
-        //console.log('insertForecastData: No forecast data provided or forecasts array is empty.');
+        //logger.debug('insertForecastData: No forecast data provided or forecasts array is empty.');
         return { success: true, count: 0, message: 'No forecast data to process.' };
     }
 
     const pool = getPool(requestId);
-    const client = await pool.connect();    
+    const client = await pool.connect();
 
     try {
-        await client.query('BEGIN');        
+        await client.query('BEGIN');
 
         const query = `
             INSERT INTO du_forecast (
@@ -461,9 +462,14 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
         `;
 
         // Map each forecast item to a promise that executes its query
-        const queryPromises = forecasts.map(forecast => {
+        const queryPromises = forecasts.map(async (forecast) => {
             // Prepare the values for the query for the current forecast
-            // Ensure numeric fields are correctly parsed or null
+            const typeCategoryIdRaw = forecast.plan_type_category_id !== undefined && forecast.plan_type_category_id !== null ? parseInt(forecast.plan_type_category_id, 10) : 0;
+            const typeCategoryId = isNaN(typeCategoryIdRaw) ? 0 : typeCategoryIdRaw;
+
+            const packageCategoryIdRaw = forecast.plan_package_category_id !== undefined && forecast.plan_package_category_id !== null ? parseInt(forecast.plan_package_category_id, 10) : 0;
+            const packageCategoryId = isNaN(packageCategoryIdRaw) ? 0 : packageCategoryIdRaw;
+
             const currentValues = [
                 parseInt(forecast.hotel_id, 10),
                 forecast.month, // Assuming this is a date string like 'YYYY/MM/DD' or 'YYYY-MM-DD'
@@ -473,10 +479,12 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 forecast.available_room_nights !== undefined && forecast.available_room_nights !== null ? parseInt(forecast.available_room_nights, 10) : null,
                 forecast.rooms_sold_nights !== undefined && forecast.rooms_sold_nights !== null ? parseInt(forecast.rooms_sold_nights, 10) : null,
                 forecast.non_accommodation_sold_rooms !== undefined && forecast.non_accommodation_sold_rooms !== null ? parseInt(forecast.non_accommodation_sold_rooms, 10) : null,
-                forecast.plan_type_category_id !== undefined && forecast.plan_type_category_id !== null ? parseInt(forecast.plan_type_category_id, 10) : null,
-                forecast.plan_package_category_id !== undefined && forecast.plan_package_category_id !== null ? parseInt(forecast.plan_package_category_id, 10) : null,
+                typeCategoryId,
+                packageCategoryId,
                 user_id
             ];
+
+            logger.debug(`[insertForecastData] Inserting/Updating record: Hotel ${forecast.hotel_id}, Month ${forecast.month}, TypeCat ${typeCategoryId}, PkgCat ${packageCategoryId}, Rev ${forecast.accommodation_revenue}, Avail ${forecast.available_room_nights}, Sold ${forecast.rooms_sold_nights}`);
 
             return client.query(query, currentValues)
                 .then(res => {
@@ -485,19 +493,19 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 })
                 .catch(err => {
                     // Log specific error context here, then re-throw to ensure Promise.all fails
-                    console.error(`Error during database query for hotel_id: ${forecast.hotel_id}, month: ${forecast.month}. Query: ${query.substring(0,200)}... Values: ${JSON.stringify(currentValues)}`, err.stack);
+                    logger.error(`Error during database query for hotel_id: ${forecast.hotel_id}, month: ${forecast.month}. Values: ${JSON.stringify(currentValues)}`, { error: err.message, stack: err.stack });
                     throw err; // Important: re-throw error to make Promise.all reject
                 });
         });
-            
+
         const allResults = await Promise.all(queryPromises);
 
         await client.query('COMMIT');
-        // console.log('Transaction committed successfully. Records processed:', forecasts.length);
+        // logger.debug('Transaction committed successfully. Records processed:', forecasts.length);
         return { success: true, count: forecasts.length };
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Error in insertForecastData:', error.stack);
+        logger.error('Error in insertForecastData:', error.stack);
         return { success: false, error: error.message, stack: error.stack, count: 0 };
     } finally {
         client.release();
@@ -506,12 +514,12 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
 
 const insertAccountingData = async (requestId, accountingEntries, user_id) => {
     if (!Array.isArray(accountingEntries) || accountingEntries.length === 0) {
-        //console.log('insertAccountingData: No accounting data provided or accountingEntries array is empty.');
+        //logger.debug('insertAccountingData: No accounting data provided or accountingEntries array is empty.');
         return { success: true, count: 0, message: 'No accounting data to process.' };
     }
 
     const pool = getPool(requestId);
-    const client = await pool.connect();  
+    const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
@@ -553,9 +561,15 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
         `;
 
         // Map each accounting entry item to a promise that executes its query
-        const queryPromises = accountingEntries.map(entry => {
+        const queryPromises = accountingEntries.map(async (entry) => {
             // Prepare the values for the query for the current entry
             // Ensure numeric fields are correctly parsed or null
+            const typeCategoryIdRaw = entry.plan_type_category_id !== undefined && entry.plan_type_category_id !== null ? parseInt(entry.plan_type_category_id, 10) : 0;
+            const typeCategoryId = isNaN(typeCategoryIdRaw) ? 0 : typeCategoryIdRaw;
+
+            const packageCategoryIdRaw = entry.plan_package_category_id !== undefined && entry.plan_package_category_id !== null ? parseInt(entry.plan_package_category_id, 10) : 0;
+            const packageCategoryId = isNaN(packageCategoryIdRaw) ? 0 : packageCategoryIdRaw;
+
             const currentValues = [
                 parseInt(entry.hotel_id, 10),
                 entry.month, // Assuming this is a date string like 'YYYY-MM-DD' and the DB column is DATE
@@ -565,36 +579,38 @@ const insertAccountingData = async (requestId, accountingEntries, user_id) => {
                 entry.available_room_nights !== undefined && entry.available_room_nights !== null ? parseInt(entry.available_room_nights, 10) : null,
                 entry.rooms_sold_nights !== undefined && entry.rooms_sold_nights !== null ? parseInt(entry.rooms_sold_nights, 10) : null,
                 entry.non_accommodation_sold_rooms !== undefined && entry.non_accommodation_sold_rooms !== null ? parseInt(entry.non_accommodation_sold_rooms, 10) : null,
-                entry.plan_type_category_id !== undefined && entry.plan_type_category_id !== null ? parseInt(entry.plan_type_category_id, 10) : null,
-                entry.plan_package_category_id !== undefined && entry.plan_package_category_id !== null ? parseInt(entry.plan_package_category_id, 10) : null,
+                typeCategoryId,
+                packageCategoryId,
                 user_id
             ];
+
+            logger.debug(`[insertAccountingData] Inserting/Updating record: Hotel ${entry.hotel_id}, Month ${entry.month}, TypeCat ${typeCategoryId}, PkgCat ${packageCategoryId}, Rev ${entry.accommodation_revenue}, Avail ${entry.available_room_nights}, Sold ${entry.rooms_sold_nights}`);
 
             // Return the promise from client.query
             return client.query(query, currentValues)
                 .then(res => {
                     // Attach entry info to the result for easier processing/logging after Promise.all
                     if (res.rowCount === 0) {
-                         console.warn(`No rows affected for hotel_id: ${entry.hotel_id}, month: ${entry.month}. This might indicate an issue if an insert or update was expected.`);
+                        logger.warn(`No rows affected for hotel_id: ${entry.hotel_id}, month: ${entry.month}. This might indicate an issue if an insert or update was expected.`);
                     }
                     return { res, entry };
                 })
                 .catch(err => {
                     // Log specific error context here, then re-throw to ensure Promise.all fails
-                    console.error(`Error during database query for hotel_id: ${entry.hotel_id}, month: ${entry.month}. Query: ${query.substring(0,250)}... Values: ${JSON.stringify(currentValues)}`, err.stack);
+                    logger.error(`Error during database query for hotel_id: ${entry.hotel_id}, month: ${entry.month}. Values: ${JSON.stringify(currentValues)}`, { error: err.message, stack: err.stack });
                     throw err; // Important: re-throw error to make Promise.all reject
                 });
         });
-            
+
         const allResults = await Promise.all(queryPromises);
 
         await client.query('COMMIT');
-        
-        return { success: true, count: accountingEntries.length, results: allResults.map(r => ({id: r.res.rows[0]?.id, ...r.entry})) };
+
+        return { success: true, count: accountingEntries.length, results: allResults.map(r => ({ id: r.res.rows[0]?.id, ...r.entry })) };
 
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Error in insertAccountingData transaction:', error.stack);
+        logger.error('Error in insertAccountingData transaction:', error.stack);
         return { success: false, error: error.message, stack: error.stack, count: 0 };
     } finally {
         client.release();
@@ -623,7 +639,7 @@ const getPrefilledData = async (requestId, type, month1, month2) => {
         const result = await client.query(query, values);
         return result.rows;
     } catch (error) {
-        console.error(`Error fetching prefilled ${type} data:`, error);
+        logger.error(`Error fetching prefilled ${type} data:`, error);
         throw error;
     } finally {
         client.release();
@@ -641,4 +657,4 @@ module.exports = {
     insertForecastData,
     insertAccountingData,
     getPrefilledData
-  };
+};
