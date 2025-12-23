@@ -3,6 +3,16 @@
         <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="transparent" animationDuration=".5s"
             aria-label="Loading" />
     </div>
+    <div v-else-if="!reservation_details || reservation_details.length === 0" class="flex flex-col items-center justify-center p-8 mt-10">
+        <Card class="w-full max-w-lg text-center">
+            <template #content>
+                <i class="pi pi-exclamation-circle text-6xl text-red-500 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-2">予約が見つかりません</h2>
+                <p class="text-gray-600 mb-6">指定された予約IDは存在しないか、既に削除されている可能性があります。</p>
+                <Button label="カレンダーに戻る" icon="pi pi-calendar" @click="router.push({ name: 'ReservationsCalendar' })" severity="secondary" />
+            </template>
+        </Card>
+    </div>
     <div v-else>
         <!-- Top Panel -->
         <Card class="m-2">
@@ -85,6 +95,8 @@
 <script setup>
 // Vue
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 import ReservationPanel from '@/pages/MainPage/Reservation/components/ReservationPanel.vue';
 import ReservationRoomsView from '@/pages/MainPage/Reservation/components/ReservationRoomsView.vue';
@@ -119,6 +131,7 @@ const { selectedHotelId, setHotelId } = useHotelStore();
 import { Card } from 'primevue';
 import { ProgressSpinner } from 'primevue';
 import { Tag } from 'primevue';
+import { Button } from 'primevue';
 
 const reservationStatus = ref(null);
 const reservation_details = ref(null);
