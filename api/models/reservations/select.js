@@ -73,6 +73,7 @@ const selectReservation = async (requestId, id, hotel_id) => {
       r.ota_reservation_id,
       r.comment,
       r.has_important_comment,
+      rd.id AS id,
       rd.id AS reservation_detail_id,
       rd.date,
       rm.room_type_id,
@@ -962,7 +963,7 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
     return result.rows;
   } catch (error) {
     logger.error('Error fetching reservations by client:', error);
-    return [];    
+    return [];
   }
 };
 

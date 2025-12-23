@@ -1645,8 +1645,13 @@ const actionSplitReservation = async (req, res) => {
   const { originalReservationId, hotelId, reservationDetailIdsToMove, isFullPeriodSplit, isFullRoomSplit } = req.body;
   const userId = req.user.id;
 
+  const { validate: uuidValidate } = require('uuid');
   if (!originalReservationId || !hotelId || !reservationDetailIdsToMove || !Array.isArray(reservationDetailIdsToMove) || reservationDetailIdsToMove.length === 0 || typeof isFullPeriodSplit !== 'boolean' || typeof isFullRoomSplit !== 'boolean') {
     return res.status(400).json({ error: 'Missing or invalid parameters for splitting a reservation.' });
+  }
+
+  if (reservationDetailIdsToMove.some(id => !id || !uuidValidate(id))) {
+    return res.status(400).json({ error: 'All reservation detail IDs to move must be valid UUIDs.' });
   }
 
   try {
