@@ -1,30 +1,48 @@
 const { getAllPlanAddons, createPlanAddon, updatePlanAddon, deletePlanAddon, getPlanAddonById } = require('../models/planAddon');
+const { validateNumericParam } = require('../utils/validationUtils');
+const logger = require('../config/logger');
+
+const parseParam = (val) => {
+    if (val === 'undefined' || val === 'null' || !val) return null;
+    return parseInt(val, 10);
+};
 
 // GET all plan addons
 const getPlanAddons = async (req, res) => {
-    const plans_global_id = req.params.gid;
-    const plans_hotel_id = req.params.hid;
-    const hotel_id = req.params.hotel_id;
-
     try {
+        const plans_global_id = parseParam(req.params.gid);
+        const plans_hotel_id = parseParam(req.params.hid);
+        const hotel_id = validateNumericParam(req.params.hotel_id, 'Hotel ID');
+
         const addons = await getAllPlanAddons(req.requestId, plans_global_id, plans_hotel_id, hotel_id);
         res.json(addons);
     } catch (error) {
-        console.error('Error getting plan addons:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error getting plan addons:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params,
+            query: req.query,
+            requestId: req.requestId
+        });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 };
 
 // GET plan addon by ID
 const getPlanAddon = async (req, res) => {
-    const addonId = parseInt(req.params.id);
-
     try {
+        const addonId = validateNumericParam(req.params.id, 'Plan Addon ID');
         const addon = await getPlanAddonById(req.requestId, addonId);
         res.json(addon);
     } catch (error) {
-        console.error('Error getting plan addon:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error getting plan addon by ID:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params,
+            query: req.query,
+            requestId: req.requestId
+        });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 };
 
@@ -40,16 +58,21 @@ const createNewPlanAddon = async (req, res) => {
         const newAddon = await createPlanAddon(req.requestId, planAddon);
         res.status(201).json(newAddon);
     } catch (error) {
-        console.error('Error creating plan addon:', error);
+        logger.error('Error creating plan addon:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params,
+            query: req.query,
+            requestId: req.requestId
+        });
         res.status(500).json({ error: error.message });
     }
 };
 
 // PUT update an existing plan addon
 const updateExistingPlanAddon = async (req, res) => {
-    const addonId = parseInt(req.params.id);
-
     try {
+        const addonId = validateNumericParam(req.params.id, 'Plan Addon ID');
         const existingAddon = await getPlanAddonById(req.requestId, addonId);
 
         const planAddon = {
@@ -65,32 +88,40 @@ const updateExistingPlanAddon = async (req, res) => {
             updated_by: req.user.id
         };
 
-        // Ensure date_start is not null if it is required by the DB
-        // Assuming it is required based on the error message.
+        // Ensure date_start is not null
         if (!planAddon.date_start) {
-            // Provide a default or throw an error. For now, let's use a default.
-            // A reasonable default for date_start could be the current date.
             planAddon.date_start = new Date().toISOString().split('T')[0];
         }
 
         const updatedAddon = await updatePlanAddon(req.requestId, addonId, planAddon);
         res.json(updatedAddon);
     } catch (error) {
-        console.error('Error updating plan addon:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error updating plan addon:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params,
+            query: req.query,
+            requestId: req.requestId
+        });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 };
 
 // DELETE a plan addon by ID
 const deleteExistingPlanAddon = async (req, res) => {
-    const addonId = parseInt(req.params.id);
-
     try {
+        const addonId = validateNumericParam(req.params.id, 'Plan Addon ID');
         const deletedAddon = await deletePlanAddon(req.requestId, addonId);
         res.json(deletedAddon);
     } catch (error) {
-        console.error('Error deleting plan addon:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error deleting plan addon:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params,
+            query: req.query,
+            requestId: req.requestId
+        });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 };
 
