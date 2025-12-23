@@ -1679,6 +1679,15 @@ const actionMergeReservations = async (req, res) => {
     return res.status(400).json({ error: 'Invalid reservation ID(s) provided. IDs must be valid UUIDs.' });
   }
 
+  if (targetReservationId === sourceReservationId) {
+    logger.warn(`[${req.requestId}] actionMergeReservations - targetReservationId and sourceReservationId are the same.`, {
+      userId,
+      targetReservationId,
+      sourceReservationId
+    });
+    return res.status(400).json({ error: 'targetReservationId and sourceReservationId must be different.' });
+  }
+
   try {
     const resultId = await reservationsModel.mergeReservations(req.requestId, targetReservationId, sourceReservationId, hotelId, userId);
     res.status(200).json({ message: 'Reservations merged successfully.', id: resultId });

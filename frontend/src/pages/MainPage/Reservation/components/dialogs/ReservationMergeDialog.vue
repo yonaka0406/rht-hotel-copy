@@ -208,8 +208,9 @@ const checkMergeValidity = (target, source) => {
     // We now use min_date and max_date provided by the backend, 
     // which represent the full range of details including cancelled ones.
     const normalizeDate = (dateStr) => {
-        if (!dateStr) return 0;
+        if (!dateStr) return null;
         const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return null;
         return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     };
 
@@ -220,8 +221,11 @@ const checkMergeValidity = (target, source) => {
     const sEnd = normalizeDate(source.details_max_date || source.check_out);
 
     // 1. Same Dates (Full Range)
-    if (tStart === sStart && tEnd === sEnd) {
-        return 'same';
+    // Only compare if all dates are valid (non-null)
+    if (tStart !== null && sStart !== null && tEnd !== null && sEnd !== null) {
+        if (tStart === sStart && tEnd === sEnd) {
+            return 'same';
+        }
     }
 
     // 2. Contiguous
@@ -238,8 +242,12 @@ const checkMergeValidity = (target, source) => {
         return null;
     }
 
-    if (tEnd === sStart || sEnd === tStart) {
-        return 'contiguous'; // Or 'serial'
+    // Only compare if the relevant boundary dates are valid
+    if (tEnd !== null && sStart !== null && tEnd === sStart) {
+        return 'contiguous';
+    }
+    if (sEnd !== null && tStart !== null && sEnd === tStart) {
+        return 'contiguous';
     }
 
     return null;
