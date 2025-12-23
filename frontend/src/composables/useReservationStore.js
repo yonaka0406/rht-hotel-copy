@@ -1632,9 +1632,21 @@ export function useReservationStore() {
     };
 
     const mergeReservations = async (targetReservationId, sourceReservationId, hotelId) => {
-        // Validation (mirror splitReservation pattern)
-        if (!targetReservationId || !sourceReservationId || !hotelId) {
-            throw new Error('Missing required parameters for merge.');
+        // Early Input Validation
+        if (!targetReservationId || (typeof targetReservationId === 'string' && !targetReservationId.trim())) {
+            throw new Error('Target reservation ID is required.');
+        }
+        if (!sourceReservationId || (typeof sourceReservationId === 'string' && !sourceReservationId.trim())) {
+            throw new Error('Source reservation ID is required.');
+        }
+        if (String(targetReservationId).trim() === String(sourceReservationId).trim()) {
+            throw new Error('Target and source reservation IDs must be different.');
+        }
+        if (!hotelId) {
+            throw new Error('Hotel ID is required.');
+        }
+        if (typeof hotelId !== 'number' && (typeof hotelId !== 'string' || !hotelId.trim())) {
+            throw new Error('Hotel ID must be a number or a non-empty string.');
         }
 
         setReservationIsUpdating(true);

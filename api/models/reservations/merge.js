@@ -161,7 +161,7 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
             // For contiguous, number of people must be identical
             // We use the effective people count calculated from active details
             if (tPeople !== sPeople) {
-                throw new Error('For contiguous merge, number of people must be identical.');
+                throw new Error('For contiguous merge, maximum daily people count must be identical.');
             }
         } else if (!isSameDates) {
             // If not same dates and not contiguous, fail

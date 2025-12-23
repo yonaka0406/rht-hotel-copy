@@ -40,7 +40,7 @@
                     <Column field="status" header="ステータス">
                         <template #body="slotProps">
                             <Badge :severity="getBadgeSeverity(slotProps.data.status)"
-                                :value="translateStatus(slotProps.data.status)" />
+                                :value="translateReservationStatus(slotProps.data.status)" />
                         </template>
                     </Column>
                     <Column header="結合タイプ">
@@ -161,9 +161,6 @@ const getBadgeSeverity = (status) => {
     }
 };
 
-const translateStatus = (status) => {
-    return translateReservationStatus(status);
-};
 
 const loadCandidates = async () => {
     if (!props.reservation || !props.reservation.client_id) return;
