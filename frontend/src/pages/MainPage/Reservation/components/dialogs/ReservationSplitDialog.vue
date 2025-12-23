@@ -231,12 +231,12 @@ const handleSplit = async () => {
             toast.add({ severity: 'success', summary: '成功', detail: '予約が正常に分割されました。', life: 3000 });
             showDialog.value = false;
             // Redirect to the first new reservation created
-            router.push(`/reservations/edit/${newReservationIds[0]}`);
+            router.push({ name: 'ReservationEdit', params: { reservation_id: newReservationIds[0] } });
         } else {
             // This case handles situations where the backend returns an empty array
             // (e.g., no changes were made or the split could not be performed for other reasons).
             // An informational toast is shown, and the dialog is closed.
-            toast.add({ severity: 'info', summary: '情報', detail: '選択された予約は分割されませんでした。' , life: 3000 });
+            toast.add({ severity: 'info', summary: '情報', detail: '選択された予約は分割されませんでした。', life: 3000 });
             showDialog.value = false; // Close the dialog even if no split
         }
     } catch (error) {

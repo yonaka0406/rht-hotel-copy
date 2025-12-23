@@ -282,7 +282,7 @@ const handleMerge = async () => {
                 showDialog.value = false;
                 emit('merged', keptId);
                 // Navigate to the merged reservation detail
-                router.push({ name: 'ReservationDetail', params: { id: keptId } });
+                router.push({ name: 'ReservationEdit', params: { reservation_id: keptId } });
             } catch (error) {
                 console.error('Merge failed', error);
                 toast.add({ severity: 'error', summary: 'エラー', detail: error.response?.data?.error || '予約の結合に失敗しました。', life: 3000 });
