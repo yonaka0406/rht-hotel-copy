@@ -161,11 +161,11 @@ const checkMergeValidity = (target, source) => {
         return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     };
 
-    // Use min_date/max_date if available (from our refined backend), otherwise fallback to check_in/check_out
-    const tStart = normalizeDate(target.min_date || target.check_in);
-    const tEnd = normalizeDate(target.max_date || target.check_out);
-    const sStart = normalizeDate(source.min_date || source.check_in);
-    const sEnd = normalizeDate(source.max_date || source.check_out);
+    // Use details_min_date/details_max_date if available (from our refined backend)
+    const tStart = normalizeDate(target.details_min_date || target.check_in);
+    const tEnd = normalizeDate(target.details_max_date || target.check_out);
+    const sStart = normalizeDate(source.details_min_date || source.check_in);
+    const sEnd = normalizeDate(source.details_max_date || source.check_out);
 
     // 1. Same Dates (Full Range)
     if (tStart === sStart && tEnd === sEnd) {
@@ -175,8 +175,8 @@ const checkMergeValidity = (target, source) => {
     // 2. Contiguous
     // Target End == Source Start OR Source End == Target Start
     // AND active number of people must match
-    const tPeople = Number(target.reservation_number_of_people || target.number_of_people);
-    const sPeople = Number(source.number_of_people);
+    const tPeople = Number(target.details_number_of_people || target.reservation_number_of_people || target.number_of_people);
+    const sPeople = Number(source.details_number_of_people || source.number_of_people);
 
     if (tPeople !== sPeople) {
         return null;
