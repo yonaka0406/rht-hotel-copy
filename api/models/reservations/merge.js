@@ -1,5 +1,6 @@
 const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
+const format = require('pg-format');
 
 // Helper: Recalculate metrics for a reservation
 async function recalculateReservationMetrics(reservationId, hotelId, userId, dbClient) {
@@ -58,6 +59,9 @@ const mergeReservations = async (requestId, targetReservationId, sourceReservati
 
     try {
         await client.query('BEGIN');
+
+        // Set session user for triggers/logging
+        await client.query(format('SET SESSION "my_app.user_id" = %L;', userId));
 
         // 1. Fetch both reservations
         const query = `SELECT * FROM reservations WHERE id IN ($1, $2) AND hotel_id = $3`;

@@ -58,6 +58,7 @@
                 severity="danger" />
             <Button label="結合" icon="pi pi-check" @click="handleMerge" :disabled="!selectedReservation" />
         </template>
+        <ConfirmDialog group="merge"></ConfirmDialog>
     </Dialog>
 </template>
 
@@ -65,6 +66,7 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Dialog from 'primevue/dialog';
+import ConfirmDialog from 'primevue/confirmdialog';
 import Button from 'primevue/button';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -249,6 +251,7 @@ const handleMerge = async () => {
     if (!selectedReservation.value) return;
 
     confirm.require({
+        group: 'merge',
         message: `予約（${formatReservationDate(selectedReservation.value)}）を現在の予約に結合しますか？選択した予約は結合後に削除されます。`,
         header: '予約結合の確認',
         icon: 'pi pi-exclamation-triangle',
