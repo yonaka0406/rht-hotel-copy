@@ -56,7 +56,8 @@
         <template #footer>
             <Button label="キャンセル" icon="pi pi-times" @click="showDialog = false" class="p-button-text"
                 severity="danger" />
-            <Button label="結合" icon="pi pi-check" @click="handleMerge" :disabled="!selectedReservation" />
+            <Button label="結合" icon="pi pi-check" @click="handleMerge" :disabled="!selectedReservation || isSubmitting"
+                :loading="isSubmitting" />
         </template>
         <ConfirmDialog group="merge"></ConfirmDialog>
     </Dialog>
@@ -253,8 +254,9 @@ const checkMergeValidity = (target, source) => {
 
 
 const handleMerge = async () => {
-    if (!selectedReservation.value) return;
+    if (isSubmitting.value || !selectedReservation.value) return;
 
+    isSubmitting.value = true;
     confirm.require({
         group: 'merge',
         message: `予約（${formatReservationDate(selectedReservation.value)}）を現在の予約に結合しますか？選択した予約は結合後に削除されます。`,
@@ -270,7 +272,6 @@ const handleMerge = async () => {
             outlined: true
         },
         accept: async () => {
-            isSubmitting.value = true;
             try {
                 // Merge SELECTED (Source) INTO CURRENT (Target)
                 const keptId = await mergeReservations(
@@ -289,6 +290,9 @@ const handleMerge = async () => {
             } finally {
                 isSubmitting.value = false;
             }
+        },
+        reject: () => {
+            isSubmitting.value = false;
         }
     });
 };

@@ -708,23 +708,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.3.4] - 2025-12-23
 
 - Feature: Added plan categories to help deprecate global plans, including sales category classification for plans and addons, inheritance of sales category by reservation rates and addons, and backend validation with DB schema updates
-
----
-
-## [1.3.5] - 2025-12-23
-
-- Bugfix: Fixed a crash during split reservation by ensuring all selected reservation details have valid IDs. Updated backend `selectReservation` model to include the `id` field, preventing `null` values from being passed to the split function.
-- Bugfix: Resolved a backend error during reservation metrics recalculation by adding a check for active reservation details and throwing a descriptive error if none are found.
-- Bugfix: Corrected the redirect after a successful reservation merge. Replaced the non-existent 'ReservationDetail' route with 'ReservationEdit' and updated the parameter name to `reservation_id`.
-- Enhancement: Renamed `total_people` to `max_daily_people` in the reservation split model for better consistency with the rest of the application's metrics.
-- Enhancement: Improved database audit logging for split reservations by ensuring the session user ID is correctly set within the transaction.
-- Enhancement: Touched up post-split and post-merge redirects to use named routes for improved robust navigation.
+- Feature: Added the merge reservations functionality to the reservation edit page
+- Bugfix: Resolved errors in split and merge reservation processes, including null IDs, metric recalculation crashes, and incorrect redirects
 
 ---
 
 ## Version History
-- **1.3.5** (2025-12-23) - Fixed split reservation errors (null IDs, metric crashes), corrected post-merge redirect, and improved metric consistency and audit logging.
-- **1.3.4** (2025-12-23) - Added plan categories to help deprecate global plans, including sales category classification for plans and addons, inheritance of sales category by reservation rates and addons, and backend validation with DB schema updates
+- **1.3.4** (2025-12-23) - Added plan categories, merge reservations feature, and fixed split/merge reservation bugs (null IDs, metric crashes, redirect errors).
 - **1.3.3** (2025-12-22) - Streamlined invoice generation with improved reservation details handling, enhanced payment processing with transaction management, and bulk payment support
 - **1.3.2** (2025-12-17) - Added year-over-year (YoY) comparison for the same month in the reporting module
 - **1.3.1** (2025-12-05) - Added 宿泊税 (Accommodation Tax) Report Download functionality

@@ -259,10 +259,12 @@ const handleTableUpdate = (data) => {
     //console.log('tableUpdate received on edit', data);
     // Check if the deleted reservation is the one currently being viewed
     if (data.action === 'DELETE' && data.record_id === props.reservation_id) {
-        console.warn(`[ReservationEdit] Current reservation (ID: ${props.reservation_id}) has been deleted. Preventing data fetch.`);
-        // Optionally, you might want to navigate away or show a message to the user
-        // router.push({ name: 'ReservationsCalendar' }); // Example navigation
-        return; // Prevent fetching data for a deleted reservation
+        console.warn(`[ReservationEdit] Current reservation (ID: ${props.reservation_id}) has been deleted. Clearing stale data and triggering empty-state UI.`);
+        reservation_details.value = [];
+        reservationStatus.value = null;
+        reservation_payments.value = [];
+        parking_reservations.value = [];
+        return;
     }
     fetchAllReservationData();
 };
