@@ -170,9 +170,11 @@ const combinedSalesByPlan = computed(() => {
         const typeCategoryName = item.type_category_name || item.plan_type_category_name;
         const packageCategoryName = item.package_category_name || item.plan_package_category_name;
         
-        if (typeCategoryId && packageCategoryId) {
+        const hasCategoryIds = typeCategoryId || packageCategoryId;
+
+        if (hasCategoryIds) {
             // New category-based structure - use ID combination as key
-            categoryKey = `${typeCategoryId}_${packageCategoryId}`;
+            categoryKey = `${typeCategoryId || 'null'}_${packageCategoryId || 'null'}`;
             displayName = `${typeCategoryName || '未設定'} - ${packageCategoryName || '未設定'}`;
         } else if (item.plan_name) {
             // Fallback to plan name for backward compatibility or addons
@@ -187,7 +189,8 @@ const combinedSalesByPlan = computed(() => {
         if (!combined[categoryKey]) {
             combined[categoryKey] = {
                 plan_name: displayName,
-                sales_category: item.sales_category || 'forecast',
+                has_category: !!hasCategoryIds,
+                sales_category: item.sales_category || (isForecastData ? 'forecast' : 'accommodation'),
                 regular_sales: 0,
                 cancelled_sales: 0,
                 regular_net_sales: 0,
@@ -225,17 +228,23 @@ const processedSalesByPlan = computed(() => {
         const totalForecastSales = item.forecast_sales;
         
         // Include if any of the sales values are greater than 0
-        return totalSales > 0 || totalNetSales > 0 || totalForecastSales > 0;
+        // OR if it is an identified category (has Type or Package ID)
+        return totalSales > 0 || totalNetSales > 0 || totalForecastSales > 0 || item.has_category;
     });
 
     const sortedData = [...filteredData];
     sortedData.sort((a, b) => {
-        // Primary sort by regular_sales (descending)
+        // Primary sort by has_category (identified categories first)
+        if (a.has_category !== b.has_category) {
+            return a.has_category ? -1 : 1;
+        }
+
+        // Secondary sort by regular_sales (descending)
         if (b.regular_sales !== a.regular_sales) {
             return b.regular_sales - a.regular_sales;
         }
 
-        // Secondary sort by plan_name (ascending) if regular_sales are the same
+        // Tertiary sort by plan_name (ascending)
         if (a.plan_name < b.plan_name) return -1;
         if (a.plan_name > b.plan_name) return 1;
         return 0;
@@ -277,6 +286,14 @@ const initSalesByPlanChart = () => {
         const totalSales = salesByPlanChartMode.value === 'tax_included' 
             ? (item.regular_sales + item.cancelled_sales)
             : (item.regular_net_sales + item.cancelled_net_sales);
+        const totalForecast = item.forecast_sales;
+        
+        // In tax_excluded mode, show if there's any sales OR forecast OR it's an identified category
+        if (salesByPlanChartMode.value === 'tax_excluded') {
+            return totalSales > 0 || totalForecast > 0 || item.has_category;
+        }
+        
+        // In tax_included mode, only show if there's actual sales (since forecast is not shown)
         return totalSales > 0;
     });
 

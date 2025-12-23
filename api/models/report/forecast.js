@@ -69,25 +69,53 @@ const selectForecastDataByCategory = async (requestId, hotelId, dateStart, dateE
   const pool = getPool(requestId);
   const client = dbClient || await pool.connect();
   const query = `
+    WITH active_categories AS (
+      -- Categories that have forecast data for this hotel
+      SELECT DISTINCT 
+        plan_type_category_id, 
+        plan_package_category_id
+      FROM du_forecast
+      WHERE hotel_id = $1
+      
+      UNION
+      
+      -- Categories that are "filled" (have plans) in PMS for this hotel
+      SELECT DISTINCT 
+        plan_type_category_id, 
+        plan_package_category_id
+      FROM plans_hotel
+      WHERE hotel_id = $1
+    ),
+    months AS (
+      SELECT generate_series(
+        date_trunc('month', $2::date),
+        date_trunc('month', $3::date),
+        '1 month'::interval
+      )::date AS month
+    )
     SELECT
-      df.hotel_id,
-      df.forecast_month,
-      df.plan_type_category_id,
-      df.plan_package_category_id,
+      $1 AS hotel_id,
+      m.month AS forecast_month,
+      ac.plan_type_category_id,
+      ac.plan_package_category_id,
       COALESCE(ptc.name, '未設定') AS type_category_name,
       COALESCE(ppc.name, '未設定') AS package_category_name,
-      df.accommodation_revenue,
-      df.non_accommodation_revenue,
-      df.operating_days,
-      df.available_room_nights,
-      df.rooms_sold_nights,
-      df.non_accommodation_sold_rooms
-    FROM du_forecast df
-    LEFT JOIN plan_type_categories ptc ON df.plan_type_category_id = ptc.id
-    LEFT JOIN plan_package_categories ppc ON df.plan_package_category_id = ppc.id
-    WHERE df.hotel_id = $1
-      AND df.forecast_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
-    ORDER BY df.forecast_month, ptc.display_order, ppc.display_order
+      COALESCE(df.accommodation_revenue, 0) AS accommodation_revenue,
+      COALESCE(df.non_accommodation_revenue, 0) AS non_accommodation_revenue,
+      COALESCE(df.operating_days, 0) AS operating_days,
+      COALESCE(df.available_room_nights, 0) AS available_room_nights,
+      COALESCE(df.rooms_sold_nights, 0) AS rooms_sold_nights,
+      COALESCE(df.non_accommodation_sold_rooms, 0) AS non_accommodation_sold_rooms
+    FROM months m
+    CROSS JOIN active_categories ac
+    LEFT JOIN plan_type_categories ptc ON ac.plan_type_category_id = ptc.id
+    LEFT JOIN plan_package_categories ppc ON ac.plan_package_category_id = ppc.id
+    LEFT JOIN du_forecast df ON 
+      df.hotel_id = $1 AND
+      m.month = df.forecast_month AND
+      (df.plan_type_category_id IS NOT DISTINCT FROM ac.plan_type_category_id) AND
+      (df.plan_package_category_id IS NOT DISTINCT FROM ac.plan_package_category_id)
+    ORDER BY m.month, ptc.display_order, ppc.display_order
   `;
   const values = [hotelId, dateStart, dateEnd];
 
@@ -106,25 +134,53 @@ const selectAccountingDataByCategory = async (requestId, hotelId, dateStart, dat
   const pool = getPool(requestId);
   const client = dbClient || await pool.connect();
   const query = `
+    WITH active_categories AS (
+      -- Categories that have accounting data for this hotel
+      SELECT DISTINCT 
+        plan_type_category_id, 
+        plan_package_category_id
+      FROM du_accounting
+      WHERE hotel_id = $1
+      
+      UNION
+      
+      -- Categories that are "filled" (have plans) in PMS for this hotel
+      SELECT DISTINCT 
+        plan_type_category_id, 
+        plan_package_category_id
+      FROM plans_hotel
+      WHERE hotel_id = $1
+    ),
+    months AS (
+      SELECT generate_series(
+        date_trunc('month', $2::date),
+        date_trunc('month', $3::date),
+        '1 month'::interval
+      )::date AS month
+    )
     SELECT
-      da.hotel_id,
-      da.accounting_month,
-      da.plan_type_category_id,
-      da.plan_package_category_id,
+      $1 AS hotel_id,
+      m.month AS accounting_month,
+      ac.plan_type_category_id,
+      ac.plan_package_category_id,
       COALESCE(ptc.name, '未設定') AS type_category_name,
       COALESCE(ppc.name, '未設定') AS package_category_name,
-      da.accommodation_revenue,
-      da.non_accommodation_revenue,
-      da.operating_days,
-      da.available_room_nights,
-      da.rooms_sold_nights,
-      da.non_accommodation_sold_rooms
-    FROM du_accounting da
-    LEFT JOIN plan_type_categories ptc ON da.plan_type_category_id = ptc.id
-    LEFT JOIN plan_package_categories ppc ON da.plan_package_category_id = ppc.id
-    WHERE da.hotel_id = $1
-      AND da.accounting_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
-    ORDER BY da.accounting_month, ptc.display_order, ppc.display_order
+      COALESCE(da.accommodation_revenue, 0) AS accommodation_revenue,
+      COALESCE(da.non_accommodation_revenue, 0) AS non_accommodation_revenue,
+      COALESCE(da.operating_days, 0) AS operating_days,
+      COALESCE(da.available_room_nights, 0) AS available_room_nights,
+      COALESCE(da.rooms_sold_nights, 0) AS rooms_sold_nights,
+      COALESCE(da.non_accommodation_sold_rooms, 0) AS non_accommodation_sold_rooms
+    FROM months m
+    CROSS JOIN active_categories ac
+    LEFT JOIN plan_type_categories ptc ON ac.plan_type_category_id = ptc.id
+    LEFT JOIN plan_package_categories ppc ON ac.plan_package_category_id = ppc.id
+    LEFT JOIN du_accounting da ON 
+      da.hotel_id = $1 AND
+      m.month = da.accounting_month AND
+      (da.plan_type_category_id IS NOT DISTINCT FROM ac.plan_type_category_id) AND
+      (da.plan_package_category_id IS NOT DISTINCT FROM ac.plan_package_category_id)
+    ORDER BY m.month, ptc.display_order, ppc.display_order
   `;
   const values = [hotelId, dateStart, dateEnd];
 
