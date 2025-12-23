@@ -45,6 +45,9 @@ const selectReservation = async (requestId, id, hotel_id) => {
       r.check_out,
       r.check_out_time,
       r.number_of_people AS reservation_number_of_people,
+      eff.min_date AS details_min_date,
+      eff.max_date AS details_max_date,
+      eff.total_people AS details_number_of_people,
       r.status,
       r.type,
       r.payment_timing,
@@ -52,6 +55,7 @@ const selectReservation = async (requestId, id, hotel_id) => {
       r.ota_reservation_id,
       r.comment,
       r.has_important_comment,
+      rd.id AS reservation_detail_id,
       rd.date,
       rm.room_type_id,
       rt.name AS room_type_name,
@@ -87,6 +91,24 @@ const selectReservation = async (requestId, id, hotel_id) => {
         rooms rm ON rm.id = rd.room_id AND rm.hotel_id = rd.hotel_id
     JOIN
         room_types rt ON rt.id = rm.room_type_id AND rt.hotel_id = rm.hotel_id
+    JOIN (
+        SELECT 
+            reservation_id, 
+            hotel_id,
+            MIN(date) as min_date, 
+            (MAX(date) + INTERVAL '1 day') as max_date,
+            MAX(daily_people) as total_people
+        FROM (
+            SELECT 
+                reservation_id, 
+                hotel_id, 
+                date, 
+                SUM(CASE WHEN cancelled IS NULL THEN number_of_people ELSE 0 END) as daily_people
+            FROM reservation_details
+            GROUP BY reservation_id, hotel_id, date
+        ) sub
+        GROUP BY reservation_id, hotel_id
+    ) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
     LEFT JOIN LATERAL (
         SELECT
             SUM(ra.price * ra.quantity) AS total_price,
