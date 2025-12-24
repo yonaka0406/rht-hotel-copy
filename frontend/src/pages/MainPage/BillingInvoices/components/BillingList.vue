@@ -183,21 +183,19 @@
             </Button>
         </div>
 
-        <Drawer v-model:visible="drawerVisible" :modal="true" :position="'bottom'" :style="{height: '75vh'}" :closable="true">
-            <ReservationEdit
-                v-if="selectedReservation"
-                :reservation_id="selectedReservation.id"                       
-            />
-        </Drawer>
+        <ReservationEditDrawer
+            v-model:visible="drawerVisible"
+            :reservationId="selectedReservation?.id"
+        />
     </Panel> 
 </template>
 
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue';
-import ReservationEdit from '@/pages/MainPage/Reservation/ReservationEdit.vue';
+import ReservationEditDrawer from './drawers/ReservationEditDrawer.vue';
 
 // Primevue
-import { Panel, Drawer, DatePicker, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge } from 'primevue';
+import { Panel, DatePicker, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge } from 'primevue';
 import { FilterMatchMode } from '@primevue/core/api';
 
 // Stores

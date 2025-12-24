@@ -10,7 +10,7 @@
                 ref="billingListRef"
             />
             
-            <BillingDrawer
+            <BulkBillingDrawer
                 v-model:visible="drawerSelectVisible"
                 :selectedReservations="selectedReservations"
                 :defaultDate="endDate"
@@ -39,7 +39,7 @@
 
     // Components
     import BillingList from './components/BillingList.vue';
-    import BillingDrawer from './components/BillingDrawer.vue';
+    import BulkBillingDrawer from './components/drawers/BulkBillingDrawer.vue';
 
     const isBillingPage = ref(false);
     const activeComponent = shallowRef(null);
