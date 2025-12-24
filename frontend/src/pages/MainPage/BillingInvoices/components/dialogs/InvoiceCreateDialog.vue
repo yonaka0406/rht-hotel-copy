@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { Dialog, FloatLabel, InputText, DataTable, Column, Textarea, Button } from 'primevue';
 
 const props = defineProps({
@@ -97,5 +97,14 @@ const emit = defineEmits(['update:visible', 'generateExcel', 'generatePdf']);
 const visible = computed({
     get: () => props.visible,
     set: (val) => emit('update:visible', val)
+});
+
+watch(() => props.visible, (newVal) => {
+    if (newVal) {
+        console.log('InvoiceCreateDialog loading contents:', {
+            invoiceData: props.invoiceData,
+            invoiceDBData: props.invoiceDBData
+        });
+    }
 });
 </script>

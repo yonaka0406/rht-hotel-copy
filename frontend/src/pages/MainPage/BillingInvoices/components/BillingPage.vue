@@ -222,6 +222,7 @@ const summarizedBilledList = computed(() => {
                         check_in: formatDate(new Date(item.check_in)),
                         check_out: formatDate(new Date(item.check_out)),
                         reservation_id: item.reservation_id,
+                        room_id: item.room_id,
                         room_type_name: item.room_type_name,
                         room_number: item.room_number,
                         comment: item.payment_comment,
@@ -234,10 +235,17 @@ const summarizedBilledList = computed(() => {
                 due_date: item.due_date ? formatDate(new Date(item.due_date)) : getAdjustedDueDate(item.date),
                 total_stays: parseFloat(item.total_stays || item.stays_count),
                 comment: item.comment,
+                _seenResIds: new Set([item.reservation_id]) // Internal tracker for deduplication
             };
         } else {
-            summary[key].total_people += parseFloat(item.total_people);
-            summary[key].stays_count += parseFloat(item.stays_count);
+            // Only add people and stays if this reservation hasn't been seen in this invoice group yet
+            // This prevents double-counting if an invoice has multiple payments for the same reservation
+            if (!summary[key]._seenResIds.has(item.reservation_id)) {
+                summary[key].total_people += parseFloat(item.total_people);
+                summary[key].stays_count += parseFloat(item.stays_count);
+                summary[key]._seenResIds.add(item.reservation_id);
+            }
+            
             summary[key].total_value += parseFloat(item.value);
 
             summary[key].details.push({
@@ -254,6 +262,7 @@ const summarizedBilledList = computed(() => {
                 check_in: formatDate(new Date(item.check_in)),
                 check_out: formatDate(new Date(item.check_out)),
                 reservation_id: item.reservation_id,
+                room_id: item.room_id,
                 room_type_name: item.room_type_name,
                 room_number: item.room_number,
                 comment: item.payment_comment,
@@ -283,7 +292,17 @@ const openInvoiceDialog = (data) => {
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
-    const allDailyDetails = data.details.flatMap(block => block.details || []);
+    // Deduplicate blocks by reservation_id to get month-level details and rates once per reservation
+    const uniqueReservationBlocks = [];
+    const seenResIds = new Set();
+    data.details.forEach(block => {
+        if (!seenResIds.has(block.reservation_id)) {
+            seenResIds.add(block.reservation_id);
+            uniqueReservationBlocks.push(block);
+        }
+    });
+
+    const allDailyDetails = uniqueReservationBlocks.flatMap(block => block.details || []);
     const relevantDailyDetails = allDailyDetails.filter(day => {
         const [year, month, d] = day.date.split('-').map(Number);
         const stayDate = new Date(year, month - 1, d);
@@ -311,6 +330,7 @@ const openInvoiceDialog = (data) => {
         }
     });
 
+    // ... (stay periods logic remains same) ...
     // Get all dates (both stay and cancellation dates) and sort them
     const allDates = [...new Set([...Object.keys(stayDetailsByDate), ...Object.keys(cancellationsByDate)])].sort();
     const stayPeriods = [];
@@ -451,19 +471,46 @@ const openInvoiceDialog = (data) => {
 
     const finalComment = `【宿泊明細】\r\n${formattedDateGroups}${formattedDateGroups && cancellationComment ? '\r\n' : ''}${cancellationComment}`;
 
+    // Aggregation Logic for Tax Rates
     const groupedRates = {};
-    data.details.forEach(block => {
-        const rate = block.tax_rate || 0.1;
-        if (!groupedRates[rate]) {
-            groupedRates[rate] = { tax_rate: rate, total_net_price: 0, total_price: 0 };
+    let hasBackendRateData = false;
+
+    console.log('Aggregating tax rates for invoice. Input blocks:', uniqueReservationBlocks);
+
+    // 1. Sum up from backend provided 'rates' (reservation_rates_json)
+    uniqueReservationBlocks.forEach(block => {
+        if (block.rates && Array.isArray(block.rates) && block.rates.length > 0) {
+            hasBackendRateData = true;
+            block.rates.forEach(rateItem => {
+                const taxRate = rateItem.tax_rate;
+                if (!groupedRates[taxRate]) {
+                    groupedRates[taxRate] = { tax_rate: taxRate, total_net_price: 0, total_price: 0 };
+                }
+                groupedRates[taxRate].total_price += Number(rateItem.total_price);
+                groupedRates[taxRate].total_net_price += Number(rateItem.total_net_price);
+            });
         }
-        groupedRates[rate].total_price += block.value;
     });
 
-    for (const rate in groupedRates) {
-        const grossTotal = groupedRates[rate].total_price;
-        groupedRates[rate].total_net_price = Math.floor(grossTotal / (1 + parseFloat(rate)));
+    // 2. Fallback logic: If no backend rate data found at all, estimate based on payment values (default 10%)
+    if (!hasBackendRateData) {
+        console.warn('No backend rate data found. Falling back to payment-based estimation.');
+        data.details.forEach(block => {
+            const rate = block.tax_rate || 0.1;
+            if (!groupedRates[rate]) {
+                groupedRates[rate] = { tax_rate: rate, total_net_price: 0, total_price: 0 };
+            }
+            groupedRates[rate].total_price += block.value;
+        });
+
+        for (const rate in groupedRates) {
+            const grossTotal = groupedRates[rate].total_price;
+            // Reverted to Math.floor to match database storage convention
+            groupedRates[rate].total_net_price = Math.floor(grossTotal / (1 + parseFloat(rate)));
+        }
     }
+
+    console.log('Final grouped rates:', groupedRates);
 
     invoiceData.value = {
         id: data.id,
@@ -482,9 +529,9 @@ const openInvoiceDialog = (data) => {
         client_name: data.display_name,
         invoice_total_stays: data.stays_count,
         invoice_total_value: data.total_value,
-        items: Object.values(groupedRates),
+        items: Object.values(groupedRates).sort((a, b) => b.tax_rate - a.tax_rate),
         comment: data.comment,
-        daily_details: allDailyDetails,
+        daily_details: relevantDailyDetails,
     };
 
     invoiceDBData.value = {
