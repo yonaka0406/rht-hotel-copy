@@ -113,6 +113,11 @@ const saveHotelPattern = async () => {
         }
         const plans_global_id = match[1] ? parseInt(match[1]) : null;
         const plans_hotel_id = match[2] ? parseInt(match[2]) : null;
+
+        if (plans_global_id === null && plans_hotel_id === null) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: `無効なプランキー形式です (${day.label})。`, life: 3000 });
+            return;
+        }
         
         template[day.value] = {
             plan_key: planKey,
