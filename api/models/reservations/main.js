@@ -1384,9 +1384,12 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   let calculatedPrice = 0;
   let isAccommodation = true; // Default to true as per migration
 
-  if (rates && rates.length > 0) {
-    calculatedPrice = calculatePriceFromRates(rates, disableRounding);
-    isAccommodation = rates.some(r => r.sales_category === 'accommodation');
+  // Normalize rates to ensure it's a proper array
+  const ratesArray = Array.isArray(rates) ? rates : [];
+  
+  if (ratesArray.length > 0) {
+    calculatedPrice = calculatePriceFromRates(ratesArray, disableRounding);
+    isAccommodation = ratesArray.some(r => r.sales_category === 'accommodation');
 
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
@@ -1435,15 +1438,15 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       isAccommodation
     ]);
 
-    if (rates && rates.length > 0) {
+    if (ratesArray.length > 0) {
       // Delete existing rates
       const deleteRatesQuery = `
         DELETE FROM reservation_rates WHERE reservation_details_id = $1;
       `;
       await dbClient.query(deleteRatesQuery, [id]);
-
+      
       // Insert rates using the shared utility function
-      await insertAggregatedRates(requestId, rates, hotel_id, id, user_id, disableRounding, dbClient);
+      await insertAggregatedRates(requestId, ratesArray, hotel_id, id, user_id, disableRounding, dbClient);
     }
 
     await dbClient.query('COMMIT');

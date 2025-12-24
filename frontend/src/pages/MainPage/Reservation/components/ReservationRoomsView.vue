@@ -24,6 +24,8 @@
                         <i class="pi" :class="allPeopleCountMatch(group) ? 'pi-check' : 'pi-exclamation-triangle'"
                             style="margin-left: 0.5rem; color: var(--primary-color);"
                             :title="allPeopleCountMatch(group) ? '宿泊者設定済み' : '宿泊者未設定'"></i>
+                        <i v-if="hasRateInconsistency(group)" class="pi pi-exclamation-triangle ml-2 text-orange-500"
+                            v-tooltip.top="'料金設定に不整合がある宿泊日があります'"></i>
                     </div>
                     <div class="col-span-2 text-right mr-4">
                         <Button icon="pi pi-file-export" label="宿泊者名簿" class="p-button-sm mr-2"
@@ -57,9 +59,14 @@
                     </Column>
                     <Column field="plan_name" header="プラン" class="text-xs">
                         <template #body="slotProps">
-                            <Badge :value="slotProps.data.plan_name"
-                                :style="{ backgroundColor: slotProps.data.plan_color }"
-                                class="text-white px-2 py-1 rounded-md text-xs" />
+                            <div class="flex items-center gap-1">
+                                <Badge :value="slotProps.data.plan_name"
+                                    :style="{ backgroundColor: slotProps.data.plan_color }"
+                                    class="text-white px-2 py-1 rounded-md text-xs" />
+                                <i v-if="isRateInconsistent(slotProps.data)"
+                                    class="pi pi-exclamation-triangle text-orange-500"
+                                    v-tooltip.top="'料金設定に不整合があります（料金あり、明細なし）'"></i>
+                            </div>
                         </template>
                     </Column>
                     <Column field="number_of_people" header="人数" class="text-xs" />
@@ -535,6 +542,13 @@ const allPeopleCountMatch = (group) => {
     return group.details.every(
         (detail) => detail.number_of_people === detail.reservation_clients.length
     );
+};
+const isRateInconsistent = (detail) => {
+    return !!(detail.plan_name && Number(detail.plan_total_price) !== 0 && (!detail.reservation_rates || detail.reservation_rates.length === 0));
+};
+
+const hasRateInconsistency = (group) => {
+    return group.details.some(isRateInconsistent);
 };
 
 const hasRoomChange = (group) => {

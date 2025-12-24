@@ -41,6 +41,11 @@
                                                         </InputNumber>
                                                         <label>プラン料金</label>
                                                     </FloatLabel>
+                                                    <div v-if="selectedPlan && planTotalRate != 0 && (!selectedRates || selectedRates.length === 0)"
+                                                        class="text-orange-500 text-xs mt-1 flex items-center gap-1">
+                                                        <i class="pi pi-exclamation-triangle"></i>
+                                                        <span>料金設定に不整合があります（料金あり、明細なし）</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <Divider />
@@ -122,7 +127,7 @@
                                                         <template #body="slotProps">
                                                             <InputNumber v-model="slotProps.data.adjustment_value"
                                                                 placeholder="数値を記入"
-                                                                @update:modelValue="recalculatePrice(slotProps.data)"
+                                                                @update:modelValue="recalculatePrice"
                                                                 fluid />
                                                         </template>
                                                     </Column>
@@ -294,7 +299,7 @@ import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, Float
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom, setReservationDetailStatus } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
-const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate, fetchPlanRates } = usePlansStore();
+const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRates } = usePlansStore();
 import { useSettingsStore } from '@/composables/useSettingsStore';
 const { taxTypes, fetchTaxTypes } = useSettingsStore();
 
@@ -360,20 +365,30 @@ const updateTaxRate = (tax) => {
     const selectedTax = taxTypes.value.find(t => t.id === tax.tax_type_id);
     tax.tax_rate = selectedTax ? selectedTax.percentage : 0;
 };
-const recalculatePrice = (rate) => {
-    // Find baseRate
-    planTotalRate.value = planTotalRate.value - rate.price;
+const recalculatePrice = () => {
+    if (!selectedRates.value) return;
+
     let baseRate = selectedRates.value
         .filter(r => r.adjustment_type === 'base_rate' && r.sales_category === 'accommodation')
-        .reduce((sum, r) => sum + parseFloat(r.adjustment_value), 0);
+        .reduce((sum, r) => sum + parseFloat(r.adjustment_value || 0), 0);
 
-    // Update the price for the changed rate
-    if (rate.adjustment_type === 'percentage') {
-        rate.price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
-    } else {
-        rate.price = rate.adjustment_value;
-    }
-    planTotalRate.value = planTotalRate.value + rate.price;
+    let total = 0;
+    selectedRates.value.forEach(rate => {
+        const adjustmentValue = Number(rate.adjustment_value || 0);
+        if (rate.adjustment_type === 'percentage') {
+            const calculatedPrice = baseRate * (adjustmentValue / 100);
+            const currency = reservationDetail.value?.currency || 'JPY';
+            if (currency === 'JPY') {
+                rate.price = Math.round(calculatedPrice);
+            } else {
+                rate.price = Math.round(calculatedPrice * 100) / 100;
+            }
+        } else {
+            rate.price = adjustmentValue;
+        }
+        total += rate.price;
+    });
+    planTotalRate.value = total;
 };
 const addRate = () => {
     if (newRate.value.adjustment_type && newRate.value.tax_type_id) {
@@ -388,6 +403,7 @@ const addRate = () => {
             price: 0,
             include_in_cancel_fee: newRate.value.include_in_cancel_fee,
         });    
+        recalculatePrice();
     } else {
         console.error("Please select both adjustment type and tax type");
     }
@@ -396,50 +412,37 @@ const deleteRate = (rate) => {
     const index = selectedRates.value.indexOf(rate);
     if (index !== -1) {
         selectedRates.value.splice(index, 1);
+        recalculatePrice();
     }
 };
 // Addons
 const selectedAddon = ref(null);
 const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
-const updatePlanAddOns = async (event) => {
+const updatePlanAddOns = async () => {
     // console.log('Selected Plan:', event.value);           
     const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);
 
     // console.log('selectedPlanObject',selectedPlanObject)
-    if (selectedPlan.value) {
+    if (selectedPlan.value && selectedPlanObject) {
         const gid = selectedPlanObject.plans_global_id ?? 0;
         const hid = selectedPlanObject.plans_hotel_id ?? 0;
         const hotel_id = props.reservation_details.hotel_id ?? 0;
 
         try {
             await fetchPlanAddons(gid, hid, hotel_id);
-            planTotalRate.value = await fetchPlanRate(gid, hid, hotel_id, reservationDetail.value.date);
-            reservationDetail.value.plan_total_price = planTotalRate.value;
-
             // Calculate price in rates
             selectedRates.value = await fetchPlanRates(gid, hid, hotel_id, reservationDetail.value.date);
-            let baseRate = selectedRates.value
-                .filter(rate => rate.adjustment_type === 'base_rate' && rate.sales_category === 'accommodation')
-                .reduce((sum, rate) => sum + parseFloat(rate.adjustment_value), 0);
-            selectedRates.value = selectedRates.value.map(rate => {
-                if (rate.adjustment_type === 'percentage') {
-                    rate.price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
-                } else {
-                    rate.price = rate.adjustment_value;
-                }
-                return rate;
-            });
+            recalculatePrice();
+
+            reservationDetail.value.plan_total_price = planTotalRate.value;
 
             const gidFixed = gid === 0 ? null : gid;
             const hidFixed = hid === 0 ? null : hid;
-            const selectedPlan = plans.value.find(plan =>
+            const foundPlan = plans.value.find(plan =>
                 plan.plans_global_id === gidFixed && plan.plans_hotel_id === hidFixed
             );
-            planBillType.value = selectedPlan ? selectedPlan.plan_type : null;
-            planBillType.value = selectedPlan.value === 'per_person'
-                ? '人数あたり'
-                : '部屋あたり';
+            planBillType.value = foundPlan ? (foundPlan.plan_type === 'per_person' ? '人数あたり' : '部屋あたり') : null;
 
         } catch (error) {
             console.error('Failed to fetch plan add-ons:', error);
@@ -484,21 +487,10 @@ const savePlan = async () => {
         //console.log('savePlan:', selectedRates.value);
 
         const plan_key = selectedPlan.value;
-        let plans_global_id = 0;
-        let plans_hotel_id = 0;
-        let plan_name = '';
-        let plan_type = '';
         let selectedPlanObject = null;
 
         if (plan_key) {
-            const [global, hotel] = plan_key.split('h').map(Number);
-            plans_global_id = global || 0;
-            plans_hotel_id = hotel || 0;
             selectedPlanObject = plans.value.find(plan => plan.plan_key === plan_key);
-            if (selectedPlanObject) {
-                plan_name = selectedPlanObject.name;
-                plan_type = selectedPlanObject.plan_type;
-            }
         }
 
         const price = planTotalRate.value || 0;

@@ -713,7 +713,16 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.3.5] - 2025-12-24
+
+- Feature: Added visual indicators (attention icon) in the Reservation Rooms View (accordion header and plan column) and Reservation Day Detail (price section) to highlight rate inconsistencies where a plan is set with a non-zero price but no detailed rates exist.
+- Bugfix: Fixed an issue in `updateReservationDetailPlan` where clearing all rates (sending an empty array) was not properly deleting existing rates from the database.
+- Refactor: Improved `recalculatePrice` logic in the frontend to ensure all rates and the total price are correctly updated and to prevent variable shadowing issues.
+
+---
+
 ## Version History
+- **1.3.5** (2025-12-24) - Added visual indicators for rate inconsistencies, fixed bug with clearing reservation rates, and refactored price calculation logic.
 - **1.3.4** (2025-12-23) - Added plan categories, merge reservations feature, and fixed split/merge reservation bugs (null IDs, metric crashes, redirect errors).
 - **1.3.3** (2025-12-22) - Streamlined invoice generation with improved reservation details handling, enhanced payment processing with transaction management, and bulk payment support
 - **1.3.2** (2025-12-17) - Added year-over-year (YoY) comparison for the same month in the reporting module

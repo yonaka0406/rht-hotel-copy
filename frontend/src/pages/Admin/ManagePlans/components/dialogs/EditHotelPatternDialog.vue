@@ -138,12 +138,12 @@ const updateHotelPattern = async () => {
         }
         
         // Parse plan_key to extract plans_global_id and plans_hotel_id
-        const match = planKey.match(/^(\d+)h(\d+)?$/);
+        const match = planKey.match(/^(\d*)h(\d+)?$/);
         if (!match) {
             toast.add({ severity: 'error', summary: 'エラー', detail: `無効なプランキー形式です (${day.label})。`, life: 3000 });
             return;
         }
-        const plans_global_id = parseInt(match[1]);
+        const plans_global_id = match[1] ? parseInt(match[1]) : null;
         const plans_hotel_id = match[2] ? parseInt(match[2]) : null;
         
         template[day.value] = {
