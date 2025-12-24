@@ -6,12 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+
 ## Unreleased
 
 ---
+
 ## Future Releases
 
 ### Planned Features
+
 - Advanced reporting dashboard with customizable metrics
 - Advanced analytics and business intelligence features
 
@@ -22,23 +25,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-02-21
 
 ### Added
+
 - Calendar: Reservation calendar now color-coded by plan, similar to reservation inquiry. (#001)
 - Reservation Edit: Employee stay index added. (#007)
 
 ## [0.2.0] - 2025-03-07
 
 ### Added
+
 - Reservation Calendar: Warning design changed for drag-and-drop operations. (#009)
 - Reservation Calendar: Date and room number font size increased. (#013)
 - Date Selection: Primevue Japanese display and date range separation. (#015)
 - Reservation: Ability to add/reduce rooms even for confirmed reservations. (#022)
 
 ### User Requests
+
 - Reservation Edit: Date change method. (Partial solution) (#020)
 
 ## [0.3.0] - 2025-03-11
 
 ### Added
+
 - Reservation Calendar: Room movement (exchange) for full rooms. (#010)
 - Reservation Calendar: Grid lines for calendar. (#014)
 - Reservation: Ability to drag-and-drop room changes during stay. (#021)
@@ -47,11 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0] - 2025-03-13
 
 ### Added
+
 - Output: Reservation information and details can now be output as CSV. (#002)
 
 ## [0.5.0] - 2025-03-14
 
 ### Added
+
 - Reservation Edit: Add-on details now reflected similarly to yadomaster. (#005)
 - Reservation Edit: Display method changed for split room movements. (#006)
 - Reservation: Ability to reactivate after cancellation. (#023)
@@ -59,57 +68,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.0] - 2025-03-27
 
 ### Added
+
 - New Reservation: Changed input method. (#016)
 
 ## [0.7.0] - 2025-03-28
 
 ### User Requests
+
 - Reservation History: View update history and 担当者 (person in charge). (Partial solution) (#019)
 
 ## [0.8.0] - 2025-03-31
 
 ### Added
+
 - New Reservation: Automatic adjustment of check-in and check-out dates. (#026)
 
 ## [0.9.0] - 2025-04-01
 
 ### Added
+
 - Add-ons: Category settings and meal count output. (#025)
 
 ## [0.9.1] - 2025-04-07
 
 ### Added
+
 - New Reservation: Duplicate reservation with same content. (Unresolved) (#003)
 - New Reservation: Plan pattern settings. (#018)
 
 ### User Requests
+
 - Reservation Edit: Maintain plan patterns when changing reservation period. (Partial solution) (#008)
 
 ## [0.9.2] - 2025-04-17
 
 ### Added
+
 - Reservation Edit: Plan color-coding in reservation details. (#027)
 - Customer: Select by phone number/email address. (#030)
 
 ## [0.9.3] - 2025-04-22
 
 ### Added
+
 - Reservation Calendar: Temporary unassigned free room movement. (#028)
 - PMS API: Google Sheets and PMS integration for reservation inquiry. (#029)
 
 ## [0.9.4] - 2025-05-15
 
 ### Added
+
 - Notifications: Make alert notifications more prominent. (#031)
 
 ## [0.9.5] - 2025-05-28
 
 ### Added
+
 - Function: Receipt issuance. (#032)
 
 ## [0.9.6] - 2025-06-10
 
 ### Added
+
 - Function: Receipt issuance (continued from 0.9.5). (#032)
 
 ---
@@ -123,6 +143,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ### Added
 
 #### Core Features
+
 - **Reservation Management** - Complete booking lifecycle with intuitive calendar interface
 - **Client Management & CRM** - Advanced customer relationship management with communication tracking
 - **Waitlist System** - Comprehensive guest waitlist management with automated notifications
@@ -131,6 +152,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - **User Management** - Role-based access control with Google OAuth integration
 
 #### Technical Features
+
 - **Real-time Updates** - Socket.io integration for live notifications and updates
 - **Data Import/Export** - CSV and Excel support for various data sources
 - **Email Notifications** - Automated communications via nodemailer
@@ -139,6 +161,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - **OTA Integration** - XML-based communication with Online Travel Agencies
 
 #### Architecture & Technology Stack
+
 - **Backend**: Node.js with Express.js framework
 - **Database**: PostgreSQL with Redis caching
 - **Frontend**: Vue.js 3 with PrimeVue 4+ components
@@ -148,6 +171,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - **Authentication**: JWT-based security with bcryptjs hashing
 
 #### Documentation System
+
 - **Structured Documentation** - Comprehensive docs organized by requirements, design, features, and operations
 - **Documentation Standards** - Established guidelines for creating and maintaining project documentation
 - **Template System** - Standardized templates for requirements, design, and feature specifications
@@ -156,18 +180,21 @@ This marks the first stable release of the comprehensive Hotel Management System
 ### 🏗️ Infrastructure
 
 #### Database Features
+
 - **Migration System** - Versioned SQL scripts for schema evolution (13 migration files)
 - **Data Aggregation** - Materialized views and summary tables for reporting performance
 - **Connection Pooling** - Optimized database connections with context-aware pool selection
 - **Background Jobs** - Scheduled tasks for maintenance and data processing
 
 #### Development Tools
+
 - **PM2 Integration** - Production process management
 - **Development Scripts** - Comprehensive npm scripts for development and deployment
 - **Environment Configuration** - Flexible environment variable management
 - **Code Quality** - ESLint configuration and development guidelines
 
 ### 📋 Key Metrics & Reporting
+
 - Daily reservation summaries and operational counts
 - Occupancy rate tracking and forecasting
 - Revenue Per Available Room (RevPAR) calculations
@@ -175,18 +202,21 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Cancellation tracking and trend analysis
 
 ### 🔧 Operations & Maintenance
+
 - **Deployment Guides** - Complete setup and deployment instructions
 - **Troubleshooting Documentation** - Common issues and solutions
 - **Security Features** - Input validation, SQL injection prevention, and secure authentication
 - **Performance Optimization** - Caching strategies and query optimization
 
 ### 📱 User Experience
+
 - **Responsive Design** - Mobile-compatible interface
 - **Japanese UI** - Complete Japanese language interface
 - **Role-based Permissions** - Granular access control system
 - **Real-time Notifications** - Live updates and system alerts
 
 ### 🔗 Integration Capabilities
+
 - **Google Services** - OAuth authentication and API integrations
 - **Payment Processing** - Secure payment gateway integration
 - **Email Services** - SMTP integration for automated notifications
@@ -197,6 +227,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.0.1] - 2025-06-11
 
 ### Fixed
+
 - Production Environment: Add-ons not reflected. (#033)
 - Production Environment: Customer name display order changed. (#035)
 - CRM: Editing sales actions. (#038)
@@ -206,16 +237,19 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.0.2] - 2025-06-23
 
 ### Added
+
 - Reservation: Check-in cancellation. (#043)
 - Production Environment: Global plan hidden. (#034)
 - CRM: Added related companies/related construction tabs. (#039)
 - CRM: Loyal customers. (#040)
 
 ### Fixed
+
 - Production Environment: Add-ons not reflected. (#033)
 - Production Environment: Calendar scroll not displaying data. (#036)
 
 ### User Requests
+
 - Production Environment: Customer name display order changed. (#035)
 - CRM: Editing sales actions. (#038)
 
@@ -224,6 +258,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.0.3] - 2025-07-16
 
 ### Added
+
 - **About/FAQ System** - Comprehensive help system with searchable FAQ and changelog display
 - **System Help Documentation** - Step-by-step instructions for all major system functions
 - **Japanese FAQ Content** - Complete FAQ coverage for reservations, clients, reports, billing, and system management
@@ -233,6 +268,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - **Accessibility Features** - ARIA labels, keyboard navigation, and screen reader support
 
 ### Improved
+
 - **Documentation System** - Enhanced codebase documentation and structured help content
 - **User Experience** - Intuitive tabbed interface for help content navigation
 - **Content Management** - External JSON files for easy FAQ and changelog updates
@@ -240,6 +276,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## [1.0.4] - 2025-07-17
+
 - Feature: Implemented 'Copy Reservation' function allowing users to duplicate a reservation for a different booker, preserving all other reservation details. (Feature Request #7)
 - Bugfix: Calendar View now resets scroll position to top when date is changed. (Bug #1)
 - Enhancement: Calendar View now displays visual lines/borders in room cells for better visibility. (Bug #2)
@@ -561,7 +598,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.1.26] - 2025-10-23
 
 - Feature: Daily Digest email routine added and table to check the logs in Admin panel.
-- Feature: Prefilled template download feature for finance imports via a new backend endpoint and CSV generator service. 
+- Feature: Prefilled template download feature for finance imports via a new backend endpoint and CSV generator service.
 - Bugfix: Fix addon quantity calculation per room.
 
 ---
@@ -678,7 +715,6 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added sales category to plan rates to track non-accommodation sales and adjusted occupancy rate calculations accordingly
 - Feature: Enhanced Reporting module with the ability to download occupation data breakdown for detailed analysis
 
-
 ---
 
 ## [1.3.1] - 2025-12-05
@@ -722,6 +758,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## Version History
+
 - **1.3.5** (2025-12-24) - Added visual indicators for rate inconsistencies, fixed bug with clearing reservation rates, and refactored price calculation logic.
 - **1.3.4** (2025-12-23) - Added plan categories, merge reservations feature, and fixed split/merge reservation bugs (null IDs, metric crashes, redirect errors).
 - **1.3.3** (2025-12-22) - Streamlined invoice generation with improved reservation details handling, enhanced payment processing with transaction management, and bulk payment support
