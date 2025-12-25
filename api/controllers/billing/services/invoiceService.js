@@ -53,14 +53,15 @@ function generateInvoiceHTML(html, data, userName) {
   modifiedHTML = modifiedHTML.replace(/{{ bank_account_name }}/g, data.bank_account_name || '');
 
   // Details Table
-  let dtlitems = data.items.map(item => `
+  // Generate a single summary row for the accommodation fee
+  let dtlitems = `
   <tr>
       <td class="cell-center">1</td>
       <td>宿泊料</td>                    
       <td class="cell-right">${data.invoice_total_stays} 泊</td>
       <td class="cell-right">¥ ${data.invoice_total_value.toLocaleString()}</td>
   </tr>
-`).join('');
+`;
   modifiedHTML = modifiedHTML.replace(/{{ detail_items }}/g, dtlitems);
   modifiedHTML = modifiedHTML.replace(/{{ details_total_value }}/g, data.invoice_total_value.toLocaleString());
 

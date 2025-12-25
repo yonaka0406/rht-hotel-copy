@@ -240,15 +240,16 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ) AS reservation_details_json
       -- The subquery for reservation rates and addons also needed to be filtered by month.
       -- This ensures the total prices are correct for the whole reservation in the billing period.
-      -- We calculate total_net_price by flooring the sum of gross prices to ensure the total is mathematically
-      -- consistent, avoiding the precision loss from summing individually floored split components.
+      -- We calculate total_net_price by rounding the sum of gross prices divided by the tax rate.
+      -- Using ROUND with numeric casting ensures mathematical consistency (e.g. 17600 -> 16000) 
+      -- and avoids precision issues from floating point division or individual component flooring.
       ,(
         SELECT json_agg(taxed_group)
         FROM (
           SELECT 
             tax_rate, 
             SUM(total_price) as total_price, 
-            FLOOR(SUM(total_price) / (1 + tax_rate)) as total_net_price
+            ROUND(SUM(total_price)::numeric / (1 + tax_rate)::numeric) as total_net_price
           FROM (
             SELECT
               rr.tax_rate,

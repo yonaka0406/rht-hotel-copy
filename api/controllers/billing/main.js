@@ -208,17 +208,49 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('J20').value = invoiceData.invoice_total_value;
 
     let totalTax = 0;
-    let totalNet = 0;
+    let totalNet10 = 0;
+    let totalNet8 = 0;
+    let totalNet0 = 0;
+    let taxAmount10 = 0;
+    let taxAmount8 = 0;
+    let taxAmount0 = 0;
+
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
       invoiceData.items.forEach(item => {
-        totalTax += (item.total_price - item.total_net_price);
-        totalNet += item.total_net_price;
+        const rate = parseFloat(item.tax_rate);
+        const net = item.total_net_price;
+        const tax = item.total_price - item.total_net_price;
+
+        totalTax += tax;
+
+        // Categorize by tax rate (allowing for small floating point differences)
+        if (Math.abs(rate - 0.10) < 0.001) {
+            totalNet10 += net;
+            taxAmount10 += tax;
+        } else if (Math.abs(rate - 0.08) < 0.001) {
+            totalNet8 += net;
+            taxAmount8 += tax;
+        } else if (Math.abs(rate) < 0.001) {
+            totalNet0 += net;
+            taxAmount0 += tax;
+        }
       });
     }
     worksheet.getCell('I24').value = invoiceData.invoice_total_value;
     worksheet.getCell('I25').value = totalTax;
-    worksheet.getCell('I27').value = totalNet;
-    worksheet.getCell('I28').value = totalTax;
+    
+    // 10% Subject (Net) and Tax
+    worksheet.getCell('I27').value = totalNet10 > 0 ? totalNet10 : '';
+    worksheet.getCell('I28').value = taxAmount10 > 0 ? taxAmount10 : '';
+
+    // 8% Subject (Net) and Tax - Corrected based on template having a spacer at I29
+    worksheet.getCell('I30').value = totalNet8 > 0 ? totalNet8 : '';
+    worksheet.getCell('I31').value = taxAmount8 > 0 ? taxAmount8 : '';
+
+    // 0% (Non-taxable) Subject and Tax
+    worksheet.getCell('I33').value = totalNet0 > 0 ? totalNet0 : '';
+    worksheet.getCell('I34').value = (totalNet0 > 0 || taxAmount0 > 0) ? taxAmount0 : ''; 
+
     worksheet.getCell('C33').value = invoiceData.comment;
     worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
 
