@@ -114,7 +114,8 @@ const createClientBasic = async (req, res) => {
     if (processed_customer_id === '' || processed_customer_id === undefined) {
       processed_customer_id = null;
     } else if (processed_customer_id !== null) {
-      processed_customer_id = parseInt(processed_customer_id, 10);
+      const parsedId = parseInt(processed_customer_id, 10);
+      processed_customer_id = isNaN(parsedId) ? null : parsedId;
     } else {
       processed_customer_id = null;
     }
@@ -150,7 +151,8 @@ const createClient = async (req, res) => {
     if (customer_id === '' || customer_id === undefined) {
       clientFields.customer_id = null;
     } else if (customer_id !== null) {
-      clientFields.customer_id = parseInt(customer_id, 10);
+      const parsedId = parseInt(customer_id, 10);
+      clientFields.customer_id = isNaN(parsedId) ? null : parsedId;
     } else {
       clientFields.customer_id = null;
     }
@@ -204,7 +206,8 @@ const updateClient = async (req, res) => {
     if (customer_id === '' || customer_id === undefined) {
       updatedFields.customer_id = null;
     } else if (customer_id !== null) {
-      updatedFields.customer_id = parseInt(customer_id, 10);
+      const parsedId = parseInt(customer_id, 10);
+      updatedFields.customer_id = isNaN(parsedId) ? null : parsedId;
     } else {
       updatedFields.customer_id = null;
     }
@@ -236,7 +239,8 @@ const updateClientFull = async (req, res) => {
     if (updatedFields.customer_id === '' || updatedFields.customer_id === undefined) {
       updatedFields.customer_id = null;
     } else if (updatedFields.customer_id !== null) {
-      updatedFields.customer_id = parseInt(updatedFields.customer_id, 10);
+      const parsedId = parseInt(updatedFields.customer_id, 10);
+      updatedFields.customer_id = isNaN(parsedId) ? null : parsedId;
     }
 
     const updatedClient = await clientsModel.editClientFull(req.requestId, clientId, updatedFields, user_id);
@@ -268,7 +272,7 @@ const updateClientGroup = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedClient = await clientsModel.editClientGroup(req.requestId, clientId, groupId, user_id)
+    const updatedClient = await clientsModel.editClientGroup(req.requestId, clientId, groupId, user_id);
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
@@ -282,7 +286,7 @@ const updateGroup = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedGroup = await clientsModel.editGroup(req.requestId, groupId, data, user_id)
+    const updatedGroup = await clientsModel.editGroup(req.requestId, groupId, data, user_id);
     res.json(updatedGroup);
   } catch (err) {
     console.error('Error updating group:', err);

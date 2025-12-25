@@ -51,7 +51,7 @@
 
         <Dialog header="新規関係追加" v-model:visible="displayAddModal" :modal="true" :style="{ width: '50vw' }"
             @hide="closeAddModal">
-            <div class="grid grid-col-12 gap-2">
+            <div class="grid grid-cols-12 gap-2">
                 <div class="col-span-12 my-6">
                     <FloatLabel>
                         <label for="targetClientAutocomplete">対象クライアント</label>
@@ -188,18 +188,24 @@ const isValidClientSelection = (client) => {
 
 // Handle client selection from ClientAutoCompleteWithStore
 const onClientSelect = (event) => {
-    const selectedClient = event.value;
+    const eventClient = event.value;
 
-    if (!isValidClientSelection(selectedClient)) {
+    if (!eventClient) {
+        selectedClientForAutocomplete.value = null;
+        newRelationship.value.target_client_id = null;
+        return;
+    }
+
+    if (!isValidClientSelection(eventClient)) {
         // Show error and clear selection
-        if (selectedClient.legal_or_natural_person !== 'legal') {
+        if (eventClient.legal_or_natural_person !== 'legal') {
             toast.add({
                 severity: 'warn',
                 summary: '選択エラー',
                 detail: '法人顧客のみ選択できます。',
                 life: 3000
             });
-        } else if (selectedClient.id === props.clientId) {
+        } else if (eventClient.id === props.clientId) {
             toast.add({
                 severity: 'warn',
                 summary: '選択エラー',
@@ -221,8 +227,8 @@ const onClientSelect = (event) => {
     }
 
     // Valid selection
-    selectedClientForAutocomplete.value = selectedClient;
-    newRelationship.value.target_client_id = selectedClient.id;
+    selectedClientForAutocomplete.value = eventClient;
+    newRelationship.value.target_client_id = eventClient.id;
 };
 
 // --- Methods using store actions ---

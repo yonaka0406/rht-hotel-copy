@@ -332,36 +332,55 @@ const saveAddress = async () => {
         toast.add({ severity: 'error', summary: 'Error', detail: '有効なメールアドレスを入力してください。', life: 3000 });
         return;
     }
-    if (dialogHeader.value === '住所追加') {
-        await createAddress(editedAddress.value);
-        toast.add({ severity: 'success', summary: 'Success', detail: '住所追加されました。', life: 3000 });
-    } else {
-        await updateAddress(editedAddress.value.id, editedAddress.value);
-        toast.add({ severity: 'info', summary: 'Success', detail: '住所編集されました。', life: 3000 });
+    try {
+        if (dialogHeader.value === '住所追加') {
+            await createAddress(editedAddress.value);
+            toast.add({ severity: 'success', summary: 'Success', detail: '住所追加されました。', life: 3000 });
+        } else {
+            await updateAddress(editedAddress.value.id, editedAddress.value);
+            toast.add({ severity: 'info', summary: 'Success', detail: '住所編集されました。', life: 3000 });
+        }
+
+        await fetchClient(clientId.value);
+        resetAddress();
+        addressDialogVisible.value = false;
+    } catch (error) {
+        console.error('saveAddress error:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: error.message || '住所の保存に失敗しました。',
+            life: 5000
+        });
     }
-
-    await fetchClient(clientId.value);
-
-    resetAddress();
-    addressDialogVisible.value = false;
 };
 const confirmDelete = async (address) => {
     // console.log('Deleting address:', address);
     confirm.require({
-        message: `「"${address.address_name}」"を削除してもよろしいですか?`,
+        message: `「${address.address_name}」を削除してもよろしいですか?`,
         header: '削除確認',
         icon: 'pi pi-info-circle',
         acceptLabel: '削除',
         acceptClass: 'p-button-danger',
-        accept: () => {
-            deleteAddress(address);
-            toast.add({
-                severity: 'success',
-                summary: '削除',
-                detail: `「"${address.address_name}"」を削除しました。`,
-                life: 3000
-            });
-            confirm.close();
+        accept: async () => {
+            try {
+                await deleteAddress(address);
+                toast.add({
+                    severity: 'success',
+                    summary: '削除',
+                    detail: `「${address.address_name}」を削除しました。`,
+                    life: 3000
+                });
+                confirm.close();
+            } catch (error) {
+                console.error('confirmDelete error:', error);
+                toast.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: error.message || '住所の削除に失敗しました。',
+                    life: 5000
+                });
+            }
         },
         rejectLabel: 'キャンセル',
         rejectClass: 'p-button-secondary',

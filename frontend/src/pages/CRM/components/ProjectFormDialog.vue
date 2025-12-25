@@ -36,9 +36,9 @@
                     <label for="targetHotels">対象店舗</label>
                     <MultiSelect v-if="showHotelMultiSelect" id="targetHotels" key="hotel-multiselect-loaded"
                         v-model="selectedHotels" :options="hotelList" optionLabel="formal_name" dataKey="id"
-                        placeholder="店舗を選択 (複数可)" display="chip" class="w-full" :loading="isLoadingHotelList.value"
+                        placeholder="店舗を選択 (複数可)" display="chip" class="w-full" :loading="isLoadingHotelList"
                         :maxSelectedLabels="3" />
-                    <InputText v-else-if="isLoadingHotelList.value" id="targetHotelsLoading" disabled
+                    <InputText v-else-if="isLoadingHotelList" id="targetHotelsLoading" disabled
                         placeholder="ホテル情報を読込中..." class="w-full" />
                     <InputText v-else id="targetHotelsEmpty" disabled placeholder="利用可能なホテルがありません" class="w-full" />
                 </FloatLabel>
@@ -440,21 +440,7 @@ onMounted(async () => {
     }
 });
 
-watch(() => props.currentClientId, async (newVal) => {
-    if (newVal) {
-        try {
-            const client = await getClientById(newVal);
-            if (client) {
-                primeContractor.value = {
-                    ...client,
-                    preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
-                };
-            }
-        } catch (error) {
-            console.error("Error fetching default prime contractor:", error);
-        }
-    }
-}, { immediate: true });
+
 
 </script>
 

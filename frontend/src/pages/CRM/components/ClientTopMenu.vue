@@ -36,7 +36,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/composables/useUserStore';
 import { useClientStore } from '@/composables/useClientStore';
-import { Menubar, Skeleton } from 'primevue';
+import { Menubar } from 'primevue';
 import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 
 const router = useRouter();

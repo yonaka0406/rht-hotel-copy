@@ -314,11 +314,11 @@ const addClientByName = async (requestId, client = {}, dbClient = null) => {
     client.updated_by
   ];
   try {
-    logger.warn('[CLIENT_CREATE] addClientByName input', { client });
-    logger.warn('[CLIENT_CREATE] Processed names', { finalName, finalNameKana, finalNameKanji });
-    logger.warn('[CLIENT_CREATE] Query and values', { query, values });
+    logger.debug('[CLIENT_CREATE] addClientByName input', { client });
+    logger.debug('[CLIENT_CREATE] Processed names', { finalName, finalNameKana, finalNameKanji });
+    logger.debug('[CLIENT_CREATE] Query and values', { query, values });
     const result = await pool.query(query, values);
-    logger.warn('[CLIENT_CREATE] Client inserted', { client_id: result.rows[0]?.id, customer_id: result.rows[0]?.customer_id });
+    logger.info('[CLIENT_CREATE] Client inserted', { client_id: result.rows[0]?.id, customer_id: result.rows[0]?.customer_id });
     return result.rows[0];
   } catch (err) {
     logger.error('Error adding client', { error: err.message, stack: err.stack });
@@ -354,7 +354,7 @@ const addNewClient = async (requestId, user_id, client) => {
     user_id
   ];
   try {
-    logger.warn('[CLIENT_CREATE] addNewClient input', { client });
+    logger.debug('[CLIENT_CREATE] addNewClient input', { client });
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (err) {
@@ -471,9 +471,9 @@ const editClient = async (requestId, clientId, updatedFields, user_id) => {
     clientId
   ];
   try {
-    logger.warn('[CLIENT_UPDATE] editClient input', { clientId, customer_id: updatedFields.customer_id });
+    logger.debug('[CLIENT_UPDATE] editClient input', { clientId, customer_id: updatedFields.customer_id });
     const result = await pool.query(query, values);
-    logger.warn('[CLIENT_UPDATE] editClient result', { customer_id: result.rows[0]?.customer_id });
+    logger.info('[CLIENT_UPDATE] editClient result', { customer_id: result.rows[0]?.customer_id });
     return result.rows[0];
   } catch (err) {
     console.error('Error updating client:', err);
@@ -519,9 +519,9 @@ const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
     clientId
   ];
   try {
-    logger.warn('[CLIENT_UPDATE] editClientFull input', { clientId, customer_id: updatedFields.customer_id });
+    logger.debug('[CLIENT_UPDATE] editClientFull input', { clientId, customer_id: updatedFields.customer_id });
     const result = await pool.query(query, values);
-    logger.warn('[CLIENT_UPDATE] editClientFull result', { customer_id: result.rows[0]?.customer_id });
+    logger.info('[CLIENT_UPDATE] editClientFull result', { customer_id: result.rows[0]?.customer_id });
     return result.rows[0];
   } catch (err) {
     console.error('Error updating client:', err);

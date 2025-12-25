@@ -131,6 +131,10 @@ const props = defineProps({
     client: {
         type: Object,
         default: () => ({})
+    },
+    isClientSelected: {
+        type: Boolean,
+        default: false
     }
 });
 
@@ -154,7 +158,7 @@ import Button from 'primevue/button';
 const localReservationDetails = ref(JSON.parse(JSON.stringify(props.reservationDetails)));
 const localClient = ref(JSON.parse(JSON.stringify(props.client)));
 const selectedClient = ref(null);
-const isClientSelected = ref(props.isClientSelected);
+const isClientSelected = ref(props.isClientSelected || Boolean(props.client && props.client.id));
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
 const impedimentStatus = ref(null);

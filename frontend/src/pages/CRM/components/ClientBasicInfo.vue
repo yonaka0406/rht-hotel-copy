@@ -282,40 +282,62 @@ const formatDate = (date) => {
 };
 
 const saveClient = async () => {
+    // Create a local copy for validation and formatting
+    const clientData = { ...client.value };
 
-    if (client.value.date_of_birth) {
-        client.value.date_of_birth = formatDate(client.value.date_of_birth);
+    // Handle Date of Birth formatting
+    if (clientData.date_of_birth) {
+        const dob = clientData.date_of_birth;
+        const dateObj = (dob instanceof Date) ? dob : new Date(dob);
+
+        if (!isNaN(dateObj.getTime())) {
+            clientData.date_of_birth = formatDate(dateObj);
+        } else {
+            // If date is invalid, we can either null it or return with error
+            toast.add({ severity: 'error', summary: 'Error', detail: '有効な年月日を入力してください。', life: 3000 });
+            return;
+        }
     } else {
-        client.value.date_of_birth = null;
+        clientData.date_of_birth = null;
     }
-    if (!hasContactInfo(client.value.email, client.value.phone)) {
+
+    if (!hasContactInfo(clientData.email, clientData.phone)) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'メールアドレス又は電話番号を入力してください。', life: 3000 });
         return;
     }
-    if (client.value.email && !isValidEmail.value) {
+    if (clientData.email && !isValidEmail.value) {
         toast.add({ severity: 'error', summary: 'Error', detail: '有効なメールアドレスを入力してください。', life: 3000 });
         return;
     }
-    if (client.value.phone && !isValidPhone.value) {
+    if (clientData.phone && !isValidPhone.value) {
         toast.add({ severity: 'error', summary: 'Error', detail: '有効な電話番号を入力してください。', life: 3000 });
         return;
     }
+    if (clientData.fax && !isValidFAX.value) {
+        toast.add({ severity: 'error', summary: 'Error', detail: '有効なFAX番号を入力してください。', life: 3000 });
+        return;
+    }
 
-    if (client.value.customer_id) {
-        if (!validateCustomerIdUtil(client.value.customer_id)) {
+    if (clientData.customer_id) {
+        if (!validateCustomerIdUtil(clientData.customer_id)) {
             toast.add({ severity: 'error', summary: 'Error', detail: '顧客コードは半角数字で入力してください。', life: 3000 });
             return;
         }
-        const validateCustomerId = await fetchCustomerID(client.value.id, client.value.customer_id);
-        if (validateCustomerId.client.length > 0) {
-            toast.add({ severity: 'error', summary: 'Error', detail: '顧客IDはすでに利用中です。', life: 3000 });
+        const validateCustomerId = await fetchCustomerID(clientData.id, clientData.customer_id);
+        if (validateCustomerId && Array.isArray(validateCustomerId.client) && validateCustomerId.client.length > 0) {
+            toast.add({ severity: 'error', summary: 'Error', detail: '顧客コードはすでに利用中です。', life: 3000 });
             return;
         }
     }
 
-    await updateClientInfoCRM(client.value.id, client.value);
-
-    toast.add({ severity: 'success', summary: 'Success', detail: '顧客情報が編集されました。', life: 3000 });
+    try {
+        await updateClientInfoCRM(clientData.id, clientData);
+        // Update the original ref after successful save
+        client.value = { ...clientData };
+        toast.add({ severity: 'success', summary: 'Success', detail: '顧客情報が編集されました。', life: 3000 });
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: error.message || '顧客情報の更新に失敗しました。', life: 5000 });
+    }
 };
 
 // Group
@@ -358,22 +380,38 @@ const createNewGroup = async () => {
         name: newGroupName.value,
         comment: newGroupComment.value,
         clientId: clientId.value
-    }
-    console.log('createNewGroup', data);
-    const result = await createClientGroup(data);
-    if (result.success) {
+    };
+
+    try {
+        const result = await createClientGroup(data);
+        if (result && result.success) {
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: `所属グループ「${data.name}」作成されました。 `,
+                life: 3000,
+            });
+
+            await fetchClient(clientId.value);
+            client.value = selectedClient.value.client;
+            newGroupDialog.value = false;
+        } else {
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: (result && result.message) || 'グループの作成に失敗しました。',
+                life: 3000,
+            });
+        }
+    } catch (error) {
+        console.error('createNewGroup error:', error);
         toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: `所属グループ「${data.name}」作成されました。 `,
-            life: 3000,
+            severity: 'error',
+            summary: 'Error',
+            detail: error.message || '予期せぬエラーが発生しました。',
+            life: 5000,
         });
     }
-    await fetchClient(clientId.value);
-    client.value = selectedClient.value.client;
-
-    newGroupDialog.value = false;
-
 };
 const goToEditClientPage = (clientId) => {
     router.push({ name: 'ClientEdit', params: { clientId: clientId } });

@@ -566,7 +566,7 @@ const onClientSelect = async (event) => {
 const submitReservation = async () => {
   // Skip validation if a client is already selected from the database
   if (isClientSelected.value) {
-    // We still want to ensure there is at least a name, but that's handled by required prop in AutoComplete
+    // We still want to ensure there is at least a name, but that's handled by required prop in ClientAutoCompleteWithStore
     // and the manual entry logic
   } else {
     // Validate for new/manual client entry

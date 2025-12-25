@@ -165,7 +165,7 @@ const submitClient = async () => {
             return;
         }
         const checkCustomerId = await fetchCustomerID(null, newClient.value.customer_id);
-        if (checkCustomerId.client.length > 0) {
+        if (checkCustomerId && Array.isArray(checkCustomerId.client) && checkCustomerId.client.length > 0) {
             toast.add({ severity: 'error', summary: 'Error', detail: '顧客IDはすでに利用中です。', life: 3000 });
             return;
         }

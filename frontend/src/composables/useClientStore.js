@@ -31,11 +31,11 @@ export function useClientStore() {
 
                 // Handle string format like "C001" - extract number
                 if (typeof id === 'string' && id.match(/^C\d+$/)) {
-                    return parseInt(id.substring(1));
+                    return parseInt(id.substring(1), 10);
                 }
 
                 // Handle direct numeric values (string or number)
-                const numericId = parseInt(id);
+                const numericId = parseInt(id, 10);
                 return isNaN(numericId) ? null : numericId;
             })
             .filter(id => id !== null && id > 0);

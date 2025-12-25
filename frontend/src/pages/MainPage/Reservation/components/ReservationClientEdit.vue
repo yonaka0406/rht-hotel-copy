@@ -101,13 +101,13 @@
                 <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
               </FloatLabel>
             </div>
-            <!-- Phone number input -->
+            <!-- Fax input -->
             <div class="col-span-1">
               <FloatLabel>
-                <InputText v-model="clientDetails.fax" :pattern="phonePattern" :class="{ 'p-invalid': !isValidPhone }"
-                  @input="validatePhone(clientDetails.fax)" fluid />
+                <InputText v-model="clientDetails.fax" :pattern="phonePattern" :class="{ 'p-invalid': !isValidFax }"
+                  @input="validateFax(clientDetails.fax)" fluid />
                 <label>FAX</label>
-                <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
+                <small v-if="!isValidFax" class="p-error">有効なFAX番号を入力してください。</small>
               </FloatLabel>
             </div>
             <!-- Customer ID input -->
@@ -198,6 +198,7 @@ const phonePattern = /^[\d\s()+\-]*$/;
 
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
+const isValidFax = ref(true);
 const isClientSelected = ref(false);
 const selectedClient = ref(null);
 const filteredClients = ref([]);
@@ -234,6 +235,9 @@ const validateEmail = (email) => {
 };
 const validatePhone = (phone) => {
   isValidPhone.value = validatePhoneUtil(phone);
+};
+const validateFax = (fax) => {
+  isValidFax.value = validatePhoneUtil(fax);
 };
 const formatDate = (date) => {
   const year = date.getFullYear();
@@ -297,30 +301,40 @@ const onClientSelect = async (event) => {
 };
 
 const saveClient = async () => {
+  // Validate Customer ID
   if (clientDetails.value.customer_id) {
     if (!validateCustomerIdUtil(clientDetails.value.customer_id)) {
       toast.add({ severity: 'error', summary: 'Error', detail: '顧客コードは半角数字で入力してください。', life: 3000 });
       return;
     }
-    const validateCustomerId = await fetchCustomerID(clientDetails.value.id, clientDetails.value.customer_id);
-    if (validateCustomerId.client.length > 0) {
-      toast.add({ severity: 'error', summary: 'Error', detail: '顧客IDはすでに利用中です。', life: 3000 });
+    const checkCustomerIdObj = await fetchCustomerID(clientDetails.value.id, clientDetails.value.customer_id);
+    if (checkCustomerIdObj && Array.isArray(checkCustomerIdObj.client) && checkCustomerIdObj.client.length > 0) {
+      toast.add({ severity: 'error', summary: 'Error', detail: '顧客コードはすでに利用中です。', life: 3000 });
       return;
     }
   }
 
-  if (isClientSelected.value) {
+  // Validate Email, Phone, and Fax flags
+  if (!isValidEmail.value || !isValidPhone.value || !isValidFax.value) {
+    toast.add({ severity: 'error', summary: 'Error', detail: '入力内容に誤りがあります。確認してください。', life: 3000 });
+    return;
+  }
 
-    !clientDetails.value.date_of_birth ? formatDate(new Date(clientDetails.value.date_of_birth)) : null;
-    // console.log('saveClient:',clientDetails.value);
+  // Format Date of Birth
+  if (clientDetails.value.date_of_birth) {
+    const dob = clientDetails.value.date_of_birth;
+    const dateObj = (dob instanceof Date) ? dob : new Date(dob);
+    if (!isNaN(dateObj.getTime())) {
+      clientDetails.value.date_of_birth = formatDate(dateObj);
+    }
+  }
+
+  if (isClientSelected.value) {
     await updateClientInfo(clientDetails.value.id, clientDetails.value);
     await setReservationClient(clientDetails.value.id);
     toast.add({ severity: 'success', summary: '成功', detail: '予約者が編集されました。', life: 3000 });
   } else {
-    // console.log('newClient:',clientDetails.value);
     const newClient = await createClient(clientDetails.value);
-    // console.log(newClient);
-    // console.log('New client id:', newClient.id);
     await setReservationClient(newClient.id);
     Object.assign(clientDetails.value, newClient);
     isClientSelected.value = true;
