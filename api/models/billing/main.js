@@ -275,13 +275,14 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       -- We calculate total_net_price by rounding the sum of gross prices divided by the tax rate.
       -- Using ROUND with numeric casting ensures mathematical consistency (e.g. 17600 -> 16000) 
       -- and avoids precision issues from floating point division or individual component flooring.
+      -- We also normalize tax_rate (if > 1, divide by 100) to handle inconsistent data (e.g. 10 instead of 0.1).
       ,(
         SELECT json_agg(taxed_group)
         FROM (
           SELECT 
-            tax_rate, 
+            (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END) as tax_rate, 
             SUM(total_price) as total_price, 
-            ROUND(SUM(total_price)::numeric / (1 + tax_rate)::numeric) as total_net_price
+            ROUND(SUM(total_price)::numeric / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END))::numeric) as total_net_price
           FROM (
             SELECT
               rr.tax_rate,
@@ -312,7 +313,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               AND rd.date >= date_trunc('month', $2::date)
               AND rd.date < date_trunc('month', $2::date) + interval '1 month'
           ) AS inside
-          GROUP BY tax_rate
+          GROUP BY (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END)
         ) AS taxed_group
       ) AS reservation_rates_json
     FROM
