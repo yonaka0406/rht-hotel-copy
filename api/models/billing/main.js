@@ -240,19 +240,19 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ) AS reservation_details_json
       -- The subquery for reservation rates and addons also needed to be filtered by month.
       -- This ensures the total prices are correct for the whole reservation in the billing period.
-      -- We sum the stored net_price values from the database to maintain consistency with individual records.
+      -- We calculate total_net_price by flooring the sum of gross prices to ensure the total is mathematically
+      -- consistent, avoiding the precision loss from summing individually floored split components.
       ,(
         SELECT json_agg(taxed_group)
         FROM (
           SELECT 
             tax_rate, 
             SUM(total_price) as total_price, 
-            SUM(total_net_price) as total_net_price
+            FLOOR(SUM(total_price) / (1 + tax_rate)) as total_net_price
           FROM (
             SELECT
               rr.tax_rate,
-              rr.price AS total_price,
-              rr.net_price AS total_net_price
+              rr.price AS total_price
             FROM
               reservation_details rd
               JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
@@ -267,8 +267,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
             UNION ALL
             SELECT
               ra.tax_rate,
-              (ra.price * ra.quantity) AS total_price,
-              (ra.net_price * ra.quantity) AS total_net_price
+              (ra.price * ra.quantity) AS total_price
             FROM
               reservation_details rd
               JOIN reservation_addons ra ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
