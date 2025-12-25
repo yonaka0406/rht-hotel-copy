@@ -222,6 +222,8 @@ const generateInvoiceExcel = async (req, res) => {
         worksheet.getCell(`B${currentRow}`).value = label;
         // Quantity
         worksheet.getCell(`G${currentRow}`).value = quantity;
+        // Unit
+        worksheet.getCell(`H${currentRow}`).value = isRoomCharge ? '泊' : '個';
         // Amount
         worksheet.getCell(`J${currentRow}`).value = item.total_price;
         
