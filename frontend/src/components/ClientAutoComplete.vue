@@ -1,20 +1,9 @@
 <template>
-  <FloatLabel>
-    <AutoComplete
-      v-model="modelValueProxy"
-      :suggestions="suggestions"
-      :optionLabel="optionLabel"
-      :placeholder="placeholder"
-      :forceSelection="forceSelection"
-      :loading="loading"
-      :dropdown=false
-      :panelClass="panelClass"
-      @complete="$emit('complete', $event)"
-      @option-select="$emit('option-select', $event)"
-      @change="$emit('change', $event)"
-      @clear="$emit('clear', $event)"
-      fluid      
-    >
+  <component :is="useFloatLabel ? FloatLabel : 'div'" :class="{ 'mb-0': !useFloatLabel }">
+    <AutoComplete v-model="modelValueProxy" :suggestions="suggestions" :optionLabel="optionLabel"
+      :placeholder="placeholder" :forceSelection="forceSelectionEffective" :loading="loading" :dropdown="false"
+      :panelClass="panelClass" @complete="$emit('complete', $event)" @option-select="$emit('option-select', $event)"
+      @change="$emit('change', $event)" @clear="$emit('clear', $event)" fluid>
       <template #option="slotProps">
         <slot name="option" v-bind="slotProps">
           <div>
@@ -23,11 +12,19 @@
               <i v-else class="pi pi-user"></i>
               {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
               <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+              <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
+                [{{ slotProps.option.customer_id }}]
+              </span>
             </p>
             <div class="flex items-center gap-2">
-              <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-              <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-              <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
+              <p v-if="slotProps.option.customer_id" class="text-xs text-sky-800"><i class="pi pi-id-card"></i> {{
+                slotProps.option.customer_id }}</p>
+              <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{
+                slotProps.option.phone }}</p>
+              <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{
+                slotProps.option.email }}</p>
+              <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{
+                slotProps.option.fax }}</p>
             </div>
           </div>
         </slot>
@@ -38,8 +35,8 @@
         </slot>
       </template>
     </AutoComplete>
-    <label>{{ label }}</label>
-  </FloatLabel>
+    <label v-if="useFloatLabel">{{ label }}</label>
+  </component>
 </template>
 
 <script setup>
@@ -53,10 +50,16 @@ const props = defineProps({
   optionLabel: { type: String, default: 'display_name' },
   placeholder: { type: [String, null], default: null },
   label: { type: String, default: '個人氏名　||　法人名称' },
-  forceSelection: { type: Boolean, default: true },
+  forceSelection: { type: Boolean, default: null },
   loading: { type: Boolean, default: false },
   dropdown: { type: Boolean, default: true },
   panelClass: { type: String, default: 'max-h-60 overflow-y-auto' },
+  useFloatLabel: { type: Boolean, default: true },
+});
+
+const forceSelectionEffective = computed(() => {
+  if (props.forceSelection !== null) return props.forceSelection;
+  return true; // default
 });
 
 const emit = defineEmits(['update:modelValue', 'complete', 'option-select', 'change', 'clear']);
@@ -66,4 +69,3 @@ const modelValueProxy = computed({
   set: v => emit('update:modelValue', v),
 });
 </script>
-

@@ -6,7 +6,7 @@ const logger = require('../../config/logger');
 
 // GET
 const getClients = async (req, res) => {
-    const page = parseInt(req.params.page, 10) || 1; // Default to page 1 if not provided or invalid
+  const page = parseInt(req.params.page, 10) || 1; // Default to page 1 if not provided or invalid
   const limit = 5000;
   const offset = (page - 1) * limit;
 
@@ -26,8 +26,8 @@ const getClients = async (req, res) => {
 };
 const getClient = async (req, res) => {
   const { id } = req.params;
-    
-  try{
+
+  try {
     const client = await clientsModel.selectClient(req.requestId, id);
     res.status(200).json({ client });
   } catch (error) {
@@ -37,10 +37,10 @@ const getClient = async (req, res) => {
 };
 const getGroup = async (req, res) => {
   const { id } = req.params;
-    
-  try{
+
+  try {
     const group = await clientsModel.selectGroup(req.requestId, id);
-    res.status(200).json( group );
+    res.status(200).json(group);
   } catch (error) {
     console.error('Error getting group:', error);
     res.status(500).json({ error: error.message });
@@ -62,8 +62,8 @@ const getConvertedName = async (req, res) => {
 };
 const getClientReservations = async (req, res) => {
   const { id } = req.params;
-    
-  try{
+
+  try {
     const client = await clientsModel.selectClientReservations(req.requestId, id);
     res.status(200).json(client);
   } catch (error) {
@@ -73,8 +73,8 @@ const getClientReservations = async (req, res) => {
 };
 const getCustomerID = async (req, res) => {
   const { clientId, customerId } = req.params;
-    
-  try{
+
+  try {
     const client = await clientsModel.selectCustomerID(req.requestId, clientId, customerId);
     res.status(200).json({ client });
   } catch (error) {
@@ -83,8 +83,8 @@ const getCustomerID = async (req, res) => {
   }
 };
 const getClientGroups = async (req, res) => {
-      
-  try{
+
+  try {
     const groups = await clientsModel.selectClientGroups(req.requestId);
     res.status(200).json(groups);
   } catch (error) {
@@ -97,7 +97,7 @@ const getClientGroups = async (req, res) => {
 const createClientBasic = async (req, res) => {
   try {
     logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
-    const { name, name_kana, legal_or_natural_person, gender, email, phone } = req.body;
+    const { name, name_kana, legal_or_natural_person, gender, email, phone, customer_id } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
@@ -110,6 +110,16 @@ const createClientBasic = async (req, res) => {
       finalGender = 'other'; // Assign plain value
     }
 
+    let processed_customer_id = customer_id;
+    if (processed_customer_id === '' || processed_customer_id === undefined) {
+      processed_customer_id = null;
+    } else if (processed_customer_id !== null) {
+      const parsedId = parseInt(processed_customer_id, 10);
+      processed_customer_id = isNaN(parsedId) ? null : parsedId;
+    } else {
+      processed_customer_id = null;
+    }
+
     const client = {
       name,
       name_kana,
@@ -117,6 +127,7 @@ const createClientBasic = async (req, res) => {
       gender: finalGender, // Use finalGender here
       email,
       phone,
+      customer_id: processed_customer_id,
       created_by,
       updated_by,
     };
@@ -134,9 +145,17 @@ const createClientBasic = async (req, res) => {
 
 const createClient = async (req, res) => {
   try {
-    logger.debug('[CLIENT_CREATE_RAW_BODY] Raw request body:', req.body);
-    const clientFields = req.body;
+    const { customer_id, ...clientFields } = req.body;
     const user_id = req.user.id;
+
+    if (customer_id === '' || customer_id === undefined) {
+      clientFields.customer_id = null;
+    } else if (customer_id !== null) {
+      const parsedId = parseInt(customer_id, 10);
+      clientFields.customer_id = isNaN(parsedId) ? null : parsedId;
+    } else {
+      clientFields.customer_id = null;
+    }
 
     if (clientFields.phone) {
       validatePhoneNumberFormat(clientFields.phone, 'phone');
@@ -158,7 +177,7 @@ const createAddress = async (req, res) => {
 
   try {
     const newAddress = await clientsModel.addNewAddress(req.requestId, user_id, addressFields);
-    res.json(newAddress); 
+    res.json(newAddress);
   } catch (err) {
     console.error('Error creating client address:', err);
     res.status(500).json({ error: 'Failed to create client address' });
@@ -170,7 +189,7 @@ const createClientGroup = async (req, res) => {
 
   try {
     const newAddress = await clientsModel.addClientGroup(req.requestId, user_id, groupFields);
-    res.json(newAddress); 
+    res.json(newAddress);
   } catch (err) {
     console.error('Error creating client address:', err);
     res.status(500).json({ error: 'Failed to create client address' });
@@ -181,8 +200,17 @@ const createClientGroup = async (req, res) => {
 const updateClient = async (req, res) => {
   try {
     const clientId = req.params.id;
-    const updatedFields = req.body;
+    const { customer_id, ...updatedFields } = req.body;
     const user_id = req.user.id;
+
+    if (customer_id === '' || customer_id === undefined) {
+      updatedFields.customer_id = null;
+    } else if (customer_id !== null) {
+      const parsedId = parseInt(customer_id, 10);
+      updatedFields.customer_id = isNaN(parsedId) ? null : parsedId;
+    } else {
+      updatedFields.customer_id = null;
+    }
 
     if (updatedFields.phone) {
       validatePhoneNumberFormat(updatedFields.phone, 'phone');
@@ -206,6 +234,13 @@ const updateClientFull = async (req, res) => {
 
     if (updatedFields.phone) {
       validatePhoneNumberFormat(updatedFields.phone, 'phone');
+    }
+
+    if (updatedFields.customer_id === '' || updatedFields.customer_id === undefined) {
+      updatedFields.customer_id = null;
+    } else if (updatedFields.customer_id !== null) {
+      const parsedId = parseInt(updatedFields.customer_id, 10);
+      updatedFields.customer_id = isNaN(parsedId) ? null : parsedId;
     }
 
     const updatedClient = await clientsModel.editClientFull(req.requestId, clientId, updatedFields, user_id);
@@ -232,32 +267,32 @@ const updateAddress = async (req, res) => {
   }
 };
 const updateClientGroup = async (req, res) => {
-  const clientId = req.params.id;  
-  const groupId = req.params.gid;  
+  const clientId = req.params.id;
+  const groupId = req.params.gid;
   const user_id = req.user.id;
 
   try {
-    const updatedClient = await clientsModel.editClientGroup(req.requestId, clientId, groupId, user_id) 
+    const updatedClient = await clientsModel.editClientGroup(req.requestId, clientId, groupId, user_id);
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update client' });
   }
-  
+
 };
-const updateGroup = async (req, res) => {   
+const updateGroup = async (req, res) => {
   const groupId = req.params.gid;
   const data = req.body;
   const user_id = req.user.id;
 
   try {
-    const updatedGroup = await clientsModel.editGroup(req.requestId, groupId, data, user_id) 
+    const updatedGroup = await clientsModel.editGroup(req.requestId, groupId, data, user_id);
     res.json(updatedGroup);
   } catch (err) {
     console.error('Error updating group:', err);
     res.status(500).json({ error: 'Failed to update group' });
   }
-  
+
 };
 
 const mergeClients = async (req, res) => {
@@ -283,12 +318,12 @@ const mergeClients = async (req, res) => {
 
 // DELETE
 const removeAddress = async (req, res) => {
-  const addressId = req.params.id;  
+  const addressId = req.params.id;
   const user_id = req.user.id;
 
   try {
     await clientsModel.deleteAddress(req.requestId, addressId, user_id);
-    res.json({message: 'Address deleted.'});
+    res.json({ message: 'Address deleted.' });
   } catch (err) {
     console.error('Error deleting address:', err);
     res.status(500).json({ error: 'Failed to delete address' });
@@ -304,12 +339,12 @@ const handleGetRelatedCompanies = async (req, res) => {
     // { relationship_id, related_company_id, related_company_name, our_perspective_type, their_perspective_type, comment }
     // Frontend expects: type_from_source_perspective, type_from_target_perspective, comment_from_source
     const mappedRelationships = relationships.map(r => ({
-        relationship_id: r.relationship_id,
-        related_company_id: r.related_company_id,
-        related_company_name: r.related_company_name,
-        type_from_source_perspective: r.our_perspective_type,
-        type_from_target_perspective: r.their_perspective_type,
-        comment_from_source: r.comment, // Assuming the single comment field is from source's view
+      relationship_id: r.relationship_id,
+      related_company_id: r.related_company_id,
+      related_company_name: r.related_company_name,
+      type_from_source_perspective: r.our_perspective_type,
+      type_from_target_perspective: r.their_perspective_type,
+      comment_from_source: r.comment, // Assuming the single comment field is from source's view
     }));
     res.status(200).json(mappedRelationships);
   } catch (error) {
@@ -332,17 +367,17 @@ const handleAddClientRelationship = async (req, res) => {
   try {
     // Validate legal status of both clients
     const clientStatuses = await clientsModel.getLegalStatusForClientIds(req.requestId, [source_client_id, target_client_id]);
-    
+
     // Check if both clients were found by checking the length of the result
     if (clientStatuses.length !== 2) {
-        // Determine which client was not found or if both were not found for a more specific message
-        const foundSource = clientStatuses.some(c => c.id === source_client_id);
-        const foundTarget = clientStatuses.some(c => c.id === target_client_id);
-        let errorMessage = 'One or both clients not found.';
-        if (!foundSource && !foundTarget) errorMessage = 'Source and target clients not found.';
-        else if (!foundSource) errorMessage = 'Source client not found.';
-        else if (!foundTarget) errorMessage = 'Target client not found.';
-        return res.status(404).json({ message: errorMessage }); // 404 for not found
+      // Determine which client was not found or if both were not found for a more specific message
+      const foundSource = clientStatuses.some(c => c.id === source_client_id);
+      const foundTarget = clientStatuses.some(c => c.id === target_client_id);
+      let errorMessage = 'One or both clients not found.';
+      if (!foundSource && !foundTarget) errorMessage = 'Source and target clients not found.';
+      else if (!foundSource) errorMessage = 'Source client not found.';
+      else if (!foundTarget) errorMessage = 'Target client not found.';
+      return res.status(404).json({ message: errorMessage }); // 404 for not found
     }
 
     for (const client of clientStatuses) {
@@ -357,7 +392,7 @@ const handleAddClientRelationship = async (req, res) => {
   } catch (error) {
     console.error('Error in handleAddClientRelationship:', error);
     if (error.code === '23505') { // Unique violation for uq_client_relationship (from model or DB)
-        return res.status(409).json({ message: 'This client relationship already exists.' });
+      return res.status(409).json({ message: 'This client relationship already exists.' });
     }
     res.status(500).json({ message: 'Failed to add client relationship', error: error.message });
   }
@@ -381,7 +416,7 @@ const handleUpdateClientRelationship = async (req, res) => {
   } catch (error) {
     console.error('Error in handleUpdateClientRelationship:', error);
     if (error.message.includes("No fields provided for update")) { // Error from model
-        return res.status(400).json({ message: error.message });
+      return res.status(400).json({ message: error.message });
     }
     res.status(500).json({ message: 'Failed to update client relationship', error: error.message });
   }
@@ -434,7 +469,7 @@ const handleGetImpedimentsByClientId = async (req, res) => {
   try {
     const impediments = await clientsModel.getImpedimentsByClientId(req.requestId, clientId);
     if (!impediments) {
-        return res.status(200).json([]);
+      return res.status(200).json([]);
     }
     res.status(200).json(impediments);
   } catch (error) {
@@ -537,16 +572,16 @@ const getExportClientsCount = async (req, res) => {
 };
 
 
-module.exports = { 
-  getClients, 
+module.exports = {
+  getClients,
   getClient,
   getGroup,
   getConvertedName,
   getClientReservations,
   getCustomerID,
   getClientGroups,
-  createClientBasic, 
-  createClient, 
+  createClientBasic,
+  createClient,
   createAddress,
   createClientGroup,
   removeAddress,

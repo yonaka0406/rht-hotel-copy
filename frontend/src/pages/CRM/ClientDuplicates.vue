@@ -26,34 +26,27 @@
                     <div class="mb-4">
                         <span class="p-input-icon-left w-full">
                             <i class="pi pi-search" />
-                            <InputText v-model="filterText" placeholder="元顧客情報をフィルター (氏名、カナ、漢字、メール、電話番号、ファックス)" class="w-full p-inputtext-sm" />
+                            <InputText v-model="filterText" placeholder="元顧客情報をフィルター (氏名、カナ、漢字、メール、電話番号、ファックス)"
+                                class="w-full p-inputtext-sm" />
                         </span>
                     </div>
 
-                    <DataTable 
-                        class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm" 
-                        :value="filteredDuplicatePairs"
-                        :paginator="true" 
-                        :rows="5" 
-                        :rowsPerPageOptions="[5, 10, 20]"
+                    <DataTable class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm"
+                        :value="filteredDuplicatePairs" :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20]"
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
                         v-if="filteredDuplicatePairs.length > 0">
-                        
+
                         <Column header="元顧客情報" style="width: 50%;">
                             <template #body="{ data }">
                                 <ClientCard :client-id="data.earliest.id" />
                                 <div class="mt-2">
-                                    <Button 
-                                        @click="goToEditClientPage(data.earliest.id)" 
-                                        label="顧客編集" 
-                                        icon="pi pi-pencil" 
-                                        severity="info"
-                                        class="p-button-sm w-full" />
+                                    <Button @click="goToEditClientPage(data.earliest.id)" label="顧客編集"
+                                        icon="pi pi-pencil" severity="info" class="p-button-sm w-full" />
                                 </div>
                             </template>
                         </Column>
-                        
+
                         <Column header="重複候補者" style="width: 50%;">
                             <template #body="{ data }">
                                 <!-- Updated Accordion structure for PrimeVue v4 -->
@@ -69,18 +62,10 @@
                                         <AccordionContent>
                                             <ClientCard :client-id="duplicate.id" />
                                             <div class="mt-2 grid grid-cols-2 gap-2">
-                                                <Button 
-                                                    @click="goToEditClientPage(duplicate.id)" 
-                                                    label="編集" 
-                                                    icon="pi pi-pencil" 
-                                                    severity="secondary"
-                                                    class="p-button-sm" />
-                                                <Button 
-                                                    @click="mergeClients(duplicate.id)" 
-                                                    label="この顧客に合流" 
-                                                    icon="pi pi-sync" 
-                                                    severity="warning"
-                                                    class="p-button-sm" />
+                                                <Button @click="goToEditClientPage(duplicate.id)" label="編集"
+                                                    icon="pi pi-pencil" severity="secondary" class="p-button-sm" />
+                                                <Button @click="mergeClients(duplicate.id)" label="この顧客に合流"
+                                                    icon="pi pi-sync" severity="warning" class="p-button-sm" />
                                             </div>
                                         </AccordionContent>
                                     </AccordionPanel>
@@ -88,7 +73,7 @@
                             </template>
                         </Column>
                     </DataTable>
-                    
+
                     <div v-else class="p-4 text-center">
                         <p>フィルターに一致する重複候補見つかりませんでした。</p>
                     </div>
@@ -104,11 +89,11 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
 
-import ClientCard from './components/ClientCard.vue'; 
+import ClientCard from './components/ClientCard.vue';
 import ClientMerge from './components/ClientMerge.vue';
 
 import Card from 'primevue/card';
@@ -125,8 +110,6 @@ import AccordionHeader from 'primevue/accordionheader';
 import AccordionContent from 'primevue/accordioncontent';
 
 
-console.log('[ClientDuplicates] Script setup started.');
-
 const router = useRouter();
 const { clients, clientsIsLoading } = useClientStore();
 
@@ -136,10 +119,6 @@ const isCalculating = ref(false);
 const showDrawer = ref(false);
 const drawerProps = ref({});
 const filterText = ref('');
-
-onMounted(() => {
-    console.log('[ClientDuplicates] Component mounted.');
-});
 
 // --- Filter Logic ---
 const filteredDuplicatePairs = computed(() => {
@@ -171,8 +150,6 @@ const calculateDuplicates = async () => {
     }
 
     isCalculating.value = true;
-    console.log('[ClientDuplicates] START: Enhanced async duplicate calculation.');
-    console.time('[ClientDuplicates] PERF: Full duplicate calculation');
 
     await new Promise(resolve => setTimeout(resolve, 0));
 
@@ -235,21 +212,18 @@ const calculateDuplicates = async () => {
             if (group.length > 1) {
                 const earliest = group.reduce((e, c) => new Date(c.created_at) < new Date(e.created_at) ? c : e);
                 const duplicates = group.filter(c => c.id !== earliest.id);
-                
+
                 if (duplicates.length > 0) {
                     finalPairs.push({ earliest, duplicates });
                 }
             }
         }
-        
+
         duplicatePairs.value = finalPairs;
 
     } catch (error) {
-        console.error('[ClientDuplicates] Error during duplicate calculation:', error);
         duplicatePairs.value = [];
     } finally {
-        console.timeEnd('[ClientDuplicates] PERF: Full duplicate calculation');
-        console.log(`[ClientDuplicates] END: Calculation finished. Found ${duplicatePairs.value.length} pairs.`);
         isCalculating.value = false;
     }
 };
@@ -262,8 +236,6 @@ const normalizeString = (str) => {
 
 // --- Watcher ---
 watch(clients, (newClients, oldClients) => {
-    console.log(`[ClientDuplicates] Watcher triggered. Client count changed from ${oldClients?.length ?? 'N/A'} to ${newClients?.length ?? 'N/A'}.`);
-    
     if (Array.isArray(newClients) && newClients.length > 0) {
         calculateDuplicates();
     } else {
@@ -274,7 +246,8 @@ watch(clients, (newClients, oldClients) => {
 
 // --- Component Actions ---
 const goToEditClientPage = (clientId) => {
-    router.push({ name: 'ClientEdit', params: { clientId: clientId } });
+    const routeData = router.resolve({ name: 'ClientEdit', params: { clientId: clientId } });
+    window.open(routeData.href, '_blank');
 };
 
 const mergeClients = (oldId) => {

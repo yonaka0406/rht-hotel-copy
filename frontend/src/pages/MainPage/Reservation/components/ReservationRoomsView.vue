@@ -301,11 +301,17 @@
                                                         slotProps.option.name || '' }}
                                                     <span v-if="slotProps.option.name_kana"> ({{
                                                         slotProps.option.name_kana }})</span>
+                                                    <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
+                                                        [{{ slotProps.option.customer_id }}]
+                                                    </span>
                                                 </p>
                                                 <div class="flex items-center gap-2">
+                                                    <p v-if="slotProps.option.customer_id" class="text-xs text-sky-800">
+                                                        <i class="pi pi-id-card"></i> {{ slotProps.option.customer_id }}
+                                                    </p>
                                                     <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
                                                             class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
+                                                    <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i
                                                             class="pi pi-at"></i> {{ slotProps.option.email }}</p>
                                                     <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i
                                                             class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
@@ -1006,6 +1012,10 @@ const genderOptions = [
     { label: 'その他', value: 'other' },
 ];
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+
+// HTML pattern attributes
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phonePattern = /^[\d\s()+\-]*$/;
 
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);

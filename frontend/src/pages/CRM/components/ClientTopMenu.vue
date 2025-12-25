@@ -19,34 +19,8 @@
         <template #end>
             <div class="flex items-center gap-2">
                 <span class="w-32 sm:w-auto mr-2">{{ userGreeting }}</span>
-                <template v-if="clientsIsLoading">
-                    <Skeleton shape="circle" size="2rem" />
-                </template>
-                <template v-else>
-                    <AutoComplete v-model="client" :suggestions="filteredClients" optionLabel="display_name"
-                        @complete="filterClients" @option-select="onClientSelect" placeholder="顧客検索"
-                        class="w-32 sm:w-auto">
-                        <template #option="slotProps">
-                            <div>
-                                <p>
-                                    <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                                    <i v-else class="pi pi-user"></i>
-                                    {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
-                                    slotProps.option.name || '' }}
-                                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                                </p>
-                                <div class="flex items-center gap-2">
-                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
-                                            class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
-                                            class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i
-                                            class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
-                                </div>
-                            </div>
-                        </template>
-                    </AutoComplete>
-                </template>
+                <ClientAutoCompleteWithStore v-model="client" @option-select="onClientSelect" placeholder="顧客検索"
+                    class="w-32 sm:w-auto" :useFloatLabel="false" />
                 <router-link to="/" class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm">
                     <i class="pi pi-home text-white mr-2"></i>
                     <span class="text-white">PMS</span>
@@ -62,7 +36,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/composables/useUserStore';
 import { useClientStore } from '@/composables/useClientStore';
-import { Menubar, AutoComplete, Skeleton } from 'primevue';
+import { Menubar } from 'primevue';
+import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 
 const router = useRouter();
 const { logged_user, fetchUser } = useUserStore();
@@ -123,62 +98,7 @@ const items = ref([
 ]);
 
 // Search
-const normalizeKana = (str) => {
-    if (!str) return '';
-    let normalizedStr = str.normalize('NFKC');
-
-    // Convert Hiragana to Katakana
-    normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
-    );
-    // Convert half-width Katakana to full-width Katakana
-    normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
-    );
-
-    return normalizedStr;
-};
-const normalizePhone = (phone) => {
-    if (!phone) return '';
-
-    // Remove all non-numeric characters
-    let normalized = phone.replace(/\D/g, '');
-
-    // Remove leading zeros
-    normalized = normalized.replace(/^0+/, '');
-
-    return normalized;
-};
 const client = ref({});
-const filteredClients = ref([]);
-const filterClients = (event) => {
-    const query = event.query.toLowerCase();
-    const normalizedQuery = normalizePhone(query);
-    const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-    if (!query || !clients.value || !Array.isArray(clients.value)) {
-        filteredClients.value = [];
-        return;
-    }
-
-    filteredClients.value = clients.value.filter((client) => {
-        // Name filtering (case-insensitive)
-        const matchesName =
-            (client.name && client.name.toLowerCase().includes(query)) ||
-            (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-            (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-        // Phone/Fax filtering (only for numeric queries)
-        const matchesPhoneFax = isNumericQuery &&
-            ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-                (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-        // Email filtering (case-insensitive)
-        const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-
-        // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
-
-        return matchesName || matchesPhoneFax || matchesEmail;
-    });
-};
 const onClientSelect = (event) => {
     client.value = event.value;
     client.value.display_name = event.value.name_kanji || event.value.name_kana || event.value.name;

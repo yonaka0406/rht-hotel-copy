@@ -1,16 +1,8 @@
 <template>
-  <ClientAutoComplete
-    v-model="selectedClientProxy"
-    :suggestions="filteredClients"
-    :loading="clientsIsLoading"
-    @complete="handleComplete"
-    @option-select="handleOptionSelect"
-    @change="handleChange"
-    @clear="handleClear"
-    :optionLabel="optionLabel"
-    :placeholder="placeholder"
-    :label="label"    
-  />
+  <ClientAutoComplete v-model="selectedClientProxy" :suggestions="filteredClients" :loading="clientsIsLoading"
+    @complete="handleComplete" @option-select="handleOptionSelect" @change="handleChange" @clear="handleClear"
+    :optionLabel="optionLabel" :placeholder="placeholder" :label="hideLabel ? '' : label" :useFloatLabel="useFloatLabel"
+    :forceSelection="forceSelection" />
 </template>
 
 <script setup>
@@ -23,6 +15,10 @@ const props = defineProps({
   optionLabel: { type: String, default: 'display_name' },
   placeholder: { type: [String, null], default: null },
   label: { type: String, default: '個人氏名　||　法人名称' },
+  hideLabel: { type: Boolean, default: false },
+  personTypeFilter: { type: String, default: null, validator: (value) => !value || ['legal', 'natural'].includes(value) },
+  useFloatLabel: { type: Boolean, default: true },
+  forceSelection: { type: Boolean, default: true },
 });
 const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear']);
 
@@ -74,15 +70,21 @@ const filterClients = (event) => {
   }
 
   filteredClients.value = clients.value.filter((client) => {
+    // Apply person type filter if specified
+    if (props.personTypeFilter && client.legal_or_natural_person !== props.personTypeFilter) {
+      return false;
+    }
+
     const matchesName =
       (client.name && client.name.toLowerCase().includes(query)) ||
       (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
       (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
     const matchesPhoneFax = isNumericQuery &&
       ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-      (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
+        (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
     const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-    return matchesName || matchesPhoneFax || matchesEmail;
+    const matchesCustomerId = client.customer_id && String(client.customer_id).toLowerCase().includes(query.toLowerCase());
+    return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerId;
   }).map(ensureDisplayName);
 };
 
@@ -118,4 +120,4 @@ onMounted(async () => {
     clients.value.forEach(ensureDisplayName);
   }
 });
-</script> 
+</script>
