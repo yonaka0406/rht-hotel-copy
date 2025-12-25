@@ -187,7 +187,6 @@ const summarizedBilledList = computed(() => {
 
     const summary = {};
     for (const item of billedList.value) {
-        console.log('Processing billed item:', item);
         const key = `${item.id}-${item.invoice_number}-${item.date}-${item.client_id}`;
         if (!summary[key]) {
             summary[key] = {
@@ -470,7 +469,7 @@ const openInvoiceDialog = (data) => {
 
     const finalComment = `【宿泊明細】\r\n${formattedDateGroups}${formattedDateGroups && cancellationComment ? '\r\n' : ''}${cancellationComment}`;
 
-    // Aggregation Logic for Tax Rates
+    // Aggregation Logic for Tax Rates and Categories
     const groupedRates = {};
     let hasBackendRateData = false;
 
@@ -482,11 +481,23 @@ const openInvoiceDialog = (data) => {
             hasBackendRateData = true;
             block.rates.forEach(rateItem => {
                 const taxRate = rateItem.tax_rate;
-                if (!groupedRates[taxRate]) {
-                    groupedRates[taxRate] = { tax_rate: taxRate, total_net_price: 0, total_price: 0 };
+                const category = rateItem.category || 'accommodation';
+                const itemName = rateItem.item_name || (category === 'accommodation' ? '宿泊料' : 'その他');
+                const key = `${taxRate}-${category}-${itemName}`;
+                
+                if (!groupedRates[key]) {
+                    groupedRates[key] = { 
+                        tax_rate: taxRate, 
+                        category: category,
+                        name: itemName,
+                        total_net_price: 0, 
+                        total_price: 0,
+                        total_quantity: 0
+                    };
                 }
-                groupedRates[taxRate].total_price += Number(rateItem.total_price);
-                groupedRates[taxRate].total_net_price += Number(rateItem.total_net_price);
+                groupedRates[key].total_price += Number(rateItem.total_price);
+                groupedRates[key].total_net_price += Number(rateItem.total_net_price);
+                groupedRates[key].total_quantity += Number(rateItem.total_quantity || 0);
             });
         }
     });
@@ -496,16 +507,29 @@ const openInvoiceDialog = (data) => {
         console.warn('No backend rate data found. Falling back to payment-based estimation.');
         data.details.forEach(block => {
             const rate = block.tax_rate || 0.1;
-            if (!groupedRates[rate]) {
-                groupedRates[rate] = { tax_rate: rate, total_net_price: 0, total_price: 0 };
+            const category = 'accommodation'; // Default to accommodation
+            const itemName = '宿泊料';
+            const key = `${rate}-${category}-${itemName}`;
+            
+            if (!groupedRates[key]) {
+                groupedRates[key] = { 
+                    tax_rate: rate, 
+                    category: category,
+                    name: itemName,
+                    total_net_price: 0, 
+                    total_price: 0,
+                    total_quantity: 0
+                };
             }
-            groupedRates[rate].total_price += block.value;
+            groupedRates[key].total_price += block.value;
+            groupedRates[key].total_quantity += (data.invoice_total_stays || 1);
         });
 
-        for (const rate in groupedRates) {
-            const grossTotal = groupedRates[rate].total_price;
+        for (const key in groupedRates) {
+            const item = groupedRates[key];
+            const grossTotal = item.total_price;
             // Using Math.round to match backend ROUND logic
-            groupedRates[rate].total_net_price = Math.round(grossTotal / (1 + parseFloat(rate)));
+            item.total_net_price = Math.round(grossTotal / (1 + parseFloat(item.tax_rate)));
         }
     }
 
@@ -528,7 +552,15 @@ const openInvoiceDialog = (data) => {
         client_name: data.display_name,
         invoice_total_stays: data.stays_count,
         invoice_total_value: data.total_value,
-        items: Object.values(groupedRates).sort((a, b) => b.tax_rate - a.tax_rate),
+        items: Object.values(groupedRates)
+            .filter(item => item.total_price !== 0) // Filter out zero-value items
+            .sort((a, b) => {
+                // Sort by category (accommodation first), then by tax_rate descending
+                if (a.category !== b.category) {
+                    return a.category === 'accommodation' ? -1 : 1;
+                }
+                return b.tax_rate - a.tax_rate;
+            }),
         comment: data.comment,
         daily_details: relevantDailyDetails,
     };

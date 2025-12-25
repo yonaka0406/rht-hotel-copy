@@ -204,8 +204,36 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
     worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
     worksheet.getCell('D16').value = invoiceData.invoice_total_value;
-    worksheet.getCell('G20').value = invoiceData.invoice_total_stays;
-    worksheet.getCell('J20').value = invoiceData.invoice_total_value;
+
+    // Populate Main Invoice Rows (Accommodation vs Addons)
+    if (invoiceData.items && Array.isArray(invoiceData.items)) {
+      let currentRow = 20;
+      invoiceData.items.forEach((item, index) => {
+        const baseLabel = item.name || (item.category === 'accommodation' ? '宿泊料' : 'その他');
+        const taxLabel = item.tax_rate ? ` (${(parseFloat(item.tax_rate) * 100).toLocaleString()}%)` : '';
+        const label = `${baseLabel}${taxLabel}`;
+        
+        const isRoomCharge = baseLabel.includes('宿泊料');
+        const quantity = isRoomCharge ? (invoiceData.invoice_total_stays || item.total_quantity || 1) : (item.total_quantity || 1);
+        
+        // No.
+        worksheet.getCell(`A${currentRow}`).value = index + 1;
+        // Description/Item Name
+        worksheet.getCell(`B${currentRow}`).value = label;
+        // Quantity
+        worksheet.getCell(`G${currentRow}`).value = quantity;
+        // Amount
+        worksheet.getCell(`J${currentRow}`).value = item.total_price;
+        
+        currentRow++;
+      });
+    } else {
+      // Fallback for backward compatibility
+      worksheet.getCell('A20').value = 1;
+      worksheet.getCell('B20').value = '宿泊料';
+      worksheet.getCell('G20').value = invoiceData.invoice_total_stays;
+      worksheet.getCell('J20').value = invoiceData.invoice_total_value;
+    }
 
     let totalTax = 0;
     let totalNet10 = 0;

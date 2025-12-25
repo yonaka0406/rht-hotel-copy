@@ -272,20 +272,23 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ) AS reservation_details_json
       -- The subquery for reservation rates and addons also needed to be filtered by month.
       -- This ensures the total prices are correct for the whole reservation in the billing period.
-      -- We calculate total_net_price by rounding the sum of gross prices divided by the tax rate.
-      -- Using ROUND with numeric casting ensures mathematical consistency (e.g. 17600 -> 16000) 
-      -- and avoids precision issues from floating point division or individual component flooring.
-      -- We also normalize tax_rate (if > 1, divide by 100) to handle inconsistent data (e.g. 10 instead of 0.1).
+      -- We now separate accommodation rates from addon rates to allow distinct line items in invoices.
       ,(
         SELECT json_agg(taxed_group)
         FROM (
           SELECT 
             (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END) as tax_rate, 
+            category,
+            item_name,
+            SUM(item_quantity) as total_quantity,
             SUM(total_price) as total_price, 
             ROUND(SUM(total_price)::numeric / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END))::numeric) as total_net_price
           FROM (
             SELECT
               rr.tax_rate,
+              'accommodation' as category,
+              '宿泊料' as item_name,
+              1 as item_quantity,
               rr.price AS total_price
             FROM
               reservation_details rd
@@ -301,6 +304,9 @@ const selectBilledListView = async (requestId, hotelId, month) => {
             UNION ALL
             SELECT
               ra.tax_rate,
+              (CASE WHEN ra.sales_category = 'other' THEN 'other' ELSE 'accommodation' END) as category,
+              COALESCE(ra.addon_name, 'その他') as item_name,
+              ra.quantity as item_quantity,
               (ra.price * ra.quantity) AS total_price
             FROM
               reservation_details rd
@@ -313,7 +319,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               AND rd.date >= date_trunc('month', $2::date)
               AND rd.date < date_trunc('month', $2::date) + interval '1 month'
           ) AS inside
-          GROUP BY (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END)
+          GROUP BY (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END), category, item_name
         ) AS taxed_group
       ) AS reservation_rates_json
     FROM
