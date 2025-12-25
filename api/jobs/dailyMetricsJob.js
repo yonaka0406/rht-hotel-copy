@@ -48,15 +48,20 @@ const performDailyMetricsCalculation = async () => {
                         SELECT
                             rr.hotel_id,
                             rr.reservation_details_id,
-                            (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END) as normalized_rate,
+                            normalized_tax,
                             SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END) AS accommodation_rate_price,
                             SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS other_rate_price,
-                            FLOOR(SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) AS accommodation_rate_net_price,
-                            FLOOR(SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) AS other_rate_net_price
-                        FROM
-                            reservation_rates rr
+                            FLOOR(SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END)::numeric / (1 + normalized_tax)::numeric) AS accommodation_rate_net_price,
+                            FLOOR(SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END)::numeric / (1 + normalized_tax)::numeric) AS other_rate_net_price
+                        FROM (
+                            SELECT 
+                                rr.*,
+                                GREATEST(0, COALESCE(CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END, 0)) as normalized_tax
+                            FROM reservation_rates rr
+                            WHERE rr.hotel_id = $3
+                        ) rr
                         GROUP BY
-                            rr.hotel_id, rr.reservation_details_id, (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END)
+                            rr.hotel_id, rr.reservation_details_id, normalized_tax
                     ) AS per_detail_tax
                     GROUP BY
                         hotel_id, reservation_details_id
@@ -74,16 +79,18 @@ const performDailyMetricsCalculation = async () => {
                         SELECT
                             ra.hotel_id,
                             ra.reservation_detail_id,
-                            (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END) as normalized_rate,
+                            GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0)) as normalized_tax,
                             SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_addon_price,
                             SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_addon_price,
                             SUM(ra.price * ra.quantity) AS total_addon_price,
-                            FLOOR(SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) AS accommodation_addon_net_price,
-                            FLOOR(SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) AS other_addon_net_price
+                            FLOOR(SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0)))::numeric) AS accommodation_addon_net_price,
+                            FLOOR(SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0)))::numeric) AS other_addon_net_price
                         FROM
                             reservation_addons ra
+                        WHERE
+                            ra.hotel_id = $3
                         GROUP BY
-                            ra.hotel_id, ra.reservation_detail_id, (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END)
+                            ra.hotel_id, ra.reservation_detail_id, GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0))
                     ) AS per_detail_tax
                     GROUP BY
                         hotel_id, reservation_detail_id

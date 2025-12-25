@@ -9,11 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-- Bugfix: Fixed SQL error in selectCountReservation function where GROUP BY clause in ra_agg CTE was incorrectly referencing table alias 'ra' outside its scope.
-- Bugfix: Fixed precision loss in net price calculations by implementing proper tax rate grouping before applying FLOOR function.
 - Refactor: Standardized net price calculation methodology using FLOOR on gross totals across reporting and billing modules.
-- Bugfix: Resolved 1-yen rounding errors in reporting modules by calculating net prices from gross sums rather than individual line items.
-- Feature: Updated KPIMetricsPanel component for improved performance and accuracy.
 
 ---
 

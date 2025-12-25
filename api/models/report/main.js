@@ -231,7 +231,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         SELECT
           rr.hotel_id,
           rr.reservation_details_id AS reservation_detail_id,
-          (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END) as normalized_rate,
+          (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END) as normalized_rate,
           
           FLOOR(
             SUM(
@@ -239,7 +239,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
                    THEN (CASE WHEN rdb.plan_type = 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
                    ELSE 0 END
             )::numeric 
-            / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
           ) AS other_net_price,
 
           FLOOR(
@@ -248,13 +248,13 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
                    THEN (CASE WHEN rdb.plan_type = 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
                    ELSE 0 END
             )::numeric 
-            / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
           ) AS accommodation_net_price
 
         FROM reservation_rates rr
         JOIN rd_base rdb ON rr.hotel_id = rdb.hotel_id AND rr.reservation_details_id = rdb.reservation_detail_id
         WHERE rr.hotel_id = $1
-        GROUP BY rr.hotel_id, rr.reservation_details_id, (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END)
+        GROUP BY rr.hotel_id, rr.reservation_details_id, (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END)
       ) AS per_tax_rate
       GROUP BY hotel_id, reservation_detail_id
     ),
@@ -272,26 +272,26 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         SELECT
           ra.hotel_id,
           ra.reservation_detail_id,
-          (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END) as normalized_rate,
+          (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END) as normalized_rate,
 
           FLOOR(
             SUM(
               CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END
             )::numeric 
-            / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
           ) AS other_net_price_sum,
 
           FLOOR(
             SUM(
               CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END
             )::numeric 
-            / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
           ) AS accommodation_net_price_sum
 
         FROM reservation_addons ra
         JOIN rd_base rdb ON ra.hotel_id = rdb.hotel_id AND ra.reservation_detail_id = rdb.reservation_detail_id
         WHERE ra.hotel_id = $1
-        GROUP BY ra.hotel_id, ra.reservation_detail_id, (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END)
+        GROUP BY ra.hotel_id, ra.reservation_detail_id, (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END)
       ) AS per_tax_rate
       GROUP BY hotel_id, reservation_detail_id
     ),
@@ -1023,7 +1023,7 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         WHEN 'parking' THEN '駐車場'
         WHEN 'other' THEN 'その他'
         ELSE ra.addon_type
-      END || '(' || (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate ELSE ra.tax_rate * 100 END)::integer || '%)' AS plan_name,
+      END || '(' || (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) ELSE COALESCE(ra.tax_rate, 0) * 100 END)::integer::text || '%)' AS plan_name,
       NULL AS plan_type_category_id,
       NULL AS plan_package_category_id,
       'アドオン' AS plan_type_category_name,
