@@ -240,15 +240,21 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ) AS reservation_details_json
       -- The subquery for reservation rates and addons also needed to be filtered by month.
       -- This ensures the total prices are correct for the billing period.
+      -- We calculate total_net_price by flooring the sum of gross prices divided by the tax rate.
+      -- Using FLOOR with numeric casting ensures mathematical consistency (e.g. 17600 -> 16000) 
+      -- and avoids precision issues from individual component flooring in the database.
+      -- We also normalize tax_rate (if > 1, divide by 100) to handle inconsistent data (e.g. 10 instead of 0.1).
       ,(
         SELECT json_agg(taxed_group)
         FROM (
-          SELECT tax_rate, SUM(total_price) as total_price, SUM(total_net_price) as total_net_price
+          SELECT 
+            (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END) as tax_rate, 
+            SUM(total_price) as total_price, 
+            FLOOR(SUM(total_price)::numeric / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END))::numeric) as total_net_price
           FROM (
             SELECT
               rr.tax_rate,
-              rr.price AS total_price,
-              rr.net_price AS total_net_price
+              rr.price AS total_price
             FROM
               reservation_details rd
               JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
@@ -264,8 +270,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
             UNION ALL
             SELECT
               ra.tax_rate,
-              ra.price AS total_price,
-              ra.net_price AS total_net_price
+              (ra.price * ra.quantity) AS total_price
             FROM
               reservation_details rd
               JOIN reservation_addons ra ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
@@ -278,7 +283,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               AND rd.date >= date_trunc('month', $2::date)
               AND rd.date < date_trunc('month', $2::date) + interval '1 month'
           ) AS inside
-          GROUP BY tax_rate
+          GROUP BY (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END)
         ) AS taxed_group
       ) AS reservation_rates_json
     FROM
