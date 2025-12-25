@@ -223,37 +223,40 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
     -------------------------------------------------------- */
     rr_agg AS MATERIALIZED (
       SELECT
-        rr.hotel_id,
-        rr.reservation_details_id AS reservation_detail_id,
+        hotel_id,
+        reservation_detail_id,
+        SUM(other_net_price) as other_net_price,
+        SUM(accommodation_net_price) as accommodation_net_price
+      FROM (
+        SELECT
+          rr.hotel_id,
+          rr.reservation_details_id AS reservation_detail_id,
+          (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END) as normalized_rate,
+          
+          FLOOR(
+            SUM(
+              CASE WHEN rr.sales_category = 'other'
+                   THEN (CASE WHEN rdb.plan_type = 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
+                   ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
+          ) AS other_net_price,
 
-        SUM(
-          CASE
-            WHEN rr.sales_category = 'other'
-              THEN CASE WHEN rdb.plan_type = 'per_room'
-                        THEN rr.net_price
-                        ELSE rr.net_price * rdb.number_of_people
-                    END
-            ELSE 0
-          END
-        ) AS other_net_price,
+          FLOOR(
+            SUM(
+              CASE WHEN rr.sales_category IN ('accommodation') OR rr.sales_category IS NULL
+                   THEN (CASE WHEN rdb.plan_type = 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
+                   ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
+          ) AS accommodation_net_price
 
-        SUM(
-          CASE
-            WHEN rr.sales_category IN ('accommodation') OR rr.sales_category IS NULL
-              THEN CASE WHEN rdb.plan_type = 'per_room'
-                        THEN rr.net_price
-                        ELSE rr.net_price * rdb.number_of_people
-                  END
-            ELSE 0
-          END
-        ) AS accommodation_net_price
-
-      FROM reservation_rates rr
-      JOIN rd_base rdb
-        ON rr.hotel_id = rdb.hotel_id
-      AND rr.reservation_details_id = rdb.reservation_detail_id
-      AND rr.hotel_id = $1
-      GROUP BY rr.hotel_id, rr.reservation_details_id
+        FROM reservation_rates rr
+        JOIN rd_base rdb ON rr.hotel_id = rdb.hotel_id AND rr.reservation_details_id = rdb.reservation_detail_id
+        WHERE rr.hotel_id = $1
+        GROUP BY rr.hotel_id, rr.reservation_details_id, (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END)
+      ) AS per_tax_rate
+      GROUP BY hotel_id, reservation_detail_id
     ),
 
     /* -------------------------------------------------------
@@ -261,29 +264,36 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
     -------------------------------------------------------- */
     ra_agg AS MATERIALIZED (
       SELECT
-        ra.hotel_id,
-        ra.reservation_detail_id,
+        hotel_id,
+        reservation_detail_id,
+        SUM(other_net_price_sum) as other_net_price_sum,
+        SUM(accommodation_net_price_sum) as accommodation_net_price_sum
+      FROM (
+        SELECT
+          ra.hotel_id,
+          ra.reservation_detail_id,
+          (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END) as normalized_rate,
 
-        SUM(
-          CASE WHEN ra.sales_category = 'other'
-              THEN ra.net_price * ra.quantity
-              ELSE 0
-          END
-        ) AS other_net_price_sum,
+          FLOOR(
+            SUM(
+              CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
+          ) AS other_net_price_sum,
 
-        SUM(
-          CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL
-              THEN ra.net_price * ra.quantity
-              ELSE 0
-          END
-        ) AS accommodation_net_price_sum
+          FLOOR(
+            SUM(
+              CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
+          ) AS accommodation_net_price_sum
 
-      FROM reservation_addons ra
-      JOIN rd_base rdb
-        ON ra.hotel_id = rdb.hotel_id
-      AND ra.reservation_detail_id = rdb.reservation_detail_id
-      AND ra.hotel_id = $1
-      GROUP BY ra.hotel_id, ra.reservation_detail_id
+        FROM reservation_addons ra
+        JOIN rd_base rdb ON ra.hotel_id = rdb.hotel_id AND ra.reservation_detail_id = rdb.reservation_detail_id
+        WHERE ra.hotel_id = $1
+        GROUP BY ra.hotel_id, ra.reservation_detail_id, (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END)
+      ) AS per_tax_rate
+      GROUP BY hotel_id, reservation_detail_id
     ),
 
     /* -------------------------------------------------------
@@ -967,62 +977,31 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
     LEFT JOIN plan_package_categories ppc ON ph.plan_package_category_id = ppc.id
     LEFT JOIN (
+        -- Subquery to aggregate prices per detail, grouping by tax_rate first to avoid precision loss
         SELECT
-            rd_inner.hotel_id,
-            rd_inner.id AS reservation_details_id,
-            -- Use actual price from reservation_details only when is_accommodation is true (edited values)
-            CASE 
-                WHEN rd_inner.is_accommodation = TRUE THEN 
-                    CASE 
-                        WHEN rd_inner.plan_type = 'per_room' THEN rd_inner.price
-                        ELSE rd_inner.price * rd_inner.number_of_people
-                    END
-                ELSE 0
-            END AS accommodation_price,
-            -- Use actual price from reservation_details for other sales when is_accommodation is false
-            CASE 
-                WHEN rd_inner.is_accommodation = FALSE THEN 
-                    CASE 
-                        WHEN rd_inner.plan_type = 'per_room' THEN rd_inner.price
-                        ELSE rd_inner.price * rd_inner.number_of_people
-                    END
-                ELSE 0
-            END AS other_price,
-            -- Use net_price from reservation_rates (calculated from the edited gross price)
-            SUM(
-                CASE 
-                    WHEN rd_inner.is_accommodation = TRUE THEN 
-                        CASE 
-                            WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
-                                CASE 
-                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                                    ELSE rr.net_price * rd_inner.number_of_people
-                                END
-                            ELSE 0 
-                        END
-                    ELSE 0
-                END
-            ) AS accommodation_net_price,
-            -- Use net_price from reservation_rates for other sales when is_accommodation is false
-            SUM(
-                CASE 
-                    WHEN rd_inner.is_accommodation = FALSE THEN 
-                        CASE 
-                            WHEN rr.sales_category = 'other' OR rr.sales_category IS NULL THEN 
-                                CASE 
-                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                                    ELSE rr.net_price * rd_inner.number_of_people
-                                END
-                            ELSE 0 
-                        END
-                    ELSE 0
-                END
-            ) AS other_net_price
-        FROM
-            reservation_details rd_inner
-        LEFT JOIN reservation_rates rr ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
+            hotel_id,
+            reservation_details_id,
+            SUM(accommodation_price) AS accommodation_price,
+            SUM(other_price) AS other_price,
+            SUM(accommodation_net_price) AS accommodation_net_price,
+            SUM(other_net_price) AS other_net_price
+        FROM (
+            SELECT
+                rd_inner.hotel_id,
+                rd_inner.id AS reservation_details_id,
+                (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END) as normalized_rate,
+                SUM(CASE WHEN rd_inner.is_accommodation = TRUE AND (rr.sales_category = 'accommodation' OR rr.sales_category IS NULL) THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END) AS accommodation_price,
+                SUM(CASE WHEN rd_inner.is_accommodation = FALSE OR rr.sales_category = 'other' THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END) AS other_price,
+                FLOOR(SUM(CASE WHEN rd_inner.is_accommodation = TRUE AND (rr.sales_category = 'accommodation' OR rr.sales_category IS NULL) THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) AS accommodation_net_price,
+                FLOOR(SUM(CASE WHEN rd_inner.is_accommodation = FALSE OR rr.sales_category = 'other' THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) AS other_net_price
+            FROM
+                reservation_details rd_inner
+            LEFT JOIN reservation_rates rr ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
+            GROUP BY
+                rd_inner.hotel_id, rd_inner.id, (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END)
+        ) AS per_detail_tax
         GROUP BY
-            rd_inner.hotel_id, rd_inner.id, rd_inner.plan_type, rd_inner.number_of_people, rd_inner.is_accommodation, rd_inner.price
+            hotel_id, reservation_details_id
     ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
@@ -1044,7 +1023,7 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         WHEN 'parking' THEN '駐車場'
         WHEN 'other' THEN 'その他'
         ELSE ra.addon_type
-      END || '(' || (ra.tax_rate * 100)::integer || '%)' AS plan_name,
+      END || '(' || (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) ELSE COALESCE(ra.tax_rate, 0) * 100 END)::integer::text || '%)' AS plan_name,
       NULL AS plan_type_category_id,
       NULL AS plan_package_category_id,
       'アドオン' AS plan_type_category_name,
@@ -1059,8 +1038,8 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_sales,
       SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_sales,
-      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_sales_net,
-      SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_sales_net
+      FLOOR(SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) AS accommodation_sales_net,
+      FLOOR(SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) AS other_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id

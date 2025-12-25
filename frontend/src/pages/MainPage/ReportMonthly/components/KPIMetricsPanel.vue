@@ -88,7 +88,7 @@
             <div class="grid grid-cols-12 gap-4">
                 <div class="col-span-12 md:col-span-3">
                     <strong>総売上:</strong>
-                    <p class="m-0 text-sm">仮予約、確定予約のプランとアドオンの合計。保留予約と社員を含まない金額。</p>
+                    <p class="m-0 text-sm">確定予約のプランとアドオンの合計。仮予約、保留予約、社員を含まない金額。</p>
                 </div>
                 <div class="col-span-12 md:col-span-3">
                     <strong>ADR (客室平均単価):</strong>

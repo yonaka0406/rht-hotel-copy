@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Refactor: Standardized net price calculation methodology using FLOOR on gross totals across reporting and billing modules.
+
 ---
 
 ## Future Releases
