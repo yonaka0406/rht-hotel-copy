@@ -228,15 +228,47 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,COALESCE(details.stays_count, 0) as stays_count
       -- The subquery for reservation details needed to be filtered by month.
       -- Includes all rooms of the reservation for this month.
+      -- Using DISTINCT ON (rd.id) to prevent duplicate rows when a room charge is split into multiple rates.
       ,(
-        SELECT json_agg(rd)
-        FROM reservation_details rd
-        WHERE rd.hotel_id = reservations.hotel_id
-          AND rd.reservation_id = reservations.id
-          AND rd.billable = TRUE
-          AND rd.hotel_id = $1
-          AND rd.date >= date_trunc('month', $2::date)
-          AND rd.date < date_trunc('month', $2::date) + interval '1 month'
+        SELECT json_agg(res_detail)
+        FROM (
+            SELECT DISTINCT ON (rd.id)
+                rd.id,
+                rd.hotel_id,
+                rd.reservation_id,
+                rd.date,
+                rd.room_id,
+                rd.plans_global_id,
+                rd.plans_hotel_id,
+                rd.plan_name,
+                rd.plan_type,
+                rd.number_of_people,
+                rd.price,
+                rd.cancelled,
+                rd.billable,
+                rd.is_accommodation,
+                rr.tax_rate,
+                ph.plan_type_category_id,
+                COALESCE(ra.addon_sum_accom, 0) as addons_price_accom,
+                COALESCE(ra.addon_sum_other, 0) as addons_price_other
+            FROM reservation_details rd
+            LEFT JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
+            LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+            LEFT JOIN (
+                SELECT hotel_id, reservation_detail_id, 
+                       SUM(CASE WHEN sales_category = 'accommodation' OR sales_category IS NULL THEN price * quantity ELSE 0 END) as addon_sum_accom,
+                       SUM(CASE WHEN sales_category = 'other' THEN price * quantity ELSE 0 END) as addon_sum_other
+                FROM reservation_addons
+                GROUP BY hotel_id, reservation_detail_id
+            ) ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+            WHERE rd.hotel_id = reservations.hotel_id
+              AND rd.reservation_id = reservations.id
+              AND rd.billable = TRUE
+              AND rd.hotel_id = $1
+              AND rd.date >= date_trunc('month', $2::date)
+              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
+            ORDER BY rd.id, rr.tax_rate DESC -- Pick one representative tax rate if multiple exist
+        ) as res_detail
       ) AS reservation_details_json
       -- The subquery for reservation rates and addons also needed to be filtered by month.
       -- This ensures the total prices are correct for the whole reservation in the billing period.
@@ -292,14 +324,14 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       reservation_payments
       ON reservation_payments.hotel_id = reservations.hotel_id AND reservation_payments.reservation_id = reservations.id
         LEFT JOIN
-      (SELECT hotel_id, reservation_id, MAX(total_people_per_day) AS number_of_people, COUNT(date) AS stays_count
+      (SELECT hotel_id, reservation_id, MAX(total_people_per_day) AS number_of_people, COUNT(rd_id) AS stays_count
         FROM (
-            SELECT hotel_id, reservation_id, date, SUM(number_of_people) as total_people_per_day
-            FROM reservation_details
-            WHERE billable = TRUE AND hotel_id = $1
-              AND date >= date_trunc('month', $2::date)
-              AND date < date_trunc('month', $2::date) + interval '1 month'
-            GROUP BY hotel_id, reservation_id, date
+            SELECT rd.hotel_id, rd.reservation_id, rd.date, rd.id as rd_id, SUM(rd.number_of_people) as total_people_per_day
+            FROM reservation_details rd
+            WHERE rd.billable = TRUE AND rd.hotel_id = $1
+              AND rd.date >= date_trunc('month', $2::date)
+              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
+            GROUP BY rd.hotel_id, rd.reservation_id, rd.date, rd.id
         ) as daily
         GROUP BY hotel_id, reservation_id
       ) AS details

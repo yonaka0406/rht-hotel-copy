@@ -204,7 +204,7 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
     worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
     worksheet.getCell('D16').value = invoiceData.invoice_total_value;
-    worksheet.getCell('H20').value = `${invoiceData.invoice_total_stays} 泊`;
+    worksheet.getCell('G20').value = invoiceData.invoice_total_stays;
     worksheet.getCell('J20').value = invoiceData.invoice_total_value;
 
     let totalTax = 0;
@@ -292,14 +292,29 @@ const generateInvoiceExcel = async (req, res) => {
       let cancelledCount = 0;
 
       todaysDetails.forEach(detail => {
+        let bucketId = detail.plans_global_id || detail.plan_type_category_id;
+
+        // Fallback: If global ID and category ID are missing, map based on tax rate
+        if (!bucketId && detail.tax_rate != null) {
+            const rate = parseFloat(detail.tax_rate);
+            if (Math.abs(rate - 0.10) < 0.001) bucketId = 4;
+            else if (Math.abs(rate - 0.08) < 0.001) bucketId = 3;
+            else bucketId = 4; // Default to standard bucket
+        }
+
         if (detail.cancelled && detail.billable) {
           cancelledCount++;
         } else if (!detail.cancelled) {
-          if (planData[detail.plans_global_id]) {
-            if (planData[detail.plans_global_id].hasOwnProperty('count')) {
-              planData[detail.plans_global_id].count++;
+          if (bucketId && planData[bucketId]) {
+            if (planData[bucketId].hasOwnProperty('count')) {
+              planData[bucketId].count++;
             }
-            planData[detail.plans_global_id].price += detail.price;
+            // Add Plan Price + Accommodation Addons (e.g. Meals included in plan price)
+            planData[bucketId].price += detail.price + (detail.addons_price_accom || 0);
+          }
+          // Add 'Other' Addons to bucket 5
+          if (detail.addons_price_other > 0) {
+            planData[5].price += detail.addons_price_other;
           }
         }
       });
