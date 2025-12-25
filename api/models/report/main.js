@@ -229,10 +229,13 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         SUM(
           CASE
             WHEN rr.sales_category = 'other'
-              THEN CASE WHEN rdb.plan_type = 'per_room'
-                        THEN rr.net_price
-                        ELSE rr.net_price * rdb.number_of_people
-                    END
+              THEN ROUND(
+                    (CASE WHEN rdb.plan_type = 'per_room'
+                          THEN rr.price
+                          ELSE rr.price * rdb.number_of_people
+                      END)::numeric 
+                    / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric
+                   )
             ELSE 0
           END
         ) AS other_net_price,
@@ -240,10 +243,13 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         SUM(
           CASE
             WHEN rr.sales_category IN ('accommodation') OR rr.sales_category IS NULL
-              THEN CASE WHEN rdb.plan_type = 'per_room'
-                        THEN rr.net_price
-                        ELSE rr.net_price * rdb.number_of_people
-                  END
+              THEN ROUND(
+                    (CASE WHEN rdb.plan_type = 'per_room'
+                          THEN rr.price
+                          ELSE rr.price * rdb.number_of_people
+                      END)::numeric 
+                    / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric
+                   )
             ELSE 0
           END
         ) AS accommodation_net_price
@@ -266,14 +272,14 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
 
         SUM(
           CASE WHEN ra.sales_category = 'other'
-              THEN ra.net_price * ra.quantity
+              THEN ROUND((ra.price * ra.quantity)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric)
               ELSE 0
           END
         ) AS other_net_price_sum,
 
         SUM(
           CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL
-              THEN ra.net_price * ra.quantity
+              THEN ROUND((ra.price * ra.quantity)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric)
               ELSE 0
           END
         ) AS accommodation_net_price_sum
@@ -988,30 +994,30 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
                     END
                 ELSE 0
             END AS other_price,
-            -- Use net_price from reservation_rates (calculated from the edited gross price)
+            -- Use net_price calculated from the edited gross price to avoid individual component flooring errors
             SUM(
                 CASE 
                     WHEN rd_inner.is_accommodation = TRUE THEN 
                         CASE 
                             WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
                                 CASE 
-                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                                    ELSE rr.net_price * rd_inner.number_of_people
+                                    WHEN rd_inner.plan_type = 'per_room' THEN ROUND(rr.price::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric)
+                                    ELSE ROUND((rr.price * rd_inner.number_of_people)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric)
                                 END
                             ELSE 0 
                         END
                     ELSE 0
                 END
             ) AS accommodation_net_price,
-            -- Use net_price from reservation_rates for other sales when is_accommodation is false
+            -- Use calculated net_price for other sales when is_accommodation is false
             SUM(
                 CASE 
                     WHEN rd_inner.is_accommodation = FALSE THEN 
                         CASE 
                             WHEN rr.sales_category = 'other' OR rr.sales_category IS NULL THEN 
                                 CASE 
-                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                                    ELSE rr.net_price * rd_inner.number_of_people
+                                    WHEN rd_inner.plan_type = 'per_room' THEN ROUND(rr.price::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric)
+                                    ELSE ROUND((rr.price * rd_inner.number_of_people)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric)
                                 END
                             ELSE 0 
                         END
@@ -1044,7 +1050,7 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         WHEN 'parking' THEN '駐車場'
         WHEN 'other' THEN 'その他'
         ELSE ra.addon_type
-      END || '(' || (ra.tax_rate * 100)::integer || '%)' AS plan_name,
+      END || '(' || (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate ELSE ra.tax_rate * 100 END)::integer || '%)' AS plan_name,
       NULL AS plan_type_category_id,
       NULL AS plan_package_category_id,
       'アドオン' AS plan_type_category_name,
@@ -1059,8 +1065,8 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_sales,
       SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_sales,
-      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_sales_net,
-      SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_sales_net
+      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ROUND((ra.price * ra.quantity)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) ELSE 0 END) AS accommodation_sales_net,
+      SUM(CASE WHEN ra.sales_category = 'other' THEN ROUND((ra.price * ra.quantity)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) ELSE 0 END) AS other_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id

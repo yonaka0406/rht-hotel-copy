@@ -42,8 +42,8 @@ const performDailyMetricsCalculation = async () => {
                         rr.reservation_details_id,
                         SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END) AS accommodation_rate_price,
                         SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS other_rate_price,
-                        SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.net_price ELSE 0 END) AS accommodation_rate_net_price,
-                        SUM(CASE WHEN rr.sales_category = 'other' THEN rr.net_price ELSE 0 END) AS other_rate_net_price
+                        SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN ROUND(rr.price::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) ELSE 0 END) AS accommodation_rate_net_price,
+                        SUM(CASE WHEN rr.sales_category = 'other' THEN ROUND(rr.price::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) ELSE 0 END) AS other_rate_net_price
                     FROM
                         reservation_rates rr
                     GROUP BY
@@ -56,8 +56,8 @@ const performDailyMetricsCalculation = async () => {
                         SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_addon_price,
                         SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_addon_price,
                         SUM(ra.price * ra.quantity) AS total_addon_price,
-                        SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_addon_net_price,
-                        SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_addon_net_price
+                        SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ROUND((ra.price * ra.quantity)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) ELSE 0 END) AS accommodation_addon_net_price,
+                        SUM(CASE WHEN ra.sales_category = 'other' THEN ROUND((ra.price * ra.quantity)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) ELSE 0 END) AS other_addon_net_price
                     FROM
                         reservation_addons ra
                     GROUP BY
