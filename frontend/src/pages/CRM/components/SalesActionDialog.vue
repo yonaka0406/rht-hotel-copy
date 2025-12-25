@@ -11,19 +11,14 @@
       <div class="field">
         <FloatLabel>
           <label for="client">クライアント</label>
-          <AutoComplete
+          <ClientAutoCompleteWithStore
             id="client"
             v-model="selectedClientObjectForForm"
-            :suggestions="filteredClientsForForm"
-            optionLabel="display_name"
-            @complete="searchClientsInForm"
-            placeholder="クライアントを選択・検索" 
+            @option-select="onClientSelect"
+            placeholder="クライアントを選択・検索"
+            :hideLabel="true"
             :disabled="actionFormMode === 'edit' && !!currentActionFormData.client_id"
-            :loading="clientsIsLoading"
-            forceSelection
-            dropdown
             style="width: 100%;"
-            panelClass="max-h-60 overflow-y-auto"
           />
         </FloatLabel>
       </div>
@@ -156,9 +151,9 @@
   import InputText from 'primevue/inputtext';
   import Textarea from 'primevue/textarea';
   import DatePicker from 'primevue/datepicker';
-  import AutoComplete from 'primevue/autocomplete';
   import Select from 'primevue/select';
   import FloatLabel from 'primevue/floatlabel';
+  import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
 
@@ -178,7 +173,17 @@
 
   const currentActionFormData = ref({ ...initialFormData });
   const selectedClientObjectForForm = ref(null);
-  const filteredClientsForForm = ref([]);
+
+  // Handle client selection from ClientAutoCompleteWithStore
+  const onClientSelect = (event) => {
+    const selectedClient = event.value;
+    selectedClientObjectForForm.value = selectedClient;
+    if (selectedClient && selectedClient.id) {
+      currentActionFormData.value.client_id = selectedClient.id;
+    } else {
+      currentActionFormData.value.client_id = null;
+    }
+  };
 
   // --- Computed Properties ---
   const dialogVisible = computed({
@@ -195,61 +200,6 @@
   const dialogTitle = computed(() => {
     return props.actionFormMode === 'create' ? '新規アクション作成' : 'アクション編集';
   });
-
-  // --- Normalization Helper Functions (Moved from SalesInteractions.vue) ---
-  const normalizeKana = (str) => {
-    if (!str) return '';
-    let normalizedStr = str.normalize('NFKC');
-    normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0x60));
-    normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEC0));
-    return normalizedStr;
-  };
-  const normalizePhone = (phone) => {
-    if (!phone) return '';
-    let normalized = phone.replace(/\D/g, '');
-    normalized = normalized.replace(/^0+/, '');
-    return normalized;
-  };
-
-  // --- Client Search for AutoComplete ---
-  const searchClientsInForm = (event) => {
-    const query = event.query.toLowerCase();
-    const normalizedQuery = normalizePhone(query);
-    const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-    if (!props.allClients || !Array.isArray(props.allClients)) {
-      filteredClientsForForm.value = [];
-      return;
-    }
-
-    let results = props.allClients.filter((client) => {
-      const clientName = client.name || '';
-      const clientNameKana = client.name_kana || '';
-      const clientNameKanji = client.name_kanji || '';
-      const clientEmail = client.email || '';
-      const clientPhone = client.phone || '';
-      const clientFax = client.fax || '';
-
-      const matchesName =
-        clientName.toLowerCase().includes(query) ||
-        (clientNameKana && normalizeKana(clientNameKana).toLowerCase().includes(normalizeKana(query))) ||
-        clientNameKanji.toLowerCase().includes(query);
-
-      const matchesPhoneFax = isNumericQuery &&
-        ((clientFax && normalizePhone(clientFax).includes(normalizedQuery)) ||
-          (clientPhone && normalizePhone(clientPhone).includes(normalizedQuery)));
-
-      const matchesEmail = clientEmail.toLowerCase().includes(query);
-
-      return matchesName || matchesPhoneFax || matchesEmail;
-    });
-
-    // Add display_name to results for AutoComplete input field rendering via optionLabel
-    filteredClientsForForm.value = results.map(client => ({
-      ...client,
-      display_name: client.name_kanji || client.name_kana || client.name || `クライアントID: ${client.id}`
-    }));
-  };
 
   // --- Form Management Methods ---
   const resetForm = () => {

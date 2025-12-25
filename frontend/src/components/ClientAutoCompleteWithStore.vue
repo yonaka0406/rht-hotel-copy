@@ -24,6 +24,7 @@ const props = defineProps({
   placeholder: { type: [String, null], default: null },
   label: { type: String, default: '個人氏名　||　法人名称' },
   hideLabel: { type: Boolean, default: false },
+  personTypeFilter: { type: String, default: null, validator: (value) => !value || ['legal', 'natural'].includes(value) },
 });
 const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear']);
 
@@ -75,6 +76,11 @@ const filterClients = (event) => {
   }
 
   filteredClients.value = clients.value.filter((client) => {
+    // Apply person type filter if specified
+    if (props.personTypeFilter && client.legal_or_natural_person !== props.personTypeFilter) {
+      return false;
+    }
+
     const matchesName =
       (client.name && client.name.toLowerCase().includes(query)) ||
       (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||

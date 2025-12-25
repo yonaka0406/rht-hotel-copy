@@ -53,43 +53,16 @@
         <div class="col-span-12 my-6">
             <FloatLabel>
                 <label for="targetClientAutocomplete">対象クライアント</label>
-                <AutoComplete
+                <ClientAutoCompleteWithStore
                     id="targetClientAutocomplete"
                     v-model="selectedClientForAutocomplete"
-                    :suggestions="autocompleteSuggestions"
-                    @complete="searchTargetClients"
-                    optionLabel="preferred_display_name"
+                    @option-select="onClientSelect"
                     placeholder="対象クライアントを選択・検索 (法人のみ)"
-                    forceSelection
-                    dropdown
+                    :hideLabel="true"
+                    :personTypeFilter="'legal'"
                     style="width: 100%;"
-                    panelClass="max-h-60 overflow-y-auto"
                     v-tooltip.bottom="'法人顧客しか選択できません。'"
-                    :loading="clientsIsLoading"
-                >
-                    <template #option="slotProps">
-                    <div class="client-option-item p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                        <p class="font-medium">
-                        <i v-if="slotProps.option.is_legal_person" class="pi pi-building mr-2 text-gray-500"></i>
-                        <i v-else class="pi pi-user mr-2 text-gray-500"></i>
-                        {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
-                        <span v-if="slotProps.option.name_kana && (slotProps.option.name_kanji || slotProps.option.name) && slotProps.option.name_kana !== (slotProps.option.name_kanji || slotProps.option.name)" class="text-sm text-gray-500"> ({{ slotProps.option.name_kana }})</span>
-                        <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
-                            [{{ slotProps.option.customer_id }}]
-                        </span>
-                        </p>
-                        <div class="flex items-center gap-x-3 mt-1 text-xs">
-                        <span v-if="slotProps.option.customer_id" class="text-sky-700"><i class="pi pi-id-card mr-1"></i>{{ slotProps.option.customer_id }}</span>
-                        <span v-if="slotProps.option.phone" class="text-sky-700"><i class="pi pi-phone mr-1"></i>{{ slotProps.option.phone }}</span>
-                        <span v-if="slotProps.option.email" class="text-sky-700"><i class="pi pi-at mr-1"></i>{{ slotProps.option.email }}</span>
-                        <span v-if="slotProps.option.fax" class="text-sky-700"><i class="pi pi-send mr-1"></i>{{ slotProps.option.fax }}</span>
-                        </div>
-                    </div>
-                    </template>
-                    <template #empty>
-                    <div class="p-3 text-center text-gray-500">該当するクライアントが見つかりません。</div>
-                    </template>
-                </AutoComplete>
+                />
             </FloatLabel>
         </div>
 
@@ -160,7 +133,7 @@
     import Dialog from 'primevue/dialog';
     import InputText from 'primevue/inputtext';
     import Select from 'primevue/select';
-    import AutoComplete from 'primevue/autocomplete';
+    import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useClientStore } from '@/composables/useClientStore';
@@ -201,13 +174,70 @@
     const displayAddModal = ref(false);
     const selectedPair = ref(null);
     const selectedClientForAutocomplete = ref(null); // For v-model of AutoComplete
-    const autocompleteSuggestions = ref([]);       // For suggestions list
     const newRelationship = ref({
     target_client_id: null, 
     source_relationship_type: '', 
     target_relationship_type: '', 
     comment: ''
     });
+
+    // Validation function for client selection
+    const isValidClientSelection = (client) => {
+        if (!client || !client.id) return false;
+        
+        // Must be a legal person
+        if (client.legal_or_natural_person !== 'legal') return false;
+        
+        // Cannot be the same as current client
+        if (client.id === props.clientId) return false;
+        
+        // Cannot be already related
+        const existingRelatedIds = new Set(
+            Array.isArray(relatedCompanies.value) ? relatedCompanies.value.map(rc => rc.related_company_id) : []
+        );
+        if (existingRelatedIds.has(client.id)) return false;
+        
+        return true;
+    };
+
+    // Handle client selection from ClientAutoCompleteWithStore
+    const onClientSelect = (event) => {
+        const selectedClient = event.value;
+        
+        if (!isValidClientSelection(selectedClient)) {
+            // Show error and clear selection
+            if (selectedClient.legal_or_natural_person !== 'legal') {
+                toast.add({
+                    severity: 'warn',
+                    summary: '選択エラー',
+                    detail: '法人顧客のみ選択できます。',
+                    life: 3000
+                });
+            } else if (selectedClient.id === props.clientId) {
+                toast.add({
+                    severity: 'warn',
+                    summary: '選択エラー',
+                    detail: '同じクライアントは選択できません。',
+                    life: 3000
+                });
+            } else {
+                toast.add({
+                    severity: 'warn',
+                    summary: '選択エラー',
+                    detail: 'このクライアントは既に関連付けられています。',
+                    life: 3000
+                });
+            }
+            
+            selectedClientForAutocomplete.value = null;
+            newRelationship.value.target_client_id = null;
+            return;
+        }
+        
+        // Valid selection
+        selectedClientForAutocomplete.value = selectedClient;
+        newRelationship.value.target_client_id = selectedClient.id;
+    };
 
     // --- Methods using store actions ---
     const loadRelatedCompanies = async () => {
@@ -236,10 +266,6 @@
         target_relationship_type: '',
         comment: ''
     };
-    autocompleteSuggestions.value = []; // Clear previous suggestions
-    // Optionally, pre-populate suggestions if desired, or let user type/click dropdown
-    // For example, to show initial list:
-    // searchTargetClients({ query: '' }); // This will populate if query is empty
     displayAddModal.value = true;
     };
 
