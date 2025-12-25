@@ -115,8 +115,20 @@
                     >
                         <template #option="slotProps">
                             <div class="flex flex-col">
-                                <div>{{ slotProps.option.preferred_display_name }}</div>
-                                <small class="text-gray-500">{{ slotProps.option.name_kana }}</small>
+                                <div class="flex items-center">
+                                    <i v-if="slotProps.option.legal_or_natural_person === 'legal'" class="pi pi-building mr-2 text-gray-500"></i>
+                                    <i v-else class="pi pi-user mr-2 text-gray-500"></i>
+                                    {{ slotProps.option.preferred_display_name }}
+                                    <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
+                                        [{{ slotProps.option.customer_id }}]
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-x-3 mt-1 text-xs">
+                                    <span v-if="slotProps.option.customer_id" class="text-sky-700"><i class="pi pi-id-card mr-1"></i>{{ slotProps.option.customer_id }}</span>
+                                    <span v-if="slotProps.option.name_kana" class="text-gray-500">{{ slotProps.option.name_kana }}</span>
+                                    <span v-if="slotProps.option.phone" class="text-sky-700"><i class="pi pi-phone mr-1"></i>{{ slotProps.option.phone }}</span>
+                                    <span v-if="slotProps.option.email" class="text-sky-700"><i class="pi pi-at mr-1"></i>{{ slotProps.option.email }}</span>
+                                </div>
                             </div>
                         </template>
                     </AutoComplete>
@@ -139,8 +151,20 @@
                     >
                         <template #option="slotProps">
                             <div class="flex flex-col">
-                                <div>{{ slotProps.option.preferred_display_name }}</div>
-                                <small class="text-gray-500">{{ slotProps.option.name_kana }}</small>
+                                <div class="flex items-center">
+                                    <i v-if="slotProps.option.legal_or_natural_person === 'legal'" class="pi pi-building mr-2 text-gray-500"></i>
+                                    <i v-else class="pi pi-user mr-2 text-gray-500"></i>
+                                    {{ slotProps.option.preferred_display_name }}
+                                    <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
+                                        [{{ slotProps.option.customer_id }}]
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-x-3 mt-1 text-xs">
+                                    <span v-if="slotProps.option.customer_id" class="text-sky-700"><i class="pi pi-id-card mr-1"></i>{{ slotProps.option.customer_id }}</span>
+                                    <span v-if="slotProps.option.name_kana" class="text-gray-500">{{ slotProps.option.name_kana }}</span>
+                                    <span v-if="slotProps.option.phone" class="text-sky-700"><i class="pi pi-phone mr-1"></i>{{ slotProps.option.phone }}</span>
+                                    <span v-if="slotProps.option.email" class="text-sky-700"><i class="pi pi-at mr-1"></i>{{ slotProps.option.email }}</span>
+                                </div>
                             </div>
                         </template>
                     </AutoComplete>

@@ -66,6 +66,21 @@
                             </template>
                         </Column>
 
+                        <!-- Customer Code Column with Filter -->
+                        <Column header="顧客コード" filterField="customer_id" sortable>
+                            <template #body="{ data }">
+                                <span v-if="data.customer_id" class="text-sky-700 font-mono">
+                                    {{ data.customer_id }}
+                                </span>
+                                <span v-else class="text-gray-400 italic">
+                                    未設定
+                                </span>
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="顧客コード検索" />
+                            </template>
+                        </Column>
+
                         <!-- Loyalty Tier Column with Filter -->
                         <Column field="loyalty_tier" header="ロイヤルティ層" sortable :showFilterMenu="false">
                             <template #body="{ data }">
@@ -170,6 +185,7 @@
     ]);
     const filters = ref({
         name: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        customer_id: { value: null, matchMode: FilterMatchMode.CONTAINS },
         phone: { value: null, matchMode: FilterMatchMode.CONTAINS },
         email: { value: null, matchMode: FilterMatchMode.CONTAINS },
         loyalty_tier: { value: null, matchMode: FilterMatchMode.EQUALS },

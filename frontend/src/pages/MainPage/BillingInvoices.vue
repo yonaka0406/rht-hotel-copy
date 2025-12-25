@@ -250,10 +250,14 @@
                                                     <i v-else class="pi pi-user"></i>
                                                     {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
                                                     <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                                                    <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
+                                                        [{{ slotProps.option.customer_id }}]
+                                                    </span>
                                                 </p>
                                                 <div class="flex items-center gap-2">
+                                                    <p v-if="slotProps.option.customer_id" class="text-xs text-sky-800"><i class="pi pi-id-card"></i> {{ slotProps.option.customer_id }}</p>
                                                     <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
+                                                    <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
                                                     <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
                                                 </div>
                                             </div>                                            
@@ -437,10 +441,12 @@
                 (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
             // Email filtering (case-insensitive)
             const matchesEmail = client.email && client.email.toLowerCase().includes(query);
+            // Customer ID filtering (case-insensitive)
+            const matchesCustomerId = client.customer_id && client.customer_id.toLowerCase().includes(query);
 
             // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
 
-            return matchesName || matchesPhoneFax || matchesEmail;
+            return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerId;
         });
     };
     const onClientSelect = (event) => {

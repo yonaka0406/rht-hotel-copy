@@ -82,7 +82,8 @@ const filterClients = (event) => {
       ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
       (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
     const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-    return matchesName || matchesPhoneFax || matchesEmail;
+    const matchesCustomerId = client.customer_id && client.customer_id.toLowerCase().includes(query);
+    return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerId;
   }).map(ensureDisplayName);
 };
 

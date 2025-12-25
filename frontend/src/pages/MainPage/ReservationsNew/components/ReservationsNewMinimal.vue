@@ -96,12 +96,18 @@
                       <i v-else class="pi pi-user"></i>
                       {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
                       <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                      <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
+                        [{{ slotProps.option.customer_id }}]
+                      </span>
                       <i v-if="slotProps.option.is_blocked" class="pi pi-ban text-red-500 ml-2"></i>
                     </p>
                     <div class="flex items-center gap-2">
+                      <p v-if="slotProps.option.customer_id" class="text-xs text-sky-800">
+                        <i class="pi pi-id-card"></i> {{ slotProps.option.customer_id }}
+                      </p>
                       <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{
                         slotProps.option.phone }}</p>
-                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{
+                      <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{
                         slotProps.option.email }}</p>
                       <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{
                         slotProps.option.fax }}</p>
