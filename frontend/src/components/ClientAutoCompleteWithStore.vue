@@ -1,16 +1,8 @@
 <template>
-  <ClientAutoComplete
-    v-model="selectedClientProxy"
-    :suggestions="filteredClients"
-    :loading="clientsIsLoading"
-    @complete="handleComplete"
-    @option-select="handleOptionSelect"
-    @change="handleChange"
-    @clear="handleClear"
-    :optionLabel="optionLabel"
-    :placeholder="placeholder"
-    :label="hideLabel ? '' : label"    
-  />
+  <ClientAutoComplete v-model="selectedClientProxy" :suggestions="filteredClients" :loading="clientsIsLoading"
+    @complete="handleComplete" @option-select="handleOptionSelect" @change="handleChange" @clear="handleClear"
+    :optionLabel="optionLabel" :placeholder="placeholder" :label="hideLabel ? '' : label"
+    :useFloatLabel="useFloatLabel" />
 </template>
 
 <script setup>
@@ -25,6 +17,7 @@ const props = defineProps({
   label: { type: String, default: '個人氏名　||　法人名称' },
   hideLabel: { type: Boolean, default: false },
   personTypeFilter: { type: String, default: null, validator: (value) => !value || ['legal', 'natural'].includes(value) },
+  useFloatLabel: { type: Boolean, default: true },
 });
 const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear']);
 
@@ -87,7 +80,7 @@ const filterClients = (event) => {
       (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
     const matchesPhoneFax = isNumericQuery &&
       ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-      (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
+        (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
     const matchesEmail = client.email && client.email.toLowerCase().includes(query);
     const matchesCustomerId = client.customer_id && typeof client.customer_id === 'string' && client.customer_id.toLowerCase().includes(query);
     return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerId;
@@ -126,4 +119,4 @@ onMounted(async () => {
     clients.value.forEach(ensureDisplayName);
   }
 });
-</script> 
+</script>

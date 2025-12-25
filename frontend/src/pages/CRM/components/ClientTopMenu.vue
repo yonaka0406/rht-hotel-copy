@@ -19,12 +19,8 @@
         <template #end>
             <div class="flex items-center gap-2">
                 <span class="w-32 sm:w-auto mr-2">{{ userGreeting }}</span>
-                <ClientAutoCompleteWithStore 
-                    v-model="client" 
-                    @option-select="onClientSelect" 
-                    placeholder="顧客検索"
-                    class="w-32 sm:w-auto"
-                />
+                <ClientAutoCompleteWithStore v-model="client" @option-select="onClientSelect" placeholder="顧客検索"
+                    class="w-32 sm:w-auto" :useFloatLabel="false" />
                 <router-link to="/" class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm">
                     <i class="pi pi-home text-white mr-2"></i>
                     <span class="text-white">PMS</span>
