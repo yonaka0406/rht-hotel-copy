@@ -1013,6 +1013,10 @@ const genderOptions = [
 ];
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
 
+// HTML pattern attributes
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phonePattern = /^[\d\s()+\-]*$/;
+
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
 const initializeGuests = () => {

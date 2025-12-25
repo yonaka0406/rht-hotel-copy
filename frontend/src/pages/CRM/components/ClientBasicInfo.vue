@@ -128,8 +128,9 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputNumber v-model="client.customer_id" :min="0" fluid />
-                                <label>顧客ID</label>
+                                <InputText v-model="client.customer_id" fluid />
+                                <label>顧客コード</label>
+                                <small class="text-gray-500">次の利用可能番号: {{ nextAvailableCustomerId }}</small>
                             </FloatLabel>
                         </div>
                         <div class="field col-span-1 flex items-center">
@@ -279,7 +280,7 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { groups, selectedClient, selectedClientGroup, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup } = useClientStore();
+    const { groups, selectedClient, selectedClientGroup, clients, nextAvailableCustomerId, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup } = useClientStore();
     import { useCRMStore } from '@/composables/useCRMStore';
     const { clientImpediments } = useCRMStore();
 
@@ -299,6 +300,10 @@
         { label: '個人', value: 'natural' },
     ];
     import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../utils/validationUtils';
+
+    // HTML pattern attributes
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phonePattern = /^[\d\s()+\-]*$/;
 
     const isValidEmail = ref(true);
     const isValidPhone = ref(true);

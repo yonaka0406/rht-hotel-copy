@@ -7,6 +7,7 @@ const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
 const selectedClientAddress = ref(null);
 const selectedClientGroup = ref(null);
+const nextAvailableCustomerId = ref('11833');
 
 const relatedCompanies = ref([]);
 const isLoadingRelatedCompanies = ref(false);
@@ -15,17 +16,53 @@ const isLoadingCommonRelationshipPairs = ref(false);
 
 export function useClientStore() {
     
+    // Function to calculate next available customer ID
+    const calculateNextCustomerId = () => {
+        if (!clients.value || clients.value.length === 0) {
+            nextAvailableCustomerId.value = '11833';
+            return;
+        }
+        
+        // Extract all customer IDs and convert to numbers
+        const existingIds = clients.value
+            .map(client => {
+                const id = client.customer_id;
+                if (!id) return null;
+                
+                // Handle string format like "C001" - extract number
+                if (typeof id === 'string' && id.match(/^C\d+$/)) {
+                    return parseInt(id.substring(1));
+                }
+                
+                // Handle direct numeric values (string or number)
+                const numericId = parseInt(id);
+                return isNaN(numericId) ? null : numericId;
+            })
+            .filter(id => id !== null && id > 0);
+        
+        if (existingIds.length === 0) {
+            nextAvailableCustomerId.value = '11833';
+            return;
+        }
+        
+        const maxId = Math.max(...existingIds);
+        const nextId = maxId + 1;
+        nextAvailableCustomerId.value = nextId.toString();
+    };
+    
     const setClients = (newClients) => {
         clients.value = newClients.map(client => ({
             ...client,
             display_name: client.name_kanji || client.name_kana || client.name || ''
         }));
+        calculateNextCustomerId(); // Update next available customer ID
     };
     const appendClients = (newClients) => {
         clients.value = [...clients.value, ...newClients.map(client => ({
             ...client,
             display_name: client.name_kanji || client.name_kana || client.name || ''
         }))]; // Append new clients
+        calculateNextCustomerId(); // Update next available customer ID
     };
     const setClientsIsLoading = (bool) => {
         clientsIsLoading.value = bool;
@@ -670,6 +707,7 @@ export function useClientStore() {
         selectedClient,
         selectedClientAddress,
         selectedClientGroup,
+        nextAvailableCustomerId,
         relatedCompanies,
         isLoadingRelatedCompanies,
         commonRelationshipPairs,

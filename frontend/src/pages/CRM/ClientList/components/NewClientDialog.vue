@@ -28,6 +28,16 @@
                 <label>カナ</label>
             </FloatLabel>
             </div>
+            <div class="col-span-2 mb-6">
+            <FloatLabel>
+                <InputText
+                v-model="newClient.customer_id"
+                fluid
+                />
+                <label>顧客コード</label>
+                <small class="text-gray-500">次の利用可能番号: {{ nextAvailableCustomerId }}</small>
+            </FloatLabel>
+            </div>
             <!-- Type of person (Legal or Natural) -->
             <div class="col-span-1">
             <SelectButton
@@ -86,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import { useClientStore } from '@/composables/useClientStore';
@@ -102,7 +112,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'client-created']);
 
 const router = useRouter();
-const { createBasicClient } = useClientStore();
+const { createBasicClient, clients, nextAvailableCustomerId } = useClientStore();
 const toast = useToast();
 
 const newClient = ref({});
@@ -125,6 +135,7 @@ const newClientReset = () => {
     newClient.value = {
         name: null,
         name_kana: null,
+        customer_id: null,
         legal_or_natural_person: 'natural',
         gender: 'other',
         phone: null,

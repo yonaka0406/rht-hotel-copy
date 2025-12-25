@@ -233,36 +233,13 @@
                             <p class="mb-1">選択中予約をまとめて請求書作成</p>
                             <div class="grid grid-cols-2 flex justify-between items-center mb-2 mt-5">
                                 <FloatLabel>
-                                    <AutoComplete
+                                    <ClientAutoCompleteWithStore
                                         v-model="client"
-                                        :suggestions="filteredClients"
-                                        optionLabel="display_name"
-                                        @complete="filterClients"
-                                        field="id"
-                                        @option-select="onClientSelect"                                        
+                                        @option-select="onClientSelect"
+                                        :hideLabel="true"                                        
                                         fluid
                                         required
-                                    >
-                                        <template #option="slotProps">                                            
-                                            <div>
-                                                <p>
-                                                    <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                                                    <i v-else class="pi pi-user"></i>
-                                                    {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
-                                                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                                                    <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
-                                                        [{{ slotProps.option.customer_id }}]
-                                                    </span>
-                                                </p>
-                                                <div class="flex items-center gap-2">
-                                                    <p v-if="slotProps.option.customer_id" class="text-xs text-sky-800"><i class="pi pi-id-card"></i> {{ slotProps.option.customer_id }}</p>
-                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                                                    <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
-                                                </div>
-                                            </div>                                            
-                                        </template>
-                                    </AutoComplete>
+                                    />
                                     <label>請求先</label>
                                 </FloatLabel>                                
                                 <FloatLabel>
@@ -336,7 +313,8 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, Card, DatePicker, AutoComplete, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge, FloatLabel } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge, FloatLabel } from 'primevue';
+    import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -418,37 +396,6 @@
     });    
     const selectedClient = ref(null);
     const client = ref({});
-    const filteredClients = ref([]);
-    const filterClients = (event) => {
-        const query = event.query.toLowerCase();
-        const normalizedQuery = normalizePhone(query);
-        const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-        if (!query || !clients.value || !Array.isArray(clients.value)) {
-            filteredClients.value = [];
-            return;
-        }
-
-        filteredClients.value = clients.value.filter((client) => {
-            // Name filtering (case-insensitive)
-            const matchesName = 
-                (client.name && client.name.toLowerCase().includes(query)) || 
-                (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) || 
-                (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-            // Phone/Fax filtering (only for numeric queries)
-            const matchesPhoneFax = isNumericQuery &&
-                ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) || 
-                (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-            // Email filtering (case-insensitive)
-            const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-            // Customer ID filtering (case-insensitive)
-            const matchesCustomerId = client.customer_id && client.customer_id.toLowerCase().includes(query);
-
-            // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
-
-            return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerId;
-        });
-    };
     const onClientSelect = (event) => {
         selectedClient.value = event.value;
         
@@ -456,32 +403,6 @@
 
         client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
         
-    };
-    const normalizeKana = (str) => {
-        if (!str) return '';
-        let normalizedStr = str.normalize('NFKC');
-        
-        // Convert Hiragana to Katakana
-        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
-        );
-        // Convert half-width Katakana to full-width Katakana
-        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
-        );
-        
-        return normalizedStr;
-    };
-    const normalizePhone = (phone) => {
-        if (!phone) return '';
-
-        // Remove all non-numeric characters
-        let normalized = phone.replace(/\D/g, '');
-
-        // Remove leading zeros
-        normalized = normalized.replace(/^0+/, '');
-
-        return normalized;
     };
     const deleteReservationFromDrawer = (reservationToDelete) => {
         selectedReservations.value = selectedReservations.value.filter(

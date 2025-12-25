@@ -9,7 +9,7 @@
     @clear="handleClear"
     :optionLabel="optionLabel"
     :placeholder="placeholder"
-    :label="label"    
+    :label="hideLabel ? '' : label"    
   />
 </template>
 
@@ -23,6 +23,7 @@ const props = defineProps({
   optionLabel: { type: String, default: 'display_name' },
   placeholder: { type: [String, null], default: null },
   label: { type: String, default: '個人氏名　||　法人名称' },
+  hideLabel: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear']);
 
@@ -82,7 +83,7 @@ const filterClients = (event) => {
       ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
       (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
     const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-    const matchesCustomerId = client.customer_id && client.customer_id.toLowerCase().includes(query);
+    const matchesCustomerId = client.customer_id && typeof client.customer_id === 'string' && client.customer_id.toLowerCase().includes(query);
     return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerId;
   }).map(ensureDisplayName);
 };

@@ -145,6 +145,14 @@
                   <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
                 </FloatLabel>
               </div>
+              <!-- Customer ID input -->
+              <div class="col-span-1">
+                <FloatLabel>
+                  <InputText id="customer_id" v-model="clientDetails.customer_id" fluid />
+                  <label for="customer_id">顧客コード</label>
+                  <small class="text-gray-500">次の利用可能番号: {{ nextAvailableCustomerId }}</small>
+                </FloatLabel>
+              </div>
               <div class="col-span-3">
                 <Divider />
                 <ClientAddresses v-if="isClientSelected" :addresses="null" />
@@ -170,7 +178,7 @@
   
   <script setup>
     // Vue
-    import { ref, watch, onMounted } from 'vue';
+    import { ref, computed, watch, onMounted } from 'vue';
 
     const props = defineProps({        
         client_id: {
@@ -188,7 +196,7 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { clients, fetchClients, fetchClient, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
+    const { clients, nextAvailableCustomerId, fetchClients, fetchClient, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
     import { useReservationStore } from '@/composables/useReservationStore';
     const { setReservationClient } = useReservationStore();
 
@@ -218,6 +226,10 @@
       { label: 'その他', value: 'other' },
     ];
     import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+
+    // HTML pattern attributes
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phonePattern = /^[\d\s()+\-]*$/;
 
     const isValidEmail = ref(true);
     const isValidPhone = ref(true);
@@ -289,7 +301,7 @@
           // Email filtering (case-insensitive)
           const matchesEmail = client.email && client.email.toLowerCase().includes(query);
           // Customer ID filtering (case-insensitive)
-          const matchesCustomerId = client.customer_id && client.customer_id.toLowerCase().includes(query);
+          const matchesCustomerId = client.customer_id && typeof client.customer_id === 'string' && client.customer_id.toLowerCase().includes(query);
 
           // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
 

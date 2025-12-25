@@ -5,52 +5,16 @@
             <!-- Name of the person making the reservation -->
             <div class="col-span-2 mb-6">
                 <FloatLabel>
-                    <AutoComplete 
+                    <ClientAutoCompleteWithStore 
                         v-model="localClient" 
-                        :suggestions="filteredClients" 
-                        optionLabel="display_name"
-                        @complete="filterClients" 
-                        field="id" 
                         @option-select="onClientSelect" 
+                        :placeholder="null"
+                        :hideLabel="true"
                         :loading="clientsIsLoading"                                                                        
                         :disabled="clientsIsLoading"
                         fluid 
                         required
-                    >
-                        <template #loading v-if="clientsIsLoading">
-                            <i class="pi pi-spin pi-spinner"></i>
-                        </template>
-                        <template #option="slotProps">
-                            <div>
-                                <p>
-                                    <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                                    <i v-else class="pi pi-user"></i>
-                                    {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
-                                        slotProps.option.name || '' }}
-                                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana
-                                        }})</span>
-                                    <span v-if="slotProps.option.customer_id" class="text-xs text-sky-800 ml-2">
-                                        [{{ slotProps.option.customer_id }}]
-                                    </span>
-                                    <i v-if="slotProps.option.is_blocked" class="pi pi-ban text-red-500 ml-2"></i>
-                                </p>
-                                <div class="flex items-center gap-2">
-                                    <p v-if="slotProps.option.customer_id" class="text-xs text-sky-800">
-                                        <i class="pi pi-id-card"></i> {{ slotProps.option.customer_id }}
-                                    </p>
-                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800">
-                                        <i class="pi pi-phone"></i> {{ slotProps.option.phone }}
-                                    </p>
-                                    <p v-if="slotProps.option.email" class="text-xs text-sky-800">
-                                        <i class="pi pi-at"></i> {{ slotProps.option.email }}
-                                    </p>
-                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800">
-                                        <i class="pi pi-send"></i> {{ slotProps.option.fax }}
-                                    </p>
-                                </div>
-                            </div>
-                        </template>
-                    </AutoComplete>
+                    />
                     <label>個人氏名 || 法人名称</label>
                 </FloatLabel>
             </div>
@@ -185,9 +149,9 @@ const emit = defineEmits([
 
 // Primevue
 import Dialog from 'primevue/dialog';
-import AutoComplete from 'primevue/autocomplete';
 import FloatLabel from 'primevue/floatlabel';
 import SelectButton from 'primevue/selectbutton';
+import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 import RadioButton from 'primevue/radiobutton';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
@@ -196,7 +160,6 @@ import Button from 'primevue/button';
 // Local state
 const localReservationDetails = ref(JSON.parse(JSON.stringify(props.reservationDetails)));
 const localClient = ref(JSON.parse(JSON.stringify(props.client)));
-const filteredClients = ref([]);
 const selectedClient = ref(null);
 const isClientSelected = ref(props.isClientSelected);
 const isValidEmail = ref(true);
@@ -206,8 +169,8 @@ const impedimentStatus = ref(null);
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
 
 // HTML pattern attributes (simplified for HTML validity)
-const emailPattern = undefined;  // or just remove this line entirely
-const phonePattern = undefined;  // or just remove this line entirely
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phonePattern = /^[\d\s()+\-]*$/;
 
 const personTypeOptions = [
     { label: '法人', value: 'legal' },
@@ -218,65 +181,6 @@ const genderOptions = [
     { label: '女性', value: 'female' },
     { label: 'その他', value: 'other' },
 ];
-
-// Filter clients based on search query
-const filterClients = async (event) => {
-    try {
-        const query = event.query.toLowerCase().trim();
-        if (!query) {
-            filteredClients.value = [];
-            return;
-        }
-
-        // Preserve original casing for display
-        localReservationDetails.value.name = event.query;
-
-        // If clients are not loaded yet, fetch them first
-        if (!clients.value || clients.value.length === 0) {
-            await fetchClients(1);
-        }
-
-        const normalizedQuery = normalizePhone(query);
-        const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-        if (!clients.value || !Array.isArray(clients.value)) {
-            filteredClients.value = [];
-            return;
-        }
-
-        filteredClients.value = clients.value.filter((client) => {
-            if (!client) return false;
-
-            // Match by name (including kana and kanji)
-            const matchesName =
-                (client.name && client.name.toLowerCase().includes(query)) ||
-                (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-                (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-
-            // Match by phone/fax (only for numeric queries)
-            const matchesPhoneFax = isNumericQuery &&
-                ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-                    (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-
-            // Match by email
-            const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-
-            // Match by customer code
-            const matchesCustomerCode = client.customer_id && client.customer_id.toLowerCase().includes(query);
-
-            return matchesName || matchesPhoneFax || matchesEmail || matchesCustomerCode;
-        });
-    } catch (error) {
-        console.error('Error filtering clients:', error);
-        filteredClients.value = [];
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: '顧客のフィルタリング中にエラーが発生しました。',
-            life: 3000,
-        });
-    }
-};
 
 // Handle client selection from dropdown
 const onClientSelect = async (event) => {
@@ -329,32 +233,6 @@ const onClientSelect = async (event) => {
 };
 
 // Validation functions
-const normalizeKana = (str) => {
-    if (!str) return '';
-    let normalizedStr = str.normalize('NFKC');
-
-    // Convert Hiragana to Katakana
-    normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
-    );
-    // Convert half-width Katakana to full-width Katakana
-    normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
-    );
-
-    return normalizedStr;
-};
-const normalizePhone = (phone) => {
-    if (!phone) return '';
-
-    // Remove all non-numeric characters
-    let normalized = phone.replace(/\D/g, '');
-
-    // Remove leading zeros
-    normalized = normalized.replace(/^0+/, '');
-
-    return normalized;
-};
 const validateEmail = (email) => {
     isValidEmail.value = validateEmailUtil(email);
 };
