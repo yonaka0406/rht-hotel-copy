@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
 

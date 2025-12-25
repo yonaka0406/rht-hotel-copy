@@ -15,41 +15,41 @@ const commonRelationshipPairs = ref([]);
 const isLoadingCommonRelationshipPairs = ref(false);
 
 export function useClientStore() {
-    
+
     // Function to calculate next available customer ID
     const calculateNextCustomerId = () => {
         if (!clients.value || clients.value.length === 0) {
             nextAvailableCustomerId.value = '11833';
             return;
         }
-        
+
         // Extract all customer IDs and convert to numbers
         const existingIds = clients.value
             .map(client => {
                 const id = client.customer_id;
                 if (!id) return null;
-                
+
                 // Handle string format like "C001" - extract number
                 if (typeof id === 'string' && id.match(/^C\d+$/)) {
                     return parseInt(id.substring(1));
                 }
-                
+
                 // Handle direct numeric values (string or number)
                 const numericId = parseInt(id);
                 return isNaN(numericId) ? null : numericId;
             })
             .filter(id => id !== null && id > 0);
-        
+
         if (existingIds.length === 0) {
             nextAvailableCustomerId.value = '11833';
             return;
         }
-        
+
         const maxId = Math.max(...existingIds);
         const nextId = maxId + 1;
         nextAvailableCustomerId.value = nextId.toString();
     };
-    
+
     const setClients = (newClients) => {
         clients.value = newClients.map(client => ({
             ...client,
@@ -66,6 +66,25 @@ export function useClientStore() {
     };
     const setClientsIsLoading = (bool) => {
         clientsIsLoading.value = bool;
+    };
+
+    const syncClientInList = (updatedClient) => {
+        if (!updatedClient || !updatedClient.id) return;
+
+        const clientWithDisplayName = {
+            ...updatedClient,
+            display_name: updatedClient.name_kanji || updatedClient.name_kana || updatedClient.name || ''
+        };
+
+        const index = clients.value.findIndex(c => c.id === updatedClient.id);
+        if (index !== -1) {
+            // Update existing client
+            clients.value[index] = { ...clients.value[index], ...clientWithDisplayName };
+        } else {
+            // Add if not in list (though normally it should be)
+            clients.value.push(clientWithDisplayName);
+        }
+        calculateNextCustomerId();
     };
 
     // Fetch the list of clients
@@ -89,12 +108,12 @@ export function useClientStore() {
             const data = await response.json();
             // console.log('From Client Store => fetchClients data:', data);
 
-            if (data && data.clients) {                
+            if (data && data.clients) {
                 if (page === 1 || page === undefined) {
-                    setClients(data.clients);                
+                    setClients(data.clients);
                     return data.totalPages;
                 } else {
-                    appendClients(data.clients);                
+                    appendClients(data.clients);
                     return data.totalPages;
                 }
             } else {
@@ -103,7 +122,7 @@ export function useClientStore() {
 
         } catch (error) {
             console.error('Failed to fetch clients.', error);
-            setClients([]);            
+            setClients([]);
             throw error;
         } finally {
             clientsIsLoading.value = false;
@@ -121,7 +140,7 @@ export function useClientStore() {
                     'Content-Type': 'application/json',
                 },
             });
-            
+
             const result = await response.json();
             selectedClient.value = result.client;
             selectedClientAddress.value = result.client.addresses;
@@ -131,7 +150,7 @@ export function useClientStore() {
                 client: selectedClient.value,
                 addresses: selectedClientAddress.value,
                 group: selectedClientGroup.value,
-            };            
+            };
         } catch (error) {
             console.error('Failed to fetch client information.', error);
         }
@@ -146,14 +165,14 @@ export function useClientStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
 
             if (!response.ok) {
                 throw new Error('Failed to fetch client by name.');
             }
 
-            const clientName = await response.json();            
+            const clientName = await response.json();
             return clientName;
         } catch (error) {
             console.error('Failed to fetch client by name.', error);
@@ -170,10 +189,10 @@ export function useClientStore() {
                     'Content-Type': 'application/json',
                 },
             });
-            
+
             const clientReservations = await response.json();
             return clientReservations;
-            
+
         } catch (error) {
             console.error('Failed to fetch client reservations.', error);
         }
@@ -189,9 +208,9 @@ export function useClientStore() {
                 },
             });
 
-            const client = await response.json();            
+            const client = await response.json();
             return client;
-            
+
         } catch (error) {
             console.error('Failed to fetch customer id.', error);
         }
@@ -206,9 +225,9 @@ export function useClientStore() {
                     'Content-Type': 'application/json',
                 },
             });
-            
+
             groups.value = await response.json();
-            
+
         } catch (error) {
             console.error('Failed to fetch client groups.', error);
         }
@@ -224,7 +243,7 @@ export function useClientStore() {
                     'Content-Type': 'application/json',
                 },
             });
-            
+
             selectedGroup.value = await response.json();
 
             return selectedGroup.value;
@@ -232,141 +251,168 @@ export function useClientStore() {
             console.error('Failed to fetch group.', error);
         }
     };
-    
-    const createBasicClient = async (name, name_kana, legal_or_natural_person, gender, email, phone) => {        
+
+    const createBasicClient = async (name, name_kana, legal_or_natural_person, gender, email, phone, customer_id) => {
         try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch('/api/client/basic', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name, name_kana, legal_or_natural_person, gender, email, phone }),
-          });
-      
-          if (!response.ok) {
-            throw new Error('Failed to create client.');
-          }
-      
-          const newClient = await response.json();                  
-          return newClient;
+            const authToken = localStorage.getItem('authToken');
+            // Ensure customer_id is a number or null
+            let processed_customer_id = customer_id;
+            if (processed_customer_id === '' || processed_customer_id === undefined) {
+                processed_customer_id = null;
+            } else if (processed_customer_id !== null) {
+                processed_customer_id = parseInt(processed_customer_id, 10);
+            }
+
+            const response = await fetch('/api/client/basic', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, name_kana, legal_or_natural_person, gender, email, phone, customer_id: processed_customer_id }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create client.');
+            }
+
+            const newClient = await response.json();
+            syncClientInList(newClient);
+            return newClient;
         } catch (error) {
-          console.error('Failed to create client.', error);
-          throw error;
+            console.error('Failed to create client.', error);
+            throw error;
         }
     };
-    const createClient = async (clientFields) => {        
+    const createClient = async (clientFields) => {
         try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch('/api/client/new', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(clientFields),
-          });
-      
-          if (!response.ok) {
-            throw new Error('Failed to create client.');
-          }
-      
-          const newClient = await response.json();
-          appendClients([newClient]);          
-          return newClient;
+            const authToken = localStorage.getItem('authToken');
+            // Ensure customer_id is a number or null
+            let processed_customer_id = clientFields.customer_id;
+            if (processed_customer_id === '' || processed_customer_id === undefined) {
+                processed_customer_id = null;
+            } else if (processed_customer_id !== null) {
+                processed_customer_id = parseInt(processed_customer_id, 10);
+            }
+
+            const response = await fetch('/api/client/new', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ...clientFields, customer_id: processed_customer_id }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create client.');
+            }
+
+            const newClient = await response.json();
+            syncClientInList(newClient);
+            return newClient;
         } catch (error) {
-          console.error('Failed to create client.', error);
-          throw error;
+            console.error('Failed to create client.', error);
+            throw error;
         }
     };
-    const createAddress = async (addressFields) => {        
+    const createAddress = async (addressFields) => {
         try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch('/api/client/address/new', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(addressFields),
-          });
-      
-          if (!response.ok) {
-            throw new Error('Failed to create client');
-          }
-      
-          const result = await response.json();          
-          return result;
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/client/address/new', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(addressFields),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create client');
+            }
+
+            const result = await response.json();
+            return result;
         } catch (error) {
-          console.error('Failed to create client', error);
-          throw error;
+            console.error('Failed to create client', error);
+            throw error;
         }
     };
-    const createClientGroup = async (groupFields) => {        
+    const createClientGroup = async (groupFields) => {
         try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch('/api/client/group/new', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(groupFields),
-          });
-      
-          if (!response.ok) {
-            throw new Error('Failed to create group');
-          }
-      
-          const result = await response.json();          
-          return result;
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/client/group/new', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(groupFields),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create group');
+            }
+
+            const result = await response.json();
+            return result;
         } catch (error) {
-          console.error('Failed to create group', error);
-          throw error;
+            console.error('Failed to create group', error);
+            throw error;
         }
     };
-    const removeAddress = async (id) => {        
+    const removeAddress = async (id) => {
         try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch(`/api/client/address/del/${id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },            
-          });
-      
-          if (!response.ok) {
-            throw new Error('Failed to delete address');
-          }
-      
-          const deleteAddress = await response.json();          
-          return deleteAddress;
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/address/del/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete address');
+            }
+
+            const deleteAddress = await response.json();
+            return deleteAddress;
         } catch (error) {
-          console.error('Failed to create client', error);
-          throw error;
+            console.error('Failed to create client', error);
+            throw error;
         }
     };
 
     const updateClientInfo = async (client_id, updatedFields) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/client/update/${client_id}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updatedFields),
-            });
-        
-            if (!response.ok) {
-            throw new Error('Failed to update client');
+            // Ensure customer_id is a number or null
+            if (updatedFields.customer_id === '' || updatedFields.customer_id === undefined) {
+                updatedFields.customer_id = null;
+            } else if (updatedFields.customer_id !== null) {
+                updatedFields.customer_id = parseInt(updatedFields.customer_id, 10);
             }
-        
+
+            const response = await fetch(`/api/client/update/${client_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedFields),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update client');
+            }
+
             const updatedClient = await response.json();
             selectedClient.value = updatedClient;
+
+            // Sync with clients list and update NEXT ID
+            syncClientInList(updatedClient);
         } catch (error) {
             console.error('Failed to update client', error);
         }
@@ -374,6 +420,14 @@ export function useClientStore() {
     const updateClientInfoCRM = async (client_id, updatedFields) => {
         try {
             const authToken = localStorage.getItem('authToken');
+
+            // Ensure customer_id is a number or null
+            if (updatedFields.customer_id === '' || updatedFields.customer_id === undefined) {
+                updatedFields.customer_id = null;
+            } else if (updatedFields.customer_id !== null) {
+                updatedFields.customer_id = parseInt(updatedFields.customer_id, 10);
+            }
+
             const response = await fetch(`/api/crm/client/update/${client_id}`, {
                 method: 'PUT',
                 headers: {
@@ -382,14 +436,17 @@ export function useClientStore() {
                 },
                 body: JSON.stringify(updatedFields),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to update client');
             }
-        
+
             const updatedClient = await response.json();
             // console.log('From Client Store => updateClientInfoCRM updatedClient:', updatedClient);
-            selectedClient.value = updatedClient;
+            selectedClient.value = { ...selectedClient.value, client: updatedClient };
+
+            // Sync with clients list and update NEXT ID
+            syncClientInList(updatedClient);
         } catch (error) {
             console.error('Failed to update client', error);
         }
@@ -405,17 +462,17 @@ export function useClientStore() {
                 },
                 body: JSON.stringify(updatedFields),
             });
-        
+
             if (!response.ok) {
-            throw new Error('Failed to update address');
+                throw new Error('Failed to update address');
             }
-        
-            const editedData = await response.json();   
-            return editedData;         
+
+            const editedData = await response.json();
+            return editedData;
         } catch (error) {
             console.error('Failed to update client', error);
         }
-    };    
+    };
     const updateClientGroup = async (groupId, clientId) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -424,15 +481,15 @@ export function useClientStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },                
+                },
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to update group');
             }
-        
-            const editedData = await response.json();   
-            return editedData;         
+
+            const editedData = await response.json();
+            return editedData;
         } catch (error) {
             console.error('Failed to update client', error);
         }
@@ -445,21 +502,21 @@ export function useClientStore() {
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
-                },    
-                body: JSON.stringify(data),           
+                },
+                body: JSON.stringify(data),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to update group');
             }
-        
-            const editedData = await response.json();   
-            return editedData;         
+
+            const editedData = await response.json();
+            return editedData;
         } catch (error) {
             console.error('Failed to update client', error);
         }
     };
-    const mergeClientsCRM = async (newClientId, oldClientId, updatedFields) => {        
+    const mergeClientsCRM = async (newClientId, oldClientId, updatedFields) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/crm/client/${newClientId}/merge/${oldClientId}`, {
@@ -470,16 +527,19 @@ export function useClientStore() {
                 },
                 body: JSON.stringify(updatedFields),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to update client');
             }
-            
+
             const updatedClient = await response.json();
-            
+
+            // Sync with clients list and update NEXT ID
+            syncClientInList(updatedClient);
+
             // Return the updated client data so you can use it
             return updatedClient;
-            
+
         } catch (error) {
             console.error('Failed to update client', error);
             throw error; // Re-throw so the caller can handle it
@@ -574,7 +634,7 @@ export function useClientStore() {
             throw error;
         }
     }
-    
+
     async function updateClientRelationship(relationshipId, payload) {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -698,7 +758,7 @@ export function useClientStore() {
             throw error; // Re-throw for component to handle
         }
     };
-    
+
     return {
         groups,
         selectedGroup,

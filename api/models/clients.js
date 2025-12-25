@@ -14,72 +14,72 @@ const transliterateKanaToRomaji = async (kanaString) => {
   let romaji = toRomaji(halfWidthString);
 
   romaji = romaji
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
   return romaji
 };
 const toFullWidthKana = (str) => {
   return str.normalize('NFKC').replace(/[｡-ﾟ]/g, (char) => {
-      const code = char.charCodeAt(0) - 0xFF61 + 0x30A1;
-      return String.fromCharCode(code);
+    const code = char.charCodeAt(0) - 0xFF61 + 0x30A1;
+    return String.fromCharCode(code);
   });
 };
 const toKatakana = (str) => str.replace(/[぀-ゟ]/g, (char) =>
   String.fromCharCode(char.charCodeAt(0) + 0x60)
 );
 const processNameStringWithSubstitutions = (name, nameKanji) => {
-    if (typeof name !== 'string' || typeof nameKanji !== 'string') {
-        console.warn('processNameStringWithSubstitutions: name and nameKanji must be strings.');
-        return name;
-    }
+  if (typeof name !== 'string' || typeof nameKanji !== 'string') {
+    console.warn('processNameStringWithSubstitutions: name and nameKanji must be strings.');
+    return name;
+  }
 
-    const substitutions = [
-        { pattern: 'deeta', replacement: ' Data ', kanji_match: 'データ' },
-        { pattern: 'denkou', replacement: ' Denkou ', kanji_match: '電工' },
-        { pattern: 'gijutsu', replacement: ' Gijutsu ', kanji_match: '技術' },
-        { pattern: 'giken', replacement: ' Giken ', kanji_match: '技研' },
-        { pattern: 'guruupu', replacement: ' Group ', kanji_match: 'グループ' },
-        { pattern: 'hausu', replacement: ' House ', kanji_match: 'ハウス' },
-        { pattern: 'hokkaidou', replacement: ' Hokkaido ', kanji_match: '北海道' },
-        { pattern: 'hoomu', replacement: ' Home ', kanji_match: 'ホーム' },
-        { pattern: 'hoorudeingusu', replacement: ' Holdings ', kanji_match: 'ホールディングス' },
-        { pattern: 'japan', replacement: ' Japan ', kanji_match: 'ジャパン' },
-        { pattern: 'kabushikigaisha', replacement: ' K.K ', kanji_match: '株式会社' },
-        { pattern: 'kensetsu', replacement: ' Kensetsu ', kanji_match: '建設' },
-        { pattern: 'kikou', replacement: ' Kikou ', kanji_match: '機工' },
-        { pattern: 'konsarutanto', replacement: ' Consultant ', kanji_match: 'コンサルタント' },
-        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '工業' },
-        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '興業' },
-        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '鋼業' },
-        { pattern: 'koumuten', replacement: ' Koumuten ', kanji_match: '工務店' },
-        { pattern: 'kureen', replacement: ' Crane ', kanji_match: 'クレーン' },
-        { pattern: 'nihon', replacement: ' Nihon ', kanji_match: '日本' },
-        { pattern: 'sangyou', replacement: ' Sangyo ', kanji_match: '産業' },
-        { pattern: 'setsubi', replacement: ' Setsubi ', kanji_match: '設備' },
-        { pattern: 'shisutemu', replacement: ' System ', kanji_match: 'システム' },
-        { pattern: 'sapporo', replacement: ' Sapporo ', kanji_match: '札幌' },
-        { pattern: 'tekkou', replacement: ' Tekkou ', kanji_match: '鉄工' },
-        { pattern: 'tosou', replacement: ' Tosou ', kanji_match: '塗装' }
-    ];
+  const substitutions = [
+    { pattern: 'deeta', replacement: ' Data ', kanji_match: 'データ' },
+    { pattern: 'denkou', replacement: ' Denkou ', kanji_match: '電工' },
+    { pattern: 'gijutsu', replacement: ' Gijutsu ', kanji_match: '技術' },
+    { pattern: 'giken', replacement: ' Giken ', kanji_match: '技研' },
+    { pattern: 'guruupu', replacement: ' Group ', kanji_match: 'グループ' },
+    { pattern: 'hausu', replacement: ' House ', kanji_match: 'ハウス' },
+    { pattern: 'hokkaidou', replacement: ' Hokkaido ', kanji_match: '北海道' },
+    { pattern: 'hoomu', replacement: ' Home ', kanji_match: 'ホーム' },
+    { pattern: 'hoorudeingusu', replacement: ' Holdings ', kanji_match: 'ホールディングス' },
+    { pattern: 'japan', replacement: ' Japan ', kanji_match: 'ジャパン' },
+    { pattern: 'kabushikigaisha', replacement: ' K.K ', kanji_match: '株式会社' },
+    { pattern: 'kensetsu', replacement: ' Kensetsu ', kanji_match: '建設' },
+    { pattern: 'kikou', replacement: ' Kikou ', kanji_match: '機工' },
+    { pattern: 'konsarutanto', replacement: ' Consultant ', kanji_match: 'コンサルタント' },
+    { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '工業' },
+    { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '興業' },
+    { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '鋼業' },
+    { pattern: 'koumuten', replacement: ' Koumuten ', kanji_match: '工務店' },
+    { pattern: 'kureen', replacement: ' Crane ', kanji_match: 'クレーン' },
+    { pattern: 'nihon', replacement: ' Nihon ', kanji_match: '日本' },
+    { pattern: 'sangyou', replacement: ' Sangyo ', kanji_match: '産業' },
+    { pattern: 'setsubi', replacement: ' Setsubi ', kanji_match: '設備' },
+    { pattern: 'shisutemu', replacement: ' System ', kanji_match: 'システム' },
+    { pattern: 'sapporo', replacement: ' Sapporo ', kanji_match: '札幌' },
+    { pattern: 'tekkou', replacement: ' Tekkou ', kanji_match: '鉄工' },
+    { pattern: 'tosou', replacement: ' Tosou ', kanji_match: '塗装' }
+  ];
 
-    let updatedName = name;
+  let updatedName = name;
 
-    for (const sub of substitutions) {
-        if (nameKanji.includes(sub.kanji_match)) {
-            try {
-                const regex = new RegExp(sub.pattern, 'gi');
-                if (regex.test(updatedName)) {
-                    updatedName = updatedName.replace(regex, sub.replacement);
-                }
-            } catch (e) {
-                console.error(`Error creating RegExp with pattern: ${sub.pattern}`, e);
-            }
+  for (const sub of substitutions) {
+    if (nameKanji.includes(sub.kanji_match)) {
+      try {
+        const regex = new RegExp(sub.pattern, 'gi');
+        if (regex.test(updatedName)) {
+          updatedName = updatedName.replace(regex, sub.replacement);
         }
+      } catch (e) {
+        console.error(`Error creating RegExp with pattern: ${sub.pattern}`, e);
+      }
     }
-    updatedName = updatedName.trim().replace(/\s+/g, ' ');
-    // Do not change casing, just return the updatedName as-is
-    return updatedName;
+  }
+  updatedName = updatedName.trim().replace(/\s+/g, ' ');
+  // Do not change casing, just return the updatedName as-is
+  return updatedName;
 };
 const processNameString = async (nameString) => {
   if (!nameString) {
@@ -284,7 +284,7 @@ const selectClientGroups = async (requestId) => {
   }
 };
 const addClientByName = async (requestId, client = {}, dbClient = null) => {
-  
+
   const pool = dbClient || getPool(requestId);
 
   let finalName, finalNameKana, finalNameKanji;
@@ -297,8 +297,8 @@ const addClientByName = async (requestId, client = {}, dbClient = null) => {
   }
   const query = `
     INSERT INTO clients (
-      name, name_kana, name_kanji, legal_or_natural_person, gender, email, phone, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      name, name_kana, name_kanji, legal_or_natural_person, gender, email, phone, customer_id, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *;
   `;
   const values = [
@@ -309,24 +309,25 @@ const addClientByName = async (requestId, client = {}, dbClient = null) => {
     client.gender,
     client.email,
     client.phone,
+    client.customer_id,
     client.created_by,
     client.updated_by
   ];
   try {
-    //logger.warn('[CLIENT_CREATE] addClientByName input', { client });
-    //logger.warn('[CLIENT_CREATE] Processed names', { finalName, finalNameKana, finalNameKanji });
-    //logger.warn('[CLIENT_CREATE] Query and values', { query, values });
+    logger.warn('[CLIENT_CREATE] addClientByName input', { client });
+    logger.warn('[CLIENT_CREATE] Processed names', { finalName, finalNameKana, finalNameKanji });
+    logger.warn('[CLIENT_CREATE] Query and values', { query, values });
     const result = await pool.query(query, values);
-    //logger.warn('[CLIENT_CREATE] Client inserted', { client_id: result.rows[0]?.id });
+    logger.warn('[CLIENT_CREATE] Client inserted', { client_id: result.rows[0]?.id, customer_id: result.rows[0]?.customer_id });
     return result.rows[0];
   } catch (err) {
-    logger.warn('Error adding client', { error: err.message, stack: err.stack });
+    logger.error('Error adding client', { error: err.message, stack: err.stack });
     throw new Error('Database error');
   }
 };
 const addNewClient = async (requestId, user_id, client) => {
   const pool = getPool(requestId);
-  if(!client.name && !client.name_kana && !client.name_kanji){
+  if (!client.name && !client.name_kana && !client.name_kanji) {
     throw new Error('Client name is required');
   }
   if (!client.name && !client.name_kanji) {
@@ -334,8 +335,8 @@ const addNewClient = async (requestId, user_id, client) => {
   }
   const query = `
     INSERT INTO clients (
-      name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, customer_id, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *;
   `;
   const values = [
@@ -348,10 +349,12 @@ const addNewClient = async (requestId, user_id, client) => {
     client.email,
     client.phone,
     client.fax,
+    client.customer_id,
     user_id,
     user_id
   ];
   try {
+    logger.warn('[CLIENT_CREATE] addNewClient input', { client });
     const result = await pool.query(query, values);
     return result.rows[0];
   } catch (err) {
@@ -361,7 +364,7 @@ const addNewClient = async (requestId, user_id, client) => {
 };
 const addNewAddress = async (requestId, user_id, address) => {
   const pool = getPool(requestId);
-  if(!address.address_name){
+  if (!address.address_name) {
     throw new Error('Address name is required');
   }
   const query = `
@@ -397,7 +400,7 @@ const addNewAddress = async (requestId, user_id, address) => {
 const addClientGroup = async (requestId, user_id, group) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
-  if(!group.name){
+  if (!group.name) {
     throw new Error('Group name is required');
   }
   let query = '';
@@ -430,7 +433,7 @@ const addClientGroup = async (requestId, user_id, group) => {
     ];
     const clientResult = await client.query(query, values);
     await client.query('COMMIT');
-    return {success: true};
+    return { success: true };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error adding client group and updating client:', err);
@@ -450,8 +453,9 @@ const editClient = async (requestId, clientId, updatedFields, user_id) => {
       email = $5,
       phone = $6,
       fax = $7,
-      updated_by = $8
-    WHERE id = $9
+      customer_id = $8,
+      updated_by = $9
+    WHERE id = $10
     RETURNING *;
   `;
   const values = [
@@ -462,12 +466,15 @@ const editClient = async (requestId, clientId, updatedFields, user_id) => {
     updatedFields.email,
     updatedFields.phone,
     updatedFields.fax,
+    updatedFields.customer_id,
     user_id,
     clientId
   ];
   try {
+    logger.warn('[CLIENT_UPDATE] editClient input', { clientId, customer_id: updatedFields.customer_id });
     const result = await pool.query(query, values);
-    return result.rows;
+    logger.warn('[CLIENT_UPDATE] editClient result', { customer_id: result.rows[0]?.customer_id });
+    return result.rows[0];
   } catch (err) {
     console.error('Error updating client:', err);
     throw err;
@@ -512,8 +519,10 @@ const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
     clientId
   ];
   try {
+    logger.warn('[CLIENT_UPDATE] editClientFull input', { clientId, customer_id: updatedFields.customer_id });
     const result = await pool.query(query, values);
-    return result.rows;
+    logger.warn('[CLIENT_UPDATE] editClientFull result', { customer_id: result.rows[0]?.customer_id });
+    return result.rows[0];
   } catch (err) {
     console.error('Error updating client:', err);
     throw err;
@@ -563,7 +572,7 @@ const editClientGroup = async (requestId, clientId, groupId, user_id) => {
   const pool = getPool(requestId);
   let query = '';
   let values = '';
-  if(groupId !== 'null'){
+  if (groupId !== 'null') {
     query = `
       UPDATE clients SET
         client_group_id = $1,
@@ -576,7 +585,7 @@ const editClientGroup = async (requestId, clientId, groupId, user_id) => {
       user_id,
       clientId
     ];
-  } else{
+  } else {
     query = `
       UPDATE clients SET
         client_group_id = NULL,
@@ -837,7 +846,7 @@ const insertRelationship = async (requestId, relationshipData) => {
   } catch (err) {
     console.error('Error in insertRelationship:', err);
     if (err.code === '23505') { // Unique violation
-        throw new Error('This client relationship already exists.');
+      throw new Error('This client relationship already exists.');
     }
     throw new Error('Database error inserting relationship');
   }
@@ -915,10 +924,10 @@ const findAllCommonRelationshipPairs = async (requestId) => {
   }
 };
 const findLegalPersonClients = async (requestId, queryParams = {}) => {
-    const pool = getPool(requestId);
-    const limit = queryParams.limit || 1000;
-    const offset = queryParams.offset || 0;
-    const sql = `
+  const pool = getPool(requestId);
+  const limit = queryParams.limit || 1000;
+  const offset = queryParams.offset || 0;
+  const sql = `
         SELECT clients.*,
                 COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS name,
                 CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key,
@@ -929,13 +938,13 @@ const findLegalPersonClients = async (requestId, queryParams = {}) => {
         ORDER BY COALESCE(clients.name_kanji, clients.name_kana, clients.name) ASC
         LIMIT $1 OFFSET $2;
     `;
-    try {
-        const result = await pool.query(sql, [limit, offset]);
-        return result.rows;
-    } catch (err) {
-        console.error('Error in findLegalPersonClients:', err);
-        throw new Error('Database error finding legal person clients');
-    }
+  try {
+    const result = await pool.query(sql, [limit, offset]);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in findLegalPersonClients:', err);
+    throw new Error('Database error finding legal person clients');
+  }
 };
 const getLegalStatusForClientIds = async (requestId, arrayOfClientIds) => {
   const pool = getPool(requestId);
@@ -1102,7 +1111,7 @@ const getImpedimentsByClientId = async (requestId, clientId) => {
 };
 const updateImpediment = async (requestId, impedimentId, updatedFields, userId) => {
   const pool = getPool(requestId);
-  
+
   const fields = [];
   const values = [];
   let paramIndex = 1;
@@ -1127,7 +1136,7 @@ const updateImpediment = async (requestId, impedimentId, updatedFields, userId) 
   if (fields.length === 0) {
     throw new Error("No fields provided for update.");
   }
-  
+
   values.push(impedimentId);
 
   const query = `
@@ -1263,7 +1272,7 @@ const getAllClientsForExport = async (requestId, filters = {}) => {
 };
 
 const getClientsCountForExport = async (requestId, filters = {}) => {
-  const pool = getPool(requestId);   
+  const pool = getPool(requestId);
   const { whereClause, values } = buildClientFilterQuery(filters);
 
   let query = `
