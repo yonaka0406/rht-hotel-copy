@@ -9,8 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-- Refactor: Standardized net price calculation methodology using FLOOR on gross totals across reporting and billing modules.
-
 ---
 
 ## Future Releases
@@ -756,6 +754,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added visual indicators (attention icon) in the Reservation Rooms View (accordion header and plan column) and Reservation Day Detail (price section) to highlight rate inconsistencies where a plan is set with a non-zero price but no detailed rates exist.
 - Bugfix: Fixed an issue in `updateReservationDetailPlan` where clearing all rates (sending an empty array) was not properly deleting existing rates from the database.
 - Refactor: Improved `recalculatePrice` logic in the frontend to ensure all rates and the total price are correctly updated and to prevent variable shadowing issues.
+
+---
+
+## [1.3.6] - 2025-12
+
+- Refactor: Standardized net price calculation methodology using FLOOR on gross totals across reporting and billing modules.
 
 ---
 
