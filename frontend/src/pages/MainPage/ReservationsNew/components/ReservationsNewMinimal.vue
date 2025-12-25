@@ -269,7 +269,7 @@ const genderOptions = [
   { label: '女性', value: 'female' },
   { label: 'その他', value: 'other' },
 ];
-import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, hasContactInfo } from '../../../../utils/validationUtils';
 
 // HTML pattern attributes
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -564,51 +564,47 @@ const onClientSelect = async (event) => {
   client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
 };
 const submitReservation = async () => {
-  // Validate email and phone
-  validateEmail();
-  validatePhone();
+  // Skip validation if a client is already selected from the database
+  if (isClientSelected.value) {
+    // We still want to ensure there is at least a name, but that's handled by required prop in AutoComplete
+    // and the manual entry logic
+  } else {
+    // Validate for new/manual client entry
+    validateEmail();
+    validatePhone();
 
-  if (impedimentStatus.value && impedimentStatus.value.level === 'block') {
-    toast.add({
-      severity: 'error',
-      summary: '予約不可',
-      detail: 'このクライアントは予約がブロックされているため、予約を作成できません。',
-      life: 5000,
-    });
-    return;
-  }
+    // Check if either email or phone is filled
+    if (!hasContactInfo(reservationDetails.value.email, reservationDetails.value.phone)) {
+      toast.add({
+        severity: 'warn',
+        summary: '注意',
+        detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
+        life: 3000,
+      });
+      return;
+    }
 
-  // Check if either email or phone is filled
-  if (!reservationDetails.value.email && !reservationDetails.value.phone) {
-    toast.add({
-      severity: 'warn',
-      summary: '注意',
-      detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
-      life: 3000,
-    });
-    return; // Stop further execution if validation fails
-  }
+    // Check for valid email format
+    if (reservationDetails.value.email && !isValidEmail.value) {
+      toast.add({
+        severity: 'warn',
+        summary: '注意',
+        detail: '有効なメールアドレスを入力してください。',
+        life: 3000,
+      });
+      return;
+    }
 
-  // Check for valid email format
-  if (reservationDetails.value.email && !isValidEmail.value) {
-    toast.add({
-      severity: 'warn',
-      summary: '注意',
-      detail: '有効なメールアドレスを入力してください。',
-      life: 3000,
-    });
-    return;
-  }
-
-  // Check for valid phone format
-  if (reservationDetails.value.phone && !isValidPhone.value) {
-    toast.add({
-      severity: 'warn',
-      summary: '注意',
-      detail: '有効な電話番号を入力してください。',
-      life: 3000,
-    });
-    return;
+    // Check for valid phone format
+    if (reservationDetails.value.phone && !isValidPhone.value) {
+      toast.add({
+        severity: 'warn',
+        summary: '注意',
+        detail: '有効な電話番号を入力してください。',
+        life: 3000,
+      });
+      return;
+    }
   }
 
   const authToken = localStorage.getItem('authToken');

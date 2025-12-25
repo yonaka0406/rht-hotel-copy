@@ -288,7 +288,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 
 import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
-import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, hasContactInfo } from '../../../../utils/validationUtils';
 
 const phonePattern = /^[\\d\\s()+\\-]*$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -922,39 +922,46 @@ const submitReservation = async () => {
         });
         return;
     }
-    // Validate email and phone
-    validateEmail(reservationDetails.value.email);
-    validatePhone(reservationDetails.value.phone);
+    // Skip validation if a client is already selected from the database
+    if (isClientSelected.value) {
+        // Validation skipped for selected clients
+    } else {
+        // Validate for new/manual client entry
+        validateEmail(reservationDetails.value.email);
+        validatePhone(reservationDetails.value.phone);
 
-    // Check if either email or phone is filled
-    if (!reservationDetails.value.email && !reservationDetails.value.phone) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
-            life: 3000,
-        });
-        return; // Stop further execution if validation fails
-    }
-    // Check for valid email format
-    if (reservationDetails.value.email && !isValidEmail.value) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: '有効なメールアドレスを入力してください。',
-            life: 3000,
-        });
-        return;
-    }
-    // Check for valid phone format
-    if (reservationDetails.value.phone && !isValidPhone.value) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: '有効な電話番号を入力してください。',
-            life: 3000,
-        });
-        return;
+        // Check if either email or phone is filled
+        if (!hasContactInfo(reservationDetails.value.email, reservationDetails.value.phone)) {
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
+                life: 3000,
+            });
+            return;
+        }
+
+        // Check for valid email format
+        if (reservationDetails.value.email && !isValidEmail.value) {
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: '有効なメールアドレスを入力してください。',
+                life: 3000,
+            });
+            return;
+        }
+
+        // Check for valid phone format
+        if (reservationDetails.value.phone && !isValidPhone.value) {
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: '有効な電話番号を入力してください。',
+                life: 3000,
+            });
+            return;
+        }
     }
 
     // First, filter for only 'stay' type combos from the original reservationCombos

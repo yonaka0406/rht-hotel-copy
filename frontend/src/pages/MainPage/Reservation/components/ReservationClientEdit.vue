@@ -190,7 +190,7 @@ const genderOptions = [
   { label: '女性', value: 'female' },
   { label: 'その他', value: 'other' },
 ];
-import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, validateCustomerId as validateCustomerIdUtil } from '../../../../utils/validationUtils';
 
 // HTML pattern attributes
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -298,7 +298,7 @@ const onClientSelect = async (event) => {
 
 const saveClient = async () => {
   if (clientDetails.value.customer_id) {
-    if (!/^\d+$/.test(clientDetails.value.customer_id)) {
+    if (!validateCustomerIdUtil(clientDetails.value.customer_id)) {
       toast.add({ severity: 'error', summary: 'Error', detail: '顧客コードは半角数字で入力してください。', life: 3000 });
       return;
     }

@@ -238,7 +238,7 @@ const personTypeOptions = [
     { label: '法人', value: 'legal' },
     { label: '個人', value: 'natural' },
 ];
-import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../utils/validationUtils';
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, validateCustomerId as validateCustomerIdUtil, hasContactInfo } from '../../../utils/validationUtils';
 
 // HTML pattern attributes
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -288,7 +288,7 @@ const saveClient = async () => {
     } else {
         client.value.date_of_birth = null;
     }
-    if (!client.value.email && !client.value.phone) {
+    if (!hasContactInfo(client.value.email, client.value.phone)) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'メールアドレス又は電話番号を入力してください。', life: 3000 });
         return;
     }
@@ -302,7 +302,7 @@ const saveClient = async () => {
     }
 
     if (client.value.customer_id) {
-        if (!/^\d+$/.test(client.value.customer_id)) {
+        if (!validateCustomerIdUtil(client.value.customer_id)) {
             toast.add({ severity: 'error', summary: 'Error', detail: '顧客コードは半角数字で入力してください。', life: 3000 });
             return;
         }

@@ -179,7 +179,7 @@ watch(localClient, (newVal) => {
     // When newVal is an object with id, it's handled by onClientSelect
 });
 
-import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, hasContactInfo } from '../../../../utils/validationUtils';
 
 // HTML pattern attributes (simplified for HTML validity)
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -267,11 +267,11 @@ const handleSave = () => {
     }
 
     // Skip validation if a client is selected (has an ID)
-    if (!localClient.value || !localClient.value.id) {
+    if (!isClientSelected.value && (!localClient.value || !localClient.value.id)) {
         validateEmail(localReservationDetails.value.email);
         validatePhone(localReservationDetails.value.phone);
 
-        if (!localReservationDetails.value.email && !localReservationDetails.value.phone) {
+        if (!hasContactInfo(localReservationDetails.value.email, localReservationDetails.value.phone)) {
             toast.add({
                 severity: 'warn',
                 summary: '注意',

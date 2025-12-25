@@ -95,7 +95,7 @@ const genderOptions = [
     { label: 'その他', value: 'other' },
 ];
 
-import { validatePhone, validateEmail } from '@/utils/validationUtils';
+import { validatePhone, validateEmail, validateCustomerId, hasContactInfo } from '@/utils/validationUtils';
 
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
@@ -142,12 +142,13 @@ const submitClient = async () => {
         toast.add({ severity: 'warn', summary: '注意', detail: '氏名・名称またはカナの少なくとも 1 つを入力する必要があります。', life: 3000 });
         return;
     }
-    if (!newClient.value.email && !newClient.value.phone) {
+    if (!hasContactInfo(newClient.value.email, newClient.value.phone)) {
         toast.add({ severity: 'warn', summary: '注意', detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。', life: 3000 });
         return;
     }
-    validateEmail(newClient.value.email);
-    validatePhone(newClient.value.phone);
+
+    validateEmailField(newClient.value.email);
+    validatePhoneField(newClient.value.phone);
 
     if (newClient.value.email && !isValidEmail.value) {
         toast.add({ severity: 'warn', summary: '注意', detail: '有効なメールアドレスを入力してください。', life: 3000 });
@@ -156,6 +157,18 @@ const submitClient = async () => {
     if (newClient.value.phone && !isValidPhone.value) {
         toast.add({ severity: 'warn', summary: '注意', detail: '有効な電話番号を入力してください。', life: 3000 });
         return;
+    }
+
+    if (newClient.value.customer_id) {
+        if (!validateCustomerId(newClient.value.customer_id)) {
+            toast.add({ severity: 'error', summary: 'Error', detail: '顧客コードは半角数字で入力してください。', life: 3000 });
+            return;
+        }
+        const checkCustomerId = await fetchCustomerID(null, newClient.value.customer_id);
+        if (checkCustomerId.client.length > 0) {
+            toast.add({ severity: 'error', summary: 'Error', detail: '顧客IDはすでに利用中です。', life: 3000 });
+            return;
+        }
     }
 
     try {
