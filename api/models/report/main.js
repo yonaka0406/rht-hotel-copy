@@ -293,7 +293,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         WHERE ra.hotel_id = $1
         GROUP BY ra.hotel_id, ra.reservation_detail_id, (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END)
       ) AS per_tax_rate
-      GROUP BY ra.hotel_id, ra.reservation_detail_id
+      GROUP BY hotel_id, reservation_detail_id
     ),
 
     /* -------------------------------------------------------
