@@ -1,7 +1,7 @@
 <template>
   <component :is="useFloatLabel ? FloatLabel : 'div'" :class="{ 'mb-0': !useFloatLabel }">
     <AutoComplete v-model="modelValueProxy" :suggestions="suggestions" :optionLabel="optionLabel"
-      :placeholder="placeholder" :forceSelection="forceSelection" :loading="loading" :dropdown="false"
+      :placeholder="placeholder" :forceSelection="forceSelectionEffective" :loading="loading" :dropdown="false"
       :panelClass="panelClass" @complete="$emit('complete', $event)" @option-select="$emit('option-select', $event)"
       @change="$emit('change', $event)" @clear="$emit('clear', $event)" fluid>
       <template #option="slotProps">
@@ -50,11 +50,16 @@ const props = defineProps({
   optionLabel: { type: String, default: 'display_name' },
   placeholder: { type: [String, null], default: null },
   label: { type: String, default: '個人氏名　||　法人名称' },
-  forceSelection: { type: Boolean, default: true },
+  forceSelection: { type: Boolean, default: null },
   loading: { type: Boolean, default: false },
   dropdown: { type: Boolean, default: true },
   panelClass: { type: String, default: 'max-h-60 overflow-y-auto' },
   useFloatLabel: { type: Boolean, default: true },
+});
+
+const forceSelectionEffective = computed(() => {
+  if (props.forceSelection !== null) return props.forceSelection;
+  return true; // default
 });
 
 const emit = defineEmits(['update:modelValue', 'complete', 'option-select', 'change', 'clear']);

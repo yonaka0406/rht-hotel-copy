@@ -167,22 +167,16 @@
                 <!-- Name of the person making the reservation -->
                 <div class="col-span-2 mb-6">
                     <FloatLabel>
-                        <ClientAutoCompleteWithStore 
-                            v-model="client" 
-                            @option-select="onClientSelect" 
-                            :placeholder="null"
-                            :hideLabel="true"
-                            fluid 
-                            required
-                        />
+                        <ClientAutoCompleteWithStore v-model="client" @option-select="onClientSelect"
+                            :placeholder="null" :hideLabel="true" :forceSelection="false" fluid required />
                         <label>個人氏名 || 法人名称</label>
                     </FloatLabel>
                 </div>
 
                 <div v-if="impedimentStatus" class="col-span-2">
                     <div :class="impedimentStatus.class" class="p-4 rounded-md">
-                    <p class="font-bold">{{ impedimentStatus.summary }}</p>
-                    <p>{{ impedimentStatus.detail }}</p>
+                        <p class="font-bold">{{ impedimentStatus.summary }}</p>
+                        <p>{{ impedimentStatus.detail }}</p>
                     </div>
                 </div>
 
@@ -257,17 +251,15 @@
             <template #footer>
                 <Button label="閉じる" icon="pi pi-times" @click="closeDialog"
                     class="p-button-danger p-button-text p-button-sm" :disabled="isSubmitting" />
-                <Button :label="isSubmitting ? '処理中...' : '保存'" :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-check'" @click="submitReservation"
-                    class="p-button-success p-button-text p-button-sm" 
+                <Button :label="isSubmitting ? '処理中...' : '保存'"
+                    :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-check'" @click="submitReservation"
+                    class="p-button-success p-button-text p-button-sm"
                     :disabled="(impedimentStatus && impedimentStatus.level === 'block') || isSubmitting" />
             </template>
         </Dialog>
 
         <!-- Multi-Block Dialog -->
-        <Dialog v-model:visible="multiBlockDialogVisible" 
-                header="複数部屋を仮ブロック" 
-                :modal="true" 
-                :style="{ width: '50vw' }">
+        <Dialog v-model:visible="multiBlockDialogVisible" header="複数部屋を仮ブロック" :modal="true" :style="{ width: '50vw' }">
             <div class="grid grid-cols-1 gap-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">コメント</label>
@@ -275,8 +267,10 @@
                 </div>
             </div>
             <template #footer>
-                <Button label="キャンセル" icon="pi pi-times" @click="multiBlockDialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />
-                <Button label="ブロックする" icon="pi pi-lock" @click="submitMultiBlock" :loading="isSubmittingBlock" severity="warn" />
+                <Button label="キャンセル" icon="pi pi-times" @click="multiBlockDialogVisible = false"
+                    class="p-button-danger p-button-text p-button-sm" text />
+                <Button label="ブロックする" icon="pi pi-lock" @click="submitMultiBlock" :loading="isSubmittingBlock"
+                    severity="warn" />
             </template>
         </Dialog>
 
@@ -311,7 +305,7 @@ const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHo
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchAllClientsForFiltering } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { availableRooms, fetchAvailableRooms, setReservationId, fetchMyHoldReservations, createHoldReservationCombo, blockMultipleRooms  } = useReservationStore();
+const { availableRooms, fetchAvailableRooms, setReservationId, fetchMyHoldReservations, createHoldReservationCombo, blockMultipleRooms } = useReservationStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { vehicleCategories, fetchVehicleCategories, checkRealTimeAvailability, saveParkingAssignments } = useParkingStore();
 import { usePlansStore } from '@/composables/usePlansStore';
@@ -431,7 +425,7 @@ const minNumberOfPeople = computed(() => {
     return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
 });
 const isRoomAddButtonDisabled = computed(() => {
-    return !comboRow.value.number_of_rooms || comboRow.value.number_of_rooms <= 0 
+    return !comboRow.value.number_of_rooms || comboRow.value.number_of_rooms <= 0
         || !comboRow.value.number_of_people || comboRow.value.number_of_people <= 0
         || !maxRoomNumber.value || maxRoomNumber.value <= 0
         || !maxCapacity.value || maxCapacity.value <= 0
@@ -469,7 +463,7 @@ const checkDates = async () => {
 
 const onDateChange = async () => {
     //console.log('[ReservationsNewCombo] onDateChange called');
-    
+
     // Update minimum checkout date
     minCheckOutDate.value = new Date(comboRow.value.check_in);
     minCheckOutDate.value.setDate(comboRow.value.check_in.getDate() + 1);
@@ -496,14 +490,14 @@ const onDateChange = async () => {
 
     // Fetch available rooms and validate combos
     await checkDates();
-    
+
     // If vehicle category was previously selected, restore it and update parking spots
     if (currentVehicleCategoryId) {
         //console.log('[ReservationsNewCombo] Restoring vehicle category and updating parking spots');
         comboRow.value.vehicle_category_id = currentVehicleCategoryId;
         await updateParkingSpots();
     }
-    
+
     validateCombos();
 };
 
@@ -723,10 +717,10 @@ const validateCombos = () => {
             // Check total parking spots against net available capacity (accounting for blocks)
             const netAvailable = parkingCapacityInfo.value.netAvailable || maxParkingSpots.value;
             if (totalRequestedParkingSpots > netAvailable) {
-                const blockedInfo = parkingCapacityInfo.value.blockedCapacity > 0 
-                    ? ` (ブロック済み: ${parkingCapacityInfo.value.blockedCapacity}台)` 
+                const blockedInfo = parkingCapacityInfo.value.blockedCapacity > 0
+                    ? ` (ブロック済み: ${parkingCapacityInfo.value.blockedCapacity}台)`
                     : '';
-                
+
                 // Check which dates have insufficient capacity
                 const insufficientDates = [];
                 if (parkingCapacityByDate.value && Object.keys(parkingCapacityByDate.value).length > 0) {
@@ -738,7 +732,7 @@ const validateCombos = () => {
                         }
                     }
                 }
-                
+
                 let errorMsg = `駐車場の利用可能台数を超えています。利用可能数: ${netAvailable}台${blockedInfo}, 合計要求数: ${totalRequestedParkingSpots}台`;
                 if (insufficientDates.length > 0) {
                     errorMsg += `\n不足している日付: ${insufficientDates.join(', ')}`;
@@ -837,6 +831,26 @@ const selectedClient = ref(null);
 const client = ref({});
 const impedimentStatus = ref(null);
 
+// Watch client input to handle manual name entry when no client is selected
+watch(client, (newVal) => {
+    if (typeof newVal === 'string') {
+        // Manually typed name
+        reservationDetails.value.name = newVal;
+        reservationDetails.value.client_id = null;
+        isClientSelected.value = false;
+        selectedClient.value = null;
+        impedimentStatus.value = null;
+    } else if (newVal === null || newVal === undefined || Object.keys(newVal).length === 0) {
+        // Cleared input
+        reservationDetails.value.name = '';
+        reservationDetails.value.client_id = null;
+        isClientSelected.value = false;
+        selectedClient.value = null;
+        impedimentStatus.value = null;
+    }
+    // When newVal is an object with id, it's handled by onClientSelect
+});
+
 const openDialog = () => {
     reservationDetails.value.check_in = formatDate(reservationCombos.value[0].check_in);
     reservationDetails.value.check_out = formatDate(reservationCombos.value[0].check_out);
@@ -858,25 +872,25 @@ const onClientSelect = async (event) => {
     const blockImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'block');
     if (blockImpediment) {
         impedimentStatus.value = {
-        level: 'block',
-        summary: '予約不可',
-        detail: 'このクライアントは予約がブロックされています。',
-        class: 'bg-red-100 border-red-400 text-red-700'
+            level: 'block',
+            summary: '予約不可',
+            detail: 'このクライアントは予約がブロックされています。',
+            class: 'bg-red-100 border-red-400 text-red-700'
         };
     } else {
         const warningImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'warning');
         if (warningImpediment) {
-        impedimentStatus.value = {
-            level: 'warning',
-            summary: '警告',
-            detail: 'このクライアントには警告があります。予約を作成する前に確認してください。',
-            class: 'bg-yellow-100 border-yellow-400 text-yellow-700'
-        };
+            impedimentStatus.value = {
+                level: 'warning',
+                summary: '警告',
+                detail: 'このクライアントには警告があります。予約を作成する前に確認してください。',
+                class: 'bg-yellow-100 border-yellow-400 text-yellow-700'
+            };
         } else {
-        impedimentStatus.value = null;
+            impedimentStatus.value = null;
         }
     }
-    
+
     // Update reservationDetails with the selected client's information
     reservationDetails.value.client_id = selectedClient.value.id;
     reservationDetails.value.legal_or_natural_person = selectedClient.value.legal_or_natural_person;
@@ -898,13 +912,13 @@ const validatePhone = (phone) => {
 
 const submitReservation = async () => {
     if (isSubmitting.value) return;
-       
+
     if (impedimentStatus.value && impedimentStatus.value.level === 'block') {
         toast.add({
-        severity: 'error',
-        summary: '予約不可',
-        detail: 'このクライアントは予約がブロックされているため、予約を作成できません。',
-        life: 5000,
+            severity: 'error',
+            summary: '予約不可',
+            detail: 'このクライアントは予約がブロックされているため、予約を作成できません。',
+            life: 5000,
         });
         return;
     }
@@ -965,7 +979,7 @@ const submitReservation = async () => {
 
     try {
         isSubmitting.value = true;
-        
+
         // 1. Create the main reservation with stay combos
         const response = await createHoldReservationCombo(reservationDetails.value, stayCombos);
         //console.log('[ReservationsNewCombo] Reservation response:', response);
@@ -977,7 +991,7 @@ const submitReservation = async () => {
         // The backend returns { reservation, reservationDetails } directly
         const { reservation, reservationDetails: createdReservationDetails } = response;
 
-         // Make sure we're getting the reservation ID correctly
+        // Make sure we're getting the reservation ID correctly
         const reservationId = reservation?.id || (Array.isArray(reservation) ? reservation[0]?.id : null);
         //console.log('[ReservationsNewCombo] Extracted reservation ID:', reservationId);
         //console.log('[ReservationsNewCombo] Created reservation details:', createdReservationDetails);
@@ -1001,7 +1015,7 @@ const submitReservation = async () => {
             const firstReservationDetailId = createdReservationDetails && createdReservationDetails.length > 0
                 ? createdReservationDetails[0].id
                 : null;
-            
+
             //console.log('[ReservationsNewCombo] Using reservation_details_id for parking:', firstReservationDetailId);
 
             // One assignment per parking combo, backend will expand it further
@@ -1126,7 +1140,7 @@ const updateParkingSpots = async () => {
         const checkInDate = new Date(comboRow.value.check_in);
         const checkOutDate = new Date(comboRow.value.check_out);
         const datesToCheck = [];
-        
+
         const currentDate = new Date(checkInDate);
         while (currentDate < checkOutDate) {
             datesToCheck.push(formatDate(new Date(currentDate)));
@@ -1154,11 +1168,11 @@ const updateParkingSpots = async () => {
 
         // Store the available spots (fully available across all dates)
         availableParkingSpots.value = response.fullyAvailableSpots || [];
-        
+
         // Store capacity by date for detailed validation
         // The response uses dateAvailability, not availabilityByDate
         parkingCapacityByDate.value = response.dateAvailability || {};
-        
+
         // Use available spots (accounts for blocks)
         // The minimum available across all dates is the limiting factor
         let minAvailable = 0;
@@ -1172,7 +1186,7 @@ const updateParkingSpots = async () => {
             minAvailable = Math.min(...availableValues);
             //console.log('[ReservationsNewCombo] Available values per date:', availableValues, 'Min:', minAvailable);
         }
-        
+
         maxParkingSpots.value = minAvailable;
 
         // Store detailed capacity info for display (aggregate across all dates)
@@ -1180,12 +1194,12 @@ const updateParkingSpots = async () => {
             const dates = Object.keys(response.dateAvailability);
             const firstDate = dates[0];
             const dateInfo = response.dateAvailability[firstDate];
-            
+
             // Find max blocked capacity across all dates for display
             const maxBlockedCapacity = Math.max(
                 ...Object.values(response.dateAvailability).map(d => d.blockedSpots || 0)
             );
-            
+
             parkingCapacityInfo.value = {
                 netAvailable: minAvailable,
                 grossCapacity: dateInfo.totalCompatibleSpots || 0,
@@ -1224,7 +1238,7 @@ watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboR
     //    checkIn: comboRow.value.check_in,
     //    checkOut: comboRow.value.check_out
     //});
-    
+
     if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
         //console.log('[ReservationsNewCombo] Calling updateParkingSpots from watch');
         await updateParkingSpots();
@@ -1289,7 +1303,7 @@ const submitMultiBlock = async () => {
         if (!stayReservation) {
             throw new Error('宿泊予約が見つかりません');
         }
-        
+
         // Get unique room types and their counts
         const roomTypeCounts = {};
         reservationCombos.value
@@ -1300,7 +1314,7 @@ const submitMultiBlock = async () => {
                 }
                 roomTypeCounts[combo.room_type_id] += combo.number_of_rooms;
             });
-        
+
         // Get parking combos
         const parkingCombos = reservationCombos.value
             .filter(combo => combo.reservation_type === 'parking')
@@ -1319,26 +1333,26 @@ const submitMultiBlock = async () => {
             comment: blockComment.value.trim(),
             number_of_people: stayReservation.number_of_people
         };
-        
+
         // Call the API
         const response = await blockMultipleRooms(requestData);
-        
+
         if (response.success) {
-            toast.add({ 
-                severity: 'success', 
+            toast.add({
+                severity: 'success',
                 summary: '部屋を仮ブロックしました',
                 detail: `${response.blocked_rooms}部屋をブロックしました`,
-                life: 5000 
+                life: 5000
             });
-            
+
             // Reset the form
             multiBlockDialogVisible.value = false;
             blockComment.value = '';
-            
+
             // Emit events to refresh the parent component
             emit('block-success', response);
             emit('refresh-calendar');
-            
+
             // Refresh room and parking availability
             await checkDates();
             await updateParkingSpots();
@@ -1352,9 +1366,9 @@ const submitMultiBlock = async () => {
         }
     } catch (error) {
         console.error('Error blocking rooms:', error);
-        
+
         let errorMessage = error.message || '部屋のブロック中にエラーが発生しました';
-        
+
         // Handle specific error cases
         if (error.error?.includes('予約は既に登録されています')) {
             errorMessage = '選択された日付には既に予約が入っている部屋があります。';
@@ -1363,12 +1377,12 @@ const submitMultiBlock = async () => {
         } else if (error.status === 404) {
             errorMessage = '指定されたリソースが見つかりませんでした。';
         }
-        
-        toast.add({ 
-            severity: 'error', 
+
+        toast.add({
+            severity: 'error',
             summary: 'エラー',
             detail: errorMessage,
-            life: 5000 
+            life: 5000
         });
     } finally {
         isSubmittingBlock.value = false;
@@ -1416,7 +1430,7 @@ watch(() => selectedHotelId.value,
             fetchHotel(),
             fetchParkingAddons()
         ]);
-        
+
         await checkDates();
         await updateParkingSpots();
 

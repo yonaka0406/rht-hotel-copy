@@ -5,16 +5,9 @@
             <!-- Name of the person making the reservation -->
             <div class="col-span-2 mb-6">
                 <FloatLabel>
-                    <ClientAutoCompleteWithStore 
-                        v-model="localClient" 
-                        @option-select="onClientSelect" 
-                        :placeholder="null"
-                        :hideLabel="true"
-                        :loading="clientsIsLoading"                                                                        
-                        :disabled="clientsIsLoading"
-                        fluid 
-                        required
-                    />
+                    <ClientAutoCompleteWithStore v-model="localClient" @option-select="onClientSelect"
+                        :placeholder="null" :hideLabel="true" :loading="clientsIsLoading" :disabled="clientsIsLoading"
+                        :forceSelection="false" fluid required />
                     <label>個人氏名 || 法人名称</label>
                 </FloatLabel>
             </div>
@@ -96,8 +89,8 @@
         <template #footer>
             <Button label="閉じる" icon="pi pi-times" @click="$emit('close')"
                 class="p-button-danger p-button-text p-button-sm" />
-            <Button label="保存" icon="pi pi-check" @click="handleSave"
-                class="p-button-success p-button-text p-button-sm" :disabled="impedimentStatus && impedimentStatus.level === 'block'" />
+            <Button label="保存" icon="pi pi-check" @click="handleSave" class="p-button-success p-button-text p-button-sm"
+                :disabled="impedimentStatus && impedimentStatus.level === 'block'" />
         </template>
     </Dialog>
 </template>
@@ -165,6 +158,26 @@ const isClientSelected = ref(props.isClientSelected);
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
 const impedimentStatus = ref(null);
+
+// Watch localClient input to handle manual name entry
+watch(localClient, (newVal) => {
+    if (typeof newVal === 'string') {
+        // Manually typed name
+        localReservationDetails.value.name = newVal;
+        localReservationDetails.value.client_id = null;
+        isClientSelected.value = false;
+        selectedClient.value = null;
+        impedimentStatus.value = null;
+    } else if (newVal === null || newVal === undefined || Object.keys(newVal).length === 0) {
+        // Cleared input
+        localReservationDetails.value.name = '';
+        localReservationDetails.value.client_id = null;
+        isClientSelected.value = false;
+        selectedClient.value = null;
+        impedimentStatus.value = null;
+    }
+    // When newVal is an object with id, it's handled by onClientSelect
+});
 
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
 
@@ -295,16 +308,16 @@ const handleSave = () => {
 
 // Fetch clients on mount
 onMounted(async () => {
-    if (props.client === null){
+    if (props.client === null) {
         console.log('[ClientForReservantionDialog] onMounted client is null');
         localReservationDetails.value.legal_or_natural_person = 'legal';
-        localReservationDetails.value.gender = 'other';    
-    }    
+        localReservationDetails.value.gender = 'other';
+    }
     try {
         setClientsIsLoading(true);
         const clientsTotalPages = await fetchClients(1);
         for (let page = 2; page <= clientsTotalPages; page++) {
-        await fetchClients(page);
+            await fetchClients(page);
         }
         setClientsIsLoading(false);
     } catch (error) {
@@ -350,13 +363,13 @@ watch(() => localReservationDetails.value.phone, (newPhone) => {
     validatePhone(newPhone);
 });
 watch(() => localReservationDetails.value.legal_or_natural_person, (newValue) => {
-    if (newValue === 'legal') {        
+    if (newValue === 'legal') {
         localReservationDetails.value.gender = 'other';
     }
     if (newValue === 'natural' && localReservationDetails.value.client_id == null) {
         localReservationDetails.value.gender = 'male';
     }
-    
+
     console.log('localReservationDetails legal_or_natural_person:', newValue, localReservationDetails.value.gender);
 },
 );

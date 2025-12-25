@@ -1,8 +1,8 @@
 <template>
   <ClientAutoComplete v-model="selectedClientProxy" :suggestions="filteredClients" :loading="clientsIsLoading"
     @complete="handleComplete" @option-select="handleOptionSelect" @change="handleChange" @clear="handleClear"
-    :optionLabel="optionLabel" :placeholder="placeholder" :label="hideLabel ? '' : label"
-    :useFloatLabel="useFloatLabel" />
+    :optionLabel="optionLabel" :placeholder="placeholder" :label="hideLabel ? '' : label" :useFloatLabel="useFloatLabel"
+    :forceSelection="forceSelection" />
 </template>
 
 <script setup>
@@ -18,6 +18,7 @@ const props = defineProps({
   hideLabel: { type: Boolean, default: false },
   personTypeFilter: { type: String, default: null, validator: (value) => !value || ['legal', 'natural'].includes(value) },
   useFloatLabel: { type: Boolean, default: true },
+  forceSelection: { type: Boolean, default: true },
 });
 const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear']);
 

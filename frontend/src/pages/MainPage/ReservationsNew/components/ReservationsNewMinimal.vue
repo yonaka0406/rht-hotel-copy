@@ -87,14 +87,8 @@
           <!-- Name of the person making the reservation -->
           <div class="col-span-2 mb-6">
             <FloatLabel>
-              <ClientAutoCompleteWithStore 
-                v-model="client" 
-                @option-select="onClientSelect" 
-                :placeholder="null"
-                :hideLabel="true"
-                fluid 
-                required
-              />
+              <ClientAutoCompleteWithStore v-model="client" @option-select="onClientSelect" :placeholder="null"
+                :hideLabel="true" :forceSelection="false" fluid required />
               <label>個人氏名 || 法人名称</label>
             </FloatLabel>
           </div>
@@ -288,6 +282,26 @@ const selectedClient = ref(null);
 const client = ref({});
 const impedimentStatus = ref(null);
 
+// Watch client input to handle manual name entry when no client is selected
+watch(client, (newVal) => {
+  if (typeof newVal === 'string') {
+    // Manually typed name
+    reservationDetails.value.name = newVal;
+    reservationDetails.value.client_id = null;
+    isClientSelected.value = false;
+    selectedClient.value = null;
+    impedimentStatus.value = null;
+  } else if (newVal === null || newVal === undefined || Object.keys(newVal).length === 0) {
+    // Cleared input
+    reservationDetails.value.name = '';
+    reservationDetails.value.client_id = null;
+    isClientSelected.value = false;
+    selectedClient.value = null;
+    impedimentStatus.value = null;
+  }
+  // When newVal is an object with id, it's handled by onClientSelect
+});
+
 const dateRange = ref([]);
 const minDate = ref(null);
 const maxDate = ref(null);
@@ -302,10 +316,10 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 const validateEmail = () => {
-    isValidEmail.value = validateEmailUtil(reservationDetails.value.email);
+  isValidEmail.value = validateEmailUtil(reservationDetails.value.email);
 };
 const validatePhone = () => {
-    isValidPhone.value = validatePhoneUtil(reservationDetails.value.phone);
+  isValidPhone.value = validatePhoneUtil(reservationDetails.value.phone);
 };
 // Generate dates
 const generateDateRange = (start, end) => {
