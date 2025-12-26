@@ -20,10 +20,11 @@
                 :asOfDate="comparisonDate" />
             <ReportingYearCumulativeAllHotels v-else-if="selectedView === 'yearCumulativeAllHotels'"
                 :revenueData="revenueData" :occupancyData="occupancyData"
-                :rawOccupationBreakdownData="occupationBreakdownAllHotels" :prevYearRevenueData="prevYearRevenueData" />
+                :rawOccupationBreakdownData="occupationBreakdownAllHotels" :prevYearRevenueData="prevYearRevenueData"
+                :prevYearOccupancyData="prevYearOccupancyData" />
             <ReportingYearCumulativeHotel v-else-if="selectedView === 'yearCumulativeHotel'" :revenueData="revenueData"
                 :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                :prevYearRevenueData="prevYearRevenueData" />
+                :prevYearRevenueData="prevYearRevenueData" :prevYearOccupancyData="prevYearOccupancyData" />
             <div v-else class="text-gray-700 dark:text-gray-200 text-center mt-4">
                 レポートタイプに対応するサマリービューが見つかりません。
             </div>
@@ -553,7 +554,6 @@ const occupancyData = computed(() => {
                         const recordDateObj = normalizeDate(new Date(record.date));
                         if (!recordDateObj) return; const monthKey = formatDateMonth(recordDateObj); if (!monthKey || !monthlyOccupancyAggregates[monthKey]) return;
                         if (monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
-                            console.log(`[DEBUG] Adding forecast to hotel ${stringHotelIdKey}, month ${monthKey}:`, { room_count: record.room_count, total_rooms: record.total_rooms });
                             monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_sold_rooms += record.room_count;
                             monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_total_rooms += record.total_rooms;
                         }
@@ -1030,7 +1030,7 @@ const fetchData = async () => {
                             prevByMonth[mk].stays += Number(item.confirmed_stays) || 0;
                         });
                     }
-                    console.log('[DEBUG] Aggregated prevByMonth:', prevByMonth);
+                    //console.log('[DEBUG] Aggregated prevByMonth:', prevByMonth);
 
                     const outlook = [];
                     for (const [monthLabel, hotelDataMap] of Object.entries(futureData)) {
@@ -1073,7 +1073,7 @@ const fetchData = async () => {
                                 if (accSum > 0) {
                                     hotelActualSales = accSum;
                                     hasAccounting = true;
-                                    console.log(`[DEBUG] Hotel ${hotelId} using accounting data:`, { accSum, hotelActualSales });
+                                    //console.log(`[DEBUG] Hotel ${hotelId} using accounting data:`, { accSum, hotelActualSales });
                                 }
                             }
 
@@ -1081,7 +1081,7 @@ const fetchData = async () => {
                                 // Fallback to PMS. Note: Backend now aggregates into `pms` key.
                                 if (data.pms && typeof data.pms.revenue === 'number') {
                                     hotelActualSales = data.pms.revenue;
-                                    console.log(`[DEBUG] Hotel ${hotelId} using PMS data:`, { pmsRevenue: data.pms.revenue, hotelActualSales });
+                                    //console.log(`[DEBUG] Hotel ${hotelId} using PMS data:`, { pmsRevenue: data.pms.revenue, hotelActualSales });
                                 }
                             }
 

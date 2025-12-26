@@ -18,6 +18,14 @@ const props = defineProps({
         type: Array,
         required: true
     },
+    prevYearOccupancyData: {
+        type: Array,
+        default: () => []
+    },
+    comparisonType: {
+        type: String,
+        default: 'forecast'
+    },
     height: {
         type: String,
         default: '450px'
@@ -35,10 +43,30 @@ const chartOptions = computed(() => {
     const data = props.occupancyData;
     if (!data || data.length === 0) return {};
 
+    const isYoY = props.comparisonType === 'yoy';
     const months = [...new Set(data.map(item => item.month))].sort((a, b) => new Date(a) - new Date(b));
+
     // fc_occ and occ are already percentages (e.g., 85.0 for 85%), so divide by 100 for chart (0-1 scale)
-    const forecastOccupancy = months.map(month => (data.find(d => d.month === month)?.fc_occ ?? 0) / 100);
     const actualOccupancy = months.map(month => (data.find(d => d.month === month)?.occ ?? 0) / 100);
+
+    let comparisonOccupancy;
+    let comparisonLabel;
+    let comparisonColor;
+
+    if (isYoY && props.prevYearOccupancyData && props.prevYearOccupancyData.length > 0) {
+        // For YoY, match by month number (e.g., "2025-04" matches "2024-04")
+        comparisonOccupancy = months.map(month => {
+            const monthNum = month.slice(-2); // Extract "04" from "2025-04"
+            const prevYearEntry = props.prevYearOccupancyData.find(d => d.month?.slice(-2) === monthNum);
+            return (prevYearEntry?.occ ?? 0) / 100;
+        });
+        comparisonLabel = '前年稼働率';
+        comparisonColor = '#909399';
+    } else {
+        comparisonOccupancy = months.map(month => (data.find(d => d.month === month)?.fc_occ ?? 0) / 100);
+        comparisonLabel = '計画稼働率';
+        comparisonColor = colorScheme.forecast;
+    }
 
     return {
         tooltip: {
@@ -54,7 +82,7 @@ const chartOptions = computed(() => {
         },
         legend: {
             data: [
-                { name: '計画稼働率', itemStyle: { color: colorScheme.forecast } },
+                { name: comparisonLabel, itemStyle: { color: comparisonColor } },
                 { name: '実績稼働率', itemStyle: { color: colorScheme.actual } }
             ],
             top: 'bottom'
@@ -72,19 +100,21 @@ const chartOptions = computed(() => {
             {
                 show: false,
                 type: 'continuous',
-                seriesIndex: 0, // Targets '計画稼働率'
-                dimension: 1,   // Apply gradient based on y-axis values
+                seriesIndex: 0,
+                dimension: 1,
                 min: 0,
                 max: 1,
                 inRange: {
-                    color: [colorScheme.neutral_gray, colorScheme.forecast_gradient_bottom, colorScheme.forecast_gradient_middle, colorScheme.forecast_gradient_top]
+                    color: isYoY
+                        ? [colorScheme.neutral_gray, comparisonColor, comparisonColor, comparisonColor]
+                        : [colorScheme.neutral_gray, colorScheme.forecast_gradient_bottom, colorScheme.forecast_gradient_middle, colorScheme.forecast_gradient_top]
                 }
             },
             {
                 show: false,
                 type: 'continuous',
-                seriesIndex: 1, // Targets '実績稼働率'
-                dimension: 1,   // Apply gradient based on y-axis values
+                seriesIndex: 1,
+                dimension: 1,
                 min: 0,
                 max: 1,
                 inRange: {
@@ -94,13 +124,13 @@ const chartOptions = computed(() => {
         ],
         series: [
             {
-                name: '計画稼働率',
+                name: comparisonLabel,
                 type: 'line',
-                data: forecastOccupancy,
+                data: comparisonOccupancy,
                 smooth: true,
                 symbol: 'roundRect',
                 symbolSize: 8,
-                itemStyle: { color: colorScheme.forecast },
+                itemStyle: { color: comparisonColor },
                 lineStyle: { width: 2.5 },
                 emphasis: { focus: 'series' }
             },
@@ -151,6 +181,14 @@ onBeforeUnmount(() => {
 });
 
 watch([chartOptions, () => props.occupancyData], () => {
+    nextTick(initChart);
+}, { deep: true });
+
+watch(() => props.comparisonType, () => {
+    nextTick(initChart);
+});
+
+watch(() => props.prevYearOccupancyData, () => {
     nextTick(initChart);
 }, { deep: true });
 </script>

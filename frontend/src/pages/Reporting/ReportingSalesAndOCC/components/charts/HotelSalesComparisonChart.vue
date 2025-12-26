@@ -4,12 +4,10 @@
         <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
         <div v-else class="print-chart-wrapper">
             <img v-if="isPrintMode && printImage" :src="printImage" alt="施設別 売上合計（計画 vs 実績）" />
-            <div v-else
-                ref="allHotelsRevenueChartContainer"
+            <div v-else ref="allHotelsRevenueChartContainer"
                 :style="allHotelsChartHeight > 0 ? { height: allHotelsChartHeight + 'px', width: '100%' } : { width: '100%' }"
-                class="chart-container hotel-sales-comparison-print-optimized"
-                :class="{ 'print-mode': isPrintMode }"
-            ></div>
+                class="chart-container hotel-sales-comparison-print-optimized" :class="{ 'print-mode': isPrintMode }">
+            </div>
         </div>
     </div>
 </template>
@@ -46,6 +44,14 @@ const props = defineProps({
     revenueData: {
         type: Array,
         required: true
+    },
+    prevYearRevenueData: {
+        type: Array,
+        default: () => []
+    },
+    comparisonType: {
+        type: String,
+        default: 'forecast'
     }
 });
 
@@ -54,24 +60,24 @@ const allHotelsRevenueChartInstance = shallowRef(null);
 const printImage = ref(null);
 
 // Print optimization composable
-const { 
-  isPrintMode, 
-  isPreparingForPrint, 
-  optimizeChartForPrint, 
-  restoreChartFromPrint, 
-  getPrintChartDimensions 
+const {
+    isPrintMode,
+    isPreparingForPrint,
+    optimizeChartForPrint,
+    restoreChartFromPrint,
+    getPrintChartDimensions
 } = usePrintOptimization();
 
 const hasAllHotelsRevenueData = computed(() => props.revenueData && props.revenueData.length > 0);
 
 const allHotelsChartHeight = computed(() => {
     if (!hasAllHotelsRevenueData.value) return 450;
-    
+
     // Skip height calculation for print mode - let CSS handle it
     if (isPrintMode.value) {
         return 0; // Return 0 instead of null to prevent "nullpx" in styles
     }
-    
+
     // Calculate height based on number of hotels for screen display only
     const hotelMap = new Map();
     props.revenueData.forEach(item => {
@@ -79,7 +85,7 @@ const allHotelsChartHeight = computed(() => {
             hotelMap.set(item.hotel_name, true);
         }
     });
-    
+
     const numHotels = hotelMap.size;
     const baseHeight = 150;
     const heightPerHotel = 50;
@@ -90,7 +96,11 @@ const allHotelsChartHeight = computed(() => {
 });
 
 const allHotelsRevenueChartOptions = computed(() => {
-    return ChartConfigurationService.getAllHotelsRevenueConfig(props.revenueData, { height: allHotelsChartHeight.value });
+    return ChartConfigurationService.getAllHotelsRevenueConfig(props.revenueData, {
+        height: allHotelsChartHeight.value,
+        prevYearRevenueData: props.prevYearRevenueData,
+        comparisonType: props.comparisonType
+    });
 });
 
 // Store original options for print restoration
@@ -101,13 +111,13 @@ const initOrUpdateChart = () => {
         if (!allHotelsRevenueChartInstance.value || allHotelsRevenueChartInstance.value.isDisposed?.()) {
             allHotelsRevenueChartInstance.value = echarts.init(allHotelsRevenueChartContainer.value);
         }
-        
+
         // Only store original options when NOT in print mode to avoid capturing print-optimized options
         if (!isPrintMode.value) {
             // Deep clone the options to prevent mutation
             originalOptions.value = JSON.parse(JSON.stringify(allHotelsRevenueChartOptions.value));
         }
-        
+
         // Apply current options (print-optimized if in print mode)
         if (isPrintMode.value) {
             // Use stored original options for print optimization, not current computed options
@@ -117,7 +127,7 @@ const initOrUpdateChart = () => {
         } else {
             allHotelsRevenueChartInstance.value.setOption(allHotelsRevenueChartOptions.value, true);
         }
-        
+
         allHotelsRevenueChartInstance.value.resize();
     } else if (allHotelsRevenueChartInstance.value && !allHotelsRevenueChartInstance.value.isDisposed?.()) {
         allHotelsRevenueChartInstance.value.dispose();
@@ -154,10 +164,10 @@ watch(isPrintMode, async (newPrintMode) => {
         } else {
             // Clear print image first
             printImage.value = null;
-            
+
             // Wait for DOM to update before restoring chart
             await nextTick();
-            
+
             // Ensure container still exists after DOM update
             if (allHotelsRevenueChartContainer.value && allHotelsRevenueChartInstance.value && !allHotelsRevenueChartInstance.value.isDisposed?.()) {
                 restoreChartFromPrint(allHotelsRevenueChartInstance.value, originalOptions.value);
@@ -173,39 +183,48 @@ watch(() => props.revenueData, () => {
     nextTick(initOrUpdateChart);
 }, { deep: true });
 
+watch(() => props.comparisonType, () => {
+    nextTick(initOrUpdateChart);
+});
+
+watch(() => props.prevYearRevenueData, () => {
+    nextTick(initOrUpdateChart);
+}, { deep: true });
+
 </script>
 
 <style scoped>
 .hotel-sales-comparison-print-optimized {
-  transition: all 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 @media print {
-  /* Root element - print-safe */
-  .hotel-sales-chart {
-    display: block !important;
-    width: 100% !important;
-    height: auto !important;
-    position: static !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  
-  /* Print chart wrapper for static images */
-  .print-chart-wrapper {
-    display: block !important;
-    width: 100% !important;
-    min-height: 220mm !important;
-    page-break-inside: avoid !important;
-    text-align: center !important;
-  }
-  
-  .print-chart-wrapper img {
-    width: 100% !important;
-    height: auto !important;
-    max-width: 100% !important;
-    display: block !important;
-    margin: 0 auto !important;
-  }
+
+    /* Root element - print-safe */
+    .hotel-sales-chart {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        position: static !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Print chart wrapper for static images */
+    .print-chart-wrapper {
+        display: block !important;
+        width: 100% !important;
+        min-height: 220mm !important;
+        page-break-inside: avoid !important;
+        text-align: center !important;
+    }
+
+    .print-chart-wrapper img {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 100% !important;
+        display: block !important;
+        margin: 0 auto !important;
+    }
 }
 </style>
