@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
 
 watch(() => props.occupancyData, () => {
   nextTick(initOrUpdateChart);
-});
+}, { deep: true });
 
 watch(() => props.comparisonType, () => {
   nextTick(initOrUpdateChart);
@@ -113,5 +113,5 @@ watch(() => props.comparisonType, () => {
 
 watch(() => props.prevYearOccupancyData, () => {
   nextTick(initOrUpdateChart);
-});
+}, { deep: true });
 </script>
