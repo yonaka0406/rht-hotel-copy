@@ -1,60 +1,56 @@
 <template>
-    <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-        <header>
-            <ReportingTopMenu :selectedDate="selectedDate" :period="period" :selectedHotels="selectedHotels"
-                :initialReportType="'monthlySummary'" :loading="loading" @date-change="handleDateChange"
-                @period-change="handlePeriodChange" @hotel-change="handleHotelChange"
-                @report-type-change="handleReportTypeChange" />
-        </header>
-
-        <main class="flex-1 overflow-auto p-6">
-            <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
-                <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
-                    ホテルID {{ hotelId }}: {{ error.message }} - 詳細: {{ error.details?.message || error.details }}
-                </Message>
+    <div>
+        <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
+            <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
+                ホテルID {{ hotelId }}: {{ error.message }} - 詳細: {{ error.details?.message || error.details }}
+            </Message>
+        </div>
+        <div v-if="loading" class="flex justify-center items-center h-full">
+            <ProgressSpinner />
+        </div>
+        <div v-else>
+            <ReportingSingleMonthAllHotels v-if="selectedView === 'singleMonthAllHotels'" :revenueData="revenueData"
+                :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
+                :prevYearRevenueData="prevYearRevenueData" :prevYearOccupancyData="prevYearOccupancyData"
+                :futureOutlookData="futureOutlookData" :asOfDate="comparisonDate" />
+            <ReportingSingleMonthHotel v-else-if="selectedView === 'singleMonthHotel'" :revenueData="revenueData"
+                :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
+                :dayOverDayChange="dayOverDayChange" :prevYearRevenueData="prevYearRevenueData"
+                :prevYearOccupancyData="prevYearOccupancyData" :futureOutlookData="futureOutlookData"
+                :asOfDate="comparisonDate" />
+            <ReportingYearCumulativeAllHotels v-else-if="selectedView === 'yearCumulativeAllHotels'"
+                :revenueData="revenueData" :occupancyData="occupancyData"
+                :rawOccupationBreakdownData="occupationBreakdownAllHotels" :prevYearRevenueData="prevYearRevenueData" />
+            <ReportingYearCumulativeHotel v-else-if="selectedView === 'yearCumulativeHotel'" :revenueData="revenueData"
+                :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
+                :prevYearRevenueData="prevYearRevenueData" />
+            <div v-else class="text-gray-700 dark:text-gray-200 text-center mt-4">
+                レポートタイプに対応するサマリービューが見つかりません。
             </div>
-            <div v-if="loading" class="flex justify-center items-center h-full">
-                <ProgressSpinner />
-            </div>
-            <div v-else>
-                <ReportingSingleMonthAllHotels v-if="selectedView === 'singleMonthAllHotels'" :revenueData="revenueData"
-                    :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                    :prevYearRevenueData="prevYearRevenueData" :prevYearOccupancyData="prevYearOccupancyData"
-                    :futureOutlookData="futureOutlookData" />
-                <ReportingSingleMonthHotel v-else-if="selectedView === 'singleMonthHotel'" :revenueData="revenueData"
-                    :occupancyData="occupancyData" :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                    :dayOverDayChange="dayOverDayChange" :prevYearRevenueData="prevYearRevenueData"
-                    :prevYearOccupancyData="prevYearOccupancyData" :futureOutlookData="futureOutlookData" />
-                <ReportingYearCumulativeAllHotels v-else-if="selectedView === 'yearCumulativeAllHotels'"
-                    :revenueData="revenueData" :occupancyData="occupancyData"
-                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                    :prevYearRevenueData="prevYearRevenueData" />
-                <ReportingYearCumulativeHotel v-else-if="selectedView === 'yearCumulativeHotel'"
-                    :revenueData="revenueData" :occupancyData="occupancyData"
-                    :rawOccupationBreakdownData="occupationBreakdownAllHotels"
-                    :prevYearRevenueData="prevYearRevenueData" />
-                <div v-else class="text-gray-700 dark:text-gray-200 text-center mt-4">
-                    レポートタイプに対応するサマリービューが見つかりません。
-                </div>
-            </div>
-        </main>
-
-        <footer class="bg-black dark:bg-gray-950 text-white dark:text-gray-300 p-4 text-center text-sm">
-            レッドホーストラスト株式会社
-        </footer>
+        </div>
     </div>
 </template>
 <script setup>
 // Vue
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, toRefs, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
-import ReportingTopMenu from '../components/ReportingTopMenu.vue';
 import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
 import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
 import ReportingSingleMonthHotel from './components/ReportingSingleMonthHotel.vue';
 import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHotel.vue';
 import { formatDateToYMD, formatDate } from '@/utils/dateUtils';
+
+// Defin Props
+const props = defineProps({
+    selectedDate: { type: Date, required: true },
+    period: { type: String, required: true },
+    selectedHotels: { type: Array, required: true },
+    allHotels: { type: Array, required: true },
+    reportType: { type: String, required: true }
+});
+
+const { selectedDate, period, selectedHotels, allHotels, reportType } = toRefs(props);
 
 // Stores
 import { useReportStore } from '@/composables/useReportStore';
@@ -120,12 +116,9 @@ function getDaysInMonth(year, month) {
 
 // --- Reactive State for the Parent Component ---
 const loading = ref(false);
-const selectedDate = ref(new Date());
-const period = ref('month');
-const selectedHotels = ref([]);
-const allHotels = ref([]);
 
 const reportTriggerKey = ref(Date.now());
+const comparisonDate = ref(null);
 
 // Computed property for the first day of the selected month for API calls
 const firstDayofFetch = computed(() => {
@@ -999,15 +992,24 @@ const fetchData = async () => {
                 const hotelIds = selectedHotels.value.filter(id => id !== 0);
                 if (hotelIds.length > 0) {
                     const latestDateStrRaw = await fetchLatestDailyReportDate();
+                    let targetDate = latestDateStrRaw;
+                    const todayDateString = formatDateToYMD(new Date());
+
+                    // If the latest report date is today, shift back one day to compare against the last full day
+                    if (targetDate === todayDateString) {
+                        const d = new Date(targetDate);
+                        d.setDate(d.getDate() - 1);
+                        targetDate = formatDateToYMD(d);
+                    }
+                    comparisonDate.value = targetDate;
 
                     // Use fetchDailyReportDataByHotel for optimized aggregated data
                     const [futureData, prevDayData] = await Promise.all([
                         fetchBatchFutureOutlook(hotelIds, formatDateToYMD(firstDayofFetch.value)),
-                        latestDateStrRaw ? fetchDailyReportDataByHotel(latestDateStrRaw, hotelIds) : Promise.resolve([])
+                        targetDate ? fetchDailyReportDataByHotel(targetDate, hotelIds) : Promise.resolve([])
                     ]);
 
                     const prevByMonth = {};
-                    console.log('[DEBUG] Previous day data for comparison:', prevDayData);
                     if (Array.isArray(prevDayData)) {
                         prevDayData.forEach(item => {
                             // Backend already filters by hotelIds and aggregates data
@@ -1103,7 +1105,7 @@ const fetchData = async () => {
                         //});
 
                         outlook.push({
-                            metric_date: latestDateStrRaw, // Added for export
+                            metric_date: targetDate, // Added for export
                             month: monthLabel,
                             forecast_sales: totalForecastSales,
                             sales: totalActualSales,
@@ -1223,35 +1225,12 @@ const debouncedFetch = () => {
     }, 50);
 };
 
-const handleDateChange = (newDate) => {
-
-
-    selectedDate.value = newDate;
-    debouncedFetch();
-};
-const handlePeriodChange = (newPeriod) => {
-    period.value = newPeriod;
-    debouncedFetch();
-};
-const handleHotelChange = (newSelectedHotelIds, hotelsFromMenu) => {
-    selectedHotels.value = newSelectedHotelIds;
-    allHotels.value = hotelsFromMenu;
-    debouncedFetch();
-};
-
-const handleReportTypeChange = (newReportType) => {
-    if (newReportType === 'reservationAnalysis') {
-        router.push('/reporting/channel-summary');
-    } else if (newReportType === 'dailyReport') {
-        router.push('/reporting/daily');
-    } else if (newReportType === 'activeReservationsChange') {
-        router.push('/reporting/active-reservations-change');
-    } else if (newReportType === 'monthlyReservationEvolution') {
-        router.push('/reporting/monthly-reservation-evolution');
-    } else {
-        // Already here
+// React to prop changes
+watch([selectedDate, period, selectedHotels], () => {
+    if (props.reportType === 'monthlySummary') {
+        debouncedFetch();
     }
-};
+});
 
 const searchAllHotels = (hotelId) => {
     if (!allHotels.value || allHotels.value.length === 0) {
@@ -1269,6 +1248,8 @@ const searchAllHotels = (hotelId) => {
 
 onMounted(async () => {
     isInitialized.value = true;
-    fetchData();
+    if (props.reportType === 'monthlySummary') {
+        fetchData();
+    }
 });
 </script>

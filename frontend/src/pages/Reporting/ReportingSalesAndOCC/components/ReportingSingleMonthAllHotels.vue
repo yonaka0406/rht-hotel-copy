@@ -3,15 +3,8 @@
         <div class="flex justify-end mb-2 no-print">
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
             <div class="ml-2 flex gap-2">
-                <Button 
-                    icon="pi pi-print" 
-                    label="印刷PDF" 
-                    class="p-button-secondary" 
-                    @click="downloadPrintPdf"
-                    :loading="isPrintDownloading" 
-                    :disabled="isPrintDownloading"
-                    title="ブラウザの印刷機能を使用してPDFを生成"
-                />
+                <Button icon="pi pi-print" label="印刷PDF" class="p-button-secondary" @click="downloadPrintPdf"
+                    :loading="isPrintDownloading" :disabled="isPrintDownloading" title="ブラウザの印刷機能を使用してPDFを生成" />
                 <!-- <Button 
                     icon="pi pi-file-pdf" 
                     label="サーバーPDF" 
@@ -90,7 +83,7 @@
                 </template>
             </Panel>
 
-            <FutureOutlookTable :data="futureOutlookData" class="future-outlook-section" />
+            <FutureOutlookTable :data="futureOutlookData" :asOfDate="asOfDate" class="future-outlook-section" />
 
             <Card class="hotel-overview-card">
                 <template #header>
@@ -190,6 +183,10 @@ const props = defineProps({
     futureOutlookData: {
         type: Array,
         default: () => []
+    },
+    asOfDate: {
+        type: String,
+        default: null
     }
 });
 
@@ -279,7 +276,7 @@ const aggregateHotelZeroData = computed(() => {
     //    currentMonth: revenueEntry?.month,
     //    currentYear: revenueEntry?.month ? new Date(revenueEntry.month).getFullYear() : 'N/A'
     //});
-    
+
     //console.log('[ReportingSingleMonthAllHotels] Previous year data:', {
     //    prevYearRevenueEntry: prevYearRevenueEntry,
     //    prevYearOccupancyEntry: prevYearOccupancyEntry,
@@ -294,7 +291,7 @@ const aggregateHotelZeroData = computed(() => {
         const currentMonth = currentDate.getMonth();
         const prevYearMonth = prevYearDate.getMonth();
         const yearDiff = currentDate.getFullYear() - prevYearDate.getFullYear();
-        
+
         //console.log('[ReportingSingleMonthAllHotels] Month comparison:', {
         //    currentMonth: currentMonth,
         //    prevYearMonth: prevYearMonth,
@@ -302,7 +299,7 @@ const aggregateHotelZeroData = computed(() => {
         //    isSameMonth: currentMonth === prevYearMonth,
         //    isOneYearDiff: yearDiff === 1
         //});
-        
+
         if (currentMonth !== prevYearMonth) {
             console.warn('[ReportingSingleMonthAllHotels] WARNING: Current month and previous year month do not match!');
         }
@@ -557,12 +554,12 @@ const allHotelsRevenueChartOptions = computed(() => {
 const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
 // Use print optimization composable with browser compatibility
-const { 
-    isPrintMode, 
-    delayedPrint, 
-    getPrintCapabilities, 
+const {
+    isPrintMode,
+    delayedPrint,
+    getPrintCapabilities,
     getProgressiveEnhancementFallback,
-    applyBrowserSpecificOptimizations 
+    applyBrowserSpecificOptimizations
 } = usePrintOptimization();
 
 // Use toast for notifications
@@ -577,26 +574,26 @@ const downloadPdf = async () => {
     let serializedChartConfigs = {};
 
     try {
-        
+
         try {
             // Serialize RevenuePlanVsActual chart configuration
             if (aggregateHotelZeroData.value) {
                 const revenuePlanVsActualConfig = chartConfigService.getRevenuePlanVsActualConfig(aggregateHotelZeroData.value);
                 serializedChartConfigs.revenuePlanVsActual = chartConfigService.serializeConfig(revenuePlanVsActualConfig, 'revenuePlanVsActual');
             }
-            
+
             // Serialize OccupancyGauge chart configuration
             if (aggregateHotelZeroData.value) {
                 const occupancyGaugeConfig = chartConfigService.getOccupancyGaugeConfig(aggregateHotelZeroData.value);
                 serializedChartConfigs.occupancyGauge = chartConfigService.serializeConfig(occupancyGaugeConfig, 'occupancyGauge');
             }
-            
+
             // Serialize AllHotelsRevenue chart configuration
             if (hasAllHotelsRevenueData.value && allHotelsRevenueChartData.value.length > 0) {
                 const allHotelsRevenueConfig = chartConfigService.getAllHotelsRevenueConfig(allHotelsRevenueChartData.value);
                 serializedChartConfigs.allHotelsRevenue = chartConfigService.serializeConfig(allHotelsRevenueConfig, 'allHotelsRevenue');
             }
-            
+
             // Serialize AllHotelsOccupancy chart configuration
             if (hasAllHotelsOccupancyData.value) {
                 const occupancyDataFiltered = props.occupancyData.filter(item => item.hotel_id !== 0);
@@ -678,10 +675,10 @@ const downloadPdf = async () => {
         console.log('PDF download initiated successfully!');
     } catch (error) {
         console.error('Error generating PDF:', error);
-        
+
         // Enhanced error handling with user feedback
         let errorMessage = 'PDFの生成中にエラーが発生しました。';
-        
+
         if (error.message.includes('timeout')) {
             errorMessage = 'PDFの生成がタイムアウトしました。しばらく待ってから再試行してください。';
         } else if (error.message.includes('network')) {
@@ -691,15 +688,15 @@ const downloadPdf = async () => {
         } else if (error.message.includes('resource')) {
             errorMessage = 'サーバーリソースが不足しています。しばらく待ってから再試行してください。';
         }
-        
+
         // Show user-friendly error message using toast notification
-        toast.add({ 
-            severity: 'error', 
-            summary: 'PDF生成エラー', 
-            detail: errorMessage, 
-            life: 5000 
+        toast.add({
+            severity: 'error',
+            summary: 'PDF生成エラー',
+            detail: errorMessage,
+            life: 5000
         });
-        
+
         // Log detailed error for debugging
         console.error('Detailed PDF generation error:', {
             message: error.message,
@@ -727,43 +724,43 @@ const downloadPrintPdf = async () => {
         // Check browser compatibility and show warnings if needed
         const capabilities = getPrintCapabilities();
         const fallbackInfo = getProgressiveEnhancementFallback();
-        
+
         if (fallbackInfo) {
-            toast.add({ 
-                severity: 'warn', 
-                summary: 'ブラウザ互換性', 
-                detail: fallbackInfo.message, 
-                life: 8000 
+            toast.add({
+                severity: 'warn',
+                summary: 'ブラウザ互換性',
+                detail: fallbackInfo.message,
+                life: 8000
             });
-            
+
             // For very old browsers, recommend using server PDF instead
             if (!capabilities.supportsMediaQueries) {
                 isPrintDownloading.value = false;
-                toast.add({ 
-                    severity: 'error', 
-                    summary: 'ブラウザ非対応', 
-                    detail: 'このブラウザでは印刷PDFがサポートされていません。サーバーPDFをご利用ください。', 
-                    life: 10000 
+                toast.add({
+                    severity: 'error',
+                    summary: 'ブラウザ非対応',
+                    detail: 'このブラウザでは印刷PDFがサポートされていません。サーバーPDFをご利用ください。',
+                    life: 10000
                 });
                 return;
             }
         }
-        
+
         // Apply browser-specific optimizations
         applyBrowserSpecificOptimizations();
-        
+
         console.log('Print PDF initiated with browser:', capabilities.browser.name, capabilities.browser.version);
         // Setup fallback to backend PDF generation if print mode fails
         printOptimizationService.setFallbackCallback(async (reason, error) => {
             console.warn('Print PDF failed, falling back to server PDF:', reason, error);
             isPrintDownloading.value = false;
-            
+
             // Show user feedback about fallback
-            toast.add({ 
-                severity: 'warn', 
-                summary: '印刷PDF失敗', 
-                detail: '印刷PDFの生成に失敗しました。サーバーPDFを使用してください。', 
-                life: 5000 
+            toast.add({
+                severity: 'warn',
+                summary: '印刷PDF失敗',
+                detail: '印刷PDFの生成に失敗しました。サーバーPDFを使用してください。',
+                life: 5000
             });
         });
 
@@ -804,10 +801,10 @@ const downloadPrintPdf = async () => {
 
         if (printActivated) {
             // Add print-specific classes to the main container
-            const reportContainer = document.querySelector('.reporting-single-month-container') || 
-                                  document.querySelector('[data-report-container]') ||
-                                  document.body;
-            
+            const reportContainer = document.querySelector('.reporting-single-month-container') ||
+                document.querySelector('[data-report-container]') ||
+                document.body;
+
             if (reportContainer) {
                 reportContainer.classList.add('print-optimized', 'print-black-text', 'print-white-bg');
             }
@@ -817,7 +814,7 @@ const downloadPrintPdf = async () => {
 
             // Use delayed print to ensure static images are ready
             await delayedPrint();
-            
+
             console.log('Print PDF dialog opened successfully with static images');
         } else {
             throw new Error('Failed to activate print mode');
@@ -825,10 +822,10 @@ const downloadPrintPdf = async () => {
 
     } catch (error) {
         console.error('Error in print PDF workflow:', error);
-        
+
         // Enhanced error handling with user feedback
         let errorMessage = '印刷PDFの生成中にエラーが発生しました。';
-        
+
         if (error.message.includes('browser')) {
             errorMessage = 'ブラウザが印刷機能をサポートしていません。サーバーPDFをご利用ください。';
         } else if (error.message.includes('permission')) {
@@ -836,14 +833,14 @@ const downloadPrintPdf = async () => {
         } else if (error.message.includes('activation')) {
             errorMessage = '印刷モードの有効化に失敗しました。サーバーPDFをご利用ください。';
         }
-        
-        toast.add({ 
-            severity: 'error', 
-            summary: '印刷PDFエラー', 
-            detail: errorMessage, 
-            life: 5000 
+
+        toast.add({
+            severity: 'error',
+            summary: '印刷PDFエラー',
+            detail: errorMessage,
+            life: 5000
         });
-        
+
         // Log detailed error for debugging
         console.error('Detailed print PDF error:', {
             message: error.message,
@@ -853,10 +850,10 @@ const downloadPrintPdf = async () => {
             hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
             hasAllHotelsOccupancyData: hasAllHotelsOccupancyData.value
         });
-        
+
     } finally {
         isPrintDownloading.value = false;
-        
+
         // Setup reliable print-completion handlers
         const cleanupPrintMode = () => {
             const reportContainer = document.querySelector('.print-optimized');
@@ -871,11 +868,11 @@ const downloadPrintPdf = async () => {
             cleanupPrintMode();
             window.removeEventListener('afterprint', handleAfterPrint);
         };
-        
+
         // Fallback handler: MediaQueryList for broader browser support
         let printMediaQuery = null;
         let mediaQueryHandler = null;
-        
+
         if (window.matchMedia) {
             printMediaQuery = window.matchMedia('print');
             mediaQueryHandler = (e) => {
@@ -887,10 +884,10 @@ const downloadPrintPdf = async () => {
             };
             printMediaQuery.addEventListener('change', mediaQueryHandler);
         }
-        
+
         // Setup primary afterprint listener
         window.addEventListener('afterprint', handleAfterPrint);
-        
+
         // Fallback timeout as last resort (reduced from 1000ms to 500ms)
         setTimeout(() => {
             // Only cleanup if handlers haven't already done so
@@ -1037,23 +1034,23 @@ watch(() => props.occupancyData, () => {
 
 /* Component-specific print optimizations */
 @media print {
-  .reporting-single-month-container {
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  
-  /* Add data attributes for print identification */
-  .monthly-summary-panel {
-    page-break-inside: avoid !important;
-  }
-  
-  .kpi-section {
-    page-break-inside: avoid !important;
-  }
-  
-  .chart-container {
-    page-break-inside: avoid !important;
-  }
+    .reporting-single-month-container {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Add data attributes for print identification */
+    .monthly-summary-panel {
+        page-break-inside: avoid !important;
+    }
+
+    .kpi-section {
+        page-break-inside: avoid !important;
+    }
+
+    .chart-container {
+        page-break-inside: avoid !important;
+    }
 }
 </style>

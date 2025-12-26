@@ -51,6 +51,7 @@ const ClientGroupEdit = () => import('@/pages/CRM/ClientGroupEdit.vue');
 const SalesInteractions = () => import('@/pages/CRM/Sales/SalesInteractions.vue');
 const SalesProjectList = () => import('@/pages/CRM/Sales/SalesProjectList.vue');
 
+const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
 const ReportingSalesAndOCC = () => import('@/pages/Reporting/ReportingSalesAndOCC/ReportingSalesAndOCC.vue');
 const ReportingChannelSummary = () => import('@/pages/Reporting/ReportingChannelSummary/ReportingChannelSummary.vue');
 const ReportingDailyReport = () => import('@/pages/Reporting/ReportingDailyReport/ReportingDailyReport.vue');
@@ -145,32 +146,15 @@ const routes = [
   },
   {
     path: '/reporting',
-    name: 'ReportingSalesAndOCC',
-    component: ReportingSalesAndOCC,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/reporting/channel-summary',
-    name: 'ReportingChannelSummary',
-    component: ReportingChannelSummary,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/reporting/daily',
-    name: 'ReportingDailyReport',
-    component: ReportingDailyReport,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/reporting/active-reservations-change',
-    name: 'ReportingActiveReservationsChange',
-    component: ReportingActiveReservationsChange,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/reporting/monthly-reservation-evolution',
-    name: 'ReportingMonthlyReservationEvolution',
-    component: ReportingMonthlyReservationEvolution,
+    component: ReportingMainPage,
+    children: [
+      { path: '', redirect: { name: 'ReportingSalesAndOCC' } },
+      { path: 'sales-occ', name: 'ReportingSalesAndOCC', component: ReportingSalesAndOCC },
+      { path: 'channel-summary', name: 'ReportingChannelSummary', component: ReportingChannelSummary },
+      { path: 'daily', name: 'ReportingDailyReport', component: ReportingDailyReport },
+      { path: 'active-reservations-change', name: 'ReportingActiveReservationsChange', component: ReportingActiveReservationsChange },
+      { path: 'monthly-reservation-evolution', name: 'ReportingMonthlyReservationEvolution', component: ReportingMonthlyReservationEvolution },
+    ],
     meta: { requiresAuth: true }
   },
   {

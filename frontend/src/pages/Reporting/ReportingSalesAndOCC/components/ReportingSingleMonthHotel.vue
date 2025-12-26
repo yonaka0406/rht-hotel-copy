@@ -60,7 +60,7 @@
                 </template>
             </Panel>
 
-            <FutureOutlookTable :data="futureOutlookData" />
+            <FutureOutlookTable :data="futureOutlookData" :asOfDate="asOfDate" />
 
         </div>
 
@@ -198,6 +198,10 @@ const props = defineProps({
     futureOutlookData: {
         type: Array,
         default: () => []
+    },
+    asOfDate: {
+        type: String,
+        default: null
     }
 });
 

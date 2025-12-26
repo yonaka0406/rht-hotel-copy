@@ -1,5 +1,5 @@
 <template>
-    <Panel header="今後の見通し (6ヶ月)" class="mb-4">
+    <Panel :header="panelHeader" class="mb-4">
         <DataTable ref="dt" :value="data" responsiveLayout="scroll" stripedRows showGridlines csvSeparator=","
             :exportFilename="'future_outlook_export'">
             <template #header>
@@ -9,11 +9,11 @@
             </template>
             <Column field="month" header="月度" style="width: 10%">
                 <template #body="{ data }">
-                    {{ data.month }}
+                    {{ formatMonth(data.month) }}
                 </template>
             </Column>
             <!-- Forecast Sales -->
-            <Column field="forecast_sales" header="計画売上" style="width: 20%">
+            <Column field="forecast_sales" header="計画売上" style="width: 15%">
                 <template #body="{ data }">
                     <div class="text-right">
                         {{ data.forecast_sales != null ? formatCurrency(data.forecast_sales) : '-' }}
@@ -21,7 +21,7 @@
                 </template>
             </Column>
             <!-- Actual Sales with DoD -->
-            <Column field="sales" header="実績売上 / 前日比" style="width: 25%">
+            <Column field="sales" header="実績売上 / 前日比" style="width: 20%">
                 <template #body="{ data }">
                     <div class="flex justify-end items-center">
                         <span class="mr-2">{{ formatCurrency(data.sales) }}</span>
@@ -31,8 +31,16 @@
                     </div>
                 </template>
             </Column>
+            <!-- Stays -->
+            <Column field="confirmed_nights" header="確定泊数" style="width: 15%">
+                <template #body="{ data }">
+                    <div class="text-right">
+                        {{ data.confirmed_nights || 0 }} 泊
+                    </div>
+                </template>
+            </Column>
             <!-- Forecast OCC -->
-            <Column field="forecast_occ" header="計画稼働率" style="width: 20%">
+            <Column field="forecast_occ" header="計画稼働率" style="width: 15%">
                 <template #body="{ data }">
                     <div class="text-right">
                         {{ Number.isFinite(data?.forecast_occ) ? data.forecast_occ.toFixed(1) + '%' : '-' }}
@@ -40,7 +48,7 @@
                 </template>
             </Column>
             <!-- Actual OCC with DoD -->
-            <Column field="occ" header="実績稼働率 / 前日比" style="width: 25%">
+            <Column field="occ" header="実績稼働率 / 前日比" style="width: 20%">
                 <template #body="{ data }">
                     <div class="flex justify-end items-center">
                         <span class="mr-2">{{ Number.isFinite(data?.occ) ? data.occ.toFixed(1) + '%' : '-' }}</span>
@@ -64,14 +72,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Panel, DataTable, Column, Badge, Button } from 'primevue';
-import { formatCurrency, formatYenInTenThousandsNoDecimal } from '@/utils/formatUtils';
+import { formatCurrency, formatYenInTenThousandsNoDecimal, formatMonth } from '@/utils/formatUtils';
 
-defineProps({
+const props = defineProps({
     data: {
         type: Array,
         required: true,
+    },
+    asOfDate: {
+        type: String,
+        default: null
     }
 });
 
@@ -86,4 +98,13 @@ const getSeverity = (value) => {
     if (value < 0) return 'danger';
     return 'secondary';
 };
+
+const panelHeader = computed(() => {
+    const base = "今後の見通し (6ヶ月)";
+    const dateToDisplay = props.asOfDate || (props.data && props.data.length > 0 ? props.data[0].metric_date : null);
+    if (dateToDisplay) {
+        return `${base} - 前日比の比較元: ${dateToDisplay}`;
+    }
+    return base;
+});
 </script>

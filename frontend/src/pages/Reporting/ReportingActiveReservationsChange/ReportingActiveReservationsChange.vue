@@ -1,48 +1,34 @@
 <template>
-    <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-        <header>
-            <ReportingTopMenu :initialReportType="'activeReservationsChange'" :selectedHotels="selectedHotels"
-                @hotel-change="handleHotelChange" @report-type-change="handleReportTypeChange" />
-        </header>
-        <main class="flex-1 overflow-auto p-6">
-            <ChangeInActiveReservationsReport :hotel-id="selectedHotelId" :trigger-fetch="reportTriggerKey" />
-        </main>
-        <footer class="bg-black dark:bg-gray-950 text-white dark:text-gray-300 p-4 text-center text-sm">
-            レッドホーストラスト株式会社
-        </footer>
+    <div>
+        <ChangeInActiveReservationsReport :hotel-id="selectedHotelId" :trigger-fetch="reportTriggerKey" />
     </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import ReportingTopMenu from '../components/ReportingTopMenu.vue';
+import { computed, watch, ref } from 'vue';
 import ChangeInActiveReservationsReport from './components/ChangeInActiveReservationsReport.vue';
 
-const router = useRouter();
-const selectedHotels = ref([0]);
+// Props from ReportingMainPage
+const props = defineProps({
+    selectedDate: { type: Date, required: true },
+    period: { type: String, required: true },
+    selectedHotels: { type: Array, required: true },
+    allHotels: { type: Array, required: true },
+    reportType: { type: String, required: true }
+});
+
 const reportTriggerKey = ref(Date.now());
 
 const selectedHotelId = computed(() => {
-    if (selectedHotels.value && selectedHotels.value.length > 0) {
-        return selectedHotels.value[0];
+    if (props.selectedHotels && props.selectedHotels.length > 0) {
+        return props.selectedHotels[0];
     }
     return 0;
 });
 
-const handleHotelChange = (newSelectedHotelIds) => {
-    selectedHotels.value = newSelectedHotelIds;
-    reportTriggerKey.value = Date.now();
-};
-
-const handleReportTypeChange = (newReportType) => {
-    if (newReportType === 'reservationAnalysis') {
-        router.push('/reporting/channel-summary');
-    } else if (newReportType === 'monthlySummary') {
-        router.push('/reporting');
-    } else if (newReportType === 'dailyReport') {
-        router.push('/reporting/daily');
-    } else if (newReportType === 'monthlyReservationEvolution') {
-        router.push('/reporting/monthly-reservation-evolution');
+// Watch for changes to trigger fetch in child
+watch(() => props.selectedHotels, () => {
+    if (props.reportType === 'activeReservationsChange') {
+        reportTriggerKey.value = Date.now();
     }
-};
+}, { deep: true });
 </script>
