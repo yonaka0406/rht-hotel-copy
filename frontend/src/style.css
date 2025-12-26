@@ -91,6 +91,35 @@
   }
 }
 
+@media print {
+  /* Global Print Reset for Full Page Printing */
+  html, body, #app {
+    height: auto !important;
+    overflow: visible !important;
+    position: relative !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure all scrollable containers expand to show content */
+  * {
+    overflow: visible !important;
+  }
+  
+  /* Hide elements that shouldn't appear in print */
+  .no-print, 
+  header, 
+  nav, 
+  footer,
+  .p-sidebar,
+  .p-dialog-mask,
+  button:not(.print-keep),
+  .p-button:not(.print-keep) {
+    display: none !important;
+  }
+}
+
 /*
   The `@source` directive is non-standard CSS. It might be a Vite-specific feature or from a PostCSS plugin.
   Assuming it's correctly processed by the build system for PrimeVue styles.

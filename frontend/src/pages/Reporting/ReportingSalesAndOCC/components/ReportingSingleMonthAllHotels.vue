@@ -5,19 +5,6 @@
                 optionValue="value" />
             <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value"
                 class="ml-2" />
-            <div class="ml-2 flex gap-2">
-                <Button icon="pi pi-print" label="印刷PDF" class="p-button-secondary" @click="downloadPrintPdf"
-                    :loading="isPrintDownloading" :disabled="isPrintDownloading" title="ブラウザの印刷機能を使用してPDFを生成" />
-                <!-- <Button 
-                    icon="pi pi-file-pdf" 
-                    label="サーバーPDF" 
-                    class="p-button-secondary" 
-                    @click="downloadPdf"
-                    :loading="isDownloadingPdf" 
-                    :disabled="isDownloadingPdf || isPrintDownloading"
-                    title="サーバーでPDFを生成（フォールバック）"
-                /> -->
-            </div>
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -215,11 +202,9 @@ import FutureOutlookTable from './tables/FutureOutlookTable.vue';
 
 // Composables
 import { useReportStore } from '@/composables/useReportStore';
-import { usePrintOptimization } from '@/composables/usePrintOptimization';
 
 // Services
 import chartConfigService from '../../services/ChartConfigurationService';
-import printOptimizationService from '@/services/printOptimizationService.js';
 
 // Utilities
 import {
@@ -246,7 +231,6 @@ const comparisonOptions = ref([
 
 // PDF download loading state
 const isDownloadingPdf = ref(false);
-const isPrintDownloading = ref(false);
 
 // Computed property to get all unique hotel names from revenueData    
 const allHotelNames = computed(() => {
@@ -570,15 +554,6 @@ const allHotelsRevenueChartOptions = computed(() => {
 // Use report store for PDF generation API call
 const { generatePdfReport: generatePdfReportApi } = useReportStore();
 
-// Use print optimization composable with browser compatibility
-const {
-    isPrintMode,
-    delayedPrint,
-    getPrintCapabilities,
-    getProgressiveEnhancementFallback,
-    applyBrowserSpecificOptimizations
-} = usePrintOptimization();
-
 // Use toast for notifications
 const toast = useToast();
 
@@ -731,194 +706,6 @@ const downloadPdf = async () => {
     }
 };
 
-// New print-based PDF download method with browser compatibility and static image support
-const downloadPrintPdf = async () => {
-    if (isPrintDownloading.value || isDownloadingPdf.value) return; // Prevent multiple simultaneous downloads
-
-    isPrintDownloading.value = true;
-
-    try {
-        // Check browser compatibility and show warnings if needed
-        const capabilities = getPrintCapabilities();
-        const fallbackInfo = getProgressiveEnhancementFallback();
-
-        if (fallbackInfo) {
-            toast.add({
-                severity: 'warn',
-                summary: 'ブラウザ互換性',
-                detail: fallbackInfo.message,
-                life: 8000
-            });
-
-            // For very old browsers, recommend using server PDF instead
-            if (!capabilities.supportsMediaQueries) {
-                isPrintDownloading.value = false;
-                toast.add({
-                    severity: 'error',
-                    summary: 'ブラウザ非対応',
-                    detail: 'このブラウザでは印刷PDFがサポートされていません。サーバーPDFをご利用ください。',
-                    life: 10000
-                });
-                return;
-            }
-        }
-
-        // Apply browser-specific optimizations
-        applyBrowserSpecificOptimizations();
-
-        console.log('Print PDF initiated with browser:', capabilities.browser.name, capabilities.browser.version);
-        // Setup fallback to backend PDF generation if print mode fails
-        printOptimizationService.setFallbackCallback(async (reason, error) => {
-            console.warn('Print PDF failed, falling back to server PDF:', reason, error);
-            isPrintDownloading.value = false;
-
-            // Show user feedback about fallback
-            toast.add({
-                severity: 'warn',
-                summary: '印刷PDF失敗',
-                detail: '印刷PDFの生成に失敗しました。サーバーPDFを使用してください。',
-                life: 5000
-            });
-        });
-
-        // Activate print mode with optimizations
-        const printActivated = await printOptimizationService.activatePrintMode({
-            hideElements: [
-                '.no-print',
-                '.reporting-top-menu', // Hide the top menu with filters and navigation
-                '.report-filters',
-                '.report-navigation',
-                '.p-selectbutton', // Hide view selector
-                'button:not(.print-keep)', // Hide all buttons except those marked to keep
-                '.p-button:not(.print-keep)',
-                '.interactive-only',
-                '.screen-only'
-            ],
-            optimizeCharts: true,
-            pageBreakRules: [
-                {
-                    selector: '.monthly-summary-panel',
-                    breakInside: 'avoid'
-                },
-                {
-                    selector: '.kpi-section',
-                    breakInside: 'avoid'
-                },
-                {
-                    selector: '.print-chart-wrapper',
-                    breakInside: 'avoid'
-                },
-                {
-                    selector: '.hotel-overview-card',
-                    breakBefore: 'auto',
-                    breakInside: 'auto'
-                }
-            ]
-        });
-
-        if (printActivated) {
-            // Add print-specific classes to the main container
-            const reportContainer = document.querySelector('.reporting-single-month-container') ||
-                document.querySelector('[data-report-container]') ||
-                document.body;
-
-            if (reportContainer) {
-                reportContainer.classList.add('print-optimized', 'print-black-text', 'print-white-bg');
-            }
-
-            // Add report title for print headers
-            document.body.setAttribute('data-report-title', `Monthly Report ${periodMaxDate.value}`);
-
-            // Use delayed print to ensure static images are ready
-            await delayedPrint();
-
-            console.log('Print PDF dialog opened successfully with static images');
-        } else {
-            throw new Error('Failed to activate print mode');
-        }
-
-    } catch (error) {
-        console.error('Error in print PDF workflow:', error);
-
-        // Enhanced error handling with user feedback
-        let errorMessage = '印刷PDFの生成中にエラーが発生しました。';
-
-        if (error.message.includes('browser')) {
-            errorMessage = 'ブラウザが印刷機能をサポートしていません。サーバーPDFをご利用ください。';
-        } else if (error.message.includes('permission')) {
-            errorMessage = '印刷の許可が必要です。ブラウザの設定を確認してください。';
-        } else if (error.message.includes('activation')) {
-            errorMessage = '印刷モードの有効化に失敗しました。サーバーPDFをご利用ください。';
-        }
-
-        toast.add({
-            severity: 'error',
-            summary: '印刷PDFエラー',
-            detail: errorMessage,
-            life: 5000
-        });
-
-        // Log detailed error for debugging
-        console.error('Detailed print PDF error:', {
-            message: error.message,
-            stack: error.stack,
-            selectedView: selectedView.value,
-            hasAggregateData: !!aggregateHotelZeroData.value,
-            hasAllHotelsRevenueData: hasAllHotelsRevenueData.value,
-            hasAllHotelsOccupancyData: hasAllHotelsOccupancyData.value
-        });
-
-    } finally {
-        isPrintDownloading.value = false;
-
-        // Setup reliable print-completion handlers
-        const cleanupPrintMode = () => {
-            const reportContainer = document.querySelector('.print-optimized');
-            if (reportContainer) {
-                reportContainer.classList.remove('print-optimized', 'print-black-text', 'print-white-bg');
-            }
-            document.body.removeAttribute('data-report-title');
-        };
-
-        // Primary handler: afterprint event
-        const handleAfterPrint = () => {
-            cleanupPrintMode();
-            window.removeEventListener('afterprint', handleAfterPrint);
-        };
-
-        // Fallback handler: MediaQueryList for broader browser support
-        let printMediaQuery = null;
-        let mediaQueryHandler = null;
-
-        if (window.matchMedia) {
-            printMediaQuery = window.matchMedia('print');
-            mediaQueryHandler = (e) => {
-                // When print media query no longer matches, print is complete
-                if (!e.matches) {
-                    cleanupPrintMode();
-                    printMediaQuery.removeEventListener('change', mediaQueryHandler);
-                }
-            };
-            printMediaQuery.addEventListener('change', mediaQueryHandler);
-        }
-
-        // Setup primary afterprint listener
-        window.addEventListener('afterprint', handleAfterPrint);
-
-        // Fallback timeout as last resort (reduced from 1000ms to 500ms)
-        setTimeout(() => {
-            // Only cleanup if handlers haven't already done so
-            if (document.querySelector('.print-optimized')) {
-                cleanupPrintMode();
-                window.removeEventListener('afterprint', handleAfterPrint);
-                if (printMediaQuery && mediaQueryHandler) {
-                    printMediaQuery.removeEventListener('change', mediaQueryHandler);
-                }
-            }
-        }, 500);
-    }
-};
-
 // Table
 const getSeverity = getSeverityUtil;
 
@@ -1045,29 +832,3 @@ watch(() => props.occupancyData, () => {
         // nextTick(refreshAllCharts);
     }
 }, { deep: true }); // Use deep watch for array/object changes</script>
-
-<style>
-@import '@/assets/css/print-styles.css';
-
-/* Component-specific print optimizations */
-@media print {
-    .reporting-single-month-container {
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* Add data attributes for print identification */
-    .monthly-summary-panel {
-        page-break-inside: avoid !important;
-    }
-
-    .kpi-section {
-        page-break-inside: avoid !important;
-    }
-
-    .chart-container {
-        page-break-inside: avoid !important;
-    }
-}
-</style>
