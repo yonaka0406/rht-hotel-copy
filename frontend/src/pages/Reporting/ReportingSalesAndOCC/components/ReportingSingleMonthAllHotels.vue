@@ -1,7 +1,10 @@
 <template>
     <div class="reporting-single-month-container" data-report-container>
         <div class="flex justify-end mb-2 no-print">
-            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
+            <SelectButton v-model="selectedComparison" :options="comparisonOptions" optionLabel="label"
+                optionValue="value" />
+            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value"
+                class="ml-2" />
             <div class="ml-2 flex gap-2">
                 <Button icon="pi pi-print" label="印刷PDF" class="p-button-secondary" @click="downloadPrintPdf"
                     :loading="isPrintDownloading" :disabled="isPrintDownloading" title="ブラウザの印刷機能を使用してPDFを生成" />
@@ -87,18 +90,23 @@
 
             <Card class="hotel-overview-card">
                 <template #header>
-                    <span class="text-xl font-bold">全施設 収益＆稼働率 概要</span>
+                    <span class="text-xl font-bold">全施設 収益＆稼働率 概要（{{ selectedComparison === 'forecast' ? '計画' : '前年' }}
+                        vs 実績）</span>
                 </template>
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-1/2 mb-4 md:mb-0 hotel-sales-chart">
-                            <HotelSalesComparisonChart :revenueData="props.revenueData" />
+                            <HotelSalesComparisonChart :revenueData="props.revenueData"
+                                :prevYearRevenueData="props.prevYearRevenueData" :comparisonType="selectedComparison" />
                         </div>
                         <div class="w-full md:w-1/2 hotel-occupancy-chart">
-                            <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
+                            <h6 class="text-center">施設別 稼働率（{{ selectedComparison === 'forecast' ? '計画' : '前年' }} vs 実績）
+                            </h6>
                             <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
                             <div v-else>
-                                <AllHotelsOccupancyChart :occupancyData="props.occupancyData" />
+                                <AllHotelsOccupancyChart :occupancyData="props.occupancyData"
+                                    :prevYearOccupancyData="props.prevYearOccupancyData"
+                                    :comparisonType="selectedComparison" />
                             </div>
                         </div>
                     </div>
@@ -225,6 +233,13 @@ const selectedView = ref('graph'); // Default view
 const viewOptions = ref([
     { label: 'グラフ', value: 'graph' },
     { label: 'テーブル', value: 'table' }
+]);
+
+// Comparison selection
+const selectedComparison = ref('forecast'); // Default comparison
+const comparisonOptions = ref([
+    { label: '計画', value: 'forecast' },
+    { label: '前年', value: 'yoy' }
 ]);
 
 // PDF download loading state

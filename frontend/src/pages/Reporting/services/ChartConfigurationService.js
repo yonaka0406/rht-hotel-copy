@@ -21,12 +21,12 @@ class ChartConfigurationService {
    * @returns {Object} ECharts configuration object
    */
   getRevenuePlanVsActualConfig(revenueData, options = {}) {
-    const { 
-      total_forecast_revenue, 
-      total_period_accommodation_revenue, 
-      total_prev_year_accommodation_revenue 
+    const {
+      total_forecast_revenue,
+      total_period_accommodation_revenue,
+      total_prev_year_accommodation_revenue
     } = revenueData;
-    
+
     const varianceAmount = total_period_accommodation_revenue - total_forecast_revenue;
     const prevYearAmount = total_prev_year_accommodation_revenue || 0;
 
@@ -238,11 +238,14 @@ class ChartConfigurationService {
   /**
    * Get configuration for All Hotels Revenue chart (Hotel Sales Comparison)
    * @param {Array} revenueData - Array of revenue data for all hotels
-   * @param {Object} options - Additional options (height, etc.)
+   * @param {Object} options - Additional options (height, prevYearRevenueData, comparisonType)
    * @returns {Object} ECharts configuration object
    */
   getAllHotelsRevenueConfig(revenueData, options = {}) {
     if (!revenueData || revenueData.length === 0) return {};
+
+    const { prevYearRevenueData = [], comparisonType = 'forecast' } = options;
+    const isYoY = comparisonType === 'yoy';
 
     const hotelMap = new Map();
     revenueData.forEach(item => {
@@ -251,8 +254,9 @@ class ChartConfigurationService {
           hotel_name: item.hotel_name,
           total_forecast_revenue: 0,
           total_period_accommodation_revenue: 0,
-          revenue_to_forecast: 0,
-          forecast_achieved_percentage: 0
+          total_prev_year_revenue: 0,
+          revenue_to_compare: 0,
+          comparison_achieved_percentage: 0
         };
         entry.total_forecast_revenue += (item.forecast_revenue || 0);
         entry.total_period_accommodation_revenue += (item.accommodation_revenue || 0);
@@ -260,36 +264,56 @@ class ChartConfigurationService {
       }
     });
 
+    if (isYoY && prevYearRevenueData.length > 0) {
+      prevYearRevenueData.forEach(item => {
+        if (item.hotel_name && item.hotel_name !== '施設合計') {
+          const entry = hotelMap.get(item.hotel_name);
+          if (entry) {
+            entry.total_prev_year_revenue += (item.accommodation_revenue || 0);
+          }
+        }
+      });
+    }
+
     const data = Array.from(hotelMap.values()).map(hotel => {
-      if ((hotel.total_forecast_revenue - hotel.total_period_accommodation_revenue) < 0) {
-        hotel.revenue_to_forecast = 0;
+      const compareValue = isYoY ? hotel.total_prev_year_revenue : hotel.total_forecast_revenue;
+
+      if ((compareValue - hotel.total_period_accommodation_revenue) < 0) {
+        hotel.revenue_to_compare = 0;
       } else {
-        hotel.revenue_to_forecast = hotel.total_forecast_revenue - hotel.total_period_accommodation_revenue;
+        hotel.revenue_to_compare = compareValue - hotel.total_period_accommodation_revenue;
       }
 
-      if (hotel.total_forecast_revenue > 0) {
-        hotel.forecast_achieved_percentage = (hotel.total_period_accommodation_revenue / hotel.total_forecast_revenue) * 100;
+      if (compareValue > 0) {
+        hotel.comparison_achieved_percentage = (hotel.total_period_accommodation_revenue / compareValue) * 100;
       } else {
-        hotel.forecast_achieved_percentage = hotel.total_period_accommodation_revenue > 0 ? Infinity : 0;
+        hotel.comparison_achieved_percentage = hotel.total_period_accommodation_revenue > 0 ? Infinity : 0;
       }
       return hotel;
     }).sort((a, b) => {
-      const diffA = a.total_period_accommodation_revenue - a.total_forecast_revenue;
-      const diffB = b.total_period_accommodation_revenue - b.total_forecast_revenue;
+      const compareValueA = isYoY ? a.total_prev_year_revenue : a.total_forecast_revenue;
+      const compareValueB = isYoY ? b.total_prev_year_revenue : b.total_forecast_revenue;
+      const diffA = a.total_period_accommodation_revenue - compareValueA;
+      const diffB = b.total_period_accommodation_revenue - compareValueB;
       return diffB - diffA;
     });
 
     if (!data.length) return {};
 
     const hotelNames = data.map(item => item.hotel_name);
-    const forecastValues = data.map(item => item.total_forecast_revenue);
+    const comparisonValues = data.map(item => isYoY ? item.total_prev_year_revenue : item.total_forecast_revenue);
     const accommodationValues = data.map(item => item.total_period_accommodation_revenue);
-    const revenueToForecastValues = data.map(item => item.revenue_to_forecast);
+    const revenueToCompareValues = data.map(item => item.revenue_to_compare);
 
     const extraData = data.map(item => ({
-      revenue_to_forecast: item.revenue_to_forecast,
-      forecast_achieved_percentage: item.forecast_achieved_percentage
+      revenue_to_compare: item.revenue_to_compare,
+      comparison_achieved_percentage: item.comparison_achieved_percentage
     }));
+
+    const comparisonLabel = isYoY ? '前年売上合計' : '計画売上合計';
+    const comparisonGapLabel = isYoY ? '前年達成まで' : '計画達成まで';
+    const achievementLabel = isYoY ? '前年比' : '達成率';
+    const compareColor = isYoY ? '#909399' : colorScheme.forecast;
 
     return {
       tooltip: {
@@ -302,53 +326,53 @@ class ChartConfigurationService {
           params.forEach(param => {
             tooltip += `${param.marker} ${param.seriesName}: ${formatYenInTenThousands(param.value)}<br/>`;
           });
-          tooltip += `達成率: ${currentHotelExtraData.forecast_achieved_percentage === Infinity ? 'N/A' : currentHotelExtraData.forecast_achieved_percentage.toFixed(2) + '%'}<br/>`;
+          tooltip += `${achievementLabel}: ${currentHotelExtraData.comparison_achieved_percentage === Infinity ? 'N/A' : currentHotelExtraData.comparison_achieved_percentage.toFixed(2) + '%'}<br/>`;
           return tooltip;
         }
       },
-      legend: { data: ['計画売上合計', '実績売上合計', '計画達成まで'], top: 'bottom' },
+      legend: { data: [comparisonLabel, '実績売上合計', comparisonGapLabel], top: 'bottom' },
       grid: { containLabel: true, left: '3%', right: '10%', bottom: '10%' },
-      xAxis: { 
-        type: 'value', 
-        name: '売上 (万円)', 
-        axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') } 
+      xAxis: {
+        type: 'value',
+        name: '売上 (万円)',
+        axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') }
       },
       yAxis: { type: 'category', data: hotelNames, inverse: true },
       series: [
-        { 
-          name: '計画売上合計', 
-          type: 'bar', 
-          data: forecastValues, 
-          itemStyle: { color: colorScheme.forecast }, 
-          barGap: '5%', 
-          label: { 
-            show: true, 
-            position: 'inside', 
-            formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' 
-          } 
-        },
-        { 
-          name: '実績売上合計', 
-          type: 'bar', 
-          data: accommodationValues, 
-          itemStyle: { color: colorScheme.actual }, 
-          barGap: '5%', 
-          label: { 
-            show: true, 
-            position: 'inside', 
-            formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' 
-          } 
+        {
+          name: comparisonLabel,
+          type: 'bar',
+          data: comparisonValues,
+          itemStyle: { color: compareColor },
+          barGap: '5%',
+          label: {
+            show: true,
+            position: 'inside',
+            formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
+          }
         },
         {
-          name: '計画達成まで',
+          name: '実績売上合計',
           type: 'bar',
-          data: revenueToForecastValues,
+          data: accommodationValues,
+          itemStyle: { color: colorScheme.actual },
+          barGap: '5%',
+          label: {
+            show: true,
+            position: 'inside',
+            formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
+          }
+        },
+        {
+          name: comparisonGapLabel,
+          type: 'bar',
+          data: revenueToCompareValues,
           itemStyle: { color: colorScheme.toForecast },
           barGap: '5%',
-          label: { 
-            show: true, 
-            position: 'right', 
-            formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' 
+          label: {
+            show: true,
+            position: 'right',
+            formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
           }
         }
       ]
@@ -358,21 +382,26 @@ class ChartConfigurationService {
   /**
    * Get configuration for All Hotels Occupancy chart
    * @param {Array} occupancyData - Array of occupancy data for all hotels
-   * @param {Object} options - Additional options (height, etc.)
+   * @param {Object} options - Additional options (height, prevYearOccupancyData, comparisonType)
    * @returns {Object} ECharts configuration object
    */
   getAllHotelsOccupancyConfig(occupancyData, options = {}) {
     if (!occupancyData || occupancyData.length === 0) return {};
+
+    const { prevYearOccupancyData = [], comparisonType = 'forecast' } = options;
+    const isYoY = comparisonType === 'yoy';
 
     const hotelMap = new Map();
     occupancyData.filter(item => item.hotel_id !== 0).forEach(item => {
       if (item.hotel_name) {
         const entry = hotelMap.get(item.hotel_name) || {
           hotel_name: item.hotel_name,
-          sum_fc_sold_rooms: 0, 
+          sum_fc_sold_rooms: 0,
           sum_fc_total_rooms: 0,
-          sum_sold_rooms: 0, 
+          sum_sold_rooms: 0,
           sum_total_rooms: 0,
+          sum_prev_year_sold_rooms: 0,
+          sum_prev_year_total_rooms: 0
         };
         entry.sum_fc_sold_rooms += (item.fc_sold_rooms || 0);
         entry.sum_fc_total_rooms += (item.fc_total_rooms || 0);
@@ -382,22 +411,40 @@ class ChartConfigurationService {
       }
     });
 
+    if (isYoY && prevYearOccupancyData.length > 0) {
+      prevYearOccupancyData.filter(item => item.hotel_id !== 0).forEach(item => {
+        if (item.hotel_name) {
+          const entry = hotelMap.get(item.hotel_name);
+          if (entry) {
+            entry.sum_prev_year_sold_rooms += (item.sold_rooms || 0);
+            entry.sum_prev_year_total_rooms += (item.total_rooms || 0);
+          }
+        }
+      });
+    }
+
     let data = Array.from(hotelMap.values()).map(hotel => {
-      const forecast_occupancy_rate = hotel.sum_fc_total_rooms > 0 ? (hotel.sum_fc_sold_rooms / hotel.sum_fc_total_rooms) * 100 : 0;
+      const compare_occupancy_rate = isYoY
+        ? (hotel.sum_prev_year_total_rooms > 0 ? (hotel.sum_prev_year_sold_rooms / hotel.sum_prev_year_total_rooms) * 100 : 0)
+        : (hotel.sum_fc_total_rooms > 0 ? (hotel.sum_fc_sold_rooms / hotel.sum_fc_total_rooms) * 100 : 0);
+
       const actual_occupancy_rate = hotel.sum_total_rooms > 0 ? (hotel.sum_sold_rooms / hotel.sum_total_rooms) * 100 : 0;
-      const occupancy_variance = actual_occupancy_rate - forecast_occupancy_rate;
-      return { ...hotel, forecast_occupancy_rate, actual_occupancy_rate, occupancy_variance };
+      const occupancy_variance = actual_occupancy_rate - compare_occupancy_rate;
+      return { ...hotel, compare_occupancy_rate, actual_occupancy_rate, occupancy_variance };
     });
 
     if (!data.length) return {};
 
-    // Sort data by occupancy_variance in descending order (outperformers at the top)
+    // Sort data by occupancy_variance in descending order
     data = [...data].sort((a, b) => b.occupancy_variance - a.occupancy_variance);
 
     const hotelNames = data.map(item => item.hotel_name);
-    const forecastValues = data.map(item => item.forecast_occupancy_rate);
+    const comparisonValues = data.map(item => item.compare_occupancy_rate);
     const actualValues = data.map(item => item.actual_occupancy_rate);
     const varianceValues = data.map(item => item.occupancy_variance);
+
+    const comparisonLabel = isYoY ? '前年稼働率' : '計画稼働率';
+    const compareColor = isYoY ? '#909399' : colorScheme.forecast;
 
     return {
       tooltip: {
@@ -411,47 +458,47 @@ class ChartConfigurationService {
           return tooltip;
         },
       },
-      legend: { data: ['計画稼働率', '実績稼働率', '稼働率差異 (p.p.)'], top: 'bottom' },
+      legend: { data: [comparisonLabel, '実績稼働率', '稼働率差異 (p.p.)'], top: 'bottom' },
       grid: { containLabel: true, left: '3%', right: '5%', bottom: '10%' },
       xAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
       yAxis: { type: 'category', data: hotelNames, inverse: true },
       series: [
-        { 
-          name: '計画稼働率', 
-          type: 'bar', 
-          data: forecastValues, 
-          itemStyle: { color: colorScheme.forecast }, 
-          barGap: '5%', 
-          label: { 
-            show: true, 
-            position: 'right', 
-            formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : '' 
-          } 
+        {
+          name: comparisonLabel,
+          type: 'bar',
+          data: comparisonValues,
+          itemStyle: { color: compareColor },
+          barGap: '5%',
+          label: {
+            show: true,
+            position: 'right',
+            formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
+          }
         },
-        { 
-          name: '実績稼働率', 
-          type: 'bar', 
-          data: actualValues, 
-          itemStyle: { color: colorScheme.actual }, 
-          barGap: '5%', 
-          label: { 
-            show: true, 
-            position: 'right', 
-            formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : '' 
-          } 
+        {
+          name: '実績稼働率',
+          type: 'bar',
+          data: actualValues,
+          itemStyle: { color: colorScheme.actual },
+          barGap: '5%',
+          label: {
+            show: true,
+            position: 'right',
+            formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
+          }
         },
-        { 
-          name: '稼働率差異 (p.p.)', 
-          type: 'bar', 
-          data: varianceValues, 
-          itemStyle: { color: colorScheme.variance }, 
-          barGap: '5%', 
-          barMaxWidth: '15%', 
-          label: { 
-            show: true, 
-            position: (params) => params.value < 0 ? 'left' : 'right', 
-            formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : '' 
-          } 
+        {
+          name: '稼働率差異 (p.p.)',
+          type: 'bar',
+          data: varianceValues,
+          itemStyle: { color: colorScheme.variance },
+          barGap: '5%',
+          barMaxWidth: '15%',
+          label: {
+            show: true,
+            position: (params) => params.value < 0 ? 'left' : 'right',
+            formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
+          }
         },
       ],
     };
@@ -503,7 +550,7 @@ class ChartConfigurationService {
       } catch (error) {
         throw new Error(`Failed to serialize chart configuration for ${chartType}: ${error.message}`);
       }
-      
+
       // Validate serialization result
       if (!serialized.options || typeof serialized.options !== 'object') {
         throw new Error(`Serialization failed for ${chartType}: invalid options object`);
@@ -517,17 +564,17 @@ class ChartConfigurationService {
         originalSize: serialized.metadata.originalSize,
         serializedSize: JSON.stringify(serialized).length
       });
-      
+
       return serialized;
     } catch (error) {
       console.error(`Chart configuration serialization failed for ${chartType}:`, error);
-      
+
       // Return a fallback serialized configuration
       return {
         type: 'chart-config',
         version: '1.0.0',
         chartType: chartType || 'unknown',
-        options: { 
+        options: {
           title: { text: `Chart configuration error for ${chartType}` },
           series: []
         },
@@ -573,7 +620,7 @@ class ChartConfigurationService {
       return config;
     } catch (error) {
       console.error('Chart configuration deserialization failed:', error);
-      
+
       // Return a fallback configuration
       return {
         title: { text: 'Chart configuration error' },
@@ -605,7 +652,7 @@ class ChartConfigurationService {
    */
   _serializeObject(obj, functions, gradients) {
     if (obj === null || obj === undefined) return obj;
-    
+
     if (typeof obj === 'function') {
       const funcId = `func_${functions.length}`;
       functions.push({

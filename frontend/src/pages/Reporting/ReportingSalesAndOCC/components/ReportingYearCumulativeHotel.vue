@@ -1,7 +1,10 @@
 <template>
     <div>
         <div class="flex justify-end mb-2">
-            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
+            <SelectButton v-model="selectedComparison" :options="comparisonOptions" optionLabel="label"
+                optionValue="value" />
+            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value"
+                class="ml-2" />
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -48,7 +51,8 @@
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-3/4 mb-4 md:mb-0">
                             <MonthlyRevenuePlanVsActualChart :revenueData="currentHotelRevenueData"
-                                :prevYearRevenueData="currentHotelPrevYearRevenueData" height="450px" />
+                                :prevYearRevenueData="currentHotelPrevYearRevenueData"
+                                :comparisonType="selectedComparison" height="450px" />
                         </div>
                         <div class="w-full md:w-1/4">
                             <RevenuePlanVsActualChart :revenueData="aggregateRevenueDataForChart" height="450px" />
@@ -73,8 +77,9 @@
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-3/4 mb-4 md:mb-0">
-                            <MonthlyOccupancyChart :occupancyData="currentHotelOccupancyData" 
-                                :title="currentHotelName" height="450px" />
+                            <MonthlyOccupancyChart :occupancyData="currentHotelOccupancyData"
+                                :prevYearOccupancyData="currentHotelPrevYearOccupancyData"
+                                :comparisonType="selectedComparison" :title="currentHotelName" height="450px" />
                         </div>
                         <div class="w-full md:w-1/4">
                             <OccupancyGaugeChart :occupancyData="aggregatedCurrentHotelOccupancy" height="450px" />
@@ -154,6 +159,10 @@ const props = defineProps({
     prevYearRevenueData: {
         type: Array,
         default: () => []
+    },
+    prevYearOccupancyData: {
+        type: Array,
+        default: () => []
     }
 });
 
@@ -180,6 +189,13 @@ const selectedView = ref('graph'); // Default view
 const viewOptions = ref([
     { label: 'グラフ', value: 'graph' },
     { label: 'テーブル', value: 'table' }
+]);
+
+// Comparison selection
+const selectedComparison = ref('forecast'); // Default comparison
+const comparisonOptions = ref([
+    { label: '計画', value: 'forecast' },
+    { label: '前年', value: 'yoy' }
 ]);
 
 // Data extraction for the single hotel
@@ -270,15 +286,24 @@ const currentHotelPrevYearRevenueData = computed(() => {
     return props.prevYearRevenueData.filter(item => item.hotel_id === currentHotelId.value);
 });
 
+// Previous year occupancy data for current hotel
+const currentHotelPrevYearOccupancyData = computed(() => {
+    if (!props.prevYearOccupancyData) return [];
+    if ((currentHotelId.value === 0 || currentHotelId.value === null) && props.prevYearOccupancyData.some(item => item.hotel_id === 0)) {
+        return props.prevYearOccupancyData.filter(item => item.hotel_id === 0);
+    }
+    return props.prevYearOccupancyData.filter(item => item.hotel_id === currentHotelId.value);
+});
+
 // Aggregate revenue data for the RevenuePlanVsActualChart
 const aggregateRevenueDataForChart = computed(() => {
     const agg = aggregatedCurrentHotelRevenue.value;
-    
+
     // Calculate previous year revenue from currentHotelPrevYearRevenueData
     const prevYearRevenue = currentHotelPrevYearRevenueData.value.reduce((acc, item) => {
         return acc + (item.accommodation_revenue || item.period_revenue || 0);
     }, 0);
-    
+
     return {
         total_forecast_revenue: agg.total_forecast_revenue,
         total_period_accommodation_revenue: agg.total_period_accommodation_revenue,
