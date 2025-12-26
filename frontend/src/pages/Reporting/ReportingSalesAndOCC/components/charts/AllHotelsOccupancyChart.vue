@@ -115,6 +115,3 @@ watch(() => props.prevYearOccupancyData, () => {
   nextTick(initOrUpdateChart);
 }, { deep: true });
 </script>
-
-<style scoped>
-</style>

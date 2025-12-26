@@ -832,6 +832,3 @@ watch(() => props.occupancyData, () => {
         // nextTick(refreshAllCharts);
     }
 }, { deep: true }); // Use deep watch for array/object changes</script>
-
-<style>
-</style>

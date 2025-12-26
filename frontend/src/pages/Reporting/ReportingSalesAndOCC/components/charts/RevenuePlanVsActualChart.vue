@@ -84,6 +84,3 @@ watch(() => props.revenueData, () => {
   nextTick(initOrUpdateChart);
 }, { deep: true });
 </script>
-
-<style scoped>
-</style>

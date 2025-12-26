@@ -132,6 +132,3 @@ watch(() => props.prevYearRevenueData, () => {
 }, { deep: true });
 
 </script>
-
-<style scoped>
-</style>
