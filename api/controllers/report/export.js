@@ -1,6 +1,10 @@
 const reportModel = require('../../models/report');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
+const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const { convertExcelToPdf } = require('../../services/libreOfficeService');
 
 const { createAccommodationTaxWorkbook } = require('./services/accommodationTaxExcel');
 const { generateReservationDetailsCsv } = require('./services/reservationDetailsCsv');
@@ -426,15 +430,15 @@ const getExportDailyReportExcel = async (req, res) => {
         const groupedReportData = {};
 
         console.log(`[DEBUG] Excel Export - Fetching data for dates: ${date1}, ${date2}`);
-        
+
         const dailyData1 = await reportModel.selectDailyReportData(req.requestId, date1);
         console.log(`[DEBUG] Daily data for ${date1}:`, dailyData1?.length || 0, 'records');
-        
+
         // Debug specific record with cancelled sales
-        const debugRecord = dailyData1?.find(r => 
-            r.accommodation_sales_cancelled > 0 && 
-            r.hotel_id == 10 && 
-            r.plan_type_category_id == 3 && 
+        const debugRecord = dailyData1?.find(r =>
+            r.accommodation_sales_cancelled > 0 &&
+            r.hotel_id == 10 &&
+            r.plan_type_category_id == 3 &&
             r.plan_package_category_id == 1
         );
         if (debugRecord) {
@@ -448,7 +452,7 @@ const getExportDailyReportExcel = async (req, res) => {
                 plan_package_category_id: debugRecord.plan_package_category_id
             });
         }
-        
+
         if (dailyData1 && dailyData1.length > 0) {
             groupedReportData[date1] = dailyData1;
         }
@@ -776,6 +780,75 @@ const generateCumulativeMultipleHotelsPdf = async (req, res) => {
     }
 };
 
+const getInvoiceTemplatePdf = async (req, res) => {
+    const requestId = req.requestId;
+    // Define paths
+    // api/controllers/report/../../components/... -> api/components/...
+    const templatePath = path.join(__dirname, '../../components/請求書テンプレート.xlsx');
+    // api/controllers/report/../../tmp -> api/tmp
+    const tmpDir = path.join(__dirname, '../../tmp');
+
+    // Ensure tmp dir exists
+    if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+    }
+
+    const uniqueId = uuidv4();
+    const tempXlsxName = `invoice_template_${uniqueId}.xlsx`;
+    const tempXlsxPath = path.join(tmpDir, tempXlsxName);
+    const outputPdfPath = path.join(tmpDir, `invoice_template_${uniqueId}.pdf`);
+
+    try {
+        // 1. Copy template to a unique temp file
+        // We copy it to ensure thread safety if we were modifying it, 
+        // and also because LibreOffice output naming is based on input filename.
+        fs.copyFileSync(templatePath, tempXlsxPath);
+
+        // 2. Convert to PDF
+        // The service takes input file and output *directory*.
+        // It creates a file with same basename but .pdf extension in that directory.
+        await convertExcelToPdf(tempXlsxPath, tmpDir);
+
+        // 3. Send the file
+        if (fs.existsSync(outputPdfPath)) {
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'attachment; filename="invoice_template.pdf"');
+
+            // Stream the file to the response
+            const fileStream = fs.createReadStream(outputPdfPath);
+            fileStream.pipe(res);
+
+            // Cleanup after stream finishes
+            fileStream.on('close', () => {
+                cleanupFiles([tempXlsxPath, outputPdfPath]);
+            });
+            fileStream.on('error', (err) => {
+                console.error(`[${requestId}] Error streaming PDF:`, err);
+                cleanupFiles([tempXlsxPath, outputPdfPath]);
+                if (!res.headersSent) res.status(500).send('Error streaming PDF');
+            });
+        } else {
+            throw new Error('PDF file not found after conversion');
+        }
+
+    } catch (error) {
+        console.error(`[${requestId}] Error generating invoice template PDF:`, error);
+        cleanupFiles([tempXlsxPath, outputPdfPath]);
+        res.status(500).json({ message: 'Failed to generate PDF', error: error.message });
+    }
+};
+
+const cleanupFiles = (filePaths) => {
+    filePaths.forEach(filePath => {
+        try {
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        } catch (err) {
+            console.warn(`Failed to cleanup file ${filePath}:`, err);
+        }
+    });
+};
 
 module.exports = {
     getExportReservationList,
@@ -790,4 +863,5 @@ module.exports = {
     generateSingleMonthMultipleHotelsPdf,
     generateCumulativeSingleHotelPdf,
     generateCumulativeMultipleHotelsPdf,
+    getInvoiceTemplatePdf,
 };

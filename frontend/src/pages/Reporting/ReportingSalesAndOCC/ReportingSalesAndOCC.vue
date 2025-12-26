@@ -1,5 +1,8 @@
 <template>
     <div>
+        <div class="flex justify-end mb-4">
+            <Button label="請求書テンプレート(PDF)をダウンロード" icon="pi pi-file-pdf" @click="downloadInvoiceTemplatePdf" />
+        </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
                 ホテルID {{ hotelId }}: {{ error.message }} - 詳細: {{ error.details?.message || error.details }}
@@ -58,10 +61,11 @@ import { useReportStore } from '@/composables/useReportStore';
 const dayOverDayChange = ref({ rooms: 0, occ: 0, sales: 0 }); // To store pickup for selected period
 const futureOutlookData = ref([]); // Store Future Outlook
 const dataErrors = ref({}); // To store errors for specific hotel data fetches
-const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate, fetchDailyReportDataByHotel } = useReportStore();
+const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate, fetchDailyReportDataByHotel, downloadInvoiceTemplatePdf } = useReportStore();
 
 // Primevue
 import { Message, ProgressSpinner } from 'primevue';
+import Button from 'primevue/button';
 
 // Router
 const router = useRouter();
