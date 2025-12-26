@@ -166,9 +166,9 @@ sudo systemctl status redis-server
 ### 4. Document Current Resource Usage
 
 **Your current VPS specs (baseline):**
-- **Memory**: 3.8GB total (1.7GB used, 2.1GB available)
-- **Disk**: 197GB total (72GB used, 116GB available)
-- **Swap**: 2GB (212MB used)
+- **Memory**: 3.8GB total (1.6GB used, 2.2GB available)
+- **Disk**: 197GB total (79GB used, 109GB available)
+- **Swap**: 2GB (74MB used)
 
 ```bash
 # Check current memory usage
@@ -216,11 +216,30 @@ curl -4 ifconfig.me  # Your public IP
 
 ### 6. Create VPS Snapshot (Recommended)
 
-**Best practice**: Take a provider snapshot (not just database backup) for instant rollback:
+**Best practice**: Take a provider snapshot (not just database backup) for instant rollback.
 
+**If your provider DOES NOT support snapshots:**
+You cannot create a full system image yourself, but you can create a "tarball" archive of all critical files. This is your safety net.
+
+**Run this on your VPS:**
 ```bash
-# Through your provider's dashboard or API
-# This allows near-instant "undo" if OS fails to boot after upscale
+# Create a comprehensive archive of app, env files, and system configs
+sudo tar -czvf /tmp/pre_upscale_backup.tar.gz \
+  /var/www/html/rht-hotel \
+  /etc/apache2 \
+  /etc/postgresql \
+  /etc/redis \
+  /root/.ssh \
+  /home/ubuntu/.ssh
+
+# Check the size of the backup
+ls -lh /tmp/pre_upscale_backup.tar.gz
+```
+
+**Then download it to your local machine (run on Windows):**
+```powershell
+# Replace 'ubuntu@your-ip' with your actual SSH login
+scp ubuntu@your-ip:/tmp/pre_upscale_backup.tar.gz ./backup/
 ```
 
 ### 7. Trigger VPS Upscale
@@ -353,25 +372,23 @@ sudo e2fsck -f /dev/sda1  # Only run on unmounted partitions!
 
 **CRITICAL: Your database won't automatically use new RAM until you update config files**
 
-Based on your new VPS specs, update PostgreSQL configuration:
+Based on your new VPS specs (8GB RAM), update PostgreSQL configuration:
 
 ```bash
 # Edit PostgreSQL config
 sudo nano /etc/postgresql/*/main/postgresql.conf
 ```
 
-**Memory allocation recommendations (from your current 3.8GB):**
-- **Current (3.8GB)**: PostgreSQL = 768MB, Node.js = 1.5GB, System = 1.5GB
-- **6GB VPS**: PostgreSQL = 1.5GB, Node.js = 3GB, System = 1.5GB  
-- **8GB VPS**: PostgreSQL = 2GB, Node.js = 4GB, System = 2GB
-- **12GB VPS**: PostgreSQL = 3GB, Node.js = 6GB, System = 3GB
+**Memory allocation (New 8GB baseline):**
+- **PostgreSQL**: 2GB (shared_buffers)
+- **Node.js**: 4GB (max-old-space-size)
+- **System/OS**: 2GB (free for OS and caching)
 
-**Key PostgreSQL settings to update:**
+**Key PostgreSQL settings for 8GB RAM:**
 ```conf
-# For 4GB VPS example
-shared_buffers = 1GB
-effective_cache_size = 3GB
-maintenance_work_mem = 256MB
+shared_buffers = 2GB
+effective_cache_size = 6GB
+maintenance_work_mem = 512MB
 checkpoint_completion_target = 0.9
 wal_buffers = 16MB
 default_statistics_target = 100
@@ -619,5 +636,5 @@ nvm use 22
 
 ---
 
-**Last Updated**: 2025-12-19
+**Last Updated**: 2025-12-27
 **Next Review**: Schedule quarterly review of resource allocation
