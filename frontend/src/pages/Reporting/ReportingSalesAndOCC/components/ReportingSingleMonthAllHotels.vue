@@ -45,32 +45,34 @@
 
                             <!-- Row 2: KPIs -->
                             <div class="grid grid-cols-2 gap-4 kpi-section">
-                                <Card class="shadow-sm bg-gray-50">
+                                <Card class="shadow-sm bg-gray-50 dark:bg-gray-800">
                                     <template #content>
                                         <div class="flex flex-col items-center text-center">
-                                            <h6 class="text-sm font-medium text-gray-500 mb-2">ADR</h6>
-                                            <span class="text-2xl font-bold text-gray-800">{{
+                                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">ADR
+                                            </h6>
+                                            <span class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                                 formatCurrency(actualADR) }}</span>
-                                            <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                            <span class="text-xs text-gray-400 dark:text-gray-500 mt-1">(計画: {{
                                                 formatCurrency(forecastADR) }})</span>
                                             <span v-if="ADRDifference"
-                                                :class="['text-xs font-bold mt-1', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                                :class="['text-xs font-bold mt-1', ADRDifference > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400']">
                                                 {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference)
                                                 }}
                                             </span>
                                         </div>
                                     </template>
                                 </Card>
-                                <Card class="shadow-sm bg-gray-50">
+                                <Card class="shadow-sm bg-gray-50 dark:bg-gray-800">
                                     <template #content>
                                         <div class="flex flex-col items-center text-center">
-                                            <h6 class="text-sm font-medium text-gray-500 mb-2">RevPAR</h6>
-                                            <span class="text-2xl font-bold text-gray-800">{{
+                                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">RevPAR
+                                            </h6>
+                                            <span class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                                 formatCurrency(actualRevPAR) }}</span>
-                                            <span class="text-xs text-gray-400 mt-1">(計画: {{
+                                            <span class="text-xs text-gray-400 dark:text-gray-500 mt-1">(計画: {{
                                                 formatCurrency(forecastRevPAR) }})</span>
                                             <span v-if="revPARDifference"
-                                                :class="['text-xs font-bold mt-1', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                                :class="['text-xs font-bold mt-1', revPARDifference > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400']">
                                                 {{ revPARDifference > 0 ? '+' : '' }}{{
                                                     formatCurrency(revPARDifference) }}
                                             </span>

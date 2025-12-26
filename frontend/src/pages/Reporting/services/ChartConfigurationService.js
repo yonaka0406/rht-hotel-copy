@@ -3,6 +3,7 @@
  * 
  * This service provides unified chart configurations for both web components and PDF generation.
  * It ensures consistent styling, colors, fonts, and layouts across all chart outputs.
+ * Supports dark mode theming for better user experience.
  */
 
 import * as echarts from 'echarts/core';
@@ -14,6 +15,48 @@ import {
 import { colorScheme } from '@/utils/reportingUtils';
 
 class ChartConfigurationService {
+  /**
+   * Detect if dark mode is currently active
+   * @returns {boolean} True if dark mode is active
+   */
+  _isDarkMode() {
+    // Check for dark class on html or body element
+    return document.documentElement.classList.contains('dark') || 
+           document.body.classList.contains('dark') ||
+           // Check for CSS custom property or media query
+           window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  /**
+   * Get theme-aware text colors
+   * @returns {Object} Text color configuration for current theme
+   */
+  _getTextColors() {
+    const isDark = this._isDarkMode();
+    return {
+      title: isDark ? '#f3f4f6' : '#374151',        // gray-100 : gray-700
+      axisLabel: isDark ? '#d1d5db' : '#6b7280',     // gray-300 : gray-500
+      axisName: isDark ? '#e5e7eb' : '#4b5563',      // gray-200 : gray-600
+      legend: isDark ? '#f9fafb' : '#111827',        // gray-50 : gray-900
+      tooltip: {
+        backgroundColor: isDark ? '#374151' : '#ffffff',  // gray-700 : white
+        textColor: isDark ? '#f9fafb' : '#111827',         // gray-50 : gray-900
+        borderColor: isDark ? '#6b7280' : '#e5e7eb'        // gray-500 : gray-200
+      }
+    };
+  }
+
+  /**
+   * Get theme-aware grid and axis line colors
+   * @returns {Object} Grid color configuration for current theme
+   */
+  _getGridColors() {
+    const isDark = this._isDarkMode();
+    return {
+      splitLine: isDark ? '#4b5563' : '#e5e7eb',     // gray-600 : gray-200
+      axisLine: isDark ? '#6b7280' : '#d1d5db',      // gray-500 : gray-300
+    };
+  }
   /**
    * Get configuration for Revenue Plan vs Actual chart
    * @param {Object} revenueData - Revenue data object
@@ -42,6 +85,10 @@ class ChartConfigurationService {
     const varianceNegativeColor = '#F44336';
     const prevYearColor = '#909399';
 
+    // Get theme-aware colors
+    const textColors = this._getTextColors();
+    const gridColors = this._getGridColors();
+
     return {
       title: {
         text: '売上 (計画 vs 実績)',
@@ -49,12 +96,18 @@ class ChartConfigurationService {
         top: '0%',
         textStyle: {
           fontSize: 16,
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          color: textColors.title
         }
       },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
+        backgroundColor: textColors.tooltip.backgroundColor,
+        borderColor: textColors.tooltip.borderColor,
+        textStyle: {
+          color: textColors.tooltip.textColor
+        },
         formatter: (params) => {
           const valueParam = params.find(p => p.seriesName === '売上');
           if (!valueParam) return '';
@@ -69,18 +122,47 @@ class ChartConfigurationService {
           return tooltipText;
         },
       },
-      grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
+      grid: { 
+        left: '3%', 
+        right: '10%', 
+        bottom: '10%', 
+        containLabel: true 
+      },
       xAxis: [{
         type: 'category',
         data: ['計画売上', '分散', '実績売上', '前年実績'],
         splitLine: { show: false },
-        axisLabel: { interval: 0 },
+        axisLabel: { 
+          interval: 0,
+          color: textColors.axisLabel
+        },
+        axisLine: {
+          lineStyle: {
+            color: gridColors.axisLine
+          }
+        }
       }],
       yAxis: [{
         type: 'value',
         name: '金額 (万円)',
-        axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` },
-        splitLine: { show: true },
+        nameTextStyle: {
+          color: textColors.axisName
+        },
+        axisLabel: { 
+          formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}`,
+          color: textColors.axisLabel
+        },
+        splitLine: { 
+          show: true,
+          lineStyle: {
+            color: gridColors.splitLine
+          }
+        },
+        axisLine: {
+          lineStyle: {
+            color: gridColors.axisLine
+          }
+        }
       }],
       series: [
         {
@@ -104,6 +186,7 @@ class ChartConfigurationService {
           barWidth: '60%',
           label: {
             show: true,
+            color: textColors.axisLabel,
             formatter: (params) => {
               if (params.name === '分散') {
                 return displayVariancePercent;
@@ -160,8 +243,16 @@ class ChartConfigurationService {
     const totalActualOccupancy = actualTotalRooms > 0 ? total_sold_rooms / actualTotalRooms : 0;
     const totalForecastOccupancy = forecastTotalRooms > 0 ? total_fc_sold_rooms / forecastTotalRooms : 0;
 
+    // Get theme-aware colors
+    const textColors = this._getTextColors();
+
     return {
       tooltip: {
+        backgroundColor: textColors.tooltip.backgroundColor,
+        borderColor: textColors.tooltip.borderColor,
+        textStyle: {
+          color: textColors.tooltip.textColor
+        },
         formatter: (params) => {
           if (params.seriesName === '実績稼働率') {
             return `実績稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
@@ -204,12 +295,12 @@ class ChartConfigurationService {
           distance: 5,
           formatter: function (value) { return (value * 100).toFixed(0) + '%'; },
           fontSize: 10,
-          color: '#555',
+          color: textColors.axisLabel,
         },
         title: {
           offsetCenter: [0, '25%'],
           fontSize: 14,
-          color: '#333',
+          color: textColors.title,
           fontWeight: 'normal',
         },
         detail: {
@@ -227,7 +318,7 @@ class ChartConfigurationService {
           rich: {
             actual: { fontSize: 24, fontWeight: 'bold', color: colorScheme.actual },
             forecast: { fontSize: 13, color: colorScheme.forecast, paddingTop: 8 },
-            prev: { fontSize: 13, color: '#999', paddingTop: 4 },
+            prev: { fontSize: 13, color: textColors.axisLabel, paddingTop: 4 },
           },
         },
         data: [{ value: totalActualOccupancy, name: '実績稼働率' }],
@@ -315,10 +406,19 @@ class ChartConfigurationService {
     const achievementLabel = isYoY ? '前年比' : '達成率';
     const compareColor = isYoY ? '#909399' : colorScheme.forecast;
 
+    // Get theme-aware colors
+    const textColors = this._getTextColors();
+    const gridColors = this._getGridColors();
+
     return {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
+        backgroundColor: textColors.tooltip.backgroundColor,
+        borderColor: textColors.tooltip.borderColor,
+        textStyle: {
+          color: textColors.tooltip.textColor
+        },
         formatter: params => {
           const dataIndex = params[0].dataIndex;
           const currentHotelExtraData = extraData[dataIndex];
@@ -330,14 +430,53 @@ class ChartConfigurationService {
           return tooltip;
         }
       },
-      legend: { data: [comparisonLabel, '実績売上合計', comparisonGapLabel], top: 'bottom' },
-      grid: { containLabel: true, left: '3%', right: '10%', bottom: '10%' },
+      legend: { 
+        data: [comparisonLabel, '実績売上合計', comparisonGapLabel], 
+        top: 'bottom',
+        textStyle: {
+          color: textColors.legend
+        }
+      },
+      grid: { 
+        containLabel: true, 
+        left: '3%', 
+        right: '10%', 
+        bottom: '10%' 
+      },
       xAxis: {
         type: 'value',
         name: '売上 (万円)',
-        axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') }
+        nameTextStyle: {
+          color: textColors.axisName
+        },
+        axisLabel: { 
+          formatter: value => (value / 10000).toLocaleString('ja-JP'),
+          color: textColors.axisLabel
+        },
+        axisLine: {
+          lineStyle: {
+            color: gridColors.axisLine
+          }
+        },
+        splitLine: {
+          lineStyle: {
+            color: gridColors.splitLine
+          }
+        }
       },
-      yAxis: { type: 'category', data: hotelNames, inverse: true },
+      yAxis: { 
+        type: 'category', 
+        data: hotelNames, 
+        inverse: true,
+        axisLabel: {
+          color: textColors.axisLabel
+        },
+        axisLine: {
+          lineStyle: {
+            color: gridColors.axisLine
+          }
+        }
+      },
       series: [
         {
           name: comparisonLabel,
@@ -348,6 +487,7 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'inside',
+            color: textColors.axisLabel,
             formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
           }
         },
@@ -360,6 +500,7 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'inside',
+            color: textColors.axisLabel,
             formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
           }
         },
@@ -372,6 +513,7 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'right',
+            color: textColors.axisLabel,
             formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
           }
         }
@@ -446,10 +588,19 @@ class ChartConfigurationService {
     const comparisonLabel = isYoY ? '前年稼働率' : '計画稼働率';
     const compareColor = isYoY ? '#909399' : colorScheme.forecast;
 
+    // Get theme-aware colors
+    const textColors = this._getTextColors();
+    const gridColors = this._getGridColors();
+
     return {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
+        backgroundColor: textColors.tooltip.backgroundColor,
+        borderColor: textColors.tooltip.borderColor,
+        textStyle: {
+          color: textColors.tooltip.textColor
+        },
         formatter: params => {
           let tooltip = `${params[0].name}<br/>`;
           params.forEach(param => {
@@ -458,10 +609,49 @@ class ChartConfigurationService {
           return tooltip;
         },
       },
-      legend: { data: [comparisonLabel, '実績稼働率', '稼働率差異 (p.p.)'], top: 'bottom' },
-      grid: { containLabel: true, left: '3%', right: '5%', bottom: '10%' },
-      xAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
-      yAxis: { type: 'category', data: hotelNames, inverse: true },
+      legend: { 
+        data: [comparisonLabel, '実績稼働率', '稼働率差異 (p.p.)'], 
+        top: 'bottom',
+        textStyle: {
+          color: textColors.legend
+        }
+      },
+      grid: { 
+        containLabel: true, 
+        left: '3%', 
+        right: '5%', 
+        bottom: '10%' 
+      },
+      xAxis: { 
+        type: 'value', 
+        axisLabel: { 
+          formatter: '{value}%',
+          color: textColors.axisLabel
+        },
+        axisLine: {
+          lineStyle: {
+            color: gridColors.axisLine
+          }
+        },
+        splitLine: {
+          lineStyle: {
+            color: gridColors.splitLine
+          }
+        }
+      },
+      yAxis: { 
+        type: 'category', 
+        data: hotelNames, 
+        inverse: true,
+        axisLabel: {
+          color: textColors.axisLabel
+        },
+        axisLine: {
+          lineStyle: {
+            color: gridColors.axisLine
+          }
+        }
+      },
       series: [
         {
           name: comparisonLabel,
@@ -472,6 +662,7 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'right',
+            color: textColors.axisLabel,
             formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
           }
         },
@@ -484,6 +675,7 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'right',
+            color: textColors.axisLabel,
             formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
           }
         },
@@ -497,6 +689,7 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: (params) => params.value < 0 ? 'left' : 'right',
+            color: textColors.axisLabel,
             formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
           }
         },
