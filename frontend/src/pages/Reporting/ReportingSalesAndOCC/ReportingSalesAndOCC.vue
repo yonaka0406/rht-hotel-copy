@@ -1,7 +1,8 @@
 <template>
     <div>
-        <div class="flex justify-end mb-4">
-            <Button label="デイリーテンプレート(PDF)をダウンロード" icon="pi pi-file-pdf" @click="downloadDailyTemplatePdf(futureOutlookData, comparisonDate)" />
+        <div class="flex justify-end gap-2 mb-4">
+            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'xlsx')" />
+            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'pdf')" />
         </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
@@ -61,7 +62,7 @@ import { useReportStore } from '@/composables/useReportStore';
 const dayOverDayChange = ref({ rooms: 0, occ: 0, sales: 0 }); // To store pickup for selected period
 const futureOutlookData = ref([]); // Store Future Outlook
 const dataErrors = ref({}); // To store errors for specific hotel data fetches
-const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate, fetchDailyReportDataByHotel, downloadDailyTemplatePdf } = useReportStore();
+const { fetchBatchCountReservation, fetchBatchForecastData, fetchBatchAccountingData, fetchBatchOccupationBreakdown, fetchDailyReportData, fetchBatchFutureOutlook, fetchLatestDailyReportDate, fetchDailyReportDataByHotel, downloadDailyTemplate } = useReportStore();
 
 // Primevue
 import { Message, ProgressSpinner } from 'primevue';

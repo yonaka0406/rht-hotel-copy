@@ -782,7 +782,7 @@ const generateCumulativeMultipleHotelsPdf = async (req, res) => {
 
 const getDailyTemplatePdf = async (req, res) => {
     const requestId = req.requestId;
-    const { outlookData, targetDate } = req.body;
+    const { outlookData, targetDate, format: outputFormat = 'pdf' } = req.body;
 
     const templatePath = path.join(__dirname, '../../components/デイリーテンプレート.xlsx');
     const tmpDir = path.join(__dirname, '../../tmp');
@@ -801,18 +801,15 @@ const getDailyTemplatePdf = async (req, res) => {
 
         const dataSheet = workbook.getWorksheet('合計データ');
         if (dataSheet) {
-            // Start from row 2
             if (Array.isArray(outlookData)) {
                 outlookData.forEach((item, index) => {
                     const rowNumber = index + 2;
                     const row = dataSheet.getRow(rowNumber);
-                    
-                    // Mapping based on inspection
                     row.getCell(1).value = item.month;
                     row.getCell(2).value = item.forecast_sales;
                     row.getCell(3).value = item.sales;
                     row.getCell(4).value = item.confirmed_nights;
-                    row.getCell(5).value = item.forecast_occ ? item.forecast_occ / 100 : 0; // Assuming Excel expects decimals for percentage
+                    row.getCell(5).value = item.forecast_occ ? item.forecast_occ / 100 : 0;
                     row.getCell(6).value = item.occ ? item.occ / 100 : 0;
                     row.getCell(7).value = item.metric_date;
                     row.getCell(8).value = item.prev_sales;
@@ -823,51 +820,47 @@ const getDailyTemplatePdf = async (req, res) => {
                     row.getCell(13).value = item.blocked_nights;
                     row.getCell(14).value = item.net_available_room_nights;
                     
-                    // Set percentage format for columns 5, 6, 9
                     row.getCell(5).numFmt = '0.0%';
                     row.getCell(6).numFmt = '0.0%';
                     row.getCell(9).numFmt = '0.0%';
-                    
                     row.commit();
                 });
             }
-            // Hide the data sheet so only the report sheet is printed
-            dataSheet.state = 'hidden';
+            dataSheet.state = 'visible';
         }
 
-        // Save the modified workbook
         await workbook.xlsx.writeFile(tempXlsxPath);
 
-        // 2. Convert to PDF
-        await convertExcelToPdf(tempXlsxPath, tmpDir);
+        const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-        // 3. Send the file
-        if (fs.existsSync(outputPdfPath)) {
-            const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            const downloadName = `daily_report_${formattedDate}.pdf`;
-
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
-
-            const fileStream = fs.createReadStream(outputPdfPath);
-            fileStream.pipe(res);
-
-            fileStream.on('close', () => {
-                cleanupFiles([tempXlsxPath, outputPdfPath]);
-            });
-            fileStream.on('error', (err) => {
-                console.error(`[${requestId}] Error streaming PDF:`, err);
-                cleanupFiles([tempXlsxPath, outputPdfPath]);
-                if (!res.headersSent) res.status(500).send('Error streaming PDF');
-            });
+        if (outputFormat === 'xlsx') {
+            if (fs.existsSync(tempXlsxPath)) {
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                res.setHeader('Content-Disposition', `attachment; filename="daily_report_${formattedDate}.xlsx"`);
+                const fileStream = fs.createReadStream(tempXlsxPath);
+                fileStream.pipe(res);
+                fileStream.on('close', () => cleanupFiles([tempXlsxPath]));
+            } else {
+                throw new Error('XLSX file not found');
+            }
         } else {
-            throw new Error('PDF file not found after conversion');
+            // PDF
+            await convertExcelToPdf(tempXlsxPath, tmpDir);
+            if (fs.existsSync(outputPdfPath)) {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="daily_report_${formattedDate}.pdf"`);
+                const fileStream = fs.createReadStream(outputPdfPath);
+                fileStream.pipe(res);
+                fileStream.on('close', () => cleanupFiles([tempXlsxPath, outputPdfPath]));
+            } else {
+                throw new Error('PDF file not found after conversion');
+            }
         }
 
     } catch (error) {
-        console.error(`[${requestId}] Error generating daily template PDF:`, error);
+        console.error(`[${requestId}] Error generating daily template ${outputFormat}:`, error);
         cleanupFiles([tempXlsxPath, outputPdfPath]);
-        if (!res.headersSent) res.status(500).json({ message: 'Failed to generate PDF', error: error.message });
+        if (!res.headersSent) res.status(500).json({ message: 'Failed to generate file', error: error.message });
     }
 };
 

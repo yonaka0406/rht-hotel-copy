@@ -1013,7 +1013,7 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyTemplatePdf = async (data, date) => {
+    const downloadDailyTemplate = async (data, date, format = 'pdf') => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, download functionality limited');
@@ -1022,7 +1022,8 @@ export function useReportStore() {
 
             const response = await api.post('/report/download/daily-template-pdf', {
                 outlookData: data,
-                targetDate: date
+                targetDate: date,
+                format: format
             }, {
                 responseType: 'blob'
             });
@@ -1036,7 +1037,7 @@ export function useReportStore() {
             
             // Format date for filename: YYYY-MM-DD -> YYYYMMDD
             const formattedDate = date ? date.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
-            a.download = `daily_report_${formattedDate}.pdf`;
+            a.download = `daily_report_${formattedDate}.${format}`;
             
             document.body.appendChild(a);
             a.click();
@@ -1045,7 +1046,7 @@ export function useReportStore() {
 
             return { success: true };
         } catch (error) {
-            console.error('Failed to download daily template PDF:', error);
+            console.error(`Failed to download daily template ${format}:`, error);
             throw error;
         }
     };
@@ -1134,6 +1135,6 @@ export function useReportStore() {
         fetchBatchFutureOutlook,
         fetchLatestDailyReportDate,
         fetchDailyReportDataByHotel,
-        downloadDailyTemplatePdf,
+        downloadDailyTemplate,
     };
 }
