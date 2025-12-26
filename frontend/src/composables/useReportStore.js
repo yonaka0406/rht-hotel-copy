@@ -1013,14 +1013,17 @@ export function useReportStore() {
         }
     };
 
-    const downloadInvoiceTemplatePdf = async () => {
+    const downloadDailyTemplatePdf = async (data, date) => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, download functionality limited');
                 throw new Error('API not available, download functionality limited');
             }
 
-            const response = await api.get('/report/download/invoice-template-pdf', {
+            const response = await api.post('/report/download/daily-template-pdf', {
+                outlookData: data,
+                targetDate: date
+            }, {
                 responseType: 'blob'
             });
 
@@ -1030,7 +1033,11 @@ export function useReportStore() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = "invoice_template.pdf";
+            
+            // Format date for filename: YYYY-MM-DD -> YYYYMMDD
+            const formattedDate = date ? date.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            a.download = `daily_report_${formattedDate}.pdf`;
+            
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -1038,7 +1045,7 @@ export function useReportStore() {
 
             return { success: true };
         } catch (error) {
-            console.error('Failed to download invoice template PDF:', error);
+            console.error('Failed to download daily template PDF:', error);
             throw error;
         }
     };
@@ -1127,6 +1134,6 @@ export function useReportStore() {
         fetchBatchFutureOutlook,
         fetchLatestDailyReportDate,
         fetchDailyReportDataByHotel,
-        downloadInvoiceTemplatePdf,
+        downloadDailyTemplatePdf,
     };
 }

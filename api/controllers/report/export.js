@@ -780,45 +780,78 @@ const generateCumulativeMultipleHotelsPdf = async (req, res) => {
     }
 };
 
-const getInvoiceTemplatePdf = async (req, res) => {
+const getDailyTemplatePdf = async (req, res) => {
     const requestId = req.requestId;
-    // Define paths
-    // api/controllers/report/../../components/... -> api/components/...
-    const templatePath = path.join(__dirname, '../../components/請求書テンプレート.xlsx');
-    // api/controllers/report/../../tmp -> api/tmp
+    const { outlookData, targetDate } = req.body;
+
+    const templatePath = path.join(__dirname, '../../components/デイリーテンプレート.xlsx');
     const tmpDir = path.join(__dirname, '../../tmp');
 
-    // Ensure tmp dir exists
     if (!fs.existsSync(tmpDir)) {
         fs.mkdirSync(tmpDir, { recursive: true });
     }
 
     const uniqueId = uuidv4();
-    const tempXlsxName = `invoice_template_${uniqueId}.xlsx`;
-    const tempXlsxPath = path.join(tmpDir, tempXlsxName);
-    const outputPdfPath = path.join(tmpDir, `invoice_template_${uniqueId}.pdf`);
+    const tempXlsxPath = path.join(tmpDir, `daily_report_${uniqueId}.xlsx`);
+    const outputPdfPath = path.join(tmpDir, `daily_report_${uniqueId}.pdf`);
 
     try {
-        // 1. Copy template to a unique temp file
-        // We copy it to ensure thread safety if we were modifying it, 
-        // and also because LibreOffice output naming is based on input filename.
-        fs.copyFileSync(templatePath, tempXlsxPath);
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.readFile(templatePath);
+
+        const dataSheet = workbook.getWorksheet('合計データ');
+        if (dataSheet) {
+            // Start from row 2
+            if (Array.isArray(outlookData)) {
+                outlookData.forEach((item, index) => {
+                    const rowNumber = index + 2;
+                    const row = dataSheet.getRow(rowNumber);
+                    
+                    // Mapping based on inspection
+                    row.getCell(1).value = item.month;
+                    row.getCell(2).value = item.forecast_sales;
+                    row.getCell(3).value = item.sales;
+                    row.getCell(4).value = item.confirmed_nights;
+                    row.getCell(5).value = item.forecast_occ ? item.forecast_occ / 100 : 0; // Assuming Excel expects decimals for percentage
+                    row.getCell(6).value = item.occ ? item.occ / 100 : 0;
+                    row.getCell(7).value = item.metric_date;
+                    row.getCell(8).value = item.prev_sales;
+                    row.getCell(9).value = item.prev_occ ? item.prev_occ / 100 : 0;
+                    row.getCell(10).value = item.prev_confirmed_stays;
+                    row.getCell(11).value = item.confirmed_nights;
+                    row.getCell(12).value = item.total_bookable_room_nights;
+                    row.getCell(13).value = item.blocked_nights;
+                    row.getCell(14).value = item.net_available_room_nights;
+                    
+                    // Set percentage format for columns 5, 6, 9
+                    row.getCell(5).numFmt = '0.0%';
+                    row.getCell(6).numFmt = '0.0%';
+                    row.getCell(9).numFmt = '0.0%';
+                    
+                    row.commit();
+                });
+            }
+            // Hide the data sheet so only the report sheet is printed
+            dataSheet.state = 'hidden';
+        }
+
+        // Save the modified workbook
+        await workbook.xlsx.writeFile(tempXlsxPath);
 
         // 2. Convert to PDF
-        // The service takes input file and output *directory*.
-        // It creates a file with same basename but .pdf extension in that directory.
         await convertExcelToPdf(tempXlsxPath, tmpDir);
 
         // 3. Send the file
         if (fs.existsSync(outputPdfPath)) {
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'attachment; filename="invoice_template.pdf"');
+            const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const downloadName = `daily_report_${formattedDate}.pdf`;
 
-            // Stream the file to the response
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+
             const fileStream = fs.createReadStream(outputPdfPath);
             fileStream.pipe(res);
 
-            // Cleanup after stream finishes
             fileStream.on('close', () => {
                 cleanupFiles([tempXlsxPath, outputPdfPath]);
             });
@@ -832,9 +865,9 @@ const getInvoiceTemplatePdf = async (req, res) => {
         }
 
     } catch (error) {
-        console.error(`[${requestId}] Error generating invoice template PDF:`, error);
+        console.error(`[${requestId}] Error generating daily template PDF:`, error);
         cleanupFiles([tempXlsxPath, outputPdfPath]);
-        res.status(500).json({ message: 'Failed to generate PDF', error: error.message });
+        if (!res.headersSent) res.status(500).json({ message: 'Failed to generate PDF', error: error.message });
     }
 };
 
@@ -863,5 +896,5 @@ module.exports = {
     generateSingleMonthMultipleHotelsPdf,
     generateCumulativeSingleHotelPdf,
     generateCumulativeMultipleHotelsPdf,
-    getInvoiceTemplatePdf,
+    getDailyTemplatePdf,
 };
