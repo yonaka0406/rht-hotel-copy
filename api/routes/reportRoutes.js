@@ -45,6 +45,7 @@ router.post('/report/channel-summary', authMiddleware, reportController.getChann
 router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, reportController.getCheckInOutReport);
 
 // PDF Report Generation Routes
+router.get('/report/download/invoice-template-pdf', authMiddleware, reportController.getInvoiceTemplatePdf);
 router.post('/report/pdf/single-month/single-hotel', authMiddleware, reportController.generateSingleMonthSingleHotelPdf);
 router.post('/report/pdf/single-month/multiple-hotels', authMiddleware, reportController.generateSingleMonthMultipleHotelsPdf);
 router.post('/report/pdf/cumulative/single-hotel', authMiddleware, reportController.generateCumulativeSingleHotelPdf);

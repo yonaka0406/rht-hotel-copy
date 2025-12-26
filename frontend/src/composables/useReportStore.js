@@ -1013,6 +1013,36 @@ export function useReportStore() {
         }
     };
 
+    const downloadInvoiceTemplatePdf = async () => {
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, download functionality limited');
+                throw new Error('API not available, download functionality limited');
+            }
+
+            const response = await api.get('/report/download/invoice-template-pdf', {
+                responseType: 'blob'
+            });
+
+            if (!response) throw new Error('Download failed');
+
+            const blob = response;
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "invoice_template.pdf";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to download invoice template PDF:', error);
+            throw error;
+        }
+    };
+
     /**
      * Batch fetch reservation list data for multiple hotels.
      * @param {Array<number>} hotelIds - Array of hotel IDs.
@@ -1097,5 +1127,6 @@ export function useReportStore() {
         fetchBatchFutureOutlook,
         fetchLatestDailyReportDate,
         fetchDailyReportDataByHotel,
+        downloadInvoiceTemplatePdf,
     };
 }

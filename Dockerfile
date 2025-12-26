@@ -22,6 +22,9 @@ RUN npm --prefix frontend install --force --legacy-peer-deps
 # Now, copy the rest of the source code
 COPY . .
 
+# Install dependencies for api
+RUN cd api && npm install
+
 # Clear npm cache and reinstall/rebuild native modules after copying source
 # This ensures native binaries are built for the correct architecture
 RUN npm cache clean --force
@@ -61,8 +64,10 @@ FROM node:24 AS production
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libvips \
     # Puppeteer dependencies
-    chromium \
     fonts-liberation \
+    # LibreOffice & Fonts for PDF conversion
+    libreoffice \
+    fonts-noto-cjk \
     libasound2 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
@@ -83,9 +88,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Tell Puppeteer to use the system-installed Chrome
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
 
@@ -101,6 +103,12 @@ COPY --from=builder --chown=appuser:appgroup /usr/src/app/node_modules ./node_mo
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/frontend/dist ./frontend/dist
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/api ./api
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/package*.json ./
+
+# Install Playwright browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir /ms-playwright && \
+    cd api && npx playwright install chromium && \
+    chown -R appuser:appgroup /ms-playwright
 
 # Change ownership of the app directory itself. This allows the non-root user
 # (and pm2) to create necessary files like the .pm2 folder.

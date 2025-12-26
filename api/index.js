@@ -655,9 +655,9 @@ const shutdown = async (signal) => {
 
   try {
     await closeSingletonBrowser();
-    logger.info('Puppeteer browser instance closed.');
+    logger.info('Playwright browser instance closed.');
   } catch (err) {
-    logger.error('Error closing Puppeteer browser instance:', err);
+    logger.error('Error closing Playwright browser instance:', err);
   }
 
   if (process.env.NODE_ENV === 'production') {
