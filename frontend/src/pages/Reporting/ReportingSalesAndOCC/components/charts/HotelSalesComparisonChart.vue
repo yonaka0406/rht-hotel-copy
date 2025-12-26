@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, shallowRef, nextTick, toRef } from 'vue';
 import * as echarts from 'echarts/core';
 import {
     TitleComponent,
@@ -25,6 +25,7 @@ import {
 import { BarChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
 import ChartConfigurationService from '../../../services/ChartConfigurationService';
+import { useHotelChartHeight } from '@/composables/useHotelChartHeight';
 
 // Register ECharts components
 echarts.use([
@@ -58,25 +59,8 @@ const allHotelsRevenueChartInstance = shallowRef(null);
 
 const hasAllHotelsRevenueData = computed(() => props.revenueData && props.revenueData.length > 0);
 
-const allHotelsChartHeight = computed(() => {
-    if (!hasAllHotelsRevenueData.value) return 450;
-
-    // Calculate height based on number of hotels
-    const hotelMap = new Map();
-    props.revenueData.forEach(item => {
-        if (item.hotel_name && item.hotel_name !== '施設合計') {
-            hotelMap.set(item.hotel_name, true);
-        }
-    });
-
-    const numHotels = hotelMap.size;
-    const baseHeight = 150;
-    const heightPerHotel = 50;
-    const minHeight = 450;
-    const calculatedHeight = baseHeight + (numHotels * heightPerHotel);
-
-    return Math.max(minHeight, calculatedHeight);
-});
+// Use the extracted height calculation logic
+const allHotelsChartHeight = useHotelChartHeight(toRef(props, 'revenueData'), hasAllHotelsRevenueData);
 
 const allHotelsRevenueChartOptions = computed(() => {
     return ChartConfigurationService.getAllHotelsRevenueConfig(props.revenueData, {
@@ -88,12 +72,20 @@ const allHotelsRevenueChartOptions = computed(() => {
 
 const initOrUpdateChart = () => {
     if (allHotelsRevenueChartContainer.value) {
-        if (!allHotelsRevenueChartInstance.value || allHotelsRevenueChartInstance.value.isDisposed?.()) {
-            allHotelsRevenueChartInstance.value = echarts.init(allHotelsRevenueChartContainer.value);
-        }
+        try {
+            if (!allHotelsRevenueChartInstance.value || allHotelsRevenueChartInstance.value.isDisposed?.()) {
+                allHotelsRevenueChartInstance.value = echarts.init(allHotelsRevenueChartContainer.value);
+            }
 
-        allHotelsRevenueChartInstance.value.setOption(allHotelsRevenueChartOptions.value, true);
-        allHotelsRevenueChartInstance.value.resize();
+            allHotelsRevenueChartInstance.value.setOption(allHotelsRevenueChartOptions.value, true);
+            allHotelsRevenueChartInstance.value.resize();
+        } catch (error) {
+            console.error('[HotelSalesComparisonChart] Error initializing or updating chart:', error);
+            if (allHotelsRevenueChartInstance.value) {
+                allHotelsRevenueChartInstance.value.dispose();
+                allHotelsRevenueChartInstance.value = null;
+            }
+        }
     } else if (allHotelsRevenueChartInstance.value && !allHotelsRevenueChartInstance.value.isDisposed?.()) {
         allHotelsRevenueChartInstance.value.dispose();
         allHotelsRevenueChartInstance.value = null;
