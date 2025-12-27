@@ -1,10 +1,13 @@
 const reportModel = require('../../models/report');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
+const fs = require('fs');
+const path = require('path');
 
 const { createAccommodationTaxWorkbook } = require('./services/accommodationTaxExcel');
 const { generateReservationDetailsCsv } = require('./services/reservationDetailsCsv');
 const { generatePdfReport: generatePdfServiceReport } = require('./services/pdfGeneratorService'); // <--- Import the service function
+const { getDailyTemplatePdf: getDailyTemplatePdfService } = require('./services/dailyTemplateService');
 
 const { formatDate, formatDateTime, translateReservationStatus, translateReservationPaymentTiming } = require('../../utils/reportUtils');
 
@@ -426,15 +429,15 @@ const getExportDailyReportExcel = async (req, res) => {
         const groupedReportData = {};
 
         console.log(`[DEBUG] Excel Export - Fetching data for dates: ${date1}, ${date2}`);
-        
+
         const dailyData1 = await reportModel.selectDailyReportData(req.requestId, date1);
         console.log(`[DEBUG] Daily data for ${date1}:`, dailyData1?.length || 0, 'records');
-        
+
         // Debug specific record with cancelled sales
-        const debugRecord = dailyData1?.find(r => 
-            r.accommodation_sales_cancelled > 0 && 
-            r.hotel_id == 10 && 
-            r.plan_type_category_id == 3 && 
+        const debugRecord = dailyData1?.find(r =>
+            r.accommodation_sales_cancelled > 0 &&
+            r.hotel_id == 10 &&
+            r.plan_type_category_id == 3 &&
             r.plan_package_category_id == 1
         );
         if (debugRecord) {
@@ -448,7 +451,7 @@ const getExportDailyReportExcel = async (req, res) => {
                 plan_package_category_id: debugRecord.plan_package_category_id
             });
         }
-        
+
         if (dailyData1 && dailyData1.length > 0) {
             groupedReportData[date1] = dailyData1;
         }
@@ -776,6 +779,9 @@ const generateCumulativeMultipleHotelsPdf = async (req, res) => {
     }
 };
 
+const getDailyTemplatePdf = async (req, res) => {
+    return getDailyTemplatePdfService(req, res);
+};
 
 module.exports = {
     getExportReservationList,
@@ -790,4 +796,5 @@ module.exports = {
     generateSingleMonthMultipleHotelsPdf,
     generateCumulativeSingleHotelPdf,
     generateCumulativeMultipleHotelsPdf,
+    getDailyTemplatePdf,
 };

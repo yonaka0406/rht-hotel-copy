@@ -34,13 +34,13 @@
     "pg": "^8.16.3",
     "pg-format": "^1.0.4",
     "playwright": "^1.57.0",
-    "puppeteer": "^21.11.0",
     "sharp": "^0.34.3",
     "soap": "^1.1.12",
     "socket.io": "^4.8.1",
     "uuid": "^13.0.0",
     "wanakana": "^5.3.1",
     "winston": "^3.18.3",
+    "xlsx-populate": "^1.21.0",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {

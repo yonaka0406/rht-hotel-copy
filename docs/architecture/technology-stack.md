@@ -119,10 +119,10 @@ This document provides a comprehensive overview of the technologies, frameworks,
   - Flexible storage options (disk, memory, cloud)
   - Integration with Express.js
 
-#### Puppeteer
+#### Playwright
 - **Purpose**: PDF generation and web scraping
 - **Rationale**:
-  - Headless Chrome automation
+  - Headless browser automation
   - High-quality PDF generation
   - HTML/CSS to PDF conversion
   - Screenshot capabilities

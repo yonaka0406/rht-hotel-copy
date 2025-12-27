@@ -1013,6 +1013,61 @@ export function useReportStore() {
         }
     };
 
+    const downloadDailyTemplate = async (options = {}) => {
+        const {
+            futureOutlookData = [],
+            comparisonDate = null,
+            format = 'pdf',
+            revenueData = [],
+            occupancyData = [],
+            prevYearRevenueData = [],
+            prevYearOccupancyData = [],
+            selectionMessage = '',
+            kpiData = null
+        } = options;
+
+        try {
+            if (limitedFunctionality.value) {
+                console.debug('API not available, download functionality limited');
+                throw new Error('API not available, download functionality limited');
+            }
+
+            const response = await api.post('/report/download/daily-template-pdf', {
+                outlookData: futureOutlookData,
+                targetDate: comparisonDate,
+                format: format,
+                revenueData,
+                occupancyData,
+                prevYearRevenueData,
+                prevYearOccupancyData,
+                selectionMessage,
+                kpiData
+            }, {
+                responseType: 'blob'
+            });
+
+            if (!response) throw new Error('Download failed');
+
+            const blob = response;
+            const url = window.URL.createObjectURL(blob);
+            const a = document.body.appendChild(document.createElement('a'));
+            a.href = url;
+            
+            // Format date for filename: YYYY-MM-DD -> YYYYMMDD
+            const formattedDate = comparisonDate ? comparisonDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            a.download = `daily_report_${formattedDate}.${format}`;
+            
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            return { success: true };
+        } catch (error) {
+            console.error(`Failed to download daily template ${format}:`, error);
+            throw error;
+        }
+    };
+
     /**
      * Batch fetch reservation list data for multiple hotels.
      * @param {Array<number>} hotelIds - Array of hotel IDs.
@@ -1097,5 +1152,6 @@ export function useReportStore() {
         fetchBatchFutureOutlook,
         fetchLatestDailyReportDate,
         fetchDailyReportDataByHotel,
+        downloadDailyTemplate,
     };
 }
