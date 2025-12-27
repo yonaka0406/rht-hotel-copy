@@ -34,7 +34,7 @@ export default defineConfig({
     emptyOutDir: true, // Clears the directory before building
     
     // Memory optimization for low-RAM VPS builds
-    minify: 'esbuild', // Enable minification to reduce file size
+    minify: false, // Disable minification to reduce memory usage
     sourcemap: false, // Disable source maps to save memory
     
     // Rollup options for further memory optimization
@@ -43,13 +43,10 @@ export default defineConfig({
         // Reduce chunk size to lower memory pressure
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('echarts') || id.includes('vue-echarts')) {
-              return 'stats';
-            }
-            if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+            if (id.includes('vue') || id.includes('vue-router')) {
               return 'vendor';
             }
-            if (id.includes('primevue') || id.includes('primeicons')) {
+            if (id.includes('primevue')) {
               return 'ui';
             }
             return 'vendor';
