@@ -163,9 +163,9 @@ const getDailyTemplatePdf = async (req, res) => {
                     row.cell(6).value(item.yoyRevenueVariance).style("numberFormat", "#,##0");
 
                     // Formulas for columns O, P, Q (division by 10000)
-                    row.cell(15).formula(`B${currentRow}/10000`).style("numberFormat", "#,##0.00");
-                    row.cell(16).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0.00");
-                    row.cell(17).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0.00");
+                    row.cell(15).formula(`B${currentRow}/10000`).style("numberFormat", "#,##0");
+                    row.cell(16).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
+                    row.cell(17).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
                 });
 
                 occupancySorted.forEach((item, index) => {
