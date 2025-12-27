@@ -41,16 +41,19 @@ export default defineConfig({
     // Rollup options for further memory optimization
     rollupOptions: {
       output: {
-        // Reduce chunk size to lower memory pressure
+        // Break down large vendor chunks to stay under the 500kB limit and reduce memory pressure
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('vue') || id.includes('vue-router')) {
-              return 'vendor';
+            if (id.includes('echarts') || id.includes('zrender')) {
+              return 'charts';
             }
             if (id.includes('primevue')) {
               return 'ui';
             }
-            return 'vendor';
+            if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+              return 'vue-core';
+            }
+            return 'vendor'; // Everything else
           }
         }
       }
