@@ -5,6 +5,7 @@
     "scripts": {
         "build": "npm run build:frontend",
         "build:frontend": "export NODE_OPTIONS=\"--max-old-space-size=4096\" && export ESBUILD_WORKER_THREADS=1 && npm --prefix frontend run build -- --mode production",
+        "analyze": "export NODE_OPTIONS=\"--max-old-space-size=4096\" && export ESBUILD_WORKER_THREADS=1 && npm --prefix frontend run analyze",
         "build:frontend:dev": "npm --prefix frontend run build:dev",
         "deploy:frontend:test": "sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/",
         "deploy:frontend:prod": "sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/",

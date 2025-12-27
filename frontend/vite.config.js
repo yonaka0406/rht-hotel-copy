@@ -44,17 +44,28 @@ export default defineConfig({
         // Break down large vendor chunks to stay under the 500kB limit and reduce memory pressure
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
+            // Split ECharts further
             if (id.includes('echarts')) {
-              return 'echarts';
+              if (id.includes('echarts/lib/chart')) return 'echarts-charts';
+              if (id.includes('echarts/lib/component')) return 'echarts-components';
+              return 'echarts-core';
             }
             if (id.includes('zrender')) {
               return 'zrender';
             }
+            // Split PrimeVue further
             if (id.includes('primevue')) {
               if (id.includes('datatable') || id.includes('column')) {
                 return 'ui-tables';
               }
-              return 'ui-base';
+              if (id.includes('datepicker') || id.includes('select') || id.includes('multiselect') || id.includes('input') || id.includes('autocomplete')) {
+                return 'ui-forms';
+              }
+              // Further split ui-base to stay under 500kB
+              if (id.includes('primevue/button') || id.includes('primevue/menu') || id.includes('primevue/dialog') || id.includes('primevue/toast')) {
+                return 'ui-base-1';
+              }
+              return 'ui-base-2';
             }
             if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
               return 'vue-core';
