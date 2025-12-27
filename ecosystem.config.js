@@ -12,9 +12,10 @@ module.exports = {
       }
     },
     {
-      name   : 'backend-prod', // Name for your production instance
-      script : './api/index.js', // Path to your backend entry point
-      node_args: "--expose-gc",
+      name   : 'backend-prod',
+      script : './api/index.js',
+      node_args: "--expose-gc --max-old-space-size=4096",
+      max_memory_restart: '4G',
       watch  : false,
       env_production: {
         "NODE_ENV": "production",
