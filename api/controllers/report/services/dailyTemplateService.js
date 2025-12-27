@@ -24,10 +24,10 @@ const getDailyTemplatePdf = async (req, res) => {
         format: outputFormat = 'pdf', 
         revenueData, 
         occupancyData, 
-        displayMonth,
         prevYearRevenueData,
         prevYearOccupancyData,
-        selectionMessage
+        selectionMessage,
+        kpiData
     } = req.body;
 
     // Adjusted path relative to this service file location (api/controllers/report/services)
@@ -55,10 +55,23 @@ const getDailyTemplatePdf = async (req, res) => {
         const dataSheet = workbook.sheet('合計データ');
 
         if (dataSheet) {
-            // Write Display Month in Column 16 (P)
-            if (displayMonth) {
-                dataSheet.cell(1, 16).value('表示月').style({ bold: true });
-                dataSheet.cell(2, 16).value(displayMonth);
+            // Write KPI Data starting at M10 (Col 13)
+            if (kpiData) {
+                const kpiStartRow = 10;
+                dataSheet.cell(kpiStartRow, 13).value('KPI').style({ bold: true });
+                
+                const kpiLabels = [
+                    { label: '実績 ADR', value: kpiData.actualADR },
+                    { label: '計画 ADR', value: kpiData.forecastADR },
+                    { label: '実績 RevPAR', value: kpiData.actualRevPAR },
+                    { label: '計画 RevPAR', value: kpiData.forecastRevPAR }
+                ];
+
+                kpiLabels.forEach((kpi, index) => {
+                    const rowNum = kpiStartRow + 1 + index;
+                    dataSheet.cell(rowNum, 13).value(kpi.label);
+                    dataSheet.cell(rowNum, 14).value(kpi.value).style("numberFormat", "#,##0");
+                });
             }
 
             if (Array.isArray(outlookData)) {
@@ -81,13 +94,6 @@ const getDailyTemplatePdf = async (req, res) => {
                     row.cell(13).value(item.blocked_nights);
                     row.cell(14).value(item.net_available_room_nights);
                 });
-
-                // Fix: Re-apply autoFilter to cover the new data range to prevent table corruption
-                const lastRow = outlookData.length + 1;
-                if (lastRow > 1) {
-                    const range = dataSheet.range(1, 1, lastRow, 14);
-                    range.autoFilter();
-                }
             }
 
             // Write All Facilities Revenue & Occupancy Overview starting from Row 10
@@ -96,47 +102,83 @@ const getDailyTemplatePdf = async (req, res) => {
                 
                 // Headers
                 const headers = [
-                    '施設名', 
-                    '計画売上', '実績売上', '売上差異', '前年売上', '前年比差異(売上)',
-                    '計画稼働率', '実績稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'
+                    '施設名', '計画売上', '実績売上', '売上差異', '前年売上', '前年比差異(売上)',
+                    '施設名', '計画稼働率', '実績稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'
                 ];
                 const headerRow = dataSheet.row(startRow);
                 headers.forEach((header, index) => {
                     headerRow.cell(index + 1).value(header).style({ bold: true });
                 });
 
-                // Data
-                const filteredRevenue = revenueData.filter(item => item.hotel_id !== 0);
-                filteredRevenue.forEach((revItem, index) => {
+                // Prepare combined data for sorting
+                const hotelMetrics = revenueData
+                    .filter(item => item.hotel_id !== 0)
+                    .map(revItem => {
+                        const occItem = occupancyData.find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
+                        const prevRevItem = (prevYearRevenueData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
+                        const prevOccItem = (prevYearOccupancyData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
+
+                        const forecastRevenue = revItem.forecast_revenue || 0;
+                        const actualRevenue = revItem.period_revenue || revItem.acc_revenue || revItem.pms_revenue || 0;
+                        const revenueVariance = actualRevenue - forecastRevenue;
+                        const prevRevenue = prevRevItem.period_revenue || prevRevItem.acc_revenue || prevRevItem.pms_revenue || 0;
+                        const yoyRevenueVariance = actualRevenue - prevRevenue;
+
+                        const forecastOcc = occItem.fc_occ || 0;
+                        const actualOcc = occItem.occ || 0;
+                        const occVariance = actualOcc - forecastOcc;
+                        const prevOcc = prevOccItem.occ || 0;
+                        const yoyOccVariance = actualOcc - prevOcc;
+
+                        return {
+                            hotel_name: revItem.hotel_name,
+                            forecastRevenue,
+                            actualRevenue,
+                            revenueVariance,
+                            prevRevenue,
+                            yoyRevenueVariance,
+                            forecastOcc,
+                            actualOcc,
+                            occVariance,
+                            prevOcc,
+                            yoyOccVariance
+                        };
+                    });
+
+                // Sort independently
+                const revenueSorted = [...hotelMetrics].sort((a, b) => b.revenueVariance - a.revenueVariance);
+                const occupancySorted = [...hotelMetrics].sort((a, b) => b.occVariance - a.occVariance);
+
+                // Write data side-by-side
+                revenueSorted.forEach((item, index) => {
                     const currentRow = startRow + 1 + index;
                     const row = dataSheet.row(currentRow);
-                    const occItem = occupancyData.find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
-                    const prevRevItem = (prevYearRevenueData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
-                    const prevOccItem = (prevYearOccupancyData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
+                    
+                    // Revenue section (Cols 1-6)
+                    row.cell(1).value(item.hotel_name);
+                    row.cell(2).value(item.forecastRevenue).style("numberFormat", "#,##0");
+                    row.cell(3).value(item.actualRevenue).style("numberFormat", "#,##0");
+                    row.cell(4).value(item.revenueVariance).style("numberFormat", "#,##0");
+                    row.cell(5).value(item.prevRevenue).style("numberFormat", "#,##0");
+                    row.cell(6).value(item.yoyRevenueVariance).style("numberFormat", "#,##0");
 
-                    const forecastRevenue = revItem.forecast_revenue || 0;
-                    const actualRevenue = revItem.period_revenue || revItem.acc_revenue || revItem.pms_revenue || 0;
-                    const revenueVariance = actualRevenue - forecastRevenue;
-                    const prevRevenue = prevRevItem.period_revenue || prevRevItem.acc_revenue || prevRevItem.pms_revenue || 0;
-                    const yoyRevenueVariance = actualRevenue - prevRevenue;
+                    // Formulas for columns O, P, Q (division by 10000)
+                    row.cell(15).formula(`B${currentRow}/10000`).style("numberFormat", "#,##0.00");
+                    row.cell(16).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0.00");
+                    row.cell(17).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0.00");
+                });
 
-                    const forecastOcc = occItem.fc_occ || 0;
-                    const actualOcc = occItem.occ || 0;
-                    const occVariance = actualOcc - forecastOcc;
-                    const prevOcc = prevOccItem.occ || 0;
-                    const yoyOccVariance = actualOcc - prevOcc;
+                occupancySorted.forEach((item, index) => {
+                    const currentRow = startRow + 1 + index;
+                    const row = dataSheet.row(currentRow);
 
-                    row.cell(1).value(revItem.hotel_name);
-                    row.cell(2).value(forecastRevenue).style("numberFormat", "#,##0");
-                    row.cell(3).value(actualRevenue).style("numberFormat", "#,##0");
-                    row.cell(4).value(revenueVariance).style("numberFormat", "#,##0");
-                    row.cell(5).value(prevRevenue).style("numberFormat", "#,##0");
-                    row.cell(6).value(yoyRevenueVariance).style("numberFormat", "#,##0");
-                    row.cell(7).value(forecastOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(8).value(actualOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(9).value(occVariance / 100).style("numberFormat", "0.0%");
-                    row.cell(10).value(prevOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(11).value(yoyOccVariance / 100).style("numberFormat", "0.0%");
+                    // Occupancy section (Cols 7-12)
+                    row.cell(7).value(item.hotel_name);
+                    row.cell(8).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(9).value(item.actualOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(10).value(item.occVariance / 100).style("numberFormat", "0.0%");
+                    row.cell(11).value(item.prevOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(12).value(item.yoyOccVariance / 100).style("numberFormat", "0.0%");
                 });
             }
         }

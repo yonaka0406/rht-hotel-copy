@@ -1,8 +1,8 @@
 <template>
     <div>
         <div class="flex justify-end gap-2 mb-4">
-            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'xlsx', revenueData, occupancyData, formatDateMonth(selectedDate), prevYearRevenueData, prevYearOccupancyData, selectionMessage)" :disabled="loading" />
-            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'pdf', revenueData, occupancyData, formatDateMonth(selectedDate), prevYearRevenueData, prevYearOccupancyData, selectionMessage)" :disabled="loading" />
+            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'xlsx', revenueData, occupancyData, prevYearRevenueData, prevYearOccupancyData, selectionMessage, kpiData)" :disabled="loading" />
+            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'pdf', revenueData, occupancyData, prevYearRevenueData, prevYearOccupancyData, selectionMessage, kpiData)" :disabled="loading" />
         </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
@@ -131,6 +131,31 @@ const selectionMessage = computed(() => {
         .filter(name => name && name !== '施設合計' && name !== 'Unknown Hotel');
     const uniqueNames = [...new Set(names)];
     return `会計データがない場合はPMSの数値になっています。期間： ${periodStr}。選択中の施設： ${uniqueNames.join(', ')}`;
+});
+
+// KPI Calculations for Export
+const kpiData = computed(() => {
+    const revenueEntry = revenueData.value?.find(item => item.hotel_id === 0);
+    const occupancyEntry = occupancyData.value?.find(item => item.hotel_id === 0);
+
+    const total_forecast_revenue = revenueEntry?.forecast_revenue || 0;
+    const total_period_accommodation_revenue = revenueEntry?.accommodation_revenue || 0;
+    const total_fc_sold_rooms = occupancyEntry?.fc_sold_rooms || 0;
+    const total_fc_available_rooms = occupancyEntry?.fc_total_rooms || 0;
+    const total_sold_rooms = occupancyEntry?.sold_rooms || 0;
+    const total_available_rooms = occupancyEntry?.total_rooms || 0;
+
+    const actualADR = total_sold_rooms ? Math.round(total_period_accommodation_revenue / total_sold_rooms) : 0;
+    const forecastADR = total_fc_sold_rooms ? Math.round(total_forecast_revenue / total_fc_sold_rooms) : 0;
+    const actualRevPAR = total_available_rooms ? Math.round(total_period_accommodation_revenue / total_available_rooms) : 0;
+    const forecastRevPAR = total_fc_available_rooms ? Math.round(total_forecast_revenue / total_fc_available_rooms) : 0;
+
+    return {
+        actualADR,
+        forecastADR,
+        actualRevPAR,
+        forecastRevPAR
+    };
 });
 
 const reportTriggerKey = ref(Date.now());
