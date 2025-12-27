@@ -32,11 +32,12 @@ export default defineConfig({
     /*outDir: '../api/public', // backend's public folder*/
     outDir: 'dist',
     emptyOutDir: true, // Clears the directory before building
-    
+
     // Memory optimization for low-RAM VPS builds
-    minify: false, // Disable minification to reduce memory usage
+    minify: 'esbuild', // Disable minification to reduce memory usage
     sourcemap: false, // Disable source maps to save memory
-    
+    cssMinify: true,
+
     // Rollup options for further memory optimization
     rollupOptions: {
       output: {
@@ -54,7 +55,7 @@ export default defineConfig({
         }
       }
     },
-    
+
     // Reduce concurrent processing
     target: 'es2015', // Use older target for simpler transforms
   },
