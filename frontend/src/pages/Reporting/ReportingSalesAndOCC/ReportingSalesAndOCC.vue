@@ -1,8 +1,8 @@
 <template>
     <div>
         <div class="flex justify-end gap-2 mb-4">
-            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate({ futureOutlookData, comparisonDate, format: 'xlsx', revenueData, occupancyData, prevYearRevenueData, prevYearOccupancyData, selectionMessage, kpiData })" :disabled="loading" />
-            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate({ futureOutlookData, comparisonDate, format: 'pdf', revenueData, occupancyData, prevYearRevenueData, prevYearOccupancyData, selectionMessage, kpiData })" :disabled="loading" />
+            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="handleDownload('xlsx')" :loading="isDownloadingExcel" :disabled="loading" />
+            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="handleDownload('pdf')" :loading="isDownloadingPdf" :disabled="loading" />
         </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
@@ -122,6 +122,8 @@ function getDaysInMonth(year, month) {
 
 // --- Reactive State for the Parent Component ---
 const loading = ref(false);
+const isDownloadingExcel = ref(false);
+const isDownloadingPdf = ref(false);
 
 const selectionMessage = computed(() => {
     if (!selectedDate.value) return '';
@@ -160,6 +162,30 @@ const kpiData = computed(() => {
 
 const reportTriggerKey = ref(Date.now());
 const comparisonDate = ref(null);
+
+const handleDownload = async (format) => {
+    if (format === 'xlsx') isDownloadingExcel.value = true;
+    else if (format === 'pdf') isDownloadingPdf.value = true;
+
+    try {
+        await downloadDailyTemplate({
+            futureOutlookData: futureOutlookData.value,
+            comparisonDate: comparisonDate.value,
+            format,
+            revenueData: revenueData.value,
+            occupancyData: occupancyData.value,
+            prevYearRevenueData: prevYearRevenueData.value,
+            prevYearOccupancyData: prevYearOccupancyData.value,
+            selectionMessage: selectionMessage.value,
+            kpiData: kpiData.value
+        });
+    } catch (error) {
+        console.error(`Error downloading ${format}:`, error);
+    } finally {
+        if (format === 'xlsx') isDownloadingExcel.value = false;
+        else if (format === 'pdf') isDownloadingPdf.value = false;
+    }
+};
 
 // Computed property for the first day of the selected month for API calls
 const firstDayofFetch = computed(() => {
