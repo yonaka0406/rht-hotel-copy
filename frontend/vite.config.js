@@ -43,7 +43,7 @@ export default defineConfig({
         // Reduce chunk size to lower memory pressure
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('echarts') || id.includes('vue-echarts')) {
+            if (id.includes('echarts') || id.includes('vue-echarts') || id.includes('zrender')) {
               return 'stats';
             }
             if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
