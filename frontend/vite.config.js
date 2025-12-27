@@ -44,11 +44,17 @@ export default defineConfig({
         // Break down large vendor chunks to stay under the 500kB limit and reduce memory pressure
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('echarts') || id.includes('zrender')) {
-              return 'charts';
+            if (id.includes('echarts')) {
+              return 'echarts';
+            }
+            if (id.includes('zrender')) {
+              return 'zrender';
             }
             if (id.includes('primevue')) {
-              return 'ui';
+              if (id.includes('datatable') || id.includes('column')) {
+                return 'ui-tables';
+              }
+              return 'ui-base';
             }
             if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
               return 'vue-core';
