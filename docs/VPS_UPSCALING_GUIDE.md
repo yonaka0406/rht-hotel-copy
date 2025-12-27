@@ -1,6 +1,7 @@
 # VPS Upscaling Guide
 
 ## Overview
+
 This guide covers the complete process of upscaling your VPS for the RHT Hotel application, including database backup, service management, memory allocation, and Node.js upgrade considerations.
 
 ## Pre-Upscale Checklist
@@ -39,6 +40,7 @@ sudo find /etc -name "postgresql.conf" 2>/dev/null
 ```
 
 **Check your current server setup:**
+
 ```bash
 # Your application is at:
 cd /var/www/html/rht-hotel
@@ -65,11 +67,13 @@ ls -la /usr/local/bin/upload_to_google_drive.js 2>/dev/null || echo "Google Driv
 ### 2. Create PostgreSQL Backup
 
 **Your automated backup system:**
+
 - **Schedule**: 3 times daily (2:00 AM, 12:00 PM, 5:00 PM JST)
 - **Timer**: `postgresql-backup-wehub.timer` (systemd)
 - **Service**: `postgresql-backup-wehub.service`
 
 **Option 1: Wait for next scheduled backup (recommended if timing allows)**
+
 ```bash
 # Check when next backup runs
 sudo systemctl list-timers | grep postgresql-backup
@@ -81,11 +85,13 @@ ls -la /var/backups/postgresql/
 **Option 2: Trigger manual backup before upscale (RECOMMENDED)**
 
 **If your upscale is soon**: Trigger a manual backup using:
+
 ```bash
 sudo systemctl start postgresql-backup-wehub.service
 ```
 
 **Complete manual backup process:**
+
 ```bash
 # Manually trigger your automated backup system
 sudo systemctl start postgresql-backup-wehub.service
@@ -101,6 +107,7 @@ ls -la /var/backups/postgresql/ | tail -5
 ```
 
 **Option 3: Manual backup using your scripts**
+
 ```bash
 # Use your backup scripts directly
 cd /var/www/html/rht-hotel
@@ -108,6 +115,7 @@ sudo ./server-config/postgres/backup_postgresql.sh wehub YOUR_GDRIVE_FOLDER_ID
 ```
 
 **Test which method works:**
+
 ```bash
 # Test postgres user connection
 sudo -u postgres psql -d wehub -c "SELECT 1;" && echo "postgres user works"
@@ -120,6 +128,7 @@ ls -la /var/backups/postgresql/ && echo "Backup directory exists"
 ```
 
 **Verify backup was created:**
+
 ```bash
 # Check recent backups
 find /tmp /var/backups -name "*wehub*" -type f -mtime -1 2>/dev/null
@@ -159,6 +168,7 @@ sudo systemctl status redis-server
 ```
 
 **This sequence ensures:**
+
 - No new data changes after backup
 - Clean, consistent backup state
 - Proper service shutdown order
@@ -166,6 +176,7 @@ sudo systemctl status redis-server
 ### 4. Document Current Resource Usage
 
 **Your current VPS specs (baseline):**
+
 - **Memory**: 3.8GB total (1.6GB used, 2.2GB available)
 - **Disk**: 197GB total (79GB used, 109GB available)
 - **Swap**: 2GB (74MB used)
@@ -204,12 +215,14 @@ curl -4 ifconfig.me  # Your public IP
 ```
 
 **Questions to ask your provider:**
+
 1. **IP Address**: Will my IP address change during upscale?
 2. **Migration**: Does upscale require moving to new physical hardware?
 3. **Snapshot**: Can you create a snapshot before upscale (faster rollback than backup)?
 4. **Downtime**: How long will the server be offline?
 
 **If IP might change:**
+
 - Update DNS records preparation
 - Note any firewall rules or API integrations using your IP
 - Prepare to update external services pointing to your server
@@ -222,6 +235,7 @@ curl -4 ifconfig.me  # Your public IP
 You cannot create a full system image yourself, but you can create a "tarball" archive of all critical files. This is your safety net.
 
 **Run this on your VPS:**
+
 ```bash
 # Create a comprehensive archive of app, env files, and system configs
 sudo tar -czvf /tmp/pre_upscale_backup.tar.gz \
@@ -237,12 +251,14 @@ ls -lh /tmp/pre_upscale_backup.tar.gz
 ```
 
 **Then download it to your local machine (run on Windows):**
+
 ```powershell
 # Replace 'ubuntu@your-ip' with your actual SSH login
 scp ubuntu@your-ip:/tmp/pre_upscale_backup.tar.gz ./backup/
 ```
 
 ### 7. Trigger VPS Upscale
+
 - Log into your VPS provider dashboard
 - Create snapshot/backup through provider (if available)
 - Navigate to your server instance
@@ -295,6 +311,7 @@ df -h
 ```
 
 **Resource Verification:**
+
 ```bash
 # Verify new resources
 free -h
@@ -380,11 +397,13 @@ sudo nano /etc/postgresql/*/main/postgresql.conf
 ```
 
 **Memory allocation (New 8GB baseline):**
+
 - **PostgreSQL**: 2GB (shared_buffers)
 - **Node.js**: 4GB (max-old-space-size)
 - **System/OS**: 2GB (free for OS and caching)
 
 **Key PostgreSQL settings for 8GB RAM:**
+
 ```conf
 shared_buffers = 2GB
 effective_cache_size = 6GB
@@ -536,6 +555,7 @@ sudo -u postgres psql -d wehub -c "SELECT * FROM pg_stat_activity;"
 ### 17. Performance Tuning
 
 **PostgreSQL optimizations:**
+
 ```sql
 -- Check slow queries
 SELECT query, mean_time, calls 
@@ -548,6 +568,7 @@ ANALYZE;
 ```
 
 **Node.js optimizations:**
+
 ```bash
 # Enable garbage collection logging
 node --expose-gc --trace-gc your-app.js
@@ -603,16 +624,19 @@ nvm use 22
 ## Memory Allocation Examples
 
 ### Small Upscale (3.8GB → 6GB)
+
 - PostgreSQL: 768MB → 1.5GB
 - Node.js: 1.5GB → 3GB  
 - System/Cache: 1.5GB → 1.5GB
 
 ### Medium Upscale (3.8GB → 8GB)
+
 - PostgreSQL: 768MB → 2GB
 - Node.js: 1.5GB → 4GB
 - System/Cache: 1.5GB → 2GB
 
 ### Large Upscale (3.8GB → 12GB)
+
 - PostgreSQL: 768MB → 3GB
 - Node.js: 1.5GB → 6GB
 - System/Cache: 1.5GB → 3GB
