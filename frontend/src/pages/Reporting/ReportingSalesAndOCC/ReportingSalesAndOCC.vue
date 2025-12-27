@@ -1,8 +1,8 @@
 <template>
     <div>
         <div class="flex justify-end gap-2 mb-4">
-            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'xlsx', revenueData, occupancyData)" :disabled="loading" />
-            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'pdf', revenueData, occupancyData)" :disabled="loading" />
+            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'xlsx', revenueData, occupancyData, formatDateMonth(selectedDate), prevYearRevenueData, prevYearOccupancyData, selectionMessage)" :disabled="loading" />
+            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'pdf', revenueData, occupancyData, formatDateMonth(selectedDate), prevYearRevenueData, prevYearOccupancyData, selectionMessage)" :disabled="loading" />
         </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
@@ -122,6 +122,16 @@ function getDaysInMonth(year, month) {
 
 // --- Reactive State for the Parent Component ---
 const loading = ref(false);
+
+const selectionMessage = computed(() => {
+    if (!selectedDate.value) return '';
+    const periodStr = formatDateMonth(selectedDate.value).replace('-', '/');
+    const names = revenueData.value
+        .map(item => item.hotel_name)
+        .filter(name => name && name !== '施設合計' && name !== 'Unknown Hotel');
+    const uniqueNames = [...new Set(names)];
+    return `会計データがない場合はPMSの数値になっています。期間： ${periodStr}。選択中の施設： ${uniqueNames.join(', ')}`;
+});
 
 const reportTriggerKey = ref(Date.now());
 const comparisonDate = ref(null);

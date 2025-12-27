@@ -1013,7 +1013,7 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyTemplate = async (data, date, format = 'pdf', revenueData = [], occupancyData = []) => {
+    const downloadDailyTemplate = async (data, date, format = 'pdf', revenueData = [], occupancyData = [], displayMonth = null, prevYearRevenueData = [], prevYearOccupancyData = [], selectionMessage = '') => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, download functionality limited');
@@ -1025,7 +1025,11 @@ export function useReportStore() {
                 targetDate: date,
                 format: format,
                 revenueData,
-                occupancyData
+                occupancyData,
+                displayMonth,
+                prevYearRevenueData,
+                prevYearOccupancyData,
+                selectionMessage
             }, {
                 responseType: 'blob'
             });
