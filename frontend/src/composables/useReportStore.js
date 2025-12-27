@@ -1013,7 +1013,19 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyTemplate = async (data, date, format = 'pdf', revenueData = [], occupancyData = [], prevYearRevenueData = [], prevYearOccupancyData = [], selectionMessage = '', kpiData = null) => {
+    const downloadDailyTemplate = async (options = {}) => {
+        const {
+            futureOutlookData = [],
+            comparisonDate = null,
+            format = 'pdf',
+            revenueData = [],
+            occupancyData = [],
+            prevYearRevenueData = [],
+            prevYearOccupancyData = [],
+            selectionMessage = '',
+            kpiData = null
+        } = options;
+
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, download functionality limited');
@@ -1021,8 +1033,8 @@ export function useReportStore() {
             }
 
             const response = await api.post('/report/download/daily-template-pdf', {
-                outlookData: data,
-                targetDate: date,
+                outlookData: futureOutlookData,
+                targetDate: comparisonDate,
                 format: format,
                 revenueData,
                 occupancyData,
@@ -1038,14 +1050,13 @@ export function useReportStore() {
 
             const blob = response;
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const a = document.body.appendChild(document.createElement('a'));
             a.href = url;
             
             // Format date for filename: YYYY-MM-DD -> YYYYMMDD
-            const formattedDate = date ? date.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const formattedDate = comparisonDate ? comparisonDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
             a.download = `daily_report_${formattedDate}.${format}`;
             
-            document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
