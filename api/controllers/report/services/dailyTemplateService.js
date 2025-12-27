@@ -18,7 +18,7 @@ const cleanupFiles = (filePaths) => {
 
 const getDailyTemplatePdf = async (req, res) => {
     const requestId = req.requestId;
-    const { outlookData, targetDate, format: outputFormat = 'pdf' } = req.body;
+    const { outlookData, targetDate, format: outputFormat = 'pdf', revenueData, occupancyData } = req.body;
 
     // Adjusted path relative to this service file location (api/controllers/report/services)
     const templatePath = path.join(__dirname, '../../../components/デイリーテンプレート.xlsx');
@@ -65,6 +65,42 @@ const getDailyTemplatePdf = async (req, res) => {
                     const range = dataSheet.range(1, 1, lastRow, 14);
                     range.autoFilter();
                 }
+            }
+
+            // Write All Facilities Revenue & Occupancy Overview starting from Row 10
+            if (Array.isArray(revenueData) && Array.isArray(occupancyData)) {
+                const startRow = 10;
+                
+                // Headers
+                const headers = ['施設名', '計画売上', '実績売上', '売上差異', '計画稼働率', '実績稼働率', '稼働率差異'];
+                const headerRow = dataSheet.row(startRow);
+                headers.forEach((header, index) => {
+                    headerRow.cell(index + 1).value(header).style({ bold: true });
+                });
+
+                // Data
+                const filteredRevenue = revenueData.filter(item => item.hotel_id !== 0);
+                filteredRevenue.forEach((revItem, index) => {
+                    const currentRow = startRow + 1 + index;
+                    const row = dataSheet.row(currentRow);
+                    const occItem = occupancyData.find(o => o.hotel_id === revItem.hotel_id) || {};
+
+                    const forecastRevenue = revItem.forecast_revenue || 0;
+                    const actualRevenue = revItem.period_revenue || revItem.acc_revenue || revItem.pms_revenue || 0;
+                    const revenueVariance = actualRevenue - forecastRevenue;
+
+                    const forecastOcc = occItem.fc_occ || 0;
+                    const actualOcc = occItem.occ || 0;
+                    const occVariance = actualOcc - forecastOcc;
+
+                    row.cell(1).value(revItem.hotel_name);
+                    row.cell(2).value(forecastRevenue).style("numberFormat", "#,##0");
+                    row.cell(3).value(actualRevenue).style("numberFormat", "#,##0");
+                    row.cell(4).value(revenueVariance).style("numberFormat", "#,##0");
+                    row.cell(5).value(forecastOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(6).value(actualOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(7).value(occVariance / 100).style("numberFormat", "0.0%");
+                });
             }
         }
 

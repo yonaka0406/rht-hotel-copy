@@ -1013,7 +1013,7 @@ export function useReportStore() {
         }
     };
 
-    const downloadDailyTemplate = async (data, date, format = 'pdf') => {
+    const downloadDailyTemplate = async (data, date, format = 'pdf', revenueData = [], occupancyData = []) => {
         try {
             if (limitedFunctionality.value) {
                 console.debug('API not available, download functionality limited');
@@ -1023,7 +1023,9 @@ export function useReportStore() {
             const response = await api.post('/report/download/daily-template-pdf', {
                 outlookData: data,
                 targetDate: date,
-                format: format
+                format: format,
+                revenueData,
+                occupancyData
             }, {
                 responseType: 'blob'
             });
