@@ -4,6 +4,28 @@ const StyleConsistencyValidator = require('../../../services/styleConsistencyVal
 const fs = require('fs');
 const path = require('path');
 
+// Queue for PDF generation to limit concurrency
+const pdfQueue = [];
+let isPdfProcessing = false;
+
+const processPdfQueue = async () => {
+    if (isPdfProcessing || pdfQueue.length === 0) return;
+    
+    isPdfProcessing = true;
+    const { reportType, reqBody, requestId, resolve, reject } = pdfQueue.shift();
+    
+    try {
+        const result = await generatePdfReportInternal(reportType, reqBody, requestId);
+        resolve(result);
+    } catch (error) {
+        reject(error);
+    } finally {
+        isPdfProcessing = false;
+        // Small delay to allow browser cleanup and resource recovery
+        setTimeout(processPdfQueue, 1000);
+    }
+};
+
 /**
  * Enhanced PDF Generator Service
  * 
@@ -205,7 +227,7 @@ const generateFallbackContent = (chartType, error) => {
     `;
 };
 
-const generatePdfReport = async (reportType, reqBody, requestId) => {
+const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
     const startTime = Date.now();
     logger.debug('PDF generation started', {
         requestId,
@@ -1490,6 +1512,16 @@ const generatePdfReport = async (reportType, reqBody, requestId) => {
             reportType
         });
     }
+};
+
+/**
+ * Wrapper for PDF generation to enforce concurrency limits
+ */
+const generatePdfReport = (reportType, reqBody, requestId) => {
+    return new Promise((resolve, reject) => {
+        pdfQueue.push({ reportType, reqBody, requestId, resolve, reject });
+        processPdfQueue();
+    });
 };
 
 module.exports = {
