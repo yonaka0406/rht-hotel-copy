@@ -16,7 +16,7 @@
         "start": "npm run build && npm run start:backend",
         "serve": "npm run build:frontend development && npm run start:backend",
         "serve:dev": "npm run stop:apache && npm run stop:psql && npm run build:frontend:dev && npm run deploy:frontend:test && npm run start:apache && npm run start:psql && pm2 startOrRestart ecosystem.config.js --env development --only backend-dev",
-        "serve:prod": "npm run stop:apache && npm run stop:psql && npm run build:frontend && npm run deploy:frontend:prod && npm run start:apache && npm run start:psql && pm2 startOrRestart ecosystem.config.js --env production --only backend-prod",
+        "serve:prod": "export NODE_OPTIONS=\"--max-old-space-size=4096\" && npm run stop:apache && npm run stop:psql && npm run build:frontend && npm run deploy:frontend:prod && npm run start:apache && npm run start:psql && pm2 startOrRestart ecosystem.config.js --env production --only backend-prod",
         "start:backend:dev": "pm2 start ecosystem.config.js --env development --only backend-dev",
         "start:backend:prod": "pm2 start ecosystem.config.js --env production --only backend-prod",
         "stop:backend:dev": "pm2 stop backend-dev",
