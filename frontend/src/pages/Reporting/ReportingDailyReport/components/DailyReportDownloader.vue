@@ -21,7 +21,7 @@
                                         </FloatLabel>
                                     </div>
                                     <div class="col-span-2">
-                                        <Button @click="loadReport" label="ロード" class="w-full" />
+                                        <Button @click="loadReport" label="ロード" class="w-full" :disabled="isLoading" />
                                     </div>
                                 </div>
                             </template>
@@ -36,19 +36,19 @@
                                     <div class="col-span-4 mt-6">
                                         <FloatLabel>
                                             <DatePicker v-model="date1" dateFormat="yy/mm/dd" class="w-full"
-                                                :minDate="minDateComparison" :maxDate="maxDateComparison" />
+                                                :minDate="minDateComparison" :maxDate="maxDateComparison" :disabled="isLoading" />
                                             <label>日付1</label>
                                         </FloatLabel>
                                     </div>
                                     <div class="col-span-4 mt-6">
                                         <FloatLabel>
                                             <DatePicker v-model="date2" dateFormat="yy/mm/dd" class="w-full"
-                                                :minDate="minDateComparison" :maxDate="maxDateComparison" />
+                                                :minDate="minDateComparison" :maxDate="maxDateComparison" :disabled="isLoading" />
                                             <label>日付2</label>
                                         </FloatLabel>
                                     </div>
                                     <div class="col-span-2">
-                                        <Button @click="compareDates" label="比較" class="w-full" />
+                                        <Button @click="compareDates" label="比較" class="w-full" :disabled="isLoading" />
                                     </div>
                                 </div>
                             </template>
@@ -77,7 +77,7 @@
                             :exportFilename="`daily_report_${loadedDate}`">
                             <template #paginatorend> <!-- Use #paginatorend slot -->
                                 <Button type="button" icon="pi pi-download" text @click="handleCSVDownload"
-                                    :disabled="!reportData.length" label="CSVダウンロード" />
+                                    :disabled="isLoading || !reportData.length" label="CSVダウンロード" />
                             </template>
                             <Column field="hotel_id" header="ホテルID"></Column>
                             <Column field="hotel_name" header="ホテル名"></Column>
@@ -156,7 +156,7 @@
                         currentPageReportTemplate="{first}-{last} of {totalRecords}">
                         <template #paginatorend> <!-- Use #paginatorend slot -->
                             <Button type="button" icon="pi pi-download" text @click="exportComparisonToExcel()"
-                                :disabled="!comparisonData.length" label="Excelダウンロード" />
+                                :disabled="isLoading || !comparisonData.length" label="Excelダウンロード" />
                         </template>
                         <Column field="hotel_name" header="ホテル名" headerClass="text-center" filter="true"
                             :showFilterMenu="false">

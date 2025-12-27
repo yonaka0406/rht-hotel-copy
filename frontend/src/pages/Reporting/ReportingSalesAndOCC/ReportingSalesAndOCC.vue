@@ -1,8 +1,8 @@
 <template>
     <div>
         <div class="flex justify-end gap-2 mb-4">
-            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'xlsx')" />
-            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'pdf')" />
+            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'xlsx')" :disabled="loading" />
+            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="downloadDailyTemplate(futureOutlookData, comparisonDate, 'pdf')" :disabled="loading" />
         </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
