@@ -825,6 +825,15 @@ const getDailyTemplatePdf = async (req, res) => {
                     row.getCell(9).numFmt = '0.0%';
                     row.commit();
                 });
+
+                // Fix: Re-apply autoFilter to cover the new data range to prevent table corruption
+                const lastRow = outlookData.length + 1;
+                if (lastRow > 1) {
+                    dataSheet.autoFilter = {
+                        from: { row: 1, column: 1 },
+                        to: { row: lastRow, column: 14 }
+                    };
+                }
             }
             dataSheet.state = 'visible';
         }
