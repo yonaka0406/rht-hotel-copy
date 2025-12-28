@@ -2,7 +2,6 @@ const { getPool } = require('../../config/database');
 
 /**
  * Fetches the top bookers summed across the entire period for the UI table.
- * Simplified: Only returns client details, sales, and used hotels.
  */
 const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false, minSales = 0, limit = 200) => {
   const pool = getPool(requestId);
@@ -75,7 +74,6 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false,
 
 /**
  * Fetches granular sales data grouped by hotel, client, and month for CSV export.
- * Includes total people summed from the reservations table.
  */
 const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTemp = false, minSales = 0, limit = 10000) => {
   const pool = getPool(requestId);
@@ -86,55 +84,22 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         rd.hotel_id,
         rd.reservation_id,
         TO_CHAR(DATE_TRUNC('month', rd.date), 'YYYY-MM') AS month,
-        MAX(r.number_of_people) AS res_people,
         
-        -- Total Sales (Confirmed)
-        SUM(
-          CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
-            COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
-          ELSE 0 END
-        ) AS total_sales,
-        
-        -- Total Nights (Confirmed)
-        COUNT(DISTINCT 
-          CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
-            rd.id 
-          END
-        ) AS total_nights,
+        -- Night Counts
+        COUNT(DISTINCT CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS total_nights,
+        COUNT(DISTINCT CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS provisory_nights,
+        COUNT(DISTINCT CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS cancelled_billable_nights,
+        COUNT(DISTINCT CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN rd.id END) AS cancelled_non_billable_nights,
 
-        -- Check if reservation was confirmed/stayed in this month
-        BOOL_OR(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as is_confirmed,
+        -- Sales
+        SUM(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS total_sales,
+        SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS provisory_sales,
+        SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_billable,
+        SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_non_billable,
 
-        -- Provisory Sales
-        SUM(
-          CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
-            COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
-          ELSE 0 END
-        ) AS provisory_sales,
-
-        -- Provisory Nights
-        COUNT(DISTINCT 
-          CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
-            rd.id 
-          END
-        ) AS provisory_nights,
-
-        -- Check if reservation was provisory in this month
-        BOOL_OR(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as is_provisory,
-        
-        -- Cancelled Billable Sales
-        SUM(
-          CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE THEN
-            COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
-          ELSE 0 END
-        ) AS cancelled_billable,
-
-        -- Cancelled Non-Billable Sales
-        SUM(
-          CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE THEN
-            COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
-          ELSE 0 END
-        ) AS cancelled_non_billable
+        -- Person attribution logic (Count people only in the check-in month to avoid double counting across months)
+        MAX(CASE WHEN TO_CHAR(r.check_in, 'YYYY-MM') = TO_CHAR(rd.date, 'YYYY-MM') AND r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL THEN r.number_of_people ELSE 0 END) AS confirmed_people,
+        MAX(CASE WHEN TO_CHAR(r.check_in, 'YYYY-MM') = TO_CHAR(rd.date, 'YYYY-MM') AND r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN r.number_of_people ELSE 0 END) AS provisory_people
 
       FROM
         reservation_details rd
@@ -178,12 +143,14 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       
       SUM(rm.total_sales) AS total_sales,
       SUM(rm.total_nights) AS total_nights,
-      SUM(CASE WHEN rm.is_confirmed THEN rm.res_people ELSE 0 END) AS total_people,
+      SUM(rm.confirmed_people) AS total_people,
       SUM(rm.provisory_sales) AS provisory_sales,
       SUM(rm.provisory_nights) AS provisory_nights,
-      SUM(CASE WHEN rm.is_provisory THEN rm.res_people ELSE 0 END) AS provisory_people,
+      SUM(rm.provisory_people) AS provisory_people,
       SUM(rm.cancelled_billable) AS cancelled_billable,
+      SUM(rm.cancelled_billable_nights) AS cancelled_billable_nights,
       SUM(rm.cancelled_non_billable) AS cancelled_non_billable,
+      SUM(rm.cancelled_non_billable_nights) AS cancelled_non_billable_nights,
       
       STRING_AGG(DISTINCT r.type, ', ') AS reservation_types,
       STRING_AGG(DISTINCT r.payment_timing, ', ') AS payment_timings,
