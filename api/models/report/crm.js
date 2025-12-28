@@ -95,6 +95,13 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
           ELSE 0 END
         ) AS total_sales,
         
+        -- Total Nights (Confirmed)
+        COUNT(DISTINCT 
+          CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
+            rd.id 
+          END
+        ) AS total_nights,
+
         -- Check if reservation was confirmed/stayed in this month
         BOOL_OR(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as is_confirmed,
 
@@ -104,6 +111,13 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
             COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
           ELSE 0 END
         ) AS provisory_sales,
+
+        -- Provisory Nights
+        COUNT(DISTINCT 
+          CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
+            rd.id 
+          END
+        ) AS provisory_nights,
 
         -- Check if reservation was provisory in this month
         BOOL_OR(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as is_provisory,
@@ -163,8 +177,10 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       rm.month,
       
       SUM(rm.total_sales) AS total_sales,
+      SUM(rm.total_nights) AS total_nights,
       SUM(CASE WHEN rm.is_confirmed THEN rm.res_people ELSE 0 END) AS total_people,
       SUM(rm.provisory_sales) AS provisory_sales,
+      SUM(rm.provisory_nights) AS provisory_nights,
       SUM(CASE WHEN rm.is_provisory THEN rm.res_people ELSE 0 END) AS provisory_people,
       SUM(rm.cancelled_billable) AS cancelled_billable,
       SUM(rm.cancelled_non_billable) AS cancelled_non_billable,
