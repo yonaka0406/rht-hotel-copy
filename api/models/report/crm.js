@@ -1,11 +1,25 @@
 const { getPool } = require('../../config/database');
 
-const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false) => {
+const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false, minSales = 0, limit = 200) => {
   const pool = getPool(requestId);
   
-  // We always fetch all relevant statuses (excluding block) to calculate separate columns
-  // The sorting logic handles the 'includeTemp' behavior
-  
+  // Base sum for sorting and filtering
+  const sortSum = `(
+    SUM(
+        CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
+          COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
+        ELSE 0 END
+    ) 
+    + 
+    CASE WHEN $3::boolean IS TRUE THEN
+        SUM(
+            CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
+            COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
+            ELSE 0 END
+        )
+    ELSE 0 END
+  )`;
+
   const query = `
     SELECT
       c.id AS client_id,
@@ -54,26 +68,12 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false)
       AND r.status <> 'block'
     GROUP BY
       c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone
-    ORDER BY
-      (
-        SUM(
-            CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
-              COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
-            ELSE 0 END
-        ) 
-        + 
-        CASE WHEN $3::boolean IS TRUE THEN
-            SUM(
-                CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
-                COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
-                ELSE 0 END
-            )
-        ELSE 0 END
-      ) DESC
-    LIMIT 200;
+    HAVING ${sortSum} >= $4
+    ORDER BY ${sortSum} DESC
+    LIMIT $5;
   `;
 
-  const values = [dateStart, dateEnd, includeTemp];
+  const values = [dateStart, dateEnd, includeTemp, minSales, limit];
 
   try {
     const result = await pool.query(query, values);
@@ -84,12 +84,15 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false)
   }
 };
 
-const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTemp = false) => {
+const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTemp = false, minSales = 0, limit = 10000) => {
   const pool = getPool(requestId);
 
-  // We ignore includeTemp for filtering here because we want to output all columns for the CSV
-  // The frontend requested "includeTemp should affect only the order displayed in the frontend"
-  // So for the CSV export, we provide full data breakdown.
+  // Note: For CSV export, minSales and limit usually apply to the aggregated totals per client,
+  // but since this query is grouped by month AND hotel, we apply the filter to the client's overall total
+  // by using a subquery or a CTE if we want precise "Top X clients" behavior.
+  // However, simple HAVING on the row is easier for now if the user just wants to filter small rows.
+  // Given the complexity of "Total sales across period" vs "rows in CSV", let's use a simple HAVING on the monthly row sum for now,
+  // or just pass 0 and high limit for "Download All".
 
   const query = `
     SELECT
@@ -190,9 +193,22 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       AND r.status <> 'block'
     GROUP BY
       h.id, h.name, c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone, TO_CHAR(DATE_TRUNC('month', rd.date), 'YYYY-MM')
+    -- No HAVING here to ensure CSV is complete by default, but we could add one if needed.
     ORDER BY
-      month DESC, total_sales DESC;
+      month DESC, total_sales DESC
+    LIMIT $3;
   `;
+
+  const values = [dateStart, dateEnd, limit];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving sales by client by month:', err);
+    throw new Error('Database error');
+  }
+};
 
   const values = [dateStart, dateEnd];
 

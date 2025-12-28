@@ -114,9 +114,9 @@ export function useCRMStore() {
         }
     };
 
-    const fetchTopBookers = async (startDate, endDate, includeTemp = false) => {
+    const fetchTopBookers = async (startDate, endDate, includeTemp = false, minSales = 0, limit = 200) => {
         try {
-            const data = await get(`/report/crm/top-bookers/${startDate}/${endDate}?include_temp=${includeTemp}`);
+            const data = await get(`/report/crm/top-bookers/${startDate}/${endDate}?include_temp=${includeTemp}&min_sales=${minSales}&limit=${limit}`);
             return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error('Failed to fetch top bookers:', error);
@@ -124,9 +124,9 @@ export function useCRMStore() {
         }
     };
 
-    const fetchSalesByClientMonthly = async (startDate, endDate, includeTemp = false) => {
+    const fetchSalesByClientMonthly = async (startDate, endDate, includeTemp = false, limit = 10000) => {
         try {
-            const data = await get(`/report/crm/sales-by-client-monthly/${startDate}/${endDate}?include_temp=${includeTemp}`);
+            const data = await get(`/report/crm/sales-by-client-monthly/${startDate}/${endDate}?include_temp=${includeTemp}&limit=${limit}`);
             return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error('Failed to fetch sales by client monthly:', error);

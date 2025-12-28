@@ -3,11 +3,23 @@
     <div class="font-semibold text-xl mb-4">売上上位顧客 ({{ dateLabel }})</div>
     
     <div class="flex items-center gap-4 mb-4 flex-wrap">
-      <DatePicker v-model="dateRange" selectionMode="range" view="month" :manualInput="false" showIcon fluid class="w-full sm:w-80" dateFormat="yy/mm" />
+      <DatePicker v-model="dateRange" selectionMode="range" view="month" :manualInput="false" showIcon fluid class="w-full sm:w-60" dateFormat="yy/mm" />
+      
+      <div class="flex items-center gap-2">
+        <label for="minSales">最低売上:</label>
+        <InputNumber v-model="minSales" inputId="minSales" mode="currency" currency="JPY" locale="ja-JP" :min="0" class="w-32" />
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label for="limit">表示件数:</label>
+        <InputNumber v-model="limit" inputId="limit" :min="1" :max="10000" class="w-24" />
+      </div>
+
       <div class="flex items-center gap-2">
         <Checkbox v-model="includeTemp" binary inputId="includeTemp" />
         <label for="includeTemp">仮予約・保留中を含める</label>
       </div>
+      
       <Button label="検索" icon="pi pi-search" @click="fetchData" :loading="loading" />
       <Button label="詳細データCSV" icon="pi pi-download" severity="secondary" @click="downloadCsv" :loading="downloading" />
     </div>
@@ -44,7 +56,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import { DatePicker, Button, DataTable, Column, Tag, Checkbox } from 'primevue';
+import { DatePicker, Button, DataTable, Column, Tag, Checkbox, InputNumber } from 'primevue';
 import { useCRMStore } from '@/composables/useCRMStore';
 import Papa from 'papaparse';
 
@@ -57,6 +69,8 @@ const bookers = ref([]);
 const dateRange = ref([]);
 const displayedDateRange = ref([]);
 const includeTemp = ref(false);
+const minSales = ref(0);
+const limit = ref(200);
 const first = ref(0);
 
 const formatDate = (date) => {
@@ -118,7 +132,7 @@ const fetchData = async () => {
   const edate = formatDate(getEndOfMonth(endDateRaw));
   
   try {
-    const data = await fetchTopBookers(sdate, edate, includeTemp.value);
+    const data = await fetchTopBookers(sdate, edate, includeTemp.value, minSales.value, limit.value);
     bookers.value = data.map((item, index) => ({
         ...item,
         rank: index + 1
@@ -146,7 +160,8 @@ const downloadCsv = async () => {
   
   try {
     // CSV download should always exclude temp/provisory bookings (pass false)
-    const data = await fetchSalesByClientMonthly(sdate, edate, false);
+    // We pass a high limit (e.g. 50000) to ensure the user gets all data if they want
+    const data = await fetchSalesByClientMonthly(sdate, edate, false, 50000);
     
     // Prepare CSV data
     const csvData = data.map(row => ({
