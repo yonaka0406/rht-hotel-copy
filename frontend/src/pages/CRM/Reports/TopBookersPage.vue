@@ -14,12 +14,13 @@
 
     <DataTable :value="bookers" :loading="loading" showGridlines stripedRows tableStyle="min-width: 50rem" 
       paginator :rows="10" :rowsPerPageOptions="[5, 10, 20, 50]"
+      v-model:first="first"
       removableSort
     >
       <template #empty>データが見つかりません。</template>
-      <Column header="#" :style="{ width: '3rem' }">
+      <Column header="#" field="rank" sortable :style="{ width: '4rem' }">
         <template #body="slotProps">
-          {{ slotProps.index + 1 }}
+          {{ slotProps.data.rank }}
         </template>
       </Column>
       <Column field="client_name" header="顧客名" sortable></Column>
@@ -56,6 +57,7 @@ const bookers = ref([]);
 const dateRange = ref([]);
 const displayedDateRange = ref([]);
 const includeTemp = ref(false);
+const first = ref(0);
 
 const formatDate = (date) => {
     if (!date) return '';
@@ -113,7 +115,10 @@ const fetchData = async () => {
   
   try {
     const data = await fetchTopBookers(sdate, edate, includeTemp.value);
-    bookers.value = data;
+    bookers.value = data.map((item, index) => ({
+        ...item,
+        rank: index + 1
+    }));
     // Update displayed range only on success
     displayedDateRange.value = [...dateRange.value];
   } catch (error) {
