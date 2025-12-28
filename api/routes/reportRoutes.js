@@ -60,4 +60,8 @@ router.post('/report/batch/res-list', authMiddleware, reportController.getBatchR
 router.post('/report/batch/booker-type', authMiddleware, reportController.getBatchBookerTypeBreakdown);
 router.post('/report/batch/future-outlook', authMiddleware, reportController.getBatchFutureOutlook);
 
+// CRM Reports
+router.get('/report/crm/top-bookers/:sdate/:edate', authMiddleware, reportController.getTopBookers);
+router.get('/report/crm/sales-by-client-monthly/:sdate/:edate', authMiddleware, reportController.getSalesByClientByMonth);
+
 module.exports = router;
