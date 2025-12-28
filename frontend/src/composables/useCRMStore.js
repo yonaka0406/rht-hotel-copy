@@ -114,6 +114,26 @@ export function useCRMStore() {
         }
     };
 
+    const fetchTopBookers = async (startDate, endDate, includeTemp = false) => {
+        try {
+            const data = await get(`/report/crm/top-bookers/${startDate}/${endDate}?include_temp=${includeTemp}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch top bookers:', error);
+            return [];
+        }
+    };
+
+    const fetchSalesByClientMonthly = async (startDate, endDate, includeTemp = false) => {
+        try {
+            const data = await get(`/report/crm/sales-by-client-monthly/${startDate}/${endDate}?include_temp=${includeTemp}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch sales by client monthly:', error);
+            return [];
+        }
+    };
+
     return {
         user_actions,
         client_actions,
@@ -131,5 +151,7 @@ export function useCRMStore() {
         createImpediment,
         updateImpediment,
         deleteImpediment,
+        fetchTopBookers,
+        fetchSalesByClientMonthly,
     };
 }

@@ -50,6 +50,7 @@ const ClientGroupList = () => import('@/pages/CRM/ClientGroupList.vue');
 const ClientGroupEdit = () => import('@/pages/CRM/ClientGroupEdit.vue');
 const SalesInteractions = () => import('@/pages/CRM/Sales/SalesInteractions.vue');
 const SalesProjectList = () => import('@/pages/CRM/Sales/SalesProjectList.vue');
+const TopBookersPage = () => import('@/pages/CRM/Reports/TopBookersPage.vue');
 
 const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
 const ReportingSalesAndOCC = () => import('@/pages/Reporting/ReportingSalesAndOCC/ReportingSalesAndOCC.vue');
@@ -140,6 +141,12 @@ const routes = [
         name: 'ProjectListAll',
         component: SalesProjectList,
         meta: { title: 'PJ・工事一覧' }
+      },
+      {
+        path: 'reports/top-bookers',
+        name: 'TopBookersPage',
+        component: TopBookersPage,
+        meta: { title: '売上上位顧客' }
       },
     ],
     meta: { requiresAuth: true },
