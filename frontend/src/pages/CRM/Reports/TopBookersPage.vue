@@ -202,7 +202,7 @@ const downloadCsv = async () => {
     const csvData = data.map(row => ({
         'ホテルID': row.hotel_id,
         'ホテル名称': row.hotel_name,
-        'レポート期間': row.month,
+        'レポート条件': `レポート条件：(${formatMonth(row.month)} [上位${displayedLimit.value}件 / 最低売上: ${formatCurrency(displayedMinSales.value)}]${displayedIncludeTemp.value ? ' [仮予約・保留中含む]' : ''})`,
         '予約タイプ': row.reservation_types ? row.reservation_types.split(', ').map(t => translateReservationType(t)).join(', ') : '',
         '予約者ID': row.client_id,
         '予約者顧客ID': row.customer_id,
@@ -216,7 +216,6 @@ const downloadCsv = async () => {
         '決済詳細': row.payment_methods,
         '売上': row.total_sales,
         '仮予約売上': row.provisory_sales || 0,
-        '仮予約宿泊数': row.provisory_nights || 0,
         '仮予約人数': row.provisory_people || 0,
         'キャンセル（請求あり）': row.cancelled_billable || 0,
         'キャンセル宿泊数（請求あり）': row.cancelled_billable_nights || 0,

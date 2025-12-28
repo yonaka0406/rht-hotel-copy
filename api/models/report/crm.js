@@ -97,9 +97,9 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_billable,
         SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_non_billable,
 
-        -- Status flags per month to determine if people should be counted in this month
-        BOOL_OR(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as has_confirmed_stay_this_month,
-        BOOL_OR(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as has_provisory_stay_this_month
+        -- Boolean flags to detect presence of confirmed/provisory stays in this month
+        BOOL_OR(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as has_confirmed,
+        BOOL_OR(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as has_provisory
 
       FROM
         reservation_details rd
@@ -117,6 +117,18 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         AND r.status <> 'block'
       GROUP BY
         rd.hotel_id, rd.reservation_id, TO_CHAR(DATE_TRUNC('month', rd.date), 'YYYY-MM')
+    ),
+    client_filter AS (
+      SELECT
+        r.reservation_client_id as filter_client_id
+      FROM
+        reservation_metrics rm
+        JOIN reservations r ON rm.reservation_id = r.id AND rm.hotel_id = r.hotel_id
+      GROUP BY
+        r.reservation_client_id
+      HAVING (SUM(rm.total_sales) + (CASE WHEN $3::boolean THEN SUM(rm.provisory_sales) ELSE 0 END)) >= $4
+      ORDER BY (SUM(rm.total_sales) + (CASE WHEN $3::boolean THEN SUM(rm.provisory_sales) ELSE 0 END)) DESC
+      LIMIT $5
     ),
     payment_metrics AS (
       SELECT
@@ -143,9 +155,9 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       
       SUM(rm.total_sales) AS total_sales,
       SUM(rm.total_nights) AS total_nights,
-      SUM(CASE WHEN rm.has_confirmed_stay_this_month THEN rm.res_people ELSE 0 END) AS total_people,
+      SUM(CASE WHEN rm.has_confirmed THEN rm.res_people ELSE 0 END) AS total_people,
       SUM(rm.provisory_sales) AS provisory_sales,
-      SUM(CASE WHEN rm.has_provisory_stay_this_month THEN rm.res_people ELSE 0 END) AS provisory_people,
+      SUM(CASE WHEN rm.has_provisory THEN rm.res_people ELSE 0 END) AS provisory_people,
       SUM(rm.cancelled_billable) AS cancelled_billable,
       SUM(rm.cancelled_billable_nights) AS cancelled_billable_nights,
       SUM(rm.cancelled_non_billable) AS cancelled_non_billable,
@@ -161,15 +173,15 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       JOIN reservations r ON rm.reservation_id = r.id AND rm.hotel_id = r.hotel_id
       JOIN clients c ON r.reservation_client_id = c.id
       JOIN hotels h ON r.hotel_id = h.id
+      JOIN client_filter cf ON c.id = cf.filter_client_id
       LEFT JOIN payment_metrics pm ON rm.reservation_id = pm.reservation_id AND rm.hotel_id = pm.hotel_id
     GROUP BY
       h.id, h.name, c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone, rm.month
     ORDER BY
-      rm.month DESC, total_sales DESC
-    LIMIT $3;
+      rm.month DESC, total_sales DESC;
   `;
 
-  const values = [dateStart, dateEnd, limit];
+  const values = [dateStart, dateEnd, includeTemp, minSales, limit];
 
   try {
     const result = await pool.query(query, values);
