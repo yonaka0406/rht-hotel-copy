@@ -217,8 +217,11 @@ const downloadCsv = async () => {
         '売上': row.total_sales,
         '仮予約売上': row.provisory_sales || 0,
         '仮予約宿泊数': row.provisory_nights || 0,
+        '仮予約人数': row.provisory_people || 0,
         'キャンセル（請求あり）': row.cancelled_billable || 0,
-        'キャンセル（請求なし）': row.cancelled_non_billable || 0
+        'キャンセル宿泊数（請求あり）': row.cancelled_billable_nights || 0,
+        'キャンセル（請求なし）': row.cancelled_non_billable || 0,
+        'キャンセル宿泊数（請求なし）': row.cancelled_non_billable_nights || 0
     }));
 
     const csv = Papa.unparse(csvData);
