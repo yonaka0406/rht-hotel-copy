@@ -8,6 +8,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       ,hotels.formal_name
       ,reservations.id
       ,reservations.status
+      ,reservations.type
       ,reservations.reservation_client_id AS booker_id
       ,booker.customer_id AS booker_customer_id
       ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
