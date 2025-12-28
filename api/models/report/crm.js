@@ -210,17 +210,6 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
   }
 };
 
-  const values = [dateStart, dateEnd];
-
-  try {
-    const result = await pool.query(query, values);
-    return result.rows;
-  } catch (err) {
-    console.error('Error retrieving sales by client by month:', err);
-    throw new Error('Database error');
-  }
-};
-
 module.exports = {
   getTopBookers,
   getSalesByClientByMonth,
