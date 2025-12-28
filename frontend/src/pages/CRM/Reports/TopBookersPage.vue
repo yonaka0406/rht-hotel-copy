@@ -23,7 +23,7 @@
           {{ slotProps.data.rank }}
         </template>
       </Column>
-      <Column field="client_name" header="顧客名" sortable></Column>
+      <Column field="client_name" header="予約者名称" sortable></Column>
       <Column field="customer_id" header="顧客ID" sortable></Column>
       <Column header="利用ホテル">
         <template #body="slotProps">
@@ -85,7 +85,11 @@ const dateLabel = computed(() => {
     if (!displayedDateRange.value || !displayedDateRange.value[0]) return '';
     const start = formatMonth(displayedDateRange.value[0]);
     const end = displayedDateRange.value[1] ? formatMonth(displayedDateRange.value[1]) : start;
-    return `${start} - ${end}`;
+    let label = `${start} - ${end}`;
+    if (includeTemp.value) {
+        label += ' [仮予約・保留中含む]';
+    }
+    return label;
 });
 
 onMounted(() => {
@@ -146,12 +150,22 @@ const downloadCsv = async () => {
     
     // Prepare CSV data
     const csvData = data.map(row => ({
-        '顧客ID': row.customer_id || row.client_id,
-        '顧客名': row.client_name,
-        '月': row.month,
+        'ホテルID': row.hotel_id,
+        'ホテル名称': row.hotel_name,
+        'レポート期間': row.month,
+        '予約タイプ': row.reservation_types,
+        '予約者ID': row.client_id,
+        '予約者顧客ID': row.customer_id,
+        '予約者': row.client_name,
+        '予約者カナ': row.client_name_kana,
+        '予約者電話番号': row.client_phone,
+        '宿泊日数': row.total_nights || 0,
+        '人数': row.total_people || 0,
+        '支払者': row.payer_names,
+        '支払い方法': row.payment_methods,
         '売上': row.total_sales,
-        '宿泊数': row.total_nights || 0,
         '仮予約売上': row.provisory_sales || 0,
+        '仮予約宿泊数': row.provisory_nights || 0,
         'キャンセル（請求あり）': row.cancelled_billable || 0,
         'キャンセル宿泊数（請求あり）': row.cancelled_billable_nights || 0,
         'キャンセル（請求なし）': row.cancelled_non_billable || 0,

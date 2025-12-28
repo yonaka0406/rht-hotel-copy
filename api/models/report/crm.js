@@ -11,6 +11,8 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false)
       c.id AS client_id,
       c.customer_id,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      c.name_kana AS client_name_kana,
+      c.phone AS client_phone,
       
       -- Total Sales (Confirmed Only)
       SUM(
@@ -25,6 +27,13 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false)
           COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
         ELSE 0 END
       ) AS provisory_sales,
+      
+      -- Provisory Nights (Hold/Provisory Only)
+      COUNT(DISTINCT 
+        CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
+          rd.id 
+        END
+      ) AS provisory_nights,
 
       JSON_AGG(DISTINCT h.name) AS used_hotels
     FROM
@@ -44,7 +53,7 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false)
       rd.date BETWEEN $1 AND $2
       AND r.status <> 'block'
     GROUP BY
-      c.id, c.customer_id, c.name_kanji, c.name_kana, c.name
+      c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone
     ORDER BY
       (
         SUM(
@@ -84,9 +93,13 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
 
   const query = `
     SELECT
+      h.id AS hotel_id,
+      h.name AS hotel_name,
       c.id AS client_id,
       c.customer_id,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      c.name_kana AS client_name_kana,
+      c.phone AS client_phone,
       TO_CHAR(DATE_TRUNC('month', rd.date), 'YYYY-MM') AS month,
       
       -- Total Sales (Confirmed)
@@ -103,12 +116,26 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         END
       ) AS total_nights,
 
+      -- Total People (Confirmed)
+      SUM(
+        CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
+          rd.number_of_people
+        ELSE 0 END
+      ) AS total_people,
+
       -- Provisory Sales (Hold/Provisory)
       SUM(
         CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
           COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
         ELSE 0 END
       ) AS provisory_sales,
+
+      -- Provisory Nights (Hold/Provisory)
+      COUNT(DISTINCT 
+        CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
+          rd.id 
+        END
+      ) AS provisory_nights,
       
       -- Cancelled Billable Sales
       SUM(
@@ -136,12 +163,20 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
           rd.id 
         END
-      ) AS cancelled_non_billable_nights
+      ) AS cancelled_non_billable_nights,
+      
+      STRING_AGG(DISTINCT r.type, ', ') AS reservation_types,
+      STRING_AGG(DISTINCT pt.name, ', ') AS payment_methods,
+      STRING_AGG(DISTINCT COALESCE(pc.name_kanji, pc.name_kana, pc.name), ', ') AS payer_names
 
     FROM
       reservations r
       JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
       JOIN clients c ON r.reservation_client_id = c.id
+      JOIN hotels h ON r.hotel_id = h.id
+      LEFT JOIN reservation_payments rp ON r.id = rp.reservation_id AND r.hotel_id = rp.hotel_id
+      LEFT JOIN payment_types pt ON rp.payment_type_id = pt.id
+      LEFT JOIN clients pc ON rp.client_id = pc.id
       LEFT JOIN (
         SELECT
           reservation_detail_id,
@@ -154,7 +189,7 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       rd.date BETWEEN $1 AND $2
       AND r.status <> 'block'
     GROUP BY
-      c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, TO_CHAR(DATE_TRUNC('month', rd.date), 'YYYY-MM')
+      h.id, h.name, c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone, TO_CHAR(DATE_TRUNC('month', rd.date), 'YYYY-MM')
     ORDER BY
       month DESC, total_sales DESC;
   `;
