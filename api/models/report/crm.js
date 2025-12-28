@@ -200,7 +200,7 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       -- Left join to distribution. If no payments, pd columns are null.
       LEFT JOIN payment_distribution pd ON rb.reservation_id = pd.reservation_id AND rb.hotel_id = pd.hotel_id
     GROUP BY
-      h.id, h.name, c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone, rb.month, payment_method, payer_name
+      h.id, h.name, c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone, rb.month, rb.payment_timing, pd.payment_method, pd.payer_name
     ORDER BY
       rb.month DESC, total_sales DESC;
   `;
