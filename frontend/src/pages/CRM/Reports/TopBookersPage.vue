@@ -71,7 +71,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { DatePicker, Button, DataTable, Column, Tag, Checkbox, InputNumber, Fieldset } from 'primevue';
 import { useCRMStore } from '@/composables/useCRMStore';
-import { translateReservationType } from '@/utils/reservationUtils';
+import { translateReservationType, translateReservationPaymentTiming } from '@/utils/reservationUtils';
 import Papa from 'papaparse';
 
 const toast = useToast();
@@ -205,7 +205,8 @@ const downloadCsv = async () => {
         '宿泊日数': row.total_nights || 0,
         '人数': row.total_people || 0,
         '支払者': row.payer_names,
-        '支払い方法': row.payment_methods,
+        '支払い方法': row.payment_timings ? row.payment_timings.split(', ').map(t => translateReservationPaymentTiming(t)).join(', ') : '',
+        '決済詳細': row.payment_methods,
         '売上': row.total_sales,
         '仮予約売上': row.provisory_sales || 0,
         '仮予約宿泊数': row.provisory_nights || 0,
