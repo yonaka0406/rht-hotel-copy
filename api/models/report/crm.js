@@ -19,7 +19,7 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false,
         ) AS total_sales,
         -- Provisory Sales
         SUM(
-          CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN
+          CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN
             COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0)
           ELSE 0 END
         ) AS provisory_sales
@@ -93,7 +93,7 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         SUM(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS total_sales,
         COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS total_nights,
         
-        SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS provisory_sales,
+        SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS provisory_sales,
         COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS provisory_nights,
         
         SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_billable,
@@ -141,7 +141,7 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         SUM(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END)
         +
         CASE WHEN $3::boolean THEN
-          SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END)
+          SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END)
         ELSE 0 END
       ) >= $4
       ORDER BY 1 DESC
