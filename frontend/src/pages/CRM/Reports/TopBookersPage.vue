@@ -2,26 +2,39 @@
   <div class="card p-4 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
     <div class="font-semibold text-xl mb-4">売上上位顧客 ({{ dateLabel }})</div>
     
-    <div class="flex items-center gap-4 mb-4 flex-wrap">
-      <DatePicker v-model="dateRange" selectionMode="range" view="month" :manualInput="false" showIcon fluid class="w-full sm:w-60" dateFormat="yy/mm" />
-      
-      <div class="flex items-center gap-2">
-        <label for="minSales">最低売上:</label>
-        <InputNumber v-model="minSales" inputId="minSales" mode="currency" currency="JPY" locale="ja-JP" :min="0" class="w-32" />
+    <div class="grid grid-cols-12 gap-4 mb-4 items-center">
+      <!-- Row 1 -->
+      <div class="col-span-12 md:col-span-4">
+        <DatePicker v-model="dateRange" selectionMode="range" view="month" :manualInput="false" showIcon fluid class="w-full" dateFormat="yy/mm" />
+      </div>
+      <div class="col-span-12 md:col-span-4">
+        <Button label="検索" icon="pi pi-search" @click="fetchData" :loading="loading" fluid />
+      </div>
+      <div class="col-span-12 md:col-span-4">
+        <Button label="詳細データCSV" icon="pi pi-download" severity="secondary" @click="downloadCsv" :loading="downloading" fluid />
       </div>
 
-      <div class="flex items-center gap-2">
-        <label for="limit">表示件数:</label>
-        <InputNumber v-model="limit" inputId="limit" :min="1" :max="10000" class="w-24" />
-      </div>
+      <!-- Row 2 -->
+      <div class="col-span-12">
+        <Fieldset legend="検索オプション">
+          <div class="flex flex-wrap items-center gap-6">
+            <div class="flex items-center gap-2">
+              <label for="minSales" class="whitespace-nowrap">最低売上:</label>
+              <InputNumber v-model="minSales" inputId="minSales" mode="currency" currency="JPY" locale="ja-JP" :min="0" class="w-40" fluid />
+            </div>
 
-      <div class="flex items-center gap-2">
-        <Checkbox v-model="includeTemp" binary inputId="includeTemp" />
-        <label for="includeTemp">仮予約・保留中を含める</label>
+            <div class="flex items-center gap-2">
+              <label for="limit" class="whitespace-nowrap">表示件数:</label>
+              <InputNumber v-model="limit" inputId="limit" :min="1" :max="10000" class="w-24" fluid />
+            </div>
+
+            <div class="flex items-center gap-2">
+              <Checkbox v-model="includeTemp" binary inputId="includeTemp" fluid />
+              <label for="includeTemp" class="whitespace-nowrap">仮予約・保留中を含める</label>
+            </div>
+          </div>
+        </Fieldset>
       </div>
-      
-      <Button label="検索" icon="pi pi-search" @click="fetchData" :loading="loading" />
-      <Button label="詳細データCSV" icon="pi pi-download" severity="secondary" @click="downloadCsv" :loading="downloading" />
     </div>
 
     <DataTable :value="bookers" :loading="loading" showGridlines stripedRows tableStyle="min-width: 50rem" 
@@ -56,8 +69,9 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import { DatePicker, Button, DataTable, Column, Tag, Checkbox, InputNumber } from 'primevue';
+import { DatePicker, Button, DataTable, Column, Tag, Checkbox, InputNumber, Fieldset } from 'primevue';
 import { useCRMStore } from '@/composables/useCRMStore';
+import { translateReservationType } from '@/utils/reservationUtils';
 import Papa from 'papaparse';
 
 const toast = useToast();
@@ -69,8 +83,11 @@ const bookers = ref([]);
 const dateRange = ref([]);
 const displayedDateRange = ref([]);
 const includeTemp = ref(false);
-const minSales = ref(0);
-const limit = ref(200);
+const displayedIncludeTemp = ref(false);
+const minSales = ref(100000);
+const displayedMinSales = ref(100000);
+const limit = ref(100);
+const displayedLimit = ref(100);
 const first = ref(0);
 
 const formatDate = (date) => {
@@ -87,7 +104,7 @@ const formatMonth = (date) => {
     const d = new Date(date);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `${year}/${month}`;
+    return `${year}年${month}月`;
 };
 
 const getEndOfMonth = (date) => {
@@ -99,8 +116,16 @@ const dateLabel = computed(() => {
     if (!displayedDateRange.value || !displayedDateRange.value[0]) return '';
     const start = formatMonth(displayedDateRange.value[0]);
     const end = displayedDateRange.value[1] ? formatMonth(displayedDateRange.value[1]) : start;
-    let label = `${start} - ${end}`;
-    if (includeTemp.value) {
+    
+    let label = start === end ? start : `${start} - ${end}`;
+    
+    label += ` [上位${displayedLimit.value}件`;
+    if (displayedMinSales.value > 0) {
+        label += ` / 最低売上: ${formatCurrency(displayedMinSales.value)}`;
+    }
+    label += ']';
+
+    if (displayedIncludeTemp.value) {
         label += ' [仮予約・保留中含む]';
     }
     return label;
@@ -137,8 +162,11 @@ const fetchData = async () => {
         ...item,
         rank: index + 1
     }));
-    // Update displayed range only on success
+    // Update displayed range and options only on success
     displayedDateRange.value = [...dateRange.value];
+    displayedIncludeTemp.value = includeTemp.value;
+    displayedMinSales.value = minSales.value;
+    displayedLimit.value = limit.value;
   } catch (error) {
     console.error(error);
     toast.add({ severity: 'error', summary: 'エラー', detail: 'データの取得に失敗しました', life: 3000 });
@@ -168,7 +196,7 @@ const downloadCsv = async () => {
         'ホテルID': row.hotel_id,
         'ホテル名称': row.hotel_name,
         'レポート期間': row.month,
-        '予約タイプ': row.reservation_types,
+        '予約タイプ': row.reservation_types ? row.reservation_types.split(', ').map(t => translateReservationType(t)).join(', ') : '',
         '予約者ID': row.client_id,
         '予約者顧客ID': row.customer_id,
         '予約者': row.client_name,
