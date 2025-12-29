@@ -289,7 +289,16 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               'accommodation' as category,
               '宿泊料' as item_name,
               1 as item_quantity,
-              rr.price AS total_price
+              -- User-Requested Heuristic:
+              -- Calculate breakdown based on reservation_rates.
+              -- If sum(rr.price) != rd.price, apply the difference to the rate with the HIGHEST tax rate.
+              -- This handles implicit discounts/rounding that should likely apply to the main tax bucket.
+              CASE
+                WHEN ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id) = 1 THEN
+                    rr.price + (rd.price - SUM(rr.price) OVER (PARTITION BY rd.id))
+                ELSE
+                    rr.price
+              END AS total_price
             FROM
               reservation_details rd
               JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id

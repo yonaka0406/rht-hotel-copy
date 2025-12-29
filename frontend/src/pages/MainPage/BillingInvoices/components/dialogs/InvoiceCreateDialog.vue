@@ -65,15 +65,17 @@
                     </Column>
                     <template #footer>
                         <div class="flex flex-col items-end gap-1 px-2">
-                            <div class="flex justify-between w-48 text-sm">
+                            <div class="flex justify-between w-64 text-sm">
                                 <span>消費税区分合計:</span>
                                 <span class="font-bold">{{ ratesTotal.toLocaleString() }} 円</span>
                             </div>
-                            <div class="flex justify-between w-48 text-sm">
+                            <div class="flex justify-between w-64 text-sm">
                                 <span>入金（請求）合計:</span>
-                                <span class="font-bold">{{ (invoiceData.invoice_total_value || 0).toLocaleString() }} 円</span>
+                                <span class="font-bold">{{ (invoiceData.invoice_total_value || 0).toLocaleString() }}
+                                    円</span>
                             </div>
-                            <div v-if="!isBalanceCorrect" class="mt-2 p-2 bg-red-100 text-red-700 rounded-md text-xs w-full text-center animate-pulse">
+                            <div v-if="!isBalanceCorrect"
+                                class="mt-2 p-2 bg-red-100 text-red-700 rounded-md text-xs w-full text-center animate-pulse">
                                 <i class="pi pi-exclamation-triangle mr-1"></i>
                                 注意：税区分合計が入金合計と一致しません。
                             </div>

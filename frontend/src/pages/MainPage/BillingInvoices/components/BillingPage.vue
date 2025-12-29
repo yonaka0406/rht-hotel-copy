@@ -29,7 +29,7 @@
                                         <div class="col-span-3 text-left">
                                             {{ `${group.client_kanji || group.client_name}` }}
                                             <small>{{ `${group.client_kana ? '(' + group.client_kana + ')' : ''}`
-                                            }}</small>
+                                                }}</small>
                                         </div>
                                         <div class="flex items-center justify-center">
                                             {{ group.total_value.toLocaleString() }} 円
@@ -54,7 +54,7 @@
                                         <Column header="予約期間">
                                             <template #body="slotProps">
                                                 <span>{{ slotProps.data.check_in }}～{{ slotProps.data.check_out
-                                                }}</span>
+                                                    }}</span>
                                             </template>
                                         </Column>
                                         <Column field="room_type_name" header="部屋タイプ"></Column>
@@ -73,6 +73,15 @@
                                         <Column header="金額" style="text-align: right;">
                                             <template #body="slotProps">
                                                 <span>{{ formatCurrency(slotProps.data.value) }}</span>
+                                            </template>
+                                        </Column>
+                                        <Column header="詳細" style="text-align: center; width: 4rem">
+                                            <template #body="slotProps">
+                                                <a :href="`/reservations/edit/${slotProps.data.reservation_id}`"
+                                                    target="_blank" rel="noopener noreferrer"
+                                                    class="text-blue-600 hover:text-blue-800">
+                                                    <i class="pi pi-external-link"></i>
+                                                </a>
                                             </template>
                                         </Column>
                                     </DataTable>
