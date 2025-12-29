@@ -4,7 +4,8 @@
     "private": true,
     "scripts": {
         "build": "npm run build:frontend",
-        "build:frontend": "npm --prefix frontend run build -- --mode production",
+        "build:frontend": "export NODE_OPTIONS=\"--max-old-space-size=4096\" && export ESBUILD_WORKER_THREADS=1 && npm --prefix frontend run build -- --mode production",
+        "analyze": "export NODE_OPTIONS=\"--max-old-space-size=4096\" && export ESBUILD_WORKER_THREADS=1 && npm --prefix frontend run analyze",
         "build:frontend:dev": "npm --prefix frontend run build:dev",
         "deploy:frontend:test": "sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/",
         "deploy:frontend:prod": "sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/",
@@ -16,7 +17,7 @@
         "start": "npm run build && npm run start:backend",
         "serve": "npm run build:frontend development && npm run start:backend",
         "serve:dev": "npm run stop:apache && npm run stop:psql && npm run build:frontend:dev && npm run deploy:frontend:test && npm run start:apache && npm run start:psql && pm2 startOrRestart ecosystem.config.js --env development --only backend-dev",
-        "serve:prod": "npm run stop:apache && npm run stop:psql && npm run build:frontend && npm run deploy:frontend:prod && npm run start:apache && npm run start:psql && pm2 startOrRestart ecosystem.config.js --env production --only backend-prod",
+        "serve:prod": "export NODE_OPTIONS=\"--max-old-space-size=4096\" && npm run stop:apache && npm run stop:psql && npm run build:frontend && npm run deploy:frontend:prod && npm run start:apache && npm run start:psql && pm2 startOrRestart ecosystem.config.js --env production --only backend-prod",
         "start:backend:dev": "pm2 start ecosystem.config.js --env development --only backend-dev",
         "start:backend:prod": "pm2 start ecosystem.config.js --env production --only backend-prod",
         "stop:backend:dev": "pm2 stop backend-dev",

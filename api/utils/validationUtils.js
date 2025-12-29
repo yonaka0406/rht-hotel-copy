@@ -11,11 +11,11 @@ const { ValidationError } = require('./customErrors');
  */
 function validateNumericParam(idString, paramName) {
   if (idString === undefined || idString === null || String(idString).trim() === '') {
-    throw new ValidationError(`${paramName} is required and cannot be empty.`, 'MISSING_REQUIRED_PARAM');
+    throw new ValidationError(`${paramName}は必須項目であり、空にすることはできません。`, 'MISSING_REQUIRED_PARAM');
   }
   const numericId = parseInt(idString, 10);
   if (isNaN(numericId) || numericId <= 0) {
-    throw new ValidationError(`Invalid ${paramName} format. Must be a positive integer. Received: '${idString}'`, 'INVALID_NUMERIC_PARAM');
+    throw new ValidationError(`${paramName}の形式が正しくありません。正の整数である必要があります。入力された値: '${idString}'`, 'INVALID_NUMERIC_PARAM');
   }
   return numericId;
 }
@@ -30,10 +30,10 @@ function validateNumericParam(idString, paramName) {
  */
 function validateUuidParam(uuidString, paramName) {
   if (uuidString === undefined || uuidString === null || String(uuidString).trim() === '') {
-    throw new ValidationError(`${paramName} is required and cannot be empty.`, 'MISSING_REQUIRED_PARAM');
+    throw new ValidationError(`${paramName}は必須項目であり、空にすることはできません。`, 'MISSING_REQUIRED_PARAM');
   }
   if (!uuidValidate(String(uuidString))) {
-    throw new ValidationError(`Invalid ${paramName} format. Must be a valid UUID. Received: '${uuidString}'`, 'INVALID_UUID_PARAM');
+    throw new ValidationError(`${paramName}の形式が正しくありません。有効なUUIDである必要があります。入力された値: '${uuidString}'`, 'INVALID_UUID_PARAM');
   }
   return String(uuidString);
 }
@@ -73,7 +73,7 @@ function validateDateStringParam(dateString, paramName) {
  */
 function validateNonEmptyStringParam(str, paramName) {
   if (str === undefined || str === null || String(str).trim() === '') {
-    throw new ValidationError(`${paramName} is required and cannot be empty or just whitespace.`, 'MISSING_REQUIRED_PARAM');
+    throw new ValidationError(`${paramName}は必須項目であり、空にすることはできません。`, 'MISSING_REQUIRED_PARAM');
   }
   return String(str).trim();
 }
@@ -88,22 +88,22 @@ function validateNonEmptyStringParam(str, paramName) {
  */
 function validateIntegerParam(intString, paramName) {
   if (intString === undefined || intString === null || String(intString).trim() === '') {
-    throw new ValidationError(`${paramName} is required and cannot be empty.`, 'MISSING_REQUIRED_PARAM');
+    throw new ValidationError(`${paramName}は必須項目であり、空にすることはできません。`, 'MISSING_REQUIRED_PARAM');
   }
   const numericInt = parseInt(intString, 10);
   if (isNaN(numericInt)) {
-    throw new ValidationError(`Invalid ${paramName} format. Must be an integer. Received: '${intString}'`, 'INVALID_INTEGER_PARAM');
+    throw new ValidationError(`${paramName}の形式が正しくありません。整数である必要があります。入力された値: '${intString}'`, 'INVALID_INTEGER_PARAM');
   }
   // Ensure it's a finite number, helps catch things like '1.2.3' which parseInt might partially parse then isNaN is false
-  if (!isFinite(numericInt)) { 
-    throw new ValidationError(`Invalid ${paramName} format. Must be a finite integer. Received: '${intString}'`, 'INVALID_INTEGER_PARAM');
+  if (!isFinite(numericInt)) {
+    throw new ValidationError(`${paramName}の形式が正しくありません。有限な整数である必要があります。入力された値: '${intString}'`, 'INVALID_INTEGER_PARAM');
   }
   // Check if the original string, when parsed, is the same as the number.
   // This helps catch cases like "123xyz" which parseInt would turn into 123.
   // Or "1.5" which parseInt would turn to 1. We need strict integer check.
   // A stricter check for non-decimal strings:
   if (!/^-?\d+$/.test(String(intString).trim())) {
-      throw new ValidationError(`Invalid ${paramName} format. Must be a whole integer (no decimals). Received: '${intString}'`, 'INVALID_INTEGER_PARAM');
+    throw new ValidationError(`${paramName}の形式が正しくありません。整数（小数点なし）である必要があります。入力された値: '${intString}'`, 'INVALID_INTEGER_PARAM');
   }
   // The regex check above makes the String(numericInt) !== String(intString).trim() check somewhat redundant
   // for already-trimmed valid integer strings, but it's a good safeguard.
@@ -125,18 +125,14 @@ function validateIntegerParam(intString, paramName) {
  */
 function validateEmailFormat(emailString, paramName) {
   if (emailString === undefined || emailString === null || String(emailString).trim() === '') {
-    // Allow empty if email is optional, otherwise make it required via validateNonEmptyStringParam first
-    // For now, let's assume if called, it's expected to be a valid email or handled as an error by this fn.
-    // If an email field is optional, the caller should check for presence before calling this.
-    // Alternatively, this function could return null/undefined for empty strings if that's desired.
-    throw new ValidationError(`${paramName} is required and cannot be empty if provided for validation.`, 'MISSING_REQUIRED_PARAM');
+    throw new ValidationError(`${paramName}は必須項目であり、空にすることはできません。`, 'MISSING_REQUIRED_PARAM');
   }
   const email = String(emailString).trim();
   // Basic regex for email format. More comprehensive regexes exist but can be overly complex.
   // This one checks for something@something.something
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    throw new ValidationError(`Invalid ${paramName} format. Must be a valid email address. Received: '${emailString}'`, 'INVALID_EMAIL_FORMAT');
+    throw new ValidationError(`${paramName}の形式が正しくありません。有効なメールアドレスを入力してください。入力された値: '${emailString}'`, 'INVALID_EMAIL_FORMAT');
   }
   return email;
 }
@@ -152,12 +148,11 @@ function validateEmailFormat(emailString, paramName) {
  */
 function validatePhoneNumberFormat(phoneString, paramName) {
   if (phoneString === undefined || phoneString === null || String(phoneString).trim() === '') {
-    // If the phone number is optional, the calling function should handle the check.
-    throw new ValidationError(`${paramName} is required and cannot be empty if provided for validation.`, 'MISSING_REQUIRED_PARAM');
+    throw new ValidationError(`${paramName}は必須項目であり、空にすることはできません。`, 'MISSING_REQUIRED_PARAM');
   }
 
   const phone = String(phoneString).trim();
-  
+
   // Remove all non-digit characters to validate the core number.
   const digitsOnly = phone.replace(/\D/g, '');
   const len = digitsOnly.length;
@@ -165,11 +160,11 @@ function validatePhoneNumberFormat(phoneString, paramName) {
 
   // Valid patterns for Japanese phone numbers:
   // - Starts with 0, total 10 or 11 digits.
-  // - Doesn't start with 0, total 9 or 10 digits (implying leading 0 was omitted).
-  const isValid = (startsWithZero && (len === 10 || len === 11)) || (!startsWithZero && (len === 9 || len === 10));
+  // - Doesn't start with 0, total 8, 9 or 10 digits (implying leading 0 was omitted or short number).
+  const isValid = (startsWithZero && (len === 10 || len === 11)) || (!startsWithZero && (len >= 8 && len <= 10));
 
   if (!isValid) {
-    throw new ValidationError(`Invalid ${paramName} format. Must be a valid 9 to 11-digit Japanese phone number. Received: '${phoneString}'`, 'INVALID_PHONE');
+    throw new ValidationError(`${paramName}の形式が正しくありません。有効な8〜11桁の日本の電話番号を入力してください。入力された値: '${phoneString}'`, 'INVALID_PHONE');
   }
 
   // Return the original, trimmed string to preserve user-entered formatting (e.g., hyphens).

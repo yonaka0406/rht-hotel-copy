@@ -41,6 +41,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    comparisonType: {
+        type: String,
+        default: 'forecast',
+    },
     height: {
         type: String,
         default: '450px',
@@ -54,6 +58,7 @@ const chartOptions = computed(() => {
     const data = props.revenueData;
     if (!data || !data.length) return {};
 
+    const isYoY = props.comparisonType === 'yoy';
     const months = [...new Set(data.map(item => item.month))].sort();
     const getDataForMonth = (month, key) => data.find(d => d.month === month)?.[key] ?? 0;
 
@@ -67,37 +72,49 @@ const chartOptions = computed(() => {
         return prevData?.period_revenue ?? prevData?.accommodation_revenue ?? 0;
     };
 
-    const forecastRevenues = months.map(month => getDataForMonth(month, 'forecast_revenue'));
     const periodRevenues = months.map(month => getDataForMonth(month, 'period_revenue'));
-    const prevYearRevenues = months.map(month => getPrevYearDataForMonth(month));
 
-    const variances = months.map(month => {
-        const forecast = getDataForMonth(month, 'forecast_revenue');
-        const period = getDataForMonth(month, 'period_revenue');
-        return parseFloat(calculateVariancePercentage(period, forecast)) || 0;
-    });
+    let comparisonRevenues;
+    let comparisonLabel;
+    let comparisonColor;
+    let variances;
 
-    const hasPrevYearData = prevYearRevenues.some(v => v > 0);
-    const legendData = hasPrevYearData
-        ? ['前年実績', '計画売上', '実績売上', '分散 (%)']
-        : ['計画売上', '実績売上', '分散 (%)'];
-
-    const series = [];
-
-    // Add previous year series first (so it appears behind)
-    if (hasPrevYearData) {
-        series.push({
-            name: '前年実績',
-            type: 'bar',
-            data: prevYearRevenues,
-            emphasis: { focus: 'series' },
-            itemStyle: { color: '#909399' }
+    if (isYoY && props.prevYearRevenueData && props.prevYearRevenueData.length > 0) {
+        comparisonRevenues = months.map(month => getPrevYearDataForMonth(month));
+        comparisonLabel = '前年実績';
+        comparisonColor = '#909399';
+        variances = months.map(month => {
+            const prevYear = getPrevYearDataForMonth(month);
+            const period = getDataForMonth(month, 'period_revenue');
+            return parseFloat(calculateVariancePercentage(period, prevYear)) || 0;
+        });
+    } else {
+        comparisonRevenues = months.map(month => getDataForMonth(month, 'forecast_revenue'));
+        comparisonLabel = '計画売上';
+        comparisonColor = colorScheme.forecast;
+        variances = months.map(month => {
+            const forecast = getDataForMonth(month, 'forecast_revenue');
+            const period = getDataForMonth(month, 'period_revenue');
+            return parseFloat(calculateVariancePercentage(period, forecast)) || 0;
         });
     }
 
-    series.push(
-        { name: '計画売上', type: 'bar', data: forecastRevenues, emphasis: { focus: 'series' }, itemStyle: { color: colorScheme.forecast } },
-        { name: '実績売上', type: 'bar', data: periodRevenues, emphasis: { focus: 'series' }, itemStyle: { color: colorScheme.actual } },
+    const legendData = [comparisonLabel, '実績売上', '分散 (%)'];
+    const series = [
+        {
+            name: comparisonLabel,
+            type: 'bar',
+            data: comparisonRevenues,
+            emphasis: { focus: 'series' },
+            itemStyle: { color: comparisonColor }
+        },
+        {
+            name: '実績売上',
+            type: 'bar',
+            data: periodRevenues,
+            emphasis: { focus: 'series' },
+            itemStyle: { color: colorScheme.actual }
+        },
         {
             name: '分散 (%)',
             type: 'line',
@@ -107,7 +124,7 @@ const chartOptions = computed(() => {
             itemStyle: { color: colorScheme.variance },
             label: { show: true, position: 'top', formatter: (params) => `${params.value}%` }
         }
-    );
+    ];
 
     return {
         tooltip: {
@@ -163,4 +180,8 @@ onBeforeUnmount(() => {
 watch([() => props.revenueData, () => props.prevYearRevenueData], () => {
     nextTick(initOrUpdateChart);
 }, { deep: true });
+
+watch(() => props.comparisonType, () => {
+    nextTick(initOrUpdateChart);
+});
 </script>

@@ -87,28 +87,8 @@
           <!-- Name of the person making the reservation -->
           <div class="col-span-2 mb-6">
             <FloatLabel>
-              <AutoComplete v-model="client" :suggestions="filteredClients" optionLabel="display_name"
-                @complete="filterClients" field="id" @option-select="onClientSelect" fluid required>
-                <template #option="slotProps">
-                  <div>
-                    <p>
-                      <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                      <i v-else class="pi pi-user"></i>
-                      {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
-                      <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                      <i v-if="slotProps.option.is_blocked" class="pi pi-ban text-red-500 ml-2"></i>
-                    </p>
-                    <div class="flex items-center gap-2">
-                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{
-                        slotProps.option.phone }}</p>
-                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{
-                        slotProps.option.email }}</p>
-                      <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{
-                        slotProps.option.fax }}</p>
-                    </div>
-                  </div>
-                </template>
-              </AutoComplete>
+              <ClientAutoCompleteWithStore v-model="client" @option-select="onClientSelect" :placeholder="null"
+                :hideLabel="true" :forceSelection="false" fluid required />
               <label>個人氏名 || 法人名称</label>
             </FloatLabel>
           </div>
@@ -222,10 +202,11 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import Panel from 'primevue/panel';
 import FloatLabel from 'primevue/floatlabel'
-import { DatePicker, InputNumber, InputText, AutoComplete, SelectButton, RadioButton } from 'primevue';
+import { DatePicker, InputNumber, InputText, SelectButton, RadioButton } from 'primevue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button'
 import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
+import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -288,15 +269,38 @@ const genderOptions = [
   { label: '女性', value: 'female' },
   { label: 'その他', value: 'other' },
 ];
-import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil } from '../../../../utils/validationUtils';
+import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, hasContactInfo } from '../../../../utils/validationUtils';
+
+// HTML pattern attributes
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phonePattern = /^[\d\s()+\-]*$/;
 
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
 const isClientSelected = ref(false);
 const selectedClient = ref(null);
 const client = ref({});
-const filteredClients = ref([]);
 const impedimentStatus = ref(null);
+
+// Watch client input to handle manual name entry when no client is selected
+watch(client, (newVal) => {
+  if (typeof newVal === 'string') {
+    // Manually typed name
+    reservationDetails.value.name = newVal;
+    reservationDetails.value.client_id = null;
+    isClientSelected.value = false;
+    selectedClient.value = null;
+    impedimentStatus.value = null;
+  } else if (newVal === null || newVal === undefined || Object.keys(newVal).length === 0) {
+    // Cleared input
+    reservationDetails.value.name = '';
+    reservationDetails.value.client_id = null;
+    isClientSelected.value = false;
+    selectedClient.value = null;
+    impedimentStatus.value = null;
+  }
+  // When newVal is an object with id, it's handled by onClientSelect
+});
 
 const dateRange = ref([]);
 const minDate = ref(null);
@@ -311,37 +315,11 @@ const formatDate = (date) => {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
-const normalizeKana = (str) => {
-  if (!str) return '';
-  let normalizedStr = str.normalize('NFKC');
-
-  // Convert Hiragana to Katakana
-  normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-    String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
-  );
-  // Convert half-width Katakana to full-width Katakana
-  normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-    String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
-  );
-
-  return normalizedStr;
-};
-const normalizePhone = (phone) => {
-  if (!phone) return '';
-
-  // Remove all non-numeric characters
-  let normalized = phone.replace(/\D/g, '');
-
-  // Remove leading zeros
-  normalized = normalized.replace(/^0+/, '');
-
-  return normalized;
-};
 const validateEmail = () => {
-    isValidEmail.value = validateEmailUtil(reservationDetails.value.email);
+  isValidEmail.value = validateEmailUtil(reservationDetails.value.email);
 };
 const validatePhone = () => {
-    isValidPhone.value = validatePhoneUtil(reservationDetails.value.phone);
+  isValidPhone.value = validatePhoneUtil(reservationDetails.value.phone);
 };
 // Generate dates
 const generateDateRange = (start, end) => {
@@ -542,36 +520,6 @@ const openDialog = () => {
 const closeDialog = () => {
   dialogVisible.value = false;
 };
-const filterClients = (event) => {
-  const query = event.query.toLowerCase();
-  const normalizedQuery = normalizePhone(query);
-  const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-  if (!query || !clients.value || !Array.isArray(clients.value)) {
-    filteredClients.value = [];
-    return;
-  }
-
-  filteredClients.value = clients.value.filter((client) => {
-    // Name filtering (case-insensitive)
-    const matchesName =
-      (client.name && client.name.toLowerCase().includes(query)) ||
-      (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-      (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-    // Phone/Fax filtering (only for numeric queries)
-    const matchesPhoneFax = isNumericQuery &&
-      ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-        (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-    // Email filtering (case-insensitive)
-    const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-
-    // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
-
-    return matchesName || matchesPhoneFax || matchesEmail;
-  });
-
-  reservationDetails.value.name = query;
-};
 const onClientSelect = async (event) => {
   // Get selected client object from the event
   selectedClient.value = event.value;
@@ -616,51 +564,47 @@ const onClientSelect = async (event) => {
   client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
 };
 const submitReservation = async () => {
-  // Validate email and phone
-  validateEmail();
-  validatePhone();
+  // Skip validation if a client is already selected from the database
+  if (isClientSelected.value) {
+    // We still want to ensure there is at least a name, but that's handled by required prop in ClientAutoCompleteWithStore
+    // and the manual entry logic
+  } else {
+    // Validate for new/manual client entry
+    validateEmail();
+    validatePhone();
 
-  if (impedimentStatus.value && impedimentStatus.value.level === 'block') {
-    toast.add({
-      severity: 'error',
-      summary: '予約不可',
-      detail: 'このクライアントは予約がブロックされているため、予約を作成できません。',
-      life: 5000,
-    });
-    return;
-  }
+    // Check if either email or phone is filled
+    if (!hasContactInfo(reservationDetails.value.email, reservationDetails.value.phone)) {
+      toast.add({
+        severity: 'warn',
+        summary: '注意',
+        detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
+        life: 3000,
+      });
+      return;
+    }
 
-  // Check if either email or phone is filled
-  if (!reservationDetails.value.email && !reservationDetails.value.phone) {
-    toast.add({
-      severity: 'warn',
-      summary: '注意',
-      detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
-      life: 3000,
-    });
-    return; // Stop further execution if validation fails
-  }
+    // Check for valid email format
+    if (reservationDetails.value.email && !isValidEmail.value) {
+      toast.add({
+        severity: 'warn',
+        summary: '注意',
+        detail: '有効なメールアドレスを入力してください。',
+        life: 3000,
+      });
+      return;
+    }
 
-  // Check for valid email format
-  if (reservationDetails.value.email && !isValidEmail.value) {
-    toast.add({
-      severity: 'warn',
-      summary: '注意',
-      detail: '有効なメールアドレスを入力してください。',
-      life: 3000,
-    });
-    return;
-  }
-
-  // Check for valid phone format
-  if (reservationDetails.value.phone && !isValidPhone.value) {
-    toast.add({
-      severity: 'warn',
-      summary: '注意',
-      detail: '有効な電話番号を入力してください。',
-      life: 3000,
-    });
-    return;
+    // Check for valid phone format
+    if (reservationDetails.value.phone && !isValidPhone.value) {
+      toast.add({
+        severity: 'warn',
+        summary: '注意',
+        detail: '有効な電話番号を入力してください。',
+        life: 3000,
+      });
+      return;
+    }
   }
 
   const authToken = localStorage.getItem('authToken');

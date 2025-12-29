@@ -1,7 +1,10 @@
 <template>
     <div>
         <div class="flex justify-end mb-2">
-            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value" />
+            <SelectButton v-model="selectedComparison" :options="comparisonOptions" optionLabel="label"
+                optionValue="value" />
+            <SelectButton v-model="selectedView" :options="viewOptions" optionLabel="label" optionValue="value"
+                class="ml-2" />
         </div>
 
         <div v-if="selectedView === 'graph'">
@@ -11,21 +14,25 @@
                 </template>
                 <template #content>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
+                                }}</p>
                         </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
+                                formatCurrency(forecastADR) }}</p>
                         </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
+                                formatCurrency(actualRevPAR) }}</p>
                         </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
+                                formatCurrency(forecastRevPAR) }}</p>
                         </div>
                     </div>
                 </template>
@@ -48,7 +55,8 @@
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-3/4 mb-4 md:mb-0">
                             <MonthlyRevenuePlanVsActualChart :revenueData="filteredRevenueForChart"
-                                :prevYearRevenueData="filteredPrevYearRevenueForChart" height="450px" />
+                                :prevYearRevenueData="filteredPrevYearRevenueForChart"
+                                :comparisonType="selectedComparison" height="450px" />
                         </div>
                         <div class="w-full md:w-1/4">
                             <RevenuePlanVsActualChart :revenueData="aggregateRevenueDataForChart" height="450px" />
@@ -73,8 +81,9 @@
                     </div>
                     <div v-else class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-3/4 mb-4 md:mb-0">
-                            <MonthlyOccupancyChart :occupancyData="filteredOccupancyForChart" 
-                                title="全施設合計" height="450px" />
+                            <MonthlyOccupancyChart :occupancyData="filteredOccupancyForChart"
+                                :prevYearOccupancyData="filteredPrevYearOccupancyForChart"
+                                :comparisonType="selectedComparison" title="全施設合計" height="450px" />
                         </div>
                         <div class="w-full md:w-1/4">
                             <OccupancyGaugeChart :occupancyData="aggregatedAllHotelsOccupancy" height="450px" />
@@ -85,16 +94,21 @@
 
             <Card>
                 <template #header>
-                    <span class="text-xl font-bold">全施設 収益＆稼働率 概要</span>
+                    <span class="text-xl font-bold">全施設 収益＆稼働率 概要（{{ selectedComparison === 'forecast' ? '計画' : '前年' }}
+                        vs 実績）</span>
                 </template>
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
                         <div class="w-full md:w-1/2 mb-4 md:mb-0">
-                            <HotelSalesComparisonChart :revenueData="props.revenueData" />
+                            <HotelSalesComparisonChart :revenueData="props.revenueData"
+                                :prevYearRevenueData="props.prevYearRevenueData" :comparisonType="selectedComparison" />
                         </div>
                         <div class="w-full md:w-1/2">
-                            <h6 class="text-center">施設別 稼働率（計画 vs 実績）</h6>
-                            <AllHotelsOccupancyChart :occupancyData="props.occupancyData" />
+                            <h6 class="text-center">施設別 稼働率（{{ selectedComparison === 'forecast' ? '計画' : '前年' }} vs 実績）
+                            </h6>
+                            <AllHotelsOccupancyChart :occupancyData="props.occupancyData"
+                                :prevYearOccupancyData="props.prevYearOccupancyData"
+                                :comparisonType="selectedComparison" />
                         </div>
                     </div>
                 </template>
@@ -113,21 +127,25 @@
                 </template>
                 <template #content>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
+                                }}</p>
                         </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
+                                formatCurrency(forecastADR) }}</p>
                         </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
+                                formatCurrency(actualRevPAR) }}</p>
                         </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
+                                formatCurrency(forecastRevPAR) }}</p>
                         </div>
                     </div>
                 </template>
@@ -176,6 +194,10 @@ const props = defineProps({
     prevYearRevenueData: {
         type: Array,
         default: () => []
+    },
+    prevYearOccupancyData: {
+        type: Array,
+        default: () => []
     }
 });
 
@@ -204,6 +226,13 @@ const selectedView = ref('graph'); // Default view
 const viewOptions = ref([
     { label: 'グラフ', value: 'graph' },
     { label: 'テーブル', value: 'table' }
+]);
+
+// Comparison selection
+const selectedComparison = ref('forecast'); // Default comparison
+const comparisonOptions = ref([
+    { label: '計画', value: 'forecast' },
+    { label: '前年', value: 'yoy' }
 ]);
 
 // Computed property to get all unique hotel names from revenueData    
@@ -303,16 +332,21 @@ const filteredOccupancyForChart = computed(() => {
     return props.occupancyData.filter(item => item.hotel_id === 0);
 });
 
+const filteredPrevYearOccupancyForChart = computed(() => {
+    if (!props.prevYearOccupancyData) return [];
+    return props.prevYearOccupancyData.filter(item => item.hotel_id === 0);
+});
+
 // Aggregate revenue data for the RevenuePlanVsActualChart
 const aggregateRevenueDataForChart = computed(() => {
     const data = filteredRevenueForChart.value;
     if (!data.length) return { total_forecast_revenue: 0, total_period_accommodation_revenue: 0, total_prev_year_accommodation_revenue: 0 };
-    
+
     // Calculate previous year revenue from filteredPrevYearRevenueForChart
     const prevYearRevenue = filteredPrevYearRevenueForChart.value.reduce((sum, item) => {
         return sum + (item.accommodation_revenue || item.period_revenue || 0);
     }, 0);
-    
+
     return {
         total_forecast_revenue: data.reduce((sum, item) => sum + (item.forecast_revenue || 0), 0),
         total_period_accommodation_revenue: data.reduce((sum, item) => sum + (item.period_revenue || 0), 0),

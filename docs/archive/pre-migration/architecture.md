@@ -33,7 +33,7 @@ The Hotel Management System is a comprehensive property management solution buil
 - **Database**: PostgreSQL with Redis for caching and sessions
 - **Authentication**: JWT tokens with bcryptjs hashing
 - **Real-time**: Socket.io for live updates
-- **File Processing**: Multer for uploads, Puppeteer for PDF generation
+- **File Processing**: Multer for uploads, Playwright for PDF generation
 - **External Integration**: XML/SOAP for OTA connectivity
 
 ### Frontend Technologies

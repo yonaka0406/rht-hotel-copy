@@ -760,6 +760,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.3.6] - 2025-12
+
+- Refactor: Standardized net price calculation methodology using FLOOR on gross totals across reporting and billing modules.
+
+---
+
 ## Version History
 
 - **1.3.5** (2025-12-24) - Added visual indicators for rate inconsistencies, fixed bug with clearing reservation rates, and refactored price calculation logic.

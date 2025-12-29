@@ -32,30 +32,37 @@ export default defineConfig({
     /*outDir: '../api/public', // backend's public folder*/
     outDir: 'dist',
     emptyOutDir: true, // Clears the directory before building
-    
+
     // Memory optimization for low-RAM VPS builds
-    minify: false, // Disable minification to reduce memory usage
-    sourcemap: false, // Disable source maps to save memory
-    
+    minify: false,
+    sourcemap: false,
+    cssMinify: true,
+
     // Rollup options for further memory optimization
     rollupOptions: {
       output: {
-        // Reduce chunk size to lower memory pressure
+        // Break down large vendor chunks to stay under the 500kB limit and reduce memory pressure
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('vue') || id.includes('vue-router')) {
-              return 'vendor';
+            // Split ECharts
+            if (id.includes('echarts') || id.includes('zrender')) {
+              return 'echarts';
             }
-            if (id.includes('primevue')) {
-              return 'ui';
+            // Group all PrimeVue and UI related stuff together to avoid initialization issues
+            if (id.includes('primevue') || id.includes('primeicons') || id.includes('@primeuix')) {
+              return 'primevue';
             }
-            return 'vendor';
+            // Vue core
+            if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+              return 'vue-core';
+            }
+            return 'vendor'; // Everything else
           }
         }
       }
     },
-    
+
     // Reduce concurrent processing
-    target: 'es2015', // Use older target for simpler transforms
+    target: 'esnext',
   },
 });

@@ -10,7 +10,7 @@ RHT Hotel is a comprehensive hotel property management system designed to stream
 
 - **Reservation & Client Management (CRM):** Full booking lifecycle and customer management.
 - **Waitlist System:** Manages guest waitlists with token-based confirmation.
-- **Billing & Invoicing:** Flexible pricing, plans, and automated invoice generation (PDF via Puppeteer).
+- **Billing & Invoicing:** Flexible pricing, plans, and automated invoice generation (PDF via Playwright).
 - **Reporting & Analytics:** Data visualization using ECharts.
 - **User Management:** Role-based access control (RBAC) with JWT authentication and Google OAuth.
 - **OTA Integration:** XML/SOAP communication with the TL-Lincoln channel manager.
@@ -24,7 +24,7 @@ RHT Hotel is a comprehensive hotel property management system designed to stream
   - **Database:** PostgreSQL
   - **Caching/Sessions:** Redis, `connect-pg-simple`
   - **Authentication:** `jsonwebtoken` (JWT), `bcryptjs`, `google-auth-library`
-  - **File Handling:** `multer` (uploads), `puppeteer` (PDFs), `exceljs` (Excel/CSV)
+  - **File Handling:** `multer` (uploads), `playwright` (PDFs), `exceljs` (Excel/CSV)
   - **API Comms:** `socket.io`, `xml2js`, `soap`
   - **Utilities:** `winston` (logging), `nodemailer` (email), `pg-format`, `sharp`
 

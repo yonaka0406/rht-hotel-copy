@@ -7,7 +7,7 @@ const {
 } = require('../utils/validationUtils');
 const { selectClient } = require('../models/clients'); // To check if client exists
 const { getHotelByID } = require('../models/hotel'); // To check if hotel exists
-const { getRoomTypeById } = require('../models/hotel'); // To check if room type exists
+const { selectRoomTypeById } = require('../models/rooms'); // To check if room type exists
 const logger = require('../config/logger');
 const { getPool } = require('../config/database');
 
@@ -39,7 +39,7 @@ const waitlistController = {
             let validatedRoomTypeId = null;
             if (room_type_id !== undefined && room_type_id !== null && room_type_id !== '') {
                 validatedRoomTypeId = validateNumericParam(room_type_id, 'Room Type ID');
-                const roomType = await getRoomTypeById(requestId, validatedRoomTypeId, validatedHotelId, client);
+                const roomType = await selectRoomTypeById(requestId, validatedRoomTypeId, validatedHotelId, client);
                 if (!roomType) {
                     await client.query('ROLLBACK');
                     return res.status(404).json({ error: `Room type with ID ${validatedRoomTypeId} not found for hotel ${validatedHotelId}.` });
@@ -108,7 +108,7 @@ const waitlistController = {
             };
 
             const newWaitlistEntry = await WaitlistEntry.create(requestId, entryData, userId, client);
-            
+
             await client.query('COMMIT');
 
             return res.status(201).json(newWaitlistEntry);
@@ -150,7 +150,7 @@ const waitlistController = {
         // Validate hotelId (basic)
         const validatedHotelId = validateNumericParam(hotelId, 'Hotel ID');
         if (validatedHotelId === null || isNaN(validatedHotelId)) { // validateNumericParam returns null on error
-             return res.status(400).json({ error: 'Invalid Hotel ID parameter.' });
+            return res.status(400).json({ error: 'Invalid Hotel ID parameter.' });
         }
 
         try {
@@ -191,7 +191,7 @@ const waitlistController = {
         try {
             // Find waitlist entry by token
             const entry = await WaitlistEntry.findByToken(requestId, token, true);
-            
+
             if (!entry) {
                 return res.status(404).json({ error: 'Invalid or expired confirmation token.' });
             }
@@ -271,9 +271,9 @@ const waitlistController = {
             }
 
             // Import reservation creation functions
-            const { 
-                addReservationHold, 
-                addReservationDetail, 
+            const {
+                addReservationHold,
+                addReservationDetail,
                 selectAvailableRooms,
                 updateReservationComment
             } = require('../models/reservations');
@@ -341,7 +341,7 @@ const waitlistController = {
                 }
 
                 // If no perfect or near-perfect room found, pick the largest available room
-                if (!bestRoom) {         
+                if (!bestRoom) {
                     bestRoom = availableRoomsFiltered.reduce((prev, curr) => (curr.capacity > prev.capacity ? curr : prev));
                 }
 
@@ -460,7 +460,7 @@ const waitlistController = {
 
             let roomTypeName = "指定なし";
             if (entry.room_type_id) {
-                const roomType = await getRoomTypeById(requestId, entry.room_type_id, entry.hotel_id, client);
+                const roomType = await selectRoomTypeById(requestId, entry.room_type_id, entry.hotel_id, client);
                 if (roomType) {
                     roomTypeName = roomType.name;
                 } else {
@@ -486,7 +486,7 @@ const waitlistController = {
 
             // --- Email Sending ---
             const { sendWaitlistNotificationEmail } = require('../utils/emailUtils');
-            
+
             try {
                 await sendWaitlistNotificationEmail(
                     entry.contact_email,
@@ -692,17 +692,17 @@ const waitlistController = {
                 number_of_guests,
                 smoking_preference
             ];
-            
+
             // console.log(`[${requestId}] Calling SQL function with params:`, params);
-            
+
             const result = await pool.query(
                 'SELECT is_waitlist_vacancy_available($1::INT, $2::INT, $3::DATE, $4::DATE, $5::INT, $6::INT, $7::BOOLEAN) AS available',
                 params
             );
-            
+
             const available = result.rows[0].available;
             // console.log(`[${requestId}] SQL function returned:`, available);
-            
+
             return res.status(200).json({ available });
         } catch (error) {
             console.error(`[${requestId}] Error in waitlistController.checkVacancy:`, error);

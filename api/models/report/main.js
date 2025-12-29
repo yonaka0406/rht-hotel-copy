@@ -223,37 +223,40 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
     -------------------------------------------------------- */
     rr_agg AS MATERIALIZED (
       SELECT
-        rr.hotel_id,
-        rr.reservation_details_id AS reservation_detail_id,
+        hotel_id,
+        reservation_detail_id,
+        SUM(other_net_price) as other_net_price,
+        SUM(accommodation_net_price) as accommodation_net_price
+      FROM (
+        SELECT
+          rr.hotel_id,
+          rr.reservation_details_id AS reservation_detail_id,
+          (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END) as normalized_rate,
+          
+          FLOOR(
+            SUM(
+              CASE WHEN rr.sales_category = 'other'
+                   THEN (CASE WHEN rdb.plan_type = 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
+                   ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
+          ) AS other_net_price,
 
-        SUM(
-          CASE
-            WHEN rr.sales_category = 'other'
-              THEN CASE WHEN rdb.plan_type = 'per_room'
-                        THEN rr.net_price
-                        ELSE rr.net_price * rdb.number_of_people
-                    END
-            ELSE 0
-          END
-        ) AS other_net_price,
+          FLOOR(
+            SUM(
+              CASE WHEN rr.sales_category IN ('accommodation') OR rr.sales_category IS NULL
+                   THEN (CASE WHEN rdb.plan_type = 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
+                   ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
+          ) AS accommodation_net_price
 
-        SUM(
-          CASE
-            WHEN rr.sales_category IN ('accommodation') OR rr.sales_category IS NULL
-              THEN CASE WHEN rdb.plan_type = 'per_room'
-                        THEN rr.net_price
-                        ELSE rr.net_price * rdb.number_of_people
-                  END
-            ELSE 0
-          END
-        ) AS accommodation_net_price
-
-      FROM reservation_rates rr
-      JOIN rd_base rdb
-        ON rr.hotel_id = rdb.hotel_id
-      AND rr.reservation_details_id = rdb.reservation_detail_id
-      AND rr.hotel_id = $1
-      GROUP BY rr.hotel_id, rr.reservation_details_id
+        FROM reservation_rates rr
+        JOIN rd_base rdb ON rr.hotel_id = rdb.hotel_id AND rr.reservation_details_id = rdb.reservation_detail_id
+        WHERE rr.hotel_id = $1
+        GROUP BY rr.hotel_id, rr.reservation_details_id, (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END)
+      ) AS per_tax_rate
+      GROUP BY hotel_id, reservation_detail_id
     ),
 
     /* -------------------------------------------------------
@@ -261,29 +264,36 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
     -------------------------------------------------------- */
     ra_agg AS MATERIALIZED (
       SELECT
-        ra.hotel_id,
-        ra.reservation_detail_id,
+        hotel_id,
+        reservation_detail_id,
+        SUM(other_net_price_sum) as other_net_price_sum,
+        SUM(accommodation_net_price_sum) as accommodation_net_price_sum
+      FROM (
+        SELECT
+          ra.hotel_id,
+          ra.reservation_detail_id,
+          (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END) as normalized_rate,
 
-        SUM(
-          CASE WHEN ra.sales_category = 'other'
-              THEN ra.net_price * ra.quantity
-              ELSE 0
-          END
-        ) AS other_net_price_sum,
+          FLOOR(
+            SUM(
+              CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
+          ) AS other_net_price_sum,
 
-        SUM(
-          CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL
-              THEN ra.net_price * ra.quantity
-              ELSE 0
-          END
-        ) AS accommodation_net_price_sum
+          FLOOR(
+            SUM(
+              CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
+          ) AS accommodation_net_price_sum
 
-      FROM reservation_addons ra
-      JOIN rd_base rdb
-        ON ra.hotel_id = rdb.hotel_id
-      AND ra.reservation_detail_id = rdb.reservation_detail_id
-      AND ra.hotel_id = $1
-      GROUP BY ra.hotel_id, ra.reservation_detail_id
+        FROM reservation_addons ra
+        JOIN rd_base rdb ON ra.hotel_id = rdb.hotel_id AND ra.reservation_detail_id = rdb.reservation_detail_id
+        WHERE ra.hotel_id = $1
+        GROUP BY ra.hotel_id, ra.reservation_detail_id, (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END)
+      ) AS per_tax_rate
+      GROUP BY hotel_id, reservation_detail_id
     ),
 
     /* -------------------------------------------------------
@@ -967,62 +977,31 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
     LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
     LEFT JOIN plan_package_categories ppc ON ph.plan_package_category_id = ppc.id
     LEFT JOIN (
+        -- Subquery to aggregate prices per detail, grouping by tax_rate first to avoid precision loss
         SELECT
-            rd_inner.hotel_id,
-            rd_inner.id AS reservation_details_id,
-            -- Use actual price from reservation_details only when is_accommodation is true (edited values)
-            CASE 
-                WHEN rd_inner.is_accommodation = TRUE THEN 
-                    CASE 
-                        WHEN rd_inner.plan_type = 'per_room' THEN rd_inner.price
-                        ELSE rd_inner.price * rd_inner.number_of_people
-                    END
-                ELSE 0
-            END AS accommodation_price,
-            -- Use actual price from reservation_details for other sales when is_accommodation is false
-            CASE 
-                WHEN rd_inner.is_accommodation = FALSE THEN 
-                    CASE 
-                        WHEN rd_inner.plan_type = 'per_room' THEN rd_inner.price
-                        ELSE rd_inner.price * rd_inner.number_of_people
-                    END
-                ELSE 0
-            END AS other_price,
-            -- Use net_price from reservation_rates (calculated from the edited gross price)
-            SUM(
-                CASE 
-                    WHEN rd_inner.is_accommodation = TRUE THEN 
-                        CASE 
-                            WHEN rr.sales_category = 'accommodation' OR rr.sales_category IS NULL THEN 
-                                CASE 
-                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                                    ELSE rr.net_price * rd_inner.number_of_people
-                                END
-                            ELSE 0 
-                        END
-                    ELSE 0
-                END
-            ) AS accommodation_net_price,
-            -- Use net_price from reservation_rates for other sales when is_accommodation is false
-            SUM(
-                CASE 
-                    WHEN rd_inner.is_accommodation = FALSE THEN 
-                        CASE 
-                            WHEN rr.sales_category = 'other' OR rr.sales_category IS NULL THEN 
-                                CASE 
-                                    WHEN rd_inner.plan_type = 'per_room' THEN rr.net_price
-                                    ELSE rr.net_price * rd_inner.number_of_people
-                                END
-                            ELSE 0 
-                        END
-                    ELSE 0
-                END
-            ) AS other_net_price
-        FROM
-            reservation_details rd_inner
-        LEFT JOIN reservation_rates rr ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
+            hotel_id,
+            reservation_details_id,
+            SUM(accommodation_price) AS accommodation_price,
+            SUM(other_price) AS other_price,
+            SUM(accommodation_net_price) AS accommodation_net_price,
+            SUM(other_net_price) AS other_net_price
+        FROM (
+            SELECT
+                rd_inner.hotel_id,
+                rd_inner.id AS reservation_details_id,
+                (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END) as normalized_rate,
+                SUM(CASE WHEN rd_inner.is_accommodation = TRUE AND (rr.sales_category = 'accommodation' OR rr.sales_category IS NULL) THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END) AS accommodation_price,
+                SUM(CASE WHEN rd_inner.is_accommodation = FALSE OR rr.sales_category = 'other' THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END) AS other_price,
+                FLOOR(SUM(CASE WHEN rd_inner.is_accommodation = TRUE AND (rr.sales_category = 'accommodation' OR rr.sales_category IS NULL) THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) AS accommodation_net_price,
+                FLOOR(SUM(CASE WHEN rd_inner.is_accommodation = FALSE OR rr.sales_category = 'other' THEN (CASE WHEN rd_inner.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd_inner.number_of_people END) ELSE 0 END)::numeric / (1 + (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END))::numeric) AS other_net_price
+            FROM
+                reservation_details rd_inner
+            LEFT JOIN reservation_rates rr ON rr.reservation_details_id = rd_inner.id AND rr.hotel_id = rd_inner.hotel_id
+            GROUP BY
+                rd_inner.hotel_id, rd_inner.id, (CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END)
+        ) AS per_detail_tax
         GROUP BY
-            rd_inner.hotel_id, rd_inner.id, rd_inner.plan_type, rd_inner.number_of_people, rd_inner.is_accommodation, rd_inner.price
+            hotel_id, reservation_details_id
     ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
     WHERE rd.hotel_id = $1
       AND rd.date BETWEEN $2 AND $3
@@ -1044,7 +1023,7 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
         WHEN 'parking' THEN '駐車場'
         WHEN 'other' THEN 'その他'
         ELSE ra.addon_type
-      END || '(' || (ra.tax_rate * 100)::integer || '%)' AS plan_name,
+      END || '(' || (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) ELSE COALESCE(ra.tax_rate, 0) * 100 END)::integer::text || '%)' AS plan_name,
       NULL AS plan_type_category_id,
       NULL AS plan_package_category_id,
       'アドオン' AS plan_type_category_name,
@@ -1059,8 +1038,8 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
       SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_sales,
       SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_sales,
-      SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_sales_net,
-      SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_sales_net
+      FLOOR(SUM(CASE WHEN ra.sales_category = 'accommodation' OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) AS accommodation_sales_net,
+      FLOOR(SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + (CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END))::numeric) AS other_sales_net
     FROM reservation_details rd
     JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
     JOIN reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
@@ -1383,185 +1362,173 @@ const selectCheckInOutReport = async (requestId, hotelId, startDate, endDate) =>
 };
 
 const selectBatchReservationListView = async (requestId, hotelIds, dateStart, dateEnd, searchType = 'stay_period') => {
-
   try {
     const pool = getPool(requestId);
 
-    // Base query parts
-    const selectClause = `
+    const query = `
+      WITH 
+      filtered_reservations AS (
+        SELECT 
+          r.id, 
+          r.hotel_id, 
+          r.status, 
+          r.reservation_client_id, 
+          r.check_in, 
+          r.check_out, 
+          r.number_of_people,
+          r.created_at
+        FROM reservations r
+        WHERE r.hotel_id = ANY($1)
+        AND r.status <> 'block'
+        ${searchType === 'check_in' ? "AND r.check_in >= $2::date AND r.check_in <= $3::date" :
+        searchType === 'created_at' ? "AND r.created_at >= $2::date AND r.created_at <= ($3::date + interval '1 day' - interval '1 second')" :
+          /* stay_period */ "AND r.check_out > $2::date AND r.check_in <= $3::date"
+      }
+      ),
+      filtered_details_base AS (
+        SELECT 
+          rd.id as rd_id,
+          rd.reservation_id,
+          rd.hotel_id,
+          rd.plan_type,
+          rd.price,
+          rd.number_of_people,
+          rd.billable
+        FROM reservation_details rd
+        WHERE rd.hotel_id = ANY($1)
+        AND rd.reservation_id IN (SELECT id FROM filtered_reservations)
+        AND rd.billable = TRUE
+      ),
+      ra_agg AS (
+        SELECT 
+          ra.reservation_detail_id,
+          SUM(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) as addon_sum
+        FROM reservation_addons ra
+        WHERE ra.hotel_id = ANY($1)
+        AND ra.reservation_detail_id IN (SELECT rd_id FROM filtered_details_base)
+        GROUP BY ra.reservation_detail_id
+      ),
+      rd_agg AS (
+        SELECT 
+          rd.hotel_id,
+          rd.reservation_id,
+          COALESCE(MIN(rr.sales_category), 'accommodation') AS plan_sales_category,
+          SUM(
+            CASE
+              WHEN rd.plan_type = 'per_room'
+              THEN rd.price
+              ELSE rd.price * rd.number_of_people
+            END
+          ) AS plan_price,
+          SUM(COALESCE(ra.addon_sum, 0)) AS addon_price
+        FROM filtered_details_base rd
+        LEFT JOIN ra_agg ra ON rd.rd_id = ra.reservation_detail_id
+        LEFT JOIN reservation_rates rr ON rd.rd_id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+        GROUP BY rd.hotel_id, rd.reservation_id
+      ),
+      rc_json_agg AS (
+        SELECT 
+          rc_sq.reservation_id,
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'client_id', c.id,
+              'name', c.name,
+              'name_kana', c.name_kana,
+              'name_kanji', c.name_kanji,
+              'email', c.email,
+              'phone', c.phone,
+              'gender', c.gender
+            )
+          ) AS clients_json
+        FROM (
+          SELECT DISTINCT fd.reservation_id, rc_inner.client_id
+          FROM reservation_clients rc_inner
+          JOIN filtered_details_base fd ON rc_inner.reservation_details_id = fd.rd_id AND rc_inner.hotel_id = fd.hotel_id
+          WHERE rc_inner.hotel_id = ANY($1)
+        ) rc_sq
+        JOIN clients c ON rc_sq.client_id = c.id
+        GROUP BY rc_sq.reservation_id
+      ),
+      rp_agg AS (
+        SELECT 
+          rp.reservation_id,
+          SUM(rp.value) as payment
+        FROM reservation_payments rp
+        WHERE rp.reservation_id IN (SELECT id FROM filtered_reservations)
+        GROUP BY rp.reservation_id
+      ),
+      rpc_json_agg AS (
+        SELECT 
+          rpc_sq.reservation_id,
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'client_id', c.id,
+              'name', c.name,
+              'name_kana', c.name_kana,
+              'name_kanji', c.name_kanji,
+              'email', c.email,
+              'phone', c.phone
+            )
+          ) AS clients_json
+        FROM (
+          SELECT DISTINCT rp_inner.reservation_id, rp_inner.client_id
+          FROM reservation_payments rp_inner
+          WHERE rp_inner.reservation_id IN (SELECT id FROM filtered_reservations)
+        ) rpc_sq
+        JOIN clients c ON rpc_sq.client_id = c.id
+        GROUP BY rpc_sq.reservation_id
+      )
       SELECT
-        reservations.hotel_id
-        ,hotels.formal_name
-        ,reservations.id
-        ,reservations.status
-        ,reservations.reservation_client_id AS booker_id
-        ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
-        ,booker.name_kana AS booker_name_kana
-        ,booker.name_kanji AS booker_name_kanji
-        ,reservations.check_in
-        ,reservations.check_out
-        ,reservations.check_out - reservations.check_in AS number_of_nights
-        ,reservations.number_of_people
-        ,details.plan_price
-        ,details.addon_price
-        ,(details.plan_price + details.addon_price) AS price
-        ,details.payment
-        ,details.plan_sales_category
-        ,details.clients_json
-        ,details.payers_json
-      FROM
-        reservations	
-        ,hotels
-        ,clients AS booker
-        ,(
-          SELECT 
-            reservation_details.hotel_id
-            ,reservation_details.reservation_id
-            ,COALESCE(MIN(rr.sales_category), 'accommodation') AS plan_sales_category
-            ,rc.clients_json::TEXT AS clients_json
-            ,rpc.clients_json::TEXT AS payers_json          
-            ,COALESCE(rp.payment,0) as payment          
-            ,SUM(
-                CASE
-                  WHEN reservation_details.billable = TRUE THEN
-                    CASE
-                      WHEN reservation_details.plan_type = 'per_room'
-                      THEN reservation_details.price
-                      ELSE reservation_details.price * reservation_details.number_of_people
-                    END
-                  ELSE 0
-                END
-            ) AS plan_price
-            ,SUM(
-                CASE
-                  WHEN reservation_details.billable = TRUE
-                  THEN COALESCE(ra.addon_sum,0)
-                  ELSE 0
-                END
-            ) AS addon_price
-          FROM
-            reservation_details 
-              LEFT JOIN reservation_rates rr ON reservation_details.id = rr.reservation_details_id
-              LEFT JOIN
-            (
-              SELECT 
-                ra.hotel_id
-                ,ra.reservation_detail_id
-                ,SUM(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) as addon_sum
-              FROM reservation_addons ra
-              GROUP BY ra.hotel_id, ra.reservation_detail_id
-            ) ra
-              ON reservation_details.hotel_id = ra.hotel_id 
-             AND reservation_details.id = ra.reservation_detail_id
-              LEFT JOIN 
-            (
-              SELECT 
-                rc.reservation_id,
-                JSON_AGG(
-                  JSON_BUILD_OBJECT(
-                    'client_id', rc.client_id,
-                    'name', c.name,
-                    'name_kana', c.name_kana,
-                    'name_kanji', c.name_kanji,
-                    'email', c.email,
-                    'phone', c.phone,
-                    'gender', c.gender
-                  )
-                ) AS clients_json
-              FROM 
-                (SELECT DISTINCT reservation_id, client_id 
-                   FROM reservation_clients rc 
-                   JOIN reservation_details rd ON rc.reservation_details_id = rd.id) rc
-                JOIN clients c ON rc.client_id = c.id
-              GROUP BY rc.reservation_id
-            ) rc ON rc.reservation_id = reservation_details.reservation_id
-             LEFT JOIN
-            (
-              SELECT
-                reservation_id
-                ,SUM(value) as payment
-              FROM reservation_payments
-              GROUP BY reservation_id
-            ) rp ON rp.reservation_id = reservation_details.reservation_id
-              LEFT JOIN
-            (
-              SELECT 
-                rpc.reservation_id,
-                JSON_AGG(
-                  JSON_BUILD_OBJECT(
-                    'client_id', c.id,
-                    'name', c.name,
-                    'name_kana', c.name_kana,
-                    'name_kanji', c.name_kanji,
-                    'email', c.email,
-                    'phone', c.phone
-                  )
-                ) AS clients_json
-              FROM 
-                (SELECT DISTINCT reservation_id, client_id 
-                   FROM reservation_payments rp 
-                   JOIN reservations r ON rp.reservation_id = r.id) rpc
-                JOIN clients c ON rpc.client_id = c.id
-              GROUP BY rpc.reservation_id
-            ) rpc ON rpc.reservation_id = reservation_details.reservation_id
-          WHERE
-            reservation_details.hotel_id = ANY($1)
-          GROUP BY
-            reservation_details.hotel_id
-            ,reservation_details.reservation_id
-            ,rc.clients_json::TEXT
-            ,rpc.clients_json::TEXT          
-            ,rp.payment
-        ) AS details
-      WHERE
-        reservations.hotel_id = ANY($1)
-        AND reservations.status <> 'block'  
-        AND reservations.reservation_client_id = booker.id
-        AND reservations.id = details.reservation_id
-        AND reservations.hotel_id = details.hotel_id
-        AND reservations.hotel_id = hotels.id
+        res.hotel_id,
+        h.formal_name,
+        res.id,
+        res.status,
+        res.reservation_client_id AS booker_id,
+        COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name,
+        booker.name_kana AS booker_name_kana,
+        booker.name_kanji AS booker_name_kanji,
+        res.check_in,
+        res.check_out,
+        res.check_out - res.check_in AS number_of_nights,
+        res.number_of_people,
+        COALESCE(rd.plan_price, 0) as plan_price,
+        COALESCE(rd.addon_price, 0) as addon_price,
+        (COALESCE(rd.plan_price, 0) + COALESCE(rd.addon_price, 0)) AS price,
+        COALESCE(rp.payment, 0) as payment,
+        rd.plan_sales_category,
+        rc.clients_json::TEXT as clients_json,
+        rpc.clients_json::TEXT as payers_json
+      FROM filtered_reservations res
+      JOIN hotels h ON res.hotel_id = h.id
+      JOIN clients booker ON res.reservation_client_id = booker.id
+      LEFT JOIN rd_agg rd ON res.id = rd.reservation_id AND res.hotel_id = rd.hotel_id
+      LEFT JOIN rc_json_agg rc ON res.id = rc.reservation_id
+      LEFT JOIN rp_agg rp ON res.id = rp.reservation_id
+      LEFT JOIN rpc_json_agg rpc ON res.id = rpc.reservation_id
+      ORDER BY res.check_in, res.id;
     `;
-
-    // Add date filtering based on search type
-    let dateFilterClause = '';
-    switch (searchType) {
-      case 'check_in':
-        dateFilterClause = `
-          AND reservations.check_in >= $2::date 
-          AND reservations.check_in <= $3::date
-        `;
-        break;
-      case 'created_at':
-        dateFilterClause = `
-          AND reservations.created_at >= $2::date 
-          AND reservations.created_at <= ($3::date + interval '1 day' - interval '1 second')
-        `;
-        break;
-      case 'stay_period':
-      default:
-        dateFilterClause = `
-          AND reservations.check_out > $2
-          AND reservations.check_in <= $3
-        `;
-    }
-
-    const orderClause = `
-      ORDER BY check_in, id;
-    `;
-
-    const query = selectClause + dateFilterClause + orderClause;
     const values = [hotelIds, dateStart, dateEnd];
+
+    console.log(`[DEBUG] [Request ${requestId}] Executing selectBatchReservationListView`, {
+      hotelIds,
+      dateStart,
+      dateEnd,
+      searchType
+    });
+    const startTime = Date.now();
 
     const result = await pool.query(query, values);
 
+    const endTime = Date.now();
+    console.log(`[DEBUG] [Request ${requestId}] selectBatchReservationListView completed in ${endTime - startTime}ms. Rows: ${result.rows.length}`);
+
     return result.rows;
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in selectBatchReservationListView:`, {
-      error: err.message,
+    logger.error(`[Request ${requestId}] Error in selectBatchReservationListView: ${err.message}`, {
       stack: err.stack,
       parameters: { hotelIds, dateStart, dateEnd, searchType }
     });
-    throw new Error('Database error');
+    throw new Error(`Database error: ${err.message}`);
   }
 };
 

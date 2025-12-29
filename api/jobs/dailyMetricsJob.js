@@ -38,30 +38,62 @@ const performDailyMetricsCalculation = async () => {
                 ),
                 rate_sums AS (
                     SELECT
-                        rr.hotel_id,
-                        rr.reservation_details_id,
-                        SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END) AS accommodation_rate_price,
-                        SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS other_rate_price,
-                        SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.net_price ELSE 0 END) AS accommodation_rate_net_price,
-                        SUM(CASE WHEN rr.sales_category = 'other' THEN rr.net_price ELSE 0 END) AS other_rate_net_price
-                    FROM
-                        reservation_rates rr
+                        hotel_id,
+                        reservation_details_id,
+                        SUM(accommodation_rate_price) AS accommodation_rate_price,
+                        SUM(other_rate_price) AS other_rate_price,
+                        SUM(accommodation_rate_net_price) AS accommodation_rate_net_price,
+                        SUM(other_rate_net_price) AS other_rate_net_price
+                    FROM (
+                        SELECT
+                            rr.hotel_id,
+                            rr.reservation_details_id,
+                            normalized_tax,
+                            SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END) AS accommodation_rate_price,
+                            SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END) AS other_rate_price,
+                            FLOOR(SUM(CASE WHEN COALESCE(rr.sales_category, 'accommodation') = 'accommodation' THEN rr.price ELSE 0 END)::numeric / (1 + normalized_tax)::numeric) AS accommodation_rate_net_price,
+                            FLOOR(SUM(CASE WHEN rr.sales_category = 'other' THEN rr.price ELSE 0 END)::numeric / (1 + normalized_tax)::numeric) AS other_rate_net_price
+                        FROM (
+                            SELECT 
+                                rr.*,
+                                GREATEST(0, COALESCE(CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END, 0)) as normalized_tax
+                            FROM reservation_rates rr
+                            WHERE rr.hotel_id = $3
+                        ) rr
+                        GROUP BY
+                            rr.hotel_id, rr.reservation_details_id, normalized_tax
+                    ) AS per_detail_tax
                     GROUP BY
-                        rr.hotel_id, rr.reservation_details_id
+                        hotel_id, reservation_details_id
                 ),
                 addon_sums AS (
                     SELECT
-                        ra.hotel_id,
-                        ra.reservation_detail_id,
-                        SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_addon_price,
-                        SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_addon_price,
-                        SUM(ra.price * ra.quantity) AS total_addon_price,
-                        SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.net_price * ra.quantity ELSE 0 END) AS accommodation_addon_net_price,
-                        SUM(CASE WHEN ra.sales_category = 'other' THEN ra.net_price * ra.quantity ELSE 0 END) AS other_addon_net_price
-                    FROM
-                        reservation_addons ra
+                        hotel_id,
+                        reservation_detail_id,
+                        SUM(accommodation_addon_price) AS accommodation_addon_price,
+                        SUM(other_addon_price) AS other_addon_price,
+                        SUM(total_addon_price) AS total_addon_price,
+                        SUM(accommodation_addon_net_price) AS accommodation_addon_net_price,
+                        SUM(other_addon_net_price) AS other_addon_net_price
+                    FROM (
+                        SELECT
+                            ra.hotel_id,
+                            ra.reservation_detail_id,
+                            GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0)) as normalized_tax,
+                            SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END) AS accommodation_addon_price,
+                            SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END) AS other_addon_price,
+                            SUM(ra.price * ra.quantity) AS total_addon_price,
+                            FLOOR(SUM(CASE WHEN COALESCE(ra.sales_category, 'accommodation') = 'accommodation' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0)))::numeric) AS accommodation_addon_net_price,
+                            FLOOR(SUM(CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END)::numeric / (1 + GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0)))::numeric) AS other_addon_net_price
+                        FROM
+                            reservation_addons ra
+                        WHERE
+                            ra.hotel_id = $3
+                        GROUP BY
+                            ra.hotel_id, ra.reservation_detail_id, GREATEST(0, COALESCE(CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END, 0))
+                    ) AS per_detail_tax
                     GROUP BY
-                        ra.hotel_id, ra.reservation_detail_id
+                        hotel_id, reservation_detail_id
                 )
                 SELECT
                     $1 AS metric_date,

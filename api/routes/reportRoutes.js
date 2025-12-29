@@ -45,6 +45,7 @@ router.post('/report/channel-summary', authMiddleware, reportController.getChann
 router.get('/report/checkin-out/:hid/:sdate/:edate', authMiddleware, reportController.getCheckInOutReport);
 
 // PDF Report Generation Routes
+router.post('/report/download/daily-template-pdf', authMiddleware, reportController.getDailyTemplatePdf);
 router.post('/report/pdf/single-month/single-hotel', authMiddleware, reportController.generateSingleMonthSingleHotelPdf);
 router.post('/report/pdf/single-month/multiple-hotels', authMiddleware, reportController.generateSingleMonthMultipleHotelsPdf);
 router.post('/report/pdf/cumulative/single-hotel', authMiddleware, reportController.generateCumulativeSingleHotelPdf);
@@ -58,5 +59,9 @@ router.post('/report/batch/occupation-breakdown', authMiddleware, reportControll
 router.post('/report/batch/res-list', authMiddleware, reportController.getBatchReservationListView);
 router.post('/report/batch/booker-type', authMiddleware, reportController.getBatchBookerTypeBreakdown);
 router.post('/report/batch/future-outlook', authMiddleware, reportController.getBatchFutureOutlook);
+
+// CRM Reports
+router.get('/report/crm/top-bookers/:sdate/:edate', authMiddleware, reportController.getTopBookers);
+router.get('/report/crm/sales-by-client-monthly/:sdate/:edate', authMiddleware, reportController.getSalesByClientByMonth);
 
 module.exports = router;

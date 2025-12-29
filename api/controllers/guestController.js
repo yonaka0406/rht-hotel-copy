@@ -168,7 +168,7 @@ const generatePdf = async (htmlContent, reservationId, isGroup) => {
         const filename = isGroup ? `guest_list_group_${reservationId}.pdf` : `guest_list_${reservationId}.pdf`;
         return { pdfBuffer, filename };
     } finally {
-        // The browser instance is a singleton and is managed by the puppeteerService.
+        // The browser instance is a singleton and is managed by the playwrightService.
         // It should not be closed here. Only the page instance should be closed.
         if (page) {
             await page.close();

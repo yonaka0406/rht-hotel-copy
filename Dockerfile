@@ -22,6 +22,9 @@ RUN npm --prefix frontend install --force --legacy-peer-deps
 # Now, copy the rest of the source code
 COPY . .
 
+# Install dependencies for api
+RUN cd api && npm install
+
 # Clear npm cache and reinstall/rebuild native modules after copying source
 # This ensures native binaries are built for the correct architecture
 RUN npm cache clean --force
@@ -46,65 +49,71 @@ RUN cd frontend && npm rebuild esbuild --force || true
 RUN cd frontend && npm install @tailwindcss/oxide-linux-x64-gnu --save-dev --force || true
 RUN cd frontend && npm install lightningcss-linux-x64-gnu --save-dev --force || true
 
-# Build the frontend
-ENV NODE_ENV=production
+# Build the frontend with memory limits
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV ESBUILD_WORKER_THREADS=1
 RUN npm run build:frontend
 
 # Remove development dependencies for a smaller final image
 RUN npm prune --production
 
 # ---- 2. Production Stage ----
-# Use the lighter -slim version of the same Debian release for the final image
 FROM node:24 AS production
 
-# Install runtime dependencies required by sharp
+# Set environment variables for stability
+ENV NODE_ENV=production
+# Force LibreOffice to use a temporary user profile to prevent lock-file OOMs
+ENV HOME=/tmp
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libvips \
-    # Puppeteer dependencies
-    chromium \
+    # 1. Image Processing
+    libvips-dev \
+    # 2. LibreOffice (The correct way for Debian Bookworm)
+    libreoffice-common \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-java-common \
+    default-jre-headless \
+    # 3. Fonts for PDF/Docs
     fonts-liberation \
+    fonts-noto-cjk \
+    # 4. Modern Playwright/Chromium dependencies
     libasound2 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
     libcairo2 \
     libcups2 \
-    libgbm-dev \
+    libgbm1 \
     libnss3 \
     libpangocairo-1.0-0 \
     libxss1 \
     libgtk-3-0 \
-    libjpeg-dev \
     libxcomposite1 \
     libxrandr2 \
     libxi6 \
     libxtst6 \
-    gconf-service \
-    libgconf-2-4 \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Tell Puppeteer to use the system-installed Chrome
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-
-ENV NODE_ENV=production
 WORKDIR /usr/src/app
 
-# Create a non-root user for better security
-RUN addgroup --system --gid 1001 appgroup && adduser --system --uid 1001 --ingroup appgroup --home /usr/src/app appuser
+# Create a non-root user
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --ingroup appgroup --home /usr/src/app appuser
 
-# Copy package files from the builder stage
+# Copy built artifacts and production node_modules from builder
 COPY --from=builder /usr/src/app/package*.json ./
-
-RUN npm install --production --include=optional sharp
-# Copy only the necessary production artifacts from the builder stage
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/frontend/dist ./frontend/dist
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/api ./api
-COPY --from=builder --chown=appuser:appgroup /usr/src/app/package*.json ./
 
-# Change ownership of the app directory itself. This allows the non-root user
-# (and pm2) to create necessary files like the .pm2 folder.
-RUN chown appuser:appgroup /usr/src/app
+# Ensure Playwright is installed for the appuser
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir -p /ms-playwright && \
+    cd api && npx playwright install --with-deps chromium && \
+    # Ensure the non-root user owns the downloaded browsers and the app directory
+    chown -R appuser:appgroup /ms-playwright && \
+    chown -R appuser:appgroup /usr/src/app
 
 USER appuser
 EXPOSE 3000

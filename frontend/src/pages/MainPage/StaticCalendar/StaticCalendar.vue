@@ -729,7 +729,7 @@ onUnmounted(() => {
 .table-container {
   width: 100%;
   overflow-x: auto;
-  max-width: 100%;
+  max-width: calc(100vw - 40px);
   position: relative;
   height: calc(100vh - 100px);
   overflow-y: auto;

@@ -462,7 +462,8 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
         LEFT JOIN LATERAL (
             WITH tax_rates_data AS (
                 SELECT
-                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4) AS tax_rate,
+                    -- Standardized tax rate handling: NULL tax rates default to 0, using FLOOR for consistency with billing
+                    CASE WHEN rr.tax_rate IS NULL THEN 0 WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END AS tax_rate,
                     SUM(rr.price) AS total_amount
                 FROM
                     reservation_details rd
@@ -473,13 +474,11 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
                     AND rd.hotel_id = p.hotel_id
                     AND rd.date >= res.check_in AND rd.date < res.check_out
                 GROUP BY
-                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4)
-                HAVING
-                    ROUND((CASE WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END), 4) IS NOT NULL
+                    CASE WHEN rr.tax_rate IS NULL THEN 0 WHEN rr.tax_rate > 1 THEN rr.tax_rate / 100.0 ELSE rr.tax_rate END
             ),
             tax_addons_data AS (
                 SELECT
-                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4) AS tax_rate,
+                    CASE WHEN ra.tax_rate IS NULL THEN 0 WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END AS tax_rate,
                     SUM(ra.price * ra.quantity) AS total_amount
                 FROM
                     reservation_details rd
@@ -490,9 +489,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
                     AND rd.hotel_id = p.hotel_id
                     AND rd.date >= res.check_in AND rd.date < res.check_out
                 GROUP BY
-                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4)
-                HAVING
-                    ROUND((CASE WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END), 4) IS NOT NULL
+                    CASE WHEN ra.tax_rate IS NULL THEN 0 WHEN ra.tax_rate > 1 THEN ra.tax_rate / 100.0 ELSE ra.tax_rate END
             ),
             combined_tax_data AS (
                 SELECT tax_rate, total_amount FROM tax_rates_data
