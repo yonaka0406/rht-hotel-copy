@@ -29,18 +29,18 @@
                                         <div class="col-span-3 text-left">
                                             {{ `${group.client_kanji || group.client_name}` }}
                                             <small>{{ `${group.client_kana ? '(' + group.client_kana + ')' : ''}`
-                                                }}</small>
+                                            }}</small>
                                         </div>
                                         <div class="flex items-center justify-center">
                                             {{ group.total_value.toLocaleString() }} 円
                                         </div>
                                         <div class="col-span-2 text-right mr-4">
                                             <Badge :severity="severityPreference(group.billing_preference)"
-                                                class="mr-2"> {{ 
+                                                class="mr-2"> {{
                                                     translatePreference(group.billing_preference) }}</Badge>
-                                            <Badge v-if="group.invoice_number" severity="contrast" class="mr-2">{{ 
+                                            <Badge v-if="group.invoice_number" severity="contrast" class="mr-2">{{
                                                 group.invoice_number }}</Badge>
-                                            <Badge severity="secondary" class="mr-2">{{ 
+                                            <Badge severity="secondary" class="mr-2">{{
                                                 translateBillingStatus(group.status) }}
                                             </Badge>
                                             <Button icon="pi pi-pencil" label="編集" class="p-button-sm"
@@ -54,7 +54,7 @@
                                         <Column header="予約期間">
                                             <template #body="slotProps">
                                                 <span>{{ slotProps.data.check_in }}～{{ slotProps.data.check_out
-                                                    }}</span>
+                                                }}</span>
                                             </template>
                                         </Column>
                                         <Column field="room_type_name" header="部屋タイプ"></Column>
@@ -243,7 +243,7 @@ const summarizedBilledList = computed(() => {
                 summary[key].stays_count += parseFloat(item.stays_count);
                 summary[key]._seenResIds.add(item.reservation_id);
             }
-            
+
             summary[key].total_value += parseFloat(item.value);
 
             summary[key].details.push({
@@ -314,7 +314,7 @@ const openInvoiceDialog = (data) => {
 
     relevantDailyDetails.forEach(day => {
         const dateStr = formatDate(new Date(day.date));
-        
+
         if (day.cancelled && day.billable) {
             totalCancellationFees++;
             if (!cancellationsByDate[dateStr]) {
@@ -332,136 +332,248 @@ const openInvoiceDialog = (data) => {
     // Get all dates (both stay and cancellation dates) and sort them
     const allDates = [...new Set([...Object.keys(stayDetailsByDate), ...Object.keys(cancellationsByDate)])].sort();
     const stayPeriods = [];
-    
-    if (allDates.length > 0) {
-        // Create a working copy of people count per date
-        const workingPeopleByDate = { ...stayDetailsByDate };
-        
-        // Find consecutive date groups and process them
-        while (Object.values(workingPeopleByDate).some(count => count > 0)) {
-            // Find consecutive date ranges (including gaps with cancellations)
-            const consecutiveGroups = [];
-            let i = 0;
-            
-            while (i < allDates.length) {
-                if (workingPeopleByDate[allDates[i]] > 0) {
-                    let groupStart = allDates[i];
-                    let groupEnd = allDates[i];
-                    let groupDates = [allDates[i]];
-                    
-                    // Find consecutive dates (including cancelled dates in between)
-                    let j = i + 1;
-                    while (j < allDates.length) {
-                        const [currentYear, currentMonth, currentDay] = allDates[j].split('-').map(Number);
-                        const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
-                        
-                        const [prevYear, prevMonth, prevDay] = allDates[j - 1].split('-').map(Number);
-                        const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
-                        
-                        const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
-                        
-                        if (diff === 1) {
-                            groupEnd = allDates[j];
-                            groupDates.push(allDates[j]);
-                            j++;
-                        } else {
-                            break;
-                        }
+
+    // Create a working copy of people count per date
+    const workingPeopleByDate = { ...stayDetailsByDate };
+    const workingCancellationsByDate = { ...cancellationsByDate };
+
+    // Find consecutive date groups and process them
+    while (Object.values(workingPeopleByDate).some(count => count > 0)) {
+        // Find consecutive date ranges (including gaps with cancellations)
+        const consecutiveGroups = [];
+        let i = 0;
+
+        while (i < allDates.length) {
+            if (workingPeopleByDate[allDates[i]] > 0) {
+                let groupStart = allDates[i];
+                let groupEnd = allDates[i];
+                let groupDates = [allDates[i]];
+
+                // Find consecutive dates (including cancelled dates in between)
+                let j = i + 1;
+                while (j < allDates.length) {
+                    const [currentYear, currentMonth, currentDay] = allDates[j].split('-').map(Number);
+                    const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
+
+                    const [prevYear, prevMonth, prevDay] = allDates[j - 1].split('-').map(Number);
+                    const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
+
+                    const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+
+                    if (diff === 1) {
+                        groupEnd = allDates[j];
+                        groupDates.push(allDates[j]);
+                        j++;
+                    } else {
+                        break;
                     }
-                    
-                    consecutiveGroups.push({
-                        start: groupStart,
-                        end: groupEnd,
-                        dates: groupDates
-                    });
-                    
-                    i = j;
-                } else {
-                    i++;
                 }
+
+                consecutiveGroups.push({
+                    start: groupStart,
+                    end: groupEnd,
+                    dates: groupDates
+                });
+
+                i = j;
+            } else {
+                i++;
             }
-            
-            // Process each consecutive group
-            consecutiveGroups.forEach(group => {
-                // Find minimum number of people in this group (only from non-cancelled dates)
-                const nonCancelledDates = group.dates.filter(date => workingPeopleByDate[date] > 0);
-                
-                if (nonCancelledDates.length > 0) {
-                    const minPeople = Math.min(...nonCancelledDates.map(date => workingPeopleByDate[date]));
-                    
-                    if (minPeople > 0) {
-                        // Calculate total nights and cancellation nights for this period
-                        const totalNights = minPeople * nonCancelledDates.length;
-                        
-                        // Create entry for actual stay nights
-                        const actualStayStart = nonCancelledDates[0];
-                        const actualStayEnd = nonCancelledDates[nonCancelledDates.length - 1];
-                        
-                        stayPeriods.push({
-                            start: actualStayStart,
-                            end: actualStayEnd,
-                            people: minPeople,
-                            totalNights: totalNights,
-                            type: 'stay'
-                        });
-                        
-                        // Create separate entry for cancellation fees if any
-                        const cancellationDates = group.dates.filter(date => 
-                            cancellationsByDate[date] && cancellationsByDate[date] >= minPeople
-                        );
-                        
-                        if (cancellationDates.length > 0) {
-                            const cancellationStart = cancellationDates[0];
-                            const cancellationEnd = cancellationDates[cancellationDates.length - 1];
-                            const cancellationNights = minPeople * cancellationDates.length;
-                            
+        }
+
+        // Process each consecutive group
+        consecutiveGroups.forEach(group => {
+            // Find minimum number of people in this group (only from non-cancelled dates)
+            const nonCancelledDates = group.dates.filter(date => workingPeopleByDate[date] > 0);
+
+            if (nonCancelledDates.length > 0) {
+                const minPeople = Math.min(...nonCancelledDates.map(date => workingPeopleByDate[date]));
+
+                if (minPeople > 0) {
+                    // Calculate total nights and cancellation nights for this period
+                    const totalNights = minPeople * nonCancelledDates.length;
+
+                    // Create entry for actual stay nights
+                    const actualStayStart = nonCancelledDates[0];
+                    const actualStayEnd = nonCancelledDates[nonCancelledDates.length - 1];
+
+                    stayPeriods.push({
+                        start: actualStayStart,
+                        end: actualStayEnd,
+                        people: minPeople,
+                        totalNights: totalNights,
+                        type: 'stay'
+                    });
+
+                    // Create separate entry for cancellation fees if any
+                    // We only use cancellations that are "available" in workingCancellationsByDate
+                    const cancellationDates = group.dates.filter(date =>
+                        workingCancellationsByDate[date] && workingCancellationsByDate[date] >= minPeople
+                    );
+
+                    if (cancellationDates.length > 0) {
+                        // Group consecutive cancellation dates
+                        let k = 0;
+                        while (k < cancellationDates.length) {
+                            let cStart = cancellationDates[k];
+                            let cEnd = cancellationDates[k];
+                            let cCount = 1;
+                            let l = k + 1;
+
+                            // Look ahead for consecutive dates
+                            while (l < cancellationDates.length) {
+                                const [cYear, cMonth, cDay] = cancellationDates[l].split('-').map(Number);
+                                const cDate = new Date(cYear, cMonth - 1, cDay);
+                                const [pYear, pMonth, pDay] = cancellationDates[l - 1].split('-').map(Number);
+                                const pDate = new Date(pYear, pMonth - 1, pDay);
+
+                                if ((cDate - pDate) / (1000 * 60 * 60 * 24) === 1) {
+                                    cEnd = cancellationDates[l];
+                                    cCount++;
+                                    l++;
+                                } else {
+                                    break;
+                                }
+                            }
+
                             stayPeriods.push({
-                                start: cancellationStart,
-                                end: cancellationEnd,
+                                start: cStart,
+                                end: cEnd,
                                 people: minPeople,
-                                totalNights: cancellationNights,
+                                totalNights: minPeople * cCount,
                                 type: 'cancellation'
                             });
+
+                            // Decrement available cancellations for these dates
+                            for (let m = k; m < l; m++) {
+                                workingCancellationsByDate[cancellationDates[m]] -= minPeople;
+                            }
+
+                            k = l;
                         }
-                        
-                        // Subtract min people from each non-cancelled date in the group
-                        nonCancelledDates.forEach(date => {
-                            workingPeopleByDate[date] -= minPeople;
-                        });
                     }
+
+                    // Subtract min people from each non-cancelled date in the group
+                    nonCancelledDates.forEach(date => {
+                        workingPeopleByDate[date] -= minPeople;
+                    });
                 }
-            });
-        }
+            }
+        });
     }
 
+    // Process remaining cancellations (orphans or those not matching stay layers)
+    while (Object.values(workingCancellationsByDate).some(count => count > 0)) {
+        const consecutiveGroups = [];
+        let i = 0;
+
+        while (i < allDates.length) {
+            if (workingCancellationsByDate[allDates[i]] > 0) {
+                let groupStart = allDates[i];
+                let groupEnd = allDates[i];
+                let groupDates = [allDates[i]];
+
+                let j = i + 1;
+                while (j < allDates.length) {
+                    const [currentYear, currentMonth, currentDay] = allDates[j].split('-').map(Number);
+                    const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
+
+                    const [prevYear, prevMonth, prevDay] = allDates[j - 1].split('-').map(Number);
+                    const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
+
+                    const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+
+                    if (diff === 1 && workingCancellationsByDate[allDates[j]] > 0) {
+                        groupEnd = allDates[j];
+                        groupDates.push(allDates[j]);
+                        j++;
+                    } else {
+                        break;
+                    }
+                }
+
+                consecutiveGroups.push({
+                    start: groupStart,
+                    end: groupEnd,
+                    dates: groupDates
+                });
+
+                i = j;
+            } else {
+                i++;
+            }
+        }
+
+        consecutiveGroups.forEach(group => {
+            if (group.dates.length > 0) {
+                const minPeople = Math.min(...group.dates.map(date => workingCancellationsByDate[date]));
+
+                if (minPeople > 0) {
+                    stayPeriods.push({
+                        start: group.start,
+                        end: group.end,
+                        people: minPeople,
+                        totalNights: minPeople * group.dates.length,
+                        type: 'cancellation'
+                    });
+
+                    group.dates.forEach(date => {
+                        workingCancellationsByDate[date] -= minPeople;
+                    });
+                }
+            }
+        });
+    }
+
+    // Aggregation: Merge identical periods (same start, end, type)
+    const aggregatedPeriods = [];
+    const periodMap = new Map();
+
+    stayPeriods.forEach(period => {
+        const key = `${period.type}|${period.start}|${period.end}`;
+        if (periodMap.has(key)) {
+            const existing = periodMap.get(key);
+            existing.people += period.people;
+            existing.totalNights += period.totalNights;
+        } else {
+            // Clone the period to avoid reference issues
+            const newPeriod = { ...period };
+            periodMap.set(key, newPeriod);
+            aggregatedPeriods.push(newPeriod);
+        }
+    });
+
+    // Use the aggregated list for sorting and display
+    const finalPeriods = aggregatedPeriods;
+
     // Sort periods by start date, then by end date, then by people count (descending)
-    stayPeriods.sort((a, b) => {
+    finalPeriods.sort((a, b) => {
         const startCompare = new Date(a.start) - new Date(b.start);
         if (startCompare !== 0) return startCompare;
-        
+
         const endCompare = new Date(a.end) - new Date(b.end);
         if (endCompare !== 0) return endCompare;
-        
+
         return b.people - a.people;
     });
 
-    const formattedDateGroups = stayPeriods.map(period => {
+    const formattedDateGroups = finalPeriods.map(period => {
         // Convert end date to check-out date (add 1 day)
         const endDate = new Date(period.end);
         const checkOutDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
         const checkOutDateStr = formatDate(checkOutDate);
-        
+
         // Use different text for cancellation vs stay periods
         const nightsLabel = period.type === 'cancellation' ? 'キャンセル料' : '宿泊日数';
         const nightsUnit = period.type === 'cancellation' ? '泊' : '泊';
-        
+
         return `・滞在期間：${period.start.replace(/-/g, '/')} ～ ${checkOutDateStr.replace(/-/g, '/')} 、${period.people}名、${nightsLabel}：${period.totalNights}${nightsUnit}`;
     }).join('\r\n');
 
     // Check if there are any remaining cancellation fees not accounted for in periods
     const accountedCancellations = stayPeriods.filter(p => p.type === 'cancellation').reduce((sum, period) => sum + period.totalNights, 0);
     const remainingCancellations = totalCancellationFees - accountedCancellations;
-    
+
     let cancellationComment = '';
     if (remainingCancellations > 0) {
         cancellationComment = `・キャンセル料：${remainingCancellations}日分`;
@@ -484,13 +596,13 @@ const openInvoiceDialog = (data) => {
                 const category = rateItem.category || 'accommodation';
                 const itemName = rateItem.item_name || (category === 'accommodation' ? '宿泊料' : 'その他');
                 const key = `${taxRate}-${category}-${itemName}`;
-                
+
                 if (!groupedRates[key]) {
-                    groupedRates[key] = { 
-                        tax_rate: taxRate, 
+                    groupedRates[key] = {
+                        tax_rate: taxRate,
                         category: category,
                         name: itemName,
-                        total_net_price: 0, 
+                        total_net_price: 0,
                         total_price: 0,
                         total_quantity: 0
                     };
@@ -510,13 +622,13 @@ const openInvoiceDialog = (data) => {
             const category = 'accommodation'; // Default to accommodation
             const itemName = '宿泊料';
             const key = `${rate}-${category}-${itemName}`;
-            
+
             if (!groupedRates[key]) {
-                groupedRates[key] = { 
-                    tax_rate: rate, 
+                groupedRates[key] = {
+                    tax_rate: rate,
                     category: category,
                     name: itemName,
-                    total_net_price: 0, 
+                    total_net_price: 0,
                     total_price: 0,
                     total_quantity: 0
                 };
@@ -602,7 +714,7 @@ watch([selectedHotelId, selectedMonth], async ([newHotelId, newMonth]) => {
         await fetchBilledListView(newHotelId, formatDate(newMonth));
         // console.log("Summarized Billed List:", summarizedBilledList.value);
     }
-}, { immediate: true } 
+}, { immediate: true }
 );
 
 
