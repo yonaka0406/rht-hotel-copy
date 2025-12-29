@@ -194,9 +194,14 @@ const downloadCsv = async () => {
   const edate = formatDate(getEndOfMonth(endDateRaw));
   
   try {
-    // CSV download should always exclude temp/provisory bookings (pass false)
-    // We pass a high limit (e.g. 50000) to ensure the user gets all data if they want
-    const data = await fetchSalesByClientMonthly(sdate, edate, false, 50000);
+    // CSV download should match the displayed data criteria
+    const data = await fetchSalesByClientMonthly(
+        sdate, 
+        edate, 
+        displayedIncludeTemp.value, 
+        displayedMinSales.value, 
+        displayedLimit.value
+    );
     
     // Prepare CSV data
     const csvData = data.map(row => ({
