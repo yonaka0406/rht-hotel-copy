@@ -43,9 +43,10 @@ const getSalesByClientByMonth = async (req, res) => {
 
   const includeTemp = req.query.include_temp === 'true';
   const limit = parseInt(req.query.limit) || 10000;
+  const minSales = Math.max(0, parseInt(req.query.min_sales) || 0);
 
   try {
-    const result = await crmReportModel.getSalesByClientByMonth(requestId, validSdate, validEdate, includeTemp, 0, limit);
+    const result = await crmReportModel.getSalesByClientByMonth(requestId, validSdate, validEdate, includeTemp, minSales, limit);
     res.status(200).json(result);
   } catch (error) {
     logger.error(`[getSalesByClientByMonth] Error for requestId: ${requestId}: ${error.message}`, { requestId, error });

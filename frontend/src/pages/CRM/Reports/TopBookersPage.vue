@@ -87,8 +87,6 @@ const { fetchTopBookers, fetchSalesByClientMonthly } = useCRMStore();
 const loading = ref(false);
 const downloading = ref(false);
 const bookers = ref([]);
-const dateRange = ref([]);
-const displayedDateRange = ref([]);
 const includeTemp = ref(false);
 const displayedIncludeTemp = ref(false);
 const minSales = ref(100000);
@@ -96,6 +94,14 @@ const displayedMinSales = ref(100000);
 const limit = ref(100);
 const displayedLimit = ref(100);
 const first = ref(0);
+
+// Initialize date range and displayed date range synchronously
+const now = new Date();
+const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+const dateRange = ref([startOfMonth, endOfMonth]);
+const displayedDateRange = ref([startOfMonth, endOfMonth]);
 
 const formatDate = (date) => {
     if (!date) return '';
@@ -139,11 +145,6 @@ const dateLabel = computed(() => {
 });
 
 onMounted(() => {
-  // Default to current month
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Not strictly needed for the picker val but good for init
-  dateRange.value = [start, end];
   fetchData();
 });
 
