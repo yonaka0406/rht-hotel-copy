@@ -145,7 +145,13 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
           SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END)
         ELSE 0 END
       ) >= $4
-      ORDER BY 1 DESC
+      ORDER BY (
+        SUM(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END)
+        +
+        CASE WHEN $3::boolean THEN
+          SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END)
+        ELSE 0 END
+      ) DESC
       LIMIT $5
     ),
     payment_distribution AS (

@@ -139,7 +139,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       AND reservations.id = details.reservation_id
       AND reservations.hotel_id = details.hotel_id
       AND reservations.hotel_id = hotels.id
-    ORDER BY 5, 7;
+    ORDER BY reservations.type, booker.customer_id;
   `;
 
   const values = [hotelId, dateStart, dateEnd]
