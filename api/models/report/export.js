@@ -8,6 +8,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       ,hotels.formal_name
       ,reservations.id
       ,reservations.status
+      ,reservations.type
       ,reservations.reservation_client_id AS booker_id
       ,booker.customer_id AS booker_customer_id
       ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
@@ -138,7 +139,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       AND reservations.id = details.reservation_id
       AND reservations.hotel_id = details.hotel_id
       AND reservations.hotel_id = hotels.id
-    ORDER BY 5, 7;
+    ORDER BY reservations.type, booker.customer_id;
   `;
 
   const values = [hotelId, dateStart, dateEnd]

@@ -95,6 +95,16 @@ const items = ref([
             }
         ]
     },
+    {
+        label: 'レポート',
+        icon: 'pi pi-chart-line',
+        items: [
+            {
+                label: '売上上位顧客',
+                route: '/crm/reports/top-bookers'
+            }
+        ]
+    },
 ]);
 
 // Search

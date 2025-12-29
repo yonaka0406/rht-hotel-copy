@@ -114,6 +114,36 @@ export function useCRMStore() {
         }
     };
 
+    const isValidDate = (date) => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date);
+
+    const fetchTopBookers = async (startDate, endDate, includeTemp = false, minSales = 0, limit = 200) => {
+        if (!isValidDate(startDate) || !isValidDate(endDate)) {
+            console.error('Invalid date format for Top Bookers search. Expected YYYY-MM-DD.', { startDate, endDate });
+            return [];
+        }
+        try {
+            const data = await get(`/report/crm/top-bookers/${encodeURIComponent(startDate)}/${encodeURIComponent(endDate)}?include_temp=${includeTemp}&min_sales=${minSales}&limit=${limit}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch top bookers:', error);
+            return [];
+        }
+    };
+
+    const fetchSalesByClientMonthly = async (startDate, endDate, includeTemp = false, limit = 10000) => {
+        if (!isValidDate(startDate) || !isValidDate(endDate)) {
+            console.error('Invalid date format for Sales by Client Monthly search. Expected YYYY-MM-DD.', { startDate, endDate });
+            return [];
+        }
+        try {
+            const data = await get(`/report/crm/sales-by-client-monthly/${encodeURIComponent(startDate)}/${encodeURIComponent(endDate)}?include_temp=${includeTemp}&limit=${limit}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch sales by client monthly:', error);
+            return [];
+        }
+    };
+
     return {
         user_actions,
         client_actions,
@@ -131,5 +161,7 @@ export function useCRMStore() {
         createImpediment,
         updateImpediment,
         deleteImpediment,
+        fetchTopBookers,
+        fetchSalesByClientMonthly,
     };
 }
