@@ -50,7 +50,7 @@ const ClientGroupList = () => import('@/pages/CRM/ClientGroupList.vue');
 const ClientGroupEdit = () => import('@/pages/CRM/ClientGroupEdit.vue');
 const SalesInteractions = () => import('@/pages/CRM/Sales/SalesInteractions.vue');
 const SalesProjectList = () => import('@/pages/CRM/Sales/SalesProjectList.vue');
-const TopBookersPage = () => import('@/pages/CRM/Reports/TopBookersPage.vue');
+const TopBookersPage = () => import('@/pages/CRM/TopBookersPage.vue');
 
 const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
 const ReportingSalesAndOCC = () => import('@/pages/Reporting/ReportingSalesAndOCC/ReportingSalesAndOCC.vue');
