@@ -9,17 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-- Feature: Enhanced Invoice PDF and Excel generation to display granular line items for accommodation and specific addons, including tax rates, item names, and correct units (泊/個).
-- Feature: Added automatic normalization of inconsistent tax rates (e.g., converting 10 to 0.1) in billing queries.
-- Feature: Implemented zero-value filtering for invoice line items and tax breakdown sections to provide cleaner documents.
-- Bugfix: Corrected 1-yen rounding discrepancy in invoices by calculating net price from gross totals using ROUND instead of relying on database-level floored net prices.
-- Bugfix: Resolved double-counting of daily charges in billing reports caused by split rate entries using DISTINCT ON deduplication.
-- Bugfix: Fixed incorrect stay count and guest count calculations in the monthly billing list.
-- Bugfix: Corrected Excel cell mappings for monthly billing summary.
-- Refactor: Comprehensive refactoring of the Billing Invoices module into a modular component structure (Orchestrator, List, Page, Drawers, Dialogs) for better maintainability.
-- Enhancement: Standardized formatDate usage across the billing module by migrating to shared date utilities.
-
 ---
+
+## Future Releases
+
+### Planned Features
+
+- Advanced reporting dashboard with customizable metrics
+- Advanced analytics and business intelligence features
 
 ### Backlog
 

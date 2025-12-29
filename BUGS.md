@@ -5,44 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### December 25, 2024
-
-#### CRM Client Data Export by Date Range
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: Feature Request
-- **Description**:
-  - Need ability to export consolidated client data from CRM for all hotels within a specified date range
-  - Current CRM lacks comprehensive export functionality for client data analysis
-- **Expected Behavior**:
-  - Add an export button in the CRM section for client data
-  - Allow selection of date range for the export
-  - Include data from all hotels in the consolidated export
-  - Provide export in multiple formats (CSV, Excel)
-- **Technical Notes**:
-  - Should include client details, reservation history, spending patterns
-  - Consider performance optimization for large datasets
-  - Add progress indicator for large exports
-  - Include data validation and error handling
-  - Ensure proper data privacy and access controls
-
-#### Add Reservation Type to Reservations List Download
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Source**: Feature Request
-- **Description**:
-  - The reservations list download should include the type of reservation (employee, OTA, normal, etc.)
-  - Currently, this information is not included in the exported data
-- **Expected Behavior**:
-  - Add a column for "Reservation Type" in the downloaded CSV/Excel file
-  - Include all reservation types: employee, OTA, normal, etc.
-  - Ensure the data is properly formatted and matches the display in the UI
-- **Technical Notes**:
-  - Review the existing export functionality in the reservations module
-  - Update the data query to include the reservation type field
-  - Ensure proper mapping of internal type codes to user-friendly labels
-  - Test with various filter combinations to ensure type information is accurate
-
 ### December 1, 2025
 
 #### Monthly Report Tax Value Issue

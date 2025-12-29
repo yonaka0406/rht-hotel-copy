@@ -158,12 +158,8 @@ export function useBillingStore() {
                 throw new Error('Failed to fetch data');
             }
 
-            // Convert JSON fields from string to objects if necessary
-            billedList.value = data.map(item => ({
-                ...item,
-                reservation_details_json: typeof item.reservation_details_json === 'string' ? JSON.parse(item.reservation_details_json) : item.reservation_details_json,
-                reservation_rates_json: typeof item.reservation_rates_json === 'string' ? JSON.parse(item.reservation_rates_json) : item.reservation_rates_json,
-            }));
+            // Convert clients_json field from string to JSON
+            billedList.value = data;
             
         } catch (error) {
             billedList.value = [];

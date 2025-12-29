@@ -204,83 +204,21 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
     worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
     worksheet.getCell('D16').value = invoiceData.invoice_total_value;
-
-    // Populate Main Invoice Rows (Accommodation vs Addons)
-    if (invoiceData.items && Array.isArray(invoiceData.items)) {
-      let currentRow = 20;
-      invoiceData.items.forEach((item, index) => {
-        const baseLabel = item.name || (item.category === 'accommodation' ? '宿泊料' : 'その他');
-        const taxLabel = item.tax_rate ? ` (${(parseFloat(item.tax_rate) * 100).toLocaleString()}%)` : '';
-        const label = `${baseLabel}${taxLabel}`;
-        
-        const isRoomCharge = baseLabel.includes('宿泊料');
-        const quantity = isRoomCharge ? (invoiceData.invoice_total_stays || item.total_quantity || 1) : (item.total_quantity || 1);
-        
-        // No.
-        worksheet.getCell(`A${currentRow}`).value = index + 1;
-        // Description/Item Name
-        worksheet.getCell(`B${currentRow}`).value = label;
-        // Quantity
-        worksheet.getCell(`G${currentRow}`).value = quantity;
-        // Unit
-        worksheet.getCell(`H${currentRow}`).value = isRoomCharge ? '泊' : '個';
-        // Amount
-        worksheet.getCell(`J${currentRow}`).value = item.total_price;
-        
-        currentRow++;
-      });
-    } else {
-      // Fallback for backward compatibility
-      worksheet.getCell('A20').value = 1;
-      worksheet.getCell('B20').value = '宿泊料';
-      worksheet.getCell('G20').value = invoiceData.invoice_total_stays;
-      worksheet.getCell('J20').value = invoiceData.invoice_total_value;
-    }
+    worksheet.getCell('H20').value = `${invoiceData.invoice_total_stays} 泊`;
+    worksheet.getCell('J20').value = invoiceData.invoice_total_value;
 
     let totalTax = 0;
-    let totalNet10 = 0;
-    let totalNet8 = 0;
-    let totalNet0 = 0;
-    let taxAmount10 = 0;
-    let taxAmount8 = 0;
-    let taxAmount0 = 0;
-
+    let totalNet = 0;
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
       invoiceData.items.forEach(item => {
-        const rate = parseFloat(item.tax_rate);
-        const net = item.total_net_price;
-        const tax = item.total_price - item.total_net_price;
-
-        totalTax += tax;
-
-        // Categorize by tax rate (allowing for small floating point differences)
-        if (Math.abs(rate - 0.10) < 0.001) {
-            totalNet10 += net;
-            taxAmount10 += tax;
-        } else if (Math.abs(rate - 0.08) < 0.001) {
-            totalNet8 += net;
-            taxAmount8 += tax;
-        } else if (Math.abs(rate) < 0.001) {
-            totalNet0 += net;
-            taxAmount0 += tax;
-        }
+        totalTax += (item.total_price - item.total_net_price);
+        totalNet += item.total_net_price;
       });
     }
     worksheet.getCell('I24').value = invoiceData.invoice_total_value;
     worksheet.getCell('I25').value = totalTax;
-    
-    // 10% Subject (Net) and Tax
-    worksheet.getCell('I27').value = totalNet10 > 0 ? totalNet10 : '';
-    worksheet.getCell('I28').value = taxAmount10 > 0 ? taxAmount10 : '';
-
-    // 8% Subject (Net) and Tax - Corrected based on template having a spacer at I29
-    worksheet.getCell('I30').value = totalNet8 > 0 ? totalNet8 : '';
-    worksheet.getCell('I31').value = taxAmount8 > 0 ? taxAmount8 : '';
-
-    // 0% (Non-taxable) Subject and Tax
-    worksheet.getCell('I33').value = totalNet0 > 0 ? totalNet0 : '';
-    worksheet.getCell('I34').value = (totalNet0 > 0 || taxAmount0 > 0) ? taxAmount0 : ''; 
-
+    worksheet.getCell('I27').value = totalNet;
+    worksheet.getCell('I28').value = totalTax;
     worksheet.getCell('C33').value = invoiceData.comment;
     worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
 
@@ -322,29 +260,14 @@ const generateInvoiceExcel = async (req, res) => {
       let cancelledCount = 0;
 
       todaysDetails.forEach(detail => {
-        let bucketId = detail.plans_global_id || detail.plan_type_category_id;
-
-        // Fallback: If global ID and category ID are missing, map based on tax rate
-        if (!bucketId && detail.tax_rate != null) {
-            const rate = parseFloat(detail.tax_rate);
-            if (Math.abs(rate - 0.10) < 0.001) bucketId = 4;
-            else if (Math.abs(rate - 0.08) < 0.001) bucketId = 3;
-            else bucketId = 4; // Default to standard bucket
-        }
-
         if (detail.cancelled && detail.billable) {
           cancelledCount++;
         } else if (!detail.cancelled) {
-          if (bucketId && planData[bucketId]) {
-            if (planData[bucketId].hasOwnProperty('count')) {
-              planData[bucketId].count++;
+          if (planData[detail.plans_global_id]) {
+            if (planData[detail.plans_global_id].hasOwnProperty('count')) {
+              planData[detail.plans_global_id].count++;
             }
-            // Add Plan Price + Accommodation Addons (e.g. Meals included in plan price)
-            planData[bucketId].price += detail.price + (detail.addons_price_accom || 0);
-          }
-          // Add 'Other' Addons to bucket 5
-          if (detail.addons_price_other > 0) {
-            planData[5].price += detail.addons_price_other;
+            planData[detail.plans_global_id].price += detail.price;
           }
         }
       });

@@ -223,88 +223,47 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.legal_or_natural_person
       ,clients.billing_preference
       -- The subquery for total people and stays count needed to be filtered by month.
-      -- This now correctly counts only the dates within the specified month for the whole reservation.
+      -- This now correctly counts only the dates within the specified month.
       ,COALESCE(details.number_of_people, 0) as total_people
-      ,COALESCE(details.stays_count, 0) as stays_count
+      ,COALESCE(details.date, 0) as stays_count
       -- The subquery for reservation details needed to be filtered by month.
-      -- Includes all rooms of the reservation for this month.
-      -- Using DISTINCT ON (rd.id) to prevent duplicate rows when a room charge is split into multiple rates.
       ,(
-        SELECT json_agg(res_detail)
-        FROM (
-            SELECT DISTINCT ON (rd.id)
-                rd.id,
-                rd.hotel_id,
-                rd.reservation_id,
-                rd.date,
-                rd.room_id,
-                rd.plans_global_id,
-                rd.plans_hotel_id,
-                rd.plan_name,
-                rd.plan_type,
-                rd.number_of_people,
-                rd.price,
-                rd.cancelled,
-                rd.billable,
-                rd.is_accommodation,
-                rr.tax_rate,
-                ph.plan_type_category_id,
-                COALESCE(ra.addon_sum_accom, 0) as addons_price_accom,
-                COALESCE(ra.addon_sum_other, 0) as addons_price_other
-            FROM reservation_details rd
-            LEFT JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
-            LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
-            LEFT JOIN (
-                SELECT hotel_id, reservation_detail_id, 
-                       SUM(CASE WHEN sales_category = 'accommodation' OR sales_category IS NULL THEN price * quantity ELSE 0 END) as addon_sum_accom,
-                       SUM(CASE WHEN sales_category = 'other' THEN price * quantity ELSE 0 END) as addon_sum_other
-                FROM reservation_addons
-                GROUP BY hotel_id, reservation_detail_id
-            ) ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
-            WHERE rd.hotel_id = reservations.hotel_id
-              AND rd.reservation_id = reservations.id
-              AND rd.billable = TRUE
-              AND rd.hotel_id = $1
-              AND rd.date >= date_trunc('month', $2::date)
-              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
-            ORDER BY rd.id, rr.tax_rate DESC -- Pick one representative tax rate if multiple exist
-        ) as res_detail
+        SELECT json_agg(rd)
+        FROM reservation_details rd
+        WHERE rd.hotel_id = reservations.hotel_id
+          AND rd.reservation_id = reservations.id
+          AND rd.room_id = reservation_payments.room_id
+          AND rd.billable = TRUE
+          AND rd.hotel_id = $1
+          AND rd.date >= date_trunc('month', $2::date)
+          AND rd.date < date_trunc('month', $2::date) + interval '1 month'
       ) AS reservation_details_json
       -- The subquery for reservation rates and addons also needed to be filtered by month.
-      -- This ensures the total prices are correct for the whole reservation in the billing period.
-      -- We now separate accommodation rates from addon rates to allow distinct line items in invoices.
+      -- This ensures the total prices are correct for the billing period.
+      -- We calculate total_net_price by flooring the sum of gross prices divided by the tax rate.
+      -- Using FLOOR with numeric casting ensures mathematical consistency (e.g. 17600 -> 16000) 
+      -- and avoids precision issues from individual component flooring in the database.
+      -- We also normalize tax_rate (if > 1, divide by 100) to handle inconsistent data (e.g. 10 instead of 0.1).
       ,(
         SELECT json_agg(taxed_group)
         FROM (
           SELECT 
-            (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END) as tax_rate, 
-            category,
-            item_name,
-            SUM(item_quantity) as total_quantity,
+            -- Standardized tax rate handling: NULL tax rates default to 0, preventing division errors
+            -- Using FLOOR for net price calculation to maintain consistency with other billing queries
+            (CASE WHEN tax_rate IS NULL THEN 0 WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END) as tax_rate, 
             SUM(total_price) as total_price, 
-            ROUND(SUM(total_price)::numeric / (1 + (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END))::numeric) as total_net_price
+            FLOOR(SUM(total_price)::numeric / (1 + (CASE WHEN tax_rate IS NULL THEN 0 WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END))::numeric) as total_net_price
           FROM (
             SELECT
               rr.tax_rate,
-              'accommodation' as category,
-              '宿泊料' as item_name,
-              1 as item_quantity,
-              -- User-Requested Heuristic:
-              -- Calculate breakdown based on reservation_rates.
-              -- If sum(rr.price) != rd.price, apply the difference to the rate with the HIGHEST tax rate.
-              -- This handles implicit discounts/rounding that should likely apply to the main tax bucket.
-              CASE
-                WHEN ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id) = 1 THEN
-                    rr.price + (rd.price - SUM(rr.price) OVER (PARTITION BY rd.id))
-                ELSE
-                    rr.price
-              END AS total_price
+              rr.price AS total_price
             FROM
               reservation_details rd
               JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
             WHERE
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
+              AND rd.room_id = reservation_payments.room_id
               AND rd.billable = TRUE
               AND rd.hotel_id = $1           
               AND rd.date >= date_trunc('month', $2::date)
@@ -313,9 +272,6 @@ const selectBilledListView = async (requestId, hotelId, month) => {
             UNION ALL
             SELECT
               ra.tax_rate,
-              (CASE WHEN ra.sales_category = 'other' THEN 'other' ELSE 'accommodation' END) as category,
-              COALESCE(ra.addon_name, 'その他') as item_name,
-              ra.quantity as item_quantity,
               (ra.price * ra.quantity) AS total_price
             FROM
               reservation_details rd
@@ -323,12 +279,13 @@ const selectBilledListView = async (requestId, hotelId, month) => {
             WHERE
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
+              AND rd.room_id = reservation_payments.room_id
               AND rd.billable = TRUE
               AND rd.hotel_id = $1           
               AND rd.date >= date_trunc('month', $2::date)
               AND rd.date < date_trunc('month', $2::date) + interval '1 month'
           ) AS inside
-          GROUP BY (CASE WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END), category, item_name
+          GROUP BY (CASE WHEN tax_rate IS NULL THEN 0 WHEN tax_rate > 1 THEN tax_rate / 100.0 ELSE tax_rate END)
         ) AS taxed_group
       ) AS reservation_rates_json
     FROM
@@ -340,18 +297,15 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       reservation_payments
       ON reservation_payments.hotel_id = reservations.hotel_id AND reservation_payments.reservation_id = reservations.id
         LEFT JOIN
-      (SELECT hotel_id, reservation_id, MAX(total_people_per_day) AS number_of_people, COUNT(rd_id) AS stays_count
-        FROM (
-            SELECT rd.hotel_id, rd.reservation_id, rd.date, rd.id as rd_id, SUM(rd.number_of_people) as total_people_per_day
-            FROM reservation_details rd
-            WHERE rd.billable = TRUE AND rd.hotel_id = $1
-              AND rd.date >= date_trunc('month', $2::date)
-              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
-            GROUP BY rd.hotel_id, rd.reservation_id, rd.date, rd.id
-        ) as daily
-        GROUP BY hotel_id, reservation_id
+      (SELECT hotel_id, reservation_id, room_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
+        FROM reservation_details
+        WHERE billable = TRUE AND hotel_id = $1
+          -- Add the month filter to this subquery
+          AND date >= date_trunc('month', $2::date)
+          AND date < date_trunc('month', $2::date) + interval '1 month'
+        GROUP BY hotel_id, reservation_id, room_id
       ) AS details
-      ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id
+      ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id AND details.room_id = reservation_payments.room_id
         JOIN
       invoices
       ON invoices.id = reservation_payments.invoice_id AND invoices.hotel_id = reservation_payments.hotel_id
