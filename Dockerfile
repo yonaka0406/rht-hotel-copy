@@ -58,7 +58,7 @@ RUN npm run build:frontend
 RUN npm prune --production
 
 # ---- 2. Production Stage ----
-FROM node:24-slim AS production
+FROM node:24 AS production
 
 # Set environment variables for stability
 ENV NODE_ENV=production
