@@ -59,15 +59,16 @@ function generateInvoiceHTML(html, data, userName) {
   if (data.items && Array.isArray(data.items)) {
     data.items.forEach(item => {
       const baseLabel = item.name || (item.category === 'accommodation' ? '宿泊料' : 'その他');
-      const taxLabel = item.tax_rate ? ` (${(item.tax_rate * 100).toLocaleString()}%)` : '';
+      const taxRateVal = item.tax_rate !== null && item.tax_rate !== undefined ? parseFloat(item.tax_rate) : null;
+      const taxLabel = taxRateVal !== null ? ` (${(taxRateVal * 100).toLocaleString()}%)` : '';
       const label = `${baseLabel}${taxLabel}`;
-      
+
       // Determine unit based on label content (Room charge vs Addon)
       const isRoomCharge = baseLabel.includes('宿泊料');
       const qtyValue = isRoomCharge ? (data.invoice_total_stays || item.total_quantity || 1) : (item.total_quantity || 1);
       const unit = isRoomCharge ? '泊' : '個';
       const quantity = `${qtyValue} ${unit}`;
-      
+
       dtlitems += `
       <tr>
           <td class="cell-center">${rowCount++}</td>
@@ -102,18 +103,22 @@ function generateInvoiceHTML(html, data, userName) {
       taxValue += difference;
 
       // Aggregate by tax rate for the breakdown section
-      const rateKey = parseFloat(item.tax_rate);
+      let rateKey = parseFloat(item.tax_rate);
+      if (isNaN(rateKey)) {
+        rateKey = 0;
+      }
       if (!taxSummary[rateKey]) {
-        taxSummary[rateKey] = { rate: rateKey, net: 0 };
+        taxSummary[rateKey] = { rate: rateKey, net: 0, tax: 0 };
       }
       taxSummary[rateKey].net += item.total_net_price;
+      taxSummary[rateKey].tax += difference;
     });
   }
   modifiedHTML = modifiedHTML.replace(/{{ total_tax_value }}/g, taxValue.toLocaleString());
 
   // Generate breakdown HTML, sorted by rate descending, filtering out 0s
   let taxitems = Object.values(taxSummary)
-    .filter(summary => summary.net !== 0)
+    .filter(summary => summary.net !== 0 || summary.tax !== 0)
     .sort((a, b) => b.rate - a.rate)
     .map(summary => `
     <tr>        
@@ -121,7 +126,7 @@ function generateInvoiceHTML(html, data, userName) {
       <td class="cell-right">¥ ${summary.net.toLocaleString()}</td>
     </tr>
 `).join('');
-  
+
   modifiedHTML = modifiedHTML.replace(/{{ taxable_details }}/g, taxitems);
 
   // Footer

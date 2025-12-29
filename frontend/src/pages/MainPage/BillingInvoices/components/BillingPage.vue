@@ -29,7 +29,7 @@
                                         <div class="col-span-3 text-left">
                                             {{ `${group.client_kanji || group.client_name}` }}
                                             <small>{{ `${group.client_kana ? '(' + group.client_kana + ')' : ''}`
-                                                }}</small>
+                                            }}</small>
                                         </div>
                                         <div class="flex items-center justify-center">
                                             {{ group.total_value.toLocaleString() }} 円
@@ -54,7 +54,7 @@
                                         <Column header="予約期間">
                                             <template #body="slotProps">
                                                 <span>{{ slotProps.data.check_in }}～{{ slotProps.data.check_out
-                                                    }}</span>
+                                                }}</span>
                                             </template>
                                         </Column>
                                         <Column field="room_type_name" header="部屋タイプ"></Column>
@@ -601,7 +601,7 @@ const openInvoiceDialog = (data) => {
         if (block.rates && Array.isArray(block.rates) && block.rates.length > 0) {
             hasBackendRateData = true;
             block.rates.forEach(rateItem => {
-                const taxRate = rateItem.tax_rate;
+                const taxRate = rateItem.tax_rate ?? 0; // Default to 0 if null/undefined
                 const category = rateItem.category || 'accommodation';
                 const itemName = rateItem.item_name || (category === 'accommodation' ? '宿泊料' : 'その他');
                 const key = `${taxRate}-${category}-${itemName}`;
@@ -643,14 +643,24 @@ const openInvoiceDialog = (data) => {
                 };
             }
             groupedRates[key].total_price += block.value;
+            groupedRates[key].total_price += block.value;
             groupedRates[key].total_quantity += (data.invoice_total_stays || 1);
+
+            // For 0% tax (or explicit 0 rate), Net Price should equal Total Price
+            if (Number(rate) === 0) {
+                groupedRates[key].total_net_price = groupedRates[key].total_price;
+            }
         });
 
         for (const key in groupedRates) {
             const item = groupedRates[key];
-            const grossTotal = item.total_price;
-            // Using Math.round to match backend ROUND logic
-            item.total_net_price = Math.round(grossTotal / (1 + parseFloat(item.tax_rate)));
+
+            // Only calculate net price if it wasn't already set (e.g. for non-0% items)
+            if (item.total_net_price === 0 && item.tax_rate !== 0) {
+                const grossTotal = item.total_price;
+                // Using Math.round to match backend ROUND logic
+                item.total_net_price = Math.round(grossTotal / (1 + parseFloat(item.tax_rate)));
+            }
         }
     }
 

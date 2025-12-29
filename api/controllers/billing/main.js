@@ -212,10 +212,10 @@ const generateInvoiceExcel = async (req, res) => {
         const baseLabel = item.name || (item.category === 'accommodation' ? '宿泊料' : 'その他');
         const taxLabel = item.tax_rate ? ` (${(parseFloat(item.tax_rate) * 100).toLocaleString()}%)` : '';
         const label = `${baseLabel}${taxLabel}`;
-        
+
         const isRoomCharge = baseLabel.includes('宿泊料');
         const quantity = isRoomCharge ? (invoiceData.invoice_total_stays || item.total_quantity || 1) : (item.total_quantity || 1);
-        
+
         // No.
         worksheet.getCell(`A${currentRow}`).value = index + 1;
         // Description/Item Name
@@ -226,7 +226,7 @@ const generateInvoiceExcel = async (req, res) => {
         worksheet.getCell(`H${currentRow}`).value = isRoomCharge ? '泊' : '個';
         // Amount
         worksheet.getCell(`J${currentRow}`).value = item.total_price;
-        
+
         currentRow++;
       });
     } else {
@@ -255,20 +255,20 @@ const generateInvoiceExcel = async (req, res) => {
 
         // Categorize by tax rate (allowing for small floating point differences)
         if (Math.abs(rate - 0.10) < 0.001) {
-            totalNet10 += net;
-            taxAmount10 += tax;
+          totalNet10 += net;
+          taxAmount10 += tax;
         } else if (Math.abs(rate - 0.08) < 0.001) {
-            totalNet8 += net;
-            taxAmount8 += tax;
+          totalNet8 += net;
+          taxAmount8 += tax;
         } else if (Math.abs(rate) < 0.001) {
-            totalNet0 += net;
-            taxAmount0 += tax;
+          totalNet0 += net;
+          taxAmount0 += tax;
         }
       });
     }
     worksheet.getCell('I24').value = invoiceData.invoice_total_value;
     worksheet.getCell('I25').value = totalTax;
-    
+
     // 10% Subject (Net) and Tax
     worksheet.getCell('I27').value = totalNet10 > 0 ? totalNet10 : '';
     worksheet.getCell('I28').value = taxAmount10 > 0 ? taxAmount10 : '';
@@ -278,8 +278,8 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('I31').value = taxAmount8 > 0 ? taxAmount8 : '';
 
     // 0% (Non-taxable) Subject and Tax
-    worksheet.getCell('I33').value = totalNet0 > 0 ? totalNet0 : '';
-    worksheet.getCell('I34').value = (totalNet0 > 0 || taxAmount0 > 0) ? taxAmount0 : ''; 
+    worksheet.getCell('I33').value = (totalNet0 > 0 || taxAmount0 > 0) ? totalNet0 : '';
+    worksheet.getCell('I34').value = (totalNet0 > 0 || taxAmount0 > 0) ? taxAmount0 : '';
 
     worksheet.getCell('C33').value = invoiceData.comment;
     worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
@@ -326,10 +326,10 @@ const generateInvoiceExcel = async (req, res) => {
 
         // Fallback: If global ID and category ID are missing, map based on tax rate
         if (!bucketId && detail.tax_rate != null) {
-            const rate = parseFloat(detail.tax_rate);
-            if (Math.abs(rate - 0.10) < 0.001) bucketId = 4;
-            else if (Math.abs(rate - 0.08) < 0.001) bucketId = 3;
-            else bucketId = 4; // Default to standard bucket
+          const rate = parseFloat(detail.tax_rate);
+          if (Math.abs(rate - 0.10) < 0.001) bucketId = 4;
+          else if (Math.abs(rate - 0.08) < 0.001) bucketId = 3;
+          else bucketId = 4; // Default to standard bucket
         }
 
         if (detail.cancelled && detail.billable) {
