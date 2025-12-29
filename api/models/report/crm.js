@@ -6,6 +6,10 @@ const { getPool } = require('../../config/database');
 const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false, minSales = 0, limit = 200) => {
   const pool = getPool(requestId);
   
+  // Parameter normalization
+  const normalizedMinSales = Math.max(0, parseInt(minSales, 10) || 0);
+  const normalizedLimit = Math.max(1, Math.min(1000, parseInt(limit, 10) || 200));
+
   const query = `
     WITH reservation_metrics AS (
       SELECT
@@ -61,14 +65,14 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false,
     LIMIT $5;
   `;
 
-  const values = [dateStart, dateEnd, includeTemp, minSales, limit];
+  const values = [dateStart, dateEnd, includeTemp, normalizedMinSales, normalizedLimit];
 
   try {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error retrieving top bookers:', err);
-    throw new Error('Database error');
+    console.error(`[Model][getTopBookers] Error: ${err.message}`, { stack: err.stack, requestId });
+    throw new Error(`Database error in getTopBookers: ${err.message}`);
   }
 };
 
@@ -77,6 +81,10 @@ const getTopBookers = async (requestId, dateStart, dateEnd, includeTemp = false,
  */
 const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTemp = false, minSales = 0, limit = 10000) => {
   const pool = getPool(requestId);
+
+  // Parameter normalization
+  const normalizedMinSales = Math.max(0, parseInt(minSales, 10) || 0);
+  const normalizedLimit = Math.max(1, Math.min(50000, parseInt(limit, 10) || 10000));
 
   const query = `
     WITH reservation_base AS (
@@ -210,14 +218,14 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       rb.month DESC, total_sales DESC;
   `;
 
-  const values = [dateStart, dateEnd, includeTemp, minSales, limit];
+  const values = [dateStart, dateEnd, includeTemp, normalizedMinSales, normalizedLimit];
 
   try {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
-    console.error('Error retrieving sales by client by month:', err);
-    throw new Error('Database error');
+    console.error(`[Model][getSalesByClientByMonth] Error: ${err.message}`, { stack: err.stack, requestId });
+    throw new Error(`Database error in getSalesByClientByMonth: ${err.message}`);
   }
 };
 
