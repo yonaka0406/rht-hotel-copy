@@ -89,21 +89,23 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         r.type as res_type,
         r.payment_timing,
         
-        -- Sales and Nights
-        SUM(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS total_sales,
+        -- Night Counts
         COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS total_nights,
-        
-        SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS provisory_sales,
         COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS provisory_nights,
-        
-        SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_billable,
         COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS cancelled_billable_nights,
-        
-        SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_non_billable,
         COUNT(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS cancelled_non_billable_nights,
 
+        -- Sales
+        SUM(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS total_sales,
+        SUM(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS provisory_sales,
+        SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_billable,
+        SUM(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE THEN COALESCE(rd.price, 0) + COALESCE(ra_sum.price, 0) ELSE 0 END) AS cancelled_non_billable,
+
+        -- Monthly presence flags for people count
         BOOL_OR(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as has_confirmed,
-        BOOL_OR(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as has_provisory
+        BOOL_OR(CASE WHEN r.status IN ('hold', 'provisory') AND rd.cancelled IS NULL THEN TRUE ELSE FALSE END) as has_provisory,
+        BOOL_OR(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = TRUE THEN TRUE ELSE FALSE END) as has_cancelled_billable,
+        BOOL_OR(CASE WHEN rd.cancelled IS NOT NULL AND rd.billable = FALSE THEN TRUE ELSE FALSE END) as has_cancelled_non_billable
 
       FROM
         reservation_details rd
@@ -123,7 +125,6 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
         rd.hotel_id, rd.reservation_id, month, r.type, r.payment_timing
     ),
     client_filter AS (
-      -- Identify which clients to include based on the UI table's criteria
       SELECT
         r.reservation_client_id as filter_client_id
       FROM
@@ -148,13 +149,11 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       LIMIT $5
     ),
     payment_distribution AS (
-      -- Split metrics by payment method proportion
       SELECT
         rp.reservation_id,
         rp.hotel_id,
         pt.name AS payment_method,
         COALESCE(pc.name_kanji, pc.name_kana, pc.name) AS payer_name,
-        -- Calculate weight of this payment method relative to total payments for this reservation
         COALESCE(rp.value / NULLIF(SUM(rp.value) OVER(PARTITION BY rp.reservation_id, rp.hotel_id), 0), 1.0) AS weight
       FROM
         reservation_payments rp
@@ -171,11 +170,9 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       c.phone AS client_phone,
       rb.month,
       
-      -- Fallback to payment_timing if no recorded payments exist
       COALESCE(pd.payment_method, rb.payment_timing) AS payment_method,
       COALESCE(pd.payer_name, '') AS payer_name,
       
-      -- Apply weight to metrics to keep totals accurate across split rows
       SUM(rb.total_sales * COALESCE(pd.weight, 1.0)) AS total_sales,
       SUM(rb.total_nights * COALESCE(pd.weight, 1.0)) AS total_nights,
       SUM(CASE WHEN rb.has_confirmed THEN rb.res_people * COALESCE(pd.weight, 1.0) ELSE 0 END) AS total_people,
@@ -186,8 +183,11 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       
       SUM(rb.cancelled_billable * COALESCE(pd.weight, 1.0)) AS cancelled_billable,
       SUM(rb.cancelled_billable_nights * COALESCE(pd.weight, 1.0)) AS cancelled_billable_nights,
+      SUM(CASE WHEN rb.has_cancelled_billable THEN rb.res_people * COALESCE(pd.weight, 1.0) ELSE 0 END) AS cancelled_billable_people,
+
       SUM(rb.cancelled_non_billable * COALESCE(pd.weight, 1.0)) AS cancelled_non_billable,
       SUM(rb.cancelled_non_billable_nights * COALESCE(pd.weight, 1.0)) AS cancelled_non_billable_nights,
+      SUM(CASE WHEN rb.has_cancelled_non_billable THEN rb.res_people * COALESCE(pd.weight, 1.0) ELSE 0 END) AS cancelled_non_billable_people,
       
       STRING_AGG(DISTINCT rb.res_type, ', ') AS reservation_types
 
@@ -197,7 +197,6 @@ const getSalesByClientByMonth = async (requestId, dateStart, dateEnd, includeTem
       JOIN clients c ON r.reservation_client_id = c.id
       JOIN hotels h ON r.hotel_id = h.id
       JOIN client_filter cf ON c.id = cf.filter_client_id
-      -- Left join to distribution. If no payments, pd columns are null.
       LEFT JOIN payment_distribution pd ON rb.reservation_id = pd.reservation_id AND rb.hotel_id = pd.hotel_id
     GROUP BY
       h.id, h.name, c.id, c.customer_id, c.name_kanji, c.name_kana, c.name, c.phone, rb.month, rb.payment_timing, pd.payment_method, pd.payer_name
