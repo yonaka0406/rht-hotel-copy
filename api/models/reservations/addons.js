@@ -18,6 +18,13 @@ const addReservationAddon = async (requestId, addon, client = null) => {
       await dbClient.query('BEGIN');
     }
 
+    const isTaxRateMissing = addon.tax_rate === null || addon.tax_rate === undefined;
+    const isTaxTypeMissing = addon.tax_type_id === null || addon.tax_type_id === undefined;
+
+    if (isTaxRateMissing || isTaxTypeMissing) {
+      logger.warn(`[${requestId}] addReservationAddon: Missing tax info for addon. Tax Rate: ${addon.tax_rate}, Tax Type ID: ${addon.tax_type_id}`);
+    }
+
     const query = `
         INSERT INTO reservation_addons (
         hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by, sales_category
@@ -35,7 +42,7 @@ const addReservationAddon = async (requestId, addon, client = null) => {
       addon.quantity,
       addon.price,
       addon.tax_type_id,
-      addon.tax_rate,
+      addon.tax_rate ?? 0,
       addon.created_by,
       addon.updated_by,
       addon.sales_category || 'accommodation'
