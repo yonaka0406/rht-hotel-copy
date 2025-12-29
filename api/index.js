@@ -21,6 +21,8 @@ const { Pool } = require('pg');
 const { startWaitlistJob } = require('./jobs/waitlistJob');
 const { scheduleDailyMetricsJob } = require('./jobs/dailyMetricsJob');
 const { scheduleDailyDigestEmailJob } = require('./jobs/dailyDigestEmailJob');
+const { scheduleDailySalesOccPdfJob } = require('./jobs/dailySalesOccPdfJob');
+const { scheduleCrmMarketingJob } = require('./jobs/crmMarketingJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 const { startOtaXmlPoller, stopOtaXmlPoller, POLL_INTERVAL } = require('./jobs/otaXmlPoller.js');
 
@@ -91,7 +93,7 @@ try {
   };
 
   sessionPool = new Pool(poolConfig);
-  
+
   sessionPool.on('error', (err) => {
     logger.error('[SESSION_POOL_ERROR] Idle client error', { message: err.message, stack: err.stack });
   });
@@ -303,7 +305,7 @@ const prodListenClient = new Pool({
 
 // Function to listen for changes in a specific table
 const listenForTableChanges = async () => {
-  
+
   // --- Development database listener ---
   if (process.env.NODE_ENV !== 'production') {
     let devClient;
@@ -338,7 +340,7 @@ const listenForTableChanges = async () => {
         if (msg.channel === 'reservation_log_inserted' && process.env.NODE_ENV === 'production') {
           const logId = parseInt(msg.payload, 10);
           logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
-                  
+
           let response = null;
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
             method: 'GET',
@@ -375,7 +377,7 @@ const listenForTableChanges = async () => {
             const inventory = await response.json();
 
             try {
-              if (process.env.NODE_ENV === 'production') {            
+              if (process.env.NODE_ENV === 'production') {
                 await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
                   method: 'POST',
                   headers: {
@@ -384,7 +386,7 @@ const listenForTableChanges = async () => {
                   body: JSON.stringify(inventory),
                 });
               }
-              
+
               logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
             } catch (siteControllerError) {
               logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
@@ -636,7 +638,7 @@ const shutdown = async (signal) => {
   } catch (err) {
     logger.error('Error closing listener DEV database pool:', err);
   }
-  
+
   try {
     await prodListenClient.end();
     logger.info('Listener PROD database pool closed.');
@@ -651,7 +653,7 @@ const shutdown = async (signal) => {
     } catch (err) {
       logger.error('Error closing session database pool:', err);
     }
-  }  
+  }
 
   try {
     await closeSingletonBrowser();
@@ -710,6 +712,8 @@ if (process.env.NODE_ENV === 'production') {
   startGoogleSheetsPoller();
   startOtaXmlPoller(); // Start the poller using its dedicated function
   scheduleDailyDigestEmailJob();
+  scheduleDailySalesOccPdfJob();
+  scheduleCrmMarketingJob();
   // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
   // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
