@@ -29,7 +29,7 @@
                                         <div class="col-span-3 text-left">
                                             {{ `${group.client_kanji || group.client_name}` }}
                                             <small>{{ `${group.client_kana ? '(' + group.client_kana + ')' : ''}`
-                                            }}</small>
+                                                }}</small>
                                         </div>
                                         <div class="flex items-center justify-center">
                                             {{ group.total_value.toLocaleString() }} 円
@@ -54,13 +54,15 @@
                                         <Column header="予約期間">
                                             <template #body="slotProps">
                                                 <span>{{ slotProps.data.check_in }}～{{ slotProps.data.check_out
-                                                }}</span>
+                                                    }}</span>
                                             </template>
                                         </Column>
                                         <Column field="room_type_name" header="部屋タイプ"></Column>
                                         <Column field="room_number" header="部屋番号" style="text-align: center;"></Column>
-                                        <Column field="details[0].number_of_people" header="人数"
-                                            style="text-align: center;">
+                                        <Column header="人数" style="text-align: center;">
+                                            <template #body="slotProps">
+                                                {{ slotProps.data.total_people }}
+                                            </template>
                                         </Column>
                                         <Column header="宿泊日数" style="text-align: center;">
                                             <template #body="slotProps">
@@ -73,6 +75,15 @@
                                                 <span>{{ formatCurrency(slotProps.data.value) }}</span>
                                             </template>
                                         </Column>
+                                        <Column header="詳細" style="text-align: center; width: 4rem">
+                                            <template #body="slotProps">
+                                                <a :href="`/reservations/edit/${slotProps.data.reservation_id}`"
+                                                    target="_blank" rel="noopener noreferrer"
+                                                    class="text-blue-600 hover:text-blue-800">
+                                                    <i class="pi pi-external-link"></i>
+                                                </a>
+                                            </template>
+                                        </Column>
                                     </DataTable>
                                 </AccordionContent>
                             </AccordionPanel>
@@ -83,91 +94,15 @@
         </div>
     </div>
 
-    <Dialog v-model:visible="displayInvoiceDialog" header="請求書作成" :modal="true">
-        <div class="grid grid-cols-12 gap-4">
-            <!-- Invoice Header-->
-            <div class="col-span-12 mb-4 mx-6">
-                <div class="grid grid-cols-12 gap-2">
-                    <div class="col-span-4 mt-6">
-                        <FloatLabel>
-                            <label class="font-bold">請求番号:</label>
-                            <InputText type="text" v-model="invoiceData.invoice_number" fluid disabled />
-                        </FloatLabel>
-                    </div>
-                    <div class="col-span-4 mt-6">
-                        <FloatLabel>
-                            <label class="font-bold">請求日:</label>
-                            <InputText type="date" v-model="invoiceData.date" fluid disabled />
-                        </FloatLabel>
-                    </div>
-                    <div class="col-span-4 mt-6">
-                        <FloatLabel>
-                            <label class="font-bold">支払期限:</label>
-                            <InputText type="date" v-model="invoiceData.due_date" fluid />
-                        </FloatLabel>
-                        <small class="ml-1">元データ：{{ invoiceDBData.due_date }}</small>
-                    </div>
-                    <div class="col-span-3 mt-6">
-                        <FloatLabel>
-                            <label class="font-bold">取引先番号:</label>
-                            <InputText type="text" v-model="invoiceData.customer_code" fluid disabled />
-                        </FloatLabel>
-                    </div>
-                    <div class="col-span-6 mt-6">
-                        <FloatLabel>
-                            <label class="font-bold">取引先名:</label>
-                            <InputText type="text" v-model="invoiceData.client_name" fluid />
-                        </FloatLabel>
-                        <small class="ml-1">元データ：{{ invoiceDBData.client_name }}</small>
-                    </div>
-                    <div class="col-span-1 mt-6">
-                        <FloatLabel>
-                            <label class="font-bold">宿泊数:</label>
-                            <InputText type="number" min="0" v-model="invoiceData.invoice_total_stays" fluid />
-                        </FloatLabel>
-                        <small class="ml-1">元データ：{{ invoiceDBData.invoice_total_stays }}</small>
-                    </div>
-                </div>
-            </div>
-            <!-- Invoice Details -->
-            <div class="col-span-12 mb-4 mx-40">
-                <DataTable :value="invoiceData.items">
-                    <Column field="total_net_price" header="税抜き">
-                        <template #body="slotProps">
-                            <span>{{ slotProps.data.total_net_price.toLocaleString() }} 円</span>
-                        </template>
-                    </Column>
-                    <Column header="税率">
-                        <template #body="slotProps">
-                            <span>{{ slotProps.data.tax_rate * 100 }} %</span>
-                        </template>
-                    </Column>
-                    <Column field="total_price" header="税込み">
-                        <template #body="slotProps">
-                            <span>{{ slotProps.data.total_price.toLocaleString() }} 円</span>
-                        </template>
-                    </Column>
-                </DataTable>
-            </div>
-            <!-- Invoice Comments -->
-            <div class="col-span-12 mb-4">
-                <FloatLabel>
-                    <Textarea v-model="invoiceData.comment" rows="3" cols="30" fluid />
-                    <label>備考</label>
-                </FloatLabel>
-                <small class="ml-1">元データ：<span style="white-space: pre-line">{{ invoiceDBData.comment }}</span></small>
-            </div>
-            <div class="col-span-12 flex justify-end gap-2">
-                <Button v-if="!isGenerating" label="Excel作成" @click="generateExcel" severity="success" />
-                <Button v-if="!isGenerating" label="PDF作成" @click="generatePdf" />
-            </div>
-        </div>
-    </Dialog>
+    <InvoiceCreateDialog v-model:visible="displayInvoiceDialog" :invoiceData="invoiceData"
+        :invoiceDBData="invoiceDBData" :isGenerating="isGenerating" @generateExcel="generateExcel"
+        @generatePdf="generatePdf" />
 </template>
 <script setup>
 // Vue
 import { ref, computed, watch } from "vue";
-import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, FloatLabel, DatePicker, InputText, Textarea, Button, Badge, Dialog, ProgressSpinner } from 'primevue';
+import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, DatePicker, Button, Badge, ProgressSpinner } from 'primevue';
+import InvoiceCreateDialog from './dialogs/InvoiceCreateDialog.vue';
 
 // Stores
 import { useBillingStore } from '@/composables/useBillingStore';
@@ -175,17 +110,10 @@ const { billedList, fetchBilledListView, generateInvoicePdf, generateInvoiceExce
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId } = useHotelStore();
 
+// Utils
+import { formatDate } from '@/utils/dateUtils';
+
 // Helper
-const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        console.error("Invalid Date object:", date);
-        throw new Error("The provided input is not a valid Date object:");
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
 const translateBillingStatus = (status) => {
     const statusMap = {
         "draft": "下書き",
@@ -238,7 +166,14 @@ const calculateNights = (reservationDetails) => {
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
     let nights = 0;
+    const targetRoomId = reservationDetails.room_id;
+
     reservationDetails.details.forEach(day => {
+        // Only count days for the specific room if a room_id is associated with this invoice row
+        if (targetRoomId && day.room_id !== targetRoomId) {
+            return;
+        }
+
         const [year, month, d] = day.date.split('-').map(Number);
         const stayDate = new Date(year, month - 1, d);
         if (!day.cancelled && stayDate >= monthStart && stayDate <= monthEnd) {
@@ -293,22 +228,31 @@ const summarizedBilledList = computed(() => {
                         check_in: formatDate(new Date(item.check_in)),
                         check_out: formatDate(new Date(item.check_out)),
                         reservation_id: item.reservation_id,
+                        room_id: item.room_id,
                         room_type_name: item.room_type_name,
                         room_number: item.room_number,
                         comment: item.payment_comment,
                         value: parseFloat(item.value),
                         details: item.reservation_details_json,
                         rates: item.reservation_rates_json,
+                        total_people: item.total_people
                     },
                 ],
                 display_name: item.display_name,
                 due_date: item.due_date ? formatDate(new Date(item.due_date)) : getAdjustedDueDate(item.date),
                 total_stays: parseFloat(item.total_stays || item.stays_count),
                 comment: item.comment,
+                _seenResIds: new Set([item.reservation_id]) // Internal tracker for deduplication
             };
         } else {
-            summary[key].total_people += parseFloat(item.total_people);
-            summary[key].stays_count += parseFloat(item.stays_count);
+            // Only add people and stays if this reservation hasn't been seen in this invoice group yet
+            // This prevents double-counting if an invoice has multiple payments for the same reservation
+            if (!summary[key]._seenResIds.has(item.reservation_id)) {
+                summary[key].total_people += parseFloat(item.total_people);
+                summary[key].stays_count += parseFloat(item.stays_count);
+                summary[key]._seenResIds.add(item.reservation_id);
+            }
+
             summary[key].total_value += parseFloat(item.value);
 
             summary[key].details.push({
@@ -325,12 +269,14 @@ const summarizedBilledList = computed(() => {
                 check_in: formatDate(new Date(item.check_in)),
                 check_out: formatDate(new Date(item.check_out)),
                 reservation_id: item.reservation_id,
+                room_id: item.room_id,
                 room_type_name: item.room_type_name,
                 room_number: item.room_number,
                 comment: item.payment_comment,
                 value: parseFloat(item.value),
                 details: item.reservation_details_json,
                 rates: item.reservation_rates_json,
+                total_people: item.total_people
             });
         }
     }
@@ -354,7 +300,17 @@ const openInvoiceDialog = (data) => {
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
-    const allDailyDetails = data.details.flatMap(block => block.details || []);
+    // Deduplicate blocks by reservation_id to get month-level details and rates once per reservation
+    const uniqueReservationBlocks = [];
+    const seenResIds = new Set();
+    data.details.forEach(block => {
+        if (!seenResIds.has(block.reservation_id)) {
+            seenResIds.add(block.reservation_id);
+            uniqueReservationBlocks.push(block);
+        }
+    });
+
+    const allDailyDetails = uniqueReservationBlocks.flatMap(block => block.details || []);
     const relevantDailyDetails = allDailyDetails.filter(day => {
         const [year, month, d] = day.date.split('-').map(Number);
         const stayDate = new Date(year, month - 1, d);
@@ -367,7 +323,7 @@ const openInvoiceDialog = (data) => {
 
     relevantDailyDetails.forEach(day => {
         const dateStr = formatDate(new Date(day.date));
-        
+
         if (day.cancelled && day.billable) {
             totalCancellationFees++;
             if (!cancellationsByDate[dateStr]) {
@@ -385,136 +341,248 @@ const openInvoiceDialog = (data) => {
     // Get all dates (both stay and cancellation dates) and sort them
     const allDates = [...new Set([...Object.keys(stayDetailsByDate), ...Object.keys(cancellationsByDate)])].sort();
     const stayPeriods = [];
-    
-    if (allDates.length > 0) {
-        // Create a working copy of people count per date
-        const workingPeopleByDate = { ...stayDetailsByDate };
-        
-        // Find consecutive date groups and process them
-        while (Object.values(workingPeopleByDate).some(count => count > 0)) {
-            // Find consecutive date ranges (including gaps with cancellations)
-            const consecutiveGroups = [];
-            let i = 0;
-            
-            while (i < allDates.length) {
-                if (workingPeopleByDate[allDates[i]] > 0) {
-                    let groupStart = allDates[i];
-                    let groupEnd = allDates[i];
-                    let groupDates = [allDates[i]];
-                    
-                    // Find consecutive dates (including cancelled dates in between)
-                    let j = i + 1;
-                    while (j < allDates.length) {
-                        const [currentYear, currentMonth, currentDay] = allDates[j].split('-').map(Number);
-                        const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
-                        
-                        const [prevYear, prevMonth, prevDay] = allDates[j - 1].split('-').map(Number);
-                        const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
-                        
-                        const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
-                        
-                        if (diff === 1) {
-                            groupEnd = allDates[j];
-                            groupDates.push(allDates[j]);
-                            j++;
-                        } else {
-                            break;
-                        }
+
+    // Create a working copy of people count per date
+    const workingPeopleByDate = { ...stayDetailsByDate };
+    const workingCancellationsByDate = { ...cancellationsByDate };
+
+    // Find consecutive date groups and process them
+    while (Object.values(workingPeopleByDate).some(count => count > 0)) {
+        // Find consecutive date ranges (including gaps with cancellations)
+        const consecutiveGroups = [];
+        let i = 0;
+
+        while (i < allDates.length) {
+            if (workingPeopleByDate[allDates[i]] > 0) {
+                let groupStart = allDates[i];
+                let groupEnd = allDates[i];
+                let groupDates = [allDates[i]];
+
+                // Find consecutive dates (including cancelled dates in between)
+                let j = i + 1;
+                while (j < allDates.length) {
+                    const [currentYear, currentMonth, currentDay] = allDates[j].split('-').map(Number);
+                    const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
+
+                    const [prevYear, prevMonth, prevDay] = allDates[j - 1].split('-').map(Number);
+                    const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
+
+                    const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+
+                    if (diff === 1) {
+                        groupEnd = allDates[j];
+                        groupDates.push(allDates[j]);
+                        j++;
+                    } else {
+                        break;
                     }
-                    
-                    consecutiveGroups.push({
-                        start: groupStart,
-                        end: groupEnd,
-                        dates: groupDates
-                    });
-                    
-                    i = j;
-                } else {
-                    i++;
                 }
+
+                consecutiveGroups.push({
+                    start: groupStart,
+                    end: groupEnd,
+                    dates: groupDates
+                });
+
+                i = j;
+            } else {
+                i++;
             }
-            
-            // Process each consecutive group
-            consecutiveGroups.forEach(group => {
-                // Find minimum number of people in this group (only from non-cancelled dates)
-                const nonCancelledDates = group.dates.filter(date => workingPeopleByDate[date] > 0);
-                
-                if (nonCancelledDates.length > 0) {
-                    const minPeople = Math.min(...nonCancelledDates.map(date => workingPeopleByDate[date]));
-                    
-                    if (minPeople > 0) {
-                        // Calculate total nights and cancellation nights for this period
-                        const totalNights = minPeople * nonCancelledDates.length;
-                        
-                        // Create entry for actual stay nights
-                        const actualStayStart = nonCancelledDates[0];
-                        const actualStayEnd = nonCancelledDates[nonCancelledDates.length - 1];
-                        
-                        stayPeriods.push({
-                            start: actualStayStart,
-                            end: actualStayEnd,
-                            people: minPeople,
-                            totalNights: totalNights,
-                            type: 'stay'
-                        });
-                        
-                        // Create separate entry for cancellation fees if any
-                        const cancellationDates = group.dates.filter(date => 
-                            cancellationsByDate[date] && cancellationsByDate[date] >= minPeople
-                        );
-                        
-                        if (cancellationDates.length > 0) {
-                            const cancellationStart = cancellationDates[0];
-                            const cancellationEnd = cancellationDates[cancellationDates.length - 1];
-                            const cancellationNights = minPeople * cancellationDates.length;
-                            
+        }
+
+        // Process each consecutive group
+        consecutiveGroups.forEach(group => {
+            // Find minimum number of people in this group (only from non-cancelled dates)
+            const nonCancelledDates = group.dates.filter(date => workingPeopleByDate[date] > 0);
+
+            if (nonCancelledDates.length > 0) {
+                const minPeople = Math.min(...nonCancelledDates.map(date => workingPeopleByDate[date]));
+
+                if (minPeople > 0) {
+                    // Calculate total nights and cancellation nights for this period
+                    const totalNights = minPeople * nonCancelledDates.length;
+
+                    // Create entry for actual stay nights
+                    const actualStayStart = nonCancelledDates[0];
+                    const actualStayEnd = nonCancelledDates[nonCancelledDates.length - 1];
+
+                    stayPeriods.push({
+                        start: actualStayStart,
+                        end: actualStayEnd,
+                        people: minPeople,
+                        totalNights: totalNights,
+                        type: 'stay'
+                    });
+
+                    // Create separate entry for cancellation fees if any
+                    // We only use cancellations that are "available" in workingCancellationsByDate
+                    const cancellationDates = group.dates.filter(date =>
+                        workingCancellationsByDate[date] && workingCancellationsByDate[date] >= minPeople
+                    );
+
+                    if (cancellationDates.length > 0) {
+                        // Group consecutive cancellation dates
+                        let k = 0;
+                        while (k < cancellationDates.length) {
+                            let cStart = cancellationDates[k];
+                            let cEnd = cancellationDates[k];
+                            let cCount = 1;
+                            let l = k + 1;
+
+                            // Look ahead for consecutive dates
+                            while (l < cancellationDates.length) {
+                                const [cYear, cMonth, cDay] = cancellationDates[l].split('-').map(Number);
+                                const cDate = new Date(cYear, cMonth - 1, cDay);
+                                const [pYear, pMonth, pDay] = cancellationDates[l - 1].split('-').map(Number);
+                                const pDate = new Date(pYear, pMonth - 1, pDay);
+
+                                if ((cDate - pDate) / (1000 * 60 * 60 * 24) === 1) {
+                                    cEnd = cancellationDates[l];
+                                    cCount++;
+                                    l++;
+                                } else {
+                                    break;
+                                }
+                            }
+
                             stayPeriods.push({
-                                start: cancellationStart,
-                                end: cancellationEnd,
+                                start: cStart,
+                                end: cEnd,
                                 people: minPeople,
-                                totalNights: cancellationNights,
+                                totalNights: minPeople * cCount,
                                 type: 'cancellation'
                             });
+
+                            // Decrement available cancellations for these dates
+                            for (let m = k; m < l; m++) {
+                                workingCancellationsByDate[cancellationDates[m]] -= minPeople;
+                            }
+
+                            k = l;
                         }
-                        
-                        // Subtract min people from each non-cancelled date in the group
-                        nonCancelledDates.forEach(date => {
-                            workingPeopleByDate[date] -= minPeople;
-                        });
                     }
+
+                    // Subtract min people from each non-cancelled date in the group
+                    nonCancelledDates.forEach(date => {
+                        workingPeopleByDate[date] -= minPeople;
+                    });
                 }
-            });
-        }
+            }
+        });
     }
 
+    // Process remaining cancellations (orphans or those not matching stay layers)
+    while (Object.values(workingCancellationsByDate).some(count => count > 0)) {
+        const consecutiveGroups = [];
+        let i = 0;
+
+        while (i < allDates.length) {
+            if (workingCancellationsByDate[allDates[i]] > 0) {
+                let groupStart = allDates[i];
+                let groupEnd = allDates[i];
+                let groupDates = [allDates[i]];
+
+                let j = i + 1;
+                while (j < allDates.length) {
+                    const [currentYear, currentMonth, currentDay] = allDates[j].split('-').map(Number);
+                    const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
+
+                    const [prevYear, prevMonth, prevDay] = allDates[j - 1].split('-').map(Number);
+                    const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
+
+                    const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+
+                    if (diff === 1 && workingCancellationsByDate[allDates[j]] > 0) {
+                        groupEnd = allDates[j];
+                        groupDates.push(allDates[j]);
+                        j++;
+                    } else {
+                        break;
+                    }
+                }
+
+                consecutiveGroups.push({
+                    start: groupStart,
+                    end: groupEnd,
+                    dates: groupDates
+                });
+
+                i = j;
+            } else {
+                i++;
+            }
+        }
+
+        consecutiveGroups.forEach(group => {
+            if (group.dates.length > 0) {
+                const minPeople = Math.min(...group.dates.map(date => workingCancellationsByDate[date]));
+
+                if (minPeople > 0) {
+                    stayPeriods.push({
+                        start: group.start,
+                        end: group.end,
+                        people: minPeople,
+                        totalNights: minPeople * group.dates.length,
+                        type: 'cancellation'
+                    });
+
+                    group.dates.forEach(date => {
+                        workingCancellationsByDate[date] -= minPeople;
+                    });
+                }
+            }
+        });
+    }
+
+    // Aggregation: Merge identical periods (same start, end, type)
+    const aggregatedPeriods = [];
+    const periodMap = new Map();
+
+    stayPeriods.forEach(period => {
+        const key = `${period.type}|${period.start}|${period.end}`;
+        if (periodMap.has(key)) {
+            const existing = periodMap.get(key);
+            existing.people += period.people;
+            existing.totalNights += period.totalNights;
+        } else {
+            // Clone the period to avoid reference issues
+            const newPeriod = { ...period };
+            periodMap.set(key, newPeriod);
+            aggregatedPeriods.push(newPeriod);
+        }
+    });
+
+    // Use the aggregated list for sorting and display
+    const finalPeriods = aggregatedPeriods;
+
     // Sort periods by start date, then by end date, then by people count (descending)
-    stayPeriods.sort((a, b) => {
+    finalPeriods.sort((a, b) => {
         const startCompare = new Date(a.start) - new Date(b.start);
         if (startCompare !== 0) return startCompare;
-        
+
         const endCompare = new Date(a.end) - new Date(b.end);
         if (endCompare !== 0) return endCompare;
-        
+
         return b.people - a.people;
     });
 
-    const formattedDateGroups = stayPeriods.map(period => {
+    const formattedDateGroups = finalPeriods.map(period => {
         // Convert end date to check-out date (add 1 day)
         const endDate = new Date(period.end);
         const checkOutDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
         const checkOutDateStr = formatDate(checkOutDate);
-        
+
         // Use different text for cancellation vs stay periods
         const nightsLabel = period.type === 'cancellation' ? 'キャンセル料' : '宿泊日数';
         const nightsUnit = period.type === 'cancellation' ? '泊' : '泊';
-        
+
         return `・滞在期間：${period.start.replace(/-/g, '/')} ～ ${checkOutDateStr.replace(/-/g, '/')} 、${period.people}名、${nightsLabel}：${period.totalNights}${nightsUnit}`;
     }).join('\r\n');
 
     // Check if there are any remaining cancellation fees not accounted for in periods
     const accountedCancellations = stayPeriods.filter(p => p.type === 'cancellation').reduce((sum, period) => sum + period.totalNights, 0);
     const remainingCancellations = totalCancellationFees - accountedCancellations;
-    
+
     let cancellationComment = '';
     if (remainingCancellations > 0) {
         cancellationComment = `・キャンセル料：${remainingCancellations}日分`;
@@ -522,19 +590,71 @@ const openInvoiceDialog = (data) => {
 
     const finalComment = `【宿泊明細】\r\n${formattedDateGroups}${formattedDateGroups && cancellationComment ? '\r\n' : ''}${cancellationComment}`;
 
+    // Aggregation Logic for Tax Rates and Categories
     const groupedRates = {};
-    data.details.forEach(block => {
-        const rate = block.tax_rate || 0.1;
-        if (!groupedRates[rate]) {
-            groupedRates[rate] = { tax_rate: rate, total_net_price: 0, total_price: 0 };
+    let hasBackendRateData = false;
+
+    console.log('Aggregating tax rates for invoice. Input blocks:', uniqueReservationBlocks);
+
+    // 1. Sum up from backend provided 'rates' (reservation_rates_json)
+    uniqueReservationBlocks.forEach(block => {
+        if (block.rates && Array.isArray(block.rates) && block.rates.length > 0) {
+            hasBackendRateData = true;
+            block.rates.forEach(rateItem => {
+                const taxRate = rateItem.tax_rate;
+                const category = rateItem.category || 'accommodation';
+                const itemName = rateItem.item_name || (category === 'accommodation' ? '宿泊料' : 'その他');
+                const key = `${taxRate}-${category}-${itemName}`;
+
+                if (!groupedRates[key]) {
+                    groupedRates[key] = {
+                        tax_rate: taxRate,
+                        category: category,
+                        name: itemName,
+                        total_net_price: 0,
+                        total_price: 0,
+                        total_quantity: 0
+                    };
+                }
+                groupedRates[key].total_price += Number(rateItem.total_price);
+                groupedRates[key].total_net_price += Number(rateItem.total_net_price);
+                groupedRates[key].total_quantity += Number(rateItem.total_quantity || 0);
+            });
         }
-        groupedRates[rate].total_price += block.value;
     });
 
-    for (const rate in groupedRates) {
-        const grossTotal = groupedRates[rate].total_price;
-        groupedRates[rate].total_net_price = Math.floor(grossTotal / (1 + parseFloat(rate)));
+    // 2. Fallback logic: If no backend rate data found at all, estimate based on payment values (default 10%)
+    if (!hasBackendRateData) {
+        console.warn('No backend rate data found. Falling back to payment-based estimation.');
+        data.details.forEach(block => {
+            const rate = block.tax_rate || 0.1;
+            const category = 'accommodation'; // Default to accommodation
+            const itemName = '宿泊料';
+            const key = `${rate}-${category}-${itemName}`;
+
+            if (!groupedRates[key]) {
+                groupedRates[key] = {
+                    tax_rate: rate,
+                    category: category,
+                    name: itemName,
+                    total_net_price: 0,
+                    total_price: 0,
+                    total_quantity: 0
+                };
+            }
+            groupedRates[key].total_price += block.value;
+            groupedRates[key].total_quantity += (data.invoice_total_stays || 1);
+        });
+
+        for (const key in groupedRates) {
+            const item = groupedRates[key];
+            const grossTotal = item.total_price;
+            // Using Math.round to match backend ROUND logic
+            item.total_net_price = Math.round(grossTotal / (1 + parseFloat(item.tax_rate)));
+        }
     }
+
+    console.log('Final grouped rates:', groupedRates);
 
     invoiceData.value = {
         id: data.id,
@@ -553,9 +673,17 @@ const openInvoiceDialog = (data) => {
         client_name: data.display_name,
         invoice_total_stays: data.stays_count,
         invoice_total_value: data.total_value,
-        items: Object.values(groupedRates),
+        items: Object.values(groupedRates)
+            .filter(item => item.total_price !== 0) // Filter out zero-value items
+            .sort((a, b) => {
+                // Sort by category (accommodation first), then by tax_rate descending
+                if (a.category !== b.category) {
+                    return a.category === 'accommodation' ? -1 : 1;
+                }
+                return b.tax_rate - a.tax_rate;
+            }),
         comment: data.comment,
-        daily_details: allDailyDetails,
+        daily_details: relevantDailyDetails,
     };
 
     invoiceDBData.value = {
