@@ -1758,7 +1758,8 @@ watch(() => headerState.value.date, (newDate) => {
   width: 100%;
   height: calc(100vh - 200px);
   overflow-y: auto;
-  max-width: 100%;
+  overflow-x: auto;
+  max-width: calc(100vw - 40px);
   position: relative;
   scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
 }
