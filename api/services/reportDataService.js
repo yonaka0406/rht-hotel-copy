@@ -1,6 +1,7 @@
-const { selectForecastData, selectAccountingData, selectCountReservation } = require('../models/report');
+const { selectForecastData, selectAccountingData, selectCountReservation, selectDailyReportDataByHotel, selectLatestDailyReportDate } = require('../models/report');
 const database = require('../config/database');
 const { formatDate } = require('../utils/reportUtils');
+const logger = require('../config/logger');
 
 /**
  * Helper to normalize a Date object to local midnight (00:00:00)
@@ -66,6 +67,7 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
         const allHotelsResult = await client.query('SELECT id, name, total_rooms, open_date FROM hotels ORDER BY sort_order');
         const allHotels = allHotelsResult.rows;
         const hotelIds = allHotels.map(h => h.id);
+        logger.debug(`[getMonthlySummaryData] Fetched ${allHotels.length} hotels.`);
 
         // --- Fetch Data ---
 
@@ -108,6 +110,8 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
         const pmsTotalData = transformToMap(pmsDataResults);
         const forecastTotalData = transformToMap(forecastDataResults);
         const accountingTotalData = transformToMap(accountingDataResults);
+
+        logger.debug(`[getMonthlySummaryData] Raw Summary: PMS=${Object.keys(pmsTotalData).length}, Forecast=${Object.keys(forecastTotalData).length}, Acc=${Object.keys(accountingTotalData).length}`);
         const prevPmsTotalData = transformToMap(prevPmsDataResults);
         const prevAccountingTotalData = transformToMap(prevAccountingDataResults);
 
@@ -137,16 +141,29 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
             for (const [sHotelId, data] of Object.entries(sourceDataMap)) {
                 if (!Array.isArray(data)) continue;
                 data.forEach(record => {
-                    const rDate = new Date(record.date);
+                    const rDate = new Date(record.date || record.forecast_month || record.accounting_month);
                     if (formatDateMonth(rDate) !== monthKey) return;
 
-                    const val = Number(record.revenue) || 0;
+                    let val = 0;
+                    let accVal = 0;
+                    let othVal = 0;
+
+                    if (key === 'pms_revenue') {
+                        val = Number(record.price) || 0;
+                        accVal = Number(record.accommodation_price) || 0;
+                        othVal = Number(record.other_price) || 0;
+                    } else {
+                        // Forecast and Accounting
+                        accVal = Number(record.accommodation_revenue) || 0;
+                        othVal = Number(record.non_accommodation_revenue) || 0;
+                        val = accVal + othVal;
+                    }
 
                     if (hotelRevenueMap[sHotelId]) {
                         if (key === 'pms_revenue') {
                             hotelRevenueMap[sHotelId].pms_revenue += val;
-                            hotelRevenueMap[sHotelId].pms_accommodation_revenue += (Number(record.accommodation_revenue) || 0);
-                            hotelRevenueMap[sHotelId].pms_other_revenue += (Number(record.other_revenue) || 0);
+                            hotelRevenueMap[sHotelId].pms_accommodation_revenue += accVal;
+                            hotelRevenueMap[sHotelId].pms_other_revenue += othVal;
                         } else if (key === 'forecast_revenue') {
                             hotelRevenueMap[sHotelId].forecast_revenue += val;
                         } else if (key === 'acc_revenue') {
@@ -159,8 +176,8 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                     if (hotelRevenueMap['0']) {
                         if (key === 'pms_revenue') {
                             hotelRevenueMap['0'].pms_revenue += val;
-                            hotelRevenueMap['0'].pms_accommodation_revenue += (Number(record.accommodation_revenue) || 0);
-                            hotelRevenueMap['0'].pms_other_revenue += (Number(record.other_revenue) || 0);
+                            hotelRevenueMap['0'].pms_accommodation_revenue += accVal;
+                            hotelRevenueMap['0'].pms_other_revenue += othVal;
                         } else if (key === 'forecast_revenue') {
                             hotelRevenueMap['0'].forecast_revenue += val;
                         } else if (key === 'acc_revenue') {
@@ -193,6 +210,7 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                 other_revenue: otherRev
             });
         }
+        logger.debug(`[getMonthlySummaryData] Revenue Data calculated. Count: ${revenueData.length}`);
 
         // 2. Occupancy Data
         const occupancyData = [];
@@ -269,8 +287,9 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
         for (const [sHotelId, data] of Object.entries(pmsTotalData)) {
             if (!Array.isArray(data)) continue;
             data.forEach(record => {
-                if (formatDateMonth(new Date(record.date)) !== monthKey) return;
-                const sold = Number(record.room_count) || 0;
+                const rDate = new Date(record.date);
+                if (formatDateMonth(rDate) !== monthKey) return;
+                const sold = Number(record.room_count || record.quantity) || 0;
 
                 if (hotelOccupancyMap[sHotelId]) {
                     hotelOccupancyMap[sHotelId].sold_rooms += sold;
@@ -285,9 +304,9 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
         for (const [sHotelId, data] of Object.entries(forecastTotalData)) {
             if (!Array.isArray(data)) continue;
             data.forEach(record => {
-                if (formatDateMonth(new Date(record.date)) !== monthKey) return;
-                const sold = Number(record.room_count) || 0;
-                const total = Number(record.total_rooms) || 0;
+                if (formatDateMonth(new Date(record.forecast_month || record.date)) !== monthKey) return;
+                const sold = Number(record.rooms_sold_nights) || 0;
+                const total = Number(record.available_room_nights) || 0;
 
                 if (hotelOccupancyMap[sHotelId]) {
                     hotelOccupancyMap[sHotelId].fc_sold_rooms += sold;
@@ -330,10 +349,16 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                 if (!Array.isArray(data)) continue;
                 data.forEach(record => {
                     // Check if record falls in prev month
-                    const rDate = new Date(record.date);
+                    const rDate = new Date(record.date || record.accounting_month);
                     if (rDate.getFullYear() !== prevYearDate.getFullYear() || rDate.getMonth() !== prevYearDate.getMonth()) return;
 
-                    const val = Number(record.revenue) || 0;
+                    let val = 0;
+                    if (key === 'pms') {
+                        val = Number(record.price) || 0;
+                    } else {
+                        val = (Number(record.accommodation_revenue) || 0) + (Number(record.non_accommodation_revenue) || 0);
+                    }
+
                     if (prevRevenueMap[sHotelId]) {
                         if (key === 'pms') prevRevenueMap[sHotelId].pms += val;
                         else if (key === 'acc') {
@@ -427,8 +452,81 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
             forecastRevPAR: total_fc_available_rooms ? Math.round(total_forecast_revenue / total_fc_available_rooms) : 0
         };
 
-        // 6. Future Outlook (Optional/Empty for now if simpler Report, but needed for Template)
-        const outlookData = []; // Can be enhanced later if needed by PDF template
+        // 6. Future Outlook (6 months)
+        const outlookData = [];
+        const outlookMonths = [];
+        for (let i = 0; i < 6; i++) {
+            const mDate = new Date(year, month + i, 1);
+            outlookMonths.push({
+                monthLabel: formatDateMonth(mDate),
+                startDate: formatDate(mDate),
+                endDate: formatDate(new Date(mDate.getFullYear(), mDate.getMonth() + 1, 0))
+            });
+        }
+
+        const outlookStartDate = outlookMonths[0].startDate;
+        const outlookEndDate = outlookMonths[outlookMonths.length - 1].endDate;
+
+        logger.debug(`[getMonthlySummaryData] Fetching Outlook data (6 months) from ${outlookStartDate} to ${outlookEndDate}`);
+
+        const [
+            outlookForecastResults,
+            outlookPmsResults,
+            latestMetricDate
+        ] = await Promise.all([
+            Promise.all(hotelIds.map(hid => selectForecastData(requestId, hid, outlookStartDate, outlookEndDate, client))),
+            Promise.all(hotelIds.map(hid => selectCountReservation(requestId, hid, outlookStartDate, outlookEndDate, client))),
+            selectLatestDailyReportDate(requestId)
+        ]);
+
+        const outlookPmsFlat = outlookPmsResults.flat();
+        const outlookForecastFlat = outlookForecastResults.flat();
+
+        let outlookSnapshots = [];
+        if (latestMetricDate) {
+            outlookSnapshots = await selectDailyReportDataByHotel(requestId, latestMetricDate, hotelIds, client);
+        }
+
+        outlookMonths.forEach(m => {
+            const mPMS = outlookPmsFlat.filter(r => formatDateMonth(new Date(r.date)) === m.monthLabel);
+            const mFC = outlookForecastFlat.filter(r => formatDateMonth(new Date(r.forecast_month)) === m.monthLabel);
+            const mSnapshot = outlookSnapshots.filter(r => r.month === m.startDate); // Month in snapshot is YYYY-MM-DD (first day)
+
+            const sales = mPMS.reduce((sum, r) => sum + (Number(r.price) || 0), 0);
+            const forecast_sales = mFC.reduce((sum, r) => sum + (Number(r.accommodation_revenue) || 0) + (Number(r.non_accommodation_revenue) || 0), 0);
+            const confirmed_nights = mPMS.reduce((sum, r) => sum + (Number(r.room_count) || 0), 0);
+
+            const forecast_sold = mFC.reduce((sum, r) => sum + (Number(r.rooms_sold_nights) || 0), 0);
+            const forecast_available = mFC.reduce((sum, r) => sum + (Number(r.available_room_nights) || 0), 0);
+            const forecast_occ = forecast_available ? (forecast_sold / forecast_available) * 100 : 0;
+
+            // Total bookable room nights for the month (Group Total)
+            const daysInM = getDaysInMonth(new Date(m.startDate).getFullYear(), new Date(m.startDate).getMonth() + 1);
+            const total_bookable_room_nights = allHotels.reduce((sum, h) => {
+                // Simplified availability check for outlook
+                return sum + (h.total_rooms * daysInM);
+            }, 0);
+
+            const prev_sales = mSnapshot.reduce((sum, r) => sum + (Number(r.accommodation_sales) || 0) + (Number(r.other_sales) || 0), 0);
+            const prev_confirmed_stays = mSnapshot.reduce((sum, r) => sum + (Number(r.confirmed_stays) || 0), 0);
+            const prev_occ = total_bookable_room_nights ? (prev_confirmed_stays / total_bookable_room_nights) * 100 : 0;
+
+            outlookData.push({
+                month: m.monthLabel,
+                forecast_sales,
+                sales,
+                confirmed_nights,
+                forecast_occ: parseFloat(forecast_occ.toFixed(2)),
+                occ: total_bookable_room_nights ? (confirmed_nights / total_bookable_room_nights) * 100 : 0,
+                metric_date: latestMetricDate,
+                prev_sales,
+                prev_occ: parseFloat(prev_occ.toFixed(2)),
+                prev_confirmed_stays,
+                total_bookable_room_nights
+            });
+        });
+
+        logger.debug(`[getMonthlySummaryData] Outlook Data compiled. Count: ${outlookData.length}`);
 
         return {
             targetDate: formatDate(targetDate),

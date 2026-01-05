@@ -29,6 +29,8 @@ const runDailySalesOccPdfJob = async () => {
         logger.info(`[${requestId}] Fetching report data for ${formattedDate}...`);
         const reportData = await getMonthlySummaryData(requestId, today, dbClient);
 
+        logger.info(`[${requestId}] Fetched ${reportData?.revenueData?.length || 0} revenue rows and ${reportData?.occupancyData?.length || 0} occupancy rows.`);
+
         // 2. Generate PDF
         logger.info(`[${requestId}] Generating PDF...`);
         const pdfPath = await generateDailyReportPdf(reportData, requestId, 'pdf');
