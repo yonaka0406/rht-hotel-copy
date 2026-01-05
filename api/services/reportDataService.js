@@ -66,7 +66,7 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
         // Fetch Hotels (Assuming all hotels for now, similar to frontend 'allHotels')
         // We'll need a way to get all hotels. Using a model call if available or hardcoded list if that's what frontend did (frontend fetched from store)
         // For backend, let's fetch all hotels from DB.
-        const allHotelsResult = await client.query('SELECT id, name, total_rooms, open_date FROM hotels WHERE is_deleted = false ORDER BY sort_order');
+        const allHotelsResult = await client.query('SELECT id, name, total_rooms, open_date FROM hotels ORDER BY sort_order');
         const allHotels = allHotelsResult.rows;
         const hotelIds = allHotels.map(h => h.id);
 
@@ -112,7 +112,7 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
         const forecastTotalData = transformToMap(forecastDataResults);
         const accountingTotalData = transformToMap(accountingDataResults);
         const prevPmsTotalData = transformToMap(prevPmsDataResults);
-        const prevAccountingTotalData = transformToMap(prevAccountingTotalData);
+        const prevAccountingTotalData = transformToMap(prevAccountingDataResults);
 
         // --- Aggregation Logic (Ported from Frontend) ---
 
