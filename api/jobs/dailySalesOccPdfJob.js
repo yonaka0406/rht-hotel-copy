@@ -6,12 +6,19 @@ const logger = require('../config/logger');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
+const { setEnvironment } = require('../config/database');
+
 /**
  * Generates and sends the Daily Sales & Occ PDF report.
  */
 const runDailySalesOccPdfJob = async () => {
     const requestId = `JOB-SALES-OCC-${uuidv4()}`;
-    logger.info(`[${requestId}] Starting Daily Sales & Occ PDF Job`);
+
+    // key fix: Ensure we use the correct database pool (Prod or Dev)
+    const isProd = process.env.NODE_ENV === 'production';
+    setEnvironment(requestId, isProd ? 'prod' : 'dev');
+
+    logger.info(`[${requestId}] Starting Daily Sales & Occ PDF Job (Env: ${isProd ? 'Production' : 'Development'})`);
 
     try {
         const today = new Date();

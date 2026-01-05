@@ -39,7 +39,7 @@ const isDomainProduction = (domain) => {
     // logger.debug('isDomainProduction: No domain provided, returning false.');
     return false;
   }
-  
+
   // Parse the domain from a full URL if needed
   try {
     if (domain.startsWith('http')) {
@@ -50,14 +50,14 @@ const isDomainProduction = (domain) => {
     logger.warn(`Error parsing URL for domain check: '${domain}', Error: ${e.message}`);
     return false; // Treat as non-production if parsing fails
   }
-  
+
   // Log the extracted domain being checked
   // logger.debug(`isDomainProduction: Checking domain '${domain}'`);
-  
+
   // Check if it's a production domain
   const isProd = domain.includes('wehub.work') && !domain.includes('test.wehub');
   // logger.debug(`isDomainProduction: Domain '${domain}' identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-  
+
   return isProd;
 };
 
@@ -65,7 +65,7 @@ const isDomainProduction = (domain) => {
 const setEnvironment = (requestId, env) => {
   // logger.debug(`Setting environment for request ${requestId} to ${env}`);
   requestEnv.set(requestId, env);
-  
+
   // Cleanup old request IDs to prevent memory leaks
   if (requestEnv.size > 1000) {
     const oldestKey = requestEnv.keys().next().value;
@@ -83,7 +83,7 @@ const getEnvironment = (requestId) => {
 const setupRequestContext = (req, res, next) => {
   const requestId = ++requestCounter;
   req.requestId = requestId;
-  
+
   // Determine environment from multiple potential sources
   // Prioritize Host header as it's typically more reliable for domain identification
   const host = req.headers.host || '';
@@ -111,13 +111,13 @@ const setupRequestContext = (req, res, next) => {
   }
 
   if (isProdEnvironment) {
-      // logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
+    // logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
   } else {
-      // logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
+    // logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
   }
 
   setEnvironment(requestId, isProdEnvironment ? 'prod' : 'dev');
-  
+
   // Add cleanup when response finishes
   res.on('finish', () => {
     setTimeout(() => {
@@ -125,10 +125,10 @@ const setupRequestContext = (req, res, next) => {
       // logger.debug(`Cleaned up request #${requestId} context`);
     }, 10000); // Keep the context for 10 seconds after response for potential async operations
   });
-  
+
   // Pass the environment info to the client via a custom header
   res.setHeader('X-Request-Environment', isProdEnvironment ? 'prod' : 'dev');
-  
+
   next();
 };
 
@@ -138,16 +138,16 @@ const getPool = (requestId) => {
   if (!requestId) {
     // logger.error('RequestId is required to select the correct database pool in getPool()');
     // Fallback to default pool if requestId is missing, to prevent application crash
-    return pool; 
+    return pool;
   }
-  
+
   const env = getEnvironment(requestId);
   // logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
-  
+
   if (env === 'prod') {
     return prodPool;
-  } 
-  
+  }
+
   // Default to development pool if environment is 'dev' or not found
   // logger.debug('Defaulting to development pool for request #' + requestId);
   return pool;
@@ -189,6 +189,7 @@ module.exports = {
   getDevPool,
   getProdPool,
   getEnvironment,
+  setEnvironment, // Export this to allow jobs to set context
   setupRequestContext,
   isDomainProduction
 }; 
