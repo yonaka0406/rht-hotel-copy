@@ -13,20 +13,45 @@ const { getProdPool, getDevPool } = require('../config/database');
  */
 const runDailySalesOccPdfJob = async () => {
     const requestId = `JOB-SALES-OCC-${uuidv4()}`;
-    logger.info(`[${requestId}] Starting Daily Sales & Occ PDF Job`);
+    const startTime = new Date();
+    
+    logger.warn(`[${requestId}] ========== DAILY SALES & OCC PDF JOB STARTED ==========`);
+    logger.warn(`[${requestId}] Job Start Time: ${startTime.toISOString()}`);
+    logger.warn(`[${requestId}] Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.warn(`[${requestId}] Process PID: ${process.pid}`);
 
     let dbClient = null;
+    let jobSuccess = false;
 
     try {
-        // Explicitly select pool based on environment to ensure correct DB access
-        const pool = process.env.NODE_ENV === 'production' ? getProdPool() : getDevPool();
+        // For jobs, explicitly choose the pool based on NODE_ENV
+        // This ensures jobs always use the correct database regardless of request context
+        let pool;
+        let databaseName;
+        
+        if (process.env.NODE_ENV === 'production') {
+            pool = getProdPool();
+            databaseName = process.env.PROD_PG_DATABASE;
+            logger.warn(`[${requestId}] Using PRODUCTION database pool`);
+        } else {
+            pool = getDevPool();
+            databaseName = process.env.PG_DATABASE;
+            logger.warn(`[${requestId}] Using DEVELOPMENT database pool`);
+        }
+        
+        logger.warn(`[${requestId}] Target Database: ${databaseName}`);
+        logger.warn(`[${requestId}] NODE_ENV: ${process.env.NODE_ENV}`);
+        
         dbClient = await pool.connect();
+        logger.warn(`[${requestId}] Database connection established successfully`);
 
         const today = new Date();
         const formattedDate = today.toISOString().split('T')[0];
 
         // 1. Fetch Data
         logger.info(`[${requestId}] Fetching report data for ${formattedDate}...`);
+        
+        // Use the requestId but provide the dbClient to ensure we use the correct database
         const reportData = await getMonthlySummaryData(requestId, today, dbClient);
 
         logger.info(`[${requestId}] Fetched ${reportData?.revenueData?.length || 0} revenue rows and ${reportData?.occupancyData?.length || 0} occupancy rows.`);
@@ -83,10 +108,37 @@ const runDailySalesOccPdfJob = async () => {
             logger.warn(`[${requestId}] Failed to cleanup PDF file: ${cleanupError.message}`);
         }
 
+        jobSuccess = true;
+        logger.warn(`[${requestId}] ========== JOB COMPLETED SUCCESSFULLY ==========`);
+
     } catch (error) {
+        logger.error(`[${requestId}] ========== JOB FAILED ==========`);
         logger.error(`[${requestId}] Job failed: ${error.message}`, { stack: error.stack });
+        
+        // Log additional context for debugging
+        logger.error(`[${requestId}] Error Details:`, {
+            errorName: error.name,
+            errorCode: error.code,
+            errorSeverity: error.severity,
+            errorPosition: error.position,
+            errorFile: error.file,
+            errorLine: error.line,
+            errorRoutine: error.routine
+        });
+        
     } finally {
-        if (dbClient) dbClient.release();
+        const endTime = new Date();
+        const duration = endTime - startTime;
+        
+        logger.warn(`[${requestId}] Job End Time: ${endTime.toISOString()}`);
+        logger.warn(`[${requestId}] Total Duration: ${duration}ms (${(duration / 1000).toFixed(2)}s)`);
+        logger.warn(`[${requestId}] Job Status: ${jobSuccess ? 'SUCCESS' : 'FAILED'}`);
+        logger.warn(`[${requestId}] ========== DAILY SALES & OCC PDF JOB FINISHED ==========`);
+        
+        if (dbClient) {
+            dbClient.release();
+            logger.debug(`[${requestId}] Database connection released.`);
+        }
     }
 };
 
@@ -96,13 +148,31 @@ const runDailySalesOccPdfJob = async () => {
 const scheduleDailySalesOccPdfJob = () => {
     // Weekdays (Mon-Fri) at 17:00
     cron.schedule('0 17 * * 1-5', () => {
-        runDailySalesOccPdfJob();
+        const triggerTime = new Date();
+        logger.warn(`========== CRON TRIGGER FIRED ==========`);
+        logger.warn(`Cron Trigger Time: ${triggerTime.toISOString()}`);
+        logger.warn(`Day of Week: ${triggerTime.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' })}`);
+        logger.warn(`Local Time (JST): ${triggerTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+        logger.warn(`About to execute runDailySalesOccPdfJob...`);
+        
+        runDailySalesOccPdfJob().catch(error => {
+            logger.error(`Unhandled error in scheduled job execution:`, {
+                message: error.message,
+                stack: error.stack
+            });
+        });
     }, {
         scheduled: true,
         timezone: "Asia/Tokyo"
     });
 
-    logger.info('Scheduled Daily Sales & Occ PDF Job for weekdays at 17:00 JST.');
+    const now = new Date();
+    logger.warn('========== CRON JOB SCHEDULED ==========');
+    logger.warn('Scheduled Daily Sales & Occ PDF Job for weekdays at 17:00 JST.');
+    logger.warn(`Current Time: ${now.toISOString()}`);
+    logger.warn(`Current JST Time: ${now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
+    logger.warn(`Next execution will be on the next weekday at 17:00 JST`);
+    logger.warn('========================================');
 };
 
 module.exports = {
