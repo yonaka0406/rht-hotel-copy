@@ -35,9 +35,8 @@ function getDaysInMonth(year, month) {
  * @param {string} requestId 
  * @param {Date} targetDate 
  */
-const getMonthlySummaryData = async (requestId, targetDate) => {
-    const pool = database.getPool(requestId);
-    const client = await pool.connect();
+const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => {
+    const client = dbClient || await database.getPool(requestId).connect();
 
     try {
         const year = targetDate.getFullYear();
@@ -63,9 +62,7 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
         const prevStartDateStr = formatDate(prevYearFirstDay);
         const prevEndDateStr = formatDate(prevYearLastDay);
 
-        // Fetch Hotels (Assuming all hotels for now, similar to frontend 'allHotels')
-        // We'll need a way to get all hotels. Using a model call if available or hardcoded list if that's what frontend did (frontend fetched from store)
-        // For backend, let's fetch all hotels from DB.
+        // Fetch Hotels
         const allHotelsResult = await client.query('SELECT id, name, total_rooms, open_date FROM hotels ORDER BY sort_order');
         const allHotels = allHotelsResult.rows;
         const hotelIds = allHotels.map(h => h.id);
@@ -449,10 +446,9 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
         console.error('Error fetching monthly summary data:', error);
         throw error;
     } finally {
-        client.release();
+        if (!dbClient) client.release();
     }
 }
-
 
 module.exports = {
     getMonthlySummaryData

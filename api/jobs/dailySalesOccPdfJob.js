@@ -6,27 +6,28 @@ const logger = require('../config/logger');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
-const { setEnvironment } = require('../config/database');
+const { getProdPool, getDevPool } = require('../config/database');
 
 /**
  * Generates and sends the Daily Sales & Occ PDF report.
  */
 const runDailySalesOccPdfJob = async () => {
     const requestId = `JOB-SALES-OCC-${uuidv4()}`;
+    logger.info(`[${requestId}] Starting Daily Sales & Occ PDF Job`);
 
-    // key fix: Ensure we use the correct database pool (Prod or Dev)
-    const isProd = process.env.NODE_ENV === 'production';
-    setEnvironment(requestId, isProd ? 'prod' : 'dev');
-
-    logger.info(`[${requestId}] Starting Daily Sales & Occ PDF Job (Env: ${isProd ? 'Production' : 'Development'})`);
+    let dbClient = null;
 
     try {
+        // Explicitly select pool based on environment to ensure correct DB access
+        const pool = process.env.NODE_ENV === 'production' ? getProdPool() : getDevPool();
+        dbClient = await pool.connect();
+
         const today = new Date();
         const formattedDate = today.toISOString().split('T')[0];
 
         // 1. Fetch Data
         logger.info(`[${requestId}] Fetching report data for ${formattedDate}...`);
-        const reportData = await getMonthlySummaryData(requestId, today);
+        const reportData = await getMonthlySummaryData(requestId, today, dbClient);
 
         // 2. Generate PDF
         logger.info(`[${requestId}] Generating PDF...`);
@@ -82,6 +83,8 @@ const runDailySalesOccPdfJob = async () => {
 
     } catch (error) {
         logger.error(`[${requestId}] Job failed: ${error.message}`, { stack: error.stack });
+    } finally {
+        if (dbClient) dbClient.release();
     }
 };
 

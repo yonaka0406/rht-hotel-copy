@@ -189,7 +189,6 @@ module.exports = {
   getDevPool,
   getProdPool,
   getEnvironment,
-  setEnvironment, // Export this to allow jobs to set context
   setupRequestContext,
   isDomainProduction
 }; 
