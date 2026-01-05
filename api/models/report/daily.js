@@ -1,8 +1,8 @@
 const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
 
-const selectDailyReportData = async (requestId, metricDate) => {
-    const pool = getPool(requestId);
+const selectDailyReportData = async (requestId, metricDate, client = null) => {
+    const queryClient = client || getPool(requestId);
     const query = `
         SELECT
             dpm.metric_date,
@@ -48,7 +48,7 @@ const selectDailyReportData = async (requestId, metricDate) => {
     const values = [metricDate];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await queryClient.query(query, values);
         return result.rows;
     } catch (err) {
         logger.error({ err }, 'Error retrieving daily report data');
@@ -56,10 +56,10 @@ const selectDailyReportData = async (requestId, metricDate) => {
     }
 };
 
-const selectLatestDailyReportDate = async (requestId) => {
-    const pool = getPool(requestId);
+const selectLatestDailyReportDate = async (requestId, client = null) => {
+    const queryClient = client || getPool(requestId);
     try {
-        const result = await pool.query("SELECT TO_CHAR(MAX(metric_date), 'YYYY-MM-DD') as max_date FROM daily_plan_metrics");
+        const result = await queryClient.query("SELECT TO_CHAR(MAX(metric_date), 'YYYY-MM-DD') as max_date FROM daily_plan_metrics");
         return result.rows[0]?.max_date || null;
     } catch (error) {
         logger.error(`[selectLatestDailyReportDate] Error executing query:`, error);
@@ -67,8 +67,8 @@ const selectLatestDailyReportDate = async (requestId) => {
     }
 };
 
-const selectDailyReportDataByHotel = async (requestId, metricDate, hotelIds) => {
-    const pool = getPool(requestId);
+const selectDailyReportDataByHotel = async (requestId, metricDate, hotelIds, client = null) => {
+    const queryClient = client || getPool(requestId);
     let query = `
         SELECT 
             TO_CHAR(dpm.metric_date, 'YYYY-MM-DD') as metric_date,
@@ -113,7 +113,7 @@ const selectDailyReportDataByHotel = async (requestId, metricDate, hotelIds) => 
     `;
 
     try {
-        const result = await pool.query(query, values);
+        const result = await queryClient.query(query, values);
         return result.rows;
     } catch (error) {
         logger.error(`[selectDailyReportDataByHotel] Error executing query:`, error);

@@ -513,7 +513,7 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
             Promise.all(hotelIds.map(hid => selectForecastData(requestId, hid, outlookStartDate, outlookEndDate, client))),
             Promise.all(hotelIds.map(hid => selectCountReservation(requestId, hid, outlookStartDate, outlookEndDate, client))),
             Promise.all(hotelIds.map(hid => selectOccupationBreakdownByMonth(requestId, hid, outlookStartDate, outlookEndDate, client))),
-            selectLatestDailyReportDate(requestId)
+            selectLatestDailyReportDate(requestId, client)
         ]);
 
         const outlookPmsFlat = outlookPmsResults.flat();
