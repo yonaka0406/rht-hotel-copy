@@ -171,6 +171,13 @@ const insertReservationRate = async (requestId, rateData, client = null) => {
     shouldReleaseClient = true;
   }
 
+  const isTaxRateMissing = rateData.tax_rate === null || rateData.tax_rate === undefined;
+  const isTaxTypeMissing = rateData.tax_type_id === null || rateData.tax_type_id === undefined;
+
+  if (isTaxRateMissing || isTaxTypeMissing) {
+    logger.warn(`[${requestId}] insertReservationRate: Missing tax info for rate. Tax Rate: ${rateData.tax_rate}, Tax Type ID: ${rateData.tax_type_id}`);
+  }
+
   const query = `
     INSERT INTO reservation_rates (
       hotel_id,
@@ -194,7 +201,7 @@ const insertReservationRate = async (requestId, rateData, client = null) => {
     rateData.adjustment_type,
     rateData.adjustment_value,
     rateData.tax_type_id,
-    rateData.tax_rate,
+    rateData.tax_rate ?? 0,
     rateData.price,
     rateData.include_in_cancel_fee,
     rateData.sales_category || 'accommodation',

@@ -123,7 +123,9 @@ const selectReservation = async (requestId, id, hotel_id) => {
                     'addon_type', ra.addon_type,
                     'quantity', ra.quantity,
                     'price', ra.price,
-                    'sales_category', ra.sales_category
+                    'sales_category', ra.sales_category,
+                    'tax_type_id', ra.tax_type_id,
+                    'tax_rate', ra.tax_rate
                 )
             ) AS addons_json
         FROM reservation_addons ra
@@ -262,7 +264,9 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
                     'addon_type', ra.addon_type,
                     'quantity', ra.quantity,
                     'price', ra.price,
-                    'sales_category', ra.sales_category
+                    'sales_category', ra.sales_category,
+                    'tax_type_id', ra.tax_type_id,
+                    'tax_rate', ra.tax_rate
                 )
             ) AS addons_json
           FROM reservation_addons ra

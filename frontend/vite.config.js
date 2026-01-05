@@ -34,8 +34,8 @@ export default defineConfig({
     emptyOutDir: true, // Clears the directory before building
 
     // Memory optimization for low-RAM VPS builds
-    minify: 'esbuild', // Disable minification to reduce memory usage
-    sourcemap: false, // Disable source maps to save memory
+    minify: false,
+    sourcemap: false,
     cssMinify: true,
 
     // Rollup options for further memory optimization
@@ -44,29 +44,15 @@ export default defineConfig({
         // Break down large vendor chunks to stay under the 500kB limit and reduce memory pressure
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            // Split ECharts further
-            if (id.includes('echarts')) {
-              if (id.includes('echarts/lib/chart')) return 'echarts-charts';
-              if (id.includes('echarts/lib/component')) return 'echarts-components';
-              return 'echarts-core';
+            // Split ECharts
+            if (id.includes('echarts') || id.includes('zrender')) {
+              return 'echarts';
             }
-            if (id.includes('zrender')) {
-              return 'zrender';
+            // Group all PrimeVue and UI related stuff together to avoid initialization issues
+            if (id.includes('primevue') || id.includes('primeicons') || id.includes('@primeuix')) {
+              return 'primevue';
             }
-            // Split PrimeVue further
-            if (id.includes('primevue')) {
-              if (id.includes('datatable') || id.includes('column')) {
-                return 'ui-tables';
-              }
-              if (id.includes('datepicker') || id.includes('select') || id.includes('multiselect') || id.includes('input') || id.includes('autocomplete')) {
-                return 'ui-forms';
-              }
-              // Further split ui-base to stay under 500kB
-              if (id.includes('primevue/button') || id.includes('primevue/menu') || id.includes('primevue/dialog') || id.includes('primevue/toast')) {
-                return 'ui-base-1';
-              }
-              return 'ui-base-2';
-            }
+            // Vue core
             if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
               return 'vue-core';
             }
@@ -77,6 +63,6 @@ export default defineConfig({
     },
 
     // Reduce concurrent processing
-    target: 'es2015', // Use older target for simpler transforms
+    target: 'esnext',
   },
 });

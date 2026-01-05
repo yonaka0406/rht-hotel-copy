@@ -757,14 +757,20 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## [1.3.6] - 2025-12
+## [1.3.6] - 2025-12-29
 
 - Refactor: Standardized net price calculation methodology using FLOOR on gross totals across reporting and billing modules.
+- Feature: Enhanced Billing module to include tax bracket distribution of the balance for improved financial reporting.
+- Feature: Added CRM Top clients report to identify and analyze high-value customers.
+- Feature: Added Daily OCC report download functionality in both Excel and PDF formats.
+- Bugfix: Fixed formatting and data mapping in the Excel invoice details sheet.
+- Optimization: Improved vite build process and upgraded the system to node 24 from node 22.
 
 ---
 
 ## Version History
 
+- **1.3.6** (2025-12-29) - Standardized net price calculation methodology, enhanced billing module with tax bracket distribution, fixed Excel invoice details, added CRM Top clients report, implemented Daily OCC report downloads (Excel/PDF), and improved build process with Node 24 upgrade.
 - **1.3.5** (2025-12-24) - Added visual indicators for rate inconsistencies, fixed bug with clearing reservation rates, and refactored price calculation logic.
 - **1.3.4** (2025-12-23) - Added plan categories, merge reservations feature, and fixed split/merge reservation bugs (null IDs, metric crashes, redirect errors).
 - **1.3.3** (2025-12-22) - Streamlined invoice generation with improved reservation details handling, enhanced payment processing with transaction management, and bulk payment support
