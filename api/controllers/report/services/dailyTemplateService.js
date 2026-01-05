@@ -16,19 +16,26 @@ const cleanupFiles = (filePaths) => {
     });
 };
 
-const getDailyTemplatePdf = async (req, res) => {
-    const requestId = req.requestId;
-    const { 
-        outlookData, 
-        targetDate, 
-        format: outputFormat = 'pdf', 
-        revenueData, 
-        occupancyData, 
+/**
+ * Generates the Daily Report PDF (or XLSX) based on provided data.
+ * @param {Object} data - The report data (outlookData, revenueData, etc.)
+ * @param {string} requestId - Request ID for logging
+ * @param {string} format - Output format ('pdf' or 'xlsx')
+ * @returns {Promise<string>} Path to the generated PDF (or XLSX) file.
+ */
+const generateDailyReportPdf = async (data, requestId, format = null) => {
+    const {
+        outlookData,
+        targetDate,
+        revenueData,
+        occupancyData,
         prevYearRevenueData,
         prevYearOccupancyData,
         selectionMessage,
         kpiData
-    } = req.body;
+    } = data;
+
+    const outputFormat = format || data.format || 'pdf';
 
     // Adjusted path relative to this service file location (api/controllers/report/services)
     const templatePath = path.join(__dirname, '../../../components/デイリーテンプレート.xlsx');
@@ -45,7 +52,7 @@ const getDailyTemplatePdf = async (req, res) => {
     try {
         // Use XlsxPopulate to load the template (preserves charts)
         const workbook = await XlsxPopulate.fromFileAsync(templatePath);
-        
+
         // Write Selection Message in 'レポート' sheet A39
         const reportSheet = workbook.sheet('レポート');
         if (reportSheet && selectionMessage) {
@@ -59,7 +66,7 @@ const getDailyTemplatePdf = async (req, res) => {
             if (kpiData) {
                 const kpiStartRow = 10;
                 dataSheet.cell(kpiStartRow, 13).value('KPI').style({ bold: true });
-                
+
                 const kpiLabels = [
                     { label: '実績 ADR', value: kpiData.actualADR },
                     { label: '計画 ADR', value: kpiData.forecastADR },
@@ -78,7 +85,7 @@ const getDailyTemplatePdf = async (req, res) => {
                 outlookData.forEach((item, index) => {
                     const rowNumber = index + 2; // xlsx-populate uses 1-based indexing
                     const row = dataSheet.row(rowNumber);
-                    
+
                     row.cell(1).value(item.month);
                     row.cell(2).value(item.forecast_sales);
                     row.cell(3).value(item.sales);
@@ -99,7 +106,7 @@ const getDailyTemplatePdf = async (req, res) => {
             // Write All Facilities Revenue & Occupancy Overview starting from Row 10
             if (Array.isArray(revenueData) && Array.isArray(occupancyData)) {
                 const startRow = 10;
-                
+
                 // Headers
                 const headers = [
                     '施設名', '計画売上', '実績売上', '売上差異', '前年売上', '前年比差異(売上)',
@@ -153,7 +160,7 @@ const getDailyTemplatePdf = async (req, res) => {
                 revenueSorted.forEach((item, index) => {
                     const currentRow = startRow + 1 + index;
                     const row = dataSheet.row(currentRow);
-                    
+
                     // Revenue section (Cols 1-6)
                     row.cell(1).value(item.hotel_name);
                     row.cell(2).value(item.forecastRevenue).style("numberFormat", "#,##0");
@@ -185,27 +192,14 @@ const getDailyTemplatePdf = async (req, res) => {
 
         await workbook.toFileAsync(tempXlsxPath);
 
-        const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
         if (outputFormat === 'xlsx') {
-            if (fs.existsSync(tempXlsxPath)) {
-                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                res.setHeader('Content-Disposition', `attachment; filename="daily_report_${formattedDate}.xlsx"`);
-                const fileStream = fs.createReadStream(tempXlsxPath);
-                fileStream.pipe(res);
-                fileStream.on('close', () => cleanupFiles([tempXlsxPath]));
-            } else {
-                throw new Error('XLSX file not found');
-            }
+            return tempXlsxPath;
         } else {
             // PDF
             await convertExcelToPdf(tempXlsxPath, tmpDir);
             if (fs.existsSync(outputPdfPath)) {
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `attachment; filename="daily_report_${formattedDate}.pdf"`);
-                const fileStream = fs.createReadStream(outputPdfPath);
-                fileStream.pipe(res);
-                fileStream.on('close', () => cleanupFiles([tempXlsxPath, outputPdfPath]));
+                cleanupFiles([tempXlsxPath]); // Cleanup xlsx immediately
+                return outputPdfPath;
             } else {
                 throw new Error('PDF file not found after conversion');
             }
@@ -214,10 +208,49 @@ const getDailyTemplatePdf = async (req, res) => {
     } catch (error) {
         console.error(`[${requestId}] Error generating daily template ${outputFormat}:`, error);
         cleanupFiles([tempXlsxPath, outputPdfPath]);
+        throw error;
+    }
+};
+
+const getDailyTemplatePdf = async (req, res) => {
+    const requestId = req.requestId;
+    const {
+        targetDate,
+        format: outputFormat = 'pdf',
+    } = req.body;
+
+    let generatedFilePath = null;
+    try {
+        generatedFilePath = await generateDailyReportPdf(req.body, requestId, outputFormat);
+
+        const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const filename = `daily_report_${formattedDate}.${outputFormat}`;
+
+        if (outputFormat === 'xlsx') {
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        } else {
+            res.setHeader('Content-Type', 'application/pdf');
+        }
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        const fileStream = fs.createReadStream(generatedFilePath);
+        fileStream.pipe(res);
+        fileStream.on('close', () => cleanupFiles([generatedFilePath]));
+        fileStream.on('error', (err) => {
+            console.error(`[${requestId}] Error piping file stream:`, err);
+            cleanupFiles([generatedFilePath]);
+            if (!res.headersSent) {
+                res.status(500).end();
+            }
+        });
+
+    } catch (error) {
         if (!res.headersSent) res.status(500).json({ message: 'Failed to generate file', error: error.message });
+        if (generatedFilePath) cleanupFiles([generatedFilePath]);
     }
 };
 
 module.exports = {
-    getDailyTemplatePdf
+    getDailyTemplatePdf,
+    generateDailyReportPdf
 };
