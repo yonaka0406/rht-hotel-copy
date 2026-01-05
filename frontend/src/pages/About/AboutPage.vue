@@ -18,7 +18,6 @@
       <TabList>
         <Tab :value="0">よくある質問</Tab>
         <Tab :value="1">更新履歴</Tab>
-        <Tab :value="2">バックログ</Tab>
       </TabList>
       <TabPanels>
         <TabPanel :value="0">
@@ -26,9 +25,6 @@
         </TabPanel>
         <TabPanel :value="1">
           <ChangelogSection />
-        </TabPanel>
-        <TabPanel :value="2">
-          <BacklogSection />
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -46,7 +42,6 @@ import TabPanel from 'primevue/tabpanel';
 import Button from 'primevue/button';
 import FAQSection from './components/FAQSection.vue';
 import ChangelogSection from './components/ChangelogSection.vue';
-import BacklogSection from './components/BacklogSection.vue';
 
 const activeTab = ref(0);
 const router = useRouter();

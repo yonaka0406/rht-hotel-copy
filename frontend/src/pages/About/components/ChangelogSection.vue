@@ -54,39 +54,56 @@
     </div>
     
     <div class="changelog-entries">
-      <div
-        v-for="entry in filteredEntries"
-        :key="entry.version"
-        class="changelog-entry mb-6 p-6 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-      >
-        <div class="entry-header mb-4">
-          <h3 class="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
-            <i class="pi pi-tag mr-2 text-blue-600 dark:text-blue-400"></i>
-            {{ entry.version }}
-          </h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {{ formatDate(entry.date) }}
-          </p>
-        </div>
-        
-        <div class="changes">
+      <div v-if="filteredEntries.length > 0">
+        <div v-for="group in groupedEntries" :key="group.year" class="year-group mb-10">
+          <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
+            <i class="pi pi-calendar text-blue-600 dark:text-blue-400 mr-3 text-2xl"></i>
+            {{ group.year }}年
+          </h2>
+          
           <div
-            v-for="change in entry.changes"
-            :key="change.id || change.description"
-            class="change-item mb-3 p-3 rounded-md"
-            :class="getChangeTypeClass(change.type)"
+            v-for="entry in group.entries"
+            :key="entry.version"
+            class="changelog-entry mb-6 p-6 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200"
           >
-            <div class="flex items-start">
-              <i :class="getChangeTypeIcon(change.type)" class="mr-3 mt-1"></i>
-              <div>
-                <Tag
-                  :value="getChangeTypeLabel(change.type)"
-                  :severity="change.type === 'feature' ? 'success' : change.type === 'improvement' ? 'info' : change.type === 'bugfix' ? 'danger' : change.type === 'performance' ? 'info' : change.type === 'user-request' ? 'warn' : undefined"
-                  class="change-type font-medium text-sm uppercase tracking-wide mr-auto"
-                />
-                <p class="mt-1 text-gray-700 dark:text-gray-300">
-                  {{ change.description }}
-                </p>
+            <div class="entry-header mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+                  <span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 py-1 px-3 rounded-full text-sm mr-3 font-mono">
+                    v{{ entry.version }}
+                  </span>
+                </h3>
+                <span class="text-sm text-gray-500 dark:text-gray-400 font-medium flex items-center">
+                  <i class="pi pi-clock mr-1 text-xs"></i>
+                  {{ formatDate(entry.date) }}
+                </span>
+              </div>
+            </div>
+            
+            <div class="changes space-y-3">
+              <div
+                v-for="(change, index) in entry.changes"
+                :key="index"
+                class="change-item p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150"
+                :class="getChangeTypeClass(change.type)"
+              >
+                <div class="flex items-start">
+                  <div class="mr-3 mt-1 flex-shrink-0">
+                    <i :class="getChangeTypeIcon(change.type)"></i>
+                  </div>
+                  <div class="flex-grow">
+                    <div class="mb-1">
+                      <Tag
+                        :value="getChangeTypeLabel(change.type)"
+                        :severity="getChangeTypeSeverity(change.type)"
+                        class="change-type text-xs font-bold uppercase tracking-wider"
+                      />
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed text-sm sm:text-base">
+                      {{ change.description }}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -94,9 +111,18 @@
       </div>
       
       <!-- No results message -->
-      <div v-if="filteredEntries.length === 0" class="text-center py-8">
-        <i class="pi pi-info-circle text-4xl text-gray-400 mb-4"></i>
-        <p class="text-gray-600 dark:text-gray-300">選択した条件に一致する更新履歴がありません。</p>
+      <div v-else class="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+          <i class="pi pi-search text-2xl text-gray-400"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">見つかりませんでした</h3>
+        <p class="text-gray-500 dark:text-gray-400">選択した条件に一致する更新履歴がありません。</p>
+        <Button 
+          label="フィルターをクリア" 
+          icon="pi pi-refresh" 
+          class="p-button-text mt-4" 
+          @click="clearFilters"
+        />
       </div>
     </div>
   </div>
@@ -106,17 +132,22 @@
 import { ref, computed } from 'vue';
 import { Select, Button } from 'primevue';
 import Tag from 'primevue/tag';
-import changelogData from '../data/changelog-ja.json';
+import changelog2025 from '../data/changelog-2025-ja.json';
+import changelog2026 from '../data/changelog-2026-ja.json';
+
+// Combine changelog data
+const changelogData = {
+  entries: [...changelog2026.entries, ...changelog2025.entries]
+};
 
 // Reactive state
 const selectedVersion = ref(null);
 const selectedType = ref(null);
 const sortOrder = ref('desc'); // 'desc' (newest first) by default
 
-// Load changelog data
-
 // Computed properties
 const versionOptions = computed(() => {
+  // Extract all versions and sort them specifically (semver sort could be better but basic string sort is okay for now)
   const versions = [...new Set(changelogData.entries.map(entry => entry.version))];
   return versions.map(version => ({ label: version, value: version }));
 });
@@ -156,42 +187,74 @@ const filteredEntries = computed(() => {
   return entries;
 });
 
+const groupedEntries = computed(() => {
+  const result = [];
+  let currentYear = null;
+  let currentGroup = null;
+
+  filteredEntries.value.forEach(entry => {
+    const year = new Date(entry.date).getFullYear();
+    if (year !== currentYear) {
+      currentYear = year;
+      currentGroup = { year, entries: [] };
+      result.push(currentGroup);
+    }
+    currentGroup.entries.push(entry);
+  });
+  
+  return result;
+});
+
 // Methods
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric'
   });
 };
 
+const getChangeTypeSeverity = (type) => {
+  switch (type) {
+    case 'feature': return 'success';
+    case 'bugfix': return 'danger';
+    case 'user-request': return 'warn';
+    case 'improvement':
+    case 'performance':
+    case 'ui':
+    case 'design':
+    case 'refactor': 
+      return 'info';
+    default: return 'secondary';
+  }
+};
+
 const getChangeTypeClass = (type) => {
   const classes = {
-    feature: 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500',
-    improvement: 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500',
-    bugfix: 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500',
-    performance: 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500',
-    'user-request': 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500',
-    ui: 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500',
-    design: 'bg-pink-50 dark:bg-pink-900/20 border-l-4 border-pink-500',
-    refactor: 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500'
+    feature: 'border-l-4 border-green-500 bg-green-50/50 dark:bg-green-900/10',
+    improvement: 'border-l-4 border-blue-500 bg-blue-50/50 dark:bg-blue-900/10',
+    bugfix: 'border-l-4 border-red-500 bg-red-50/50 dark:bg-red-900/10',
+    performance: 'border-l-4 border-cyan-500 bg-cyan-50/50 dark:bg-cyan-900/10',
+    'user-request': 'border-l-4 border-amber-500 bg-amber-50/50 dark:bg-amber-900/10',
+    ui: 'border-l-4 border-purple-500 bg-purple-50/50 dark:bg-purple-900/10',
+    design: 'border-l-4 border-pink-500 bg-pink-50/50 dark:bg-pink-900/10',
+    refactor: 'border-l-4 border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10'
   };
-  return classes[type] || 'bg-gray-50 dark:bg-gray-700 border-l-4 border-gray-500';
+  return classes[type] || 'border-l-4 border-gray-500 bg-gray-50/50 dark:bg-gray-800/50';
 };
 
 const getChangeTypeIcon = (type) => {
   const icons = {
-    feature: 'pi pi-plus-circle text-green-600 dark:text-green-400',
+    feature: 'pi pi-star-fill text-green-600 dark:text-green-400',
     improvement: 'pi pi-arrow-up text-blue-600 dark:text-blue-400',
     bugfix: 'pi pi-wrench text-red-600 dark:text-red-400',
-    performance: 'pi pi-bolt text-blue-600 dark:text-blue-400',
-    'user-request': 'pi pi-user-edit text-yellow-600 dark:text-yellow-400',
-    ui: 'pi pi-desktop text-purple-600 dark:text-purple-400',
+    performance: 'pi pi-bolt text-cyan-600 dark:text-cyan-400',
+    'user-request': 'pi pi-user text-amber-600 dark:text-amber-400',
+    ui: 'pi pi-eye text-purple-600 dark:text-purple-400',
     design: 'pi pi-palette text-pink-600 dark:text-pink-400',
     refactor: 'pi pi-code text-indigo-600 dark:text-indigo-400'
   };
-  return icons[type] || 'pi pi-info-circle text-gray-600 dark:text-gray-400';
+  return icons[type] || 'pi pi-circle-fill text-gray-600 dark:text-gray-400';
 };
 
 const getChangeTypeLabel = (type) => {
