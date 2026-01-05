@@ -524,9 +524,14 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                 prev_confirmed_stays,
                 total_bookable_room_nights
             });
+            logger.debug(`[getMonthlySummaryData] Outlook Month: ${m.monthLabel}, Sales: ${sales}, Forecast: ${forecast_sales}, PrevSales: ${prev_sales}, PrevOcc: ${prev_occ}%`);
         });
 
         logger.debug(`[getMonthlySummaryData] Outlook Data compiled. Count: ${outlookData.length}`);
+
+        const hotel0Rev = revenueData.find(r => r.hotel_id === 0);
+        const hotel0Occ = occupancyData.find(r => r.hotel_id === 0);
+        logger.debug(`[getMonthlySummaryData] Final Data - Hotel 0: Rev(PMS=${hotel0Rev?.pms_revenue}, FC=${hotel0Rev?.forecast_revenue}), Occ(PMS=${hotel0Occ?.occ}%, FC=${hotel0Occ?.fc_occ}%)`);
 
         return {
             targetDate: formatDate(targetDate),
