@@ -1,4 +1,4 @@
-const { selectForecastData, selectAccountingData, selectCountReservation, selectDailyReportDataByHotel, selectLatestDailyReportDate } = require('../models/report');
+const { selectForecastData, selectAccountingData, selectCountReservation, selectDailyReportDataByHotel, selectLatestDailyReportDate, selectOccupationBreakdownByMonth } = require('../models/report');
 const database = require('../config/database');
 const { formatDate } = require('../utils/reportUtils');
 const logger = require('../config/logger');
@@ -88,14 +88,21 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
 
             // Previous Year
             prevPmsDataResults,
-            prevAccountingDataResults
+            prevAccountingDataResults,
+            prevOccDataResults,
+
+            // New: Occupation Breakdown for current year (to get blocked_nights, net_available_room_nights)
+            occDataResults
         ] = await Promise.all([
             fetchAllHotelsData(selectCountReservation, startDateStr, endDateStr),
             fetchAllHotelsData(selectForecastData, startDateStr, endDateStr),
             fetchAllHotelsData(selectAccountingData, startDateStr, endDateStr),
 
             fetchAllHotelsData(selectCountReservation, prevStartDateStr, prevEndDateStr),
-            fetchAllHotelsData(selectAccountingData, prevStartDateStr, prevEndDateStr)
+            fetchAllHotelsData(selectAccountingData, prevStartDateStr, prevEndDateStr),
+            fetchAllHotelsData(selectOccupationBreakdownByMonth, prevStartDateStr, prevEndDateStr),
+
+            fetchAllHotelsData(selectOccupationBreakdownByMonth, startDateStr, endDateStr)
         ]);
 
         // Transform results into the structure expected by the PDF generator (similar to frontend 'pmsTotalData' etc.)
@@ -111,9 +118,10 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
         const forecastTotalData = transformToMap(forecastDataResults);
         const accountingTotalData = transformToMap(accountingDataResults);
 
-        logger.debug(`[getMonthlySummaryData] Raw Summary: PMS=${Object.keys(pmsTotalData).length}, Forecast=${Object.keys(forecastTotalData).length}, Acc=${Object.keys(accountingTotalData).length}`);
         const prevPmsTotalData = transformToMap(prevPmsDataResults);
         const prevAccountingTotalData = transformToMap(prevAccountingDataResults);
+        const prevOccTotalData = transformToMap(prevOccDataResults);
+        const occTotalData = transformToMap(occDataResults);
 
         // --- Aggregation Logic (Ported from Frontend) ---
 
@@ -149,14 +157,14 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                     let othVal = 0;
 
                     if (key === 'pms_revenue') {
-                        val = Number(record.price) || 0;
                         accVal = Number(record.accommodation_price) || 0;
                         othVal = Number(record.other_price) || 0;
+                        val = accVal; // Focused on Accommodation for this report
                     } else {
                         // Forecast and Accounting
                         accVal = Number(record.accommodation_revenue) || 0;
                         othVal = Number(record.non_accommodation_revenue) || 0;
-                        val = accVal + othVal;
+                        val = accVal; // Focused on Accommodation for this report
                     }
 
                     if (hotelRevenueMap[sHotelId]) {
@@ -221,6 +229,7 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                 hotel_name: h.name,
                 total_rooms: 0, sold_rooms: 0,
                 fc_total_rooms: 0, fc_sold_rooms: 0,
+                blocked_nights: 0, net_available_room_nights: 0,
                 roomDifferenceSum: 0
             };
         });
@@ -228,6 +237,7 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
             hotel_name: '施設合計',
             total_rooms: 0, sold_rooms: 0,
             fc_total_rooms: 0, fc_sold_rooms: 0,
+            blocked_nights: 0, net_available_room_nights: 0,
             roomDifferenceSum: 0
         };
 
@@ -319,6 +329,29 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
             });
         }
 
+        // Aggregate Occupation Breakdown (for blocked_nights, net_available_room_nights)
+        for (const [sHotelId, data] of Object.entries(occTotalData)) {
+            if (!Array.isArray(data)) continue;
+            data.forEach(record => {
+                // Filter only '稼働の合計' row if applicable, or check structure
+                if (record.plan_name !== '稼働の合計') return;
+                const rDate = new Date(record.month);
+                if (formatDateMonth(rDate) !== monthKey) return;
+
+                const blocked = Number(record.blocked_nights) || 0;
+                const netAvailable = Number(record.net_available_room_nights) || 0;
+
+                if (hotelOccupancyMap[sHotelId]) {
+                    hotelOccupancyMap[sHotelId].blocked_nights += blocked;
+                    hotelOccupancyMap[sHotelId].net_available_room_nights += netAvailable;
+                }
+                if (hotelOccupancyMap['0']) {
+                    hotelOccupancyMap['0'].blocked_nights += blocked;
+                    hotelOccupancyMap['0'].net_available_room_nights += netAvailable;
+                }
+            });
+        }
+
         for (const [hId, d] of Object.entries(hotelOccupancyMap)) {
             const occRate = d.total_rooms > 0 ? (d.sold_rooms / d.total_rooms) * 100 : 0;
             const fcOcc = d.fc_total_rooms > 0 ? (d.fc_sold_rooms / d.fc_total_rooms) * 100 : 0;
@@ -332,7 +365,9 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                 occ: parseFloat(occRate.toFixed(2)),
                 fc_sold_rooms: d.fc_sold_rooms,
                 fc_total_rooms: d.fc_total_rooms,
-                fc_occ: parseFloat(fcOcc.toFixed(2))
+                fc_occ: parseFloat(fcOcc.toFixed(2)),
+                blocked_nights: d.blocked_nights,
+                net_available_room_nights: d.net_available_room_nights
             });
         }
 
@@ -354,9 +389,9 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
 
                     let val = 0;
                     if (key === 'pms') {
-                        val = Number(record.price) || 0;
+                        val = Number(record.accommodation_price) || Number(record.price) || 0;
                     } else {
-                        val = (Number(record.accommodation_revenue) || 0) + (Number(record.non_accommodation_revenue) || 0);
+                        val = Number(record.accommodation_revenue) || 0;
                     }
 
                     if (prevRevenueMap[sHotelId]) {
@@ -472,15 +507,19 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
         const [
             outlookForecastResults,
             outlookPmsResults,
+            outlookOccResults,
             latestMetricDate
         ] = await Promise.all([
             Promise.all(hotelIds.map(hid => selectForecastData(requestId, hid, outlookStartDate, outlookEndDate, client))),
             Promise.all(hotelIds.map(hid => selectCountReservation(requestId, hid, outlookStartDate, outlookEndDate, client))),
+            Promise.all(hotelIds.map(hid => selectOccupationBreakdownByMonth(requestId, hid, outlookStartDate, outlookEndDate, client))),
             selectLatestDailyReportDate(requestId)
         ]);
 
         const outlookPmsFlat = outlookPmsResults.flat();
         const outlookForecastFlat = outlookForecastResults.flat();
+        const outlookOccFlat = outlookOccResults.flat();
+        logger.debug(`[getMonthlySummaryData] Outlook Data Counts: PMS=${outlookPmsFlat.length}, FC=${outlookForecastFlat.length}, Occ=${outlookOccFlat.length}`);
 
         let outlookSnapshots = [];
         if (latestMetricDate) {
@@ -492,8 +531,8 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
             const mFC = outlookForecastFlat.filter(r => formatDateMonth(new Date(r.forecast_month)) === m.monthLabel);
             const mSnapshot = outlookSnapshots.filter(r => r.month === m.startDate); // Month in snapshot is YYYY-MM-DD (first day)
 
-            const sales = mPMS.reduce((sum, r) => sum + (Number(r.price) || 0), 0);
-            const forecast_sales = mFC.reduce((sum, r) => sum + (Number(r.accommodation_revenue) || 0) + (Number(r.non_accommodation_revenue) || 0), 0);
+            const sales = mPMS.reduce((sum, r) => sum + (Number(r.accommodation_price) || 0), 0);
+            const forecast_sales = mFC.reduce((sum, r) => sum + (Number(r.accommodation_revenue) || 0), 0);
             const confirmed_nights = mPMS.reduce((sum, r) => sum + (Number(r.room_count) || 0), 0);
 
             const forecast_sold = mFC.reduce((sum, r) => sum + (Number(r.rooms_sold_nights) || 0), 0);
@@ -507,7 +546,14 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                 return sum + (h.total_rooms * daysInM);
             }, 0);
 
-            const prev_sales = mSnapshot.reduce((sum, r) => sum + (Number(r.accommodation_sales) || 0) + (Number(r.other_sales) || 0), 0);
+            const mOcc = outlookOccFlat.filter(r => {
+                const rDate = new Date(r.month);
+                return formatDateMonth(rDate) === m.monthLabel && r.plan_name === '稼働の合計';
+            });
+            const blocked_nights = mOcc.reduce((sum, r) => sum + (Number(r.blocked_nights) || 0), 0);
+            const net_available_room_nights = mOcc.reduce((sum, r) => sum + (Number(r.net_available_room_nights) || 0), 0);
+
+            const prev_sales = mSnapshot.reduce((sum, r) => sum + (Number(r.accommodation_sales) || 0), 0);
             const prev_confirmed_stays = mSnapshot.reduce((sum, r) => sum + (Number(r.confirmed_stays) || 0), 0);
             const prev_occ = total_bookable_room_nights ? (prev_confirmed_stays / total_bookable_room_nights) * 100 : 0;
 
@@ -522,7 +568,9 @@ const getMonthlySummaryData = async (requestId, targetDate, dbClient = null) => 
                 prev_sales,
                 prev_occ: parseFloat(prev_occ.toFixed(2)),
                 prev_confirmed_stays,
-                total_bookable_room_nights
+                total_bookable_room_nights,
+                blocked_nights,
+                net_available_room_nights
             });
             logger.debug(`[getMonthlySummaryData] Outlook Month: ${m.monthLabel}, Sales: ${sales}, Forecast: ${forecast_sales}, PrevSales: ${prev_sales}, PrevOcc: ${prev_occ}%`);
         });
