@@ -46,11 +46,14 @@ const runDailySalesOccPdfJob = async () => {
             <p>※このメールは自動送信されています。</p>
         `;
 
+        const textBody = `${formattedDate} の売上と稼働率レポート (PDF) を送付いたします。詳細は添付ファイルをご確認ください。`;
+
         logger.info(`[${requestId}] Sending email to ${emailTo}...`);
 
         await sendGenericEmail(
             emailTo,
             subject,
+            textBody,
             html,
             [
                 {

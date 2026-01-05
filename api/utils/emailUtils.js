@@ -4,9 +4,9 @@ const nodemailer = require('nodemailer');
 let envFrontend;
 
 if (process.env.NODE_ENV === 'production') {
-  envFrontend = process.env.PROD_FRONTEND_URL  
+  envFrontend = process.env.PROD_FRONTEND_URL
 } else {
-  envFrontend = process.env.FRONTEND_URL  
+  envFrontend = process.env.FRONTEND_URL
 }
 
 // Function to send the reset email
@@ -59,7 +59,7 @@ const sendAdminResetEmail = async (email, resetToken) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);    
+    await transporter.sendMail(mailOptions);
   } catch (error) {
     console.error('Error sending admin reset email:', error);
     throw new Error('Failed to send admin reset email');
@@ -159,7 +159,7 @@ ${confirmationLink}
   }
 };
 
-const sendGenericEmail = async (to, subject, text, html) => {
+const sendGenericEmail = async (to, subject, text, html, attachments = []) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -174,6 +174,7 @@ const sendGenericEmail = async (to, subject, text, html) => {
     subject: subject,
     text: text,
     html: html,
+    attachments: attachments,
   };
 
   try {
