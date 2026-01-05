@@ -20,11 +20,10 @@ const runDailySalesOccPdfJob = async () => {
         // 1. Fetch Data
         logger.info(`[${requestId}] Fetching report data for ${formattedDate}...`);
         const reportData = await getMonthlySummaryData(requestId, today);
-        reportData.format = 'pdf'; // Set format explicitly for generator
 
         // 2. Generate PDF
         logger.info(`[${requestId}] Generating PDF...`);
-        const pdfPath = await generateDailyReportPdf(reportData, requestId);
+        const pdfPath = await generateDailyReportPdf(reportData, requestId, 'pdf');
 
         if (!pdfPath || !fs.existsSync(pdfPath)) {
             throw new Error('PDF generation failed, file not found.');
@@ -65,7 +64,7 @@ const runDailySalesOccPdfJob = async () => {
 
         // 4. Cleanup
         try {
-            fs.unlinkSync(pdfPath);
+            await fs.promises.unlink(pdfPath);
             logger.info(`[${requestId}] Cleaned up temporary PDF file.`);
         } catch (cleanupError) {
             logger.warn(`[${requestId}] Failed to cleanup PDF file: ${cleanupError.message}`);

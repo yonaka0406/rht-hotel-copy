@@ -1,6 +1,4 @@
-const reportModel = require('../models/report');
-const { getDailyReportDataByHotel, selectOccupationBreakdownByMonth, selectForecastData, selectAccountingData, selectCountReservation } = require('../models/report');
-const { getAvailableMetricDates } = require('../models/report');
+const { selectForecastData, selectAccountingData, selectCountReservation } = require('../models/report');
 const database = require('../config/database');
 const { formatDate } = require('../utils/reportUtils');
 
@@ -74,14 +72,6 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
 
         // --- Fetch Data ---
 
-        // 1. Current Month Data
-        const pmsData = await selectCountReservation(requestId, 'all', startDateStr, endDateStr, client); // 'all' assumes model handles it or we pass hotelIds
-        // selectCountReservation usually takes a single hotelId or we loop. 
-        // Let's use the batch request logic concept but implemented directly here for efficiency if models allow, 
-        // or loop if models are single-hotel. The batch controller loops.
-        // To be safe and reuse existing tested models, let's loop or use the 'all' if supported. 
-        // Looking at batch.js, it loops. Let's loop here too for now or use Promise.all.
-
         // Helper for independent hotel fetches
         const fetchAllHotelsData = async (fetchMethod, sDate, eDate) => {
             const results = await Promise.all(hotelIds.map(async (hid) => {
@@ -96,21 +86,17 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
             pmsDataResults,
             forecastDataResults,
             accountingDataResults,
-            occupationResults,
 
             // Previous Year
             prevPmsDataResults,
-            prevAccountingDataResults,
-            prevOccupationResults
+            prevAccountingDataResults
         ] = await Promise.all([
             fetchAllHotelsData(selectCountReservation, startDateStr, endDateStr),
             fetchAllHotelsData(selectForecastData, startDateStr, endDateStr),
             fetchAllHotelsData(selectAccountingData, startDateStr, endDateStr),
-            fetchAllHotelsData(selectOccupationBreakdownByMonth, startDateStr, endDateStr),
 
             fetchAllHotelsData(selectCountReservation, prevStartDateStr, prevEndDateStr),
-            fetchAllHotelsData(selectAccountingData, prevStartDateStr, prevEndDateStr),
-            fetchAllHotelsData(selectOccupationBreakdownByMonth, prevStartDateStr, prevEndDateStr)
+            fetchAllHotelsData(selectAccountingData, prevStartDateStr, prevEndDateStr)
         ]);
 
         // Transform results into the structure expected by the PDF generator (similar to frontend 'pmsTotalData' etc.)
@@ -126,7 +112,7 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
         const forecastTotalData = transformToMap(forecastDataResults);
         const accountingTotalData = transformToMap(accountingDataResults);
         const prevPmsTotalData = transformToMap(prevPmsDataResults);
-        const prevAccountingTotalData = transformToMap(prevAccountingDataResults);
+        const prevAccountingTotalData = transformToMap(prevAccountingTotalData);
 
         // --- Aggregation Logic (Ported from Frontend) ---
 
@@ -264,8 +250,11 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
                 const dateStr = formatDate(currentDayDate);
 
                 // If hotel not open yet on this day
-                if (h.open_date && new Date(h.open_date) > currentDayDate) {
-                    continue;
+                if (h.open_date) {
+                    const normalizedOpenDate = normalizeDate(new Date(h.open_date));
+                    if (normalizedOpenDate > currentDayDate) {
+                        continue;
+                    }
                 }
 
                 if (dailyRealRoomsMap.has(dateStr)) {
@@ -400,9 +389,7 @@ const getMonthlySummaryData = async (requestId, targetDate) => {
             prevOccupancyMap['0'].total += totalAvailable;
         }
 
-        // Iterate occupationResults (using prev data) - BUT wait, I used occupationResults for current year above, 
-        // actually I need prevPmsData for sold rooms source or prevOccupationResults if that's what frontend uses.
-        // Frontend uses pmsTotalData for sold_rooms.
+        // Iterate prevPmsTotalData for sold rooms source
         for (const [sHotelId, data] of Object.entries(prevPmsTotalData)) {
             if (!Array.isArray(data)) continue;
             data.forEach(record => {

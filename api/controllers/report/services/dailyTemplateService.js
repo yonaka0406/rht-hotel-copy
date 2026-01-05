@@ -20,13 +20,13 @@ const cleanupFiles = (filePaths) => {
  * Generates the Daily Report PDF (or XLSX) based on provided data.
  * @param {Object} data - The report data (outlookData, revenueData, etc.)
  * @param {string} requestId - Request ID for logging
+ * @param {string} format - Output format ('pdf' or 'xlsx')
  * @returns {Promise<string>} Path to the generated PDF (or XLSX) file.
  */
-const generateDailyReportPdf = async (data, requestId) => {
+const generateDailyReportPdf = async (data, requestId, format = null) => {
     const {
         outlookData,
         targetDate,
-        format: outputFormat = 'pdf',
         revenueData,
         occupancyData,
         prevYearRevenueData,
@@ -34,6 +34,8 @@ const generateDailyReportPdf = async (data, requestId) => {
         selectionMessage,
         kpiData
     } = data;
+
+    const outputFormat = format || data.format || 'pdf';
 
     // Adjusted path relative to this service file location (api/controllers/report/services)
     const templatePath = path.join(__dirname, '../../../components/デイリーテンプレート.xlsx');
@@ -219,7 +221,7 @@ const getDailyTemplatePdf = async (req, res) => {
 
     let generatedFilePath = null;
     try {
-        generatedFilePath = await generateDailyReportPdf(req.body, requestId);
+        generatedFilePath = await generateDailyReportPdf(req.body, requestId, outputFormat);
 
         const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const filename = `daily_report_${formattedDate}.${outputFormat}`;
@@ -234,6 +236,13 @@ const getDailyTemplatePdf = async (req, res) => {
         const fileStream = fs.createReadStream(generatedFilePath);
         fileStream.pipe(res);
         fileStream.on('close', () => cleanupFiles([generatedFilePath]));
+        fileStream.on('error', (err) => {
+            console.error(`[${requestId}] Error piping file stream:`, err);
+            cleanupFiles([generatedFilePath]);
+            if (!res.headersSent) {
+                res.status(500).end();
+            }
+        });
 
     } catch (error) {
         if (!res.headersSent) res.status(500).json({ message: 'Failed to generate file', error: error.message });
