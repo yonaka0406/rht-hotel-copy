@@ -14,4 +14,8 @@ UPDATE reservation_addons
 SET tax_rate = 0.10, tax_type_id = 3
 WHERE tax_rate IS NULL AND addons_global_id != 5;
 
+UPDATE reservation_addons
+SET tax_rate = 0.10, tax_type_id = 3
+WHERE tax_rate IS NULL AND addons_global_id IS NULL AND addons_hotel_id IS NULL;
+
 COMMIT;
