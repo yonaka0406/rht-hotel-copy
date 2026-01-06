@@ -730,7 +730,9 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
             [hotel_id, addons_hotel_id]
         );
         addonDetails = result.rows[0];
-    } else if (addons_global_id) {
+    }
+
+    if (!addonDetails && addons_global_id) {
         const result = await client.query(
             'SELECT * FROM addons_global WHERE id = $1',
             [addons_global_id]
@@ -739,6 +741,7 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
     }
 
     return addonDetails || {
+        id: 3,
         addons_global_id: 3,
         name: '駐車場',
         addon_type: 'parking', // Added addon_type
@@ -1055,14 +1058,16 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
                     const detail = detailsByDate[dateStr][0];
 
-                    let global_addon_id = null;
+                    // Determine IDs based on whether we found a hotel-specific or global addon
                     let hotel_addon_id = null;
+                    let global_addon_id = null;
 
-                    if (addon?.addons_hotel_id) {
+                    if (addonDetails.hotel_id) {
                         hotel_addon_id = addonDetails.id;
                         global_addon_id = addonDetails.addons_global_id;
                     } else {
-                        global_addon_id = addonDetails.id;
+                        hotel_addon_id = null;
+                        global_addon_id = addonDetails.addons_global_id || addonDetails.id;
                     }
 
                     addonValues.push([

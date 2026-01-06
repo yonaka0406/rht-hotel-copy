@@ -497,7 +497,8 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
           check_out: formatDate(endDate),
           unit_price: 0, // Assuming 0 for blocked spots, or fetch from somewhere
           number_of_vehicles: 1, // Each spot is one vehicle
-          spotId: s.parking_spot_id // Preferred spot
+          spotId: s.parking_spot_id, // Preferred spot
+          addon: { name: '駐車場', addon_type: 'parking' }
         }));
 
         await saveParkingAssignments(requestId, parkingAssignments, userId, client);

@@ -1397,7 +1397,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
 
   // Normalize rates to ensure it's a proper array
   const ratesArray = Array.isArray(rates) ? rates : [];
-  
+
   if (ratesArray.length > 0) {
     calculatedPrice = calculatePriceFromRates(ratesArray, disableRounding);
     isAccommodation = ratesArray.some(r => r.sales_category === 'accommodation');
@@ -1455,7 +1455,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
         DELETE FROM reservation_rates WHERE reservation_details_id = $1;
       `;
       await dbClient.query(deleteRatesQuery, [id]);
-      
+
       // Insert rates using the shared utility function
       await insertAggregatedRates(requestId, ratesArray, hotel_id, id, user_id, disableRounding, dbClient);
     }
@@ -3551,7 +3551,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
             const addonToInsert = {
               hotel_id: hotel_id,
               reservation_detail_id: reservationDetailsId,
-              addons_global_id: addon.addons_global_id,
+              addons_global_id: addon.addons_global_id || (addon.addon_type === 'parking' && !addon.addons_hotel_id ? 3 : null),
               addons_hotel_id: addon.addons_hotel_id,
               addon_name: addon.addon_name,
               addon_type: addon.addon_type, // Assuming addon.addon_type exists in the input

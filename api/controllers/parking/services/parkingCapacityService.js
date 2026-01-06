@@ -46,26 +46,26 @@ class ParkingCapacityService {
      */
     _generateDateRange(startDate, endDate) {
         const dates = [];
-        
+
         // Parse date strings into components to avoid timezone issues
         const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
         const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-        
+
         // Create UTC dates to avoid timezone shifts
         const current = new Date(Date.UTC(startYear, startMonth - 1, startDay));
         const end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
-        
+
         while (current.getTime() < end.getTime()) {
             // Format using UTC getters to avoid timezone conversion
             const year = current.getUTCFullYear();
             const month = String(current.getUTCMonth() + 1).padStart(2, '0');
             const day = String(current.getUTCDate()).padStart(2, '0');
             dates.push(`${year}-${month}-${day}`);
-            
+
             // Increment using UTC methods
             current.setUTCDate(current.getUTCDate() + 1);
         }
-        
+
         return dates;
     }
 
@@ -86,10 +86,10 @@ class ParkingCapacityService {
      */
     async getAvailableCapacity(hotelId, startDate, endDate, vehicleCategoryId, client = null) {
         console.log(`[ParkingCapacityService.getAvailableCapacity] Request: hotel=${hotelId}, dates=${startDate} to ${endDate}, category=${vehicleCategoryId}, transactional=${!!client}`);
-        
+
         const pool = client || this._getPool();
         const dates = this._generateDateRange(startDate, endDate);
-        
+
         try {
             // Step 1: Get vehicle category capacity requirements
             const categoryQuery = `
@@ -98,14 +98,14 @@ class ParkingCapacityService {
                 WHERE id = $1
             `;
             const categoryResult = await pool.query(categoryQuery, [vehicleCategoryId]);
-            
+
             if (categoryResult.rows.length === 0) {
                 throw new Error(`Vehicle category ${vehicleCategoryId} not found`);
             }
-            
+
             const category = categoryResult.rows[0];
             console.log(`[ParkingCapacityService.getAvailableCapacity] Vehicle category: ${category.name}, requires ${category.capacity_units_required} capacity units`);
-            
+
             // Step 2: Count total physical parking spots compatible with this vehicle category
             const physicalSpotsQuery = `
                 SELECT COUNT(DISTINCT ps.id) as total_physical_spots
@@ -118,21 +118,21 @@ class ParkingCapacityService {
             `;
             const physicalSpotsResult = await pool.query(physicalSpotsQuery, [hotelId, category.capacity_units_required]);
             const totalPhysicalSpots = parseInt(physicalSpotsResult.rows[0].total_physical_spots, 10);
-            
+
             console.log(`[ParkingCapacityService.getAvailableCapacity] Total physical spots compatible with category: ${totalPhysicalSpots}`);
-            
+
             // Step 3: Get the virtual capacity pool spot ID for this hotel and category
             const virtualSpotQuery = `
                 SELECT get_virtual_capacity_pool_spot($1, $2) as virtual_spot_id
             `;
             const virtualSpotResult = await pool.query(virtualSpotQuery, [hotelId, vehicleCategoryId]);
             const virtualSpotId = virtualSpotResult.rows[0].virtual_spot_id;
-            
+
             console.log(`[ParkingCapacityService.getAvailableCapacity] Virtual capacity pool spot ID: ${virtualSpotId}`);
-            
+
             // Step 4: Calculate capacity for each date
             const capacityByDate = {};
-            
+
             for (const date of dates) {
                 // Count capacity-based reservations (assigned to virtual spot) for this date
                 const reservationsQuery = `
@@ -146,7 +146,7 @@ class ParkingCapacityService {
                 `;
                 const reservationsResult = await pool.query(reservationsQuery, [hotelId, virtualSpotId, date]);
                 const reservedCapacity = parseInt(reservationsResult.rows[0].reserved_count, 10);
-                
+
                 // Count blocked capacity for this date
                 // Only count blocks that are compatible with this vehicle category
                 // A block is compatible if: spot_size IS NULL (applies to all) OR spot_size >= capacity_units_required
@@ -160,10 +160,10 @@ class ParkingCapacityService {
                 `;
                 const blocksResult = await pool.query(blocksQuery, [hotelId, date, category.capacity_units_required]);
                 const blockedCapacity = parseInt(blocksResult.rows[0].blocked_count, 10);
-                
+
                 // Calculate available capacity
                 const availableCapacity = Math.max(0, totalPhysicalSpots - reservedCapacity - blockedCapacity);
-                
+
                 capacityByDate[date] = {
                     date,
                     totalPhysicalSpots,
@@ -171,10 +171,10 @@ class ParkingCapacityService {
                     blockedCapacity,
                     availableCapacity
                 };
-                
+
                 console.log(`[ParkingCapacityService.getAvailableCapacity] Date ${date}: total=${totalPhysicalSpots}, reserved=${reservedCapacity}, blocked=${blockedCapacity}, available=${availableCapacity}`);
             }
-            
+
             const result = {
                 hotelId,
                 vehicleCategoryId,
@@ -197,11 +197,11 @@ class ParkingCapacityService {
                 result.summary.minAvailableCapacity = Math.min(...availableCapacities);
                 result.summary.maxAvailableCapacity = Math.max(...availableCapacities);
             }
-            
+
             console.log(`[ParkingCapacityService.getAvailableCapacity] Summary: min available=${result.summary.minAvailableCapacity}, max available=${result.summary.maxAvailableCapacity}`);
-            
+
             return result;
-            
+
         } catch (error) {
             console.error(`[ParkingCapacityService.getAvailableCapacity] Error:`, error);
             throw error;
@@ -243,20 +243,20 @@ class ParkingCapacityService {
             user_id,
             addon
         } = reservationData;
-        
+
         console.log(`[ParkingCapacityService.reserveCapacity] Request: hotel=${hotel_id}, reservation=${reservation_id}, category=${vehicle_category_id}, dates=${start_date} to ${end_date}, spots=${number_of_spots}`);
-        
+
         const pool = this._getPool();
         const client = await pool.connect();
-        
+
         try {
             await client.query('BEGIN');
             console.log(`[ParkingCapacityService.reserveCapacity] Transaction started`);
-            
+
             // Step 1: Validate capacity availability within the transaction to prevent race conditions
             const availability = await this.getAvailableCapacity(hotel_id, start_date, end_date, vehicle_category_id, client);
             const dates = this._generateDateRange(start_date, end_date);
-            
+
             for (const date of dates) {
                 const dayCapacity = availability.capacityByDate[date];
                 if (dayCapacity.availableCapacity < number_of_spots) {
@@ -264,22 +264,25 @@ class ParkingCapacityService {
                 }
             }
             console.log(`[ParkingCapacityService.reserveCapacity] Capacity validation passed for all dates`);
-            
+
             // Step 2: Get virtual capacity pool spot
             const virtualSpotQuery = `SELECT get_virtual_capacity_pool_spot($1, $2) as virtual_spot_id`;
             const virtualSpotResult = await client.query(virtualSpotQuery, [hotel_id, vehicle_category_id]);
             const virtualSpotId = virtualSpotResult.rows[0].virtual_spot_id;
-            
+
             console.log(`[ParkingCapacityService.reserveCapacity] Using virtual capacity pool spot ID: ${virtualSpotId}`);
-            
+
             // Step 3: Get addon details for billing
             let addonDetails = {
+                id: 3,
+                addons_global_id: 3,
                 name: '駐車場',
-                tax_type_id: null,
+                addon_type: 'parking',
+                tax_type_id: 3,
                 tax_rate: 0.1,
                 price: unit_price
             };
-            
+
             if (addon?.addons_hotel_id) {
                 const addonQuery = `SELECT * FROM addons_hotel WHERE hotel_id = $1 AND id = $2`;
                 const addonResult = await client.query(addonQuery, [hotel_id, addon.addons_hotel_id]);
@@ -293,22 +296,22 @@ class ParkingCapacityService {
                     addonDetails = addonResult.rows[0];
                 }
             }
-            
+
             console.log(`[ParkingCapacityService.reserveCapacity] Addon details: ${addonDetails.name}, price=${addonDetails.price}`);
-            
+
             // Step 4: Create reservation_addons and reservation_parking records for each spot
             const createdRecords = [];
-            
+
             for (let spotIndex = 0; spotIndex < number_of_spots; spotIndex++) {
                 console.log(`[ParkingCapacityService.reserveCapacity] Creating records for spot ${spotIndex + 1}/${number_of_spots}`);
-                
+
                 for (const date of dates) {
                     // Create addon record using addReservationAddon
                     const newAddon = {
                         hotel_id: hotel_id,
                         reservation_detail_id: reservation_details_id,
-                        addons_global_id: addon?.addons_global_id || null,
-                        addons_hotel_id: addon?.addons_hotel_id || null,
+                        addons_global_id: addonDetails.addons_global_id || (addonDetails.hotel_id ? null : addonDetails.id),
+                        addons_hotel_id: addonDetails.hotel_id ? addonDetails.id : null,
                         addon_name: addonDetails.name,
                         addon_type: addonDetails.addon_type,
                         quantity: 1, // Always 1 for a single parking spot on a given day
@@ -320,9 +323,9 @@ class ParkingCapacityService {
                     };
                     const createdAddon = await addReservationAddon(this.requestId, newAddon, client);
                     const addonId = createdAddon.id;
-                    
+
                     console.log(`[ParkingCapacityService.reserveCapacity] Created addon record using addReservationAddon: ${addonId} for date ${date}`);
-                    
+
                     // Create parking record
                     const parkingInsertQuery = `
                         INSERT INTO reservation_parking (
@@ -344,9 +347,9 @@ class ParkingCapacityService {
                     ];
                     const parkingResult = await client.query(parkingInsertQuery, parkingValues);
                     const parkingId = parkingResult.rows[0].id;
-                    
+
                     console.log(`[ParkingCapacityService.reserveCapacity] Created parking record: ${parkingId} for date ${date}`);
-                    
+
                     createdRecords.push({
                         date,
                         addonId,
@@ -355,10 +358,10 @@ class ParkingCapacityService {
                     });
                 }
             }
-            
+
             await client.query('COMMIT');
             console.log(`[ParkingCapacityService.reserveCapacity] Transaction committed successfully. Created ${createdRecords.length} records`);
-            
+
             return {
                 success: true,
                 message: `Successfully reserved ${number_of_spots} parking spot(s) for ${dates.length} night(s)`,
@@ -368,7 +371,7 @@ class ParkingCapacityService {
                 dates,
                 createdRecords
             };
-            
+
         } catch (error) {
             await client.query('ROLLBACK');
             console.error(`[ParkingCapacityService.reserveCapacity] Error, transaction rolled back:`, error);
@@ -406,21 +409,21 @@ class ParkingCapacityService {
             comment,
             user_id
         } = blockData;
-        
+
         console.log(`[ParkingCapacityService.blockCapacity] Request: hotel=${hotel_id}, parking_lot=${parking_lot_id}, spot_size=${spot_size}, dates=${start_date} to ${end_date}, spots=${number_of_spots}`);
-        
+
         const pool = this._getPool();
-        
+
         try {
             // Step 1: Validate parameters
             if (number_of_spots <= 0) {
                 throw new Error('Number of spots must be greater than 0');
             }
-            
+
             if (new Date(start_date) > new Date(end_date)) {
                 throw new Error('End date must be on or after start date');
             }
-            
+
             // Step 2: Get total physical capacity
             // Build query based on provided filters
             let physicalSpotsQuery = `
@@ -433,32 +436,32 @@ class ParkingCapacityService {
             `;
             const queryParams = [hotel_id];
             let paramIndex = 2;
-            
+
             // Add parking lot filter if specified
             if (parking_lot_id) {
                 physicalSpotsQuery += ` AND pl.id = $${paramIndex}`;
                 queryParams.push(parking_lot_id);
                 paramIndex++;
             }
-            
+
             // Add spot size filter if specified
             if (spot_size) {
                 physicalSpotsQuery += ` AND ps.capacity_units = $${paramIndex}`;
                 queryParams.push(spot_size);
                 paramIndex++;
             }
-            
+
             const physicalSpotsResult = await pool.query(physicalSpotsQuery, queryParams);
             const totalPhysicalSpots = parseInt(physicalSpotsResult.rows[0].total_physical_spots, 10);
-            
+
             console.log(`[ParkingCapacityService.blockCapacity] Total physical spots: ${totalPhysicalSpots}, blocking: ${number_of_spots}`);
-            
+
             // Step 3: Check if blocking exceeds total capacity (warning, not error)
             const exceedsCapacity = number_of_spots > totalPhysicalSpots;
             if (exceedsCapacity) {
                 console.warn(`[ParkingCapacityService.blockCapacity] WARNING: Number of spots (${number_of_spots}) exceeds total physical spots (${totalPhysicalSpots})`);
             }
-            
+
             // Step 4: Get spots to block based on filters
             let spotsQuery = `
                 SELECT ps.id, ps.spot_number, pl.name as parking_lot_name
@@ -470,31 +473,31 @@ class ParkingCapacityService {
             `;
             const spotsQueryParams = [hotel_id];
             let spotsParamIndex = 2;
-            
+
             if (parking_lot_id) {
                 spotsQuery += ` AND pl.id = $${spotsParamIndex}`;
                 spotsQueryParams.push(parking_lot_id);
                 spotsParamIndex++;
             }
-            
+
             if (spot_size) {
                 spotsQuery += ` AND ps.capacity_units = $${spotsParamIndex}`;
                 spotsQueryParams.push(spot_size);
                 spotsParamIndex++;
             }
-            
+
             spotsQuery += ` ORDER BY ps.id LIMIT $${spotsParamIndex}`;
             spotsQueryParams.push(number_of_spots);
-            
+
             const spotsResult = await pool.query(spotsQuery, spotsQueryParams);
             const spotsToBlock = spotsResult.rows;
-            
+
             console.log(`[ParkingCapacityService.blockCapacity] Found ${spotsToBlock.length} spots to block`);
-            
+
             if (spotsToBlock.length === 0) {
                 throw new Error('No spots found matching the specified criteria');
             }
-            
+
             // Step 5: Create blocking record
             const insertQuery = `
                 INSERT INTO parking_blocks (
@@ -514,14 +517,14 @@ class ParkingCapacityService {
                 user_id,
                 user_id
             ];
-            
+
             const result = await pool.query(insertQuery, values);
             const blockId = result.rows[0].id;
-            
+
             console.log(`[ParkingCapacityService.blockCapacity] Created block record: ${blockId}`);
-            
+
             const dayCount = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24)) + 1;
-            
+
             return {
                 success: true,
                 blockId,
@@ -534,7 +537,7 @@ class ParkingCapacityService {
                 numberOfSpots: spotsToBlock.length,
                 dayCount
             };
-            
+
         } catch (error) {
             console.error(`[ParkingCapacityService.blockCapacity] Error:`, error);
             throw error;
@@ -550,14 +553,14 @@ class ParkingCapacityService {
      */
     async releaseBlockedCapacity(blockId, userId) {
         console.log(`[ParkingCapacityService.releaseBlockedCapacity] Request: blockId=${blockId}, userId=${userId}`);
-        
+
         const pool = this._getPool();
         const client = await pool.connect();
-        
+
         try {
             await client.query('BEGIN');
             console.log(`[ParkingCapacityService.releaseBlockedCapacity] Transaction started`);
-            
+
             // Step 1: Get block details before deletion
             const selectQuery = `
                 SELECT pb.*, h.name as hotel_name, pl.name as parking_lot_name
@@ -567,28 +570,28 @@ class ParkingCapacityService {
                 WHERE pb.id = $1
             `;
             const selectResult = await client.query(selectQuery, [blockId]);
-            
+
             if (selectResult.rows.length === 0) {
                 throw new Error(`Block ${blockId} not found`);
             }
-            
+
             const block = selectResult.rows[0];
             console.log(`[ParkingCapacityService.releaseBlockedCapacity] Found block: hotel=${block.hotel_id}, parking_lot=${block.parking_lot_name || 'All'}, spots=${block.number_of_spots}, created_by=${block.created_by}`);
-            
+
             // Step 2: Create audit log entry before deletion (if audit table exists)
             // Note: Audit table schema would need to be updated to match new parking_blocks schema
             // Skipping audit for now until audit table is updated
-            
+
             // Step 3: Delete the block
             const deleteQuery = `
                 DELETE FROM parking_blocks
                 WHERE id = $1
             `;
             await client.query(deleteQuery, [blockId]);
-            
+
             await client.query('COMMIT');
             console.log(`[ParkingCapacityService.releaseBlockedCapacity] Successfully deleted block: ${blockId}, transaction committed`);
-            
+
             return {
                 success: true,
                 message: `Successfully released blocked capacity`,
@@ -606,7 +609,7 @@ class ParkingCapacityService {
                     createdBy: block.created_by
                 }
             };
-            
+
         } catch (error) {
             await client.query('ROLLBACK');
             console.error(`[ParkingCapacityService.releaseBlockedCapacity] Error, transaction rolled back:`, error);
@@ -629,9 +632,9 @@ class ParkingCapacityService {
      */
     async getCapacitySummary(hotelId, startDate, endDate) {
         console.log(`[ParkingCapacityService.getCapacitySummary] Request: hotel=${hotelId}, dates=${startDate} to ${endDate}`);
-        
+
         const pool = this._getPool();
-        
+
         try {
             // Step 1: Get all vehicle categories
             const categoriesQuery = `
@@ -641,15 +644,15 @@ class ParkingCapacityService {
             `;
             const categoriesResult = await pool.query(categoriesQuery);
             const categories = categoriesResult.rows;
-            
+
             console.log(`[ParkingCapacityService.getCapacitySummary] Found ${categories.length} vehicle categories`);
-            
+
             // Step 2: Get capacity for each category
             const capacityByCategory = {};
-            
+
             for (const category of categories) {
                 const availability = await this.getAvailableCapacity(hotelId, startDate, endDate, category.id);
-                
+
                 capacityByCategory[category.id] = {
                     vehicleCategoryId: category.id,
                     vehicleCategoryName: category.name,
@@ -660,7 +663,7 @@ class ParkingCapacityService {
                     capacityByDate: availability.capacityByDate
                 };
             }
-            
+
             // Step 3: Get parking lot breakdown
             const parkingLotsQuery = `
                 SELECT 
@@ -681,14 +684,14 @@ class ParkingCapacityService {
                 description: row.description,
                 totalPhysicalSpots: parseInt(row.total_physical_spots, 10)
             }));
-            
+
             console.log(`[ParkingCapacityService.getCapacitySummary] Found ${parkingLots.length} parking lots`);
-            
+
             // Step 4: Calculate overall statistics
             const totalCapacityAllCategories = Object.values(capacityByCategory).reduce(
                 (sum, cat) => sum + cat.totalPhysicalSpots, 0
             );
-            
+
             const result = {
                 hotelId,
                 dateRange: {
@@ -703,11 +706,11 @@ class ParkingCapacityService {
                 capacityByCategory,
                 parkingLots
             };
-            
+
             console.log(`[ParkingCapacityService.getCapacitySummary] Summary: ${parkingLots.length} lots, ${totalCapacityAllCategories} total spots, ${categories.length} categories`);
-            
+
             return result;
-            
+
         } catch (error) {
             console.error(`[ParkingCapacityService.getCapacitySummary] Error:`, error);
             throw error;
