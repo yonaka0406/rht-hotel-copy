@@ -372,8 +372,8 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     // Exclude virtual capacity pool spots (spot_type = 'capacity_pool')
     // Also exclude spots blocked by parking_blocks table
     // Optionally exclude parking records from a specific reservation (for editing)
-    
-    
+
+
     //console.log('[getAvailableSpotsForDates] Query parameters:', {
     //    hotel_id,
     //    capacityUnits,
@@ -381,8 +381,8 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     //    endDate,
     //    excludeReservationId
     //});
-    
-    
+
+
     // Debug: Check what parking records exist for this date range
     const debugQuery = `
         SELECT 
@@ -400,7 +400,7 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     const debugResult = await pool.query(debugQuery, [hotel_id, startDate, endDate]);
     //console.log('[getAvailableSpotsForDates] Existing parking records in date range:', debugResult.rows);
     //console.log('[getAvailableSpotsForDates] Records to exclude (reservation_details_id):', excludeReservationId);
-    
+
     const query = `
         SELECT 
             ps.*,
@@ -428,7 +428,7 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
         ORDER BY pl.name, ps.spot_number::integer
     `;
     const values = [hotel_id, capacityUnits, startDate, endDate, excludeReservationId];
-    
+
     // Debug: Check which spots are being blocked
     const debugBlockQuery = `
         SELECT 
@@ -468,7 +468,7 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     //        comment: r.comment
     //    }))
     //);
-    
+
     // Debug: Check what the query is actually matching
     const debugJoinQuery = `
         SELECT 
@@ -517,11 +517,11 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
     //        exclusion_status: r.exclusion_status
     //    }))
     //);
-    
+
     const result = await pool.query(query, values);
-    
+
     //console.log('[getAvailableSpotsForDates] Query returned', result.rows.length, 'spots');
-    
+
     return result.rows;
 };
 
@@ -622,21 +622,21 @@ const updateParkingAssignmentAddon = async (requestId, assignmentId, newAddonId)
 const removeParkingAssignmentsByAddon = async (requestId, addonId) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
-    
+
     try {
         await client.query('BEGIN');
-        
+
         // First delete the parking assignment
         const deleteParkingQuery = 'DELETE FROM reservation_parking WHERE reservation_addon_id = $1 RETURNING *';
         const parkingResult = await client.query(deleteParkingQuery, [addonId]);
-        
+
         // Then delete the addon record
         const deleteAddonQuery = {
             text: 'DELETE FROM reservation_addons WHERE id = $1::uuid RETURNING *',
             values: [addonId]
         };
         await client.query(deleteAddonQuery);
-        
+
         await client.query('COMMIT');
         return parkingResult.rows;
     } catch (error) {
@@ -663,11 +663,11 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
                    WHERE reservation_addon_id = ANY($1::uuid[])`,
             values: [assignmentIds]
         };
-        
+
         //console.log('Executing query to find addon IDs:', getAddonsQuery);
         const addonsResult = await client.query(getAddonsQuery);
         //console.log('Found addon records:', addonsResult.rows);
-        
+
         const addonIds = addonsResult.rows.map(row => row.reservation_addon_id);
         //console.log('Extracted addon IDs:', addonIds);
 
@@ -723,7 +723,7 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
 // Helper function to get addon details
 async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_id) {
     let addonDetails = null;
-    
+
     if (addons_hotel_id) {
         const result = await client.query(
             'SELECT * FROM addons_hotel WHERE hotel_id = $1 AND id = $2',
@@ -737,11 +737,12 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
         );
         addonDetails = result.rows[0];
     }
-    
+
     return addonDetails || {
+        addons_global_id: 3,
         name: '駐車場',
         addon_type: 'parking', // Added addon_type
-        tax_type_id: null,
+        tax_type_id: 3,
         tax_rate: 0.1, // Default 10% tax if not specified
         price: 0
     };
@@ -762,9 +763,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
         for (const [index, assignment] of assignments.entries()) {
 
             //logger.debug(`[saveParkingAssignments] Processing assignment ${index + 1}/${assignments.length}:`, { assignment });
-            const { 
+            const {
                 hotel_id, reservation_id, vehicle_category_id, roomId,
-                check_in, check_out, unit_price, numberOfSpots = 1, spotId: preferredSpotId, addon 
+                check_in, check_out, unit_price, numberOfSpots = 1, spotId: preferredSpotId, addon
             } = assignment;
             //logger.debug(`[saveParkingAssignments] Extracted assignment details`, { hotel_id, reservation_id, vehicle_category_id, roomId, check_in, check_out, unit_price, numberOfSpots, preferredSpotId, hasAddon: !!addon });
 
@@ -807,12 +808,12 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             const detailsRes = await localClient.query(query);
             const reservationDetails = detailsRes.rows;
             //logger.debug(`[saveParkingAssignments] Fetched reservation details (${reservationDetails.length} rows)`);
-            
 
-                // Query to check what reservation_details actually exist for this reservation
 
-            
-            
+            // Query to check what reservation_details actually exist for this reservation
+
+
+
             if (!reservationDetails.length) {
                 logger.warn(`No reservation details found for reservation ${reservation_id} with params:`, {
                     reservation_id,
@@ -865,7 +866,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
             const allReservationDates = Object.keys(detailsByDate).map(dateStr => new Date(dateStr));
             const allReservationDateStrings = allReservationDates.map(d => formatDate(d));
-            
+
             // Check for parking blocks that would reduce available capacity
             const blocksRes = await localClient.query(
                 `SELECT pb.*, pl.name as parking_lot_name
@@ -877,49 +878,49 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                    AND (pb.spot_size IS NULL OR pb.spot_size = $4)`,
                 [hotel_id, allReservationDateStrings[0], allReservationDateStrings[allReservationDateStrings.length - 1], requiredUnits]
             );
-            
+
             // Calculate blocked capacity for each date and parking lot
             const blockedCapacityByDateAndLot = {}; // { date: { parking_lot_id: count } }
             const blockedCapacityByDate = {};
-            
+
             for (const dateStr of allReservationDateStrings) {
                 let totalBlockedCount = 0;
                 blockedCapacityByDateAndLot[dateStr] = {};
-                
+
                 for (const block of blocksRes.rows) {
                     // Use formatDate to handle timezone correctly
                     const blockStartDate = formatDate(block.start_date);
                     const blockEndDate = formatDate(block.end_date);
-                    
+
                     // Check if this date falls within the block period
                     if (dateStr >= blockStartDate && dateStr <= blockEndDate) {
                         const parkingLotId = block.parking_lot_id;
                         const blockCount = block.number_of_spots || 0;
-                        
+
                         if (!blockedCapacityByDateAndLot[dateStr][parkingLotId]) {
                             blockedCapacityByDateAndLot[dateStr][parkingLotId] = 0;
                         }
                         blockedCapacityByDateAndLot[dateStr][parkingLotId] += blockCount;
                         totalBlockedCount += blockCount;
-                        
+
                         //logger.debug(`[saveParkingAssignments] Block ${block.id} applies to date ${dateStr}, lot ${parkingLotId}: ${blockCount} spots`);
                     }
                 }
-                
+
                 blockedCapacityByDate[dateStr] = totalBlockedCount;
                 //logger.debug(`[saveParkingAssignments] Date ${dateStr} has ${totalBlockedCount} blocked spots total across all lots`);
             }
-            
+
             // Validate that requested spots don't exceed available capacity (considering blocks)
             for (const dateStr of allReservationDateStrings) {
                 const blockedCount = blockedCapacityByDate[dateStr] || 0;
                 const maxAvailable = candidateSpots.length - blockedCount;
-                
+
                 if (numberOfSpots > maxAvailable) {
                     throw new Error(`Insufficient capacity for ${dateStr}: ${numberOfSpots} spots requested, but only ${maxAvailable} available (${blockedCount} blocked)`);
                 }
             }
-            
+
             //logger.debug(`[saveParkingAssignments] Loading existing reservations for dates:`, { dates: allReservationDateStrings });
             const existingReservationsRes = await localClient.query(
                 `SELECT rp.parking_spot_id, rp.date, rp.status
@@ -933,43 +934,43 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                    AND rp.status IN ('confirmed','blocked')`,
                 [hotel_id, allReservationDateStrings]
             );
-            
+
             //logger.debug(`[saveParkingAssignments] Existing reservations:`, existingReservationsRes.rows.map(r => ({
             //    spot: r.parking_spot_id,
             //    date: formatDate(new Date(r.date)),
             //    status: r.status
             //})));
-            
+
             const dateToSpots = new Map();
             const spotToDates = new Map();
-            
+
             for (const row of existingReservationsRes.rows) {
                 const dateStr = formatDate(new Date(row.date));
                 const spotId = row.parking_spot_id;
-                
+
                 if (!dateToSpots.has(dateStr)) {
                     dateToSpots.set(dateStr, new Set());
                 }
                 dateToSpots.get(dateStr).add(spotId);
-                
+
                 if (!spotToDates.has(spotId)) {
                     spotToDates.set(spotId, new Set());
                 }
                 spotToDates.get(spotId).add(dateStr);
             }
-            
+
             //logger.debug(`[saveParkingAssignments] Loaded ${existingReservationsRes.rows.length} existing reservations into memory maps`);
-            
+
             const assignedPhysicalSpotsForThisAssignment = new Set();
             const assignmentCountByDate = {}; // Track how many spots we've assigned for each date in this request
-            
+
             for (const dateStr of allReservationDateStrings) {
                 assignmentCountByDate[dateStr] = 0;
             }
 
             for (let i = 0; i < numberOfSpots; i++) {
                 //logger.debug(`[saveParkingAssignments] Attempting to assign spot ${i + 1}/${numberOfSpots} for current assignment.`);
-                
+
                 let remainingDatesToAssign = new Set(allReservationDateStrings);
                 const assignedSpotsPerDate = {};
 
@@ -988,14 +989,14 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                         for (const dateStr of remainingDatesToAssign) {
                             const reservedSpots = dateToSpots.get(dateStr);
                             const isReserved = reservedSpots && reservedSpots.has(spotId);
-                            
+
                             // Check if this spot's parking lot has reached capacity for this specific date
                             const parkingLotId = spotToParkingLot.get(spotId);
                             const spotsInLot = candidateSpots.filter(id => spotToParkingLot.get(id) === parkingLotId);
                             const occupiedInLot = spotsInLot.filter(id => dateToSpots.get(dateStr)?.has(id)).length;
                             const blockedInLot = blockedCapacityByDateAndLot[dateStr]?.[parkingLotId] || 0;
                             const availableInLot = spotsInLot.length - occupiedInLot - blockedInLot;
-                            
+
                             const parkingLotFull = availableInLot <= 0;
 
                             if (!isReserved && !parkingLotFull) {
@@ -1020,32 +1021,32 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     for (const dateStr of bestSpotAvailableDates) {
                         assignedSpotsPerDate[dateStr] = bestSpot;
                         remainingDatesToAssign.delete(dateStr);
-                        
+
                         // Increment the assignment count for this date
                         assignmentCountByDate[dateStr]++;
-                        
+
                         if (!dateToSpots.has(dateStr)) {
                             dateToSpots.set(dateStr, new Set());
                         }
                         dateToSpots.get(dateStr).add(bestSpot);
-                        
+
                         if (!spotToDates.has(bestSpot)) {
                             spotToDates.set(bestSpot, new Set());
                         }
                         spotToDates.get(bestSpot).add(dateStr);
-                        
+
                         //logger.debug(`[saveParkingAssignments] Assigned spot ${bestSpot} to date ${dateStr}.`);
                     }
                 }
 
                 for (const dateStr of Object.keys(assignedSpotsPerDate)) {
                     const assignedSpot = assignedSpotsPerDate[dateStr];
-                    
+
                     if (!detailsByDate[dateStr] || detailsByDate[dateStr].length === 0) {
                         logger.warn(`[saveParkingAssignments] No reservation details found for date ${dateStr} while generating addon values. Skipping.`);
                         continue;
                     }
-            
+
                     if (detailsByDate[dateStr].length > 1) {
                         logger.warn(`[saveParkingAssignments] Multiple reservation details found for date ${dateStr} and room ID ${roomId}. Using the first one as per current logic.`, {
                             detailsCount: detailsByDate[dateStr].length
@@ -1093,7 +1094,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             for (let i = 0; i < addonValues.length; i += BATCH_SIZE) {
                 const batch = addonValues.slice(i, i + BATCH_SIZE);
                 const placeholders = batch.map(
-                    (_, idx) => `($${idx*11+1},$${idx*11+2},$${idx*11+3},$${idx*11+4},$${idx*11+5},$${idx*11+6},$${idx*11+7},$${idx*11+8},$${idx*11+9},$${idx*11+10},$${idx*11+11})`
+                    (_, idx) => `($${idx * 11 + 1},$${idx * 11 + 2},$${idx * 11 + 3},$${idx * 11 + 4},$${idx * 11 + 5},$${idx * 11 + 6},$${idx * 11 + 7},$${idx * 11 + 8},$${idx * 11 + 9},$${idx * 11 + 10},$${idx * 11 + 11})`
                 ).join(',');
 
                 const flatValues = batch.flat();
@@ -1113,9 +1114,9 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             //logger.debug(`[saveParkingAssignments] Preparing to insert ${parkingValues.length} parking records in batches.`);
             for (let i = 0; i < parkingValues.length; i += BATCH_SIZE) {
                 const batch = parkingValues.slice(i, i + BATCH_SIZE);
-                
-                const placeholders = batch.map((_, idx) => 
-                    `($${idx*8+1},$${idx*8+2},$${idx*8+3},$${idx*8+4},$${idx*8+5},$${idx*8+6},$${idx*8+7},$${idx*8+8})`
+
+                const placeholders = batch.map((_, idx) =>
+                    `($${idx * 8 + 1},$${idx * 8 + 2},$${idx * 8 + 3},$${idx * 8 + 4},$${idx * 8 + 5},$${idx * 8 + 6},$${idx * 8 + 7},$${idx * 8 + 8})`
                 ).join(',');
 
                 const flatValues = batch.flatMap(p => [
@@ -1140,7 +1141,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
         }
 
         if (releaseClient) {
-            await localClient.query('COMMIT');            
+            await localClient.query('COMMIT');
         }
         return { success: true, message: 'Parking assignments saved successfully' };
     } catch (error) {
@@ -1157,7 +1158,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
     } finally {
         if (releaseClient) {
             try {
-                localClient.release();                
+                localClient.release();
             } catch (releaseError) {
                 logger.error('[saveParkingAssignments] Error during client release in finally block:', { requestId, error: releaseError.message, stack: releaseError.stack });
             }

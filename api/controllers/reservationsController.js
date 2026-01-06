@@ -646,8 +646,19 @@ const createReservationDetails = async (req, res) => {
     }
 
     if (ogmReservationAddons && ogmReservationAddons.length > 0) {
-      const addOnPromises = ogmReservationAddons.map(addon =>
-        reservationsModel.addReservationAddon(req.requestId, {
+      const addOnPromises = ogmReservationAddons.map(addon => {
+        let taxTypeId = addon.tax_type_id;
+        if (!taxTypeId) {
+          logger.warn(`[${req.requestId}] createReservationDetails: Missing tax_type_id for addon ${addon.addon_name}. Using default 3.`);
+          taxTypeId = 3;
+        }
+        let taxRate = addon.tax_rate;
+        if (taxRate === null || taxRate === undefined) {
+          logger.warn(`[${req.requestId}] createReservationDetails: Missing tax_rate for addon ${addon.addon_name}. Using default 0.1.`);
+          taxRate = 0.1;
+        }
+
+        return reservationsModel.addReservationAddon(req.requestId, {
           hotel_id: addon.hotel_id,
           reservation_detail_id: newReservationDetail.id,
           addons_global_id: addon.addons_global_id,
@@ -655,12 +666,12 @@ const createReservationDetails = async (req, res) => {
           addon_name: addon.addon_name,
           quantity: addon.quantity,
           price: addon.price,
-          tax_type_id: addon.tax_type_id || 3,
-          tax_rate: addon.tax_rate ?? 0.1,
+          tax_type_id: taxTypeId,
+          tax_rate: taxRate,
           created_by: updated_by,
           updated_by,
-        }, client)
-      );
+        }, client);
+      });
 
       // Wait for all add-ons to be added
       await Promise.all(addOnPromises);
@@ -927,8 +938,19 @@ const editReservationDetail = async (req, res) => {
       // const deletedAddonsCount = await reservationsModel.deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, updated_by);
       // logger.debug(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
-      const addOnPromises = addons.map(addon =>
-        reservationsModel.addReservationAddon(req.requestId, {
+      const addOnPromises = addons.map(addon => {
+        let taxTypeId = addon.tax_type_id;
+        if (!taxTypeId) {
+          logger.warn(`[${req.requestId}] editReservationDetail: Missing tax_type_id for addon ${addon.addon_name}. Using default 3.`);
+          taxTypeId = 3;
+        }
+        let taxRate = addon.tax_rate;
+        if (taxRate === null || taxRate === undefined) {
+          logger.warn(`[${req.requestId}] editReservationDetail: Missing tax_rate for addon ${addon.addon_name}. Using default 0.1.`);
+          taxRate = 0.1;
+        }
+
+        return reservationsModel.addReservationAddon(req.requestId, {
           hotel_id,
           reservation_detail_id: updatedReservation.id,
           addons_global_id: addon.addons_global_id,
@@ -936,12 +958,12 @@ const editReservationDetail = async (req, res) => {
           addon_name: addon.addon_name,
           quantity: addon.quantity,
           price: addon.price,
-          tax_type_id: addon.tax_type_id || 3,
-          tax_rate: addon.tax_rate ?? 0.1,
+          tax_type_id: taxTypeId,
+          tax_rate: taxRate,
           created_by: updated_by,
           updated_by,
-        }, client)
-      );
+        }, client);
+      });
 
       // Wait for all add-ons to be added
       await Promise.all(addOnPromises);

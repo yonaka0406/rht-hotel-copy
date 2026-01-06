@@ -1060,6 +1060,17 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             // Insert addons
             if (addonsToCopy.length > 0) {
               for (const addonRow of addonsToCopy) {
+                let taxTypeId = addonRow.tax_type_id;
+                if (!taxTypeId) {
+                  logger.warn(`[${requestId}] updateRoomByCalendar: Missing tax_type_id for addon ${addonRow.addon_name} (ID: ${addonRow.id}). Using default 3.`);
+                  taxTypeId = 3;
+                }
+                let taxRate = addonRow.tax_rate;
+                if (taxRate === null || taxRate === undefined) {
+                  logger.warn(`[${requestId}] updateRoomByCalendar: Missing tax_rate for addon ${addonRow.addon_name} (ID: ${addonRow.id}). Using default 0.1.`);
+                  taxRate = 0.1;
+                }
+
                 const addonToInsert = {
                   hotel_id: hotel_id,
                   reservation_detail_id: detail.id,
@@ -1069,8 +1080,8 @@ const updateRoomByCalendar = async (requestId, roomData) => {
                   addon_type: addonRow.addon_type,
                   quantity: addonRow.quantity,
                   price: addonRow.price,
-                  tax_type_id: addonRow.tax_type_id || 3,
-                  tax_rate: addonRow.tax_rate ?? 0.1,
+                  tax_type_id: taxTypeId,
+                  tax_rate: taxRate,
                   created_by: updated_by,
                   updated_by: updated_by,
                 };
@@ -2604,9 +2615,19 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           include_in_cancel_fee: true,
           created_by: 1
         };
-        const reservationRates = await insertReservationRate(requestId, rateData, internalClient);
         if (addons && Array.isArray(addons) && addons.length > 0) {
           for (const addon of addons) {
+            let taxTypeId = addon.tax_type_id;
+            if (!taxTypeId) {
+              logger.warn(`[${requestId}] addOTAReservation: Missing tax_type_id for addon ${addon.addon_name}. Using default 3.`);
+              taxTypeId = 3;
+            }
+            let taxRate = addon.tax_rate;
+            if (taxRate === null || taxRate === undefined) {
+              logger.warn(`[${requestId}] addOTAReservation: Missing tax_rate for addon ${addon.addon_name}. Using default 0.1.`);
+              taxRate = 0.1;
+            }
+
             const addonToInsert = {
               hotel_id: hotel_id,
               reservation_detail_id: reservationDetailsId,
@@ -2616,8 +2637,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               addon_type: addon.addon_type, // Assuming addon.addon_type exists in the input
               quantity: addon.quantity,
               price: 0,
-              tax_type_id: addon.tax_type_id || 3,
-              tax_rate: addon.tax_rate ?? 0.1,
+              tax_type_id: taxTypeId,
+              tax_rate: taxRate,
               created_by: 1,
               updated_by: 1
             };
@@ -3516,6 +3537,17 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         // Insert addon information if addons exist
         if (addons && Array.isArray(addons) && addons.length > 0) {
           for (const addon of addons) {
+            let taxTypeId = addon.tax_type_id;
+            if (!taxTypeId) {
+              logger.warn(`[${requestId}] editOTAReservation: Missing tax_type_id for addon ${addon.addon_name}. Using default 3.`);
+              taxTypeId = 3;
+            }
+            let taxRate = addon.tax_rate;
+            if (taxRate === null || taxRate === undefined) {
+              logger.warn(`[${requestId}] editOTAReservation: Missing tax_rate for addon ${addon.addon_name}. Using default 0.1.`);
+              taxRate = 0.1;
+            }
+
             const addonToInsert = {
               hotel_id: hotel_id,
               reservation_detail_id: reservationDetailsId,
@@ -3525,8 +3557,8 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               addon_type: addon.addon_type, // Assuming addon.addon_type exists in the input
               quantity: addon.quantity,
               price: 0,
-              tax_type_id: addon.tax_type_id || 3,
-              tax_rate: addon.tax_rate ?? 0.1,
+              tax_type_id: taxTypeId,
+              tax_rate: taxRate,
               created_by: 1,
               updated_by: 1
             };
@@ -3968,6 +4000,17 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
         // Copy addons if they exist
         if (originalDetail?.reservation_addons && originalDetail.reservation_addons.length > 0) {
           for (const addon of originalDetail.reservation_addons) {
+            let taxTypeId = addon.tax_type_id;
+            if (!taxTypeId) {
+              logger.warn(`[${requestId}] insertCopyReservation: Missing tax_type_id for addon ${addon.addon_name}. Using default 3.`);
+              taxTypeId = 3;
+            }
+            let taxRate = addon.tax_rate;
+            if (taxRate === null || taxRate === undefined) {
+              logger.warn(`[${requestId}] insertCopyReservation: Missing tax_rate for addon ${addon.addon_name}. Using default 0.1.`);
+              taxRate = 0.1;
+            }
+
             const addonData = {
               hotel_id,
               reservation_detail_id: newDetail.id,
@@ -3976,8 +4019,8 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
               addon_name: addon.addon_name,
               quantity: addon.quantity,
               price: addon.price,
-              tax_type_id: addon.tax_type_id || 3,
-              tax_rate: addon.tax_rate ?? 0.1,
+              tax_type_id: taxTypeId,
+              tax_rate: taxRate,
               created_by: userId,
               updated_by: userId,
             };
