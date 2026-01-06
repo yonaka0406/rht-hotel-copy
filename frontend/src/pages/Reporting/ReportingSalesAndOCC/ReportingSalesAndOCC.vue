@@ -1,8 +1,10 @@
 <template>
     <div>
         <div class="flex justify-end gap-2 mb-4">
-            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="handleDownload('xlsx')" :loading="isDownloadingExcel" :disabled="loading" />
-            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="handleDownload('pdf')" :loading="isDownloadingPdf" :disabled="loading" />
+            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="handleDownload('xlsx')"
+                :loading="isDownloadingExcel" :disabled="loading" />
+            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="handleDownload('pdf')"
+                :loading="isDownloadingPdf" :disabled="loading" />
         </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
@@ -149,7 +151,8 @@ const kpiData = computed(() => {
 
     const actualADR = total_sold_rooms ? Math.round(total_period_accommodation_revenue / total_sold_rooms) : 0;
     const forecastADR = total_fc_sold_rooms ? Math.round(total_forecast_revenue / total_fc_sold_rooms) : 0;
-    const actualRevPAR = total_available_rooms ? Math.round(total_period_accommodation_revenue / total_available_rooms) : 0;
+    const actualDenominator = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
+    const actualRevPAR = actualDenominator ? Math.round(total_period_accommodation_revenue / actualDenominator) : 0;
     const forecastRevPAR = total_fc_available_rooms ? Math.round(total_forecast_revenue / total_fc_available_rooms) : 0;
 
     return {
@@ -695,7 +698,7 @@ const occupancyData = computed(() => {
         // Now, create the result array for the month
         for (const hotelId in monthData) {
             const data = monthData[hotelId];
-            const total_rooms = data.total_available_rooms_for_month_calc || 0;
+            const total_rooms = data.fc_total_rooms > 0 ? data.fc_total_rooms : (data.total_available_rooms_for_month_calc || 0);
             const total_gross_rooms = data.total_gross_rooms_for_month_calc || 0;
             const occupancyRate = total_rooms > 0 ? (data.sold_rooms / total_rooms) * 100 : 0;
 

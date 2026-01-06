@@ -237,7 +237,7 @@ class ChartConfigurationService {
 
     const { previousYearOccupancy = null } = options;
 
-    const actualTotalRooms = total_available_rooms;
+    const actualTotalRooms = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
     const forecastTotalRooms = total_fc_available_rooms;
 
     const totalActualOccupancy = actualTotalRooms > 0 ? total_sold_rooms / actualTotalRooms : 0;
@@ -573,7 +573,7 @@ class ChartConfigurationService {
         ? (hotel.sum_prev_year_total_rooms > 0 ? (hotel.sum_prev_year_sold_rooms / hotel.sum_prev_year_total_rooms) * 100 : 0)
         : (hotel.sum_fc_total_rooms > 0 ? (hotel.sum_fc_sold_rooms / hotel.sum_fc_total_rooms) * 100 : 0);
 
-      const actual_occupancy_rate = hotel.sum_total_rooms > 0 ? (hotel.sum_sold_rooms / hotel.sum_total_rooms) * 100 : 0;
+      const actual_occupancy_rate = hotel.sum_fc_total_rooms > 0 ? (hotel.sum_sold_rooms / hotel.sum_fc_total_rooms) * 100 : (hotel.sum_total_rooms > 0 ? (hotel.sum_sold_rooms / hotel.sum_total_rooms) * 100 : 0);
       const occupancy_variance = actual_occupancy_rate - compare_occupancy_rate;
       return { ...hotel, compare_occupancy_rate, actual_occupancy_rate, occupancy_variance };
     });

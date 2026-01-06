@@ -17,7 +17,7 @@
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                                }}</p>
+                            }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -130,7 +130,7 @@
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                                }}</p>
+                            }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -302,7 +302,9 @@ const forecastADR = computed(() => {
 });
 const actualRevPAR = computed(() => {
     const revenue = aggregatedAllHotelsRevenue.value.total_period_revenue;
-    const availableRooms = aggregatedAllHotelsOccupancy.value.total_available_rooms;
+    const availableRooms = aggregatedAllHotelsOccupancy.value.total_fc_available_rooms > 0
+        ? aggregatedAllHotelsOccupancy.value.total_fc_available_rooms
+        : aggregatedAllHotelsOccupancy.value.total_available_rooms;
     return availableRooms ? Math.round(revenue / availableRooms) : NaN;
 });
 const forecastRevPAR = computed(() => {

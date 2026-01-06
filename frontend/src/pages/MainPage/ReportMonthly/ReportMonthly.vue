@@ -257,12 +257,14 @@ const calculateMetrics = () => {
     //    revPAR: totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0
     //});
 
-    revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
+    const revPARDenominator = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
+    revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
 
 
     // OCC calculation using net capacity from occupation breakdown
     const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
-    const netAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
+    const baseNetAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
+    const netAvailableRoomNights = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
 
     OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
 
@@ -305,38 +307,38 @@ const fetchDataAndProcess = async () => {
         calculateMetrics();
         return;
     }
-    
+
     try {
         isLoading.value = true;
-        
+
         // Fetch data for the widest necessary range
         loadingStatus.value = '予約データを取得中...';
         const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-        
+
         loadingStatus.value = '予算データを取得中...';
         const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-        
+
         loadingStatus.value = '実績データを取得中...';
         const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-        
+
         loadingStatus.value = 'プラン別売上データを取得中...';
         const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '稼働率データを取得中...';
         const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '予約チャネルデータを取得中...';
         const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '決済タイミングデータを取得中...';
         const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '予約者タイプデータを取得中...';
         const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = 'プラン別予算データを取得中...';
         const forecastDataByPlanResult = await fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '予約詳細データを取得中...';
         // Fetch reservation list for booker type and length of stay
         const reservationListViewResult = await fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
