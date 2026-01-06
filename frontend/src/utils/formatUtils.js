@@ -86,3 +86,11 @@ export const formatMonth = (dateString) => {
   const month = date.getMonth() + 1; // getMonth() is 0-indexed
   return `${year}年${month}月`;
 };
+
+// Format integer with comma separators
+export const formatInteger = (value) => {
+  if (value === null || value === undefined) return '0';
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '0';
+  return num.toLocaleString('ja-JP');
+};

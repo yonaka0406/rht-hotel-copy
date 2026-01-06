@@ -35,7 +35,7 @@
             <Column field="confirmed_nights" header="確定泊数" style="width: 15%">
                 <template #body="{ data }">
                     <div class="text-right">
-                        {{ data.confirmed_nights || 0 }} 泊
+                        {{ formatInteger(data.confirmed_nights) }} 泊
                     </div>
                 </template>
             </Column>
@@ -74,7 +74,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Panel, DataTable, Column, Badge, Button } from 'primevue';
-import { formatCurrency, formatYenInTenThousandsNoDecimal, formatMonth } from '@/utils/formatUtils';
+import { formatCurrency, formatYenInTenThousandsNoDecimal, formatMonth, formatInteger } from '@/utils/formatUtils';
 
 const props = defineProps({
     data: {
