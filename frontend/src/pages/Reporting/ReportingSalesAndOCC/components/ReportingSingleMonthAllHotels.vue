@@ -505,15 +505,15 @@ const allHotelsRevenueChartOptions = computed(() => {
         xAxis: { type: 'value', name: '売上 (万円)', axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') } },
         yAxis: { type: 'category', data: hotelNames, inverse: true },
         series: [
-            { name: '計画売上合計', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
-            { name: '実績売上合計', type: 'bar', data: accommodationValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'inside', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
+            { name: '計画売上合計', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'right', distance: 5, color: '#333333', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
+            { name: '実績売上合計', type: 'bar', data: accommodationValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'right', distance: 5, color: '#333333', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
             {
                 name: '計画達成まで',
                 type: 'bar',
                 data: revenueToForecastValues,
                 itemStyle: { color: colorScheme.toForecast },
                 barGap: '5%',
-                label: { show: true, position: 'right', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' }
+                label: { show: true, position: 'right', distance: 5, color: '#333333', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' }
             }
         ]
     };

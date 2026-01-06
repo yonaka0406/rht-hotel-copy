@@ -21,10 +21,10 @@ class ChartConfigurationService {
    */
   _isDarkMode() {
     // Check for dark class on html or body element
-    return document.documentElement.classList.contains('dark') || 
-           document.body.classList.contains('dark') ||
-           // Check for CSS custom property or media query
-           window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return document.documentElement.classList.contains('dark') ||
+      document.body.classList.contains('dark') ||
+      // Check for CSS custom property or media query
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
   /**
@@ -122,17 +122,17 @@ class ChartConfigurationService {
           return tooltipText;
         },
       },
-      grid: { 
-        left: '3%', 
-        right: '10%', 
-        bottom: '10%', 
-        containLabel: true 
+      grid: {
+        left: '3%',
+        right: '10%',
+        bottom: '10%',
+        containLabel: true
       },
       xAxis: [{
         type: 'category',
         data: ['計画売上', '分散', '実績売上', '前年実績'],
         splitLine: { show: false },
-        axisLabel: { 
+        axisLabel: {
           interval: 0,
           color: textColors.axisLabel
         },
@@ -148,11 +148,11 @@ class ChartConfigurationService {
         nameTextStyle: {
           color: textColors.axisName
         },
-        axisLabel: { 
+        axisLabel: {
           formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}`,
           color: textColors.axisLabel
         },
-        splitLine: { 
+        splitLine: {
           show: true,
           lineStyle: {
             color: gridColors.splitLine
@@ -430,18 +430,18 @@ class ChartConfigurationService {
           return tooltip;
         }
       },
-      legend: { 
-        data: [comparisonLabel, '実績売上合計', comparisonGapLabel], 
+      legend: {
+        data: [comparisonLabel, '実績売上合計', comparisonGapLabel],
         top: 'bottom',
         textStyle: {
           color: textColors.legend
         }
       },
-      grid: { 
-        containLabel: true, 
-        left: '3%', 
-        right: '10%', 
-        bottom: '10%' 
+      grid: {
+        containLabel: true,
+        left: '3%',
+        right: '10%',
+        bottom: '10%'
       },
       xAxis: {
         type: 'value',
@@ -449,7 +449,7 @@ class ChartConfigurationService {
         nameTextStyle: {
           color: textColors.axisName
         },
-        axisLabel: { 
+        axisLabel: {
           formatter: value => (value / 10000).toLocaleString('ja-JP'),
           color: textColors.axisLabel
         },
@@ -464,9 +464,9 @@ class ChartConfigurationService {
           }
         }
       },
-      yAxis: { 
-        type: 'category', 
-        data: hotelNames, 
+      yAxis: {
+        type: 'category',
+        data: hotelNames,
         inverse: true,
         axisLabel: {
           color: textColors.axisLabel
@@ -486,8 +486,9 @@ class ChartConfigurationService {
           barGap: '5%',
           label: {
             show: true,
-            position: 'inside',
-            color: textColors.axisLabel,
+            position: 'right',
+            distance: 5,
+            color: '#333333',
             formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
           }
         },
@@ -499,8 +500,9 @@ class ChartConfigurationService {
           barGap: '5%',
           label: {
             show: true,
-            position: 'inside',
-            color: textColors.axisLabel,
+            position: 'right',
+            distance: 5,
+            color: '#333333',
             formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
           }
         },
@@ -513,7 +515,8 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'right',
-            color: textColors.axisLabel,
+            distance: 5,
+            color: '#333333',
             formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : ''
           }
         }
@@ -609,22 +612,22 @@ class ChartConfigurationService {
           return tooltip;
         },
       },
-      legend: { 
-        data: [comparisonLabel, '実績稼働率', '稼働率差異 (p.p.)'], 
+      legend: {
+        data: [comparisonLabel, '実績稼働率', '稼働率差異 (p.p.)'],
         top: 'bottom',
         textStyle: {
           color: textColors.legend
         }
       },
-      grid: { 
-        containLabel: true, 
-        left: '3%', 
-        right: '5%', 
-        bottom: '10%' 
+      grid: {
+        containLabel: true,
+        left: '3%',
+        right: '5%',
+        bottom: '10%'
       },
-      xAxis: { 
-        type: 'value', 
-        axisLabel: { 
+      xAxis: {
+        type: 'value',
+        axisLabel: {
           formatter: '{value}%',
           color: textColors.axisLabel
         },
@@ -639,9 +642,9 @@ class ChartConfigurationService {
           }
         }
       },
-      yAxis: { 
-        type: 'category', 
-        data: hotelNames, 
+      yAxis: {
+        type: 'category',
+        data: hotelNames,
         inverse: true,
         axisLabel: {
           color: textColors.axisLabel
@@ -662,7 +665,8 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'right',
-            color: textColors.axisLabel,
+            distance: 5,
+            color: '#333333',
             formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
           }
         },
@@ -675,7 +679,8 @@ class ChartConfigurationService {
           label: {
             show: true,
             position: 'right',
-            color: textColors.axisLabel,
+            distance: 5,
+            color: '#333333',
             formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
           }
         },
@@ -688,8 +693,9 @@ class ChartConfigurationService {
           barMaxWidth: '15%',
           label: {
             show: true,
-            position: (params) => params.value < 0 ? 'left' : 'right',
-            color: textColors.axisLabel,
+            position: 'left',
+            distance: 5,
+            color: '#333333',
             formatter: (params) => params.value !== 0 ? formatPercentage(params.value / 100) : ''
           }
         },

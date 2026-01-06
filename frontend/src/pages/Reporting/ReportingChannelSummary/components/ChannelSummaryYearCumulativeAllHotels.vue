@@ -270,7 +270,10 @@ const paymentTimingChartData = computed(() => {
                     const percentage = parseFloat(params.value.toFixed(1));
                     return percentage >= 5 ? `${percentage}%` : ''; // Hide if less than 5%
                 },
-                position: 'inside' // Center label inside the bar
+                position: 'inside', // Center label inside the bar
+                color: '#ffffff',
+                textBorderColor: '#333333',
+                textBorderWidth: 2
             },
             emphasis: {
                 focus: 'series'
@@ -402,7 +405,10 @@ const bookerTypeChartData = computed(() => {
                     const percentage = parseFloat(params.value.toFixed(1));
                     return percentage >= 5 ? `${percentage}%` : '';
                 },
-                position: 'inside'
+                position: 'inside',
+                color: '#ffffff',
+                textBorderColor: '#333333',
+                textBorderWidth: 2
             },
             emphasis: {
                 focus: 'series'
