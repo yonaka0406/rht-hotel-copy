@@ -18,11 +18,24 @@ const addReservationAddon = async (requestId, addon, client = null) => {
       await dbClient.query('BEGIN');
     }
 
-    const isTaxRateMissing = addon.tax_rate === null || addon.tax_rate === undefined;
-    const isTaxTypeMissing = addon.tax_type_id === null || addon.tax_type_id === undefined;
+    // Deduce tax_type_id if missing but tax_rate is present
+    let finalTaxTypeId = addon.tax_type_id;
+    const finalTaxRate = addon.tax_rate ?? 0;
 
-    if (isTaxRateMissing || isTaxTypeMissing) {
-      logger.warn(`[${requestId}] addReservationAddon: Missing tax info for addon. Tax Rate: ${addon.tax_rate}, Tax Type ID: ${addon.tax_type_id}`);
+    if ((finalTaxTypeId === null || finalTaxTypeId === undefined)) {
+      if (Math.abs(finalTaxRate - 0.1) < 0.0001) {
+        finalTaxTypeId = 3; // 10%
+      } else if (Math.abs(finalTaxRate - 0.08) < 0.0001) {
+        finalTaxTypeId = 2; // 8%
+      } else if (Math.abs(finalTaxRate - 0) < 0.0001) {
+        finalTaxTypeId = 1; // 0%
+      }
+    }
+
+    const isTaxTypeMissing = finalTaxTypeId === null || finalTaxTypeId === undefined;
+
+    if (isTaxTypeMissing) {
+      logger.warn(`[${requestId}] addReservationAddon: Missing tax info for addon. Tax Rate: ${addon.tax_rate}, Tax Type ID: ${addon.tax_type_id} (Deduced: ${finalTaxTypeId})`);
     }
 
     const query = `
@@ -41,8 +54,8 @@ const addReservationAddon = async (requestId, addon, client = null) => {
       addon.addon_type,
       addon.quantity,
       addon.price,
-      addon.tax_type_id,
-      addon.tax_rate ?? 0,
+      finalTaxTypeId,
+      finalTaxRate,
       addon.created_by,
       addon.updated_by,
       addon.sales_category || 'accommodation'
