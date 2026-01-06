@@ -113,9 +113,7 @@
   nav, 
   footer,
   .p-sidebar,
-  .p-dialog-mask,
-  button:not(.print-keep),
-  .p-button:not(.print-keep) {
+  .p-dialog-mask {
     display: none !important;
   }
 }
