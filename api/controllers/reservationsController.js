@@ -655,8 +655,8 @@ const createReservationDetails = async (req, res) => {
           addon_name: addon.addon_name,
           quantity: addon.quantity,
           price: addon.price,
-          tax_type_id: addon.tax_type_id,
-          tax_rate: addon.tax_rate,
+          tax_type_id: addon.tax_type_id || 3,
+          tax_rate: addon.tax_rate ?? 0.1,
           created_by: updated_by,
           updated_by,
         }, client)
@@ -936,8 +936,8 @@ const editReservationDetail = async (req, res) => {
           addon_name: addon.addon_name,
           quantity: addon.quantity,
           price: addon.price,
-          tax_type_id: addon.tax_type_id,
-          tax_rate: addon.tax_rate,
+          tax_type_id: addon.tax_type_id || 3,
+          tax_rate: addon.tax_rate ?? 0.1,
           created_by: updated_by,
           updated_by,
         }, client)

@@ -1069,8 +1069,8 @@ const updateRoomByCalendar = async (requestId, roomData) => {
                   addon_type: addonRow.addon_type,
                   quantity: addonRow.quantity,
                   price: addonRow.price,
-                  tax_type_id: addonRow.tax_type_id,
-                  tax_rate: addonRow.tax_rate,
+                  tax_type_id: addonRow.tax_type_id || 3,
+                  tax_rate: addonRow.tax_rate ?? 0.1,
                   created_by: updated_by,
                   updated_by: updated_by,
                 };
@@ -2617,7 +2617,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               quantity: addon.quantity,
               price: 0,
               tax_type_id: addon.tax_type_id || 3,
-              tax_rate: addon.tax_rate || 0.1,
+              tax_rate: addon.tax_rate ?? 0.1,
               created_by: 1,
               updated_by: 1
             };
@@ -3526,7 +3526,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               quantity: addon.quantity,
               price: 0,
               tax_type_id: addon.tax_type_id || 3,
-              tax_rate: addon.tax_rate || 0.1,
+              tax_rate: addon.tax_rate ?? 0.1,
               created_by: 1,
               updated_by: 1
             };
@@ -3976,8 +3976,8 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
               addon_name: addon.addon_name,
               quantity: addon.quantity,
               price: addon.price,
-              tax_type_id: addon.tax_type_id,
-              tax_rate: addon.tax_rate,
+              tax_type_id: addon.tax_type_id || 3,
+              tax_rate: addon.tax_rate ?? 0.1,
               created_by: userId,
               updated_by: userId,
             };
