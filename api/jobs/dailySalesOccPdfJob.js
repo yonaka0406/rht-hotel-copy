@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { sendGenericEmail } = require('../utils/emailUtils');
-const { getMonthlySummaryData } = require('../services/reportDataService');
+const { getFrontendCompatibleReportData } = require('./services/frontendCompatibleReportService');
 const { generateDailyReportPdf } = require('../controllers/report/services/dailyTemplateService');
 const logger = require('../config/logger');
 const fs = require('fs');
@@ -51,8 +51,10 @@ const runDailySalesOccPdfJob = async () => {
         // 1. Fetch Data
         logger.info(`[${requestId}] Fetching report data for ${formattedDate}...`);
         
-        // Use the requestId but provide the dbClient to ensure we use the correct database
-        const reportData = await getMonthlySummaryData(requestId, today, dbClient);
+        // Use the frontend-compatible service to ensure data consistency with downloaded reports
+        // Use the first day of the current month to match frontend behavior
+        const reportDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        const reportData = await getFrontendCompatibleReportData(requestId, reportDate, dbClient);
 
         logger.info(`[${requestId}] Fetched ${reportData?.revenueData?.length || 0} revenue rows and ${reportData?.occupancyData?.length || 0} occupancy rows.`);
 
