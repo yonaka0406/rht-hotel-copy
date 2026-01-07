@@ -1,104 +1,31 @@
 <template>
     <Panel class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">
         <template #header>
-            <div class="grid grid-cols-3 items-center w-full">
-                <p class="text-lg font-bold dark:text-gray-100">ダッシュボード</p>
-                <DatePicker v-model="selectedDate" :showIcon="true" iconDisplay="input" dateFormat="yy-mm-dd"
-                    :selectOtherMonths="true" fluid required class="dark:bg-gray-800 dark:text-gray-100 rounded" />
-                <div class="flex justify-end w-full">
-                    <Button severity="help" @click="openHelpDialog">データを開く</Button>
-                </div>
-            </div>
+            <DashboardHeader v-model:selectedDate="selectedDate" @open-dialog="openHelpDialog" />
         </template>
+
+        <!-- Charts Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2">
-            <div ref="barChart" class="w-full h-100"></div>
-            <div ref="gaugeChart" class="w-full h-100"></div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2 mt-2">
-            <div ref="barStackChart" :key="chartKey" class="w-full h-100"></div>
-            <div ref="barAddonChart" :key="chartKey" class="w-full h-100"></div>
-        </div>
-        <div>
-            <DataTable :value="reservationList" :loading="tableLoading" :paginator="true" :rows="10" dataKey="id"
-                stripedRows @rowDblclick="openEditReservation"
-                class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl">
-                <template #header>
-                    <div class="flex justify-between">
-                        <p class="font-bold text-lg dark:text-gray-100">予約一覧</p>
-                    </div>
-                </template>
-                <template #empty> <span class="dark:text-gray-400">指定されている期間中では予約ありません。</span> </template>
-                <Column field="status" header="ステータス" style="width:10%">
-                    <template #body="slotProps">
-                        <div class="flex justify-center items-center">
-                            <span v-if="slotProps.data.status === 'hold'"
-                                class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200"><i
-                                    class="pi pi-pause" v-tooltip="'保留中'"></i></span>
-                            <span v-if="slotProps.data.status === 'provisory'"
-                                class="px-2 py-1 rounded-md bg-cyan-200 text-cyan-700 dark:bg-cyan-800 dark:text-cyan-200"><i
-                                    class="pi pi-clock" v-tooltip="'仮予約'"></i></span>
-                            <span v-if="slotProps.data.status === 'confirmed'"
-                                class="px-2 py-1 rounded-md bg-sky-200 text-sky-700 dark:bg-sky-800 dark:text-sky-200"><i
-                                    class="pi pi-check-circle" v-tooltip="'確定'"></i></span>
-                            <span v-if="slotProps.data.status === 'checked_in'"
-                                class="px-2 py-1 rounded-md bg-green-200 text-green-700 dark:bg-green-800 dark:text-green-200"><i
-                                    class="pi pi-user" v-tooltip="'滞在中'"></i></span>
-                            <span v-if="slotProps.data.status === 'checked_out'"
-                                class="px-2 py-1 rounded-md bg-purple-200 text-purple-700 dark:bg-purple-800 dark:text-purple-200"><i
-                                    class="pi pi-sign-out" v-tooltip="'アウト'"></i></span>
-                            <span v-if="slotProps.data.status === 'cancelled'"
-                                class="px-2 py-1 rounded-md bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"><i
-                                    class="pi pi-times" v-tooltip="'キャンセル'"></i></span>
-                        </div>
-                    </template>
-                </Column>
-                <Column field="booker_name" header="予約者" style="width:20%">
-                    <template #body="slotProps">
-                        <span class="dark:text-gray-100">{{ slotProps.data.booker_name }}</span>
-                    </template>
-                </Column>
-                <Column field="clients_json" header="宿泊者" style="width:20%">
-                    <template #body="{ data }">
-                        <div v-if="data.clients_json" class="dark:text-gray-100" style="white-space: pre-line;"
-                            v-tooltip="formatClientNames(data.clients_json)">
-                            <div v-for="client in (Array.isArray(data.clients_json) ? data.clients_json : JSON.parse(data.clients_json))"
-                                :key="client.id">
-                                <span v-if="client.gender === 'male'" class="mr-1 text-blue-500">♂</span>
-                                <span v-else-if="client.gender === 'female'" class="mr-1 text-pink-500">♀</span>
-                                {{ client.name_kanji || client.name_kana || client.name }}
-                            </div>
-                        </div>
-                    </template>
-                </Column>
-                <Column field="check_in" header="チェックイン" sortable style="width:15%">
-                    <template #body="slotProps">
-                        <span class="dark:text-gray-100">{{ formatDateWithDay(slotProps.data.check_in) }}</span>
-                    </template>
-                </Column>
-                <Column field="number_of_people" header="宿泊者数" sortable style="width:10%">
-                    <template #body="slotProps">
-                        <div class="flex justify-end mr-4">
-                            <span class="dark:text-gray-100">{{ slotProps.data.number_of_people }}</span>
-                        </div>
-                    </template>
-                </Column>
-                <Column field="number_of_nights" header="宿泊数" sortable style="width:10%">
-                    <template #body="slotProps">
-                        <div class="flex justify-end mr-4">
-                            <span class="dark:text-gray-100">{{ slotProps.data.number_of_nights }}</span>
-                        </div>
-                    </template>
-                </Column>
-                <Column field="price" header="料金" sortable style="width:10%">
-                    <template #body="slotProps">
-                        <div class="flex justify-end mr-2">
-                            <span class="items-end dark:text-gray-100">{{ formatCurrency(slotProps.data.price) }}</span>
-                        </div>
-                    </template>
-                </Column>
-            </DataTable>
+            <OccupancyBarChart :xAxisData="barChartxAxis" :maxValue="barChartyAxisMax" :roomCountData="barChartyAxisBar"
+                :occRateData="barChartyAxisLine" :maleCountData="barChartyAxisMale"
+                :femaleCountData="barChartyAxisFemale" :unspecifiedCountData="barChartyAxisUnspecified" />
+            <OccupancyGaugeChart :gaugeData="gaugeData" />
         </div>
 
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2 mt-2">
+            <PlanStackChart :xAxisData="barStackChartData.xAxis" :seriesData="barStackChartData.series"
+                :chartKey="chartKey" />
+            <AddonChart :xAxisData="barAddonChartData.xAxis" :seriesData="barAddonChartData.series"
+                :chartKey="chartKey" />
+        </div>
+
+        <!-- Reservation List -->
+        <div>
+            <ReservationListTable :reservationList="reservationList" :loading="tableLoading"
+                @row-dblclick="openEditReservation" />
+        </div>
+
+        <!-- Reservation Edit Drawer -->
         <Drawer v-model:visible="drawerVisible" :modal="true" :position="'bottom'" :style="{ height: '75vh' }"
             @hide="handleDrawerClose" :closable="true" class="dark:bg-gray-800">
             <div class="flex justify-end" v-if="hasReservation">
@@ -109,751 +36,89 @@
             <ReservationEdit v-if="hasReservation" :reservation_id="selectedReservationID" />
         </Drawer>
 
+        <!-- Dashboard Dialog -->
         <DashboardDialog :visible="helpDialogVisible" @update:visible="helpDialogVisible = $event"
-            :dashboardSelectedDate="selectedDate" :reportDisplayStartDate="reportStartDate.value"
+            :dashboardSelectedDate="selectedDate" :reportDisplayStartDate="reportStartDate"
             :checkInOutReportData="checkInOutReportData" :hotelName="selectedHotel?.name"
             :mealReportData="mealReportData" />
-
     </Panel>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
+
+// Components
+import ReservationEdit from '../Reservation/ReservationEdit.vue';
+import DashboardDialog from './components/DashboardDialog.vue';
+import DashboardHeader from './components/DashboardHeader.vue';
+import ReservationListTable from './components/ReservationListTable.vue';
+import OccupancyBarChart from './charts/OccupancyBarChart.vue';
+import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
+import PlanStackChart from './charts/PlanStackChart.vue';
+import AddonChart from './charts/AddonChart.vue';
+
+// PrimeVue
+import { Panel, Drawer, Button } from 'primevue';
+
+// Composables
+import { useReportStore } from '@/composables/useReportStore';
+import { useHotelStore } from '@/composables/useHotelStore';
+import { useDashboardCharts } from './composables/useDashboardCharts';
+
 const router = useRouter();
 
-import ReservationEdit from '../Reservation/ReservationEdit.vue';
-import DashboardDialog from '../components/Dialogs/DashboardDialog.vue';
-
-import { Panel, Drawer } from 'primevue';
-import { DataTable, Column } from 'primevue';
-import { DatePicker, Button } from 'primevue';
-
-import { useReportStore } from '@/composables/useReportStore';
-const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchCheckInOutReport } = useReportStore();
-import { useHotelStore } from '@/composables/useHotelStore';
+// Store
+const { reservationList, fetchReservationListView, fetchCheckInOutReport } = useReportStore();
 const { selectedHotelId, fetchHotels, fetchHotel, selectedHotel } = useHotelStore();
 
-const checkInOutReportData = ref(null);
+// Chart composable
+const {
+    barChartxAxis,
+    barChartyAxisMax,
+    barChartyAxisBar,
+    barChartyAxisLine,
+    barChartyAxisMale,
+    barChartyAxisFemale,
+    barChartyAxisUnspecified,
+    barStackChartData,
+    barAddonChartData,
+    gaugeData,
+    mealReportData,
+    chartKey,
+    fetchBarChartData,
+    fetchBarStackChartData,
+    fetchGaugeChartData,
+    formatDate
+} = useDashboardCharts();
 
-import * as echarts from 'echarts/core';
-import {
-    TitleComponent,
-    ToolboxComponent,
-    TooltipComponent,
-    GridComponent,
-    LegendComponent
-} from 'echarts/components';
-import { BarChart, LineChart } from 'echarts/charts';
-import { GaugeChart } from 'echarts/charts';
-import { UniversalTransition } from 'echarts/features';
-import { CanvasRenderer } from 'echarts/renderers';
-
-echarts.use([
-    TitleComponent,
-    ToolboxComponent,
-    TooltipComponent,
-    GridComponent,
-    LegendComponent,
-    BarChart,
-    LineChart,
-    GaugeChart,
-    CanvasRenderer,
-    UniversalTransition
-]);
-
-
-
-
-// Charts
-const chartKey = ref(0);
-
-const barChartxAxis = ref([]);
-const barChartyAxisMax = ref([]);
-const barChartyAxisBar = ref([0, 0, 0, 0, 0, 0, 0]);
-const barChartyAxisLine = ref([0, 0, 0, 0, 0, 0, 0]);
-const barChartyAxisMale = ref([0, 0, 0, 0, 0, 0, 0]);
-const barChartyAxisFemale = ref([0, 0, 0, 0, 0, 0, 0]);
-const barChartyAxisUnspecified = ref([0, 0, 0, 0, 0, 0, 0]);
-
-const barChart = ref(null);
-const barChartOption = ref(null);
-
-const barStackChart = ref(null);
-const barStackChartData = ref({
-    series: [],
-    xAxis: []
-});
-const barStackChartOption = ref(null);
-
-const barAddonChart = ref(null);
-const barAddonChartData = ref({
-    series: [],
-    xAxis: []
-});
-const barAddonChartOption = ref(null);
-
-const gaugeChart = ref(null);
-const gaugeData = ref([
-    {
-        value: 0,
-        name: '再来月',
-        title: {
-            offsetCenter: ['0%', '-45%']
-        },
-        detail: {
-            valueAnimation: true,
-            offsetCenter: ['0%', '-30%']
-        }
-    },
-    {
-        value: 0,
-        name: '来月',
-        title: {
-            offsetCenter: ['0%', '-5%']
-        },
-        detail: {
-            valueAnimation: true,
-            offsetCenter: ['0%', '10%']
-        }
-    },
-    {
-        value: 0,
-        name: '今月',
-        title: {
-            offsetCenter: ['0%', '35%']
-        },
-        detail: {
-            valueAnimation: true,
-            offsetCenter: ['0%', '50%']
-        }
-    }
-]);
-const gaugeChartOption = {
-    title: {
-        text: '稼働率',
-    },
-    color: [
-        "#3498db",
-        "#6be6c1",
-        "#626c91",
-        "#a0a7e6",
-        "#c4ebad",
-        "#7fb3d5"
-    ],
-    series: [
-        {
-            type: 'gauge',
-            startAngle: 90,
-            endAngle: -270,
-            pointer: {
-                show: false
-            },
-            progress: {
-                show: true,
-                overlap: false,
-                roundCap: true,
-                clip: false,
-                itemStyle: {
-                    borderWidth: 1,
-                    borderColor: '#464646'
-                }
-            },
-            axisLine: {
-                lineStyle: {
-                    width: 40
-                }
-            },
-            splitLine: {
-                show: false,
-                distance: 0,
-                length: 10
-            },
-            axisTick: {
-                show: false
-            },
-            axisLabel: {
-                show: false,
-                distance: 50
-            },
-            data: gaugeData.value,
-            title: {
-                fontSize: 14
-            },
-            detail: {
-                width: 50,
-                height: 14,
-                fontSize: 14,
-                color: 'inherit',
-                borderColor: 'inherit',
-                borderRadius: 20,
-                borderWidth: 1,
-                formatter: '{value}%'
-            }
-        }
-    ]
-};
-// Data Table                
+// State
+const selectedDate = ref(new Date());
 const tableLoading = ref(true);
 const drawerVisible = ref(false);
 const selectedReservationID = ref(null);
 const hasReservation = ref(false);
-const helpDialogVisible = ref(false); // Re-add helpDialogVisible
-const mealReportData = ref(null);
+const helpDialogVisible = ref(false);
+const checkInOutReportData = ref(null);
+const reportStartDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() - 1))));
+const reportEndDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() + 6))));
 
-// Helper function
-const openHelpDialog = () => { // Re-add openHelpDialog
-    helpDialogVisible.value = true;
-};
-const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        console.error("Invalid Date object:", date);
-        throw new Error("The provided input is not a valid Date object:");
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
-const formatDateWithDay = (date) => {
-    const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
-    const parsedDate = new Date(date);
-    return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
-};
-const formatCurrency = (value) => {
-    if (value == null) return '';
-    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
-};
-const selectedDate = ref(new Date());
-// Define start and end based on selectedDate
+// Computed
 const startDate = computed(() => {
     const date = new Date(selectedDate.value);
     date.setDate(date.getDate() - 1);
     return formatDate(date);
 });
+
 const endDate = computed(() => {
     const date = new Date(selectedDate.value);
-    date.setDate(date.getDate() + 6); // selectedDate + 6 days
+    date.setDate(date.getDate() + 6);
     return formatDate(date);
 });
 
-const reportStartDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() - 1))));
-const reportEndDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() + 6))));
-
-// Charts
-const fetchBarChartData = async () => {
-    // Define 7-day range starting from selectedDate for this chart
-    const chartStartDate = formatDate(new Date(selectedDate.value));
-    const endDateObjForApi = new Date(selectedDate.value);
-    endDateObjForApi.setDate(endDateObjForApi.getDate() + 6);
-    const chartEndDate = formatDate(endDateObjForApi);
-
-    const countData = await fetchCountReservation(selectedHotelId.value, chartStartDate, chartEndDate);
-
-    // DEBUG LOG
-    //console.log('[Dashboard] fetchCountReservation countData:', countData);
-
-    // Generate an array of dates from chartStartDate to chartEndDate
-    const dateArray = [];
-    let currentDate = new Date(chartStartDate);
-    const endDateObj = new Date(chartEndDate);
-
-    while (currentDate <= endDateObj) {
-        dateArray.push(formatDateWithDay(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    barChartxAxis.value = dateArray;
-    barChartyAxisBar.value = new Array(dateArray.length).fill(0);
-    barChartyAxisLine.value = new Array(dateArray.length).fill(0);
-    barChartyAxisMale.value = new Array(dateArray.length).fill(0);
-    barChartyAxisFemale.value = new Array(dateArray.length).fill(0);
-    barChartyAxisUnspecified.value = new Array(dateArray.length).fill(0);
-
-    if (!countData) {
-        barChartyAxisMax.value = [];
-        barChartOption.value = generateBarChartOptions();
-        return
-    }
-
-    barChartyAxisMax.value = countData.length > 0 ? countData[0].total_rooms : 0;
-    // Fill data for returned dates only
-    countData.forEach(item => {
-        const itemDate = formatDateWithDay(new Date(item.date));
-        const index = dateArray.indexOf(itemDate);
-
-        if (index !== -1) {
-            barChartyAxisBar.value[index] = item.room_count;
-            const calculatedPercentage = item.total_rooms_real ? Math.round(item.room_count / item.total_rooms_real * 10000) / 100 : 0;
-
-            // DEBUG LOG
-            //console.log(`[Dashboard] Date: ${itemDate}, RoomCount: ${item.room_count}, TotalRooms: ${item.total_rooms}, TotalRoomsReal: ${item.total_rooms_real}, Percentage: ${calculatedPercentage}`);
-
-            barChartyAxisLine.value[index] = calculatedPercentage;
-            barChartyAxisMale.value[index] = item.male_count;
-            barChartyAxisFemale.value[index] = item.female_count;
-            barChartyAxisUnspecified.value[index] = item.unspecified_count;
-        }
-    });
-
-    nextTick(() => {
-        barChartOption.value = generateBarChartOptions();
-    });
-};
-const generateBarChartOptions = () => ({
-    tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-            type: 'shadow'
-        }
-    },
-    color: [
-        "#516b91",
-        "#59c4e6",
-        "#edafda",
-        "#93b7e3",
-        "#a5e7f0",
-        "#cbb0e3"
-    ],
-    legend: {
-        data: ['予約部屋数', '稼働率', '男性', '女性', '未定'],
-        bottom: '0%'
-    },
-    grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '20%',
-        containLabel: true
-    },
-    xAxis: [
-        {
-            type: 'category',
-            data: barChartxAxis,
-            axisPointer: {
-                type: 'shadow'
-            },
-            axisLabel: {
-                rotate: 55
-            }
-        }
-    ],
-    yAxis: [
-        {
-            type: 'value',
-            name: '数',
-            min: 0,
-            max: barChartyAxisMax,
-            interval: 10,
-            axisLabel: {
-                formatter: '{value}'
-            }
-        },
-        {
-            type: 'value',
-            name: '稼働率',
-            min: 0,
-            max: 100,
-            interval: 25,
-            axisLabel: {
-                formatter: '{value} %'
-            }
-        }
-    ],
-    series: [
-        {
-            name: '予約部屋数',
-            type: 'bar',
-            tooltip: {
-                valueFormatter: function (value) {
-                    return value + ' 室';
-                }
-            },
-            data: barChartyAxisBar.value,
-        },
-        {
-            name: '稼働率',
-            type: 'line',
-            yAxisIndex: 1,
-            tooltip: {
-                valueFormatter: function (value) {
-                    return value + ' %';
-                }
-            },
-            data: barChartyAxisLine.value,
-        },
-        {
-            name: '男性',
-            type: 'bar',
-            yAxisIndex: 0,
-            stack: '宿泊者数',
-            itemStyle: {
-                color: '#93b7e3'
-            },
-            tooltip: {
-                valueFormatter: function (value) {
-                    return value + ' 人';
-                }
-            },
-            data: barChartyAxisMale.value,
-        },
-        {
-            name: '女性',
-            type: 'bar',
-            yAxisIndex: 0,
-            stack: '宿泊者数',
-            itemStyle: {
-                color: '#edafda'
-            },
-            tooltip: {
-                valueFormatter: function (value) {
-                    return value + ' 人';
-                }
-            },
-            data: barChartyAxisFemale.value,
-        },
-        {
-            name: '未定',
-            type: 'bar',
-            yAxisIndex: 0,
-            stack: '宿泊者数',
-            itemStyle: {
-                color: '#cccccc'
-            },
-            tooltip: {
-                valueFormatter: function (value) {
-                    return value + ' 人';
-                }
-            },
-            data: barChartyAxisUnspecified.value,
-        }
-    ]
-}); const fetchBarStackChartData = async () => {
-    barStackChartData.value = {
-        series: [],
-        xAxis: []
-    };
-    barAddonChartData.value = {
-        series: [],
-        xAxis: []
-    };
-    const countData = await fetchCountReservationDetails(selectedHotelId.value, startDate.value, endDate.value);
-
-    //console.log('[Dashboard] fetchCountReservationDetails', countData);
-
-    // Generate an array of dates from startDate to endDate (full fetched range)
-    const dateArray = [];
-    let currentFetchedDate = new Date(startDate.value);
-    const endFetchedDateObj = new Date(endDate.value);
-
-    while (currentFetchedDate <= endFetchedDateObj) {
-        dateArray.push(formatDate(currentFetchedDate));
-        currentFetchedDate = new Date(currentFetchedDate); // Create a new date object to avoid reference issues
-        currentFetchedDate.setDate(currentFetchedDate.getDate() + 1);
-    }
-
-    // Generate an array of dates for chart display (starting from selectedDate)
-    const chartDisplayDateArray = [];
-    let currentDisplayDate = new Date(selectedDate.value);
-    const endDisplayDateObj = new Date(new Date(selectedDate.value).setDate(new Date(selectedDate.value).getDate() + 6));
-
-    while (currentDisplayDate <= endDisplayDateObj) {
-        chartDisplayDateArray.push(formatDateWithDay(currentDisplayDate));
-        currentDisplayDate.setDate(currentDisplayDate.getDate() + 1);
-    }
-
-    barStackChartData.value.xAxis = chartDisplayDateArray;
-    barAddonChartData.value.xAxis = chartDisplayDateArray;
-
-    const planSeries = [];
-    const otherAddonSeries = [];
-    const mealAddonSeries = [];
-    const uniquePlanKeys = new Set();
-    const uniqueOtherAddonKeys = new Set();
-    const uniqueMealAddonKeys = new Set();
-
-    const mealAddonTypes = ['breakfast', 'lunch', 'dinner'];
-
-    const createSeriesItem = (keyField, stack, countData, dateArray, isMeal = false) => {
-        const data = [];
-        let name = '';
-
-        const dailyValues = new Array(chartDisplayDateArray.length).fill(0);
-        // `dateArray` starts one day earlier than `chartDisplayDateArray`.
-        // `displayOffset` accounts for this difference to map `fetchedIndex` to `chartDisplayDateArray`.
-        const displayOffset = 1;
-
-        dateArray.forEach((dateStr, fetchedIndex) => {
-            let value = 0;
-
-            if (countData[dateStr]) {
-                const items = stack === 'Plan' ? countData[dateStr].plans || [] : countData[dateStr].addons || [];
-                const foundItem = items.find(item => item.key === keyField);
-                if (foundItem) {
-                    name = foundItem.name || foundItem.addon_name || name; // Use addon_name for addons
-                    value = parseInt(foundItem.quantity) || 0;
-
-                    // Calculate the base index in the `chartDisplayDateArray` corresponding to `fetchedIndex`.
-                    let targetDisplayIndex = fetchedIndex - displayOffset;
-
-                    // If it's a meal addon (lunch or breakfast), it should be displayed on the *next* day.
-                    // So, we bump the `fetchedIndex` by 1 before applying the `displayOffset`.
-                    if (foundItem.addon_type === 'lunch' || foundItem.addon_type === 'breakfast') {
-                        targetDisplayIndex = fetchedIndex + 1 - displayOffset;
-                    }
-
-                    // Ensure the `targetDisplayIndex` is within the bounds of `chartDisplayDateArray`
-                    if (targetDisplayIndex >= 0 && targetDisplayIndex < chartDisplayDateArray.length) {
-                        dailyValues[targetDisplayIndex] = (dailyValues[targetDisplayIndex] || 0) + value;
-                    }
-                }
-            }
-        });
-
-        return {
-            name: name,
-            type: 'bar',
-            stack: isMeal ? 'Meal Count' : stack,
-            emphasis: { focus: 'series' },
-            data: dailyValues,
-        };
-    };
-
-    if (!countData || Object.keys(countData).length === 0) {
-        console.log('No data was found for fetchBarStackChartData');
-        chartKey.value++;
-        // Initialize with empty chart
-        nextTick(() => {
-            const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value, null, { passive: true, renderer: 'canvas' });
-            barStackChartOption.value.series = [];
-            barStackChartOption.value.xAxis[0].data = chartDisplayDateArray;
-            myBarStackChart.setOption(barStackChartOption.value, true);
-            myBarStackChart.resize();
-
-            const myBarAddonChart = echarts.getInstanceByDom(barAddonChart.value) || echarts.init(barAddonChart.value, null, { passive: true, renderer: 'canvas' });
-            barAddonChartOption.value.series = [];
-            barAddonChartOption.value.xAxis[0].data = chartDisplayDateArray;
-            myBarAddonChart.setOption(barAddonChartOption.value, true);
-            myBarAddonChart.resize();
-        });
-        return;
-    }
-
-    // First pass: collect all unique keys and categorize addons
-    for (const date in countData) {
-        if (countData.hasOwnProperty(date)) {
-            const item = countData[date];
-            if (item.plans) {
-                item.plans.forEach(plan => uniquePlanKeys.add(plan.key));
-            }
-            if (item.addons) {
-                item.addons.forEach(addon => {
-                    if (mealAddonTypes.includes(addon.addon_type)) {
-                        uniqueMealAddonKeys.add(addon.key);
-                    } else {
-                        uniqueOtherAddonKeys.add(addon.key);
-                    }
-                });
-            }
-        }
-    }
-
-    // Create series for plans
-    Array.from(uniquePlanKeys).sort().forEach(key => {
-        planSeries.push(createSeriesItem(key, 'Plan', countData, dateArray));
-    });
-
-    // Create series for other addons
-    Array.from(uniqueOtherAddonKeys).sort().forEach(key => {
-        otherAddonSeries.push(createSeriesItem(key, 'Addon', countData, dateArray));
-    });
-
-    // Create series for meal addons
-    Array.from(uniqueMealAddonKeys).sort().forEach(key => {
-        mealAddonSeries.push(createSeriesItem(key, 'Addon', countData, dateArray, true));
-    });
-
-    barStackChartData.value.series = planSeries;
-    barAddonChartData.value.series = [...otherAddonSeries, ...mealAddonSeries];
-
-    // Process meal data for the report dialog
-    const processedMealData = {};
-    for (const dateStr in countData) {
-        if (countData.hasOwnProperty(dateStr)) {
-            const item = countData[dateStr];
-            if (item.addons) {
-                item.addons.forEach(addon => {
-                    if (mealAddonTypes.includes(addon.addon_type)) {
-                        let effectiveDate = new Date(dateStr);
-                        if (addon.addon_type === 'lunch' || addon.addon_type === 'breakfast') {
-                            effectiveDate.setDate(effectiveDate.getDate() + 1); // Bump to next day
-                        }
-                        const formattedEffectiveDate = formatDate(effectiveDate);
-
-                        if (!processedMealData[formattedEffectiveDate]) {
-                            processedMealData[formattedEffectiveDate] = {
-                                breakfast: 0,
-                                lunch: 0,
-                                dinner: 0,
-                            };
-                        }
-                        processedMealData[formattedEffectiveDate][addon.addon_type] += parseInt(addon.quantity) || 0;
-                    }
-                });
-            }
-        }
-    }
-    mealReportData.value = processedMealData;
-
-    nextTick(() => {
-        barStackChartOption.value = generateBarStackChartOptions();
-        barStackChartOption.value.series = barStackChartData.value.series;
-        barStackChartOption.value.xAxis[0].data = barStackChartData.value.xAxis;
-
-        const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value, null, { passive: true, renderer: 'canvas' });
-        myBarStackChart.setOption(barStackChartOption.value, true);
-        myBarStackChart.resize();
-
-        barAddonChartOption.value = generateBarAddonChartOptions();
-        barAddonChartOption.value.series = barAddonChartData.value.series;
-        barAddonChartOption.value.xAxis[0].data = barAddonChartData.value.xAxis;
-
-        const myBarAddonChart = echarts.getInstanceByDom(barAddonChart.value) || echarts.init(barAddonChart.value, null, { passive: true, renderer: 'canvas' });
-        myBarAddonChart.setOption(barAddonChartOption.value, true);
-        myBarAddonChart.resize();
-    });
-};
-const generateBarStackChartOptions = () => ({
-    title: {
-        text: 'プラン',
-    },
-    tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-            type: 'shadow'
-        }
-    },
-    legend: {
-        bottom: '0%'
-    },
-    grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '20%',
-        containLabel: true
-    },
-    xAxis: [
-        {
-            type: 'category',
-            data: barChartxAxis,
-            axisLabel: {
-                rotate: 55
-            }
-        }
-    ],
-    yAxis: [
-        {
-            type: 'value'
-        }
-    ],
-    series: barStackChartData.value.series
-}); const generateBarAddonChartOptions = () => ({
-    title: {
-        text: 'アドオン',
-    },
-    tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-            type: 'shadow'
-        }
-    },
-    color: [
-        "#27727b",
-        "#fcce10",
-        "#e87c25",
-        "#b5c334",
-        "#fe8463",
-        "#9bca63",
-        "#fad860",
-        "#f3a43b",
-        "#60c0dd",
-        "#d7504b",
-        "#c6e579",
-        "#f4e001",
-        "#f0805a",
-        "#26c0c0",
-        "#c1232b"
-    ],
-    legend: {
-        bottom: '0%'
-    },
-    grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '20%',
-        containLabel: true
-    },
-    xAxis: [
-        {
-            type: 'category',
-            data: barChartxAxis,
-            axisLabel: {
-                rotate: 55
-            }
-        }
-    ],
-    yAxis: [
-        {
-            type: 'value'
-        }
-    ],
-    series: barAddonChartData.value.series
-}); const fetchGaugeChartData = async () => {
-    const month_0 = await fetchOccupationByPeriod('month_0', selectedHotelId.value, startDate.value);
-    const month_1 = await fetchOccupationByPeriod('month_1', selectedHotelId.value, startDate.value);
-    const month_2 = await fetchOccupationByPeriod('month_2', selectedHotelId.value, startDate.value);
-
-    // DEBUG LOG
-    //console.log('[Dashboard] Gauge Data month_0:', month_0);
-    //console.log('[Dashboard] Gauge Data month_1:', month_1);
-    //console.log('[Dashboard] Gauge Data month_2:', month_2);
-
-    if (month_0) {
-        const gaugeValue_0 = month_0[0].available_rooms === 0 ? 0 : Math.round(month_0[0].room_count / month_0[0].available_rooms * 10000) / 100;
-        gaugeData.value[2].value = gaugeValue_0;
-    } else {
-        gaugeData.value[2].value = 0
-    }
-    if (month_1) {
-        const gaugeValue_1 = month_1[0].available_rooms === 0 ? 0 : Math.round(month_1[0].room_count / month_1[0].available_rooms * 10000) / 100;
-        gaugeData.value[1].value = gaugeValue_1;
-    } else {
-        gaugeData.value[1].value = 0
-    }
-    if (month_2) {
-        const gaugeValue_2 = month_2[0].available_rooms === 0 ? 0 : Math.round(month_2[0].room_count / month_2[0].available_rooms * 10000) / 100;
-        gaugeData.value[0].value = gaugeValue_2;
-    } else {
-        gaugeData.value[0].value = 0
-    }
-
-    // Get the month from startDate.value
-    const currentMonth = new Date(startDate.value).getMonth() + 1;
-    const gaugeName_0 = currentMonth;
-    const gaugeName_1 = currentMonth % 12 + 1;
-    const gaugeName_2 = (currentMonth + 1) % 12 + 1;
-
-    gaugeData.value[0].name = gaugeName_2 + '月';
-    gaugeData.value[1].name = gaugeName_1 + '月';
-    gaugeData.value[2].name = gaugeName_0 + '月';
-};
-
-// Data Table
-const formatClientNames = (clients) => {
-    const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
-    if (parsedClients.length <= 2) return "";
-    return parsedClients
-        .map(client => client.name_kanji || client.name_kana || client.name)
-        .join("\n")
+// Methods
+const openHelpDialog = () => {
+    helpDialogVisible.value = true;
 };
 
 const openEditReservation = (event) => {
@@ -870,85 +135,49 @@ const goToReservation = () => {
     router.push({ name: 'ReservationEdit', params: { reservation_id: selectedReservationID.value } });
 };
 
+const loadDashboardData = async () => {
+    tableLoading.value = true;
 
+    await fetchHotels();
+    await fetchHotel();
+    await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
+
+    tableLoading.value = false;
+
+    // Fetch chart data
+    await fetchBarChartData(selectedHotelId.value, selectedDate.value);
+    await fetchBarStackChartData(selectedHotelId.value, startDate.value, endDate.value, selectedDate.value);
+    await fetchGaugeChartData(selectedHotelId.value, startDate.value);
+
+    // Fetch check-in/out report data
+    const tempReportStartDate = new Date(selectedDate.value);
+    tempReportStartDate.setDate(tempReportStartDate.getDate() - 1);
+    reportStartDate.value = formatDate(tempReportStartDate);
+
+    const tempReportEndDate = new Date(tempReportStartDate);
+    tempReportEndDate.setDate(tempReportEndDate.getDate() + 7);
+    reportEndDate.value = formatDate(tempReportEndDate);
+
+    checkInOutReportData.value = await fetchCheckInOutReport(
+        selectedHotelId.value,
+        reportStartDate.value,
+        reportEndDate.value
+    );
+};
+
+// Lifecycle
 onMounted(async () => {
     await fetchHotels();
     await fetchHotel();
 });
 
-watch(() => [selectedDate.value, selectedHotelId.value], // Watch both values
+watch(
+    () => [selectedDate.value, selectedHotelId.value],
     async () => {
-        tableLoading.value = true;
-
-        await fetchHotels();
-        await fetchHotel();
-        await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
-        tableLoading.value = false;
-        // console.log('from watch reservationList', reservationList.value);
-        await fetchBarChartData();
-        await fetchBarStackChartData();
-        await fetchGaugeChartData();
-
-        // Fetch check-in/out report data
-        const tempReportStartDate = new Date(selectedDate.value);
-        tempReportStartDate.setDate(tempReportStartDate.getDate() - 1); // Start one day before selectedDate
-        reportStartDate.value = formatDate(tempReportStartDate);
-
-        const tempReportEndDate = new Date(tempReportStartDate);
-        tempReportEndDate.setDate(tempReportEndDate.getDate() + 7); // Cover a full week from the adjusted start date
-        reportEndDate.value = formatDate(tempReportEndDate);
-
-        checkInOutReportData.value = await fetchCheckInOutReport(
-            selectedHotelId.value,
-            reportStartDate.value,
-            reportEndDate.value
-        );
-
-        nextTick(() => { // Update chart after data changes
-            const myBarChart = echarts.getInstanceByDom(barChart.value); // Get existing instance
-            if (myBarChart) {
-                myBarChart.setOption(barChartOption.value); // Update with new data
-            } else {
-                const myBarChart = echarts.init(barChart.value, null, { passive: true, renderer: 'canvas' }); // Create if it doesn't exist
-                myBarChart.setOption(barChartOption.value);
-            }
-
-            const myGaugeChart = echarts.getInstanceByDom(gaugeChart.value);
-            if (myGaugeChart) {
-                myGaugeChart.setOption(gaugeChartOption);
-            } else {
-                const myGaugeChart = echarts.init(gaugeChart.value, null, { passive: true, renderer: 'canvas' });
-                myGaugeChart.setOption(gaugeChartOption);
-            }
-
-            const myBarStackChart = echarts.getInstanceByDom(barStackChart.value);
-            if (myBarStackChart) {
-                barStackChartOption.value.series = barStackChartData.value.series;
-                myBarStackChart.setOption(barStackChartOption.value);
-                myBarStackChart.resize();
-            } else {
-                const myBarStackChart = echarts.init(barStackChart.value, null, { passive: true, renderer: 'canvas' });
-                barStackChartOption.value.series = barStackChartData.value.series;
-                myBarStackChart.setOption(barStackChartOption.value);
-                myBarStackChart.resize();
-            }
-
-            const myBarAddonChart = echarts.getInstanceByDom(barAddonChart.value);
-            if (myBarAddonChart) {
-                barAddonChartOption.value.series = barAddonChartData.value.series;
-                myBarAddonChart.setOption(barAddonChartOption.value);
-                myBarAddonChart.resize();
-            } else {
-                const myBarAddonChart = echarts.init(barAddonChart.value, null, { passive: true, renderer: 'canvas' });
-                barAddonChartOption.value.series = barAddonChartData.value.series;
-                myBarAddonChart.setOption(barAddonChartOption.value);
-                myBarAddonChart.resize();
-            }
-        });
+        await loadDashboardData();
     },
     { immediate: true }
 );
-
 </script>
 
 <style scoped></style>
