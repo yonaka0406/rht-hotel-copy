@@ -122,8 +122,8 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
-import ReservationEdit from './Reservation/ReservationEdit.vue';
-import DashboardDialog from './components/Dialogs/DashboardDialog.vue'; // Updated import path and component name
+import ReservationEdit from '../Reservation/ReservationEdit.vue';
+import DashboardDialog from '../components/Dialogs/DashboardDialog.vue';
 
 import { Panel, Drawer } from 'primevue';
 import { DataTable, Column } from 'primevue';
@@ -349,7 +349,7 @@ const fetchBarChartData = async () => {
     const chartEndDate = formatDate(endDateObjForApi);
 
     const countData = await fetchCountReservation(selectedHotelId.value, chartStartDate, chartEndDate);
-    
+
     // DEBUG LOG
     //console.log('[Dashboard] fetchCountReservation countData:', countData);
 
@@ -385,7 +385,7 @@ const fetchBarChartData = async () => {
         if (index !== -1) {
             barChartyAxisBar.value[index] = item.room_count;
             const calculatedPercentage = item.total_rooms_real ? Math.round(item.room_count / item.total_rooms_real * 10000) / 100 : 0;
-            
+
             // DEBUG LOG
             //console.log(`[Dashboard] Date: ${itemDate}, RoomCount: ${item.room_count}, TotalRooms: ${item.total_rooms}, TotalRoomsReal: ${item.total_rooms_real}, Percentage: ${calculatedPercentage}`);
 
@@ -580,7 +580,7 @@ const generateBarChartOptions = () => ({
         const dailyValues = new Array(chartDisplayDateArray.length).fill(0);
         // `dateArray` starts one day earlier than `chartDisplayDateArray`.
         // `displayOffset` accounts for this difference to map `fetchedIndex` to `chartDisplayDateArray`.
-        const displayOffset = 1; 
+        const displayOffset = 1;
 
         dateArray.forEach((dateStr, fetchedIndex) => {
             let value = 0;
@@ -593,12 +593,12 @@ const generateBarChartOptions = () => ({
                     value = parseInt(foundItem.quantity) || 0;
 
                     // Calculate the base index in the `chartDisplayDateArray` corresponding to `fetchedIndex`.
-                    let targetDisplayIndex = fetchedIndex - displayOffset; 
+                    let targetDisplayIndex = fetchedIndex - displayOffset;
 
                     // If it's a meal addon (lunch or breakfast), it should be displayed on the *next* day.
                     // So, we bump the `fetchedIndex` by 1 before applying the `displayOffset`.
                     if (foundItem.addon_type === 'lunch' || foundItem.addon_type === 'breakfast') {
-                        targetDisplayIndex = fetchedIndex + 1 - displayOffset; 
+                        targetDisplayIndex = fetchedIndex + 1 - displayOffset;
                     }
 
                     // Ensure the `targetDisplayIndex` is within the bounds of `chartDisplayDateArray`
@@ -811,7 +811,7 @@ const generateBarStackChartOptions = () => ({
     const month_0 = await fetchOccupationByPeriod('month_0', selectedHotelId.value, startDate.value);
     const month_1 = await fetchOccupationByPeriod('month_1', selectedHotelId.value, startDate.value);
     const month_2 = await fetchOccupationByPeriod('month_2', selectedHotelId.value, startDate.value);
-    
+
     // DEBUG LOG
     //console.log('[Dashboard] Gauge Data month_0:', month_0);
     //console.log('[Dashboard] Gauge Data month_1:', month_1);
