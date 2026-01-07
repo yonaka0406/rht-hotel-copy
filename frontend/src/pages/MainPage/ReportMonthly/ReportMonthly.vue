@@ -280,6 +280,12 @@ const calculateMetrics = () => {
     const revPARDenominator = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
     revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
 
+    console.log('[ReportMonthly] RevPAR calculation:', {
+        numerator: totalRevenue,
+        denominator: revPARDenominator,
+        result: revPAR.value
+    });
+
 
     // OCC calculation using net capacity from occupation breakdown
     const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');

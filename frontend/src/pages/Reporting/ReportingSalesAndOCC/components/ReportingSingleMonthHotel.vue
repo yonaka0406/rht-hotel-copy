@@ -20,7 +20,7 @@
                         <!-- Column 2: Gauge + KPIs + DoD -->
                         <div class="w-full md:w-1/2 flex flex-col gap-4">
                             <!-- Gauge + DoD -->
-                            <div class="flex flex-col items-center">
+                            <div class="flex flex-col w-full">
                                 <OccupancyGaugeChart :occupancyData="gaugeChartData" height="250px"
                                     :previousYearOccupancy="currentHotelPrevYearOccupancy" />
 

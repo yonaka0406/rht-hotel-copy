@@ -1156,14 +1156,15 @@ const fetchData = async () => {
 
                             totalActualSales += hotelActualSales;
                         }
-                        const actualOccAccommodation = accommodationNetAvailableRoomNights > 0 ? (accommodationConfirmedNights / accommodationNetAvailableRoomNights) * 100 : 0;
+                        const occDenominator = totalForecastRooms > 0 ? totalForecastRooms : accommodationNetAvailableRoomNights;
+                        const actualOccAccommodation = occDenominator > 0 ? (accommodationConfirmedNights / occDenominator) * 100 : 0;
                         const forecastOcc = totalForecastRooms > 0 ? (totalForecastStays / totalForecastRooms) * 100 : 0; // This remains general forecast
 
                         const hasPrevData = !!prevByMonth[monthLabel];
                         const prev = prevByMonth[monthLabel] || { sales: 0, stays: 0, rooms: 0 };
 
                         // prevOcc is not specific to accommodation here, as prevByMonth doesn't have sales_category breakdown.
-                        const prevOcc = accommodationNetAvailableRoomNights > 0 ? (prev.stays / accommodationNetAvailableRoomNights) * 100 : 0;
+                        const prevOcc = occDenominator > 0 ? (prev.stays / occDenominator) * 100 : 0;
 
                         const salesDiff = hasPrevData ? totalActualSales - prev.sales : null;
                         //console.log(`[DEBUG] Sales comparison for ${monthLabel}:`, {

@@ -44,9 +44,6 @@
             <Column field="fc_total_rooms" header="計画総室数" sortable style="min-width: 100px; width: 7.5%">
                 <template #body="{data}">{{ data.fc_total_rooms?.toLocaleString('ja-JP') || 0 }}</template>
             </Column>
-            <Column field="total_rooms" header="実績総室数" sortable style="min-width: 100px; width: 7.5%">
-                <template #body="{data}">{{ data.total_rooms?.toLocaleString('ja-JP') || 0 }}</template>
-            </Column>
             <template #paginatorstart></template>
             <template #paginatorend>
                 <div class="flex gap-2">
@@ -218,8 +215,8 @@ const exportCSV = () => {
         : `${hotelName.replace(/\s+/g, '_')}_稼働率データ.csv`;
 
     const headers = props.showHotelColumn
-        ? ["ホテルID", "施設", "月度", "計画販売室数", "実績販売室数", "販売室数差異", ...(props.showNonAccommodationColumn ? ["非宿泊数"] : []), "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "実績総室数"]
-        : ["月度", "計画販売室数", "実績販売室数", "販売室数差異", "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "実績総室数"];
+        ? ["ホテルID", "施設", "月度", "計画販売室数", "実績販売室数", "販売室数差異", ...(props.showNonAccommodationColumn ? ["非宿泊数"] : []), "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数"]
+        : ["月度", "計画販売室数", "実績販売室数", "販売室数差異", "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数"];
 
     const csvRows = [headers.join(',')];
 
@@ -239,8 +236,7 @@ const exportCSV = () => {
             fcOcc.toFixed(2),
             occ.toFixed(2),
             (occ - fcOcc).toFixed(2),
-            row.fc_total_rooms || 0,
-            row.total_rooms || 0
+            row.fc_total_rooms || 0
         ];
         csvRows.push(csvRow.join(','));
     });
