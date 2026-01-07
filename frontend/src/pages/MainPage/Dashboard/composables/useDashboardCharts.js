@@ -107,11 +107,11 @@ export function useDashboardCharts() {
         barChartyAxisUnspecified.value = new Array(dateArray.length).fill(0);
 
         if (!countData) {
-            barChartyAxisMax.value = [];
+            barChartyAxisMax.value = 0;
             return;
         }
 
-        barChartyAxisMax.value = countData.length > 0 ? countData[0].total_rooms : 0;
+        barChartyAxisMax.value = countData.length > 0 ? parseInt(countData[0].total_rooms) || 0 : 0;
 
         countData.forEach(item => {
             const itemDate = formatDateWithDay(new Date(item.date));
