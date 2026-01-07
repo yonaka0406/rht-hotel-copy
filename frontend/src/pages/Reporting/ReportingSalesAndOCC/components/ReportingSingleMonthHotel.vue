@@ -355,12 +355,27 @@ const gaugeChartData = computed(() => {
     // If no data, return empty object to prevent errors, defaults in chart will handle it
     if (!props.occupancyData || props.occupancyData.length === 0) return {};
     const raw = props.occupancyData[0] || {};
-    return {
+    const data = {
         total_sold_rooms: raw.sold_rooms,
         total_available_rooms: raw.total_rooms,
         total_fc_sold_rooms: raw.fc_sold_rooms,
         total_fc_available_rooms: raw.fc_total_rooms
     };
+
+    const actualDenominator = data.total_fc_available_rooms > 0 ? data.total_fc_available_rooms : data.total_available_rooms;
+    console.log('[ReportingSingleMonthHotel] Actual OCC calculation:', {
+        numerator: data.total_sold_rooms,
+        denominator: actualDenominator,
+        result: actualDenominator > 0 ? (data.total_sold_rooms / actualDenominator) * 100 : 0
+    });
+
+    console.log('[ReportingSingleMonthHotel] Forecast OCC calculation:', {
+        numerator: data.total_fc_sold_rooms,
+        denominator: data.total_fc_available_rooms,
+        result: data.total_fc_available_rooms > 0 ? (data.total_fc_sold_rooms / data.total_fc_available_rooms) * 100 : 0
+    });
+
+    return data;
 });
 
 // ECharts imports    

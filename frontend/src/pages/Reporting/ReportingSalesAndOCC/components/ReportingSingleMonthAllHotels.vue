@@ -331,6 +331,19 @@ const aggregateHotelZeroData = computed(() => {
     //    prevYearOccupancyEntryMonth: prevYearOccupancyEntry?.month
     //});
 
+    const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
+    console.log('[ReportingSingleMonthAllHotels] Actual OCC calculation:', {
+        numerator: result.total_sold_rooms,
+        denominator: actualDenominator,
+        result: actualDenominator > 0 ? (result.total_sold_rooms / actualDenominator) * 100 : 0
+    });
+
+    console.log('[ReportingSingleMonthAllHotels] Forecast OCC calculation:', {
+        numerator: result.total_fc_sold_rooms,
+        denominator: result.total_fc_available_rooms,
+        result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
+    });
+
     return result;
 });
 

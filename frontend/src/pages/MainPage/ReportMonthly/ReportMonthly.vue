@@ -35,7 +35,8 @@
                 :translateReservationPaymentTiming="translateReservationPaymentTiming" />
 
             <SalesByPlanBreakdown :salesByPlan="salesByPlan" :forecastDataByPlan="forecastDataByPlan" />
-            <OccupationBreakdownPanel :occupationBreakdownData="occupationBreakdownData" />
+            <OccupationBreakdownPanel :occupationBreakdownData="occupationBreakdownData"
+                :totalForecastAvailableRooms="totalForecastAvailableRoomsRef" />
         </div>
     </div>
 </template>
@@ -177,6 +178,7 @@ const salesDifference = ref(0);
 const ADRDifference = ref(0);
 const revPARDifference = ref(0);
 const OCCDifference = ref(0);
+const totalForecastAvailableRoomsRef = ref(0);
 
 const calculateMetrics = () => {
     if (!allReservationsData.value || allReservationsData.value.length === 0) {
@@ -193,6 +195,7 @@ const calculateMetrics = () => {
         ADRDifference.value = 0;
         revPARDifference.value = 0;
         OCCDifference.value = 0;
+        totalForecastAvailableRoomsRef.value = 0;
         return;
     }
 
@@ -257,17 +260,6 @@ const calculateMetrics = () => {
     //    revPAR: totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0
     //});
 
-    const revPARDenominator = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
-    revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
-
-
-    // OCC calculation using net capacity from occupation breakdown
-    const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
-    const baseNetAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
-    const netAvailableRoomNights = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
-
-    OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
-
     // Calculate Forecast
     const forecastDataForPeriod = forecastData.value.filter(forecast => {
         const forecastDate = forecast.date;
@@ -283,9 +275,34 @@ const calculateMetrics = () => {
         totalForecastAvailableRooms += parseInt(forecast.available_room_nights || 0);
     });
 
+    totalForecastAvailableRoomsRef.value = totalForecastAvailableRooms;
+
+    const revPARDenominator = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
+    revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
+
+
+    // OCC calculation using net capacity from occupation breakdown
+    const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
+    const baseNetAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
+    const netAvailableRoomNights = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
+
+    console.log('[ReportMonthly] Actual OCC calculation:', {
+        numerator: totalRoomsSold,
+        denominator: netAvailableRoomNights,
+        result: netAvailableRoomNights > 0 ? (totalRoomsSold / netAvailableRoomNights) * 100 : 0
+    });
+
+    OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
+
     forecastSales.value = Math.round(totalForecastRevenue);
     forecastADR.value = totalForecastRooms > 0 ? Math.round(totalForecastRevenue / totalForecastRooms) : 0;
     forecastRevPAR.value = totalForecastAvailableRooms > 0 ? Math.round(totalForecastRevenue / totalForecastAvailableRooms) : 0;
+    console.log('[ReportMonthly] Forecast OCC calculation:', {
+        numerator: totalForecastRooms,
+        denominator: totalForecastAvailableRooms,
+        result: totalForecastAvailableRooms > 0 ? (totalForecastRooms / totalForecastAvailableRooms) * 100 : 0
+    });
+
     forecastOCC.value = totalForecastAvailableRooms > 0 ? Math.round((totalForecastRooms / totalForecastAvailableRooms) * 10000) / 100 : 0;
 
     // Calculate Differences

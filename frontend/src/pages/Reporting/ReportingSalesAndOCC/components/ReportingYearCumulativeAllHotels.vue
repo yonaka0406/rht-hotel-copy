@@ -278,7 +278,7 @@ const aggregatedAllHotelsOccupancy = computed(() => {
         total_sold_rooms: 0, total_fc_sold_rooms: 0,
         total_available_rooms: 0, total_fc_available_rooms: 0
     };
-    return occupancyEntry.reduce((acc, item) => {
+    const result = occupancyEntry.reduce((acc, item) => {
         acc.total_sold_rooms += (item.sold_rooms || 0);
         acc.total_fc_sold_rooms += (item.fc_sold_rooms || 0);
         acc.total_available_rooms += (item.total_rooms || 0);
@@ -288,6 +288,21 @@ const aggregatedAllHotelsOccupancy = computed(() => {
         total_sold_rooms: 0, total_fc_sold_rooms: 0,
         total_available_rooms: 0, total_fc_available_rooms: 0
     });
+
+    const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
+    console.log('[ReportingYearCumulativeAllHotels] Actual OCC calculation:', {
+        numerator: result.total_sold_rooms,
+        denominator: actualDenominator,
+        result: actualDenominator > 0 ? (result.total_sold_rooms / actualDenominator) * 100 : 0
+    });
+
+    console.log('[ReportingYearCumulativeAllHotels] Forecast OCC calculation:', {
+        numerator: result.total_fc_sold_rooms,
+        denominator: result.total_fc_available_rooms,
+        result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
+    });
+
+    return result;
 });
 
 const actualADR = computed(() => {
