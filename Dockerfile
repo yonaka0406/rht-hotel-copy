@@ -1,5 +1,5 @@
 # ---- 1. Builder Stage ----
-# Use the official Node.js 22 image based on Debian 12 (Bookworm)
+# Use the official Node.js 24 image based on Debian 12 (Bookworm)
 FROM node:24 AS builder
 
 # Install build tools for native modules
