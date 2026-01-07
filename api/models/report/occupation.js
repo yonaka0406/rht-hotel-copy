@@ -42,13 +42,23 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
       LEFT JOIN rooms rm ON rd.room_id = rm.id
       WHERE rd.hotel_id = $2
       GROUP BY h.hotel_id, h.month_start, h.days_in_month, h.total_physical_rooms
+    ),
+    forecast_summary AS (
+      SELECT 
+        hotel_id,
+        forecast_month,
+        MAX(available_room_nights) AS available_room_nights
+      FROM du_forecast
+      WHERE hotel_id = $2 AND forecast_month = DATE_TRUNC('month', $1::DATE)
+      GROUP BY hotel_id, forecast_month
     )
     SELECT
       ms.total_occupied_room_nights AS room_count,
-      (ms.total_capacity_room_nights - ms.total_blocked_room_nights) AS available_rooms,
+      COALESCE(NULLIF(fs.available_room_nights, 0), (ms.total_capacity_room_nights - ms.total_blocked_room_nights)) AS available_rooms,
       ms.total_blocked_room_nights AS blocked_rooms,
       ms.total_capacity_room_nights AS total_rooms -- Renamed for clarity, was 'total_rooms'
-    FROM monthly_summary ms;
+    FROM monthly_summary ms
+    LEFT JOIN forecast_summary fs ON ms.hotel_id = fs.hotel_id AND ms.month_start = fs.forecast_month;
   `;
 
   const values = [formattedDate, hotelId];
