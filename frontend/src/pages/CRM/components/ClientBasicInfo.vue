@@ -52,8 +52,7 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.email" :pattern="emailPattern"
-                                    :class="{ 'p-invalid': !isValidEmail }" @input="validateEmail(client.email)"
+                                <InputText v-model="client.email" :invalid="!isValidEmail"
                                     fluid />
                                 <label>メールアドレス</label>
                                 <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
@@ -61,8 +60,8 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.phone" :pattern="phonePattern"
-                                    :class="{ 'p-invalid': !isValidPhone }" @input="validatePhone(client.phone)"
+                                <InputText v-model="client.phone"
+                                    :invalid="!isValidPhone"
                                     fluid />
                                 <label>電話番号</label>
                                 <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
@@ -70,8 +69,8 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.fax" :pattern="phonePattern"
-                                    :class="{ 'p-invalid': !isValidFAX }" @input="validateFAX(client.fax)" fluid />
+                                <InputText v-model="client.fax"
+                                    :invalid="!isValidFAX" fluid />
                                 <label>FAX</label>
                                 <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
                             </FloatLabel>
@@ -240,10 +239,6 @@ const personTypeOptions = [
 ];
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, validateCustomerId as validateCustomerIdUtil, hasContactInfo } from '../../../utils/validationUtils';
 
-// HTML pattern attributes
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^[\d\s()+\-]*$/;
-
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
 const isValidFAX = ref(true);
@@ -265,15 +260,15 @@ const impedimentStatus = computed(() => {
 });
 
 // Helper    
-const validateEmail = (email) => {
-    isValidEmail.value = validateEmailUtil(email);
-};
-const validatePhone = (phone) => {
-    isValidPhone.value = validatePhoneUtil(phone);
-};
-const validateFAX = (phone) => {
-    isValidFAX.value = validatePhoneUtil(phone); // FAX uses the same validation as phone
-};
+watch(() => client.value.email, (newValue) => {
+    isValidEmail.value = validateEmailUtil(newValue);
+});
+watch(() => client.value.phone, (newValue) => {
+    isValidPhone.value = validatePhoneUtil(newValue);
+});
+watch(() => client.value.fax, (newValue) => {
+    isValidFAX.value = validatePhoneUtil(newValue); // FAX uses the same validation as phone
+});
 const formatDate = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
