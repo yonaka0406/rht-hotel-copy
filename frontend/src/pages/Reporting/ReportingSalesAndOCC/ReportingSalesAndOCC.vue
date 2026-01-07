@@ -137,6 +137,17 @@ const selectionMessage = computed(() => {
     return `会計データがない場合はPMSの数値になっています。期間： ${periodStr}。選択中の施設： ${uniqueNames.join(', ')}`;
 });
 
+const hotelSortOrderMap = computed(() => {
+    const map = new Map();
+    if (allHotels.value) {
+        allHotels.value.forEach(h => {
+            map.set(Number(h.id), (h.sort_order !== null && h.sort_order !== undefined) ? h.sort_order : 999);
+        });
+    }
+    map.set(0, -1); // 施設合計 always first
+    return map;
+});
+
 // KPI Calculations for Export
 const kpiData = computed(() => {
     const revenueEntry = revenueData.value?.find(item => item.hotel_id === 0);
@@ -383,6 +394,7 @@ const prevYearRevenueData = computed(() => {
                 current_year_month: currentYearMonth,
                 hotel_id: outputHotelId,
                 hotel_name: hotelName,
+                sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
                 pms_revenue: pmsRev,
                 acc_revenue: accRev,
                 period_revenue: periodRev,
@@ -392,7 +404,14 @@ const prevYearRevenueData = computed(() => {
         }
     });
 
-
+    result.sort((a, b) => {
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
+    });
 
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
@@ -505,17 +524,19 @@ const revenueData = computed(() => {
             let otherRev = (accRev !== null) ? 0 : (pmsOtherRev || 0); // If using accounting, other is 0 since accounting only has accommodation
             result.push({
                 month: monthKey, hotel_id: outputHotelId, hotel_name: hotelName,
+                sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
                 pms_revenue: pmsRev, forecast_revenue: forecastRev, acc_revenue: accRev, period_revenue: periodRev,
                 accommodation_revenue: accommodationRev, other_revenue: otherRev,
             });
         }
     });
     result.sort((a, b) => {
-        if (a.month < b.month) return -1; if (a.month > b.month) return 1;
-        const idA = a.hotel_id; const idB = b.hotel_id;
-        if (idA === 0 && idB !== 0) return -1; if (idA !== 0 && idB === 0) return 1;
-        if (typeof idA === 'number' && typeof idB === 'number') return idA - idB;
-        return String(idA).localeCompare(String(idB));
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
     });
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
@@ -704,6 +725,7 @@ const occupancyData = computed(() => {
 
             let outputHotelId = hotelId === '0' ? 0 : parseInt(hotelId, 10);
             const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
+            const hotelOpenDate = searchAllHotels(outputHotelId)[0]?.open_date || null;
 
             const oldAdjustedTotalRoomsEquivalentForCondition = data.total_rooms + data.roomDifferenceSum;
             if (hotelId !== '0' || (hotelId === '0' && selectedHotels.value.length > 0)) {
@@ -712,6 +734,8 @@ const occupancyData = computed(() => {
                         month: monthKey,
                         hotel_id: outputHotelId,
                         hotel_name: hotelName,
+                        sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
+                        open_date: hotelOpenDate,
                         total_rooms: total_rooms,
                         net_total_rooms: total_rooms,
                         gross_total_rooms: total_gross_rooms,
@@ -728,11 +752,12 @@ const occupancyData = computed(() => {
         }
     });
     result.sort((a, b) => {
-        if (a.month < b.month) return -1; if (a.month > b.month) return 1;
-        const idA = a.hotel_id; const idB = b.hotel_id;
-        if (idA === 0 && idB !== 0) return -1; if (idA !== 0 && idB === 0) return 1;
-        if (typeof idA === 'number' && typeof idB === 'number') return idA - idB;
-        return String(idA).localeCompare(String(idB));
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
     });
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
@@ -844,11 +869,21 @@ const prevYearOccupancyData = computed(() => {
             result.push({
                 month: monthKey,
                 hotel_id: outputHotelId, hotel_name: hotelName,
+                sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
                 sold_rooms: data.sold_rooms,
                 total_rooms: total_rooms,
                 occ: parseFloat(occupancyRate.toFixed(2))
             });
         }
+    });
+
+    result.sort((a, b) => {
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
     });
 
     if (selectedView.value?.endsWith('Hotel')) {
