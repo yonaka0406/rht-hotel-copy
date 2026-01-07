@@ -58,12 +58,13 @@
                             footerStyle="text-align:right" />
                     </Row>
                     <Row>
-                        <Column footer="確定泊数 / 正味利用可能泊数:" :colspan="5" footerStyle="text-align:right" />
+                        <Column :footer="(props.totalForecastAvailableRooms && props.totalForecastAvailableRooms > 0) ? '確定泊数 / 計画利用可能泊数:' : '確定泊数 / 正味利用可能泊数:'" :colspan="5" footerStyle="text-align:right" />
                         <Column :footer="(() => {
                                 const confirmed = confirmedOccupancyNights;
                                 const netAvailable = occupationBreakdownTotals.net_available_room_nights;
-                                if (netAvailable <= 0) return 'N/A';
-                                return ((confirmed / netAvailable) * 100).toFixed(2) + '%';
+                                const denominator = (props.totalForecastAvailableRooms && props.totalForecastAvailableRooms > 0) ? props.totalForecastAvailableRooms : netAvailable;
+                                if (denominator <= 0) return 'N/A';
+                                return ((confirmed / denominator) * 100).toFixed(2) + '%';
                             })()
                             " footerStyle="text-align:right" />
                     </Row>
@@ -105,6 +106,10 @@ const props = defineProps({
     occupationBreakdownData: {
         type: Array,
         required: true
+    },
+    totalForecastAvailableRooms: {
+        type: Number,
+        default: 0
     }
 });
 

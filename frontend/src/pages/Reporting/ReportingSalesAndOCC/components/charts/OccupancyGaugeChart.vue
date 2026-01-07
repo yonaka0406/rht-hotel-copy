@@ -49,6 +49,7 @@ const props = defineProps({
 
 const chartContainer = ref(null);
 const chartInstance = shallowRef(null);
+let resizeObserver = null;
 
 const chartOptions = computed(() => {
   return ChartConfigurationService.getOccupancyGaugeConfig(props.occupancyData, { 
@@ -59,6 +60,13 @@ const chartOptions = computed(() => {
 
 const initOrUpdateChart = () => {
   if (chartContainer.value) {
+    const width = chartContainer.value.clientWidth;
+    const height = chartContainer.value.clientHeight;
+
+    if (width === 0 || height === 0) {
+      return;
+    }
+
     if (!chartInstance.value || chartInstance.value.isDisposed?.()) {
       chartInstance.value = echarts.init(chartContainer.value);
     }
@@ -69,18 +77,36 @@ const initOrUpdateChart = () => {
   }
 };
 
-const resizeChartHandler = () => {
-  chartInstance.value?.resize();
-};
-
 onMounted(() => {
-  nextTick(initOrUpdateChart);
-  window.addEventListener('resize', resizeChartHandler);
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver((entries) => {
+      window.requestAnimationFrame(() => {
+        if (!Array.isArray(entries) || !entries.length) return;
+        initOrUpdateChart();
+      });
+    });
+    if (chartContainer.value) {
+      resizeObserver.observe(chartContainer.value);
+    }
+  } else {
+    // Fallback
+    window.addEventListener('resize', initOrUpdateChart);
+    nextTick(initOrUpdateChart);
+  }
 });
 
 onBeforeUnmount(() => {
-  chartInstance.value?.dispose();
-  window.removeEventListener('resize', resizeChartHandler);
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  } else {
+    window.removeEventListener('resize', initOrUpdateChart);
+  }
+  
+  if (chartInstance.value) {
+    chartInstance.value.dispose();
+    chartInstance.value = null;
+  }
 });
 
 watch(() => props.occupancyData, () => {

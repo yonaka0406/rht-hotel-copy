@@ -17,7 +17,7 @@
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                                }}</p>
+                            }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -130,7 +130,7 @@
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                                }}</p>
+                            }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -278,7 +278,7 @@ const aggregatedAllHotelsOccupancy = computed(() => {
         total_sold_rooms: 0, total_fc_sold_rooms: 0,
         total_available_rooms: 0, total_fc_available_rooms: 0
     };
-    return occupancyEntry.reduce((acc, item) => {
+    const result = occupancyEntry.reduce((acc, item) => {
         acc.total_sold_rooms += (item.sold_rooms || 0);
         acc.total_fc_sold_rooms += (item.fc_sold_rooms || 0);
         acc.total_available_rooms += (item.total_rooms || 0);
@@ -288,6 +288,21 @@ const aggregatedAllHotelsOccupancy = computed(() => {
         total_sold_rooms: 0, total_fc_sold_rooms: 0,
         total_available_rooms: 0, total_fc_available_rooms: 0
     });
+
+    const actualDenominator = result.total_fc_available_rooms > 0 ? result.total_fc_available_rooms : result.total_available_rooms;
+    console.log('[ReportingYearCumulativeAllHotels] Actual OCC calculation:', {
+        numerator: result.total_sold_rooms,
+        denominator: actualDenominator,
+        result: actualDenominator > 0 ? (result.total_sold_rooms / actualDenominator) * 100 : 0
+    });
+
+    console.log('[ReportingYearCumulativeAllHotels] Forecast OCC calculation:', {
+        numerator: result.total_fc_sold_rooms,
+        denominator: result.total_fc_available_rooms,
+        result: result.total_fc_available_rooms > 0 ? (result.total_fc_sold_rooms / result.total_fc_available_rooms) * 100 : 0
+    });
+
+    return result;
 });
 
 const actualADR = computed(() => {
@@ -302,7 +317,9 @@ const forecastADR = computed(() => {
 });
 const actualRevPAR = computed(() => {
     const revenue = aggregatedAllHotelsRevenue.value.total_period_revenue;
-    const availableRooms = aggregatedAllHotelsOccupancy.value.total_available_rooms;
+    const availableRooms = aggregatedAllHotelsOccupancy.value.total_fc_available_rooms > 0
+        ? aggregatedAllHotelsOccupancy.value.total_fc_available_rooms
+        : aggregatedAllHotelsOccupancy.value.total_available_rooms;
     return availableRooms ? Math.round(revenue / availableRooms) : NaN;
 });
 const forecastRevPAR = computed(() => {

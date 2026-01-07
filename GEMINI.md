@@ -252,3 +252,11 @@ docker cp wehub-db:/tmp/daily_plan_metrics_backup.sql C:\Users\almeida.ped_redho
 
 ## 13. Docker Compose Database Access
 You can use `docker compose` to access the database.
+
+## 14. Shell Command Execution
+
+In this environment (Windows PowerShell), when chaining multiple shell commands, use the semicolon `;` as a separator instead of `&&`. For example:
+`git status; git diff HEAD; git log -n 3`
+instead of
+`git status && git diff HEAD && git log -n 3`
+This ensures that the commands are executed correctly by the shell.

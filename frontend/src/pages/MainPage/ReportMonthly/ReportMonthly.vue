@@ -35,7 +35,8 @@
                 :translateReservationPaymentTiming="translateReservationPaymentTiming" />
 
             <SalesByPlanBreakdown :salesByPlan="salesByPlan" :forecastDataByPlan="forecastDataByPlan" />
-            <OccupationBreakdownPanel :occupationBreakdownData="occupationBreakdownData" />
+            <OccupationBreakdownPanel :occupationBreakdownData="occupationBreakdownData"
+                :totalForecastAvailableRooms="totalForecastAvailableRoomsRef" />
         </div>
     </div>
 </template>
@@ -177,6 +178,7 @@ const salesDifference = ref(0);
 const ADRDifference = ref(0);
 const revPARDifference = ref(0);
 const OCCDifference = ref(0);
+const totalForecastAvailableRoomsRef = ref(0);
 
 const calculateMetrics = () => {
     if (!allReservationsData.value || allReservationsData.value.length === 0) {
@@ -193,6 +195,7 @@ const calculateMetrics = () => {
         ADRDifference.value = 0;
         revPARDifference.value = 0;
         OCCDifference.value = 0;
+        totalForecastAvailableRoomsRef.value = 0;
         return;
     }
 
@@ -257,15 +260,6 @@ const calculateMetrics = () => {
     //    revPAR: totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0
     //});
 
-    revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
-
-
-    // OCC calculation using net capacity from occupation breakdown
-    const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
-    const netAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
-
-    OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
-
     // Calculate Forecast
     const forecastDataForPeriod = forecastData.value.filter(forecast => {
         const forecastDate = forecast.date;
@@ -281,9 +275,40 @@ const calculateMetrics = () => {
         totalForecastAvailableRooms += parseInt(forecast.available_room_nights || 0);
     });
 
+    totalForecastAvailableRoomsRef.value = totalForecastAvailableRooms;
+
+    const revPARDenominator = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
+    revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
+
+    console.log('[ReportMonthly] RevPAR calculation:', {
+        numerator: totalRevenue,
+        denominator: revPARDenominator,
+        result: revPAR.value
+    });
+
+
+    // OCC calculation using net capacity from occupation breakdown
+    const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
+    const baseNetAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
+    const netAvailableRoomNights = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
+
+    console.log('[ReportMonthly] Actual OCC calculation:', {
+        numerator: totalRoomsSold,
+        denominator: netAvailableRoomNights,
+        result: netAvailableRoomNights > 0 ? (totalRoomsSold / netAvailableRoomNights) * 100 : 0
+    });
+
+    OCC.value = netAvailableRoomNights > 0 ? Math.round((totalRoomsSold / netAvailableRoomNights) * 10000) / 100 : 0;
+
     forecastSales.value = Math.round(totalForecastRevenue);
     forecastADR.value = totalForecastRooms > 0 ? Math.round(totalForecastRevenue / totalForecastRooms) : 0;
     forecastRevPAR.value = totalForecastAvailableRooms > 0 ? Math.round(totalForecastRevenue / totalForecastAvailableRooms) : 0;
+    console.log('[ReportMonthly] Forecast OCC calculation:', {
+        numerator: totalForecastRooms,
+        denominator: totalForecastAvailableRooms,
+        result: totalForecastAvailableRooms > 0 ? (totalForecastRooms / totalForecastAvailableRooms) * 100 : 0
+    });
+
     forecastOCC.value = totalForecastAvailableRooms > 0 ? Math.round((totalForecastRooms / totalForecastAvailableRooms) * 10000) / 100 : 0;
 
     // Calculate Differences
@@ -305,38 +330,38 @@ const fetchDataAndProcess = async () => {
         calculateMetrics();
         return;
     }
-    
+
     try {
         isLoading.value = true;
-        
+
         // Fetch data for the widest necessary range
         loadingStatus.value = '予約データを取得中...';
         const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-        
+
         loadingStatus.value = '予算データを取得中...';
         const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-        
+
         loadingStatus.value = '実績データを取得中...';
         const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-        
+
         loadingStatus.value = 'プラン別売上データを取得中...';
         const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '稼働率データを取得中...';
         const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '予約チャネルデータを取得中...';
         const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '決済タイミングデータを取得中...';
         const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '予約者タイプデータを取得中...';
         const bookerTypeBreakdownResult = await fetchBookerTypeBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = 'プラン別予算データを取得中...';
         const forecastDataByPlanResult = await fetchForecastDataByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-        
+
         loadingStatus.value = '予約詳細データを取得中...';
         // Fetch reservation list for booker type and length of stay
         const reservationListViewResult = await fetchReservationListView(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);

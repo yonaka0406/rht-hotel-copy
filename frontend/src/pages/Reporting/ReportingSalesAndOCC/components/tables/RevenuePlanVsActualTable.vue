@@ -33,11 +33,8 @@
                                     {{ formatCurrency(data.variance_amount) }}
                                 </span>
                                 <span v-else>—</span>
-                                <Badge
-                                    v-if="data.variance_percentage != null"
-                                    class="ml-2"
-                                    :severity="getSeverity(data.variance_percentage)"
-                                    size="small">
+                                <Badge v-if="data.variance_percentage != null" class="ml-2"
+                                    :severity="getSeverity(data.variance_percentage)" size="small">
                                     {{ formatPercentage(data.variance_percentage) }}
                                 </Badge>
                                 <Badge v-else class="ml-2" severity="info" size="small">
@@ -63,7 +60,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'; // Add this line
+import { computed } from 'vue';
 import { Card, DataTable, Column, Badge, Button } from 'primevue';
 import {
     formatCurrencyForReporting as formatCurrency,

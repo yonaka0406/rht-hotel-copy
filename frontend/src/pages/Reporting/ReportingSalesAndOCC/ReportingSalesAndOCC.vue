@@ -1,8 +1,10 @@
 <template>
     <div>
         <div class="flex justify-end gap-2 mb-4">
-            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="handleDownload('xlsx')" :loading="isDownloadingExcel" :disabled="loading" />
-            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="handleDownload('pdf')" :loading="isDownloadingPdf" :disabled="loading" />
+            <Button label="デイリーレポート(Excel)" icon="pi pi-file-excel" severity="success" @click="handleDownload('xlsx')"
+                :loading="isDownloadingExcel" :disabled="loading" />
+            <Button label="デイリーレポート(PDF)" icon="pi pi-file-pdf" @click="handleDownload('pdf')"
+                :loading="isDownloadingPdf" :disabled="loading" />
         </div>
         <div v-if="Object.keys(dataErrors).length > 0" class="mb-4">
             <Message severity="error" :closable="true" v-for="(error, hotelId) in dataErrors" :key="hotelId">
@@ -135,6 +137,17 @@ const selectionMessage = computed(() => {
     return `会計データがない場合はPMSの数値になっています。期間： ${periodStr}。選択中の施設： ${uniqueNames.join(', ')}`;
 });
 
+const hotelSortOrderMap = computed(() => {
+    const map = new Map();
+    if (allHotels.value) {
+        allHotels.value.forEach(h => {
+            map.set(Number(h.id), (h.sort_order !== null && h.sort_order !== undefined) ? h.sort_order : 999);
+        });
+    }
+    map.set(0, -1); // 施設合計 always first
+    return map;
+});
+
 // KPI Calculations for Export
 const kpiData = computed(() => {
     const revenueEntry = revenueData.value?.find(item => item.hotel_id === 0);
@@ -149,7 +162,8 @@ const kpiData = computed(() => {
 
     const actualADR = total_sold_rooms ? Math.round(total_period_accommodation_revenue / total_sold_rooms) : 0;
     const forecastADR = total_fc_sold_rooms ? Math.round(total_forecast_revenue / total_fc_sold_rooms) : 0;
-    const actualRevPAR = total_available_rooms ? Math.round(total_period_accommodation_revenue / total_available_rooms) : 0;
+    const actualDenominator = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
+    const actualRevPAR = actualDenominator ? Math.round(total_period_accommodation_revenue / actualDenominator) : 0;
     const forecastRevPAR = total_fc_available_rooms ? Math.round(total_forecast_revenue / total_fc_available_rooms) : 0;
 
     return {
@@ -380,6 +394,7 @@ const prevYearRevenueData = computed(() => {
                 current_year_month: currentYearMonth,
                 hotel_id: outputHotelId,
                 hotel_name: hotelName,
+                sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
                 pms_revenue: pmsRev,
                 acc_revenue: accRev,
                 period_revenue: periodRev,
@@ -389,7 +404,14 @@ const prevYearRevenueData = computed(() => {
         }
     });
 
-
+    result.sort((a, b) => {
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
+    });
 
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
@@ -502,17 +524,19 @@ const revenueData = computed(() => {
             let otherRev = (accRev !== null) ? 0 : (pmsOtherRev || 0); // If using accounting, other is 0 since accounting only has accommodation
             result.push({
                 month: monthKey, hotel_id: outputHotelId, hotel_name: hotelName,
+                sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
                 pms_revenue: pmsRev, forecast_revenue: forecastRev, acc_revenue: accRev, period_revenue: periodRev,
                 accommodation_revenue: accommodationRev, other_revenue: otherRev,
             });
         }
     });
     result.sort((a, b) => {
-        if (a.month < b.month) return -1; if (a.month > b.month) return 1;
-        const idA = a.hotel_id; const idB = b.hotel_id;
-        if (idA === 0 && idB !== 0) return -1; if (idA !== 0 && idB === 0) return 1;
-        if (typeof idA === 'number' && typeof idB === 'number') return idA - idB;
-        return String(idA).localeCompare(String(idB));
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
     });
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
@@ -695,12 +719,13 @@ const occupancyData = computed(() => {
         // Now, create the result array for the month
         for (const hotelId in monthData) {
             const data = monthData[hotelId];
-            const total_rooms = data.total_available_rooms_for_month_calc || 0;
+            const total_rooms = data.fc_total_rooms > 0 ? data.fc_total_rooms : (data.total_available_rooms_for_month_calc || 0);
             const total_gross_rooms = data.total_gross_rooms_for_month_calc || 0;
             const occupancyRate = total_rooms > 0 ? (data.sold_rooms / total_rooms) * 100 : 0;
 
             let outputHotelId = hotelId === '0' ? 0 : parseInt(hotelId, 10);
             const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
+            const hotelOpenDate = searchAllHotels(outputHotelId)[0]?.open_date || null;
 
             const oldAdjustedTotalRoomsEquivalentForCondition = data.total_rooms + data.roomDifferenceSum;
             if (hotelId !== '0' || (hotelId === '0' && selectedHotels.value.length > 0)) {
@@ -709,6 +734,8 @@ const occupancyData = computed(() => {
                         month: monthKey,
                         hotel_id: outputHotelId,
                         hotel_name: hotelName,
+                        sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
+                        open_date: hotelOpenDate,
                         total_rooms: total_rooms,
                         net_total_rooms: total_rooms,
                         gross_total_rooms: total_gross_rooms,
@@ -725,11 +752,12 @@ const occupancyData = computed(() => {
         }
     });
     result.sort((a, b) => {
-        if (a.month < b.month) return -1; if (a.month > b.month) return 1;
-        const idA = a.hotel_id; const idB = b.hotel_id;
-        if (idA === 0 && idB !== 0) return -1; if (idA !== 0 && idB === 0) return 1;
-        if (typeof idA === 'number' && typeof idB === 'number') return idA - idB;
-        return String(idA).localeCompare(String(idB));
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
     });
     if (selectedView.value?.endsWith('Hotel')) {
         return result.filter(item => item.hotel_id !== 0);
@@ -841,11 +869,21 @@ const prevYearOccupancyData = computed(() => {
             result.push({
                 month: monthKey,
                 hotel_id: outputHotelId, hotel_name: hotelName,
+                sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
                 sold_rooms: data.sold_rooms,
                 total_rooms: total_rooms,
                 occ: parseFloat(occupancyRate.toFixed(2))
             });
         }
+    });
+
+    result.sort((a, b) => {
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.month < b.month) return -1;
+        if (a.month > b.month) return 1;
+        return Number(a.hotel_id) - Number(b.hotel_id);
     });
 
     if (selectedView.value?.endsWith('Hotel')) {
@@ -1153,14 +1191,15 @@ const fetchData = async () => {
 
                             totalActualSales += hotelActualSales;
                         }
-                        const actualOccAccommodation = accommodationNetAvailableRoomNights > 0 ? (accommodationConfirmedNights / accommodationNetAvailableRoomNights) * 100 : 0;
+                        const occDenominator = totalForecastRooms > 0 ? totalForecastRooms : accommodationNetAvailableRoomNights;
+                        const actualOccAccommodation = occDenominator > 0 ? (accommodationConfirmedNights / occDenominator) * 100 : 0;
                         const forecastOcc = totalForecastRooms > 0 ? (totalForecastStays / totalForecastRooms) * 100 : 0; // This remains general forecast
 
                         const hasPrevData = !!prevByMonth[monthLabel];
                         const prev = prevByMonth[monthLabel] || { sales: 0, stays: 0, rooms: 0 };
 
                         // prevOcc is not specific to accommodation here, as prevByMonth doesn't have sales_category breakdown.
-                        const prevOcc = accommodationNetAvailableRoomNights > 0 ? (prev.stays / accommodationNetAvailableRoomNights) * 100 : 0;
+                        const prevOcc = occDenominator > 0 ? (prev.stays / occDenominator) * 100 : 0;
 
                         const salesDiff = hasPrevData ? totalActualSales - prev.sales : null;
                         //console.log(`[DEBUG] Sales comparison for ${monthLabel}:`, {
