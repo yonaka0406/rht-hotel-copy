@@ -52,8 +52,7 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.email" :pattern="emailPattern"
-                                    :class="{ 'p-invalid': !isValidEmail }" @input="validateEmail(client.email)"
+                                <InputText v-model="client.email" :invalid="!isValidEmail"
                                     fluid />
                                 <label>メールアドレス</label>
                                 <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
@@ -241,7 +240,6 @@ const personTypeOptions = [
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, validateCustomerId as validateCustomerIdUtil, hasContactInfo } from '../../../utils/validationUtils';
 
 // HTML pattern attributes
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[\d\s()+\-]*$/;
 
 const isValidEmail = ref(true);
@@ -265,9 +263,9 @@ const impedimentStatus = computed(() => {
 });
 
 // Helper    
-const validateEmail = (email) => {
-    isValidEmail.value = validateEmailUtil(email);
-};
+watch(() => client.value.email, (newValue) => {
+    isValidEmail.value = validateEmailUtil(newValue);
+});
 const validatePhone = (phone) => {
     isValidPhone.value = validatePhoneUtil(phone);
 };
