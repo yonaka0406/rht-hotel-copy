@@ -14,16 +14,17 @@ WORKDIR /usr/src/app
 # Copy package files first to leverage Docker cache
 COPY package*.json ./
 COPY frontend/package*.json ./frontend/
+COPY api/package*.json ./api/
 
 # Install dependencies for both root and frontend
 RUN npm install
 RUN npm --prefix frontend install --force --legacy-peer-deps
 
-# Now, copy the rest of the source code
-COPY . .
-
 # Install dependencies for api
 RUN cd api && npm install
+
+# Now, copy the rest of the source code
+COPY . .
 
 # Clear npm cache and reinstall/rebuild native modules after copying source
 # This ensures native binaries are built for the correct architecture
@@ -105,7 +106,10 @@ RUN addgroup --system --gid 1001 appgroup && \
 COPY --from=builder /usr/src/app/package*.json ./
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/frontend/dist ./frontend/dist
-COPY --from=builder --chown=appuser:appgroup /usr/src/app/api ./api
+
+# Copy api dependencies first to cache playwright install
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/api/package*.json ./api/
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/api/node_modules ./api/node_modules
 
 # Ensure Playwright is installed for the appuser
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
@@ -114,6 +118,9 @@ RUN mkdir -p /ms-playwright && \
     # Ensure the non-root user owns the downloaded browsers and the app directory
     chown -R appuser:appgroup /ms-playwright && \
     chown -R appuser:appgroup /usr/src/app
+
+# Copy the rest of the api source code
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/api ./api
 
 USER appuser
 EXPOSE 3000
