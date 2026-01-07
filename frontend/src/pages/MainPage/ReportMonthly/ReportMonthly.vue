@@ -277,14 +277,14 @@ const calculateMetrics = () => {
 
     totalForecastAvailableRoomsRef.value = totalForecastAvailableRooms;
 
-    const revPARDenominator = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
+    const revPARDenominator = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : totalAvailableRoomNightsInPeriod;
     revPAR.value = revPARDenominator > 0 ? Math.round(totalRevenue / revPARDenominator) : 0;
 
 
     // OCC calculation using net capacity from occupation breakdown
     const totalAvailableRow = occupationBreakdownData.value.find(row => row.plan_name === 'Total Available');
     const baseNetAvailableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.net_available_room_nights || 0) : totalAvailableRoomNightsInPeriod;
-    const netAvailableRoomNights = totalForecastAvailableRooms > 0 ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
+    const netAvailableRoomNights = (totalForecastAvailableRooms && totalForecastAvailableRooms > 0) ? totalForecastAvailableRooms : baseNetAvailableRoomNights;
 
     console.log('[ReportMonthly] Actual OCC calculation:', {
         numerator: totalRoomsSold,

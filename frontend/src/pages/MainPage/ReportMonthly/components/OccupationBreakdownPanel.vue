@@ -58,11 +58,11 @@
                             footerStyle="text-align:right" />
                     </Row>
                     <Row>
-                        <Column :footer="props.totalForecastAvailableRooms > 0 ? '確定泊数 / 計画利用可能泊数:' : '確定泊数 / 正味利用可能泊数:'" :colspan="5" footerStyle="text-align:right" />
+                        <Column :footer="(props.totalForecastAvailableRooms && props.totalForecastAvailableRooms > 0) ? '確定泊数 / 計画利用可能泊数:' : '確定泊数 / 正味利用可能泊数:'" :colspan="5" footerStyle="text-align:right" />
                         <Column :footer="(() => {
                                 const confirmed = confirmedOccupancyNights;
                                 const netAvailable = occupationBreakdownTotals.net_available_room_nights;
-                                const denominator = props.totalForecastAvailableRooms > 0 ? props.totalForecastAvailableRooms : netAvailable;
+                                const denominator = (props.totalForecastAvailableRooms && props.totalForecastAvailableRooms > 0) ? props.totalForecastAvailableRooms : netAvailable;
                                 if (denominator <= 0) return 'N/A';
                                 return ((confirmed / denominator) * 100).toFixed(2) + '%';
                             })()
