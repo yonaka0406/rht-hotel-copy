@@ -1053,8 +1053,9 @@ export function useReportStore() {
             const a = document.body.appendChild(document.createElement('a'));
             a.href = url;
             
-            // Format date for filename: YYYY-MM-DD -> YYYYMMDD
-            const formattedDate = comparisonDate ? comparisonDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            // Format date for filename: always use today's date
+            const today = new Date();
+            const formattedDate = today.toISOString().slice(0, 10).replace(/-/g, '');
             a.download = `daily_report_${formattedDate}.${format}`;
             
             a.click();

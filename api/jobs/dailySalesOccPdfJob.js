@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { sendGenericEmail } = require('../utils/emailUtils');
-const { getMonthlySummaryData } = require('../services/reportDataService');
+const { getFrontendCompatibleReportData } = require('./services/frontendCompatibleReportService');
 const { generateDailyReportPdf } = require('../controllers/report/services/dailyTemplateService');
 const logger = require('../config/logger');
 const fs = require('fs');
@@ -51,13 +51,34 @@ const runDailySalesOccPdfJob = async () => {
         // 1. Fetch Data
         logger.info(`[${requestId}] Fetching report data for ${formattedDate}...`);
         
-        // Use the requestId but provide the dbClient to ensure we use the correct database
-        const reportData = await getMonthlySummaryData(requestId, today, dbClient);
+        // Use the frontend-compatible service to ensure data consistency with downloaded reports
+        // Use today's date to match frontend manual download behavior (both use fresh data)
+        const reportData = await getFrontendCompatibleReportData(requestId, today, dbClient);
 
         logger.info(`[${requestId}] Fetched ${reportData?.revenueData?.length || 0} revenue rows and ${reportData?.occupancyData?.length || 0} occupancy rows.`);
 
+        // Debug: Check the occupancy data before passing to template
+        if (reportData?.occupancyData) {
+            const totalOcc = reportData.occupancyData.find(item => item.hotel_id === 0);
+            logger.warn(`[${requestId}] BEFORE TEMPLATE - Total occupancy: ${totalOcc?.occ}%, Sold: ${totalOcc?.sold_rooms}, Total: ${totalOcc?.total_rooms}`);
+        }
+
+        // Debug: Check the outlook data for blocked nights
+        if (reportData?.outlookData) {
+            logger.warn(`[${requestId}] OUTLOOK DATA - Found ${reportData.outlookData.length} months`);
+            reportData.outlookData.forEach(item => {
+                logger.warn(`[${requestId}] Month ${item.month}: Blocked nights: ${item.blocked_nights}, Occ: ${item.occ}%`);
+            });
+        }
+
         // 2. Generate PDF
         logger.info(`[${requestId}] Generating PDF...`);
+        
+        // Debug: Also generate Excel to check raw data
+        logger.info(`[${requestId}] Generating Excel for debugging...`);
+        const excelPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
+        logger.warn(`[${requestId}] Excel file generated at: ${excelPath}`);
+        
         const pdfPath = await generateDailyReportPdf(reportData, requestId, 'pdf');
 
         if (!pdfPath || !fs.existsSync(pdfPath)) {
