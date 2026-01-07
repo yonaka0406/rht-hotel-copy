@@ -10,20 +10,10 @@ export const validatePhone = (phone) => {
   const len = digitsOnly.length;
   const startsWithZero = digitsOnly.startsWith('0');
 
-  // デバッグログを追加
-  console.log('--- Phone Validation Debug ---');
-  console.log('Original phone:', phone);
-  console.log('Digits only:', digitsOnly);
-  console.log('Length:', len);
-  console.log('Starts with zero:', startsWithZero);
-
   // Same logic as backend:
   // Starts with 0 -> 10 or 11 digits
   // Doesn't start with 0 -> 8 to 10 digits
   const isValid = (startsWithZero && (len === 10 || len === 11)) || (!startsWithZero && (len >= 8 && len <= 10));
-
-  console.log('Is valid:', isValid);
-  console.log('----------------------------');
 
   return isValid;
 };
