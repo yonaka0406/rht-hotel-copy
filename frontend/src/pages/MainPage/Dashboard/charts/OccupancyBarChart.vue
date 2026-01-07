@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
     }
 });
 
-watch(() => [props.xAxisData, props.roomCountData, props.occRateData, props.maleCountData, props.femaleCountData, props.unspecifiedCountData], () => {
+watch(() => [props.xAxisData, props.maxValue, props.roomCountData, props.occRateData, props.maleCountData, props.femaleCountData, props.unspecifiedCountData], () => {
     nextTick(initChart);
 }, { deep: true });
 </script>

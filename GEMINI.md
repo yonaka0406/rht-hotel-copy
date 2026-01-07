@@ -255,8 +255,9 @@ You can use `docker compose` to access the database.
 
 ## 14. Shell Command Execution
 
-In this environment (Windows PowerShell), when chaining multiple shell commands, use the semicolon `;` as a separator instead of `&&`. For example:
-`git status; git diff HEAD; git log -n 3`
-instead of
-`git status && git diff HEAD && git log -n 3`
-This ensures that the commands are executed correctly by the shell.
+In this environment (Windows PowerShell), command chaining operators behave differently. Select the operator based on the desired error handling:
+
+- **`;` (Sequential):** Runs commands one after another regardless of whether previous commands succeeded or failed. Use this when you need all steps to run (e.g., reporting status) regardless of errors.
+- **`&&` (Conditional):** Runs the next command *only* if the previous one succeeded (exit code 0). Use this for dependent tasks where a failure should halt execution (e.g., `git add && git commit`).
+
+*Note:* Using `;` is not universally "more correct" but is specific to PowerShell for unconditional chaining. In POSIX shells (bash, sh), `&&` is standard for dependent execution. Choose your separator based on whether you want the pipeline to stop on error (`&&`) or continue ignoring errors (`;`).

@@ -50,9 +50,8 @@
         <Column field="clients_json" header="宿泊者" style="width:20%">
             <template #body="{ data }">
                 <div v-if="data.clients_json" class="dark:text-gray-100" style="white-space: pre-line;"
-                    :v-tooltip="formatClientNames(data.clients_json)">
-                    <div v-for="client in (Array.isArray(data.clients_json) ? data.clients_json : JSON.parse(data.clients_json))"
-                        :key="client.id">
+                    v-tooltip="formatClientNames(data.clients_json)">
+                    <div v-for="client in parseClients(data.clients_json)" :key="client.id">
                         <span v-if="client.gender === 'male'" class="mr-1 text-blue-500">♂</span>
                         <span v-else-if="client.gender === 'female'" class="mr-1 text-pink-500">♀</span>
                         {{ client.name_kanji || client.name_kana || client.name }}
@@ -124,8 +123,19 @@ const formatClientNames = (clientsJson) => {
     try {
         const clients = Array.isArray(clientsJson) ? clientsJson : JSON.parse(clientsJson);
         return clients.map(client => client.name_kanji || client.name_kana || client.name).join('\n');
-    } catch (e) {
+    } catch (_e) {
         return '';
+    }
+};
+
+const parseClients = (clientsJson) => {
+    if (!clientsJson) return [];
+    if (Array.isArray(clientsJson)) return clientsJson;
+    try {
+        return JSON.parse(clientsJson);
+    } catch (_e) {
+        console.error('Error parsing clients_json:', _e);
+        return [];
     }
 };
 </script>

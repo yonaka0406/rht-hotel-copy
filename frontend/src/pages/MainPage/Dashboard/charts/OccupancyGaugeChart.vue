@@ -7,8 +7,9 @@ import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import * as echarts from 'echarts/core';
 import { GaugeChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
+import { TitleComponent } from 'echarts/components';
 
-echarts.use([GaugeChart, CanvasRenderer]);
+echarts.use([GaugeChart, CanvasRenderer, TitleComponent]);
 
 const props = defineProps({
     gaugeData: {

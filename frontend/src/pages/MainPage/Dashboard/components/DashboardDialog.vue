@@ -101,6 +101,31 @@ const getMidnight = (date) => {
     return d;
 };
 
+const formatGender = (female) => {
+    return female > 0 ? `${female}♀️ ` : '';
+};
+
+const formatReportDate = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        return '無効な日付'; // Localized invalid date
+    }
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
+    const formatted = date.toLocaleDateString('ja-JP', options);
+    return formatted;
+};
+
+const formatDate = (date) => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+        console.error("Invalid Date object:", date);
+        return ''; // Safe fallback instead of throwing
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
 const plainTextReportContent = computed(() => {
     if (!props.checkInOutReportData || props.checkInOutReportData.length === 0) {
         return 'データがありません。';
@@ -108,30 +133,6 @@ const plainTextReportContent = computed(() => {
 
     const weekEndDate = new Date(props.dashboardSelectedDate);
     weekEndDate.setDate(weekEndDate.getDate() + 6);
-
-    const formatGender = (female) => {
-        return female > 0 ? `${female}♀️ ` : '';
-    };
-
-            const formatReportDate = (dateString) => {
-                const date = new Date(dateString);
-                if (isNaN(date.getTime())) {
-                    return '無効な日付'; // Localized invalid date
-                }
-                const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
-                const formatted = date.toLocaleDateString('ja-JP', options);
-                return formatted;
-            };
-    const formatDate = (date) => {
-        if (!(date instanceof Date) || isNaN(date.getTime())) {
-            console.error("Invalid Date object:", date);
-            throw new Error("The provided input is not a valid Date object:");
-        }
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    };
 
     let report = `📊 ${props.hotelName || 'ホテル'} ${formattedDate.value} のチェックイン・チェックアウトレポート\n\n`;
 
@@ -145,7 +146,7 @@ const plainTextReportContent = computed(() => {
 
             report += `🚪 チェックアウト: ${dailyData.checkout_room_count || 0}室 (${dailyData.total_checkouts || 0}人)\n`;
             const checkoutFemale = formatGender(dailyData.female_checkouts);
-            if (checkoutFemale) report += `  インのうち: ${checkoutFemale}\n\n`;
+            if (checkoutFemale) report += `  アウトのうち: ${checkoutFemale}\n\n`;
         } else {
             report += `当日データがありません。\n\n`;
         }
@@ -199,6 +200,10 @@ const plainTextReportContent = computed(() => {
 });
 
 const copyReportToClipboard = async () => {
+    if (!reportContentForCopy.value || !reportContentForCopy.value.textContent) {
+        toast.add({ severity: 'error', summary: 'コピー失敗', detail: 'コピーする内容がありません', life: 3000 });
+        return;
+    }
     try {
         await navigator.clipboard.writeText(reportContentForCopy.value.textContent);
         toast.add({ severity: 'success', summary: 'コピーしました', detail: 'レポートがクリップボードにコピーされました', life: 3000 });
@@ -222,31 +227,6 @@ const displayReportData = computed(() => {
 
     const weekEndDate = new Date(props.dashboardSelectedDate);
     weekEndDate.setDate(weekEndDate.getDate() + 6);
-
-    const formatGender = (female) => {
-        return female > 0 ? `${female}♀️ ` : '';
-    };
-
-    const formatReportDate = (dateString) => {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return '無効な日付';
-        }
-        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
-        const formatted = date.toLocaleDateString('ja-JP', options);
-        return formatted;
-    };
-
-    const formatDate = (date) => {
-        if (!(date instanceof Date) || isNaN(date.getTime())) {
-            console.error("Invalid Date object:", date);
-            throw new Error("The provided input is not a valid Date object:");
-        }
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    };
 
     if (selectedView.value === '当日') {
         const formattedDashboardDate = formatDate(new Date(props.dashboardSelectedDate));

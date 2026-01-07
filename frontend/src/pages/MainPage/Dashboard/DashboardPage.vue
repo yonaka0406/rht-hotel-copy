@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 // Components
@@ -128,7 +128,11 @@ const openEditReservation = (event) => {
 };
 
 const handleDrawerClose = async () => {
-    await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
+    try {
+        await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
+    } catch (error) {
+        console.error('Error fetching reservation list on drawer close:', error);
+    }
 };
 
 const goToReservation = () => {
@@ -137,38 +141,40 @@ const goToReservation = () => {
 
 const loadDashboardData = async () => {
     tableLoading.value = true;
+    try {
+        await fetchHotels();
+        await fetchHotel();
+        await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
 
-    await fetchHotels();
-    await fetchHotel();
-    await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
+        // Fetch chart data
+        await fetchBarChartData(selectedHotelId.value, selectedDate.value);
+        await fetchBarStackChartData(selectedHotelId.value, startDate.value, endDate.value, selectedDate.value);
+        await fetchGaugeChartData(selectedHotelId.value, startDate.value);
 
-    tableLoading.value = false;
+        // Fetch check-in/out report data
+        const tempReportStartDate = new Date(selectedDate.value);
+        tempReportStartDate.setDate(tempReportStartDate.getDate() - 1);
+        reportStartDate.value = formatDate(tempReportStartDate);
 
-    // Fetch chart data
-    await fetchBarChartData(selectedHotelId.value, selectedDate.value);
-    await fetchBarStackChartData(selectedHotelId.value, startDate.value, endDate.value, selectedDate.value);
-    await fetchGaugeChartData(selectedHotelId.value, startDate.value);
+        const tempReportEndDate = new Date(tempReportStartDate);
+        tempReportEndDate.setDate(tempReportEndDate.getDate() + 7);
+        reportEndDate.value = formatDate(tempReportEndDate);
 
-    // Fetch check-in/out report data
-    const tempReportStartDate = new Date(selectedDate.value);
-    tempReportStartDate.setDate(tempReportStartDate.getDate() - 1);
-    reportStartDate.value = formatDate(tempReportStartDate);
-
-    const tempReportEndDate = new Date(tempReportStartDate);
-    tempReportEndDate.setDate(tempReportEndDate.getDate() + 7);
-    reportEndDate.value = formatDate(tempReportEndDate);
-
-    checkInOutReportData.value = await fetchCheckInOutReport(
-        selectedHotelId.value,
-        reportStartDate.value,
-        reportEndDate.value
-    );
+        checkInOutReportData.value = await fetchCheckInOutReport(
+            selectedHotelId.value,
+            reportStartDate.value,
+            reportEndDate.value
+        );
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    } finally {
+        tableLoading.value = false;
+    }
 };
 
 // Lifecycle
 onMounted(async () => {
-    await fetchHotels();
-    await fetchHotel();
+    // Initial data load is handled by the immediate watch on loadDashboardData
 });
 
 watch(

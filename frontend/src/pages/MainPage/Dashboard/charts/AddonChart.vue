@@ -1,5 +1,6 @@
 <template>
-    <div ref="chartContainer" :key="chartKey" class="w-full h-100"></div>
+    <div ref="chartContainer" :key="chartKey" class="w-full h-100" role="img"
+        :aria-label="chartLabel"></div>
 </template>
 
 <script setup>
@@ -35,6 +36,10 @@ const props = defineProps({
     chartKey: {
         type: Number,
         default: 0
+    },
+    chartLabel: {
+        type: String,
+        default: 'Addon usage chart'
     }
 });
 
@@ -96,7 +101,7 @@ const generateChartOptions = () => ({
 
 const initChart = () => {
     if (chartContainer.value) {
-        chartInstance = echarts.getInstanceByDom(chartContainer.value) || echarts.init(chartContainer.value, null, { passive: true, renderer: 'canvas' });
+        chartInstance = echarts.getInstanceByDom(chartContainer.value) || echarts.init(chartContainer.value, null, { renderer: 'canvas' });
         chartInstance.setOption(generateChartOptions(), true);
         chartInstance.resize();
     }

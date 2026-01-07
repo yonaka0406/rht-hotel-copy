@@ -79,7 +79,7 @@ const generateChartOptions = () => ({
 
 const initChart = () => {
     if (chartContainer.value) {
-        chartInstance = echarts.getInstanceByDom(chartContainer.value) || echarts.init(chartContainer.value, null, { passive: true, renderer: 'canvas' });
+        chartInstance = echarts.getInstanceByDom(chartContainer.value) || echarts.init(chartContainer.value, null, { renderer: 'canvas' });
         chartInstance.setOption(generateChartOptions(), true);
         chartInstance.resize();
     }

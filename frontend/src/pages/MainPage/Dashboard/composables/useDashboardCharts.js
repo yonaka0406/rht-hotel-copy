@@ -68,7 +68,7 @@ export function useDashboardCharts() {
     const formatDate = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
             console.error("Invalid Date object:", date);
-            throw new Error("The provided input is not a valid Date object:");
+            throw new Error(`The provided input is not a valid Date object: ${date}`);
         }
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -77,8 +77,12 @@ export function useDashboardCharts() {
     };
 
     const formatDateWithDay = (date) => {
-        const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
         const parsedDate = new Date(date);
+        if (isNaN(parsedDate.getTime())) {
+            console.error("Invalid Date object in formatDateWithDay:", date);
+            return '';
+        }
+        const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
         return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
     };
 
@@ -213,7 +217,7 @@ export function useDashboardCharts() {
         };
 
         for (const date in countData) {
-            if (countData.hasOwnProperty(date)) {
+            if (Object.prototype.hasOwnProperty.call(countData, date)) {
                 const item = countData[date];
                 if (item.plans) {
                     item.plans.forEach(plan => uniquePlanKeys.add(plan.key));
@@ -248,7 +252,7 @@ export function useDashboardCharts() {
         // Process meal data for the report dialog
         const processedMealData = {};
         for (const dateStr in countData) {
-            if (countData.hasOwnProperty(dateStr)) {
+            if (Object.prototype.hasOwnProperty.call(countData, dateStr)) {
                 const item = countData[dateStr];
                 if (item.addons) {
                     item.addons.forEach(addon => {
