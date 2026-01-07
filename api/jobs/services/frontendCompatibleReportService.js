@@ -21,22 +21,32 @@ function formatDateMonth(date) {
 }
 
 /**
- * Helper to format a Date object to YYYY-MM-DD
- */
-function formatDateToYMD(date) {
-    if (!date) return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-/**
  * Helper to get the number of days in a given month (1-indexed) of a year
  */
 function getDaysInMonth(year, month) {
     if (typeof year !== 'number' || typeof month !== 'number') return 0;
     return new Date(year, month, 0).getDate();
+}
+
+/**
+ * Helper function to determine if a hotel should be included in the report
+ * Replicates the complex condition from frontend
+ */
+function isHotelRelevant(hotelIdStr, hotelIds) {
+    return hotelIdStr !== '0' || (hotelIdStr === '0' && hotelIds.length > 0);
+}
+
+/**
+ * Helper function to check if all metrics are zero (used to filter out empty rows)
+ * Replicates the complex condition from frontend
+ */
+function hasAllZeroMetrics(hotelIdStr, data) {
+    const oldAdjustedTotalRoomsEquivalentForCondition = data.total_rooms + data.roomDifferenceSum;
+    return hotelIdStr === '0' && 
+           oldAdjustedTotalRoomsEquivalentForCondition === 0 && 
+           data.sold_rooms === 0 && 
+           data.roomDifferenceSum === 0 && 
+           data.total_rooms === 0;
 }
 
 /**
@@ -49,8 +59,35 @@ function getDaysInMonth(year, month) {
  */
 const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) => {
     try {
-        const year = targetDate.getFullYear();
-        const month = targetDate.getMonth();
+        // Input validation for targetDate
+        let validatedDate;
+        
+        if (!targetDate) {
+            const error = new Error(`[${requestId}] targetDate is required but was ${targetDate}`);
+            logger.error(`[getFrontendCompatibleReportData] ${error.message}`);
+            throw error;
+        }
+        
+        // Accept both Date objects and date strings
+        if (targetDate instanceof Date) {
+            validatedDate = targetDate;
+        } else if (typeof targetDate === 'string') {
+            validatedDate = new Date(targetDate);
+        } else {
+            const error = new Error(`[${requestId}] targetDate must be a Date object or date string, received: ${typeof targetDate} (${targetDate})`);
+            logger.error(`[getFrontendCompatibleReportData] ${error.message}`);
+            throw error;
+        }
+        
+        // Validate that the date is actually valid
+        if (isNaN(validatedDate.getTime())) {
+            const error = new Error(`[${requestId}] targetDate is not a valid date: ${targetDate}`);
+            logger.error(`[getFrontendCompatibleReportData] ${error.message}`);
+            throw error;
+        }
+        
+        const year = validatedDate.getFullYear();
+        const month = validatedDate.getMonth();
 
         // Calculate date ranges (same as frontend)
         const firstDayOfMonth = new Date(year, month, 1);
@@ -61,7 +98,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         const endDateStr = formatDate(lastDayOfMonth);
 
         // Previous Year Dates
-        const prevYearDate = new Date(targetDate);
+        const prevYearDate = new Date(validatedDate);
         prevYearDate.setFullYear(prevYearDate.getFullYear() - 1);
         const prevYearFirstDay = new Date(prevYearDate.getFullYear(), month, 1);
         const prevYearLastDay = new Date(prevYearDate.getFullYear(), month + 1, 0);
@@ -90,23 +127,19 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             batchPmsData,
             batchForecastData,
             batchAccountingData,
-            batchOccupationBreakdownData,
 
             // Previous Year
             batchPrevPmsData,
-            batchPrevAccountingData,
-            batchPrevOccupationBreakdownData
+            batchPrevAccountingData
         ] = await Promise.all([
             // Current Year
             fetchAllHotelsData(selectCountReservation, startDateStr, endDateStr),
             fetchAllHotelsData(selectForecastData, startDateStr, endDateStr),
             fetchAllHotelsData(selectAccountingData, startDateStr, endDateStr),
-            fetchAllHotelsData(selectOccupationBreakdownByMonth, startDateStr, endDateStr),
 
             // Previous Year
             fetchAllHotelsData(selectCountReservation, prevStartDateStr, prevEndDateStr),
-            fetchAllHotelsData(selectAccountingData, prevStartDateStr, prevEndDateStr),
-            fetchAllHotelsData(selectOccupationBreakdownByMonth, prevStartDateStr, prevEndDateStr)
+            fetchAllHotelsData(selectAccountingData, prevStartDateStr, prevEndDateStr)
         ]);
 
         // Process data exactly like frontend does
@@ -132,7 +165,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                 }
 
                 const mappedData = rawPmsData.map(item => ({
-                    date: formatDateToYMD(item.date),
+                    date: formatDate(item.date),
                     revenue: item.price !== undefined ? Number(item.price) : 0,
                     accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
                     other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
@@ -151,7 +184,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             const rawForecastData = batchForecastData[hKey] || [];
             if (Array.isArray(rawForecastData)) {
                 forecastTotalData[hKey] = rawForecastData.map(item => ({
-                    date: formatDateToYMD(item.forecast_month),
+                    date: formatDate(item.forecast_month),
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                     total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0,
                     room_count: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0,
@@ -164,7 +197,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             const rawAccountingData = batchAccountingData[hKey] || [];
             if (Array.isArray(rawAccountingData)) {
                 accountingTotalData[hKey] = rawAccountingData.map(item => ({
-                    date: formatDateToYMD(item.accounting_month),
+                    date: formatDate(item.accounting_month),
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                 })).filter(item => item.date !== null);
             } else {
@@ -175,7 +208,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             const rawPrevPmsData = batchPrevPmsData[hKey] || [];
             if (Array.isArray(rawPrevPmsData)) {
                 prevYearPmsTotalData[hKey] = rawPrevPmsData.map(item => ({
-                    date: formatDateToYMD(item.date),
+                    date: formatDate(item.date),
                     revenue: item.price !== undefined ? Number(item.price) : 0,
                     accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
                     other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
@@ -192,7 +225,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             const rawPrevAccountingData = batchPrevAccountingData[hKey] || [];
             if (Array.isArray(rawPrevAccountingData)) {
                 prevYearAccountingTotalData[hKey] = rawPrevAccountingData.map(item => ({
-                    date: formatDateToYMD(item.accounting_month),
+                    date: formatDate(item.accounting_month),
                     revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
                 })).filter(item => item.date !== null);
             } else {
@@ -221,7 +254,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
 
         // Generate revenue data (replicating frontend computed property logic)
         const revenueData = [];
-        const monthKey = formatDateMonth(targetDate);
+        const monthKey = formatDateMonth(validatedDate);
         
         // Initialize monthly aggregates
         const monthlyAggregates = {};
@@ -318,10 +351,10 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         aggregateDataSource(accountingTotalData, 'acc_revenue');
 
         // Build revenue data array
-        Object.keys(monthlyAggregates).sort().forEach(monthKey => {
-            for (const hotelIdStringKeyInMonth in monthlyAggregates[monthKey]) {
+        Object.keys(monthlyAggregates).sort().forEach(monthKeyInLoop => {
+            for (const hotelIdStringKeyInMonth in monthlyAggregates[monthKeyInLoop]) {
                 let outputHotelId = hotelIdStringKeyInMonth === '0' ? 0 : parseInt(hotelIdStringKeyInMonth, 10);
-                const aggregatedMonthData = monthlyAggregates[monthKey][hotelIdStringKeyInMonth];
+                const aggregatedMonthData = monthlyAggregates[monthKeyInLoop][hotelIdStringKeyInMonth];
                 const pmsRev = aggregatedMonthData.pms_revenue;
                 const pmsAccommodationRev = aggregatedMonthData.pms_accommodation_revenue;
                 const pmsOtherRev = aggregatedMonthData.pms_other_revenue;
@@ -335,7 +368,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                 let otherRev = (accRev !== null) ? 0 : (pmsOtherRev || 0);
                 
                 revenueData.push({
-                    month: monthKey,
+                    month: monthKeyInLoop,
                     hotel_id: outputHotelId,
                     hotel_name: hotelName,
                     sort_order: hotelSortOrderMap.get(outputHotelId) ?? 999,
@@ -493,7 +526,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
 
             for (let day = 1; day <= daysInCurrentMonth; day++) {
                 const dateForDay = new Date(year, month, day);
-                const currentDateStr = formatDateToYMD(dateForDay);
+                const currentDateStr = formatDate(dateForDay);
 
                 total_available_rooms_for_month_calc += dailyRealRoomsMap.has(currentDateStr) ? dailyRealRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
                 total_gross_rooms_for_month_calc += dailyGrossRoomsMap.has(currentDateStr) ? dailyGrossRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
@@ -535,9 +568,9 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                 });
             }
 
-            const oldAdjustedTotalRoomsEquivalentForCondition = data.total_rooms + data.roomDifferenceSum;
-            if (hotelIdStr !== '0' || (hotelIdStr === '0' && hotelIds.length > 0)) {
-                if (!(hotelIdStr === '0' && oldAdjustedTotalRoomsEquivalentForCondition === 0 && data.sold_rooms === 0 && data.roomDifferenceSum === 0 && data.total_rooms === 0)) {
+            // Use helper functions to determine if hotel should be included
+            if (isHotelRelevant(hotelIdStr, hotelIds)) {
+                if (!hasAllZeroMetrics(hotelIdStr, data)) {
                     occupancyData.push({
                         month: monthKey,
                         hotel_id: outputHotelId,
@@ -668,7 +701,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         });
 
         // Generate selection message
-        const periodStr = formatDateMonth(targetDate).replace('-', '/');
+        const periodStr = formatDateMonth(validatedDate).replace('-', '/');
         const names = revenueData
             .map(item => item.hotel_name)
             .filter(name => name && name !== '施設合計' && name !== 'Unknown Hotel');
@@ -678,7 +711,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         logger.debug(`[getFrontendCompatibleReportData] Generated report data - Revenue: ${revenueData.length}, Occupancy: ${occupancyData.length}, Outlook: ${outlookData.length}`);
 
         return {
-            targetDate: formatDate(targetDate),
+            targetDate: formatDate(validatedDate),
             revenueData,
             occupancyData,
             prevYearRevenueData,
