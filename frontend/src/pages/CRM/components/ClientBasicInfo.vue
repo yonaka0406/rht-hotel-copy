@@ -61,7 +61,7 @@
                         <div class="field col-span-1">
                             <FloatLabel>
                                 <InputText v-model="client.phone" :pattern="phonePattern"
-                                    :class="{ 'p-invalid': !isValidPhone }" @input="validatePhone(client.phone)"
+                                    :invalid="!isValidPhone"
                                     fluid />
                                 <label>電話番号</label>
                                 <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
@@ -70,7 +70,7 @@
                         <div class="field col-span-1">
                             <FloatLabel>
                                 <InputText v-model="client.fax" :pattern="phonePattern"
-                                    :class="{ 'p-invalid': !isValidFAX }" @input="validateFAX(client.fax)" fluid />
+                                    :invalid="!isValidFAX" fluid />
                                 <label>FAX</label>
                                 <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
                             </FloatLabel>
@@ -266,12 +266,12 @@ const impedimentStatus = computed(() => {
 watch(() => client.value.email, (newValue) => {
     isValidEmail.value = validateEmailUtil(newValue);
 });
-const validatePhone = (phone) => {
-    isValidPhone.value = validatePhoneUtil(phone);
-};
-const validateFAX = (phone) => {
-    isValidFAX.value = validatePhoneUtil(phone); // FAX uses the same validation as phone
-};
+watch(() => client.value.phone, (newValue) => {
+    isValidPhone.value = validatePhoneUtil(newValue);
+});
+watch(() => client.value.fax, (newValue) => {
+    isValidFAX.value = validatePhoneUtil(newValue); // FAX uses the same validation as phone
+});
 const formatDate = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
