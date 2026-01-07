@@ -60,7 +60,7 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.phone" :pattern="phonePattern"
+                                <InputText v-model="client.phone"
                                     :invalid="!isValidPhone"
                                     fluid />
                                 <label>電話番号</label>
@@ -69,7 +69,7 @@
                         </div>
                         <div class="field col-span-1">
                             <FloatLabel>
-                                <InputText v-model="client.fax" :pattern="phonePattern"
+                                <InputText v-model="client.fax"
                                     :invalid="!isValidFAX" fluid />
                                 <label>FAX</label>
                                 <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
@@ -238,9 +238,6 @@ const personTypeOptions = [
     { label: '個人', value: 'natural' },
 ];
 import { validatePhone as validatePhoneUtil, validateEmail as validateEmailUtil, validateCustomerId as validateCustomerIdUtil, hasContactInfo } from '../../../utils/validationUtils';
-
-// HTML pattern attributes
-const phonePattern = /^[\d\s()+\-]*$/;
 
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
