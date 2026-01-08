@@ -60,6 +60,9 @@ const ReportingActiveReservationsChange = () => import('@/pages/Reporting/Report
 const ReportingMonthlyReservationEvolution = () => import('@/pages/Reporting/ReportingMonthlyReservationEvolution/ReportingMonthlyReservationEvolution.vue');
 const AboutPage = () => import('@/pages/About/AboutPage.vue');
 
+const AccountingMainPage = () => import('@/pages/Accounting/AccountingMainPage.vue');
+const AccountingDashboard = () => import('@/pages/Accounting/AccountingDashboard.vue');
+
 
 const routes = [
   {
@@ -163,6 +166,15 @@ const routes = [
       { path: 'monthly-reservation-evolution', name: 'ReportingMonthlyReservationEvolution', component: ReportingMonthlyReservationEvolution },
     ],
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/accounting',
+    component: AccountingMainPage,
+    children: [
+      { path: '', redirect: { name: 'AccountingDashboard' } },
+      { path: 'dashboard', name: 'AccountingDashboard', component: AccountingDashboard },
+    ],
+    meta: { requiresAuth: true, requiresAccounting: true }
   },
   {
     path: '/about',
@@ -272,6 +284,22 @@ router.beforeEach((to, from, next) => {
 
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     const isAdminRoute = to.path.startsWith('/admin');
+    const isAccountingRoute = to.path.startsWith('/accounting');
+    
+    // For accounting routes, check permissions from token
+    if (isAccountingRoute) {
+      try {
+        // Decode the JWT token to check permissions
+        const tokenPayload = JSON.parse(atob(authToken.split('.')[1]));
+        if (!tokenPayload.permissions || !tokenPayload.permissions.accounting) {
+          return next({ name: 'Dashboard' });
+        }
+      } catch (error) {
+        console.error('Error checking accounting permissions:', error);
+        return next({ name: 'Dashboard' });
+      }
+    }
+    
     const apiUrl = isAdminRoute ? '/api/adminProtected' : '/api/protected';
 
     verifyToken(apiUrl).then((isValid) => {
