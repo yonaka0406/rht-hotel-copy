@@ -23,7 +23,7 @@
                             class="ml-2" />
                     </template>
                 </Column>
-                <Column header="通常売上" bodyStyle="text-align:right">
+                <Column header="宿泊売上" bodyStyle="text-align:right">
                     <template #body="slotProps">
                         <span v-if="salesByPlanChartMode === 'tax_included'">
                             {{ slotProps.data.regular_sales.toLocaleString('ja-JP') }} 円
@@ -210,7 +210,7 @@ const combinedSalesByPlan = computed(() => {
                 combined[categoryKey].cancelled_sales += parseFloat(item.accommodation_sales || 0) + parseFloat(item.other_sales || 0);
                 combined[categoryKey].cancelled_net_sales += parseFloat(item.accommodation_sales_net || 0) + parseFloat(item.other_sales_net || 0);
             } else {
-                // 通常売上 should only include accommodation_sales, not other_sales
+                // 宿泊売上 should only include accommodation_sales, not other_sales
                 combined[categoryKey].regular_sales += parseFloat(item.accommodation_sales || 0);
                 combined[categoryKey].regular_net_sales += parseFloat(item.accommodation_sales_net || 0);
             }
@@ -321,7 +321,7 @@ const initSalesByPlanChart = () => {
 
     const series = [
         {
-            name: '通常売上',
+            name: '宿泊売上',
             type: 'bar',
             stack: 'total',
             label: {
@@ -374,7 +374,7 @@ const initSalesByPlanChart = () => {
             valueFormatter: (value) => Math.round(value / 10000).toLocaleString('ja-JP') + valueLabel
         },
         legend: {
-            data: salesByPlanChartMode.value !== 'tax_included' ? ['通常売上', 'キャンセル売上', '計画売上'] : ['通常売上', 'キャンセル売上'],
+            data: salesByPlanChartMode.value !== 'tax_included' ? ['宿泊売上', 'キャンセル売上', '計画売上'] : ['宿泊売上', 'キャンセル売上'],
             top: '5%' // Move legend down slightly
         },
         grid: {

@@ -966,8 +966,20 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
       COALESCE(ptc.name, '未設定') AS plan_type_category_name,
       COALESCE(ppc.name, '未設定') AS plan_package_category_name,
       rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
-      SUM(COALESCE(rr.accommodation_price, 0)) AS accommodation_sales,
-      SUM(COALESCE(rr.other_price, 0)) AS other_sales,
+      SUM(
+        CASE 
+          WHEN COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 
+            CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END
+          ELSE 0 
+        END
+      ) AS accommodation_sales,
+      SUM(
+        CASE 
+          WHEN COALESCE(rd.is_accommodation, TRUE) = FALSE THEN 
+            CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END
+          ELSE 0 
+        END
+      ) AS other_sales,
       SUM(COALESCE(rr.accommodation_net_price, 0)) AS accommodation_sales_net,
       SUM(COALESCE(rr.other_net_price, 0)) AS other_sales_net
     FROM reservation_details rd
