@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.9] - 2026-01-08
+
+- Improvement: Updated reporting terminology from '実績' to '実績・予約' across all charts, tables, KPI cards, and export files for enhanced data accuracy.
+
+---
+
 ## [1.3.8] - 2026-01-07
 
 - New Feature: Reorganized dashboard with interactive charts (occupancy bar chart, gauge chart, plan stack chart) and enhanced reservation list table with status, guest details, and pricing information.
