@@ -21,7 +21,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 mb-6">
                 <div class="text-center">
                     <div class="mb-4">
-                        <i class="pi pi-calculator text-4xl text-emerald-600 dark:text-emerald-400"></i>
+                        <i class="pi pi-calculator text-4xl text-purple-400"></i>
                     </div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                         会計モジュール
@@ -31,31 +31,31 @@
                     </p>
                     
                     <!-- User Context Information -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 mb-6" style="background-color: #f3f0ff;">
                         <div class="flex items-center justify-center space-x-4 text-sm text-gray-700 dark:text-gray-300">
                             <div class="flex items-center space-x-2">
-                                <i class="pi pi-user text-emerald-600 dark:text-emerald-400"></i>
+                                <i class="pi pi-user text-purple-400"></i>
                                 <span>ユーザー: {{ userName }}</span>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <i class="pi pi-shield text-emerald-600 dark:text-emerald-400"></i>
+                                <i class="pi pi-shield text-purple-400"></i>
                                 <span>ロール: {{ userRole }}</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Placeholder Message -->
-                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                    <div class="border rounded-lg p-6" style="background-color: #e7d1ff; border-color: #d8b4fe;">
                         <div class="flex items-center justify-center mb-3">
-                            <i class="pi pi-info-circle text-2xl text-blue-600 dark:text-blue-400"></i>
+                            <i class="pi pi-info-circle text-2xl text-purple-700"></i>
                         </div>
-                        <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                        <h3 class="text-lg font-semibold text-purple-900 mb-2">
                             開発中の機能
                         </h3>
-                        <p class="text-blue-700 dark:text-blue-300 mb-4">
+                        <p class="text-purple-800 mb-4">
                             会計モジュールは現在開発中です。今後、以下の機能が追加される予定です：
                         </p>
-                        <ul class="text-left text-blue-700 dark:text-blue-300 space-y-2 max-w-md mx-auto">
+                        <ul class="text-left text-purple-800 space-y-2 max-w-md mx-auto">
                             <li class="flex items-center space-x-2">
                                 <i class="pi pi-download text-sm"></i>
                                 <span>月次ホテルデータのダウンロード（監査用）</span>
@@ -79,27 +79,27 @@
 
             <!-- Quick Access Section (Future) -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 opacity-50">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-purple-200 dark:border-gray-700 p-6 opacity-50">
                     <div class="text-center">
-                        <i class="pi pi-download text-2xl text-gray-400 mb-3"></i>
-                        <h3 class="font-semibold text-gray-500 mb-2">データダウンロード</h3>
-                        <p class="text-sm text-gray-400">近日公開予定</p>
+                        <i class="pi pi-download text-2xl text-purple-300 mb-3"></i>
+                        <h3 class="font-semibold text-purple-400 mb-2">データダウンロード</h3>
+                        <p class="text-sm text-purple-300">近日公開予定</p>
                     </div>
                 </div>
                 
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 opacity-50">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-purple-200 dark:border-gray-700 p-6 opacity-50">
                     <div class="text-center">
-                        <i class="pi pi-upload text-2xl text-gray-400 mb-3"></i>
-                        <h3 class="font-semibold text-gray-500 mb-2">ファイルアップロード</h3>
-                        <p class="text-sm text-gray-400">近日公開予定</p>
+                        <i class="pi pi-upload text-2xl text-purple-300 mb-3"></i>
+                        <h3 class="font-semibold text-purple-400 mb-2">ファイルアップロード</h3>
+                        <p class="text-sm text-purple-300">近日公開予定</p>
                     </div>
                 </div>
                 
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 opacity-50">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-purple-200 dark:border-gray-700 p-6 opacity-50">
                     <div class="text-center">
-                        <i class="pi pi-cog text-2xl text-gray-400 mb-3"></i>
-                        <h3 class="font-semibold text-gray-500 mb-2">設定</h3>
-                        <p class="text-sm text-gray-400">近日公開予定</p>
+                        <i class="pi pi-cog text-2xl text-purple-300 mb-3"></i>
+                        <h3 class="font-semibold text-purple-400 mb-2">設定</h3>
+                        <p class="text-sm text-purple-300">近日公開予定</p>
                     </div>
                 </div>
             </div>
