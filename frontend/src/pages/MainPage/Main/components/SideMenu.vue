@@ -99,6 +99,18 @@
           レポート
         </span>
       </router-link>
+      <router-link v-if="isAccounting" to="/accounting/dashboard" :class="[
+        'flex items-center py-3 text-gray-200 dark:text-gray-300 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:text-white rounded-lg transition-colors duration-200 group',
+        $route.path.startsWith('/accounting') ? 'bg-emerald-700 dark:bg-emerald-600 font-semibold' : '',
+        isCollapsed ? 'px-0 justify-center' : 'px-6'
+      ]">
+        <i :class="['pi pi-calculator text-lg', isCollapsed ? '' : 'mr-3']"></i>
+        <span v-if="!isCollapsed">会計</span>
+        <span v-if="isCollapsed"
+          class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 dark:bg-emerald-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0">
+          会計
+        </span>
+      </router-link>
       <Button @click="handleLogout" severity="danger" :class="[
         'flex items-center w-full py-3 text-gray-200 dark:text-gray-300 hover:bg-red-700 dark:hover:bg-red-600 hover:text-white rounded-lg transition-colors duration-200 group',
         isCollapsed ? 'px-0 justify-center' : 'px-6'
@@ -271,6 +283,9 @@ const menubarItems = computed(() => {
     if (permissions.view_reports) {
       items.push({ label: 'レポート', icon: 'pi pi-book', command: () => router.push('/reporting') });
     }
+    if (permissions.accounting) {
+      items.push({ label: '会計', icon: 'pi pi-calculator', command: () => router.push('/accounting/dashboard') });
+    }
   }
   return items;
 });
@@ -279,6 +294,7 @@ const showDrawer = ref(false);
 const isAdmin = ref(false);
 const isClientEditor = ref(false);
 const isReporting = ref(false);
+const isAccounting = ref(false);
 
 const userGreeting = computed(() => {
   if (!logged_user.value || !logged_user.value[0]) return '';
@@ -333,6 +349,7 @@ onMounted(async () => {
       isAdmin.value = !!(permissions.manage_db || permissions.manage_users);
       isClientEditor.value = !!permissions.manage_clients;
       isReporting.value = !!permissions.view_reports;
+      isAccounting.value = !!permissions.accounting;
       
       // console.log('User permissions loaded:', {
       //   isAdmin: isAdmin.value,
