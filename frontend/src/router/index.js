@@ -286,18 +286,44 @@ router.beforeEach((to, from, next) => {
     const isAdminRoute = to.path.startsWith('/admin');
     const isAccountingRoute = to.path.startsWith('/accounting');
     
-    // For accounting routes, check permissions from token
+    // For accounting routes, verify permissions via API
     if (isAccountingRoute) {
-      try {
-        // Decode the JWT token to check permissions
-        const tokenPayload = JSON.parse(atob(authToken.split('.')[1]));
-        if (!tokenPayload.permissions || !tokenPayload.permissions.accounting) {
+      const checkAccountingPermission = async () => {
+        try {
+          const response = await fetch('/api/user/get', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+            },
+            credentials: 'include',
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            if (userData && userData[0] && userData[0].permissions && userData[0].permissions.accounting) {
+              // User has accounting permission, continue with normal auth flow
+              const apiUrl = isAdminRoute ? '/api/adminProtected' : '/api/protected';
+              verifyToken(apiUrl).then((isValid) => {
+                if (isValid) {
+                  next();
+                }
+              });
+            } else {
+              // User doesn't have accounting permission
+              return next({ name: 'Dashboard' });
+            }
+          } else {
+            // API call failed, redirect to dashboard
+            return next({ name: 'Dashboard' });
+          }
+        } catch (error) {
+          console.error('Error checking accounting permissions:', error);
           return next({ name: 'Dashboard' });
         }
-      } catch (error) {
-        console.error('Error checking accounting permissions:', error);
-        return next({ name: 'Dashboard' });
-      }
+      };
+      
+      checkAccountingPermission();
+      return;
     }
     
     const apiUrl = isAdminRoute ? '/api/adminProtected' : '/api/protected';
