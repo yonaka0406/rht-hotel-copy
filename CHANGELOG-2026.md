@@ -22,7 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New Feature: Reorganized dashboard with interactive charts (occupancy bar chart, gauge chart, plan stack chart) and enhanced reservation list table with status, guest details, and pricing information.
 - New Feature: Improved occupancy forecasting with fallback logic using forecast data when available.
-- Documentation: Added shell command execution guidance for Windows PowerShell.
 - Refactor: Dashboard component restructured into modular, reusable chart and table components for improved maintainability.
 - Refactor: Enhanced occupancy calculations across reporting pages to prioritize forecast data.
 - Improvement: Enhanced daily sales and occupancy reports with improved data aggregation across multiple sources, providing comprehensive revenue, occupancy, and KPI metrics.
