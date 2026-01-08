@@ -99,7 +99,7 @@ const chartOptions = computed(() => {
         });
     }
 
-    const legendData = [comparisonLabel, '実績売上', '分散 (%)'];
+    const legendData = [comparisonLabel, '売上', '分散 (%)'];
     const series = [
         {
             name: comparisonLabel,
@@ -109,7 +109,7 @@ const chartOptions = computed(() => {
             itemStyle: { color: comparisonColor }
         },
         {
-            name: '実績売上',
+            name: '売上',
             type: 'bar',
             data: periodRevenues,
             emphasis: { focus: 'series' },

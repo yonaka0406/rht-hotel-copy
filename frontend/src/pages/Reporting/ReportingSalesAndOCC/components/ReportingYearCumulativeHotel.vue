@@ -15,9 +15,9 @@
                 <template #content>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                            }}</p>
+                                }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -25,7 +25,7 @@
                                 formatCurrency(forecastADR) }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 RevPAR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                 formatCurrency(actualRevPAR) }}</p>
                         </div>
@@ -45,7 +45,7 @@
 
             <Card class="mb-4">
                 <template #header>
-                    <span class="text-xl font-bold">収益（計画ｘ実績）- {{ currentHotelName }}</span>
+                    <span class="text-xl font-bold">収益（計画ｘ実績・予約）- {{ currentHotelName }}</span>
                 </template>
                 <template #content>
                     <div v-if="!currentHotelRevenueData || currentHotelRevenueData.length === 0"
@@ -72,7 +72,7 @@
 
             <Card class="mb-4">
                 <template #header>
-                    <span class="text-xl font-bold">稼働率（計画ｘ実績）- {{ currentHotelName }}</span>
+                    <span class="text-xl font-bold">稼働率（計画ｘ実績・予約）- {{ currentHotelName }}</span>
                 </template>
                 <template #content>
                     <div v-if="!currentHotelOccupancyData || currentHotelOccupancyData.length === 0"
@@ -102,9 +102,9 @@
                 <template #content>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                            }}</p>
+                                }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -112,7 +112,7 @@
                                 formatCurrency(forecastADR) }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 RevPAR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                 formatCurrency(actualRevPAR) }}</p>
                         </div>
@@ -134,7 +134,7 @@
 
             <Card>
                 <template #header>
-                    <span class="text-xl font-bold">稼働状況（計画ｘ実績）- {{ currentHotelName }}</span>
+                    <span class="text-xl font-bold">稼働状況（計画ｘ実績・予約）- {{ currentHotelName }}</span>
                 </template>
                 <template #content>
                     <OccupancyPlanVsActualTable :occupancyData="currentHotelOccupancyData"
@@ -373,7 +373,7 @@ const exportCSV = (tableType) => {
 
     if (tableType === 'revenue' && hotelDataRevenue && hotelDataRevenue.length > 0) {
         filename = `${currentHotelName.value || 'SingleHotel'}_YearCumulative_Revenue.csv`;
-        const headers = ["月度", "計画売上 (円)", "実績売上 (円)", "分散額 (円)", "分散率 (%)"];
+        const headers = ["月度", "計画売上 (円)", "売上 (円)", "分散額 (円)", "分散率 (%)"];
         const csvRows = [headers.join(',')];
         hotelDataRevenue.forEach(row => {
             const forecastRevenue = row.forecast_revenue || 0;
@@ -394,7 +394,7 @@ const exportCSV = (tableType) => {
 
     } else if (tableType === 'occupancy' && hotelDataOccupancy && hotelDataOccupancy.length > 0) {
         filename = `${currentHotelName.value || 'SingleHotel'}_YearCumulative_Occupancy.csv`;
-        const headers = ["月度", "計画販売室数", "実績販売室数", "販売室数差異", "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "実績総室数"];
+        const headers = ["月度", "計画販売室数", "販売室数", "販売室数差異", "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数", "総室数"];
         const csvRows = [headers.join(',')];
         hotelDataOccupancy.forEach(row => {
             const fcSold = row.fc_sold_rooms || 0;

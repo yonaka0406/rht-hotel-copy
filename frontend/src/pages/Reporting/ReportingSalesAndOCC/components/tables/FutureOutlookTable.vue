@@ -21,7 +21,7 @@
                 </template>
             </Column>
             <!-- Actual Sales with DoD -->
-            <Column field="sales" header="実績売上 / 前日比" style="width: 20%">
+            <Column field="sales" header="売上 / 前日比" style="width: 20%">
                 <template #body="{ data }">
                     <div class="flex justify-end items-center">
                         <span class="mr-2">{{ formatCurrency(data.sales) }}</span>
@@ -48,7 +48,7 @@
                 </template>
             </Column>
             <!-- Actual OCC with DoD -->
-            <Column field="occ" header="実績稼働率 / 前日比" style="width: 20%">
+            <Column field="occ" header="稼働率 / 前日比" style="width: 20%">
                 <template #body="{ data }">
                     <div class="flex justify-end items-center">
                         <span class="mr-2">{{ Number.isFinite(data?.occ) ? data.occ.toFixed(1) + '%' : '-' }}</span>
@@ -60,8 +60,8 @@
             </Column>
             <!-- Hidden Columns for Export -->
             <Column field="metric_date" header="前日集計日" hidden exportable></Column>
-            <Column field="prev_sales" header="前日実績売上" hidden exportable></Column>
-            <Column field="prev_occ" header="前日実績稼働率" hidden exportable></Column>
+            <Column field="prev_sales" header="前日売上" hidden exportable></Column>
+            <Column field="prev_occ" header="前日稼働率" hidden exportable></Column>
             <Column field="prev_confirmed_stays" header="前日確定泊数" hidden exportable></Column>
             <Column field="confirmed_nights" header="確定泊数" hidden exportable></Column>
             <Column field="total_bookable_room_nights" header="販売可能室数" hidden exportable></Column>

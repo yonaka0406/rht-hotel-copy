@@ -91,7 +91,7 @@ class ChartConfigurationService {
 
     return {
       title: {
-        text: '売上 (計画 vs 実績)',
+        text: '売上 (計画 vs 実績・予約)',
         left: 'center',
         top: '0%',
         textStyle: {
@@ -130,7 +130,7 @@ class ChartConfigurationService {
       },
       xAxis: [{
         type: 'category',
-        data: ['計画売上', '分散', '実績売上', '前年実績'],
+        data: ['計画売上', '分散', '実績・予約売上', '前年実績'],
         splitLine: { show: false },
         axisLabel: {
           interval: 0,
@@ -254,8 +254,8 @@ class ChartConfigurationService {
           color: textColors.tooltip.textColor
         },
         formatter: (params) => {
-          if (params.seriesName === '実績稼働率') {
-            return `実績稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
+          if (params.seriesName === '実績・予約稼働率') {
+            return `実績・予約稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
           }
           return '';
         },
@@ -321,7 +321,7 @@ class ChartConfigurationService {
             prev: { fontSize: 13, color: textColors.axisLabel, paddingTop: 4 },
           },
         },
-        data: [{ value: totalActualOccupancy, name: '実績稼働率' }],
+        data: [{ value: totalActualOccupancy, name: '実績・予約稼働率' }],
       }],
     };
   }
@@ -431,7 +431,7 @@ class ChartConfigurationService {
         }
       },
       legend: {
-        data: [comparisonLabel, '実績売上合計', comparisonGapLabel],
+        data: [comparisonLabel, '実績・予約売上合計', comparisonGapLabel],
         top: 'bottom',
         textStyle: {
           color: textColors.legend
@@ -493,7 +493,7 @@ class ChartConfigurationService {
           }
         },
         {
-          name: '実績売上合計',
+          name: '実績・予約売上合計',
           type: 'bar',
           data: accommodationValues,
           itemStyle: { color: colorScheme.actual },
@@ -613,7 +613,7 @@ class ChartConfigurationService {
         },
       },
       legend: {
-        data: [comparisonLabel, '実績稼働率', '稼働率差異 (p.p.)'],
+        data: [comparisonLabel, '実績・予約稼働率', '稼働率差異 (p.p.)'],
         top: 'bottom',
         textStyle: {
           color: textColors.legend
@@ -671,7 +671,7 @@ class ChartConfigurationService {
           }
         },
         {
-          name: '実績稼働率',
+          name: '実績・予約稼働率',
           type: 'bar',
           data: actualValues,
           itemStyle: { color: colorScheme.actual },

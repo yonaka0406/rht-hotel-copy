@@ -20,7 +20,7 @@ vi.mock('echarts/core', () => ({
 
 describe('ChartConfigurationService', () => {
   let service;
-  
+
   beforeEach(() => {
     service = ChartConfigurationService;
   });
@@ -36,9 +36,9 @@ describe('ChartConfigurationService', () => {
       const config = service.getRevenuePlanVsActualConfig(revenueData);
 
       expect(config).toBeDefined();
-      expect(config.title.text).toBe('売上 (計画 vs 実績)');
+      expect(config.title.text).toBe('売上 (計画 vs 実績・予約)');
       expect(config.series).toHaveLength(2);
-      expect(config.xAxis[0].data).toEqual(['計画売上', '分散', '実績売上', '前年実績']);
+      expect(config.xAxis[0].data).toEqual(['計画売上', '分散', '売上', '前年売上']);
     });
 
     it('should handle zero forecast revenue', () => {
@@ -184,7 +184,7 @@ describe('ChartConfigurationService', () => {
     it('should handle functions in configuration', () => {
       const originalConfig = {
         tooltip: {
-          formatter: function(params) { return params.name; }
+          formatter: function (params) { return params.name; }
         }
       };
 
@@ -202,11 +202,11 @@ describe('ChartConfigurationService', () => {
           { offset: 1, color: '#00ff00' }
         ]
       };
-      
+
       // Make it look like a LinearGradient instance for the serializer
       Object.setPrototypeOf(mockGradient, Object.getPrototypeOf({}));
       mockGradient.constructor = { name: 'LinearGradient' };
-      
+
       const originalConfig = {
         series: [{
           type: 'gauge',
@@ -221,10 +221,10 @@ describe('ChartConfigurationService', () => {
       // Since we're using a mock, let's test the serialization logic directly
       // by checking if the serializer can handle gradient-like objects
       const serialized = service.serializeConfig(originalConfig);
-      
+
       // The serializer should preserve the color object as-is since it's not a real LinearGradient
       expect(serialized.options.series[0].progress.itemStyle.color).toEqual(mockGradient);
-      
+
       const deserialized = service.deserializeConfig(serialized);
       expect(deserialized.series[0].progress.itemStyle.color).toEqual(mockGradient);
     });
@@ -237,14 +237,14 @@ describe('ChartConfigurationService', () => {
           { offset: 1, color: '#red' }
         ]
       };
-      
+
       const originalConfig = {
         tooltip: {
-          formatter: function(params) { return `Value: ${params.value}`; }
+          formatter: function (params) { return `Value: ${params.value}`; }
         },
         yAxis: {
           axisLabel: {
-            formatter: function(value) { return `${value}%`; }
+            formatter: function (value) { return `${value}%`; }
           }
         },
         series: [{
@@ -260,7 +260,7 @@ describe('ChartConfigurationService', () => {
 
       const serialized = service.serializeConfig(originalConfig);
       expect(serialized.functions).toHaveLength(3); // Three formatter functions
-      
+
       // Since we're using a mock gradient, it won't be detected as a LinearGradient
       // but the serialization should still work correctly
       expect(serialized.options.series[0].itemStyle.color).toEqual(mockGradient);
@@ -298,7 +298,7 @@ describe('ChartConfigurationService', () => {
           data: [
             1,
             { value: 2, itemStyle: { color: '#red' } },
-            function() { return 3; },
+            function () { return 3; },
             null
           ]
         }]
@@ -427,7 +427,7 @@ describe('ChartConfigurationService', () => {
               const deserialized = service.deserializeConfig(serialized);
 
               // Verify essential visual consistency properties
-              
+
               // 1. Colors should be preserved (Requirements 1.1)
               if (config.series && deserialized.series) {
                 config.series.forEach((series, seriesIndex) => {
@@ -437,8 +437,8 @@ describe('ChartConfigurationService', () => {
                   }
                   if (series.data && Array.isArray(series.data)) {
                     series.data.forEach((dataItem, dataIndex) => {
-                      if (dataItem?.itemStyle?.color && 
-                          deserialized.series[seriesIndex]?.data?.[dataIndex]?.itemStyle?.color) {
+                      if (dataItem?.itemStyle?.color &&
+                        deserialized.series[seriesIndex]?.data?.[dataIndex]?.itemStyle?.color) {
                         expect(deserialized.series[seriesIndex].data[dataIndex].itemStyle.color)
                           .toBe(dataItem.itemStyle.color);
                       }
@@ -475,8 +475,8 @@ describe('ChartConfigurationService', () => {
                     if (typeof series.label.position === 'string') {
                       expect(deserialized.series[seriesIndex].label.position)
                         .toBe(series.label.position);
-                    } else if (typeof series.label.position === 'function' && 
-                               typeof deserialized.series[seriesIndex].label.position === 'function') {
+                    } else if (typeof series.label.position === 'function' &&
+                      typeof deserialized.series[seriesIndex].label.position === 'function') {
                       // For functions, we can't compare identity, but we can verify they exist
                       expect(typeof deserialized.series[seriesIndex].label.position).toBe('function');
                     }

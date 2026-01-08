@@ -1,7 +1,7 @@
 <template>
     <Card class="mb-4">
         <template #header>
-            <span class="text-xl font-bold">収益（計画ｘ実績）</span>
+            <span class="text-xl font-bold">収益（計画ｘ実績・予約）</span>
         </template>
         <template #content>
             <div v-if="!revenueData || revenueData.length === 0" class="text-center p-4">
@@ -19,7 +19,7 @@
                             </div>
                         </template>
                     </Column>
-                    <Column field="actual_revenue" header="実績①" sortable style="width: 20%">
+                    <Column field="actual_revenue" header="実績・予約①" sortable style="width: 20%">
                         <template #body="{ data }">
                             <div class="flex justify-end mr-2">
                                 {{ formatCurrency(data.actual_revenue) }}

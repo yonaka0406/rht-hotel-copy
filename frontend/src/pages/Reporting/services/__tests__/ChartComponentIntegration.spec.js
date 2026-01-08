@@ -113,7 +113,7 @@ describe('Chart Component Integration with ChartConfigurationService', () => {
 
       // Verify all configurations are valid
       expect(revenueConfig).toBeDefined();
-      expect(revenueConfig.title.text).toBe('売上 (計画 vs 実績)');
+      expect(revenueConfig.title.text).toBe('売上 (計画 vs 実績・予約)');
       expect(revenueConfig.series).toHaveLength(2);
 
       expect(occupancyConfig).toBeDefined();

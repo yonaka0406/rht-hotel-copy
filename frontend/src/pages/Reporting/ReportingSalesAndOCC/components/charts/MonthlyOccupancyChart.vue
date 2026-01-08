@@ -83,7 +83,7 @@ const chartOptions = computed(() => {
         legend: {
             data: [
                 { name: comparisonLabel, itemStyle: { color: comparisonColor } },
-                { name: '実績稼働率', itemStyle: { color: colorScheme.actual } }
+                { name: '稼働率', itemStyle: { color: colorScheme.actual } }
             ],
             top: 'bottom'
         },
@@ -135,7 +135,7 @@ const chartOptions = computed(() => {
                 emphasis: { focus: 'series' }
             },
             {
-                name: '実績稼働率',
+                name: '稼働率',
                 type: 'line',
                 data: actualOccupancy,
                 smooth: true,

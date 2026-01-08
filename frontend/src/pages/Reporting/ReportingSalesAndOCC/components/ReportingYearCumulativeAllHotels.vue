@@ -15,7 +15,7 @@
                 <template #content>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
                             }}</p>
                         </div>
@@ -25,7 +25,7 @@
                                 formatCurrency(forecastADR) }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 RevPAR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                 formatCurrency(actualRevPAR) }}</p>
                         </div>
@@ -46,7 +46,7 @@
 
             <Card class="mb-4">
                 <template #header>
-                    <span class="text-xl font-bold">収益（計画ｘ実績）</span>
+                    <span class="text-xl font-bold">収益（計画ｘ実績・予約）</span>
                 </template>
                 <template #content>
                     <div v-if="!hasRevenueDataForChart" class="text-center p-4">
@@ -72,7 +72,7 @@
 
             <Card class="mb-4">
                 <template #header>
-                    <span class="text-xl font-bold">稼働率（計画ｘ実績）- 全施設合計</span>
+                    <span class="text-xl font-bold">稼働率（計画ｘ実績・予約）- 全施設合計</span>
                 </template>
                 <template #content>
                     <div v-if="!filteredOccupancyForChart || filteredOccupancyForChart.length === 0"
@@ -95,7 +95,7 @@
             <Card>
                 <template #header>
                     <span class="text-xl font-bold">全施設 収益＆稼働率 概要（{{ selectedComparison === 'forecast' ? '計画' : '前年' }}
-                        vs 実績）</span>
+                        vs 実績・予約）</span>
                 </template>
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
@@ -104,7 +104,8 @@
                                 :prevYearRevenueData="props.prevYearRevenueData" :comparisonType="selectedComparison" />
                         </div>
                         <div class="w-full md:w-1/2">
-                            <h6 class="text-center">施設別 稼働率（{{ selectedComparison === 'forecast' ? '計画' : '前年' }} vs 実績）
+                            <h6 class="text-center">施設別 稼働率（{{ selectedComparison === 'forecast' ? '計画' : '前年' }} vs
+                                実績・予約）
                             </h6>
                             <AllHotelsOccupancyChart :occupancyData="props.occupancyData"
                                 :prevYearOccupancyData="props.prevYearOccupancyData"
@@ -128,7 +129,7 @@
                 <template #content>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 ADR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
                             }}</p>
                         </div>
@@ -138,7 +139,7 @@
                                 formatCurrency(forecastADR) }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">実績 RevPAR</h6>
+                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                 formatCurrency(actualRevPAR) }}</p>
                         </div>
@@ -161,7 +162,7 @@
 
             <Card>
                 <template #header>
-                    <span class="text-xl font-bold">稼働状況（計画ｘ実績）</span>
+                    <span class="text-xl font-bold">稼働状況（計画ｘ実績・予約）</span>
                 </template>
                 <template #content>
                     <OccupancyPlanVsActualTable :occupancyData="props.occupancyData"
@@ -426,7 +427,7 @@ const exportCSV = (tableType) => {
 
     if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
         filename = '複数施設・年度・収益データ.csv';
-        const headers = ["施設", "月度", "計画売上 (円)", "実績売上 (円)", "分散額 (円)", "分散率 (%)"];
+        const headers = ["施設", "月度", "計画売上 (円)", "売上 (円)", "分散額 (円)", "分散率 (%)"];
         const csvRows = [headers.join(',')];
         props.revenueData.forEach(row => {
             const forecastRevenue = row.forecast_revenue || 0;
@@ -452,9 +453,9 @@ const exportCSV = (tableType) => {
         filename = '複数施設・年度・稼働率データ.csv';
         const headers = [
             "施設", "月度",
-            "計画販売室数", "実績販売室数", "販売室数差異", "非宿泊数",
-            "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)",
-            "計画総室数", "実績総室数"
+            "計画販売室数", "販売室数", "販売室数差異", "非宿泊数",
+            "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)",
+            "計画総室数", "総室数"
         ];
         const csvRows = [headers.join(',')];
         props.occupancyData.forEach(row => {

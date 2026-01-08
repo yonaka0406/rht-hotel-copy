@@ -68,9 +68,9 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 dataSheet.cell(kpiStartRow, 13).value('KPI').style({ bold: true });
 
                 const kpiLabels = [
-                    { label: '実績 ADR', value: kpiData.actualADR },
+                    { label: 'ADR', value: kpiData.actualADR },
                     { label: '計画 ADR', value: kpiData.forecastADR },
-                    { label: '実績 RevPAR', value: kpiData.actualRevPAR },
+                    { label: 'RevPAR', value: kpiData.actualRevPAR },
                     { label: '計画 RevPAR', value: kpiData.forecastRevPAR }
                 ];
 
@@ -109,8 +109,8 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
 
                 // Headers
                 const headers = [
-                    '施設名', '計画売上', '実績売上', '売上差異', '前年売上', '前年比差異(売上)',
-                    '施設名', '計画稼働率', '実績稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'
+                    '施設名', '計画売上', '売上', '売上差異', '前年売上', '前年比差異(売上)',
+                    '施設名', '計画稼働率', '稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'
                 ];
                 const headerRow = dataSheet.row(startRow);
                 headers.forEach((header, index) => {

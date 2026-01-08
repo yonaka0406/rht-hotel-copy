@@ -1,6 +1,6 @@
 <template>
     <div class="hotel-sales-chart">
-        <h6 class="text-center">施設別 売上合計（計画 vs 実績）</h6>
+        <h6 class="text-center">施設別 売上合計（計画 vs 実績・予約）</h6>
         <div v-if="!hasAllHotelsRevenueData" class="text-center p-4">データはありません。</div>
         <div v-else>
             <div ref="allHotelsRevenueChartContainer"

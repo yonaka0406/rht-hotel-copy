@@ -4,16 +4,14 @@
     </div>
     <div v-else class="p-fluid">
         <DataTable :value="processedOccupancyData" responsiveLayout="scroll" paginator :rows="rows"
-                                        :rowsPerPageOptions="rowsPerPageOptions"
-                                        stripedRows
-                                        sortMode="multiple"
-                                        removableSort
-                                    >            <Column v-if="showHotelColumn" field="hotel_name" header="施設" frozen sortable style="min-width: 150px; width: 15%"></Column>
+            :rowsPerPageOptions="rowsPerPageOptions" stripedRows sortMode="multiple" removableSort>
+            <Column v-if="showHotelColumn" field="hotel_name" header="施設" frozen sortable
+                style="min-width: 150px; width: 15%"></Column>
             <Column field="month" header="月度" sortable :style="monthColumnStyle"></Column>
             <Column field="fc_sold_rooms" header="計画販売室数" sortable style="min-width: 100px; width: 10%">
                 <template #body="{ data }">{{ data.fc_sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
             </Column>
-            <Column field="sold_rooms" header="実績販売室数" sortable style="min-width: 100px; width: 10%">
+            <Column field="sold_rooms" header="販売室数" sortable style="min-width: 100px; width: 10%">
                 <template #body="{ data }">{{ data.sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
             </Column>
             <Column field="diff_sold_rooms" header="販売室数差異" sortable style="min-width: 100px; width: 10%">
@@ -26,7 +24,7 @@
             <Column field="fc_occ" header="計画稼働率" sortable style="min-width: 100px; width: 10%">
                 <template #body="{ data }">{{ formatPercentage(data.fc_occ / 100) }}</template>
             </Column>
-            <Column field="occ" header="実績稼働率" sortable style="min-width: 100px; width: 10%">
+            <Column field="occ" header="稼働率" sortable style="min-width: 100px; width: 10%">
                 <template #body="{ data }">{{ formatPercentage(data.occ / 100) }}</template>
             </Column>
             <Column header="稼働率差異 (p.p.)" sortable style="min-width: 120px; width: 10%">
@@ -216,8 +214,8 @@ const exportCSV = () => {
         : `${hotelName.replace(/\s+/g, '_')}_稼働率データ.csv`;
 
     const headers = props.showHotelColumn
-        ? ["ホテルID", "施設", "月度", "計画販売室数", "実績販売室数", "販売室数差異", ...(props.showNonAccommodationColumn ? ["非宿泊数"] : []), "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数"]
-        : ["月度", "計画販売室数", "実績販売室数", "販売室数差異", "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数"];
+        ? ["ホテルID", "施設", "月度", "計画販売室数", "販売室数", "販売室数差異", ...(props.showNonAccommodationColumn ? ["非宿泊数"] : []), "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数"]
+        : ["月度", "計画販売室数", "販売室数", "販売室数差異", "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)", "計画総室数"];
 
     const csvRows = [headers.join(',')];
 

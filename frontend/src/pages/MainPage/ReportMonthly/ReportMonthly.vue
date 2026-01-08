@@ -341,7 +341,7 @@ const fetchDataAndProcess = async () => {
         loadingStatus.value = '予算データを取得中...';
         const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
 
-        loadingStatus.value = '実績データを取得中...';
+        loadingStatus.value = '実績・予約データを取得中...';
         const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
 
         loadingStatus.value = 'プラン別売上データを取得中...';

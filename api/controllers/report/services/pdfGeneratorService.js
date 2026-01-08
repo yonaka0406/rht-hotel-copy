@@ -10,10 +10,10 @@ let isPdfProcessing = false;
 
 const processPdfQueue = async () => {
     if (isPdfProcessing || pdfQueue.length === 0) return;
-    
+
     isPdfProcessing = true;
     const { reportType, reqBody, requestId, resolve, reject } = pdfQueue.shift();
-    
+
     try {
         const result = await generatePdfReportInternal(reportType, reqBody, requestId);
         resolve(result);
@@ -121,7 +121,7 @@ const validateChartRendering = async (page, requestId) => {
         const validationResult = await page.evaluate(() => {
             const chartContainers = [
                 'revenuePlanVsActualContainer',
-                'occupancyGaugeContainer', 
+                'occupancyGaugeContainer',
                 'allHotelsRevenueContainer',
                 'allHotelsOccupancyContainer'
             ];
@@ -134,7 +134,7 @@ const validateChartRendering = async (page, requestId) => {
                 const container = document.getElementById(containerId);
                 if (container) {
                     const canvases = container.querySelectorAll('canvas');
-                    const hasValidCanvas = canvases.length > 0 && 
+                    const hasValidCanvas = canvases.length > 0 &&
                         Array.from(canvases).some(canvas => {
                             // Check if canvas has actual content (not just empty)
                             const ctx = canvas.getContext('2d');
@@ -173,16 +173,16 @@ const validateChartRendering = async (page, requestId) => {
             };
         });
 
-        logger.debug('Chart validation completed', { 
-            requestId, 
-            validation: validationResult 
+        logger.debug('Chart validation completed', {
+            requestId,
+            validation: validationResult
         });
 
         return validationResult;
     } catch (error) {
-        logger.error('Chart validation failed', { 
-            requestId, 
-            error: error.message 
+        logger.error('Chart validation failed', {
+            requestId,
+            error: error.message
         });
         return {
             containers: {},
@@ -201,7 +201,7 @@ const validateChartRendering = async (page, requestId) => {
 const generateFallbackContent = (chartType, error) => {
     const fallbackMessages = {
         'revenuePlanVsActual': '収益チャートの生成に失敗しました',
-        'occupancyGauge': '稼働率チャートの生成に失敗しました', 
+        'occupancyGauge': '稼働率チャートの生成に失敗しました',
         'allHotelsRevenue': '施設別収益チャートの生成に失敗しました',
         'allHotelsOccupancy': '施設別稼働率チャートの生成に失敗しました'
     };
@@ -238,17 +238,17 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
         hasSerializedChartConfigs: !!reqBody.serializedChartConfigs
     });
 
-    const { 
-        selectedView, 
-        periodMaxDate, 
-        allHotelNames, 
-        kpiData, 
-        chartData, 
+    const {
+        selectedView,
+        periodMaxDate,
+        allHotelNames,
+        kpiData,
+        chartData,
         serializedChartConfigs,
         // Legacy support for old format
-        allHotelsRevenueChartOptions 
+        allHotelsRevenueChartOptions
     } = reqBody;
-    
+
     // Create a redacted summary of the request body for logging
     const redactedReqBody = { ...reqBody };
     const sensitiveKeys = ['kpiData', 'chartData', 'serializedChartConfigs', 'allHotelNames', 'allHotelsRevenueChartOptions'];
@@ -304,7 +304,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
             logger.debug('Generating graph view PDF', { requestId });
             const isCumulative = reportType.startsWith('cumulative');
             logger.debug('Chart configuration', { requestId, isCumulative });
-            
+
             // Debug the incoming data
             logger.debug('Incoming request data', {
                 requestId,
@@ -320,7 +320,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
             });
 
             logger.debug('Building enhanced chart generation script', { requestId });
-            
+
             // Validate and deserialize chart configurations
             let deserializedConfigs = {};
             try {
@@ -329,14 +329,14 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                         try {
                             deserializedConfigs[chartType] = deserializeChartConfig(serializedChartConfigs[chartType]);
                             logger.debug(`Successfully deserialized ${chartType} config`, { requestId });
-                            
+
                             // Validate the deserialized configuration
                             const validation = styleValidator.validateChartConfig(
-                                deserializedConfigs[chartType], 
-                                chartType, 
+                                deserializedConfigs[chartType],
+                                chartType,
                                 requestId
                             );
-                            
+
                             if (!validation.isValid) {
                                 logger.warn(`Chart configuration validation failed for ${chartType}`, {
                                     requestId,
@@ -350,21 +350,21 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                                 });
                             }
                         } catch (error) {
-                            logger.error(`Failed to deserialize ${chartType} config`, { 
-                                requestId, 
-                                error: error.message 
+                            logger.error(`Failed to deserialize ${chartType} config`, {
+                                requestId,
+                                error: error.message
                             });
                             deserializedConfigs[chartType] = null;
                         }
                     });
                 }
-                
+
                 // Validate data serialization for injection into HTML
                 const testKpiData = JSON.stringify(kpiData || {});
                 const testChartData = JSON.stringify(chartData || {});
                 const testDeserializedConfigs = JSON.stringify(deserializedConfigs);
-                
-                logger.debug('Data serialization test passed', { 
+
+                logger.debug('Data serialization test passed', {
                     requestId,
                     kpiDataLength: testKpiData.length,
                     chartDataLength: testChartData.length,
@@ -512,13 +512,13 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                                     // Fallback basic chart
                                     options = {
                                         animation: false,
-                                        title: { text: '売上 (計画 vs 実績)', left: 'center' },
+                                        title: { text: '売上 (計画 vs 実績・予約)', left: 'center' },
                                         series: [{
                                             type: 'bar',
                                             data: [100, 50, 80],
                                             itemStyle: { color: '#3498db' }
                                         }],
-                                        xAxis: { type: 'category', data: ['計画売上', '分散', '実績売上'] },
+                                        xAxis: { type: 'category', data: ['計画売上', '分散', '売上'] },
                                         yAxis: { type: 'value' }
                                     };
                                 }
@@ -841,7 +841,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                                             axisPointer: { type: 'cross' }
                                         },
                                         legend: { 
-                                            data: ['計画稼働率', '実績稼働率'], 
+                                            data: ['計画稼働率', '稼働率'], 
                                             top: 'bottom' 
                                         },
                                         grid: { containLabel: true, left: '3%', right: '4%', bottom: '15%' },
@@ -858,7 +858,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                                                 itemStyle: { color: '#3498db' }
                                             },
                                             {
-                                                name: '実績稼働率',
+                                                name: '稼働率',
                                                 type: 'bar',
                                                 data: hotels.map(h => {
                                                     const item = occupancyData.find(d => d.hotel_name === h);
@@ -1031,7 +1031,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 });
             `;
 
-            logger.debug('Building HTML content for graph view', { 
+            logger.debug('Building HTML content for graph view', {
                 requestId,
                 hasKpiData: !!kpiData,
                 hasChartData: !!chartData,
@@ -1120,28 +1120,28 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                                         <p style="font-size: 1.4em; font-weight: bold; color: #333; margin: 0;">${kpiData.actualADR ? kpiData.actualADR.toLocaleString('ja-JP') : 'N/A'}円</p>
                                         <p style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">(計画: ${kpiData.forecastADR ? kpiData.forecastADR.toLocaleString('ja-JP') : 'N/A'}円)</p>
                                         ${(() => {
-                                            if (kpiData.actualADR && kpiData.forecastADR) {
-                                                const diff = kpiData.actualADR - kpiData.forecastADR;
-                                                const color = diff >= 0 ? '#10b981' : '#ef4444'; // green or red
-                                                const sign = diff >= 0 ? '+' : '';
-                                                return `<p style="font-size: 0.8em; color: ${color}; margin: 5px 0 0 0; font-weight: bold;">${sign}${diff.toLocaleString('ja-JP')}円</p>`;
-                                            }
-                                            return '';
-                                        })()}
+                    if (kpiData.actualADR && kpiData.forecastADR) {
+                        const diff = kpiData.actualADR - kpiData.forecastADR;
+                        const color = diff >= 0 ? '#10b981' : '#ef4444'; // green or red
+                        const sign = diff >= 0 ? '+' : '';
+                        return `<p style="font-size: 0.8em; color: ${color}; margin: 5px 0 0 0; font-weight: bold;">${sign}${diff.toLocaleString('ja-JP')}円</p>`;
+                    }
+                    return '';
+                })()}
                                     </div>
                                     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e9ecef;">
                                         <h4 style="font-size: 0.9em; color: #666; margin: 0 0 10px 0; font-weight: 500;">RevPAR</h4>
                                         <p style="font-size: 1.4em; font-weight: bold; color: #333; margin: 0;">${kpiData.actualRevPAR ? kpiData.actualRevPAR.toLocaleString('ja-JP') : 'N/A'}円</p>
                                         <p style="font-size: 0.8em; color: #666; margin: 5px 0 0 0;">(計画: ${kpiData.forecastRevPAR ? kpiData.forecastRevPAR.toLocaleString('ja-JP') : 'N/A'}円)</p>
                                         ${(() => {
-                                            if (kpiData.actualRevPAR && kpiData.forecastRevPAR) {
-                                                const diff = kpiData.actualRevPAR - kpiData.forecastRevPAR;
-                                                const color = diff >= 0 ? '#10b981' : '#ef4444'; // green or red
-                                                const sign = diff >= 0 ? '+' : '';
-                                                return `<p style="font-size: 0.8em; color: ${color}; margin: 5px 0 0 0; font-weight: bold;">${sign}${diff.toLocaleString('ja-JP')}円</p>`;
-                                            }
-                                            return '';
-                                        })()}
+                    if (kpiData.actualRevPAR && kpiData.forecastRevPAR) {
+                        const diff = kpiData.actualRevPAR - kpiData.forecastRevPAR;
+                        const color = diff >= 0 ? '#10b981' : '#ef4444'; // green or red
+                        const sign = diff >= 0 ? '+' : '';
+                        return `<p style="font-size: 0.8em; color: ${color}; margin: 5px 0 0 0; font-weight: bold;">${sign}${diff.toLocaleString('ja-JP')}円</p>`;
+                    }
+                    return '';
+                })()}
                                     </div>
                                 </div>
                             </div>
@@ -1152,11 +1152,11 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                         <h2 style="page-break-before: always;">全施設 収益＆稼働率 概要</h2>
                         <div class="chart-row">
                             <div class="chart-half">
-                                <h3>施設別 売上合計（計画 vs 実績）</h3>
+                                <h3>施設別 売上合計（計画 vs 実績・予約）</h3>
                                 <div id="allHotelsRevenueContainer" style="width: 400px; height: 1200px; margin: 0 auto;"></div>
                             </div>
                             <div class="chart-half">
-                                <h3>施設別 稼働率（計画 vs 実績）</h3>
+                                <h3>施設別 稼働率（計画 vs 実績・予約）</h3>
                                 <div id="allHotelsOccupancyContainer" style="width: 400px; height: 1200px; margin: 0 auto;"></div>
                             </div>
                         </div>
@@ -1191,10 +1191,10 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
 
             const revenueData = chartData?.allHotelsRevenueData || [];
             const occupancyData = chartData?.allHotelsOccupancyData || [];
-            
+
             if (revenueData && revenueData.length > 0) {
                 htmlContent += `<div class="section-title">収益データ</div>`;
-                htmlContent += `<table><thead><tr><th>ホテル名</th><th>月度</th><th>計画売上</th><th>実績売上</th></tr></thead><tbody>`;
+                htmlContent += `<table><thead><tr><th>ホテル名</th><th>月度</th><th>計画売上</th><th>売上</th></tr></thead><tbody>`;
                 revenueData.forEach(item => {
                     const forecastRev = typeof item.forecast_revenue === 'number' ? item.forecast_revenue.toLocaleString() : 'N/A';
                     const accommodationRev = typeof item.accommodation_revenue === 'number' ? item.accommodation_revenue.toLocaleString() : 'N/A';
@@ -1202,7 +1202,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 });
                 htmlContent += `</tbody></table>`;
             } else {
-                 htmlContent += `<p>収益データはありません。</p>`;
+                htmlContent += `<p>収益データはありません。</p>`;
             }
 
             if (occupancyData && occupancyData.length > 0) {
@@ -1220,7 +1220,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
         }
 
         logger.debug('Launching browser with enhanced configuration', { requestId });
-        
+
         // Enhanced browser launch with resource management
         browser = await chromium.launch({
             headless: true,
@@ -1236,13 +1236,13 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 '--max_old_space_size=4096'
             ]
         });
-        
+
         page = await browser.newPage();
-        
+
         // Set page resource limits
         await page.setViewportSize({ width: 1200, height: 800 });
         await page.setDefaultTimeout(30000);
-        
+
         // Monitor page errors and resource usage
         page.on('error', (error) => {
             logger.error('Page error detected', {
@@ -1251,7 +1251,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 stack: error.stack
             });
         });
-        
+
         page.on('pageerror', (error) => {
             logger.error('Page JavaScript error', {
                 requestId,
@@ -1259,11 +1259,11 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 stack: error.stack
             });
         });
-        
+
         logger.debug('Browser and page created with enhanced monitoring', { requestId });
 
-        logger.debug('Setting page content', { 
-            requestId, 
+        logger.debug('Setting page content', {
+            requestId,
             htmlContentLength: htmlContent.length,
             selectedView,
             htmlPreview: htmlContent.substring(0, 500)
@@ -1273,24 +1273,24 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
 
         if (selectedView === 'graph') {
             logger.debug('Waiting for charts to render', { requestId });
-            
+
             // Listen to console messages from the page
             page.on('console', msg => {
                 logger.debug(`Browser console [${msg.type()}]:`, { requestId, message: msg.text() });
             });
-            
+
             try {
                 // Enhanced timeout handling with partial content support
                 await page.waitForSelector('body[data-charts-rendered="true"]', { timeout: 30000 });
                 logger.debug('Charts rendered successfully', { requestId });
-                
+
                 // Perform comprehensive chart validation using StyleConsistencyValidator
                 const validationResult = await validateChartRendering(page, requestId);
-                
+
                 // Validate each chart container using StyleConsistencyValidator
                 const chartContainers = ['revenuePlanVsActualContainer', 'occupancyGaugeContainer', 'allHotelsRevenueContainer', 'allHotelsOccupancyContainer'];
                 const canvasValidations = {};
-                
+
                 for (const containerId of chartContainers) {
                     if (validationResult.containers[containerId]) {
                         const canvasValidation = styleValidator.validateCanvasContent(
@@ -1299,7 +1299,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                             requestId
                         );
                         canvasValidations[containerId] = canvasValidation;
-                        
+
                         if (!canvasValidation.isValid) {
                             logger.warn(`Canvas validation failed for ${containerId}`, {
                                 requestId,
@@ -1308,11 +1308,11 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                         }
                     }
                 }
-                
+
                 // Log overall validation summary
                 const validCanvasCount = Object.values(canvasValidations).filter(v => v.isValid).length;
                 const totalExpectedCharts = chartContainers.length;
-                
+
                 logger.info('Chart rendering validation summary', {
                     requestId,
                     validCanvases: validCanvasCount,
@@ -1320,29 +1320,29 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                     renderingSuccess: validationResult.summary.renderingSuccess,
                     canvasValidations
                 });
-                
+
                 // Give a small delay to ensure charts are fully processed
                 await page.waitForTimeout(2000);
                 logger.debug('Additional delay completed', { requestId });
-                
+
             } catch (error) {
-                logger.warn('Chart rendering timeout, proceeding with partial content', { 
-                    requestId, 
+                logger.warn('Chart rendering timeout, proceeding with partial content', {
+                    requestId,
                     error: error.message,
                     timeoutDuration: 30000
                 });
-                
+
                 // Check if we have any partial chart content
                 try {
                     const partialValidation = await validateChartRendering(page, requestId);
                     const partialCanvasCount = partialValidation.summary.validCanvases;
-                    
+
                     logger.info('Partial chart content detected', {
                         requestId,
                         partialCanvases: partialCanvasCount,
                         totalExpected: 4
                     });
-                    
+
                     if (partialCanvasCount > 0) {
                         logger.info('Proceeding with partial chart content', {
                             requestId,
@@ -1359,7 +1359,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                         error: validationError.message
                     });
                 }
-                
+
                 // Continue with PDF generation even if charts timeout
             }
         }
@@ -1378,9 +1378,9 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
 
         // Collect final metrics
         const generationTime = Date.now() - startTime;
-        
-        logger.info('PDF generated successfully', { 
-            requestId, 
+
+        logger.info('PDF generated successfully', {
+            requestId,
             pdfSize: pdf.length,
             generationTime,
             selectedView,
@@ -1388,7 +1388,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
             hasSerializedConfigs: !!serializedChartConfigs,
             configCount: serializedChartConfigs ? Object.keys(serializedChartConfigs).length : 0
         });
-        
+
         return pdf;
 
     } catch (error) {
@@ -1400,7 +1400,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
             reportType,
             browserActive: !!browser
         });
-        
+
         // Enhanced error handling with fallback content
         if (error.message.includes('timeout') || error.message.includes('TimeoutError')) {
             logger.warn('PDF generation timeout detected, attempting partial content return', {
@@ -1408,7 +1408,7 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 selectedView,
                 reportType
             });
-            
+
             // Try to generate a simplified PDF with available content
             try {
                 if (browser && page) {
@@ -1422,12 +1422,12 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                             left: '20mm'
                         }
                     });
-                    
+
                     logger.info('Partial PDF generated successfully after timeout', {
                         requestId,
                         pdfSize: partialPdf.length
                     });
-                    
+
                     return partialPdf;
                 }
             } catch (partialError) {
@@ -1437,14 +1437,14 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 });
             }
         }
-        
+
         // Circuit breaker pattern for resource exhaustion
         if (error.message.includes('memory') || error.message.includes('resource')) {
             logger.error('Resource exhaustion detected, implementing circuit breaker', {
                 requestId,
                 error: error.message
             });
-            
+
             // Force cleanup and throw specific error
             if (browser) {
                 try {
@@ -1456,10 +1456,10 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                     });
                 }
             }
-            
+
             throw new Error('PDF generation temporarily unavailable due to resource constraints');
         }
-        
+
         console.error(`[${requestId}] Error generating PDF report:`, error);
         throw new Error('Failed to generate PDF report: ' + error.message);
     } finally {
@@ -1467,32 +1467,32 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
         if (browser) {
             try {
                 logger.debug('Starting browser cleanup', { requestId });
-                
+
                 // Close browser with timeout - Playwright handles page/context cleanup automatically
                 const closePromise = browser.close();
                 const timeoutPromise = new Promise((_, reject) => {
                     setTimeout(() => reject(new Error('Browser close timeout')), 10000);
                 });
-                
+
                 await Promise.race([closePromise, timeoutPromise]);
                 logger.debug('Browser closed successfully', { requestId });
-                
+
             } catch (cleanupError) {
                 logger.error('Error during browser cleanup', {
                     requestId,
                     error: cleanupError.message,
                     stack: cleanupError.stack
                 });
-                
+
                 // Force close if normal close fails
                 try {
                     if (browser && typeof browser.close === 'function') {
                         await browser.close();
                     }
                 } catch (forceCloseError) {
-                    logger.warn('Force close also failed, Playwright will handle process cleanup', { 
+                    logger.warn('Force close also failed, Playwright will handle process cleanup', {
                         requestId,
-                        error: forceCloseError.message 
+                        error: forceCloseError.message
                     });
                 }
             } finally {
@@ -1500,10 +1500,10 @@ const generatePdfReportInternal = async (reportType, reqBody, requestId) => {
                 logger.debug('Browser cleanup completed', { requestId });
             }
         }
-        
+
         // Log final resource cleanup metrics
         const finalTime = Date.now();
-        
+
         logger.info('PDF generation process completed', {
             requestId,
             totalTime: finalTime - startTime,

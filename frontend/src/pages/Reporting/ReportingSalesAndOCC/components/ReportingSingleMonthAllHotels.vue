@@ -80,7 +80,7 @@
             <Card class="hotel-overview-card">
                 <template #header>
                     <span class="text-xl font-bold">全施設 収益＆稼働率 概要（{{ selectedComparison === 'forecast' ? '計画' : '前年' }}
-                        vs 実績）</span>
+                        vs 実績・予約）</span>
                 </template>
                 <template #content>
                     <div class="flex flex-col md:flex-row md:gap-4 p-4">
@@ -89,7 +89,8 @@
                                 :prevYearRevenueData="props.prevYearRevenueData" :comparisonType="selectedComparison" />
                         </div>
                         <div class="w-full md:w-1/2 hotel-occupancy-chart">
-                            <h6 class="text-center">施設別 稼働率（{{ selectedComparison === 'forecast' ? '計画' : '前年' }} vs 実績）
+                            <h6 class="text-center">施設別 稼働率（{{ selectedComparison === 'forecast' ? '計画' : '前年' }} vs
+                                実績・予約）
                             </h6>
                             <div v-if="!hasAllHotelsOccupancyData" class="text-center p-4">データはありません。</div>
                             <div v-else>
@@ -116,7 +117,7 @@
                 <template #content>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
+                            <h6 class="text-sm font-medium text-gray-500">ADR</h6>
                             <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
@@ -124,7 +125,7 @@
                             <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
+                            <h6 class="text-sm font-medium text-gray-500">RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
                         </div>
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
@@ -138,7 +139,7 @@
 
             <Card>
                 <template #header>
-                    <span class="text-xl font-bold">稼働状況（計画ｘ実績）</span>
+                    <span class="text-xl font-bold">稼働状況（計画ｘ実績・予約）</span>
                 </template>
                 <template #content>
                     <OccupancyPlanVsActualTable :occupancyData="props.occupancyData"
@@ -514,13 +515,13 @@ const allHotelsRevenueChartOptions = computed(() => {
                 return tooltip;
             }
         },
-        legend: { data: ['計画売上合計', '実績売上合計', '計画達成まで'], top: 'bottom' }, // Added new series to legend
+        legend: { data: ['計画売上合計', '売上合計', '計画達成まで'], top: 'bottom' }, // Added new series to legend
         grid: { containLabel: true, left: '3%', right: '10%', bottom: '10%' },
         xAxis: { type: 'value', name: '売上 (万円)', axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') } },
         yAxis: { type: 'category', data: hotelNames, inverse: true },
         series: [
             { name: '計画売上合計', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'right', distance: 5, color: '#333333', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
-            { name: '実績売上合計', type: 'bar', data: accommodationValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'right', distance: 5, color: '#333333', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
+            { name: '売上合計', type: 'bar', data: accommodationValues, itemStyle: { color: colorScheme.actual }, barGap: '5%', label: { show: true, position: 'right', distance: 5, color: '#333333', formatter: params => params.value > 0 ? formatYenInTenThousandsNoDecimal(params.value) : '' } },
             {
                 name: '計画達成まで',
                 type: 'bar',
@@ -736,7 +737,7 @@ const exportCSV = (tableType) => {
 
     if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
         filename = '複数施設・年度・収益データ.csv';
-        const headers = ["施設", "月度", "計画売上 (円)", "実績売上 (円)", "分散額 (円)", "分散率 (%)"];
+        const headers = ["施設", "月度", "計画売上 (円)", "売上合計 (円)", "分散額 (円)", "分散率 (%)"];
         const csvRows = [headers.join(',')];
         props.revenueData.forEach(row => {
             const forecastRevenue = row.forecast_revenue || 0;
@@ -762,9 +763,9 @@ const exportCSV = (tableType) => {
         filename = '複数施設・年度・稼働率データ.csv';
         const headers = [
             "施設", "月度",
-            "計画販売室数", "実績販売室数", "販売室数差異", "非宿泊数",
-            "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)",
-            "計画総室数", "実績総室数"
+            "計画販売室数", "販売室数", "販売室数差異", "非宿泊数",
+            "計画稼働率 (%)", "稼働率 (%)", "稼働率差異 (p.p.)",
+            "計画総室数", "総室数"
         ];
         const csvRows = [headers.join(',')];
         props.occupancyData.forEach(row => {
