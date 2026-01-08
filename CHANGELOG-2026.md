@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.9] - 2026-01-08
 
 - Improvement: Updated reporting terminology from '実績' to '実績・予約' across all charts, tables, KPI cards, and export files for enhanced data accuracy.
+- Fix: Updated category-wise monthly sales report to use reservation detail prices for accurate tax-included totals and renamed '通常売上' to '宿泊売上'.
 
 ---
 
