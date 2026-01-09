@@ -61,7 +61,8 @@ const ReportingMonthlyReservationEvolution = () => import('@/pages/Reporting/Rep
 const AboutPage = () => import('@/pages/About/AboutPage.vue');
 
 const AccountingMainPage = () => import('@/pages/Accounting/AccountingMainPage.vue');
-const AccountingDashboard = () => import('@/pages/Accounting/AccountingDashboard.vue');
+const AccountingDashboard = () => import('@/pages/Accounting/AccountingDashboard/AccountingDashboard.vue');
+const AccountingLedgerExport = () => import('@/pages/Accounting/AccountingLedgerExport/AccountingLedgerExport.vue');
 
 
 const routes = [
@@ -173,6 +174,7 @@ const routes = [
     children: [
       { path: '', redirect: { name: 'AccountingDashboard' } },
       { path: 'dashboard', name: 'AccountingDashboard', component: AccountingDashboard },
+      { path: 'ledger-export', name: 'AccountingLedgerExport', component: AccountingLedgerExport },
     ],
     meta: { requiresAuth: true, requiresAccounting: true }
   },
