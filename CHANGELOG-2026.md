@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.10] - 2026-01-09
+
+- Fix: Resolved password reset errors by aligning frontend and backend validation rules, including mandatory special characters.
+- New Feature: Added a confirmation dialog in the forgot password flow for Google-linked accounts to transition to local password-based accounts.
+- Improvement: Integrated comprehensive Japanese translations for all backend validation and authentication-related error messages.
+- Improvement: Simplified the password reset UI by removing redundant feedback from the confirmation input and streamlining error display via popups and on-screen text.
+- Refactor: Enhanced database logic to ensure all social provider tokens and IDs are fully cleared when a user resets their local password.
+
+---
+
 ## [1.3.9] - 2026-01-08
 
 - Improvement: Updated reporting terminology from '実績' to '実績・予約' across all charts, tables, KPI cards, and export files for enhanced data accuracy.
