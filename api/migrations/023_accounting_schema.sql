@@ -74,20 +74,28 @@ CREATE TABLE acc_yayoi_export_data (
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     export_batch_id UUID, -- To group records by export session
     
-    -- 1. 識別フラグ (Identity Flag): Usually '2111' (Import) or '2000'
-    identification_flag VARCHAR(20) DEFAULT '2111', 
+    -- 1. 識別フラグ (Identification Flag) [必須]
+    -- 2000: 伝票以外の仕訳データ (Journal data other than slips)
+    -- 2111: 1行の伝票データ (Single-line slip)
+    -- 複数行の伝票データ (Multi-line slip):
+    --   2110: 1行目 (First line)
+    --   2100: 間の行 (Middle lines)
+    --   2101: 最終行 (Last line)
+    identification_flag VARCHAR(20) DEFAULT '2111' NOT NULL, 
     
-    -- 2. 伝票No (Slip Number): Optional, can be used for grouping
+    -- 2. 伝票No (Slip Number)
+    -- 事業所データの［帳簿・伝票設定］で伝票No.の付番方法が「手入力」の場合に記述した伝票No.を反映。
+    -- ※複数行の伝票データの場合は1行目を反映。
     slip_number VARCHAR(50), 
     
     -- 3. 決算 (Settlement/Closing): '決算' or NULL
     settlement_type VARCHAR(20), 
     
-    -- 4. 取引日付 (Transaction Date): YYYY/MM/DD
+    -- 4. 取引日付 (Transaction Date) [必須]: YYYY/MM/DD
     transaction_date DATE NOT NULL,
     
-    -- 5. 借方勘定科目 (Debit Account)
-    debit_account_code VARCHAR(50), 
+    -- 5. 借方勘定科目 (Debit Account) [必須]
+    debit_account_code VARCHAR(50) NOT NULL, 
     
     -- 6. 借方補助科目 (Debit Sub-Account)
     debit_sub_account VARCHAR(50),
@@ -95,17 +103,17 @@ CREATE TABLE acc_yayoi_export_data (
     -- 7. 借方部門 (Debit Department)
     debit_department VARCHAR(50),
     
-    -- 8. 借方税区分 (Debit Tax Class): e.g. "課税売上10%"
-    debit_tax_class VARCHAR(50),
+    -- 8. 借方税区分 (Debit Tax Class) [必須]: e.g. "課税売上10%"
+    debit_tax_class VARCHAR(50) NOT NULL,
     
-    -- 9. 借方金額 (Debit Amount)
+    -- 9. 借方金額 (Debit Amount) [必須]
     debit_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
     
     -- 10. 借方税金額 (Debit Tax Amount)
     debit_tax_amount NUMERIC(15, 2) DEFAULT 0,
     
-    -- 11. 貸方勘定科目 (Credit Account)
-    credit_account_code VARCHAR(50),
+    -- 11. 貸方勘定科目 (Credit Account) [必須]
+    credit_account_code VARCHAR(50) NOT NULL,
     
     -- 12. 貸方補助科目 (Credit Sub-Account)
     credit_sub_account VARCHAR(50),
@@ -113,10 +121,10 @@ CREATE TABLE acc_yayoi_export_data (
     -- 13. 貸方部門 (Credit Department)
     credit_department VARCHAR(50),
     
-    -- 14. 貸方税区分 (Credit Tax Class)
-    credit_tax_class VARCHAR(50),
+    -- 14. 貸方税区分 (Credit Tax Class) [必須]
+    credit_tax_class VARCHAR(50) NOT NULL,
     
-    -- 15. 貸方金額 (Credit Amount)
+    -- 15. 貸方金額 (Credit Amount) [必須]
     credit_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
     
     -- 16. 貸方税金額 (Credit Tax Amount)
@@ -131,8 +139,8 @@ CREATE TABLE acc_yayoi_export_data (
     -- 19. 期日 (Due Date)
     due_date DATE,
     
-    -- 20. タイプ (Type): e.g. "掛け" (Credit), "現金" (Cash)
-    ledger_type VARCHAR(50),
+    -- 20. タイプ (Type) [必須]: e.g. "仕訳" (Journal), "掛け" (Credit), "現金" (Cash)
+    ledger_type VARCHAR(50) NOT NULL DEFAULT '仕訳',
     
     -- 21. 生成元 (Source): e.g. "RHT-PMS"
     source_name VARCHAR(50),
@@ -146,8 +154,11 @@ CREATE TABLE acc_yayoi_export_data (
     -- 24. 付箋2 (Sticky Note 2)
     sticky_note2 VARCHAR(20),
     
-    -- 25. 調整 (Adjustment): 'yes' or specific code
-    adjustment_flag VARCHAR(20),
+    -- 25. 調整 (Adjustment) [必須]
+    -- 調整にチェックを付ける場合は「yes」（または「true」「on」「1」「-1」）を記述。
+    -- チェックを付けない場合は「no」（または「yes」「true」「on」「1」「-1」以外の文字）を記述。
+    -- ※空欄の場合もチェックは付かない。
+    adjustment_flag VARCHAR(20) NOT NULL DEFAULT 'no', 
     
     -- Internal Metadata (Not exported to Yayoi)
     source_type VARCHAR(50), -- 'reservation', 'pos', 'manual'
