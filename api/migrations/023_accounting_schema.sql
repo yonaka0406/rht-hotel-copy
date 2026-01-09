@@ -154,7 +154,12 @@ CREATE TABLE acc_yayoi_export_data (
     -- 20. タイプ (Type) [必須]: e.g. "仕訳" (Journal), "掛け" (Credit), "現金" (Cash)
     ledger_type VARCHAR(50) NOT NULL DEFAULT '仕訳',
     
-    -- 21. 生成元 (Source): e.g. "RHT-PMS"
+    -- 21. 生成元 (Source)
+    -- 生成元を全角2桁で記述。
+    -- 受手：受取手形、支手：支払手形、償却：固定資産、預金：預貯金、借入：借入金、
+    -- 一括：一括税抜、按分：家事按分、給与：弥生給与、販売：弥生販売、
+    -- 会OL：弥生会計 オンライン/やよいの青色申告 オンライン
+    -- ※複数行の伝票データの場合は1行目を反映。
     source_name VARCHAR(50),
     
     -- 22. 仕訳メモ (Journal Memo)
