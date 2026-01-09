@@ -67,56 +67,91 @@ CREATE INDEX idx_acc_accounting_mappings_lookup ON acc_accounting_mappings (hote
 CREATE INDEX idx_acc_accounting_mappings_account_code ON acc_accounting_mappings (account_code_id);
 
 -- 3. Yayoi Export Data
--- Stores aggregated transaction data ready for export in Yayoi format.
--- This can be populated periodically or on-demand before export.
+-- Stores aggregated transaction data ready for export in Yayoi format (25 Columns).
+-- This table is a staging area that mirrors the standard Yayoi Import CSV format.
 CREATE TABLE acc_yayoi_export_data (
     id SERIAL PRIMARY KEY,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     export_batch_id UUID, -- To group records by export session
     
-    -- Yayoi Import Fields
-    -- 識別フラグ (Identify Flag): '2000', '2111' etc. Default usually '2111' for generic journals? 
-    -- We will store component parts and format on select if needed, or store raw import format.
-    -- Common Yayoi CSV columns:
-    -- 1. IdentifyFlag (識別フラグ) - e.g. "2111"
-    -- 2. Date (日付) - YYYY/MM/DD
-    -- 3. DebitAccount (借方勘定科目)
-    -- 4. DebitSubAccount (借方補助科目)
-    -- 5. DebitDepartment (借方部門)
-    -- 6. DebitTaxClass (借方税区分)
-    -- 7. DebitAmount (借方金額)
-    -- 8. DebitTaxAmount (借方消費税額)
-    -- 9. CreditAccount (貸方勘定科目)
-    -- 10. CreditSubAccount (貸方補助科目)
-    -- 11. CreditDepartment (貸方部門)
-    -- 12. CreditTaxClass (貸方税区分)
-    -- 13. CreditAmount (貸方金額)
-    -- 14. CreditTaxAmount (貸方消費税額)
-    -- 15. Summary (摘要)
-    -- 16. SettlementCode (決済)
+    -- 1. 識別フラグ (Identity Flag): Usually '2111' (Import) or '2000'
+    identification_flag VARCHAR(20) DEFAULT '2111', 
     
+    -- 2. 伝票No (Slip Number): Optional, can be used for grouping
+    slip_number VARCHAR(50), 
+    
+    -- 3. 決算 (Settlement/Closing): '決算' or NULL
+    settlement_type VARCHAR(20), 
+    
+    -- 4. 取引日付 (Transaction Date): YYYY/MM/DD
     transaction_date DATE NOT NULL,
     
-    debit_account_code VARCHAR(50), -- Link to acc_account_codes if needed, but string for CSV
+    -- 5. 借方勘定科目 (Debit Account)
+    debit_account_code VARCHAR(50), 
+    
+    -- 6. 借方補助科目 (Debit Sub-Account)
     debit_sub_account VARCHAR(50),
+    
+    -- 7. 借方部門 (Debit Department)
     debit_department VARCHAR(50),
-    debit_tax_class VARCHAR(50), -- e.g. "課税売上10%"
+    
+    -- 8. 借方税区分 (Debit Tax Class): e.g. "課税売上10%"
+    debit_tax_class VARCHAR(50),
+    
+    -- 9. 借方金額 (Debit Amount)
     debit_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    
+    -- 10. 借方税金額 (Debit Tax Amount)
     debit_tax_amount NUMERIC(15, 2) DEFAULT 0,
     
+    -- 11. 貸方勘定科目 (Credit Account)
     credit_account_code VARCHAR(50),
+    
+    -- 12. 貸方補助科目 (Credit Sub-Account)
     credit_sub_account VARCHAR(50),
+    
+    -- 13. 貸方部門 (Credit Department)
     credit_department VARCHAR(50),
+    
+    -- 14. 貸方税区分 (Credit Tax Class)
     credit_tax_class VARCHAR(50),
+    
+    -- 15. 貸方金額 (Credit Amount)
     credit_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    
+    -- 16. 貸方税金額 (Credit Tax Amount)
     credit_tax_amount NUMERIC(15, 2) DEFAULT 0,
     
-    summary TEXT, -- Description of the transaction
+    -- 17. 摘要 (Summary)
+    summary TEXT,
     
-    -- Metadata
-    source_type VARCHAR(50), -- 'reservation', 'pos', 'manual', etc.
-    source_id VARCHAR(50), -- ID of the source record
+    -- 18. 番号 (Journal Number/Daily Serial): Daily sequential number
+    journal_number VARCHAR(20),
     
+    -- 19. 期日 (Due Date)
+    due_date DATE,
+    
+    -- 20. タイプ (Type): e.g. "掛け" (Credit), "現金" (Cash)
+    ledger_type VARCHAR(50),
+    
+    -- 21. 生成元 (Source): e.g. "RHT-PMS"
+    source_name VARCHAR(50),
+    
+    -- 22. 仕訳メモ (Journal Memo): Internal notes not in summary
+    journal_memo TEXT,
+    
+    -- 23. 付箋1 (Sticky Note 1)
+    sticky_note1 VARCHAR(20),
+    
+    -- 24. 付箋2 (Sticky Note 2)
+    sticky_note2 VARCHAR(20),
+    
+    -- 25. 調整 (Adjustment): 'yes' or specific code
+    adjustment_flag VARCHAR(20),
+    
+    -- Internal Metadata (Not exported to Yayoi)
+    source_type VARCHAR(50), -- 'reservation', 'pos', 'manual'
+    source_id VARCHAR(50),   -- ID of the source record
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id)
 );
