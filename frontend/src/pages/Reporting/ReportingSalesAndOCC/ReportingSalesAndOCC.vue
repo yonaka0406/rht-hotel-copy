@@ -148,29 +148,28 @@ const hotelSortOrderMap = computed(() => {
     return map;
 });
 
-// KPI Calculations for Export
+// KPI Calculations for Export (6 months)
 const kpiData = computed(() => {
-    const revenueEntry = revenueData.value?.find(item => item.hotel_id === 0);
-    const occupancyEntry = occupancyData.value?.find(item => item.hotel_id === 0);
+    if (!futureOutlookData.value || futureOutlookData.value.length === 0) {
+        return {
+            actualADR: [],
+            forecastADR: [],
+            actualRevPAR: [],
+            forecastRevPAR: []
+        };
+    }
 
-    const total_forecast_revenue = revenueEntry?.forecast_revenue || 0;
-    const total_period_accommodation_revenue = revenueEntry?.accommodation_revenue || 0;
-    const total_fc_sold_rooms = occupancyEntry?.fc_sold_rooms || 0;
-    const total_fc_available_rooms = occupancyEntry?.fc_total_rooms || 0;
-    const total_sold_rooms = occupancyEntry?.sold_rooms || 0;
-    const total_available_rooms = occupancyEntry?.total_rooms || 0;
-
-    const actualADR = total_sold_rooms ? Math.round(total_period_accommodation_revenue / total_sold_rooms) : 0;
-    const forecastADR = total_fc_sold_rooms ? Math.round(total_forecast_revenue / total_fc_sold_rooms) : 0;
-    const actualDenominator = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
-    const actualRevPAR = actualDenominator ? Math.round(total_period_accommodation_revenue / actualDenominator) : 0;
-    const forecastRevPAR = total_fc_available_rooms ? Math.round(total_forecast_revenue / total_fc_available_rooms) : 0;
+    // Limit to 6 months
+    const targetMonths = futureOutlookData.value.slice(0, 6);
 
     return {
-        actualADR,
-        forecastADR,
-        actualRevPAR,
-        forecastRevPAR
+        actualADR: targetMonths.map(m => m.confirmed_nights ? Math.round(m.sales / m.confirmed_nights) : 0),
+        forecastADR: targetMonths.map(m => m.forecast_stays ? Math.round(m.forecast_sales / m.forecast_stays) : 0),
+        actualRevPAR: targetMonths.map(m => {
+            const denom = m.forecast_rooms > 0 ? m.forecast_rooms : m.net_available_room_nights;
+            return denom ? Math.round(m.sales / denom) : 0;
+        }),
+        forecastRevPAR: targetMonths.map(m => m.forecast_rooms ? Math.round(m.forecast_sales / m.forecast_rooms) : 0)
     };
 });
 
@@ -1224,7 +1223,9 @@ const fetchData = async () => {
                             confirmed_nights: accommodationConfirmedNights,
                             total_bookable_room_nights: accommodationBookableRoomNights,
                             blocked_nights: accommodationBlockedNights,
-                            net_available_room_nights: accommodationNetAvailableRoomNights
+                            net_available_room_nights: accommodationNetAvailableRoomNights,
+                            forecast_stays: totalForecastStays,
+                            forecast_rooms: totalForecastRooms
                         });
                     }
                     outlook.sort((a, b) => a.month.localeCompare(b.month));

@@ -62,23 +62,23 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
         const dataSheet = workbook.sheet('合計データ');
 
         if (dataSheet) {
-            // Write KPI Data starting at M10 (Col 13)
+            // Write KPI Data (6 months)
             if (kpiData) {
-                const kpiStartRow = 10;
-                dataSheet.cell(kpiStartRow, 13).value('KPI').style({ bold: true });
+                const writeKpiRow = (rowNum, dataArray) => {
+                    if (Array.isArray(dataArray)) {
+                        dataArray.forEach((val, i) => {
+                            if (i < 6) {
+                                // Start from Column V (22)
+                                dataSheet.cell(rowNum, 22 + i).value(val).style("numberFormat", "#,##0");
+                            }
+                        });
+                    }
+                };
 
-                const kpiLabels = [
-                    { label: 'ADR', value: kpiData.actualADR },
-                    { label: '計画 ADR', value: kpiData.forecastADR },
-                    { label: 'RevPAR', value: kpiData.actualRevPAR },
-                    { label: '計画 RevPAR', value: kpiData.forecastRevPAR }
-                ];
-
-                kpiLabels.forEach((kpi, index) => {
-                    const rowNum = kpiStartRow + 1 + index;
-                    dataSheet.cell(rowNum, 13).value(kpi.label);
-                    dataSheet.cell(rowNum, 14).value(kpi.value).style("numberFormat", "#,##0");
-                });
+                writeKpiRow(2, kpiData.actualADR);
+                writeKpiRow(4, kpiData.actualRevPAR);
+                writeKpiRow(7, kpiData.forecastADR);
+                writeKpiRow(8, kpiData.forecastRevPAR);
             }
 
             if (Array.isArray(outlookData)) {
@@ -108,13 +108,16 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 const startRow = 10;
 
                 // Headers
-                const headers = [
-                    '施設名', '計画売上', '売上', '売上差異', '前年売上', '前年比差異(売上)',
-                    '施設名', '計画稼働率', '稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'
-                ];
+                const revHeaders = ['施設名', '計画売上', '売上', '売上差異', '前年売上', '前年比差異(売上)'];
+                const occHeaders = ['施設名', '計画稼働率', '稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'];
+
                 const headerRow = dataSheet.row(startRow);
-                headers.forEach((header, index) => {
+                revHeaders.forEach((header, index) => {
                     headerRow.cell(index + 1).value(header).style({ bold: true });
+                });
+                occHeaders.forEach((header, index) => {
+                    // Start from Column H (8)
+                    headerRow.cell(index + 8).value(header).style({ bold: true });
                 });
 
                 // Prepare combined data for sorting
@@ -179,13 +182,13 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const currentRow = startRow + 1 + index;
                     const row = dataSheet.row(currentRow);
 
-                    // Occupancy section (Cols 7-12)
-                    row.cell(7).value(item.hotel_name);
-                    row.cell(8).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(9).value(item.actualOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(10).value(item.occVariance / 100).style("numberFormat", "0.0%");
-                    row.cell(11).value(item.prevOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(12).value(item.yoyOccVariance / 100).style("numberFormat", "0.0%");
+                    // Occupancy section (Starts from Col 8 / H)
+                    row.cell(8).value(item.hotel_name);
+                    row.cell(9).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(10).value(item.actualOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(11).value(item.occVariance / 100).style("numberFormat", "0.0%");
+                    row.cell(12).value(item.prevOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(13).value(item.yoyOccVariance / 100).style("numberFormat", "0.0%");
                 });
             }
         }
