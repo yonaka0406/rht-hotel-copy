@@ -88,13 +88,23 @@ CREATE TABLE acc_yayoi_export_data (
     -- ※複数行の伝票データの場合は1行目を反映。
     slip_number VARCHAR(50), 
     
-    -- 3. 決算 (Settlement/Closing): '決算' or NULL
+    -- 3. 決算 (Settlement/Closing)
+    -- 仕訳が決算仕訳の場合に「中決」「本決」を記述。空白：通常の仕訳
+    -- 中決：中間決算仕訳
+    -- 本決：本決算仕訳
+    -- ※複数行の伝票データの場合は1行目を反映。
     settlement_type VARCHAR(20), 
     
-    -- 4. 取引日付 (Transaction Date) [必須]: YYYY/MM/DD
+    -- 4. 取引日付 (Transaction Date) [必須]
+    -- 会計期間内の西暦または和暦日付に限る。
+    -- （例）「20190701」「2019/07/01」「2019/7/1」「R01/07/01」「R01/7/1」
+    -- ※複数行の伝票データの場合は1行目が必須（2行目以降は1行目の内容を反映）。
     transaction_date DATE NOT NULL,
     
     -- 5. 借方勘定科目 (Debit Account) [必須]
+    -- 弥生会計で登録されている名称と同一文字列が望ましい。
+    -- ※複数行の伝票データで、借方勘定科目がない場合は空白でも可。
+    -- ※複数行の入金伝票の場合は、2行目以降は空白でも可（1行目の科目のみをチェックする）。
     debit_account_code VARCHAR(50) NOT NULL, 
     
     -- 6. 借方補助科目 (Debit Sub-Account)
