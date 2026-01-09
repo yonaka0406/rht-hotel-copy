@@ -113,7 +113,9 @@ CREATE TABLE acc_yayoi_export_data (
     -- 7. 借方部門 (Debit Department)
     debit_department VARCHAR(50),
     
-    -- 8. 借方税区分 (Debit Tax Class) [必須]: e.g. "課税売上10%"
+    -- 8. 借方税区分 (Debit Tax Class) [必須]
+    -- 複数行の伝票データで、借方勘定科目がない場合でも必須。借方勘定科目がない場合は「対象外」と記述。
+    -- ※インボイス項目の請求書区分、仕入税額控除は必要に応じて税区分と組み合わせた形式で記述（記述なしでもインポート可）。
     debit_tax_class VARCHAR(50) NOT NULL,
     
     -- 9. 借方金額 (Debit Amount) [必須]
@@ -155,13 +157,16 @@ CREATE TABLE acc_yayoi_export_data (
     -- 21. 生成元 (Source): e.g. "RHT-PMS"
     source_name VARCHAR(50),
     
-    -- 22. 仕訳メモ (Journal Memo): Internal notes not in summary
+    -- 22. 仕訳メモ (Journal Memo)
+    -- 半角180桁を超える文字は、インポート時に切り捨てられる。
     journal_memo TEXT,
     
     -- 23. 付箋1 (Sticky Note 1)
+    -- 0～5の数字で記述。空欄は0と認識される。
     sticky_note1 VARCHAR(20),
     
     -- 24. 付箋2 (Sticky Note 2)
+    -- 0～5の数字で記述。※0は付箋なし。
     sticky_note2 VARCHAR(20),
     
     -- 25. 調整 (Adjustment) [必須]
