@@ -149,10 +149,15 @@ CREATE TABLE acc_yayoi_export_data (
     journal_number VARCHAR(20),
     
     -- 19. 期日 (Due Date)
+    -- （例）2019年7月1日の場合、次のいずれかで記述。
+    -- 「20190701」「2019/07/01」「2019/7/1」「R01/07/01」「R01/7/1」
     due_date DATE,
     
-    -- 20. タイプ (Type) [必須]: e.g. "仕訳" (Journal), "掛け" (Credit), "現金" (Cash)
-    ledger_type VARCHAR(50) NOT NULL DEFAULT '仕訳',
+    -- 20. タイプ (Type) [必須]
+    -- 取引タイプを0～3の数字で記述。
+    -- 0：仕訳データ、1：出金伝票データ、2：入金伝票データ、3：振替伝票データ
+    -- ※複数行の伝票データの場合は1行目を反映。
+    ledger_type VARCHAR(50) NOT NULL DEFAULT '0',
     
     -- 21. 生成元 (Source)
     -- 生成元を全角2桁で記述。
