@@ -42,11 +42,11 @@ function isHotelRelevant(hotelIdStr, hotelIds) {
  */
 function hasAllZeroMetrics(hotelIdStr, data) {
     const oldAdjustedTotalRoomsEquivalentForCondition = data.total_rooms + data.roomDifferenceSum;
-    return hotelIdStr === '0' && 
-           oldAdjustedTotalRoomsEquivalentForCondition === 0 && 
-           data.sold_rooms === 0 && 
-           data.roomDifferenceSum === 0 && 
-           data.total_rooms === 0;
+    return hotelIdStr === '0' &&
+        oldAdjustedTotalRoomsEquivalentForCondition === 0 &&
+        data.sold_rooms === 0 &&
+        data.roomDifferenceSum === 0 &&
+        data.total_rooms === 0;
 }
 
 /**
@@ -61,13 +61,13 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
     try {
         // Input validation for targetDate
         let validatedDate;
-        
+
         if (!targetDate) {
             const error = new Error(`[${requestId}] targetDate is required but was ${targetDate}`);
             logger.error(`[getFrontendCompatibleReportData] ${error.message}`);
             throw error;
         }
-        
+
         // Accept both Date objects and date strings
         if (targetDate instanceof Date) {
             validatedDate = targetDate;
@@ -78,14 +78,14 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             logger.error(`[getFrontendCompatibleReportData] ${error.message}`);
             throw error;
         }
-        
+
         // Validate that the date is actually valid
         if (isNaN(validatedDate.getTime())) {
             const error = new Error(`[${requestId}] targetDate is not a valid date: ${targetDate}`);
             logger.error(`[getFrontendCompatibleReportData] ${error.message}`);
             throw error;
         }
-        
+
         const year = validatedDate.getFullYear();
         const month = validatedDate.getMonth();
 
@@ -109,7 +109,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         const allHotelsResult = await dbClient.query('SELECT id, name, total_rooms, open_date, sort_order FROM hotels ORDER BY sort_order');
         const allHotels = allHotelsResult.rows;
         const hotelIds = allHotels.map(h => h.id);
-        
+
         logger.warn(`[getFrontendCompatibleReportData] Fetched ${allHotels.length} hotels. Hotel IDs: ${hotelIds.join(', ')}`);
         logger.warn(`[getFrontendCompatibleReportData] Date range: ${startDateStr} to ${endDateStr}`);
 
@@ -257,19 +257,19 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         // Generate revenue data (replicating frontend computed property logic)
         const revenueData = [];
         const monthKey = formatDateMonth(validatedDate);
-        
+
         // Initialize monthly aggregates (same as frontend - use null for initial values)
         const monthlyAggregates = {};
         monthlyAggregates[monthKey] = {};
-        monthlyAggregates[monthKey]['0'] = { 
-            pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, 
-            forecast_revenue: null, acc_revenue: null 
+        monthlyAggregates[monthKey]['0'] = {
+            pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null,
+            forecast_revenue: null, acc_revenue: null
         };
-        
+
         hotelIds.forEach(hotelId => {
-            monthlyAggregates[monthKey][String(hotelId)] = { 
-                pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, 
-                forecast_revenue: null, acc_revenue: null 
+            monthlyAggregates[monthKey][String(hotelId)] = {
+                pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null,
+                forecast_revenue: null, acc_revenue: null
             };
         });
 
@@ -387,12 +387,12 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                 const forecastRev = aggregatedMonthData.forecast_revenue;
                 const accRev = aggregatedMonthData.acc_revenue;
                 const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
-                
+
                 // Prioritize accounting revenue if available, otherwise use PMS (same as frontend)
                 let periodRev = (accRev !== null) ? accRev : (pmsRev || 0);
                 let accommodationRev = (accRev !== null) ? accRev : (pmsAccommodationRev || 0);
                 let otherRev = (accRev !== null) ? 0 : (pmsOtherRev || 0);
-                
+
                 revenueData.push({
                     month: monthKeyInLoop,
                     hotel_id: outputHotelId,
@@ -421,13 +421,13 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         // Generate occupancy data (replicating exact frontend logic)
         const occupancyData = [];
         const daysInCurrentMonth = getDaysInMonth(year, month + 1);
-        
+
         // Build monthly occupancy aggregates (same as frontend)
         const monthlyOccupancyAggregates = {};
         monthlyOccupancyAggregates[monthKey] = {};
-        monthlyOccupancyAggregates[monthKey]['0'] = { 
-            total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0, 
-            roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 
+        monthlyOccupancyAggregates[monthKey]['0'] = {
+            total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0,
+            roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0
         };
 
         // Initialize aggregates for each hotel (same as frontend)
@@ -435,12 +435,12 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             const hotel = allHotels.find(h => h.id === hotelId);
             let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
             let effectiveDaysForHotelInMonth = daysInCurrentMonth;
-            
+
             if (hotel && hotel.open_date) {
                 const openDate = normalizeDate(new Date(hotel.open_date));
                 const firstDayOfMonth = normalizeDate(new Date(year, month, 1));
                 const lastDayOfMonth = normalizeDate(new Date(year, month, daysInCurrentMonth));
-                
+
                 if (openDate && !isNaN(openDate.getTime())) {
                     if (openDate > lastDayOfMonth) effectiveDaysForHotelInMonth = 0;
                     else if (openDate > firstDayOfMonth) effectiveDaysForHotelInMonth = lastDayOfMonth.getDate() - openDate.getDate() + 1;
@@ -448,11 +448,11 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
             }
             effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
             const monthlyAvailableRoomDays = physicalRooms * effectiveDaysForHotelInMonth;
-            
+
             monthlyOccupancyAggregates[monthKey]['0'].total_rooms += monthlyAvailableRoomDays;
-            monthlyOccupancyAggregates[monthKey][String(hotelId)] = { 
-                total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, non_accommodation_stays: 0, 
-                roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0 
+            monthlyOccupancyAggregates[monthKey][String(hotelId)] = {
+                total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, non_accommodation_stays: 0,
+                roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0
             };
         });
 
@@ -632,29 +632,11 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
         const prevYearRevenueData = [];
         const prevYearOccupancyData = [];
 
-        // Calculate KPI data (same as frontend)
-        const kpiRevenueEntry = revenueData.find(item => item.hotel_id === 0);
-        const kpiOccupancyEntry = occupancyData.find(item => item.hotel_id === 0);
-
-        const total_forecast_revenue = kpiRevenueEntry?.forecast_revenue || 0;
-        const total_period_accommodation_revenue = kpiRevenueEntry?.accommodation_revenue || 0;
-        const total_fc_sold_rooms = kpiOccupancyEntry?.fc_sold_rooms || 0;
-        const total_fc_available_rooms = kpiOccupancyEntry?.fc_total_rooms || 0;
-        const total_sold_rooms = kpiOccupancyEntry?.sold_rooms || 0;
-        const total_available_rooms = kpiOccupancyEntry?.total_rooms || 0;
-
-        const actualDenominator = total_fc_available_rooms > 0 ? total_fc_available_rooms : total_available_rooms;
-        
-        const kpiData = {
-            actualADR: total_sold_rooms ? Math.round(total_period_accommodation_revenue / total_sold_rooms) : 0,
-            forecastADR: total_fc_sold_rooms ? Math.round(total_forecast_revenue / total_fc_sold_rooms) : 0,
-            actualRevPAR: actualDenominator ? Math.round(total_period_accommodation_revenue / actualDenominator) : 0,
-            forecastRevPAR: total_fc_available_rooms ? Math.round(total_forecast_revenue / total_fc_available_rooms) : 0
-        };
 
         // Generate future outlook data (matching frontend logic exactly)
         const outlookData = [];
-        
+        let kpiData = { actualADR: [], forecastADR: [], actualRevPAR: [], forecastRevPAR: [] };
+
         try {
             const latestDateStrRaw = await selectLatestDailyReportDate(requestId, dbClient);
             let targetDate = latestDateStrRaw;
@@ -674,9 +656,9 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                 const startDate = formatDate(monthDate);
                 const lastDayDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
                 const endDate = formatDate(lastDayDate);
-                months.push({ 
-                    startDate, 
-                    endDate, 
+                months.push({
+                    startDate,
+                    endDate,
                     monthLabel: formatDateMonth(monthDate)
                 });
             }
@@ -755,12 +737,12 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                         accommodationBookableRoomNights += hotelBookable;
                         accommodationNetAvailableRoomNights += hotelNetAvailable;
                     }
-                    if (Array.isArray(data.forecast)) { 
-                        data.forecast.forEach(f => { 
-                            totalForecastSales += Number(f.accommodation_revenue) || 0; 
-                            totalForecastRooms += Number(f.available_room_nights) || 0; 
-                            totalForecastStays += Number(f.rooms_sold_nights) || 0; 
-                        }); 
+                    if (Array.isArray(data.forecast)) {
+                        data.forecast.forEach(f => {
+                            totalForecastSales += Number(f.accommodation_revenue) || 0;
+                            totalForecastRooms += Number(f.available_room_nights) || 0;
+                            totalForecastStays += Number(f.rooms_sold_nights) || 0;
+                        });
                     }
 
                     let hotelActualSales = 0;
@@ -810,10 +792,24 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                     confirmed_nights: accommodationConfirmedNights,
                     total_bookable_room_nights: accommodationBookableRoomNights,
                     blocked_nights: accommodationBlockedNights,
-                    net_available_room_nights: accommodationNetAvailableRoomNights
+                    net_available_room_nights: accommodationNetAvailableRoomNights,
+                    forecast_stays: totalForecastStays,
+                    forecast_rooms: totalForecastRooms
                 });
             }
             outlookData.sort((a, b) => a.month.localeCompare(b.month));
+
+            // Calculate KPI data (matching frontend 6-month logic)
+            const targetMonths = outlookData.slice(0, 6);
+            kpiData = {
+                actualADR: targetMonths.map(m => m.confirmed_nights ? Math.round(m.sales / m.confirmed_nights) : 0),
+                forecastADR: targetMonths.map(m => m.forecast_stays ? Math.round(m.forecast_sales / m.forecast_stays) : 0),
+                actualRevPAR: targetMonths.map(m => {
+                    const denom = m.forecast_rooms > 0 ? m.forecast_rooms : m.net_available_room_nights;
+                    return denom ? Math.round(m.sales / denom) : 0;
+                }),
+                forecastRevPAR: targetMonths.map(m => m.forecast_rooms ? Math.round(m.forecast_sales / m.forecast_rooms) : 0)
+            };
         } catch (e) {
             logger.error(`[${requestId}] Future Outlook fetch failed:`, e);
             // Continue without outlook data
