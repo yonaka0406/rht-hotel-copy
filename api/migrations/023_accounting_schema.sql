@@ -119,6 +119,9 @@ CREATE TABLE acc_yayoi_export_data (
     debit_tax_class VARCHAR(50) NOT NULL,
     
     -- 9. 借方金額 (Debit Amount) [必須]
+    -- 整数（税込金額を入力）。
+    -- ※複数行の伝票データで、借方勘定科目がない場合でも必須。借方勘定科目がない場合は「0」と記述。
+    -- ※仕入税額控除計算前の金額
     debit_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
     
     -- 10. 借方税金額 (Debit Tax Amount)
@@ -134,6 +137,8 @@ CREATE TABLE acc_yayoi_export_data (
     credit_department VARCHAR(50),
     
     -- 14. 貸方税区分 (Credit Tax Class) [必須]
+    -- 複数行の伝票データで、貸方勘定科目がない場合でも必須。貸方勘定科目がない場合は「対象外」と記述。
+    -- ※インボイス項目の請求書区分、仕入税額控除は必要に応じて税区分と組み合わせた形式で記述（記述なしでもインポート可）。
     credit_tax_class VARCHAR(50) NOT NULL,
     
     -- 15. 貸方金額 (Credit Amount) [必須]
