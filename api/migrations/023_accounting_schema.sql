@@ -148,6 +148,7 @@ CREATE TABLE acc_yayoi_export_data (
     credit_tax_amount NUMERIC(15, 2) DEFAULT 0,
     
     -- 17. 摘要 (Summary)
+    -- 半角64桁を超える文字は、インポート時に切り捨てられる。
     summary TEXT,
     
     -- 18. 番号 (Journal Number/Daily Serial): Daily sequential number
