@@ -42,7 +42,7 @@ const login = async (req, res) => {
     logger.warn('Login validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors });
     // For multiple validation errors, sending all of them might be too verbose for prod.
     // Sending the first one or a generic message.
-    const clientError = isProduction ? 'Login failed. Please check your input.' : specificErrors[0].message;
+    const clientError = isProduction ? 'ログインに失敗しました。入力を確認してください。' : specificErrors[0].message;
     return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
   }
 
@@ -53,7 +53,7 @@ const login = async (req, res) => {
     if (!user) {
       const specificError = 'User not found';
       logger.warn('Login attempt for non-existent user', { email, ip: req.ip, specificError });
-      return res.status(401).json({ error: isProduction ? 'Invalid credentials.' : specificError });
+      return res.status(401).json({ error: isProduction ? '認証に失敗しました。' : specificError });
     }
 
     // Check if the account is Google-linked
@@ -66,13 +66,13 @@ const login = async (req, res) => {
     if (!isValidPassword) {
       const specificError = 'パスワードの誤差がありました。'; // Password error
       logger.warn('Invalid password attempt', { userId: user.id, email, ip: req.ip, specificError });
-      return res.status(401).json({ error: isProduction ? 'Invalid credentials.' : specificError });
+      return res.status(401).json({ error: isProduction ? '認証に失敗しました。' : specificError });
     }
 
     if (user.status_id !== 1) {
       const specificError = 'ユーザーが無効になっています。'; // User is disabled
       logger.warn('Login attempt for disabled user', { userId: user.id, email, status_id: user.status_id, ip: req.ip, specificError });
-      return res.status(401).json({ error: isProduction ? 'Account issue. Please contact support.' : specificError });
+      return res.status(401).json({ error: isProduction ? 'アカウントに問題があります。サポートにお問い合わせください。' : specificError });
     }
 
     const token = generateToken(user);
@@ -94,7 +94,7 @@ const login = async (req, res) => {
   } catch (err) {
     const specificError = 'Internal server error during login';
     logger.error('Login error', { error: err.message, stack: err.stack, email, ip: req.ip, specificError });
-    res.status(500).json({ error: isProduction ? 'Login failed. Please try again later.' : specificError });
+    res.status(500).json({ error: isProduction ? 'ログインに失敗しました。後でもう一度お試しください。' : specificError });
   }
 };
 
@@ -109,7 +109,7 @@ const forgot = async (req, res) => {
   if (!errors.isEmpty()) {
     const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
     logger.warn('Forgot password validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors, requestId: req.requestId });
-    const clientError = isProduction ? 'Invalid input. Please check your email.' : specificErrors[0].message;
+    const clientError = isProduction ? '入力が無効です。メールアドレスを確認してください。' : specificErrors[0].message;
     return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
   }
 
@@ -123,11 +123,26 @@ const forgot = async (req, res) => {
     if (!user) {
       const specificError = 'ユーザー見つかりません。'; // User not found
       logger.warn('Password reset requested for non-existent user', { email, ip: req.ip, specificError, requestId: req.requestId });
-      const message = isProduction ? 'If your email is registered, you will receive a password reset link.' : specificError;
+      const message = isProduction ? 'メールアドレスが登録されている場合、パスワードリセットリンクが送信されます。' : specificError;
       // Respond with 200 in production even if user not found to prevent email enumeration
       return res.status(isProduction ? 200 : 400).json({ message: message, error: isProduction ? undefined : specificError });
     }
-    logger.debug('User found for password reset', { userId: user.id, userEmail: user.email, requestId: req.requestId });
+    logger.debug('User found for password reset', { userId: user.id, userEmail: user.email, authProvider: user.auth_provider, requestId: req.requestId });
+
+    // Check if the account is Google-linked
+    if (user.auth_provider === 'google') {
+      const { forceReset } = req.body;
+      logger.debug('Google account detected during forgot password', { userId: user.id, forceReset, requestId: req.requestId });
+      if (!forceReset) {
+        const googleError = "このアカウントはGoogleで登録されています。Googleログインをご利用ください。";
+        logger.warn('Password reset requested for Google-linked account', { userId: user.id, email, ip: req.ip, requestId: req.requestId });
+        return res.status(400).json({
+          error: googleError,
+          isGoogleAccount: true
+        });
+      }
+      logger.info('Password reset forced for Google-linked account', { userId: user.id, email, requestId: req.requestId });
+    }
 
     const resetToken = jwt.sign({ email: user.email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
     logger.debug('Password reset token generated', { userEmail: user.email, tokenPreview: resetToken.substring(0, 20) + '...', requestId: req.requestId });
@@ -158,7 +173,7 @@ const forgot = async (req, res) => {
       specificError,
       requestId: req.requestId
     });
-    res.status(500).json({ error: isProduction ? 'Error processing request. Please try again later.' : specificError + (isProduction ? '' : ` (${err.message})`) });
+    res.status(500).json({ error: isProduction ? 'リクエストの処理中にエラーが発生しました。後でもう一度お試しください。' : specificError + (isProduction ? '' : ` (${err.message})`) });
   }
 }
 
@@ -170,7 +185,7 @@ const forgotAdmin = async (req, res) => {
   if (!errors.isEmpty()) {
     const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
     logger.warn('Forgot admin password validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors });
-    const clientError = isProduction ? 'Invalid input. Please check your email.' : specificErrors[0].message;
+    const clientError = isProduction ? '入力が無効です。メールアドレスを確認してください。' : specificErrors[0].message;
     return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
   }
 
@@ -185,7 +200,7 @@ const forgotAdmin = async (req, res) => {
   } catch (err) {
     const specificError = 'Error occurred while sending the admin password reset email.';
     logger.error('Forgot admin password error', { error: err.message, stack: err.stack, email, ip: req.ip, specificError });
-    res.status(500).json({ error: isProduction ? 'Error processing request. Please try again later.' : specificError });
+    res.status(500).json({ error: isProduction ? 'リクエストの処理中にエラーが発生しました。後でもう一度お試しください。' : specificError });
   }
 }
 
@@ -197,14 +212,17 @@ const reset = async (req, res) => {
   if (!errors.isEmpty()) {
     const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
     logger.warn('Reset password validation failed', { ip: req.ip, errors: specificErrors });
-    // Password validation errors can be more specific in prod if they don't leak too much (e.g. "Password too short")
-    const clientError = isProduction ? 'Password reset failed. Please ensure your new password meets the requirements.' : specificErrors[0].message;
+    const clientError = isProduction ? 'パスワードのリセットに失敗しました。新しいパスワードが要件を満たしているか確認してください。' : specificErrors[0].message;
     return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
   }
 
   const { token, password } = req.body;
 
   try {
+    if (!token) {
+      throw { name: 'JsonWebTokenError', message: 'Token is missing' };
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
     const email = decoded.email;
     const user = await usersModel.selectUserByEmail(req.requestId, email);
@@ -212,7 +230,7 @@ const reset = async (req, res) => {
     if (!user) {
       const specificError = 'Invalid or expired token (user not found for token email)';
       logger.warn('Password reset attempt with invalid or expired token', { tokenEmail: email, ip: req.ip, specificError });
-      return res.status(400).json({ error: isProduction ? 'Password reset failed. The link may be invalid or expired.' : specificError });
+      return res.status(400).json({ error: isProduction ? 'パスワードのリセットに失敗しました。リンクが無効か、有効期限が切れている可能性があります。' : specificError });
     }
 
     const updated_by = user.id;
@@ -222,14 +240,31 @@ const reset = async (req, res) => {
     logger.info('Password reset successfully', { userId: user.id, email, ip: req.ip });
     res.json({ message: 'パスワードが正常にリセットされました。' });
   } catch (error) {
-    let specificError = 'Error occurred while resetting password';
+    let specificError = 'パスワードのリセット中にエラーが発生しました。';
+    let statusCode = 500;
+
     if (error.name === 'TokenExpiredError') {
-      specificError = 'Password reset token has expired.';
+      specificError = 'パスワードリセットのリンクの有効期限が切れています。もう一度リクエストしてください。';
+      statusCode = 400;
     } else if (error.name === 'JsonWebTokenError') {
-      specificError = 'Password reset token is invalid.';
+      specificError = 'パスワードリセットのリンクが無効です。';
+      statusCode = 400;
     }
-    logger.error('Error resetting password', { error: error.message, stack: error.stack, errorName: error.name, tokenUsed: !!token, ip: req.ip, specificError });
-    res.status(500).json({ error: isProduction ? 'Password reset failed. Please try again or request a new link.' : specificError });
+
+    logger.error('Error resetting password', {
+      error: error.message,
+      stack: error.stack,
+      errorName: error.name,
+      tokenUsed: !!token,
+      ip: req.ip,
+      specificError
+    });
+
+    res.status(statusCode).json({
+      error: isProduction && statusCode === 500
+        ? 'パスワードのリセットに失敗しました。もう一度お試しいただくか、新しいリンクをリクエストしてください。'
+        : specificError
+    });
   }
 }
 

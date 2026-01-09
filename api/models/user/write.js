@@ -4,7 +4,10 @@ const bcrypt = require('bcryptjs');
 // Update a user's password hash
 const updatePasswordHash = async (requestId, email, passwordHash, updated_by, dbClient = null) => {
     const client = dbClient || getPool(requestId);
-    const query = 'UPDATE users SET password_hash = $1, updated_by = $2 WHERE email = $3 RETURNING *';
+    // Explicitly set auth_provider to 'local' and provider_user_id to NULL when resetting password.
+    // This allows Google-linked accounts to be converted to local accounts with a password,
+    // while satisfying the database constraints (password_auth_consistency and provider_id_consistency).
+    const query = 'UPDATE users SET password_hash = $1, updated_by = $2, auth_provider = \'local\', provider_user_id = NULL WHERE email = $3 RETURNING *';
     const values = [passwordHash, updated_by, email];
 
     try {
