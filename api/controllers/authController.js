@@ -64,7 +64,7 @@ const login = async (req, res) => {
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      const specificError = 'パスワードの誤差がありました。'; // Password error
+      const specificError = 'パスワードが間違っています。'; // Password error
       logger.warn('Invalid password attempt', { userId: user.id, email, ip: req.ip, specificError });
       return res.status(401).json({ error: isProduction ? '認証に失敗しました。' : specificError });
     }
@@ -220,9 +220,10 @@ const reset = async (req, res) => {
 
   try {
     if (!token) {
-      throw { name: 'JsonWebTokenError', message: 'Token is missing' };
+      const err = new Error('Token is missing');
+      err.name = 'JsonWebTokenError';
+      throw err;
     }
-
     const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
     const email = decoded.email;
     const user = await usersModel.selectUserByEmail(req.requestId, email);
