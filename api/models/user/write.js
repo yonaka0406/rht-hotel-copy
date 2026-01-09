@@ -27,7 +27,7 @@ const updatePasswordHash = async (requestId, email, passwordHash, updated_by, db
         const result = await client.query(query, values);
         return result.rows[0]; // Return the updated user
     } catch (err) {
-        console.error('Error updating password:', err);
+        console.error('Error updating password and clearing Google account link:', err);
         throw new Error('Database error');
     }
 };
