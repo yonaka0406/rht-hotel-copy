@@ -42,10 +42,11 @@
                                     </template>
                                     <template #footer>
                                         <Divider />
-                                        <ul class="pl-2 ml-2 my-0 leading-normal">
+                                        <ul class="pl-2 ml-2 my-0 leading-normal text-sm">
                                             <li>少なくとも1つの小文字</li>
                                             <li>少なくとも1つの大文字</li>
                                             <li>少なくとも1つの数字</li>
+                                            <li>少なくとも1つの記号</li>
                                             <li>最低8文字</li>
                                         </ul>
                                     </template>
@@ -608,13 +609,13 @@ const validateEmail = (email) => {
 };
 // Password Validation
 const validatePassword = (password) => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]).{8,}$/;
 
     if (!password) {
         passwordError.value = "パスワードが必要です。";
     } else if (!passwordRegex.test(password)) {
         passwordError.value =
-            "Password must have at least 8 characters, one uppercase letter, one lowercase letter, and one number.";
+            "パスワードには少なくとも8文字、大文字1文字、小文字1文字、数字1文字、および記号1文字を含める必要があります。";
     } else {
         passwordError.value = null;
     }

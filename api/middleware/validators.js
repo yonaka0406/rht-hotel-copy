@@ -2,32 +2,32 @@ const { body } = require('express-validator');
 
 const emailValidation = [
   body('email')
-    .notEmpty().withMessage('Email is required.')
-    .isEmail().withMessage('Invalid email format.')
+    .notEmpty().withMessage('メールアドレスが必要です。')
+    .isEmail().withMessage('無効なメール形式です。')
     .normalizeEmail(),
 ];
 
 const passwordLoginValidation = [
   body('password')
-    .notEmpty().withMessage('Password is required.'),
+    .notEmpty().withMessage('パスワードが必要です。'),
 ];
 
 // Strong password validation: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 symbol
 const strongPasswordValidation = [
   body('password')
-    .notEmpty().withMessage('Password is required.')
-    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long.')
+    .notEmpty().withMessage('パスワードが必要です。')
+    .isLength({ min: 8 }).withMessage('パスワードは少なくとも8文字である必要があります。')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]).*$/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.'),
+    .withMessage('パスワードには少なくとも8文字、大文字1文字、小文字1文字、数字1文字、および記号1文字を含める必要があります。'),
 ];
 
 // Name validation (e.g., for registration)
 const nameValidation = [
   body('name')
-    .notEmpty().withMessage('Name is required.')
-    .isString().withMessage('Name must be a string.')
+    .notEmpty().withMessage('名前が必要です。')
+    .isString().withMessage('名前は文字列である必要があります。')
     .trim()
-    .isLength({ min: 2, max: 50 }).withMessage('Name must be between 2 and 50 characters.'),
+    .isLength({ min: 2, max: 50 }).withMessage('名前は2文字から50文字の間である必要があります。'),
 ];
 
 // Validation for just the password field when it's being reset (uses strong password rules)
