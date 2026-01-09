@@ -151,7 +151,9 @@ CREATE TABLE acc_yayoi_export_data (
     -- 半角64桁を超える文字は、インポート時に切り捨てられる。
     summary TEXT,
     
-    -- 18. 番号 (Journal Number/Daily Serial): Daily sequential number
+    -- 18. 番号 (Journal Number)
+    -- ［受取手形］［支払手形］の手形番号を記述。
+    -- 半角10桁を超える文字は、インポート時に切り捨てられる。
     journal_number VARCHAR(20),
     
     -- 19. 期日 (Due Date)
