@@ -516,10 +516,11 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
             )
         ),
         client_res_info AS (
-            -- Get min check-in date for relevant reservations
+            -- Get min check-in date and activity type for relevant reservations
             SELECT 
                 r.reservation_client_id,
-                MIN(r.check_in) as check_in
+                MIN(r.check_in) as check_in,
+                BOOL_OR(r.type IN ('web', 'ota')) as is_ota_web
             FROM reservations r
             JOIN res_list rl ON r.reservation_client_id = rl.reservation_client_id
             WHERE r.hotel_id = $3
@@ -586,6 +587,7 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
             c.id as client_id,
             COALESCE(c.name_kanji, c.name_kana, c.name) as client_name,
             ri.check_in,
+            ri.is_ota_web,
             COALESCE(cs.month_sales, 0) as total_sales,
             COALESCE(cp.month_payments, 0) as total_payments,
             COALESCE(cp.month_payments, 0) - COALESCE(cs.month_sales, 0) as difference,

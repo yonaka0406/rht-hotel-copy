@@ -35,12 +35,27 @@ const selectedReservationId = ref(null);
 const showReservationModal = ref(false);
 
 const statusFilter = ref('all');
+const typeFilter = ref('all');
 const filteredHotelDetails = computed(() => {
-    if (statusFilter.value === 'all') return hotelDetails.value;
-    if (statusFilter.value === 'settled') return hotelDetails.value.filter(d => Math.abs(d.cumulative_difference) <= 1);
-    if (statusFilter.value === 'outstanding') return hotelDetails.value.filter(d => d.cumulative_difference < -1);
-    if (statusFilter.value === 'overpaid') return hotelDetails.value.filter(d => d.cumulative_difference > 1);
-    return hotelDetails.value;
+    let list = hotelDetails.value;
+    
+    // Status Filter
+    if (statusFilter.value === 'settled') {
+        list = list.filter(d => Math.abs(d.cumulative_difference) <= 1);
+    } else if (statusFilter.value === 'outstanding') {
+        list = list.filter(d => d.cumulative_difference < -1);
+    } else if (statusFilter.value === 'overpaid') {
+        list = list.filter(d => d.cumulative_difference > 1);
+    }
+
+    // Reservation Type Filter
+    if (typeFilter.value === 'ota_web') {
+        list = list.filter(d => d.is_ota_web);
+    } else if (typeFilter.value === 'other') {
+        list = list.filter(d => !d.is_ota_web);
+    }
+    
+    return list;
 });
 
 // Helper: Format YYYY-MM
@@ -88,6 +103,7 @@ const handleHotelSelect = async (hotel) => {
     selectedClient.value = null;
     hotelDetails.value = [];
     statusFilter.value = 'all';
+    typeFilter.value = 'all';
     try {
         isHotelLoading.value = true;
         const range = getMonthRange(selectedDate.value);
@@ -259,41 +275,23 @@ watch(selectedDate, () => {
                         </DataTable>
 
                         <div v-else>
-                            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 flex flex-wrap gap-4 items-center">
-                                <span class="text-xs font-bold text-slate-500 uppercase">絞り込み:</span>
-                                <div class="flex gap-2">
-                                    <Button 
-                                        label="全て" 
-                                        :severity="statusFilter === 'all' ? 'primary' : 'secondary'" 
-                                        size="small" 
-                                        text 
-                                        @click="statusFilter = 'all'" 
-                                        class="!py-1"
-                                    />
-                                    <Button 
-                                        label="未収あり" 
-                                        :severity="statusFilter === 'outstanding' ? 'danger' : 'secondary'" 
-                                        size="small" 
-                                        text 
-                                        @click="statusFilter = 'outstanding'"
-                                        class="!py-1"
-                                    />
-                                    <Button 
-                                        label="過入金あり" 
-                                        :severity="statusFilter === 'overpaid' ? 'warn' : 'secondary'" 
-                                        size="small" 
-                                        text 
-                                        @click="statusFilter = 'overpaid'"
-                                        class="!py-1"
-                                    />
-                                    <Button 
-                                        label="精算済" 
-                                        :severity="statusFilter === 'settled' ? 'success' : 'secondary'" 
-                                        size="small" 
-                                        text 
-                                        @click="statusFilter = 'settled'"
-                                        class="!py-1"
-                                    />
+                            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800">
+                                <div class="flex flex-wrap gap-4 items-center">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase w-12">入金状況:</span>
+                                    <div class="flex gap-1">
+                                        <Button label="全て" :severity="statusFilter === 'all' ? 'primary' : 'secondary'" size="small" text @click="statusFilter = 'all'" class="!py-1 !px-3 text-xs" />
+                                        <Button label="未収あり" :severity="statusFilter === 'outstanding' ? 'danger' : 'secondary'" size="small" text @click="statusFilter = 'outstanding'" class="!py-1 !px-3 text-xs" />
+                                        <Button label="過入金あり" :severity="statusFilter === 'overpaid' ? 'warn' : 'secondary'" size="small" text @click="statusFilter = 'overpaid'" class="!py-1 !px-3 text-xs" />
+                                        <Button label="精算済" :severity="statusFilter === 'settled' ? 'success' : 'secondary'" size="small" text @click="statusFilter = 'settled'" class="!py-1 !px-3 text-xs" />
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-4 items-center">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase w-12">予約種別:</span>
+                                    <div class="flex gap-1">
+                                        <Button label="全て" :severity="typeFilter === 'all' ? 'primary' : 'secondary'" size="small" text @click="typeFilter = 'all'" class="!py-1 !px-3 text-xs" />
+                                        <Button label="OTA/WEB" :severity="typeFilter === 'ota_web' ? 'primary' : 'secondary'" size="small" text @click="typeFilter = 'ota_web'" class="!py-1 !px-3 text-xs" />
+                                        <Button label="その他" :severity="typeFilter === 'other' ? 'primary' : 'secondary'" size="small" text @click="typeFilter = 'other'" class="!py-1 !px-3 text-xs" />
+                                    </div>
                                 </div>
                             </div>
                             <DataTable 
