@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import DatePicker from 'primevue/datepicker';
@@ -33,6 +33,15 @@ const isClientLoading = ref(false);
 
 const selectedReservationId = ref(null);
 const showReservationModal = ref(false);
+
+const statusFilter = ref('all');
+const filteredHotelDetails = computed(() => {
+    if (statusFilter.value === 'all') return hotelDetails.value;
+    if (statusFilter.value === 'settled') return hotelDetails.value.filter(d => Math.abs(d.cumulative_difference) <= 1);
+    if (statusFilter.value === 'outstanding') return hotelDetails.value.filter(d => d.cumulative_difference < -1);
+    if (statusFilter.value === 'overpaid') return hotelDetails.value.filter(d => d.cumulative_difference > 1);
+    return hotelDetails.value;
+});
 
 // Helper: Format YYYY-MM
 const formatMonth = (date) => {
@@ -78,6 +87,7 @@ const handleHotelSelect = async (hotel) => {
     selectedHotel.value = hotel;
     selectedClient.value = null;
     hotelDetails.value = [];
+    statusFilter.value = 'all';
     try {
         isHotelLoading.value = true;
         const range = getMonthRange(selectedDate.value);
@@ -236,8 +246,45 @@ watch(selectedDate, () => {
                         </DataTable>
 
                         <div v-else>
+                            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 flex flex-wrap gap-4 items-center">
+                                <span class="text-xs font-bold text-slate-500 uppercase">絞り込み:</span>
+                                <div class="flex gap-2">
+                                    <Button 
+                                        label="全て" 
+                                        :severity="statusFilter === 'all' ? 'primary' : 'secondary'" 
+                                        size="small" 
+                                        text 
+                                        @click="statusFilter = 'all'" 
+                                        class="!py-1"
+                                    />
+                                    <Button 
+                                        label="未収あり" 
+                                        :severity="statusFilter === 'outstanding' ? 'danger' : 'secondary'" 
+                                        size="small" 
+                                        text 
+                                        @click="statusFilter = 'outstanding'"
+                                        class="!py-1"
+                                    />
+                                    <Button 
+                                        label="過入金あり" 
+                                        :severity="statusFilter === 'overpaid' ? 'warn' : 'secondary'" 
+                                        size="small" 
+                                        text 
+                                        @click="statusFilter = 'overpaid'"
+                                        class="!py-1"
+                                    />
+                                    <Button 
+                                        label="精算済" 
+                                        :severity="statusFilter === 'settled' ? 'success' : 'secondary'" 
+                                        size="small" 
+                                        text 
+                                        @click="statusFilter = 'settled'"
+                                        class="!py-1"
+                                    />
+                                </div>
+                            </div>
                             <DataTable 
-                                :value="hotelDetails" 
+                                :value="filteredHotelDetails" 
                                 :loading="isHotelLoading"
                                 stripedRows
                                 paginator :rows="10"
@@ -246,13 +293,13 @@ watch(selectedDate, () => {
                                 rowHover
                             >
                                 <Column field="client_name" header="顧客名" sortable></Column>
-                                <Column field="total_sales" header="売上" sortable>
+                                <Column field="total_sales" header="今月売上" sortable>
                                     <template #body="{ data }">{{ formatCurrency(data.total_sales) }}</template>
                                 </Column>
-                                <Column field="total_payments" header="入金" sortable>
+                                <Column field="total_payments" header="今月入金" sortable>
                                     <template #body="{ data }">{{ formatCurrency(data.total_payments) }}</template>
                                 </Column>
-                                <Column field="difference" header="差異" sortable>
+                                <Column field="difference" header="当月差異" sortable>
                                     <template #body="{ data }">
                                         <span :class="[
                                             data.difference > 1 ? 'text-emerald-500 font-bold' : '',
@@ -261,6 +308,12 @@ watch(selectedDate, () => {
                                         ]">
                                             {{ (data.difference > 0 ? '+' : '') + Number(data.difference).toLocaleString() }}
                                         </span>
+                                    </template>
+                                </Column>
+                                <Column header="累計ステータス">
+                                    <template #body="{ data }">
+                                        <Tag v-if="Math.abs(data.cumulative_difference) <= 1" value="精算済" severity="success" class="text-[10px]" />
+                                        <Tag v-else :value="data.cumulative_difference > 1 ? '過入金' : '未収あり'" :severity="data.cumulative_difference > 1 ? 'warn' : 'danger'" class="text-[10px]" />
                                     </template>
                                 </Column>
                             </DataTable>
