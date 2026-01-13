@@ -60,7 +60,7 @@ const ReportingActiveReservationsChange = () => import('@/pages/Reporting/Report
 const ReportingMonthlyReservationEvolution = () => import('@/pages/Reporting/ReportingMonthlyReservationEvolution/ReportingMonthlyReservationEvolution.vue');
 const AboutPage = () => import('@/pages/About/AboutPage.vue');
 
-const AccountingMainPage = () => import('@/pages/Accounting/AccountingMainPage.vue');
+const AccountingMainPage = () => import('@/pages/Accounting/Main/AccountingMainPage.vue');
 const AccountingDashboard = () => import('@/pages/Accounting/AccountingDashboard/AccountingDashboard.vue');
 const AccountingLedgerExport = () => import('@/pages/Accounting/AccountingLedgerExport/AccountingLedgerExport.vue');
 
@@ -209,6 +209,13 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    } else {
+      return { top: 0, behavior: 'auto' };
+    }
+  },
 });
 
 // Navigation guard for authentication
@@ -287,7 +294,7 @@ router.beforeEach((to, from, next) => {
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     const isAdminRoute = to.path.startsWith('/admin');
     const isAccountingRoute = to.path.startsWith('/accounting');
-    
+
     // For accounting routes, verify permissions via API
     if (isAccountingRoute) {
       const checkAccountingPermission = async () => {
@@ -299,7 +306,7 @@ router.beforeEach((to, from, next) => {
             },
             credentials: 'include',
           });
-          
+
           if (response.ok) {
             const userData = await response.json();
             if (userData && userData[0] && userData[0].permissions && userData[0].permissions.accounting) {
@@ -323,11 +330,11 @@ router.beforeEach((to, from, next) => {
           return next({ name: 'Dashboard' });
         }
       };
-      
+
       checkAccountingPermission();
       return;
     }
-    
+
     const apiUrl = isAdminRoute ? '/api/adminProtected' : '/api/protected';
 
     verifyToken(apiUrl).then((isValid) => {

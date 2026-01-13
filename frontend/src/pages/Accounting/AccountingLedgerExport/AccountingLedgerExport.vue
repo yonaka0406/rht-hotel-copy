@@ -28,27 +28,7 @@ const handleReviewStepNext = (data) => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
-        <!-- Breadcrumb Navigation -->
-        <nav class="mb-6">
-            <ol class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
-                <li>
-                    <router-link to="/dashboard" class="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
-                        ホーム
-                    </router-link>
-                </li>
-                <li class="flex items-center">
-                    <i class="pi pi-chevron-right mx-2 text-xs"></i>
-                    <router-link to="/accounting/dashboard" class="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
-                        会計
-                    </router-link>
-                </li>
-                <li class="flex items-center">
-                    <i class="pi pi-chevron-right mx-2 text-xs"></i>
-                    <span class="text-slate-900 dark:text-slate-100 font-medium">帳票出力</span>
-                </li>
-            </ol>
-        </nav>
+    <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
 
         <div class="max-w-7xl mx-auto">
             <!-- Header -->

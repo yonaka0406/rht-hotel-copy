@@ -1,41 +1,32 @@
 <template>
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
-        <!-- Breadcrumb Navigation -->
-        <nav class="mb-6">
-            <ol class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
-                <li>
-                    <router-link to="/dashboard" class="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
-                        ホーム
-                    </router-link>
-                </li>
-                <li class="flex items-center">
-                    <i class="pi pi-chevron-right mx-2 text-xs"></i>
-                    <span class="text-slate-900 dark:text-slate-100 font-medium">会計</span>
-                </li>
-            </ol>
-        </nav>
+    <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
+
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto">
             
-            <!-- Hero Section -->
-            <div class="mb-10 text-center sm:text-left">
-                <div class="inline-flex items-center justify-center p-3 bg-violet-100 dark:bg-violet-900/30 rounded-2xl mb-4">
-                    <i class="pi pi-calculator text-3xl text-violet-600 dark:text-violet-400"></i>
+            <!-- Hero Section (Compact) -->
+            <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="flex-shrink-0 inline-flex items-center justify-center p-3 bg-violet-100 dark:bg-violet-900/30 rounded-2xl">
+                        <i class="pi pi-calculator text-2xl text-violet-600 dark:text-violet-400"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                            会計モジュール
+                        </h1>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            プロパティ管理システム (PMS) • データ監査・照合センター
+                        </p>
+                    </div>
                 </div>
-                <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
-                    会計モジュール
-                </h1>
-                <p class="text-slate-600 dark:text-slate-400 max-w-2xl">
-                    プロパティ管理システム (PMS) • データ監査・照合センター
-                </p>
                 
-                <!-- User Badge (Optional, keeping consistent with previous logic but styled differently) -->
-                <div class="mt-4 inline-flex items-center space-x-3 px-4 py-2 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <div class="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center text-white text-xs font-bold">
+                <!-- User Badge -->
+                <div class="inline-flex items-center space-x-3 px-4 py-2 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm self-start sm:self-center">
+                    <div class="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white text-sm font-bold">
                         {{ userInitial }}
                     </div>
-                    <div class="text-xs">
+                    <div class="text-xs text-left">
                         <span class="font-semibold text-slate-900 dark:text-white block">{{ userName }}</span>
                         <span class="text-slate-500 dark:text-slate-400 block">{{ userRole }}</span>
                     </div>
@@ -56,10 +47,6 @@
                                     財務記録の同期と検証を行うアクションを選択してください。
                                 </p>
                             </div>
-                            <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full self-start flex items-center gap-1">
-                                <i class="pi pi-check-circle text-[10px]"></i>
-                                システム稼働中
-                            </span>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -186,7 +173,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, nextTick } from 'vue';
 import { useUserStore } from '@/composables/useUserStore';
 
 // User store
@@ -229,9 +216,10 @@ const userRole = computed(() => {
 // Lifecycle
 onMounted(async () => {
     await fetchUser();
+    await nextTick();
+    window.scrollTo(0, 0);
 });
 </script>
 
 <style scoped>
-/* No specific styles needed as we use Tailwind classes */
 </style>

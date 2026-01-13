@@ -43,7 +43,7 @@
                         <i class="pi pi-building text-violet-600"></i>
                         対象ホテル ({{ filters.hotelIds.length }}件選択中)
                     </label>
-                    <button @click="toggleAllHotels" class="text-[10px] font-bold text-violet-600 hover:underline">
+                    <button @click="toggleAllHotels" class="text-[10px] font-bold text-violet-600 hover:underline bg-transparent p-0 border-0 cursor-pointer">
                         {{ allHotelsSelected ? 'すべて解除' : 'すべて選択' }}
                     </button>
                 </div>
@@ -68,7 +68,7 @@
                         <i class="pi pi-tags text-violet-600"></i>
                         勘定プラン ({{ filters.planTypeCategoryIds.length }}件選択中)
                     </label>
-                    <button @click="toggleAllPlans" class="text-[10px] font-bold text-violet-600 hover:underline">
+                    <button @click="toggleAllPlans" class="text-[10px] font-bold text-violet-600 hover:underline bg-transparent p-0 border-0 cursor-pointer">
                         {{ allPlansSelected ? 'すべて解除' : 'すべて選択' }}
                     </button>
                 </div>
