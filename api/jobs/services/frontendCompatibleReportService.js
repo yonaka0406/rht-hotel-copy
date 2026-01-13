@@ -57,7 +57,7 @@ function hasAllZeroMetrics(hotelIdStr, data) {
  * @param {Date} targetDate 
  * @param {Object} dbClient - Database client
  */
-const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) => {
+const getFrontendCompatibleReportData = async (requestId, targetDate, period = 'month', dbClient) => {
     try {
         // Input validation for targetDate
         let validatedDate;
@@ -677,7 +677,9 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, dbClient) 
                         // Aggregate daily PMS data to monthly
                         let pmsTotalRevenue = 0;
                         if (Array.isArray(pmsData)) {
-                            pmsTotalRevenue = pmsData.reduce((sum, day) => sum + (Number(day.accommodation_price) || 0), 0);
+                            // Use 'price' instead of 'accommodation_price' to include non-accommodation revenue (breakfast, parking, etc.)
+                            // to match manual export logic in batch.js
+                            pmsTotalRevenue = pmsData.reduce((sum, day) => sum + (Number(day.price) || 0), 0);
                         }
 
                         futureData[monthInfo.monthLabel][hotelId] = {

@@ -53,10 +53,10 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
         // Use XlsxPopulate to load the template (preserves charts)
         const workbook = await XlsxPopulate.fromFileAsync(templatePath);
 
-        // Write Selection Message in 'レポート' sheet A39
+        // Write Selection Message in 'レポート' sheet A45
         const reportSheet = workbook.sheet('レポート');
         if (reportSheet && selectionMessage) {
-            reportSheet.cell('A39').value(selectionMessage);
+            reportSheet.cell('A45').value(selectionMessage);
         }
 
         const dataSheet = workbook.sheet('合計データ');
