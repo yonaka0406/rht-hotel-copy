@@ -29,7 +29,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-6">
-                    <div v-if="previewData.length > 0" class="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div v-if="ledgerPreviewData.length > 0" class="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                         <i class="pi pi-check-circle text-green-600 dark:text-green-400"></i>
                         <span class="text-[10px] font-black text-green-700 dark:text-green-300 uppercase tracking-widest">借貸一致 (Balanced)</span>
                     </div>
@@ -49,7 +49,7 @@
                 <span class="text-slate-500 font-bold">データを集計中...</span>
             </div>
 
-            <div v-else-if="previewData.length === 0" class="py-24 text-center">
+            <div v-else-if="ledgerPreviewData.length === 0" class="py-24 text-center">
                 <i class="pi pi-search text-4xl text-slate-300 mb-4 block"></i>
                 <p class="text-slate-500 font-medium">選択された条件に一致するデータが見つかりませんでした。</p>
             </div>
@@ -126,11 +126,11 @@
         </div>
 
         <div class="flex justify-between mt-8">
-            <button @click="$emit('back')" class="flex items-center justify-center gap-2 rounded-lg h-12 px-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer">
+            <button @click="handleBack" class="flex items-center justify-center gap-2 rounded-lg h-12 px-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer">
                 <i class="pi pi-arrow-left"></i>
                 <span>戻る</span>
             </button>
-            <button @click="handleNext" :disabled="loading || previewData.length === 0" class="flex items-center justify-center gap-2 rounded-lg h-12 px-10 bg-violet-600 text-white text-sm font-bold shadow-lg shadow-violet-200 dark:shadow-none hover:bg-violet-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            <button @click="handleNext" :disabled="loading || ledgerPreviewData.length === 0" class="flex items-center justify-center gap-2 rounded-lg h-12 px-10 bg-violet-600 text-white text-sm font-bold shadow-lg shadow-violet-200 dark:shadow-none hover:bg-violet-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                 <span>次へ：出力形式</span>
                 <i class="pi pi-arrow-right"></i>
             </button>
@@ -150,21 +150,19 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['back', 'next']);
-const { getLedgerPreview, loading } = useAccounting();
-
-const previewData = ref([]);
+const { fetchLedgerPreview, ledgerPreviewData, loading } = useAccountingStore();
 
 const totalAmount = computed(() => {
-    return previewData.value.reduce((sum, row) => sum + parseInt(row.total_amount || 0), 0);
+    return ledgerPreviewData.value.reduce((sum, row) => sum + parseInt(row.total_amount || 0), 0);
 });
 
 const hasUnmappedRows = computed(() => {
-    return previewData.value.some(row => !row.account_code);
+    return ledgerPreviewData.value.some(row => !row.account_code);
 });
 
 const formattedPreview = computed(() => {
     const groups = {};
-    previewData.value.forEach(row => {
+    ledgerPreviewData.value.forEach(row => {
         if (!groups[row.hotel_id]) {
             groups[row.hotel_id] = {
                 hotel_id: row.hotel_id,
@@ -181,14 +179,18 @@ const formattedPreview = computed(() => {
 
 onMounted(async () => {
     try {
-        previewData.value = await getLedgerPreview(props.filters);
+        await fetchLedgerPreview(props.filters);
     } catch (err) {
         console.error('Failed to fetch preview data', err);
     }
 });
 
+const handleBack = () => {
+    emit('back');
+};
+
 const handleNext = () => {
-    emit('next', previewData.value);
+    emit('next');
 };
 </script>
 

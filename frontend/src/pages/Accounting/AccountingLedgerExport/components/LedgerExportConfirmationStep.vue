@@ -12,8 +12,8 @@
             <div class="p-8 space-y-8">
                 <div class="grid grid-cols-2 gap-4">
                     <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                        <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">総レコード数</span>
-                        <span class="text-2xl font-black tabular-nums text-slate-900 dark:text-white">{{ previewData.length }}</span>
+                         <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">総レコード数</span>
+                        <span class="text-2xl font-black tabular-nums text-slate-900 dark:text-white">{{ ledgerPreviewData.length }}</span>
                     </div>
                     <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
                         <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">総金額</span>
@@ -46,27 +46,23 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useAccounting } from '@/composables/useAccounting';
+import { useAccountingStore } from '@/composables/useAccountingStore';
 
 const props = defineProps({
     filters: {
         type: Object,
         required: true
-    },
-    previewData: {
-        type: Array,
-        required: true
     }
 });
 
 defineEmits(['back']);
-const { downloadLedger, loading } = useAccounting();
+const { downloadLedger, ledgerPreviewData, loading } = useAccountingStore();
 
 const selectedFormat = ref('csv');
 const emailCopy = ref(false);
 
 const totalAmount = computed(() => {
-    return props.previewData.reduce((sum, row) => sum + parseInt(row.total_amount || 0), 0);
+    return ledgerPreviewData.value.reduce((sum, row) => sum + parseInt(row.total_amount || 0), 0);
 });
 
 const handleDownload = async () => {

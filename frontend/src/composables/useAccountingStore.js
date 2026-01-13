@@ -1,6 +1,10 @@
+import { ref } from 'vue';
 import { useApi } from './useApi';
 
-export function useAccounting() {
+const ledgerPreviewData = ref([]);
+const lastFilters = ref(null);
+
+export function useAccountingStore() {
     const { isLoading: loading, error, get, post } = useApi();
 
     const getExportOptions = async () => {
@@ -12,13 +16,21 @@ export function useAccounting() {
         }
     };
 
-    const getLedgerPreview = async (filters) => {
-        try {
-            const data = await post('/accounting/export/preview', filters);
-            return data;
-        } catch (err) {
-            throw err;
+    const fetchLedgerPreview = async (filters) => {
+        // Only fetch if filters have changed or we have no data
+        const filtersChanged = JSON.stringify(lastFilters.value) !== JSON.stringify(filters);
+
+        if (ledgerPreviewData.value.length === 0 || filtersChanged) {
+            try {
+                const data = await post('/accounting/export/preview', filters);
+                ledgerPreviewData.value = data;
+                lastFilters.value = JSON.parse(JSON.stringify(filters));
+                return data;
+            } catch (err) {
+                throw err;
+            }
         }
+        return ledgerPreviewData.value;
     };
 
     const downloadLedger = async (filters) => {
@@ -27,12 +39,10 @@ export function useAccounting() {
                 responseType: 'blob'
             });
 
-            // Create a link to download the file
             const url = window.URL.createObjectURL(new Blob([data]));
             const link = document.createElement('a');
             link.href = url;
 
-            // Using a generic filename for now, which is improved if the backend sets it correctly.
             let fileName = `sales_ledger_${filters.selectedMonth || 'export'}`;
             fileName += filters.format === 'excel' ? '.xlsx' : '.csv';
 
@@ -47,11 +57,18 @@ export function useAccounting() {
         }
     };
 
+    const clearPreviewData = () => {
+        ledgerPreviewData.value = [];
+        lastFilters.value = null;
+    };
+
     return {
         loading,
         error,
+        ledgerPreviewData,
         getExportOptions,
-        getLedgerPreview,
-        downloadLedger
+        fetchLedgerPreview,
+        downloadLedger,
+        clearPreviewData
     };
 }

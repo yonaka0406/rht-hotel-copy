@@ -1,9 +1,12 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onUnmounted } from 'vue';
+import { useAccountingStore } from '@/composables/useAccountingStore';
 import LedgerExportStepper from './components/LedgerExportStepper.vue';
 import LedgerExportFilterStep from './components/LedgerExportFilterStep.vue';
 import LedgerExportReviewStep from './components/LedgerExportReviewStep.vue';
 import LedgerExportConfirmationStep from './components/LedgerExportConfirmationStep.vue';
+
+const { clearPreviewData } = useAccountingStore();
 
 const currentStep = ref(1);
 const exportFilters = reactive({
@@ -13,18 +16,19 @@ const exportFilters = reactive({
     planTypeCategoryIds: []
 });
 
-const previewData = ref([]);
-
 const handleFilterStepNext = (filters) => {
     Object.assign(exportFilters, filters);
     currentStep.value = 2;
 };
 
-const handleReviewStepNext = (data) => {
-    previewData.value = data;
+const handleReviewStepNext = () => {
     currentStep.value = 3;
 };
 
+// Cleanup store on unmount to avoid stale data between sessions
+onUnmounted(() => {
+    clearPreviewData();
+});
 </script>
 
 <template>
@@ -62,7 +66,6 @@ const handleReviewStepNext = (data) => {
             <LedgerExportConfirmationStep 
                 v-if="currentStep === 3" 
                 :filters="exportFilters"
-                :preview-data="previewData"
                 @back="currentStep = 2" 
             />
 
