@@ -17,10 +17,10 @@ router.post('/accounting/settings/departments', authMiddleware_accounting, accou
 router.delete('/accounting/settings/departments/:id', authMiddleware_accounting, accountingController.deleteDepartment);
 
 // Dashboard
-router.get('/dashboard/metrics', authMiddleware_accounting, accountingController.getDashboardMetrics);
+router.get('/accounting/dashboard/metrics', authMiddleware_accounting, accountingController.getDashboardMetrics);
 
 // Export
-router.get('/export/options', authMiddleware_accounting, accountingController.getExportOptions);
+router.get('/accounting/export/options', authMiddleware_accounting, accountingController.getExportOptions);
 router.post('/accounting/export/preview', authMiddleware_accounting, accountingController.getLedgerPreview);
 router.post('/accounting/export/download', authMiddleware_accounting, accountingController.exportLedger);
 
