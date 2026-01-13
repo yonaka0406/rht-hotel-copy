@@ -615,11 +615,13 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
         rr_totals AS (
             SELECT rd_id, SUM(rr_price) as sum_rr_price FROM rr_base GROUP BY rd_id
         ),
-        -- Multi-perspective Sales (Month vs Total)
+        -- Multi-perspective Sales (Month vs Cumulative vs Total)
         res_sales_agg AS (
             SELECT 
                 reservation_id,
+                SUM(CASE WHEN date < $3 THEN amount ELSE 0 END) as prev_sales,
                 SUM(CASE WHEN date BETWEEN $3 AND $4 THEN amount ELSE 0 END) as month_sales,
+                SUM(CASE WHEN date <= $4 THEN amount ELSE 0 END) as cumulative_sales,
                 SUM(amount) as total_sales
             FROM (
                 SELECT 
@@ -639,11 +641,13 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
                 WHERE rd.billable = TRUE
             ) s GROUP BY reservation_id
         ),
-        -- Multi-perspective Payments (Month vs Total)
+        -- Multi-perspective Payments (Month vs Cumulative vs Total)
         res_payments_agg AS (
             SELECT 
                 rp.reservation_id,
+                SUM(CASE WHEN rp.date < $3 THEN rp.value ELSE 0 END) as prev_payments,
                 SUM(CASE WHEN rp.date BETWEEN $3 AND $4 THEN rp.value ELSE 0 END) as month_payments,
+                SUM(CASE WHEN rp.date <= $4 THEN rp.value ELSE 0 END) as cumulative_payments,
                 SUM(rp.value) as total_payments
             FROM reservation_payments rp
             JOIN res_list rl ON rp.reservation_id = rl.id
@@ -656,6 +660,10 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
             r.status,
             COALESCE(sa.month_sales, 0) as month_sales,
             COALESCE(pa.month_payments, 0) as month_payments,
+            COALESCE(sa.cumulative_sales, 0) as cumulative_sales,
+            COALESCE(pa.cumulative_payments, 0) as cumulative_payments,
+            COALESCE(pa.cumulative_payments, 0) - COALESCE(sa.cumulative_sales, 0) as cumulative_difference,
+            COALESCE(pa.prev_payments, 0) - COALESCE(sa.prev_sales, 0) as brought_forward_balance,
             COALESCE(sa.total_sales, 0) as total_sales,
             COALESCE(pa.total_payments, 0) as total_payments,
             COALESCE(pa.total_payments, 0) - COALESCE(sa.total_sales, 0) as total_difference

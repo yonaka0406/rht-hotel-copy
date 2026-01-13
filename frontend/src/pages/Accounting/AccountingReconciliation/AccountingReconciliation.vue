@@ -294,16 +294,23 @@ watch(selectedDate, () => {
                                         </div>
                                         <div class="flex flex-col items-end gap-1">
                                             <Tag :value="translateReservationStatus(res.status)" severity="info" class="text-[10px]" />
-                                            <Tag v-if="Math.abs(res.total_difference) <= 1" value="全額受領済" severity="success" class="text-[9px]" />
-                                            <Tag v-else :value="res.total_difference > 0 ? '過入金' : '未収金'" :severity="res.total_difference > 0 ? 'warn' : 'danger'" class="text-[9px]" />
+                                            <!-- Balance Status as of Month End -->
+                                            <Tag v-if="Math.abs(res.cumulative_difference) <= 1" value="当月末精算済" severity="success" class="text-[9px]" />
+                                            <Tag v-else :value="res.cumulative_difference > 0 ? '当月末過入金' : '当月末未収'" :severity="res.cumulative_difference > 0 ? 'warn' : 'danger'" class="text-[9px]" />
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-2 gap-2 text-xs mb-1">
                                         <div class="text-slate-500">今月売上: <span class="text-slate-700 dark:text-slate-300">{{ formatCurrency(res.month_sales) }}</span></div>
                                         <div class="text-slate-500">今月入金: <span class="text-slate-700 dark:text-slate-300">{{ formatCurrency(res.month_payments) }}</span></div>
                                     </div>
-                                    <div class="text-[10px] text-slate-400 mb-3 flex justify-between">
-                                        <span>全体合計: 売上 {{ formatCurrency(res.total_sales) }} / 入金 {{ formatCurrency(res.total_payments) }}</span>
+                                    <div class="text-[10px] text-slate-400 mb-3 flex flex-col gap-0.5">
+                                        <div class="flex justify-between">
+                                            <span>前月繰越: {{ formatCurrency(res.brought_forward_balance) }}</span>
+                                            <span class="font-bold" :class="res.cumulative_difference < 0 ? 'text-rose-500' : 'text-emerald-600'">当月末残高: {{ formatCurrency(res.cumulative_difference) }}</span>
+                                        </div>
+                                        <div class="border-t border-slate-100 dark:border-slate-800 pt-1 mt-1 opacity-60">
+                                            全体合計: 売上 {{ formatCurrency(res.total_sales) }} / 入金 {{ formatCurrency(res.total_payments) }}
+                                        </div>
                                     </div>
                                     <div class="flex gap-2">
                                         <Button icon="pi pi-pencil" label="修正" class="p-button-xs flex-1" severity="secondary" @click="openReservation(res.reservation_id)" />
