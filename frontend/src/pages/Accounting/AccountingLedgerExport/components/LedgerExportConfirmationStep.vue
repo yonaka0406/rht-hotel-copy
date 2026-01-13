@@ -14,12 +14,12 @@
                     <div class="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
                          <span class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">総レコード数</span>
                         <span class="text-3xl font-black tabular-nums text-slate-900 dark:text-white">{{ ledgerPreviewData.length }}</span>
-                        <span class="text-[10px] text-slate-400 font-bold uppercase">Rows to export</span>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase">出力対象データ</span>
                     </div>
                     <div class="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
                         <span class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">総売上金額</span>
                         <span class="text-3xl font-black tabular-nums text-violet-600 dark:text-violet-400">¥{{ totalAmount.toLocaleString() }}</span>
-                        <span class="text-[10px] text-violet-400 font-bold uppercase">Total Balance</span>
+                        <span class="text-[10px] text-violet-400 font-bold uppercase">精算合計金額</span>
                     </div>
                 </div>
 
