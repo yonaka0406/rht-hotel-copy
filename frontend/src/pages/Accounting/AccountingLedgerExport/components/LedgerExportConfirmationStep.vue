@@ -37,12 +37,6 @@
                         <span>プレビュー画面に戻る</span>
                     </button>
 
-                    <div class="flex flex-col items-center gap-2 pt-4">
-                        <div class="flex items-center gap-2 text-[10px] text-slate-400 uppercase tracking-widest font-black bg-slate-100 dark:bg-slate-900/50 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
-                             <i class="pi pi-shield-check"></i>
-                            <span>安全なERP接続: AES-256 暗号化済み</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
