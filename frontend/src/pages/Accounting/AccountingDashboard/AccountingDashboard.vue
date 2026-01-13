@@ -120,17 +120,17 @@
                         </div>
                     </div>
 
-                    <!-- Receivables -->
+                    <!-- Total Payments Last Month -->
                     <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between mb-4">
                             <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                                <i class="pi pi-list text-blue-600 dark:text-blue-400 text-lg"></i>
+                                <i class="pi pi-check-square text-blue-600 dark:text-blue-400 text-lg"></i>
                             </div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">未収金</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">先月の入金合計</span>
                         </div>
                         <div class="mb-2">
                             <p class="text-3xl font-bold text-slate-900 dark:text-white">¥---,---</p>
-                            <p class="text-sm font-medium text-slate-600 dark:text-slate-400">クライアント請求残高</p>
+                            <p class="text-sm font-medium text-slate-600 dark:text-slate-400">カード・現金・請求書等</p>
                         </div>
                         <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
                             <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
