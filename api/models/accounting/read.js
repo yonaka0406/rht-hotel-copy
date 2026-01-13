@@ -213,6 +213,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
         SELECT 
             h.id as hotel_id,
             h.name as hotel_name,
+            COALESCE(ad.name, h.name) as department_code,
             ms.account_code_id,
             ac.code as account_code,
             ac.name as account_name,
@@ -222,9 +223,10 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
             ms.display_name as display_category_name
         FROM mapped_sales ms
         JOIN hotels h ON ms.hotel_id = h.id
+        LEFT JOIN acc_departments ad ON h.id = ad.hotel_id
         LEFT JOIN acc_account_codes ac ON ms.account_code_id = ac.id
         LEFT JOIN acc_tax_classes atc ON ms.tax_rate = atc.tax_rate AND atc.yayoi_name LIKE '課税売上%'
-        GROUP BY h.id, h.name, ms.account_code_id, ac.code, ac.name, ms.tax_rate, atc.yayoi_name, ms.display_name, ms.mapping_target
+        GROUP BY h.id, h.name, ad.name, ms.account_code_id, ac.code, ac.name, ms.tax_rate, atc.yayoi_name, ms.display_name, ms.mapping_target
         HAVING SUM(ms.amount) != 0
         ORDER BY h.id, ms.mapping_target, ms.display_name, ms.tax_rate DESC
     `;

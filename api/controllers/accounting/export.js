@@ -98,24 +98,27 @@ const exportLedger = async (req, res) => {
                 ? Math.floor(totalAmount / (1 + taxRate) * taxRate)
                 : 0;
 
+            // Format summary: {hotel_name}売上 - {plan_name}
+            const summary = `${row.hotel_name}売上 - ${row.display_category_name || ''}`;
+
             const cols = [
                 flag,                 // 1: 識別フラグ
                 '',                   // 2: 伝票No
                 '',                   // 3: 決算
                 yayoiDate,            // 4: 取引日付
-                '売掛金',              // 5: 借方勘定科目 (Debit A/R)
-                row.hotel_name,       // 6: 借方補助科目
-                '',                   // 7: 借方部門
-                '対象外',             // 8: 借方税区分
-                totalAmount,          // 9: 借方金額
-                '0',                  // 10: 借方税金額 (A/R is tax-exempt)
-                row.account_name || '未設定', // 11: 貸方勘定科目 (Sales Account)
-                row.hotel_name,       // 12: 貸方補助科目
-                '',                   // 13: 貸方部門
-                row.tax_category || '対象外', // 14: 貸方税区分
-                totalAmount,          // 15: 貸方金額
-                taxAmount,            // 16: 貸方税金額 (Calculated tax)
-                row.display_category_name, // 17: 摘要
+                '売掛金',              // 5: 借方勘定科目 (Debit: Accounts Receivable)
+                '',                   // 6: 借方補助科目 (Debit: No sub-account)
+                row.department_code || '', // 7: 借方部門 (Debit: Department code)
+                '対象外',             // 8: 借方税区分 (Debit: Tax-exempt)
+                totalAmount,          // 9: 借方金額 (Debit: Amount)
+                '0',                  // 10: 借方税金額 (Debit: Tax amount - A/R is tax-exempt)
+                row.account_name || '未設定', // 11: 貸方勘定科目 (Credit: Sales account)
+                row.display_category_name || '', // 12: 貸方補助科目 (Credit: Plan name as sub-account)
+                row.department_code || '', // 13: 貸方部門 (Credit: Department code)
+                row.tax_category || '対象外', // 14: 貸方税区分 (Credit: Tax category)
+                totalAmount,          // 15: 貸方金額 (Credit: Amount)
+                taxAmount,            // 16: 貸方税金額 (Credit: Calculated tax)
+                summary,              // 17: 摘要 (Summary: {hotel}売上 - {plan})
                 '',                   // 18: 番号
                 '',                   // 19: 期日
                 '0',                  // 20: タイプ
