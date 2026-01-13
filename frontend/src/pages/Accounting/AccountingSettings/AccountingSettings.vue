@@ -533,7 +533,7 @@ const confirmDelete = (type, item) => {
             label: 'いいえ',
             severity: 'secondary',
             variant: 'text',
-            class: 'px-6 py-2 rounded-xl font-bold font-medium'
+            class: 'px-6 py-2 rounded-xl font-bold'
         },
         accept: async () => {
             try {
@@ -552,10 +552,15 @@ const confirmDelete = (type, item) => {
 };
 
 onMounted(async () => {
-    await Promise.all([
-        fetchSettings(),
-        hotelStore.fetchHotels()
-    ]);
+    try {
+        await Promise.all([
+            fetchSettings(),
+            hotelStore.fetchHotels()
+        ]);
+    } catch (err) {
+        console.error('Failed to initialize settings page', err);
+        toast.add({ severity: 'error', summary: '初期化エラー', detail: '一部のデータの読み込みに失敗しました。', life: 3000 });
+    }
 });
 </script>
 
