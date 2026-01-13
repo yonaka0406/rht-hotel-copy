@@ -484,6 +484,9 @@ const getReconciliationOverview = async (requestId, startDate, endDate, hotelIds
 
         const result = await client.query(query, [startDate, endDate, hotelIds]);
         return result.rows;
+    } catch (err) {
+        logger.error('Error in getReconciliationOverview:', err);
+        throw err;
     } finally {
         if (shouldRelease) client.release();
     }
@@ -511,6 +514,16 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
                 OR 
                 (rp.date BETWEEN $1 AND $2)
             )
+        ),
+        client_res_info AS (
+            -- Get min check-in date for relevant reservations
+            SELECT 
+                r.reservation_client_id,
+                MIN(r.check_in) as check_in
+            FROM reservations r
+            JOIN res_list rl ON r.reservation_client_id = rl.reservation_client_id
+            WHERE r.hotel_id = $3
+            GROUP BY r.reservation_client_id
         ),
         rr_base AS (
             SELECT 
@@ -572,6 +585,7 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
         SELECT 
             c.id as client_id,
             COALESCE(c.name_kanji, c.name_kana, c.name) as client_name,
+            ri.check_in,
             COALESCE(cs.month_sales, 0) as total_sales,
             COALESCE(cp.month_payments, 0) as total_payments,
             COALESCE(cp.month_payments, 0) - COALESCE(cs.month_sales, 0) as difference,
@@ -582,11 +596,15 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
         JOIN res_list rl ON c.id = rl.reservation_client_id
         LEFT JOIN client_sales_agg cs ON c.id = cs.reservation_client_id
         LEFT JOIN client_payments_agg cp ON c.id = cp.reservation_client_id
+        LEFT JOIN client_res_info ri ON c.id = ri.reservation_client_id
         ORDER BY ABS(COALESCE(cp.month_payments, 0) - COALESCE(cs.month_sales, 0)) DESC
         `;
 
         const result = await client.query(query, [startDate, endDate, hotelId]);
         return result.rows;
+    } catch (err) {
+        logger.error('Error in getReconciliationHotelDetails:', err);
+        throw err;
     } finally {
         if (shouldRelease) client.release();
     }
@@ -649,12 +667,12 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
                 JOIN rr_totals t ON b.rd_id = t.rd_id
                 UNION ALL
                 SELECT 
-                    ra.reservation_id,
+                    rd.reservation_id,
                     rd.date,
                     (ra.price * ra.quantity) as amount
                 FROM reservation_addons ra
                 JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
-                JOIN res_list r ON ra.reservation_id = r.id
+                JOIN res_list r ON rd.reservation_id = r.id
                 WHERE rd.billable = TRUE
             ) s GROUP BY reservation_id
         ),
@@ -693,6 +711,9 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
 
         const result = await client.query(query, [hotelId, clientId, startDate, endDate]);
         return result.rows;
+    } catch (err) {
+        logger.error('Error in getReconciliationClientDetails:', err);
+        throw err;
     } finally {
         if (shouldRelease) client.release();
     }

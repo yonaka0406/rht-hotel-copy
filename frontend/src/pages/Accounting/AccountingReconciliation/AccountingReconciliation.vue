@@ -134,12 +134,25 @@ const formatCurrency = (val) => {
     return Number(val).toLocaleString('ja-JP', { style: 'currency', currency: 'JPY' });
 };
 
-onMounted(() => {
-    // Default to last month if day is 1-15, else current month
-    const today = new Date();
-    if (today.getDate() < 10) {
-        selectedDate.value = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+const getBalanceLabel = (cumulativeDifference, checkIn = null) => {
+    if (Math.abs(cumulativeDifference) <= 1) return '精算済';
+    if (cumulativeDifference < -1) return '未収あり';
+    
+    // Positive balance
+    if (checkIn) {
+        const monthEnd = new Date(selectedDate.value.getFullYear(), selectedDate.value.getMonth() + 1, 0);
+        const checkInDate = new Date(checkIn);
+        if (checkInDate > monthEnd) {
+            return '事前払い';
+        }
     }
+    return '過入金';
+};
+
+onMounted(() => {
+    // Default to previous month
+    const today = new Date();
+    selectedDate.value = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     fetchOverview();
 });
 
@@ -312,8 +325,11 @@ watch(selectedDate, () => {
                                 </Column>
                                 <Column header="累計ステータス">
                                     <template #body="{ data }">
-                                        <Tag v-if="Math.abs(data.cumulative_difference) <= 1" value="精算済" severity="success" class="text-[10px]" />
-                                        <Tag v-else :value="data.cumulative_difference > 1 ? '過入金' : '未収あり'" :severity="data.cumulative_difference > 1 ? 'warn' : 'danger'" class="text-[10px]" />
+                                        <Tag 
+                                            :value="getBalanceLabel(data.cumulative_difference, data.check_in)" 
+                                            :severity="Math.abs(data.cumulative_difference) <= 1 ? 'success' : (data.cumulative_difference > 1 ? 'warn' : 'danger')" 
+                                            class="text-[10px]" 
+                                        />
                                     </template>
                                 </Column>
                             </DataTable>
@@ -348,8 +364,11 @@ watch(selectedDate, () => {
                                         <div class="flex flex-col items-end gap-1">
                                             <Tag :value="translateReservationStatus(res.status)" severity="info" class="text-[10px]" />
                                             <!-- Balance Status as of Month End -->
-                                            <Tag v-if="Math.abs(res.cumulative_difference) <= 1" value="当月末精算済" severity="success" class="text-[9px]" />
-                                            <Tag v-else :value="res.cumulative_difference > 0 ? '当月末過入金' : '当月末未収'" :severity="res.cumulative_difference > 0 ? 'warn' : 'danger'" class="text-[9px]" />
+                                            <Tag 
+                                                :value="'当月末' + getBalanceLabel(res.cumulative_difference, res.check_in)" 
+                                                :severity="Math.abs(res.cumulative_difference) <= 1 ? 'success' : (res.cumulative_difference > 0 ? 'warn' : 'danger')" 
+                                                class="text-[9px]" 
+                                            />
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-2 gap-2 text-xs mb-1">
