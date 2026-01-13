@@ -104,7 +104,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <span class="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 uppercase tracking-tight">{{ row.plan_type_category_name }}</span>
+                                        <span class="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 uppercase tracking-tight">{{ row.display_category_name }}</span>
                                         <span class="text-[11px] text-slate-400">({{ group.hotel_name }})</span>
                                     </div>
                                 </td>
