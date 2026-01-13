@@ -445,7 +445,7 @@ const getGroupName = (id) => {
 };
 
 const getHotelName = (id) => {
-    const h = hotelStore.hotels.find(x => x.id === id);
+    const h = hotelStore.safeHotels.value?.find(x => x.id === id);
     return h ? h.name : '-';
 };
 
