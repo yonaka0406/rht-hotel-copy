@@ -22,7 +22,30 @@ INSERT INTO acc_management_groups (id, name, display_order, created_by) VALUES
 (9, '特別損失', 9, 1),
 (10, '法人税等', 10, 1);
 
--- 2. Account Codes Master
+-- 2. Tax Classes Master
+-- Defines tax categories as recognized by the accounting system (e.g., Yayoi).
+CREATE TABLE acc_tax_classes (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL, -- Visual name in the system
+    yayoi_name VARCHAR(100) NOT NULL, -- Name used in CSV exports
+    tax_rate DECIMAL(5, 4) NOT NULL, -- e.g., 0.1000
+    is_active BOOLEAN DEFAULT true,
+    display_order INT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    UNIQUE (name),
+    UNIQUE (yayoi_name)
+);
+
+-- Seed Tax Classes
+INSERT INTO acc_tax_classes (name, yayoi_name, tax_rate, display_order, created_by) VALUES
+('課税売上10%', '課税売上内10%', 0.10, 1, 1),
+('課税売上軽減8%', '課税売上内軽減8%', 0.08, 2, 1),
+('非課税売上', '非課売上', 0.00, 3, 1),
+('課税仕入10%', '課税仕入内10%', 0.10, 4, 1),
+('対象外', '対象外', 0.00, 99, 1);
+
+-- 3. Account Codes Master
 -- Defines the chart of accounts or specific codes used for external auditing/ledger.
 CREATE TABLE acc_account_codes (
     id SERIAL PRIMARY KEY,

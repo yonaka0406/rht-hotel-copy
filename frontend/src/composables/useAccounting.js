@@ -1,66 +1,49 @@
-import { ref } from 'vue';
-import axios from 'axios';
+import { useApi } from './useApi';
 
 export function useAccounting() {
-    const loading = ref(false);
-    const error = ref(null);
+    const { isLoading: loading, error, get, post } = useApi();
 
     const getExportOptions = async () => {
-        loading.value = true;
         try {
-            const response = await axios.get('/api/accounting/export/options');
-            return response.data;
+            const data = await get('/accounting/export/options');
+            return data;
         } catch (err) {
-            error.value = err.response?.data?.message || 'Options fetch failed';
             throw err;
-        } finally {
-            loading.value = false;
         }
     };
 
     const getLedgerPreview = async (filters) => {
-        loading.value = true;
         try {
-            const response = await axios.post('/api/accounting/export/preview', filters);
-            return response.data;
+            const data = await post('/accounting/export/preview', filters);
+            return data;
         } catch (err) {
-            error.value = err.response?.data?.message || 'Preview fetch failed';
             throw err;
-        } finally {
-            loading.value = false;
         }
     };
 
     const downloadLedger = async (filters) => {
-        loading.value = true;
         try {
-            const response = await axios.post('/api/accounting/export/download', filters, {
+            const data = await post('/accounting/export/download', filters, {
                 responseType: 'blob'
             });
-            
+
             // Create a link to download the file
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(new Blob([data]));
             const link = document.createElement('a');
             link.href = url;
-            
-            const contentDisposition = response.headers['content-disposition'];
-            let fileName = 'ledger_export';
-            if (contentDisposition) {
-                const fileNameMatch = contentDisposition.match(/filename=(.+)/);
-                if (fileNameMatch.length === 2) fileName = fileNameMatch[1];
-            } else {
-                fileName += filters.format === 'excel' ? '.xlsx' : '.csv';
-            }
-            
+
+            // Using a generic filename for now, which is improved if the backend sets it correctly.
+            let fileName = `sales_ledger_${filters.selectedMonth || 'export'}`;
+            fileName += filters.format === 'excel' ? '.xlsx' : '.csv';
+
             link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();
             link.remove();
+
+            setTimeout(() => window.URL.revokeObjectURL(url), 100);
         } catch (err) {
-            error.value = err.response?.data?.message || 'Download failed';
             throw err;
-        } finally {
-            loading.value = false;
         }
     };
 

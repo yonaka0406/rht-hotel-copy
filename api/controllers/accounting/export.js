@@ -25,18 +25,23 @@ const getExportOptions = async (req, res) => {
 const getLedgerPreview = async (req, res) => {
     const { requestId, body } = req;
     try {
-        const { startDate, endDate, hotelIds, planTypeCategoryIds } = body;
+        const { selectedMonth, hotelIds } = body;
 
         // Validation
-        if (!startDate || !endDate || !hotelIds || !planTypeCategoryIds) {
+        if (!selectedMonth || !hotelIds) {
             return res.status(400).json({ message: 'Missing required filters' });
         }
+
+        // Calculate startDate and endDate from selectedMonth (YYYY-MM)
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
         const data = await accountingModel.getLedgerPreview(requestId, {
             startDate,
             endDate,
-            hotelIds,
-            planTypeCategoryIds
+            hotelIds
         });
 
         res.json(data);
@@ -49,13 +54,18 @@ const getLedgerPreview = async (req, res) => {
 const exportLedger = async (req, res) => {
     const { requestId, body } = req;
     try {
-        const { startDate, endDate, hotelIds, planTypeCategoryIds, format } = body;
+        const { selectedMonth, hotelIds, format } = body;
+
+        // Calculate startDate and endDate from selectedMonth (YYYY-MM)
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
         const data = await accountingModel.getLedgerPreview(requestId, {
             startDate,
             endDate,
-            hotelIds,
-            planTypeCategoryIds
+            hotelIds
         });
 
         if (format === 'excel') {
@@ -91,13 +101,13 @@ const exportLedger = async (req, res) => {
         } else if (format === 'csv') {
             res.setHeader('Content-Type', 'text/csv');
             res.setHeader('Content-Disposition', `attachment; filename=sales_ledger_${startDate}_${endDate}.csv`);
-            
+
             // Simple CSV generation
             const header = 'ホテル,プランタイプ,勘定コード,勘定科目名,合計金額\n';
-            const rows = data.map(row => 
+            const rows = data.map(row =>
                 `"${row.hotel_name}","${row.plan_type_category_name}","${row.account_code || ''}","${row.account_name || ''}",${row.total_amount}`
             ).join('\n');
-            
+
             res.send('\ufeff' + header + rows); // Add BOM for Excel UTF-8 support
         } else {
             res.json(data); // Default to JSON
