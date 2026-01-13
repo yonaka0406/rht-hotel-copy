@@ -11,10 +11,11 @@ const getSettings = async (req, res, next) => {
             validationUtils.validateNumericParam(hotel_id, 'hotel_id');
         }
 
-        const [codes, groups, taxClasses] = await Promise.all([
+        const [codes, groups, taxClasses, departments] = await Promise.all([
             accountingModel.getAccountCodes(requestId),
             accountingModel.getManagementGroups(requestId),
-            accountingModel.getTaxClasses(requestId)
+            accountingModel.getTaxClasses(requestId),
+            accountingModel.getDepartments(requestId)
         ]);
 
         const targetHotelId = (hotel_id && hotel_id !== 'undefined' && hotel_id !== 'null') ? parseInt(hotel_id) : null;
@@ -24,6 +25,7 @@ const getSettings = async (req, res, next) => {
             codes,
             groups,
             taxClasses,
+            departments,
             mappings
         });
     } catch (err) {
@@ -116,6 +118,34 @@ const deleteTaxClass = async (req, res, next) => {
     }
 };
 
+const upsertDepartment = async (req, res, next) => {
+    try {
+        const { requestId, user } = req;
+        const data = req.body;
+        if (!data.hotel_id || !data.name) {
+            const error = new Error('Hotel ID and Name are required');
+            error.statusCode = 400;
+            throw error;
+        }
+        const result = await accountingModel.upsertDepartment(requestId, data, user.id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const deleteDepartment = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { id } = req.params;
+        validationUtils.validateNumericParam(id, 'id');
+        const result = await accountingModel.deleteDepartment(requestId, id);
+        res.json(result);
+    } catch (err) {
+        next(err);
+    }
+};
+
 const upsertMapping = async (req, res, next) => {
     try {
         const { requestId, user } = req;
@@ -152,6 +182,8 @@ module.exports = {
     deleteManagementGroup,
     upsertTaxClass,
     deleteTaxClass,
+    upsertDepartment,
+    deleteDepartment,
     upsertMapping,
     deleteMapping
 };

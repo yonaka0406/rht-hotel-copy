@@ -13,6 +13,8 @@ router.post('/accounting/settings/tax-classes', authMiddleware_accounting, accou
 router.delete('/accounting/settings/tax-classes/:id', authMiddleware_accounting, accountingController.deleteTaxClass);
 router.post('/accounting/settings/mappings', authMiddleware_accounting, accountingController.upsertMapping);
 router.delete('/accounting/settings/mappings/:id', authMiddleware_accounting, accountingController.deleteMapping);
+router.post('/accounting/settings/departments', authMiddleware_accounting, accountingController.upsertDepartment);
+router.delete('/accounting/settings/departments/:id', authMiddleware_accounting, accountingController.deleteDepartment);
 
 // Export Routes
 router.get('/accounting/export/options', authMiddleware_accounting, accountingController.getExportOptions);

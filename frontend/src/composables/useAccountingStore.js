@@ -5,7 +5,7 @@ const ledgerPreviewData = ref([]);
 const lastFilters = ref(null);
 
 export function useAccountingStore() {
-    const { isLoading: loading, error, get, post } = useApi();
+    const { isLoading: loading, error, get, post, del } = useApi();
 
     const getExportOptions = async () => {
         try {
@@ -130,6 +130,22 @@ export function useAccountingStore() {
         }
     };
 
+    const upsertDepartment = async (data) => {
+        try {
+            return await post('/accounting/settings/departments', data);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const deleteDepartment = async (id) => {
+        try {
+            return await del(`/accounting/settings/departments/${id}`);
+        } catch (err) {
+            throw err;
+        }
+    };
+
     const clearPreviewData = () => {
         ledgerPreviewData.value = [];
         lastFilters.value = null;
@@ -151,6 +167,8 @@ export function useAccountingStore() {
         deleteManagementGroup,
         upsertTaxClass,
         deleteTaxClass,
+        upsertDepartment,
+        deleteDepartment,
         clearPreviewData
     };
 }

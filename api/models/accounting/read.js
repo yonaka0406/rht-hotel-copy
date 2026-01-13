@@ -280,10 +280,34 @@ const getTaxClasses = async (requestId, dbClient = null) => {
     }
 };
 
+const getDepartments = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `
+        SELECT ad.*, h.name as hotel_name
+        FROM acc_departments ad
+        JOIN hotels h ON ad.hotel_id = h.id
+        ORDER BY h.name ASC
+    `;
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error retrieving departments:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     getAccountCodes,
     getMappings,
     getLedgerPreview,
     getManagementGroups,
-    getTaxClasses
+    getTaxClasses,
+    getDepartments
 };

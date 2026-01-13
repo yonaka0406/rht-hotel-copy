@@ -195,6 +195,52 @@ const deleteTaxClass = async (requestId, id, dbClient = null) => {
     }
 };
 
+const upsertDepartment = async (requestId, data, user_id, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { id, hotel_id, name } = data;
+
+    const query = `
+        INSERT INTO acc_departments (id, hotel_id, name, created_by, updated_by)
+        VALUES (COALESCE($1, nextval('acc_departments_id_seq')), $2, $3, $4, $4)
+        ON CONFLICT (hotel_id) DO UPDATE SET
+            name = EXCLUDED.name,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = CURRENT_TIMESTAMP
+        RETURNING *;
+    `;
+    const values = [id, hotel_id, name, user_id];
+
+    try {
+        const result = await client.query(query, values);
+        return result.rows[0];
+    } catch (err) {
+        logger.error('Error upserting department:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+const deleteDepartment = async (requestId, id, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `DELETE FROM acc_departments WHERE id = $1 RETURNING *`;
+    try {
+        const result = await client.query(query, [id]);
+        return result.rows[0];
+    } catch (err) {
+        logger.error('Error deleting department:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     upsertAccountCode,
     deleteAccountCode,
@@ -203,5 +249,7 @@ module.exports = {
     upsertManagementGroup,
     deleteManagementGroup,
     upsertTaxClass,
-    deleteTaxClass
+    deleteTaxClass,
+    upsertDepartment,
+    deleteDepartment
 };
