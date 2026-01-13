@@ -16,8 +16,11 @@ router.delete('/accounting/settings/mappings/:id', authMiddleware_accounting, ac
 router.post('/accounting/settings/departments', authMiddleware_accounting, accountingController.upsertDepartment);
 router.delete('/accounting/settings/departments/:id', authMiddleware_accounting, accountingController.deleteDepartment);
 
-// Export Routes
-router.get('/accounting/export/options', authMiddleware_accounting, accountingController.getExportOptions);
+// Dashboard
+router.get('/dashboard/metrics', authMiddleware_accounting, accountingController.getDashboardMetrics);
+
+// Export
+router.get('/export/options', authMiddleware_accounting, accountingController.getExportOptions);
 router.post('/accounting/export/preview', authMiddleware_accounting, accountingController.getLedgerPreview);
 router.post('/accounting/export/download', authMiddleware_accounting, accountingController.exportLedger);
 

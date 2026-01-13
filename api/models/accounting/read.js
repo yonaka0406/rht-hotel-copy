@@ -310,11 +310,117 @@ const getDepartments = async (requestId, dbClient = null) => {
     }
 };
 
+const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    try {
+        // 1. Total Sales (Revenue) - Reusing the logic from getLedgerPreview but aggregating
+        // We use a CTE approach similar to getLedgerPreview but simplified for just the total
+        const salesQuery = `
+        WITH plan_sales AS (
+            SELECT 
+                h.id as hotel_id,
+                rd.id as target_id,
+                'plan_hotel' as mapping_target,
+                rd.plans_hotel_id as plan_type_category_id,
+                NULL::int as addons_global_id,
+                COALESCE(rr.net_price, 0) as amount,
+                COALESCE(ti.rate, 0.10) as tax_rate
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id
+            JOIN hotels h ON rd.hotel_id = h.id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id
+            LEFT JOIN tax_info ti ON rr.tax_type_id = ti.id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = ANY($3)
+            AND rd.billable = true
+            AND rd.cancelled IS NULL
+            AND rd.is_accommodation = true
+        ),
+        addon_sales AS (
+            SELECT 
+                h.id as hotel_id,
+                ra.id as target_id,
+                CASE 
+                    WHEN ra.addons_hotel_id IS NOT NULL THEN 'addon_hotel'
+                    ELSE 'addon_global'
+                END as mapping_target,
+                NULL::int as plan_type_category_id,
+                ra.addons_global_id,
+                COALESCE(ra.net_price * ra.quantity, 0) as amount,
+                COALESCE(ti.rate, 0.10) as tax_rate
+            FROM reservation_addons ra
+            JOIN reservation_details rd ON ra.reservation_detail_id = rd.id
+            JOIN hotels h ON ra.hotel_id = h.id
+            LEFT JOIN tax_info ti ON ra.tax_type_id = ti.id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = ANY($3)
+            AND rd.billable = true
+            AND rd.cancelled IS NULL
+        ),
+        cancellation_sales AS (
+            SELECT 
+                h.id as hotel_id,
+                rd.id as target_id,
+                'cancellation' as mapping_target,
+                NULL::int as plan_type_category_id,
+                NULL::int as addons_global_id,
+                COALESCE(rr.net_price, 0) as amount,
+                COALESCE(ti.rate, 0.10) as tax_rate
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id
+            JOIN hotels h ON rd.hotel_id = h.id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id
+            LEFT JOIN tax_info ti ON rr.tax_type_id = ti.id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = ANY($3)
+            AND rd.cancelled IS NOT NULL 
+            AND rr.include_in_cancel_fee = true
+        ),
+        combined_sales AS (
+            SELECT hotel_id, amount FROM plan_sales
+            UNION ALL
+            SELECT hotel_id, amount FROM addon_sales
+            UNION ALL
+            SELECT hotel_id, amount FROM cancellation_sales
+        )
+        SELECT SUM(amount) as total_sales FROM combined_sales
+        `;
+
+        // 2. Total Payments (Cash Flow)
+        const paymentsQuery = `
+            SELECT SUM(value) as total_payments
+            FROM reservation_payments
+            WHERE date BETWEEN $1 AND $2
+            AND hotel_id = ANY($3)
+        `;
+
+        const [salesResult, paymentsResult] = await Promise.all([
+            client.query(salesQuery, [startDate, endDate, hotelIds]),
+            client.query(paymentsQuery, [startDate, endDate, hotelIds])
+        ]);
+
+        return {
+            totalSales: parseInt(salesResult.rows[0]?.total_sales || 0),
+            totalPayments: parseInt(paymentsResult.rows[0]?.total_payments || 0)
+        };
+
+    } catch (err) {
+        logger.error('Error calculating dashboard metrics:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     getAccountCodes,
     getMappings,
     getLedgerPreview,
     getManagementGroups,
     getTaxClasses,
-    getDepartments
+    getDepartments,
+    getDashboardMetrics
 };

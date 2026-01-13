@@ -1,5 +1,81 @@
+<script setup>
+import { ref, onMounted, computed, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '@/composables/useUserStore';
+import { useAccountingStore } from '@/composables/useAccountingStore';
+
+const router = useRouter();
+const userStore = useUserStore();
+const accountingStore = useAccountingStore();
+
+const metrics = ref({
+    totalSales: null,
+    totalPayments: null
+});
+
+const isLoading = ref(true);
+const logged_user = computed(() => userStore.currentUser);
+
+// Computed properties for user information
+const userName = computed(() => {
+    return logged_user.value?.name || 'ユーザー';
+});
+
+const userInitial = computed(() => {
+    const name = userName.value;
+    return name ? name.charAt(0).toUpperCase() : 'U';
+});
+
+const userRole = computed(() => {
+    const user = logged_user.value;
+    if (!user) return '不明';
+    
+    // Simple role logic based on permissions or role field if available
+    const permissions = user.permissions || {};
+    
+    if (permissions.manage_db && permissions.manage_users) return '管理者 (Admin)';
+    if (permissions.manage_users) return 'マネージャー';
+    if (permissions.manage_clients) return '編集者';
+    if (permissions.crud_ok) return 'ユーザー';
+    return '閲覧者';
+});
+
+onMounted(async () => {
+    try {
+        isLoading.value = true;
+        if (!userStore.currentUser) {
+            await userStore.fetchUser();
+        }
+        
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const end = new Date(today.getFullYear(), today.getMonth(), 0);
+        
+        const formatDate = (d) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+        
+        const data = await accountingStore.fetchDashboardMetrics({
+            startDate: formatDate(start),
+            endDate: formatDate(end)
+        });
+        
+        metrics.value = data;
+    } catch (e) {
+        console.error('Failed to load dashboard metrics', e);
+    } finally {
+        isLoading.value = false;
+        await nextTick();
+        window.scrollTo(0, 0);
+    }
+});
+</script>
+
 <template>
-    <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
+    <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300 min-h-screen">
 
 
         <!-- Main Content -->
@@ -33,136 +109,100 @@
                 </div>
             </div>
 
-            <!-- Audit & Reconciliation Section -->
-            <section class="mb-10">
-                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="p-6 sm:p-8">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                            <div>
-                                <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <i class="pi pi-chart-bar text-violet-600 dark:text-violet-400"></i>
-                                    監査と照合
-                                </h2>
-                                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                    財務記録の同期と検証を行うアクションを選択してください。
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Column: Audit & Actions -->
+                <div class="lg:col-span-2">
+                    <section class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-full">
+                        <div class="p-6 sm:p-8">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                                <div>
+                                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <i class="pi pi-chart-bar text-violet-600 dark:text-violet-400"></i>
+                                        監査と照合
+                                    </h2>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                        財務記録の同期と検証を行うアクションを選択してください。
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Data Export Card -->
+                                <button @click="$router.push({ name: 'AccountingLedgerExport' })" class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
+                                    <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                                        <i class="pi pi-download text-xl text-violet-600 dark:text-violet-400"></i>
+                                    </div>
+                                    <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">売上仕訳出力</span>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">先月の全施設売上合計</p>
+                                    <p v-if="isLoading" class="text-xl font-bold text-slate-700 dark:text-slate-300 animate-pulse mb-4">読み込み中...</p>
+                                    <p v-else class="text-xl font-bold text-slate-900 dark:text-white mb-4">
+                                        {{ metrics.totalSales ? `¥${metrics.totalSales.toLocaleString()}` : '¥0' }}
+                                    </p>
+                                    <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
+                                        エクスポートへ進む <i class="pi pi-arrow-right"></i>
+                                    </span>
+                                </button>
+                                
+                                <!-- OTA Import (Placeholder) -->
+                                <div class="group bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed relative overflow-hidden flex flex-col items-center text-center h-full">
+                                    <div class="absolute top-3 right-3 px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] font-bold rounded uppercase tracking-wider">Coming Soon</div>
+                                    <div class="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-200 dark:border-slate-600 opacity-50">
+                                        <i class="pi pi-cloud-upload text-xl text-slate-500"></i>
+                                    </div>
+                                    <span class="font-semibold text-slate-400">OTA入金取込</span>
+                                    <span class="text-xs text-slate-400 mt-2">
+                                        OTAからの入金通知書をインポートして自動消込
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right Column: At a Glance -->
+                <div class="space-y-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="h-8 w-1 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></div>
+                        <h2 class="text-xl font-bold text-slate-800 dark:text-white">At a Glance</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Total Payments Last Month -->
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                                    <i class="pi pi-wallet text-blue-600 dark:text-blue-400 text-lg"></i>
+                                </div>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">先月の入金合計</span>
+                            </div>
+                            <div class="mb-2">
+                                <p v-if="isLoading" class="text-3xl font-bold text-slate-900 dark:text-white animate-pulse">...</p>
+                                <p v-else class="text-3xl font-bold text-slate-900 dark:text-white">
+                                    {{ metrics.totalPayments ? `¥${metrics.totalPayments.toLocaleString()}` : '¥0' }}
                                 </p>
+                                <p class="text-sm font-medium text-slate-600 dark:text-slate-400">カード・現金・請求書等</p>
                             </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Data Export Card -->
-                            <button @click="$router.push({ name: 'AccountingLedgerExport' })" class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer">
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
-                                    <i class="pi pi-download text-xl text-violet-600 dark:text-violet-400"></i>
-                                </div>
-                                <span class="font-semibold text-slate-900 dark:text-white">データ出力</span>
-                                <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center">
-                                    監査用の月次ホテルデータをエクスポート
-                                </span>
-                            </button>
-
-                            <!-- Upload OTA Slips Card (Coming Soon) -->
-                            <div class="relative group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl opacity-60 cursor-not-allowed">
-                                <div class="absolute top-3 right-3 px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] font-bold rounded uppercase tracking-wider">Coming Soon</div>
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-100 dark:border-slate-700 grayscale">
-                                    <i class="pi pi-upload text-xl text-violet-600 dark:text-violet-400"></i>
-                                </div>
-                                <span class="font-semibold text-slate-900 dark:text-white">OTA明細取込</span>
-                                <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center">
-                                    外部OTAの支払明細データをアップロード
-                                </span>
-                            </div>
-
-                            <!-- Sales Comparison Card (Coming Soon) -->
-                            <div class="relative group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl opacity-60 cursor-not-allowed">
-                                <div class="absolute top-3 right-3 px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] font-bold rounded uppercase tracking-wider">Coming Soon</div>
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-100 dark:border-slate-700 grayscale">
-                                    <i class="pi pi-arrow-right-arrow-left text-xl text-violet-600 dark:text-violet-400"></i>
-                                </div>
-                                <span class="font-semibold text-slate-900 dark:text-white">売上照合</span>
-                                <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center">
-                                    PMS記録と会計データの差異をチェック
+                            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                                    内訳を表示 <i class="pi pi-arrow-right text-[10px]"></i>
                                 </span>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </section>
 
-            <!-- Metrics Section (At a Glance) - Disabled -->
-            <section class="opacity-50 pointer-events-none select-none relative filter grayscale">
-                <div class="absolute inset-0 z-10 flex items-center justify-center">
-                    <div class="bg-slate-900/80 text-white px-6 py-3 rounded-xl font-bold backdrop-blur-sm shadow-xl">
-                        <i class="pi pi-wrench mr-2"></i> 開発中 (In Development)
-                    </div>
-                </div>
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-6 px-1 flex items-center gap-2">
-                    <i class="pi pi-eye text-slate-400"></i>
-                    概況 (At a Glance)
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Unreconciled -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                                <i class="pi pi-clock text-orange-600 dark:text-orange-400 text-lg"></i>
+                        <!-- Discrepancies (Coming Soon Style) -->
+                        <div class="group bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed relative overflow-hidden">
+                             <div class="flex items-center justify-between mb-4 opacity-50">
+                                <div class="p-2 bg-rose-100 dark:bg-rose-900/20 rounded-lg">
+                                    <i class="pi pi-exclamation-triangle text-rose-500 text-lg"></i>
+                                </div>
+                                <span class="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-xs font-bold rounded-full">Coming Soon</span>
                             </div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">未照合</span>
-                        </div>
-                        <div class="mb-2">
-                            <p class="text-3xl font-bold text-slate-900 dark:text-white">--</p>
-                            <p class="text-sm font-medium text-slate-600 dark:text-slate-400">OTA支払件数</p>
-                        </div>
-                        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                                リストを確認 <i class="pi pi-arrow-right text-[10px]"></i>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Total Payments Last Month -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                                <i class="pi pi-check-square text-blue-600 dark:text-blue-400 text-lg"></i>
-                            </div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">先月の入金合計</span>
-                        </div>
-                        <div class="mb-2">
-                            <p class="text-3xl font-bold text-slate-900 dark:text-white">¥---,---</p>
-                            <p class="text-sm font-medium text-slate-600 dark:text-slate-400">カード・現金・請求書等</p>
-                        </div>
-                        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                                内訳を表示 <i class="pi pi-arrow-right text-[10px]"></i>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Discrepancies -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                                <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-lg"></i>
-                            </div>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">差異発生率</span>
-                        </div>
-                        <div class="mb-2">
-                            <p class="text-3xl font-bold text-slate-900 dark:text-white">--%</p>
-                            <p class="text-sm font-medium text-slate-600 dark:text-slate-400">PMS 対 会計データ</p>
-                        </div>
-                        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                                診断を実行 <i class="pi pi-arrow-right text-[10px]"></i>
-                            </span>
+                            <h3 class="text-lg font-bold text-slate-400 mb-2">要確認事項</h3>
+                            <p class="text-sm text-slate-400 mb-4">不突合・要確認の取引を自動検出</p>
                         </div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Footer -->
-            <footer class="mt-16 text-center pb-24">
-            </footer>
+            </div>
         </div>
 
         <!-- FAB (Settings) -->
@@ -174,54 +214,6 @@
     </div>
 </template>
 
-<script setup>
-import { computed, onMounted, nextTick } from 'vue';
-import { useUserStore } from '@/composables/useUserStore';
-
-// User store
-const { logged_user, fetchUser } = useUserStore();
-
-// Computed properties for user information
-const userName = computed(() => {
-    if (!logged_user.value || !logged_user.value[0]) return 'ユーザー';
-    return logged_user.value[0]?.name || 'ユーザー';
-});
-
-const userInitial = computed(() => {
-    const name = userName.value;
-    return name ? name.charAt(0).toUpperCase() : 'U';
-});
-
-const userRole = computed(() => {
-    if (!logged_user.value || !logged_user.value[0]) return '不明';
-    
-    // Get role information from user data
-    const user = logged_user.value[0];
-    const permissions = user.permissions;
-    
-    if (!permissions) return '不明';
-    
-    // Determine role based on permissions
-    if (permissions.manage_db && permissions.manage_users) {
-        return '管理者 (Admin)';
-    } else if (permissions.manage_users) {
-        return 'マネージャー';
-    } else if (permissions.manage_clients) {
-        return '編集者';
-    } else if (permissions.crud_ok) {
-        return 'ユーザー';
-    } else {
-        return '閲覧者';
-    }
-});
-
-// Lifecycle
-onMounted(async () => {
-    await fetchUser();
-    await nextTick();
-    window.scrollTo(0, 0);
-});
-</script>
-
 <style scoped>
+/* No specific styles needed as Tailwind is used */
 </style>

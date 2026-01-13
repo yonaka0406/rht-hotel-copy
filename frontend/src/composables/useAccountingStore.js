@@ -59,12 +59,23 @@ export function useAccountingStore() {
 
     const getAccountingSettings = async (hotelId = null) => {
         try {
-            const query = hotelId ? `?hotel_id=${hotelId}` : '';
-            return await get(`/accounting/settings${query}`);
+            const params = hotelId ? { hotel_id: hotelId } : {};
+            const data = await get('/accounting/settings', params);
+            return data;
         } catch (err) {
             throw err;
         }
     };
+
+    const fetchDashboardMetrics = async (params) => {
+        try {
+            const data = await get('/accounting/dashboard/metrics', params);
+            return data;
+        } catch (err) {
+            throw err;
+        }
+    };
+
 
     const upsertAccountCode = async (data) => {
         try {
@@ -169,6 +180,7 @@ export function useAccountingStore() {
         deleteTaxClass,
         upsertDepartment,
         deleteDepartment,
-        clearPreviewData
+        clearPreviewData,
+        fetchDashboardMetrics
     };
 }
