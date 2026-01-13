@@ -61,41 +61,48 @@
                                 </span>
                             </button>
 
-                            <!-- Upload OTA Slips Card -->
-                            <button class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer">
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                            <!-- Upload OTA Slips Card (Coming Soon) -->
+                            <div class="relative group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl opacity-60 cursor-not-allowed">
+                                <div class="absolute top-3 right-3 px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] font-bold rounded uppercase tracking-wider">Coming Soon</div>
+                                <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-100 dark:border-slate-700 grayscale">
                                     <i class="pi pi-upload text-xl text-violet-600 dark:text-violet-400"></i>
                                 </div>
                                 <span class="font-semibold text-slate-900 dark:text-white">OTA明細取込</span>
                                 <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center">
                                     外部OTAの支払明細データをアップロード
                                 </span>
-                            </button>
+                            </div>
 
-                            <!-- Sales Comparison Card -->
-                            <button class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer">
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                            <!-- Sales Comparison Card (Coming Soon) -->
+                            <div class="relative group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl opacity-60 cursor-not-allowed">
+                                <div class="absolute top-3 right-3 px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] font-bold rounded uppercase tracking-wider">Coming Soon</div>
+                                <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-100 dark:border-slate-700 grayscale">
                                     <i class="pi pi-arrow-right-arrow-left text-xl text-violet-600 dark:text-violet-400"></i>
                                 </div>
                                 <span class="font-semibold text-slate-900 dark:text-white">売上照合</span>
                                 <span class="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center">
                                     PMS記録と会計データの差異をチェック
                                 </span>
-                            </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Metrics Section (At a Glance) -->
-            <section>
+            <!-- Metrics Section (At a Glance) - Disabled -->
+            <section class="opacity-50 pointer-events-none select-none relative filter grayscale">
+                <div class="absolute inset-0 z-10 flex items-center justify-center">
+                    <div class="bg-slate-900/80 text-white px-6 py-3 rounded-xl font-bold backdrop-blur-sm shadow-xl">
+                        <i class="pi pi-wrench mr-2"></i> 開発中 (In Development)
+                    </div>
+                </div>
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-6 px-1 flex items-center gap-2">
                     <i class="pi pi-eye text-slate-400"></i>
                     概況 (At a Glance)
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- Unreconciled -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between mb-4">
                             <div class="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
                                 <i class="pi pi-clock text-orange-600 dark:text-orange-400 text-lg"></i>
@@ -103,18 +110,18 @@
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">未照合</span>
                         </div>
                         <div class="mb-2">
-                            <p class="text-3xl font-bold text-slate-900 dark:text-white">12</p>
+                            <p class="text-3xl font-bold text-slate-900 dark:text-white">--</p>
                             <p class="text-sm font-medium text-slate-600 dark:text-slate-400">OTA支払件数</p>
                         </div>
                         <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <a href="#" class="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+                            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
                                 リストを確認 <i class="pi pi-arrow-right text-[10px]"></i>
-                            </a>
+                            </span>
                         </div>
                     </div>
 
                     <!-- Receivables -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between mb-4">
                             <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                                 <i class="pi pi-list text-blue-600 dark:text-blue-400 text-lg"></i>
@@ -122,18 +129,18 @@
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">未収金</span>
                         </div>
                         <div class="mb-2">
-                            <p class="text-3xl font-bold text-slate-900 dark:text-white">¥4,285,000</p>
+                            <p class="text-3xl font-bold text-slate-900 dark:text-white">¥---,---</p>
                             <p class="text-sm font-medium text-slate-600 dark:text-slate-400">クライアント請求残高</p>
                         </div>
                         <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <a href="#" class="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+                            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
                                 内訳を表示 <i class="pi pi-arrow-right text-[10px]"></i>
-                            </a>
+                            </span>
                         </div>
                     </div>
 
                     <!-- Discrepancies -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between mb-4">
                             <div class="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
                                 <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-lg"></i>
@@ -141,13 +148,13 @@
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">差異発生率</span>
                         </div>
                         <div class="mb-2">
-                            <p class="text-3xl font-bold text-slate-900 dark:text-white">0.4%</p>
+                            <p class="text-3xl font-bold text-slate-900 dark:text-white">--%</p>
                             <p class="text-sm font-medium text-slate-600 dark:text-slate-400">PMS 対 会計データ</p>
                         </div>
                         <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                            <a href="#" class="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+                            <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
                                 診断を実行 <i class="pi pi-arrow-right text-[10px]"></i>
-                            </a>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -155,11 +162,6 @@
 
             <!-- Footer -->
             <footer class="mt-16 text-center pb-24">
-                <p class="text-sm text-slate-500 dark:text-slate-500">
-                    会計モジュールに関するサポートが必要ですか？
-                    <a href="#" class="text-violet-600 dark:text-violet-400 hover:underline font-medium">サポートへ連絡</a> または 
-                    <a href="#" class="text-violet-600 dark:text-violet-400 hover:underline font-medium">ユーザーガイドを表示</a>
-                </p>
             </footer>
         </div>
 
