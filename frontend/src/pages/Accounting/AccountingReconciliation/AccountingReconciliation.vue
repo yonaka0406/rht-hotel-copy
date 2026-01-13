@@ -20,7 +20,7 @@ const hotelStore = useHotelStore();
 const selectedDate = ref(new Date());
 const isLoading = ref(false);
 const overviewData = ref([]);
-const totals = ref({ sales: 0, payments: 0 });
+const totals = ref({ sales: 0, payments: 0, advance: 0, settlement: 0 });
 
 // Drill down state
 const selectedHotel = ref(null);
@@ -88,8 +88,10 @@ const fetchOverview = async () => {
         totals.value = data.reduce((acc, curr) => {
             acc.sales += Number(curr.total_sales);
             acc.payments += Number(curr.total_payments);
+            acc.advance += Number(curr.advance_payments || 0);
+            acc.settlement += Number(curr.settlement_payments || 0);
             return acc;
-        }, { sales: 0, payments: 0 });
+        }, { sales: 0, payments: 0, advance: 0, settlement: 0 });
 
     } catch (e) {
         console.error('Failed to fetch reconciliation overview', e);
@@ -213,10 +215,37 @@ watch(selectedDate, () => {
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">合計売上 (税込)</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatCurrency(totals.sales) }}</p>
+                    <p class="text-[10px] text-slate-400 mt-2">※ 対象月内に滞在（売上計上）があった予約の合計額</p>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">合計入金</p>
-                    <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatCurrency(totals.payments) }}</p>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">合計入金</p>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatCurrency(totals.payments) }}</p>
+                        </div>
+                        <div class="text-right flex flex-col gap-1 pr-1">
+                            <div class="flex items-center justify-end gap-3 text-[11px]">
+                                <span class="text-slate-400">精算等:</span>
+                                <span class="font-bold text-slate-700 dark:text-slate-300">{{ formatCurrency(totals.settlement) }}</span>
+                            </div>
+                            <div class="flex items-center justify-end gap-3 text-[11px]">
+                                <span class="text-violet-400">事前払:</span>
+                                <span class="font-bold text-violet-600 dark:text-violet-400">{{ formatCurrency(totals.advance) }}</span>
+                            </div>
+                            <div class="flex items-center justify-end gap-3 text-[11px] mt-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                                <span class="text-slate-400">精算差異:</span>
+                                <span :class="[
+                                    Math.abs(totals.settlement - totals.sales) > 10 ? 'text-rose-500 font-bold' : 'text-slate-500'
+                                ]">{{ formatCurrency(totals.settlement - totals.sales) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <p class="text-[9px] text-slate-400 leading-relaxed">
+                            ※ <strong>事前払:</strong> 対象月末時点で、チェックイン日が翌月以降となっている予約に対して行われた入金です。<br/>
+                            ※ <strong>精算等:</strong> 対象月末までにチェックイン済みの予約（滞在中の清算や過去分の回収等）に関連する入金です。
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -248,9 +277,16 @@ watch(selectedDate, () => {
                                 <template #body="{ data }">{{ formatCurrency(data.total_sales) }}</template>
                             </Column>
                             <Column field="total_payments" header="入金額" sortable>
-                                <template #body="{ data }">{{ formatCurrency(data.total_payments) }}</template>
+                                <template #body="{ data }">
+                                    <div class="flex flex-col">
+                                        <span>{{ formatCurrency(data.total_payments) }}</span>
+                                        <span v-if="Number(data.advance_payments) > 0" class="text-[9px] text-violet-500 font-bold">
+                                            (事前払: {{ Number(data.advance_payments).toLocaleString() }})
+                                        </span>
+                                    </div>
+                                </template>
                             </Column>
-                            <Column field="difference" header="差異" sortable>
+                            <Column field="difference" header="精算差異" sortable>
                                 <template #body="{ data }">
                                     <span :class="[
                                         data.difference > 1 ? 'text-emerald-500 font-bold' : '',
@@ -302,9 +338,16 @@ watch(selectedDate, () => {
                                     <template #body="{ data }">{{ formatCurrency(data.total_sales) }}</template>
                                 </Column>
                                 <Column field="total_payments" header="今月入金" sortable>
-                                    <template #body="{ data }">{{ formatCurrency(data.total_payments) }}</template>
+                                    <template #body="{ data }">
+                                        <div class="flex flex-col">
+                                            <span>{{ formatCurrency(data.total_payments) }}</span>
+                                            <span v-if="Number(data.advance_payments) > 0" class="text-[9px] text-violet-500 font-bold">
+                                                (事前払: {{ Number(data.advance_payments).toLocaleString() }})
+                                            </span>
+                                        </div>
+                                    </template>
                                 </Column>
-                                <Column field="difference" header="当月差異" sortable>
+                                <Column field="difference" header="当月精算差異" sortable>
                                     <template #body="{ data }">
                                         <span :class="[
                                             data.difference > 1 ? 'text-emerald-500 font-bold' : '',

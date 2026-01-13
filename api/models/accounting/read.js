@@ -463,18 +463,25 @@ const getReconciliationOverview = async (requestId, startDate, endDate, hotelIds
             ) s GROUP BY hotel_id
         ),
         hotel_payments AS (
-            SELECT hotel_id, SUM(value) as total_payments
-            FROM reservation_payments
-            WHERE date BETWEEN $1 AND $2
-            AND hotel_id = ANY($3::int[])
-            GROUP BY hotel_id
+            SELECT 
+                rp.hotel_id, 
+                SUM(rp.value) as total_payments,
+                SUM(CASE WHEN r.check_in > $2 THEN rp.value ELSE 0 END) as advance_payments,
+                SUM(CASE WHEN r.check_in <= $2 THEN rp.value ELSE 0 END) as settlement_payments
+            FROM reservation_payments rp
+            JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
+            WHERE rp.date BETWEEN $1 AND $2
+            AND rp.hotel_id = ANY($3::int[])
+            GROUP BY rp.hotel_id
         )
         SELECT 
             h.id as hotel_id,
             h.name as hotel_name,
             COALESCE(hs.total_sales, 0) as total_sales,
             COALESCE(hp.total_payments, 0) as total_payments,
-            COALESCE(hp.total_payments, 0) - COALESCE(hs.total_sales, 0) as difference
+            COALESCE(hp.advance_payments, 0) as advance_payments,
+            COALESCE(hp.settlement_payments, 0) as settlement_payments,
+            COALESCE(hp.settlement_payments, 0) - COALESCE(hs.total_sales, 0) as difference
         FROM hotels h
         LEFT JOIN hotel_sales hs ON h.id = hs.hotel_id
         LEFT JOIN hotel_payments hp ON h.id = hp.hotel_id
@@ -576,6 +583,8 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
             SELECT 
                 r.reservation_client_id,
                 SUM(CASE WHEN rp.date BETWEEN $1 AND $2 THEN rp.value ELSE 0 END) as month_payments,
+                SUM(CASE WHEN rp.date BETWEEN $1 AND $2 AND r.check_in > $2 THEN rp.value ELSE 0 END) as advance_payments,
+                SUM(CASE WHEN rp.date BETWEEN $1 AND $2 AND r.check_in <= $2 THEN rp.value ELSE 0 END) as settlement_payments,
                 SUM(CASE WHEN rp.date <= $2 THEN rp.value ELSE 0 END) as cumulative_payments
             FROM reservation_payments rp
             JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
@@ -590,7 +599,9 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
             ri.is_ota_web,
             COALESCE(cs.month_sales, 0) as total_sales,
             COALESCE(cp.month_payments, 0) as total_payments,
-            COALESCE(cp.month_payments, 0) - COALESCE(cs.month_sales, 0) as difference,
+            COALESCE(cp.advance_payments, 0) as advance_payments,
+            COALESCE(cp.settlement_payments, 0) as settlement_payments,
+            COALESCE(cp.settlement_payments, 0) - COALESCE(cs.month_sales, 0) as difference,
             COALESCE(cs.cumulative_sales, 0) as cumulative_sales,
             COALESCE(cp.cumulative_payments, 0) as cumulative_payments,
             COALESCE(cp.cumulative_payments, 0) - COALESCE(cs.cumulative_sales, 0) as cumulative_difference
