@@ -286,10 +286,16 @@ const getDepartments = async (requestId, dbClient = null) => {
     const shouldRelease = !dbClient;
 
     const query = `
-        SELECT ad.*, h.name as hotel_name
-        FROM acc_departments ad
-        JOIN hotels h ON ad.hotel_id = h.id
-        ORDER BY h.name ASC
+        SELECT 
+            h.id as hotel_id, 
+            h.name as hotel_name, 
+            ad.id, 
+            ad.name, 
+            ad.created_at, 
+            ad.updated_at
+        FROM hotels h
+        LEFT JOIN acc_departments ad ON h.id = ad.hotel_id
+        ORDER BY h.id ASC
     `;
 
     try {
