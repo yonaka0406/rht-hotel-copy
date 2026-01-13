@@ -46,6 +46,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
+import { useToast } from 'primevue/usetoast';
 
 const props = defineProps({
     filters: {
@@ -55,13 +56,17 @@ const props = defineProps({
 });
 
 defineEmits(['back']);
+const toast = useToast();
 const { downloadLedger, ledgerPreviewData, loading } = useAccountingStore();
 
 const selectedFormat = ref('csv');
 const emailCopy = ref(false);
 
 const totalAmount = computed(() => {
-    return ledgerPreviewData.value.reduce((sum, row) => sum + parseInt(row.total_amount || 0), 0);
+    return ledgerPreviewData.value.reduce((sum, row) => {
+        const val = Number(row.total_amount);
+        return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
 });
 
 const handleDownload = async () => {
@@ -73,19 +78,16 @@ const handleDownload = async () => {
         });
     } catch (err) {
         console.error('Download failed', err);
+        toast.add({
+            severity: 'error',
+            summary: 'ダウンロード失敗',
+            detail: err.message || '予期せぬエラーが発生しました',
+            life: 5000
+        });
     }
 };
 </script>
 
-<style scoped>
-@keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
-}
-</style>
 
 <style scoped>
 @keyframes fade-in {
