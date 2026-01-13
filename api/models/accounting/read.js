@@ -214,6 +214,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
             h.id as hotel_id,
             h.name as hotel_name,
             COALESCE(ad.name, h.name) as department_code,
+            (ad.name IS NOT NULL) as is_dept_configured,
             ms.account_code_id,
             ac.code as account_code,
             ac.name as account_name,

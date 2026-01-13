@@ -78,7 +78,10 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="text-slate-600 dark:text-slate-400 font-medium">{{ group.hotel_name }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-600 dark:text-slate-400 font-medium">{{ group.hotel_name }}</span>
+                                        <i v-if="!group.is_dept_configured" class="pi pi-exclamation-triangle text-amber-500 text-xs" title="部門設定が未完了です"></i>
+                                    </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">対象外</span>
@@ -159,6 +162,7 @@ const formattedPreview = computed(() => {
             groups[row.hotel_id] = {
                 hotel_id: row.hotel_id,
                 hotel_name: row.hotel_name,
+                is_dept_configured: row.is_dept_configured,
                 total: 0,
                 categories: []
             };
