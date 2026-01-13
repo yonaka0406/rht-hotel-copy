@@ -63,20 +63,55 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
     const { startDate, endDate, hotelIds } = filters;
 
     const query = `
-        WITH sales_data AS (
+        WITH rr_base AS (
+            /* Get all rate lines and identify the one with the highest tax rate per detail */
             SELECT 
+                rd.id as rd_id,
                 rd.hotel_id,
                 rd.plans_hotel_id,
                 ph.plan_type_category_id,
+                rd.price as total_rd_price,
+                rr.id as rr_id,
                 rr.tax_rate,
-                SUM(rr.price) as amount
+                rr.price as rr_price,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
             FROM reservation_details rd
             JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
             JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3::int[])
             AND rd.cancelled IS NULL
-            GROUP BY rd.hotel_id, rd.plans_hotel_id, ph.plan_type_category_id, rr.tax_rate
+        ),
+        rr_totals AS (
+            /* Calculate the sum of rate prices to detect discrepancies */
+            SELECT rd_id, SUM(rr_price) as sum_rr_price
+            FROM rr_base
+            GROUP BY rd_id
+        ),
+        adjusted_sales_lines AS (
+            /* Adjust the row with the highest tax rate (rn=1) to absorb any price difference */
+            SELECT 
+                b.hotel_id,
+                b.plans_hotel_id,
+                b.plan_type_category_id,
+                b.tax_rate,
+                CASE 
+                    WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price)
+                    ELSE b.rr_price
+                END as adjusted_rr_price
+            FROM rr_base b
+            JOIN rr_totals t ON b.rd_id = t.rd_id
+        ),
+        sales_data AS (
+            /* Aggregate the adjusted prices */
+            SELECT 
+                hotel_id,
+                plans_hotel_id,
+                plan_type_category_id,
+                tax_rate,
+                SUM(adjusted_rr_price) as amount
+            FROM adjusted_sales_lines
+            GROUP BY hotel_id, plans_hotel_id, plan_type_category_id, tax_rate
         ),
         mapped_sales AS (
             SELECT 

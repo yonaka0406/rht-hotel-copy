@@ -3,10 +3,10 @@
         <!-- Summary Widgets -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
             <div class="bg-white dark:bg-slate-800 p-5 flex flex-col gap-1">
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">対象期間</span>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">対象月</span>
                 <div class="flex items-center gap-2">
                     <i class="pi pi-calendar text-violet-600 dark:text-violet-400 text-lg"></i>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ filters.startDate }} - {{ filters.endDate }}</p>
+                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ filters.selectedMonth.replace('-', ' / ') }}</p>
                 </div>
             </div>
             <div class="bg-white dark:bg-slate-800 p-5 flex flex-col gap-1">
