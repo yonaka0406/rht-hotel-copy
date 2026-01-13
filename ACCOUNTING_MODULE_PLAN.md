@@ -6,7 +6,7 @@ The Accounting Module is designed to manage financial operations, auditing, and 
 
 ## Current Status
 
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-13
 
 ### Implemented Features
 
@@ -18,6 +18,31 @@ The Accounting Module is designed to manage financial operations, auditing, and 
   - New `accounting` permission added to database roles.
   - Frontend permission checks.
   - Backend middleware `authMiddleware_accounting`.
+- **Dashboard (`AccountingDashboard.vue`)**:
+  - Implemented strictly following the UI/UX design.
+  - "Data Export" card linked to the Ledger Export wizard.
+  - "OTA Import" and "Sales Reconciliation" cards marked as *Coming Soon*.
+  - "At a Glance" section marked as *In Development*.
+- **Master Settings (`AccountingSettings.vue`)**:
+  - **Tabs**:
+    - **Account Codes**: CRUD, mapping to Management Groups and Tax Classes.
+    - **Management Groups**: CRUD for grouping account codes.
+    - **Tax Classes**: CRUD for tax settings (Yayoi names, rates) with 0%/10% filter.
+    - **Departments**: Management of Hotel <-> Yayoi Department Code mappings.
+  - **UI**: Modal-based editing, confirmation dialogs, read-only hotel names in Department edit.
+  - **Backend**: Full CRUD endpoints in `accounting` controller and model.
+- **Ledger Export (Sales Journal)**:
+  - **UI**: 3-Step Wizard (`LedgerExportStepper`).
+    1. **Filter**: Month selection (YYYY-MM), Hotel multi-select.
+    2. **Review**: Preview table with Debit (Hotel) and Credit (Sales) rows. Visual warning for unmapped Departments.
+    3. **Confirmation**: Download button (CSV) and summary stats.
+  - **Backend**:
+    - `getLedgerPreview`: Complex query aggregating sales data, joining with `acc_account_codes`, `acc_departments`, etc.
+    - `downloadLedger`: Logic to generate Yayoi-importable CSV format.
+  - **Features**:
+    - Auto-mapping of Hotel IDs to Department names (or fallback to Hotel Name with warning).
+    - Error handling with Toast notifications.
+    - Robust number handling for currency totals.
 
 ## UI/UX Design Specification
 
@@ -31,7 +56,7 @@ Based on the approved HTML prototype, the UI will follow these specifications:
 
 ### Dashboard Layout (`AccountingDashboard.vue`)
 
-The dashboard will consist of the following sections:
+The dashboard consists of the following sections:
 
 1. **Header**:
     - Breadcrumbs: Home > Accounting.
@@ -46,86 +71,50 @@ The dashboard will consist of the following sections:
 3. **Audit & Reconciliation (Action Section)**:
     - *Status Indicator:* "System Online" badge.
     - **Action Cards**:
-        - **Data Export**: "Export monthly hotel data for auditing" (Icon: `download_for_offline`).
-        - **Upload OTA Slips**: "Upload external OTA payment details" (Icon: `upload_file`).
-        - **Sales Comparison**: "Reconcile PMS records vs Accounting data" (Icon: `compare_arrows`).
+        - **Data Export**: "Export monthly hotel data for auditing" (Icon: `download_for_offline`). **(Implemented)**
+        - **Upload OTA Slips**: "Upload external OTA payment details" (Icon: `upload_file`). **(Coming Soon)**
+        - **Sales Comparison**: "Reconcile PMS records vs Accounting data" (Icon: `compare_arrows`). **(Coming Soon)**
 
 4. **At a Glance (Metrics Section)**:
-    - **Unreconciled Items**:
-        - Metric: Count (e.g., 12 OTA Payments).
-        - Icon: `pending_actions` (Orange).
-        - Action: "Review list".
-    - **Receivables**:
-        - Metric: Currency (e.g., $42,850 Pending by Client).
-        - Icon: `receipt_long` (Blue).
-        - Action: "View breakdown".
-    - **Discrepancies**:
-        - Metric: Percentage (e.g., 0.4% PMS vs Accounting).
-        - Icon: `warning` (Red).
-        - Action: "Run diagnostics".
+    - **Status**: *In Development* (Placeholder displayed).
 
 5. **Global Actions**:
-    - Floating Action Button (FAB) for **Settings** (`settings` icon).
+    - Floating Action Button (FAB) for **Settings** (`settings` icon). **(Implemented)**
 
 ## Planned Features & Roadmap
 
 ### 1. Monthly Data Export (Auditing)
 
 - **Goal**: Allow authorized users to download comprehensive hotel operation data for monthly audits.
-
-- **UI Component**: "Data Export" Action Card -> Leads to **Ledger Sales Export by Plan** page.
-- **Design Specification (3-Step Wizard)**:
-  - **Step 1: Filter Selection**
-    - **Date Range**: Custom date picker.
-    - **Hotels**: Multi-select checkbox list for properties.
-    - **Account Plans**: Multi-select checkbox list for plans.
-  - **Step 2: Review & Preview**
-    - **Summary Widgets**:
-      - Date Range (Display).
-      - Selected Hotels (Count).
-      - Account Plans (List).
-    - **Header Stats**: "Total Estimated" Amount.
-    - **Sales Ledger Preview Table**:
-      - Columns: Hotel (Name + ID), Plan (Badge), Account Code (Monospace), Total Amount (Right-aligned), Reconciliation (Status Icon).
-      - Pagination Controls.
-    - **Navigation**: "Back" and "Next: Choose Format" buttons.
-  - **Step 3: Export Confirmation**
-    - **Summary Card**:
-      - "Ready for Export" status with check icon.
-      - "Total Records" and "Total Amount" tiles.
-    - **Format Selection**: Radio buttons (CSV, Excel, PDF, JSON).
-    - **Options**: "Send a copy to my email" checkbox.
-    - **Action**: Large "Download Ledger" button.
-- **Status**: Planned.
+- **Status**: **Completed**.
+- **Implementation**:
+  - Frontend: `AccountingLedgerExport` directory.
+  - Backend: `accounting/export.js` controller, `accounting/read.js` model.
 
 ### 2. OTA Payment Reconciliation
 
 - **Goal**: Upload OTA payment detail files to the system.
-
 - **UI Component**: "Upload OTA Slips" Action Card.
-- **Status**: Planned.
+- **Status**: **Planned** (Card placeholder implemented).
 
 ### 3. Sales Data Reconciliation
 
 - **Goal**: Automated comparison between system sales data and uploaded payment records.
-
 - **UI Component**: "Sales Comparison" Action Card.
-- **Status**: Planned.
+- **Status**: **Planned** (Card placeholder implemented).
 
 ### 4. Dashboard Metrics (Analytics)
 
 - **Goal**: Provide real-time visibility into financial health.
-
-- **Components**:
-  - **Unreconciled Payments Query**: Backend logic to count pending reconciliations.
-  - **Receivables Calculator**: Aggregation of unpaid invoices.
-  - **Discrepancy Checker**: Logic to compare PMS totals vs. External inputs.
-- **Status**: Planned.
+- **Status**: **Planned** (Section placeholder implemented).
 
 ## Next Steps
 
-1. **Frontend Update**: Refactor `AccountingDashboard.vue` to match the new HTML design (Colors, Layout, Widgets).
-2. **Backend Implementation**:
+1. **Release v1.0 (Current Branch)**:
+    - Verify CSV export format with Yayoi constraints.
+    - Additional testing of Department mappings.
+    - Merge current accounting features (`feat/accounting-module`) to main.
+2. **Phase 2: OTA Reconciliation**:
     - Design database schema for uploaded OTA records.
-    - Implement endpoints for the "At a Glance" metrics.
-3. **Feature Development**: Start with "Data Export" functionality.
+    - Implement file upload and parsing (CSV/Excel) for OTA slips.
+    - Implement reconciliation logic (matching PMS bookings with OTA records).
