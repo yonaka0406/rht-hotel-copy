@@ -57,6 +57,79 @@ export function useAccountingStore() {
         }
     };
 
+    const getAccountingSettings = async (hotelId = null) => {
+        try {
+            const query = hotelId ? `?hotel_id=${hotelId}` : '';
+            return await get(`/accounting/settings${query}`);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const upsertAccountCode = async (data) => {
+        try {
+            return await post('/accounting/settings/codes', data);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const deleteAccountCode = async (id) => {
+        try {
+            return await del(`/accounting/settings/codes/${id}`);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const upsertMapping = async (data) => {
+        try {
+            return await post('/accounting/settings/mappings', data);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const deleteMapping = async (id) => {
+        try {
+            return await del(`/accounting/settings/mappings/${id}`);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const upsertManagementGroup = async (data) => {
+        try {
+            return await post('/accounting/settings/groups', data);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const deleteManagementGroup = async (id) => {
+        try {
+            return await del(`/accounting/settings/groups/${id}`);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const upsertTaxClass = async (data) => {
+        try {
+            return await post('/accounting/settings/tax-classes', data);
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const deleteTaxClass = async (id) => {
+        try {
+            return await del(`/accounting/settings/tax-classes/${id}`);
+        } catch (err) {
+            throw err;
+        }
+    };
+
     const clearPreviewData = () => {
         ledgerPreviewData.value = [];
         lastFilters.value = null;
@@ -69,6 +142,15 @@ export function useAccountingStore() {
         getExportOptions,
         fetchLedgerPreview,
         downloadLedger,
+        getAccountingSettings,
+        upsertAccountCode,
+        deleteAccountCode,
+        upsertMapping,
+        deleteMapping,
+        upsertManagementGroup,
+        deleteManagementGroup,
+        upsertTaxClass,
+        deleteTaxClass,
         clearPreviewData
     };
 }

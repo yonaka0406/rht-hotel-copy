@@ -174,36 +174,39 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
         mapped_sales AS (
             SELECT 
                 cs.*,
-                (
-                    SELECT am.account_code_id
-                    FROM acc_accounting_mappings am
-                    WHERE (
-                        (cs.mapping_target = 'plan_hotel' AND (
-                            (am.target_type = 'plan_hotel' AND am.target_id = cs.target_id AND am.hotel_id = cs.hotel_id)
+                COALESCE(
+                    (
+                        SELECT am.account_code_id
+                        FROM acc_accounting_mappings am
+                        WHERE (
+                            (cs.mapping_target = 'plan_hotel' AND (
+                                (am.target_type = 'plan_hotel' AND am.target_id = cs.target_id AND am.hotel_id = cs.hotel_id)
+                                OR
+                                (am.target_type = 'plan_type_category' AND am.target_id = cs.plan_type_category_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
+                            ))
                             OR
-                            (am.target_type = 'plan_type_category' AND am.target_id = cs.plan_type_category_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
-                        ))
-                        OR
-                        (cs.mapping_target = 'addon_hotel' AND (
-                            (am.target_type = 'addon_hotel' AND am.target_id = cs.target_id AND am.hotel_id = cs.hotel_id)
+                            (cs.mapping_target = 'addon_hotel' AND (
+                                (am.target_type = 'addon_hotel' AND am.target_id = cs.target_id AND am.hotel_id = cs.hotel_id)
+                                OR
+                                (am.target_type = 'addon_global' AND am.target_id = cs.addons_global_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
+                            ))
                             OR
-                            (am.target_type = 'addon_global' AND am.target_id = cs.addons_global_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
-                        ))
-                        OR
-                        (cs.mapping_target = 'addon_global' AND am.target_type = 'addon_global' AND am.target_id = cs.target_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
-                        OR
-                        (cs.mapping_target = 'cancellation' AND am.target_type = 'cancellation' AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
-                    )
-                    ORDER BY 
-                        CASE 
-                            WHEN am.target_type IN ('plan_hotel', 'addon_hotel') THEN 1
-                            WHEN am.target_type = 'cancellation' AND am.hotel_id IS NOT NULL THEN 1.5
-                            WHEN am.target_type IN ('plan_type_category', 'addon_global') AND am.hotel_id IS NOT NULL THEN 2
-                            WHEN am.target_type = 'cancellation' AND am.hotel_id IS NULL THEN 2.5
-                            WHEN am.target_type IN ('plan_type_category', 'addon_global') AND am.hotel_id IS NULL THEN 3
-                            ELSE 4
-                        END ASC
-                    LIMIT 1
+                            (cs.mapping_target = 'addon_global' AND am.target_type = 'addon_global' AND am.target_id = cs.target_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
+                            OR
+                            (cs.mapping_target = 'cancellation' AND am.target_type = 'cancellation' AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
+                        )
+                        ORDER BY 
+                            CASE 
+                                WHEN am.target_type IN ('plan_hotel', 'addon_hotel') THEN 1
+                                WHEN am.target_type = 'cancellation' AND am.hotel_id IS NOT NULL THEN 1.5
+                                WHEN am.target_type IN ('plan_type_category', 'addon_global') AND am.hotel_id IS NOT NULL THEN 2
+                                WHEN am.target_type = 'cancellation' AND am.hotel_id IS NULL THEN 2.5
+                                WHEN am.target_type IN ('plan_type_category', 'addon_global') AND am.hotel_id IS NULL THEN 3
+                                ELSE 4
+                            END ASC
+                        LIMIT 1
+                    ),
+                    (SELECT id FROM acc_account_codes b WHERE b.code = '4110004' LIMIT 1)
                 ) as account_code_id
             FROM combined_sales cs
         )
@@ -239,8 +242,46 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
     }
 };
 
+const getManagementGroups = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `SELECT * FROM acc_management_groups ORDER BY display_order ASC, name ASC`;
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error retrieving management groups:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+const getTaxClasses = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `SELECT * FROM acc_tax_classes ORDER BY display_order ASC, name ASC`;
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error retrieving tax classes:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     getAccountCodes,
     getMappings,
-    getLedgerPreview
+    getLedgerPreview,
+    getManagementGroups,
+    getTaxClasses
 };

@@ -165,7 +165,7 @@
 
         <!-- FAB (Settings) -->
         <div class="fixed bottom-6 right-6 z-50">
-            <button class="w-14 h-14 bg-violet-600 text-white rounded-full shadow-lg hover:shadow-violet-600/40 hover:bg-violet-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group cursor-pointer">
+            <button @click="$router.push({ name: 'AccountingSettings' })" class="w-14 h-14 bg-violet-600 text-white rounded-full shadow-lg hover:shadow-violet-600/40 hover:bg-violet-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group cursor-pointer">
                 <i class="pi pi-cog text-xl group-hover:rotate-90 transition-transform duration-500"></i>
             </button>
         </div>
