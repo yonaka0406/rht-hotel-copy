@@ -171,7 +171,7 @@
                                     :key="rate"
                                     @click="selectedTaxFilter = rate"
                                     class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                                    :class="Math.abs(selectedTaxFilter - rate) < 0.0001 ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
+                                    :class="selectedTaxFilter !== null && Math.abs(selectedTaxFilter - rate) < 0.0001 ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
                                 >
                                     {{ (rate * 100).toFixed(0) }}%
                                 </button>
