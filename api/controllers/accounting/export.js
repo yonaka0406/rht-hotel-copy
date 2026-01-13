@@ -28,8 +28,12 @@ const getLedgerPreview = async (req, res) => {
         const { selectedMonth, hotelIds } = body;
 
         // Validation
-        if (!selectedMonth || !hotelIds) {
-            return res.status(400).json({ message: 'Missing required filters' });
+        if (!selectedMonth || !/^\d{4}-\d{2}$/.test(selectedMonth)) {
+            return res.status(400).json({ message: 'Invalid format for selectedMonth. Expected YYYY-MM' });
+        }
+
+        if (!Array.isArray(hotelIds) || hotelIds.length === 0) {
+            return res.status(400).json({ message: 'Missing required filters: hotelIds must be a non-empty array' });
         }
 
         // Calculate startDate and endDate from selectedMonth (YYYY-MM)
@@ -56,6 +60,20 @@ const exportLedger = async (req, res) => {
     try {
         const { selectedMonth, hotelIds, format } = body;
 
+        // Validate inputs
+        if (!selectedMonth || typeof selectedMonth !== 'string' || !/^\d{4}-\d{2}$/.test(selectedMonth)) {
+            return res.status(400).json({ message: 'Invalid or missing selectedMonth. Expected YYYY-MM format.' });
+        }
+
+        const hotelIdsArray = Array.isArray(hotelIds) ? hotelIds : (hotelIds ? [hotelIds] : []);
+        if (hotelIdsArray.length === 0) {
+            return res.status(400).json({ message: 'Missing hotelIds.' });
+        }
+
+        if (format !== 'csv') {
+            return res.status(400).json({ message: 'Only CSV format is supported for this export' });
+        }
+
         // Calculate startDate and endDate from selectedMonth (YYYY-MM)
         const [year, month] = selectedMonth.split('-').map(Number);
         const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -65,12 +83,8 @@ const exportLedger = async (req, res) => {
         const data = await accountingModel.getLedgerPreview(requestId, {
             startDate,
             endDate,
-            hotelIds
+            hotelIds: hotelIdsArray
         });
-
-        if (format !== 'csv') {
-            return res.status(400).json({ message: 'Only CSV format is supported for this export' });
-        }
 
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename=yayoi_export_${startDate}_${endDate}.csv`);
