@@ -316,8 +316,9 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
     const shouldRelease = !dbClient;
 
     try {
+        logger.debug(`[Accounting] Model getDashboardMetrics: Range[${startDate} to ${endDate}] Hotels[${hotelIds}]`);
+
         // 1. Total Sales (Revenue) - Reusing the logic from getLedgerPreview but aggregating
-        // We use a CTE approach similar to getLedgerPreview but simplified for just the total
         const salesQuery = `
         WITH plan_sales AS (
             SELECT 
@@ -327,12 +328,11 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
                 rd.plans_hotel_id as plan_type_category_id,
                 NULL::int as addons_global_id,
                 COALESCE(rr.net_price, 0) as amount,
-                COALESCE(ti.rate, 0.10) as tax_rate
+                COALESCE(rr.tax_rate, 0.10) as tax_rate
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id
             JOIN hotels h ON rd.hotel_id = h.id
             LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id
-            LEFT JOIN tax_info ti ON rr.tax_type_id = ti.id
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3)
             AND rd.billable = true
@@ -350,11 +350,10 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
                 NULL::int as plan_type_category_id,
                 ra.addons_global_id,
                 COALESCE(ra.net_price * ra.quantity, 0) as amount,
-                COALESCE(ti.rate, 0.10) as tax_rate
+                COALESCE(ra.tax_rate, 0.10) as tax_rate
             FROM reservation_addons ra
             JOIN reservation_details rd ON ra.reservation_detail_id = rd.id
             JOIN hotels h ON ra.hotel_id = h.id
-            LEFT JOIN tax_info ti ON ra.tax_type_id = ti.id
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3)
             AND rd.billable = true
@@ -368,12 +367,11 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
                 NULL::int as plan_type_category_id,
                 NULL::int as addons_global_id,
                 COALESCE(rr.net_price, 0) as amount,
-                COALESCE(ti.rate, 0.10) as tax_rate
+                COALESCE(rr.tax_rate, 0.10) as tax_rate
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id
             JOIN hotels h ON rd.hotel_id = h.id
             LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id
-            LEFT JOIN tax_info ti ON rr.tax_type_id = ti.id
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3)
             AND rd.cancelled IS NOT NULL 
@@ -397,14 +395,14 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
             AND hotel_id = ANY($3)
         `;
 
-        const [salesResult, paymentsResult] = await Promise.all([
+        const [salesRes, paymentsRes] = await Promise.all([
             client.query(salesQuery, [startDate, endDate, hotelIds]),
             client.query(paymentsQuery, [startDate, endDate, hotelIds])
         ]);
 
         return {
-            totalSales: parseInt(salesResult.rows[0]?.total_sales || 0),
-            totalPayments: parseInt(paymentsResult.rows[0]?.total_payments || 0)
+            totalSales: parseInt(salesRes.rows[0]?.total_sales || 0),
+            totalPayments: parseInt(paymentsRes.rows[0]?.total_payments || 0)
         };
 
     } catch (err) {

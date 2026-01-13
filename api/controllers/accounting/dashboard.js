@@ -7,14 +7,9 @@ const getDashboardMetrics = async (req, res, next) => {
         const { requestId } = req;
         const { startDate, endDate, hotelIds } = req.query;
 
-        // Basic validation
-        if (!startDate || !endDate) {
-            const error = new Error('Start date and end date are required');
-            error.statusCode = 400;
-            throw error;
-        }
+        logger.debug(`[Accounting] getDashboardMetrics requested. Start: ${startDate}, End: ${endDate}, Hotels: ${hotelIds}`);
 
-        // Validate hotelIds
+        // 1. Resolve Hotel IDs (Default to all if empty or undefined)
         let targetHotelIds = [];
         if (hotelIds && hotelIds !== 'null' && hotelIds !== 'undefined') {
             if (Array.isArray(hotelIds)) {
@@ -28,14 +23,41 @@ const getDashboardMetrics = async (req, res, next) => {
             }
         }
 
-        // Check if hotelIds are provided, otherwise throw error or return empty?
-        // Usually, dashboard fetches data for accessible hotels. 
-        // If frontend sends no hotelIds, we should probably fail or handle it.
-        // But for now, let's assume valid request.
+        if (targetHotelIds.length === 0) {
+            const hotelModel = require('../../models/hotel/read');
+            const allHotels = await hotelModel.getAllHotels(requestId);
+            targetHotelIds = allHotels.map(h => h.id);
+            logger.debug(`[Accounting] Defaulting to all hotels: ${targetHotelIds}`);
+        }
 
-        const metrics = await accountingModel.getDashboardMetrics(requestId, startDate, endDate, targetHotelIds);
+        // 2. Resolve Dates (Default to Last Month relative to today if missing)
+        let queryStart = startDate;
+        let queryEnd = endDate;
+
+        if (!queryStart || !queryEnd) {
+            const today = new Date(); // Jan 13, 2026
+            const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+            const formatYMD = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            queryStart = formatYMD(lastMonthStart);
+            queryEnd = formatYMD(lastMonthEnd);
+            logger.debug(`[Accounting] Dates missing, defaulted to last month: ${queryStart} to ${queryEnd}`);
+        }
+
+        // 3. Fetch Metrics
+        const metrics = await accountingModel.getDashboardMetrics(requestId, queryStart, queryEnd, targetHotelIds);
+
+        logger.debug(`[Accounting] Dashboard metrics fetched successfully for ${queryStart} to ${queryEnd}`);
         res.json(metrics);
     } catch (err) {
+        logger.error(`[Accounting] Error in getDashboardMetrics controller: ${err.message}`);
         next(err);
     }
 };

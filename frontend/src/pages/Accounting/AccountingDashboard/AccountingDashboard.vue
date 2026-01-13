@@ -5,7 +5,7 @@ import { useUserStore } from '@/composables/useUserStore';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 
 const router = useRouter();
-const userStore = useUserStore();
+const { logged_user, fetchUser } = useUserStore();
 const accountingStore = useAccountingStore();
 
 const metrics = ref({
@@ -14,11 +14,10 @@ const metrics = ref({
 });
 
 const isLoading = ref(true);
-const logged_user = computed(() => userStore.currentUser);
 
 // Computed properties for user information
 const userName = computed(() => {
-    return logged_user.value?.name || 'ユーザー';
+    return logged_user.value?.[0]?.name || 'ユーザー';
 });
 
 const userInitial = computed(() => {
@@ -27,7 +26,7 @@ const userInitial = computed(() => {
 });
 
 const userRole = computed(() => {
-    const user = logged_user.value;
+    const user = logged_user.value?.[0];
     if (!user) return '不明';
     
     // Simple role logic based on permissions or role field if available
@@ -43,8 +42,8 @@ const userRole = computed(() => {
 onMounted(async () => {
     try {
         isLoading.value = true;
-        if (!userStore.currentUser) {
-            await userStore.fetchUser();
+        if (!logged_user.value || !logged_user.value.length) {
+            await fetchUser();
         }
         
         const today = new Date();
@@ -180,7 +179,12 @@ onMounted(async () => {
                                 <p v-else class="text-3xl font-bold text-slate-900 dark:text-white">
                                     {{ metrics.totalPayments ? `¥${metrics.totalPayments.toLocaleString()}` : '¥0' }}
                                 </p>
-                                <p class="text-sm font-medium text-slate-600 dark:text-slate-400">カード・現金・請求書等</p>
+                                <div v-if="!isLoading && metrics.totalSales !== null" class="mt-1">
+                                    <small :class="Math.abs(metrics.totalPayments - metrics.totalSales) > 1 ? 'text-rose-500 font-medium' : 'text-slate-500'">
+                                        売上計上との差額: {{ (metrics.totalPayments - metrics.totalSales) > 0 ? '+' : '' }}{{ (metrics.totalPayments - metrics.totalSales).toLocaleString() }}
+                                    </small>
+                                </div>
+                                <p class="text-sm font-medium text-slate-600 dark:text-slate-400 mt-1">カード・現金・請求書等</p>
                             </div>
                             <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
                                 <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
