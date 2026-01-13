@@ -318,71 +318,63 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
     try {
         logger.debug(`[Accounting] Model getDashboardMetrics: Range[${startDate} to ${endDate}] Hotels[${hotelIds}]`);
 
-        // 1. Total Sales (Revenue) - Reusing the logic from getLedgerPreview but aggregating
+        /**
+         * 1. Total Sales (Revenue)
+         * CRITICAL: Using the exact same CTE logic as getLedgerPreview to ensure matching totals.
+         */
         const salesQuery = `
-        WITH plan_sales AS (
+        WITH rr_base AS (
             SELECT 
-                h.id as hotel_id,
-                rd.id as target_id,
-                'plan_hotel' as mapping_target,
-                rd.plans_hotel_id as plan_type_category_id,
-                NULL::int as addons_global_id,
-                COALESCE(rr.net_price, 0) as amount,
-                COALESCE(rr.tax_rate, 0.10) as tax_rate
+                rd.id as rd_id,
+                CASE 
+                    WHEN rd.plan_type = 'per_room' THEN rd.price 
+                    ELSE rd.price * rd.number_of_people 
+                END as total_rd_price,
+                rr.id as rr_id,
+                CASE 
+                    WHEN rd.plan_type = 'per_room' THEN rr.price 
+                    ELSE rr.price * rd.number_of_people 
+                END as rr_price,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
             FROM reservation_details rd
-            JOIN reservations r ON rd.reservation_id = r.id
-            JOIN hotels h ON rd.hotel_id = h.id
-            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
             WHERE rd.date BETWEEN $1 AND $2
-            AND rd.hotel_id = ANY($3)
-            AND rd.billable = true
-            AND rd.cancelled IS NULL
-            AND rd.is_accommodation = true
+            AND rd.hotel_id = ANY($3::int[])
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+        ),
+        rr_totals AS (
+            SELECT rd_id, SUM(rr_price) as sum_rr_price
+            FROM rr_base
+            GROUP BY rd_id
+        ),
+        plan_sales AS (
+            SELECT 
+                CASE 
+                    WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price)
+                    ELSE b.rr_price
+                END as amount
+            FROM rr_base b
+            JOIN rr_totals t ON b.rd_id = t.rd_id
         ),
         addon_sales AS (
             SELECT 
-                h.id as hotel_id,
-                ra.id as target_id,
-                CASE 
-                    WHEN ra.addons_hotel_id IS NOT NULL THEN 'addon_hotel'
-                    ELSE 'addon_global'
-                END as mapping_target,
-                NULL::int as plan_type_category_id,
-                ra.addons_global_id,
-                COALESCE(ra.net_price * ra.quantity, 0) as amount,
-                COALESCE(ra.tax_rate, 0.10) as tax_rate
+                (ra.price * ra.quantity) as amount
             FROM reservation_addons ra
-            JOIN reservation_details rd ON ra.reservation_detail_id = rd.id
-            JOIN hotels h ON ra.hotel_id = h.id
+            JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
             WHERE rd.date BETWEEN $1 AND $2
-            AND rd.hotel_id = ANY($3)
-            AND rd.billable = true
-            AND rd.cancelled IS NULL
-        ),
-        cancellation_sales AS (
-            SELECT 
-                h.id as hotel_id,
-                rd.id as target_id,
-                'cancellation' as mapping_target,
-                NULL::int as plan_type_category_id,
-                NULL::int as addons_global_id,
-                COALESCE(rr.net_price, 0) as amount,
-                COALESCE(rr.tax_rate, 0.10) as tax_rate
-            FROM reservation_details rd
-            JOIN reservations r ON rd.reservation_id = r.id
-            JOIN hotels h ON rd.hotel_id = h.id
-            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id
-            WHERE rd.date BETWEEN $1 AND $2
-            AND rd.hotel_id = ANY($3)
-            AND rd.cancelled IS NOT NULL 
-            AND rr.include_in_cancel_fee = true
+            AND ra.hotel_id = ANY($3::int[])
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
         ),
         combined_sales AS (
-            SELECT hotel_id, amount FROM plan_sales
+            SELECT amount FROM plan_sales
             UNION ALL
-            SELECT hotel_id, amount FROM addon_sales
-            UNION ALL
-            SELECT hotel_id, amount FROM cancellation_sales
+            SELECT amount FROM addon_sales
         )
         SELECT SUM(amount) as total_sales FROM combined_sales
         `;
@@ -392,7 +384,7 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
             SELECT SUM(value) as total_payments
             FROM reservation_payments
             WHERE date BETWEEN $1 AND $2
-            AND hotel_id = ANY($3)
+            AND hotel_id = ANY($3::int[])
         `;
 
         const [salesRes, paymentsRes] = await Promise.all([
