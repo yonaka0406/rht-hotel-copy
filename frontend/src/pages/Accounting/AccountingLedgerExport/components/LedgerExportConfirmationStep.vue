@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col items-center justify-center flex-1 px-4 animate-fade-in">
+    <div class="flex flex-col items-center w-full px-4 animate-fade-in">
         <div class="w-full max-w-xl bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
             <div class="bg-violet-50 dark:bg-violet-900/20 p-8 text-center border-b border-slate-200 dark:border-slate-700">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 mb-4">

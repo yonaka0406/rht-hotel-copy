@@ -34,41 +34,48 @@ onUnmounted(() => {
 <template>
     <div class="bg-slate-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
 
-        <div class="max-w-7xl mx-auto">
+        <div class="max-w-7xl mx-auto flex flex-col items-center">
             <!-- Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
+            <div class="mb-12 text-center w-full">
+                <h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-3">
                     帳票出力：プラン別売上
                 </h1>
-                <p class="text-slate-600 dark:text-slate-400">
+                <p class="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
                     ホテルおよびプランごとの売上データを監査・照合用に出力します。
                 </p>
             </div>
 
             <!-- Stepper Indicators -->
-            <LedgerExportStepper :current-step="currentStep" />
+            <div class="w-full max-w-4xl">
+                <LedgerExportStepper :current-step="currentStep" />
+            </div>
 
-            <!-- Step 1: Filter Selection -->
-            <LedgerExportFilterStep 
-                v-if="currentStep === 1" 
-                @next="handleFilterStepNext" 
-            />
+            <!-- Step Containers -->
+            <div class="w-full flex flex-col items-center">
+                <!-- Step 1: Filter Selection -->
+                <div v-if="currentStep === 1" class="w-full max-w-4xl">
+                    <LedgerExportFilterStep 
+                        @next="handleFilterStepNext" 
+                    />
+                </div>
 
-            <!-- Step 2: Review & Preview -->
-            <LedgerExportReviewStep 
-                v-if="currentStep === 2" 
-                :filters="exportFilters"
-                @back="currentStep = 1" 
-                @next="handleReviewStepNext" 
-            />
+                <!-- Step 2: Review & Preview -->
+                <div v-if="currentStep === 2" class="w-full">
+                    <LedgerExportReviewStep 
+                        :filters="exportFilters"
+                        @back="currentStep = 1" 
+                        @next="handleReviewStepNext" 
+                    />
+                </div>
 
-            <!-- Step 3: Export Confirmation -->
-            <LedgerExportConfirmationStep 
-                v-if="currentStep === 3" 
-                :filters="exportFilters"
-                @back="currentStep = 2" 
-            />
-
+                <!-- Step 3: Export Confirmation -->
+                <div v-if="currentStep === 3" class="w-full">
+                    <LedgerExportConfirmationStep 
+                        :filters="exportFilters"
+                        @back="currentStep = 2" 
+                    />
+                </div>
+            </div>
         </div>
     </div>
 </template>
