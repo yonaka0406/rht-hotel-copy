@@ -113,7 +113,8 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                 b.plan_type_category_id,
                 CASE 
                     WHEN b.is_cancelled THEN 'キャンセル' 
-                    ELSE COALESCE(b.category_name || ' - ', '') || b.plan_name 
+                    WHEN b.plan_name LIKE '%マンスリー%' THEN COALESCE(b.category_name || ' - ', '') || 'マンスリー'
+                    ELSE COALESCE(b.category_name, b.plan_name)
                 END as display_name,
                 b.tax_rate,
                 CASE 
