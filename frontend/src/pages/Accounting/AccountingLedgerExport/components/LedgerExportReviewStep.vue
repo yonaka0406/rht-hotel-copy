@@ -140,7 +140,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useAccounting } from '@/composables/useAccounting';
+import { useAccountingStore } from '@/composables/useAccountingStore';
 
 const props = defineProps({
     filters: {
