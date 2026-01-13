@@ -418,7 +418,9 @@ const getReconciliationOverview = async (requestId, startDate, endDate, hotelIds
         WITH rr_base AS (
             SELECT 
                 rd.hotel_id,
+                r.reservation_client_id,
                 rd.id as rd_id,
+                rd.date,
                 CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END as total_rd_price,
                 rr.id as rr_id,
                 CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END as rr_price,
@@ -429,63 +431,80 @@ const getReconciliationOverview = async (requestId, startDate, endDate, hotelIds
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3::int[])
             AND rd.billable = TRUE
-            AND r.status NOT IN ('hold', 'block')
+            AND r.status NOT IN ('hold', 'block', 'cancelled')
             AND r.type <> 'employee'
         ),
         rr_totals AS (
             SELECT rd_id, SUM(rr_price) as sum_rr_price FROM rr_base GROUP BY rd_id
         ),
-        plan_sales AS (
+        client_sales_agg AS (
             SELECT 
-                b.hotel_id,
-                CASE WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price) ELSE b.rr_price END as amount
-            FROM rr_base b
-            JOIN rr_totals t ON b.rd_id = t.rd_id
-        ),
-        addon_sales AS (
-            SELECT 
-                ra.hotel_id,
-                (ra.price * ra.quantity) as amount
-            FROM reservation_addons ra
-            JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
-            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
-            WHERE rd.date BETWEEN $1 AND $2
-            AND ra.hotel_id = ANY($3::int[])
-            AND rd.billable = TRUE
-            AND r.status NOT IN ('hold', 'block')
-            AND r.type <> 'employee'
-        ),
-        hotel_sales AS (
-            SELECT hotel_id, SUM(amount) as total_sales FROM (
-                SELECT hotel_id, amount FROM plan_sales
+                hotel_id,
+                reservation_client_id,
+                SUM(CASE WHEN date BETWEEN $1 AND $2 THEN amount ELSE 0 END) as month_sales,
+                SUM(CASE WHEN date <= $2 THEN amount ELSE 0 END) as cumulative_sales
+            FROM (
+                SELECT 
+                    b.hotel_id,
+                    b.reservation_client_id,
+                    b.date,
+                    CASE WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price) ELSE b.rr_price END as amount
+                FROM rr_base b
+                JOIN rr_totals t ON b.rd_id = t.rd_id
                 UNION ALL
-                SELECT hotel_id, amount FROM addon_sales
-            ) s GROUP BY hotel_id
+                SELECT 
+                    rd.hotel_id,
+                    r.reservation_client_id,
+                    rd.date,
+                    (ra.price * ra.quantity) as amount
+                FROM reservation_addons ra
+                JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+                JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                WHERE rd.date BETWEEN $1 AND $2
+                AND rd.hotel_id = ANY($3::int[])
+                AND rd.billable = TRUE
+                AND r.status NOT IN ('hold', 'block', 'cancelled')
+                AND r.type <> 'employee'
+            ) s GROUP BY hotel_id, reservation_client_id
         ),
-        hotel_payments AS (
+        client_payments_agg AS (
             SELECT 
                 rp.hotel_id, 
-                SUM(rp.value) as total_payments,
+                r.reservation_client_id,
+                SUM(rp.value) as month_payments,
                 SUM(CASE WHEN r.check_in > $2 THEN rp.value ELSE 0 END) as advance_payments,
-                SUM(CASE WHEN r.check_in <= $2 THEN rp.value ELSE 0 END) as settlement_payments
+                SUM(CASE WHEN r.check_in <= $2 THEN rp.value ELSE 0 END) as settlement_payments,
+                SUM(CASE WHEN rp.date <= $2 THEN rp.value ELSE 0 END) as cumulative_payments
             FROM reservation_payments rp
             JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
-            WHERE rp.date BETWEEN $1 AND $2
+            WHERE rp.date BETWEEN $1 AND $2 
             AND rp.hotel_id = ANY($3::int[])
-            GROUP BY rp.hotel_id
+            GROUP BY rp.hotel_id, r.reservation_client_id
+        ),
+        client_list AS (
+            SELECT DISTINCT hotel_id, reservation_client_id FROM client_sales_agg
+            UNION
+            SELECT DISTINCT hotel_id, reservation_client_id FROM client_payments_agg
         )
         SELECT 
             h.id as hotel_id,
             h.name as hotel_name,
-            COALESCE(hs.total_sales, 0) as total_sales,
-            COALESCE(hp.total_payments, 0) as total_payments,
-            COALESCE(hp.advance_payments, 0) as advance_payments,
-            COALESCE(hp.settlement_payments, 0) as settlement_payments,
-            COALESCE(hp.settlement_payments, 0) - COALESCE(hs.total_sales, 0) as difference
+            COALESCE(SUM(cs.month_sales), 0) as total_sales,
+            COALESCE(SUM(cp.month_payments), 0) as total_payments,
+            COALESCE(SUM(cp.advance_payments), 0) as advance_payments,
+            COALESCE(SUM(cp.settlement_payments), 0) as settlement_payments,
+            COALESCE(SUM(
+                CASE 
+                    WHEN ABS(COALESCE(cp.cumulative_payments, 0) - COALESCE(cs.cumulative_sales, 0)) <= 1 THEN 0 
+                    ELSE COALESCE(cp.settlement_payments, 0) - COALESCE(cs.month_sales, 0) 
+                END
+            ), 0) as difference
         FROM hotels h
-        LEFT JOIN hotel_sales hs ON h.id = hs.hotel_id
-        LEFT JOIN hotel_payments hp ON h.id = hp.hotel_id
+        JOIN client_list cl ON h.id = cl.hotel_id
+        LEFT JOIN client_sales_agg cs ON cl.hotel_id = cs.hotel_id AND cl.reservation_client_id = cs.reservation_client_id
+        LEFT JOIN client_payments_agg cp ON cl.hotel_id = cp.hotel_id AND cl.reservation_client_id = cp.reservation_client_id
         WHERE h.id = ANY($3::int[])
+        GROUP BY h.id, h.name
         ORDER BY h.id
         `;
 
@@ -601,7 +620,10 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
             COALESCE(cp.month_payments, 0) as total_payments,
             COALESCE(cp.advance_payments, 0) as advance_payments,
             COALESCE(cp.settlement_payments, 0) as settlement_payments,
-            COALESCE(cp.settlement_payments, 0) - COALESCE(cs.month_sales, 0) as difference,
+            CASE 
+                WHEN ABS(COALESCE(cp.cumulative_payments, 0) - COALESCE(cs.cumulative_sales, 0)) <= 1 THEN 0 
+                ELSE COALESCE(cp.settlement_payments, 0) - COALESCE(cs.month_sales, 0) 
+            END as difference,
             COALESCE(cs.cumulative_sales, 0) as cumulative_sales,
             COALESCE(cp.cumulative_payments, 0) as cumulative_payments,
             COALESCE(cp.cumulative_payments, 0) - COALESCE(cs.cumulative_sales, 0) as cumulative_difference

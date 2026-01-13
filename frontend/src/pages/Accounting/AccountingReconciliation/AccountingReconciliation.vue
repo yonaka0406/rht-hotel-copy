@@ -90,8 +90,9 @@ const fetchOverview = async () => {
             acc.payments += Number(curr.total_payments);
             acc.advance += Number(curr.advance_payments || 0);
             acc.settlement += Number(curr.settlement_payments || 0);
+            acc.difference += Number(curr.difference || 0);
             return acc;
-        }, { sales: 0, payments: 0, advance: 0, settlement: 0 });
+        }, { sales: 0, payments: 0, advance: 0, settlement: 0, difference: 0 });
 
     } catch (e) {
         console.error('Failed to fetch reconciliation overview', e);
@@ -131,6 +132,19 @@ const handleClientSelect = async (client) => {
     } finally {
         isClientLoading.value = false;
     }
+};
+
+/**
+ * 事前払 (Prepayment) Definition:
+ * 対象月末時点で、チェックイン日が翌月以降となっている予約に対して行われた入金です。
+ * これらは今月の売上と対比させるべき「精算」とは区別され、当月の精算差異には含まれません。
+ */
+const formatDiffValue = (val, cumulativeDiff = null) => {
+    // If settled (cumulative balance is near 0), force the monthly difference display to 0
+    if (cumulativeDiff !== null && Math.abs(cumulativeDiff) <= 1) return '0';
+    // Force 0 for negligible rounding errors
+    if (Math.abs(val) <= 1) return '0';
+    return (val > 0 ? '+' : '') + Number(val).toLocaleString();
 };
 
 const openReservation = (resId) => {
@@ -235,8 +249,8 @@ watch(selectedDate, () => {
                             <div class="flex items-center justify-end gap-3 text-[11px] mt-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                                 <span class="text-slate-400">精算差異:</span>
                                 <span :class="[
-                                    Math.abs(totals.settlement - totals.sales) > 10 ? 'text-rose-500 font-bold' : 'text-slate-500'
-                                ]">{{ formatCurrency(totals.settlement - totals.sales) }}</span>
+                                    Math.abs(totals.difference) > 10 ? 'text-rose-500 font-bold' : 'text-slate-500'
+                                ]">{{ formatCurrency(totals.difference) }}</span>
                             </div>
                         </div>
                     </div>
@@ -354,7 +368,7 @@ watch(selectedDate, () => {
                                             data.difference < -1 ? 'text-rose-500 font-bold' : '',
                                             Math.abs(data.difference) <= 1 ? 'text-slate-500' : ''
                                         ]">
-                                            {{ (data.difference > 0 ? '+' : '') + Number(data.difference).toLocaleString() }}
+                                            {{ formatDiffValue(data.difference, data.cumulative_difference) }}
                                         </span>
                                     </template>
                                 </Column>
