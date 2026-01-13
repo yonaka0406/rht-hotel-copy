@@ -90,6 +90,14 @@ const exportLedger = async (req, res) => {
                 else flag = '2100';
             }
 
+            // Calculate tax amount (rounded down)
+            // For tax-inclusive amounts: tax = floor(total / (1 + rate) * rate)
+            const taxRate = parseFloat(row.tax_rate) || 0;
+            const totalAmount = parseFloat(row.total_amount) || 0;
+            const taxAmount = taxRate > 0
+                ? Math.floor(totalAmount / (1 + taxRate) * taxRate)
+                : 0;
+
             const cols = [
                 flag,                 // 1: 識別フラグ
                 '',                   // 2: 伝票No
@@ -99,14 +107,14 @@ const exportLedger = async (req, res) => {
                 row.hotel_name,       // 6: 借方補助科目
                 '',                   // 7: 借方部門
                 '対象外',             // 8: 借方税区分
-                row.total_amount,     // 9: 借方金額
-                '0',                  // 10: 借方税金額
+                totalAmount,          // 9: 借方金額
+                '0',                  // 10: 借方税金額 (A/R is tax-exempt)
                 row.account_name || '未設定', // 11: 貸方勘定科目 (Sales Account)
                 row.hotel_name,       // 12: 貸方補助科目
                 '',                   // 13: 貸方部門
                 row.tax_category || '対象外', // 14: 貸方税区分
-                row.total_amount,     // 15: 貸方金額
-                '0',                  // 16: 貸方税金額
+                totalAmount,          // 15: 貸方金額
+                taxAmount,            // 16: 貸方税金額 (Calculated tax)
                 row.display_category_name, // 17: 摘要
                 '',                   // 18: 番号
                 '',                   // 19: 期日

@@ -63,7 +63,6 @@
                             <th class="px-6 py-4">補助科目 / ホテル</th>
                             <th class="px-6 py-4 w-32">税区分</th>
                             <th class="px-6 py-4 text-right w-36">金額</th>
-                            <th class="px-6 py-4 text-center w-24">状態</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -86,9 +85,6 @@
                                 </td>
                                 <td class="px-6 py-4 text-right tabular-nums text-slate-900 dark:text-white">
                                     ¥{{ group.total.toLocaleString() }}
-                                </td>
-                                <td class="px-6 py-4 text-center">
-                                    <i class="pi pi-check-circle text-blue-500 text-lg" v-tooltip.top="'借方勘定：自動設定済み'"></i>
                                 </td>
                             </tr>
                             <!-- Credit Rows (Sales Breakdown) -->
@@ -113,10 +109,6 @@
                                 </td>
                                 <td class="px-6 py-4 text-right tabular-nums text-slate-600 dark:text-slate-400">
                                     ¥{{ parseInt(row.total_amount).toLocaleString() }}
-                                </td>
-                                <td class="px-6 py-4 text-center">
-                                    <i v-if="row.account_code" class="pi pi-check-circle text-green-500 text-lg" v-tooltip.top="'勘定コード設定済み'"></i>
-                                    <i v-else class="pi pi-exclamation-circle text-amber-500 text-lg" v-tooltip.top="'勘定コードが未設定です'"></i>
                                 </td>
                             </tr>
                         </template>

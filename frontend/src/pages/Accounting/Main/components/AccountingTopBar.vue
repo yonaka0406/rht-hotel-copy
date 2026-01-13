@@ -3,7 +3,7 @@
         <ol class="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
             <li>
                 <router-link to="/dashboard" class="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
-                    ホーム
+                    PMSホーム
                 </router-link>
             </li>
             <li v-for="(crumb, index) in breadcrumbs" :key="index" class="flex items-center">
