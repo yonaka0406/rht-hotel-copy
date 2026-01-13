@@ -21,7 +21,6 @@
                     </div>
                 </div>
 
-                <div class="space-y-6">
                 <div class="space-y-4">
                     <button @click="handleDownload" :disabled="loading" 
                         class="w-full flex cursor-pointer items-center justify-center gap-3 rounded-xl h-14 px-8 bg-violet-600 text-white text-lg font-bold hover:bg-violet-700 hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-none transition-all disabled:opacity-50">
