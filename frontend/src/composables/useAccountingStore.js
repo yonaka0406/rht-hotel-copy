@@ -69,7 +69,8 @@ export function useAccountingStore() {
 
     const fetchDashboardMetrics = async (params) => {
         try {
-            const data = await get('/accounting/dashboard/metrics', params);
+            const query = new URLSearchParams(params).toString();
+            const data = await get(`/accounting/dashboard/metrics?${query}`);
             return data;
         } catch (err) {
             throw err;
