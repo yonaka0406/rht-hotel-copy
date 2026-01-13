@@ -10,6 +10,8 @@ import Dialog from 'primevue/dialog';
 import ProgressSpinner from 'primevue/progressspinner';
 import Tag from 'primevue/tag';
 import ReservationEdit from '@/pages/MainPage/Reservation/ReservationEdit.vue';
+import { formatDateToYMD } from '@/utils/dateUtils';
+import { translateReservationStatus } from '@/utils/reservationUtils';
 
 const accountingStore = useAccountingStore();
 const hotelStore = useHotelStore();
@@ -287,10 +289,10 @@ watch(selectedDate, () => {
                                         <div>
                                             <span class="text-xs font-bold text-slate-400">#{{ res.reservation_id.substring(0,8) }}</span>
                                             <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                                {{ res.check_in }} ～ {{ res.check_out }}
+                                                {{ formatDateToYMD(res.check_in) }} ～ {{ formatDateToYMD(res.check_out) }}
                                             </p>
                                         </div>
-                                        <Tag :value="res.status" severity="info" class="text-[10px]" />
+                                        <Tag :value="translateReservationStatus(res.status)" severity="info" class="text-[10px]" />
                                     </div>
                                     <div class="grid grid-cols-2 gap-2 text-xs mb-3">
                                         <div class="text-slate-500">売上: <span class="text-slate-700 dark:text-slate-300">{{ formatCurrency(res.total_sales) }}</span></div>
@@ -324,7 +326,7 @@ watch(selectedDate, () => {
             </div>
             <template #footer>
                 <div class="flex justify-between items-center w-full">
-                    <Button label="别タブで開く" icon="pi pi-external-link" text @click="openInNewTab(selectedReservationId)" />
+                    <Button label="別タブで開く" icon="pi pi-external-link" text @click="openInNewTab(selectedReservationId)" />
                     <Button label="閉じる" icon="pi pi-times" severity="secondary" @click="showReservationModal = false" />
                 </div>
             </template>

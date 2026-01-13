@@ -144,7 +144,7 @@ onMounted(async () => {
                                 
                                 <!-- OTA Import (Placeholder) -->
                                 <div class="group bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed relative overflow-hidden flex flex-col items-center text-center h-full">
-                                    <div class="absolute top-3 right-3 px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] font-bold rounded uppercase tracking-wider">Coming Soon</div>
+                                    <div class="absolute top-3 right-3 px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] font-bold rounded uppercase tracking-wider">近日公開</div>
                                     <div class="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center shadow-sm mb-4 border border-slate-200 dark:border-slate-600 opacity-50">
                                         <i class="pi pi-cloud-upload text-xl text-slate-500"></i>
                                     </div>
@@ -193,13 +193,13 @@ onMounted(async () => {
                             </div>
                         </div>
 
-                        <!-- Discrepancies (Coming Soon Style) -->
+                        <!-- Discrepancies (近日公開 Style) -->
                         <div class="group bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed relative overflow-hidden">
                              <div class="flex items-center justify-between mb-4 opacity-50">
                                 <div class="p-2 bg-rose-100 dark:bg-rose-900/20 rounded-lg">
                                     <i class="pi pi-exclamation-triangle text-rose-500 text-lg"></i>
                                 </div>
-                                <span class="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-xs font-bold rounded-full">Coming Soon</span>
+                                <span class="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-xs font-bold rounded-full">近日公開</span>
                             </div>
                             <h3 class="text-lg font-bold text-slate-400 mb-2">要確認事項</h3>
                             <p class="text-sm text-slate-400 mb-4">不突合・要確認の取引を自動検出</p>
