@@ -585,59 +585,68 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
 
     try {
         const query = `
-        WITH rr_base AS (
+        WITH res_list AS (
+            -- Step 1: Find reservations with activity in the target month
+            SELECT DISTINCT r.id
+            FROM reservations r
+            LEFT JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
+            LEFT JOIN reservation_payments rp ON r.id = rp.reservation_id AND r.hotel_id = rp.hotel_id
+            WHERE r.hotel_id = $1 AND r.reservation_client_id = $2
+            AND (
+                (rd.date BETWEEN $3 AND $4 AND rd.billable = TRUE)
+                OR 
+                (rp.date BETWEEN $3 AND $4)
+            )
+        ),
+        rr_base AS (
             SELECT 
                 r.id as reservation_id,
                 rd.id as rd_id,
+                rd.date,
                 CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END as total_rd_price,
                 rr.id as rr_id,
                 CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END as rr_price,
                 ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
             FROM reservation_details rd
-            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN res_list r ON rd.reservation_id = r.id
             JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
-            WHERE rd.date BETWEEN $1 AND $2
-            AND rd.hotel_id = $3
-            AND r.reservation_client_id = $4
-            AND rd.billable = TRUE
-            AND r.status NOT IN ('hold', 'block')
-            AND r.type <> 'employee'
+            WHERE rd.billable = TRUE
         ),
         rr_totals AS (
             SELECT rd_id, SUM(rr_price) as sum_rr_price FROM rr_base GROUP BY rd_id
         ),
-        res_sales AS (
+        -- Multi-perspective Sales (Month vs Total)
+        res_sales_agg AS (
             SELECT 
                 reservation_id,
+                SUM(CASE WHEN date BETWEEN $3 AND $4 THEN amount ELSE 0 END) as month_sales,
                 SUM(amount) as total_sales
             FROM (
                 SELECT 
                     b.reservation_id,
+                    b.date,
                     CASE WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price) ELSE b.rr_price END as amount
                 FROM rr_base b
                 JOIN rr_totals t ON b.rd_id = t.rd_id
                 UNION ALL
                 SELECT 
-                    r.id as reservation_id,
+                    ra.reservation_id,
+                    rd.date,
                     (ra.price * ra.quantity) as amount
                 FROM reservation_addons ra
                 JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
-                JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
-                WHERE rd.date BETWEEN $1 AND $2
-                AND ra.hotel_id = $3
-                AND r.reservation_client_id = $4
-                AND rd.billable = TRUE
-                AND r.status NOT IN ('hold', 'block')
-                AND r.type <> 'employee'
+                JOIN res_list r ON ra.reservation_id = r.id
+                WHERE rd.billable = TRUE
             ) s GROUP BY reservation_id
         ),
-        res_payments AS (
-            SELECT rp.reservation_id, SUM(rp.value) as total_payments
+        -- Multi-perspective Payments (Month vs Total)
+        res_payments_agg AS (
+            SELECT 
+                rp.reservation_id,
+                SUM(CASE WHEN rp.date BETWEEN $3 AND $4 THEN rp.value ELSE 0 END) as month_payments,
+                SUM(rp.value) as total_payments
             FROM reservation_payments rp
-            JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
-            WHERE rp.date BETWEEN $1 AND $2
-            AND rp.hotel_id = $3
-            AND r.reservation_client_id = $4
+            JOIN res_list rl ON rp.reservation_id = rl.id
             GROUP BY rp.reservation_id
         )
         SELECT 
@@ -645,18 +654,19 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
             r.check_in,
             r.check_out,
             r.status,
-            COALESCE(rs.total_sales, 0) as total_sales,
-            COALESCE(rp.total_payments, 0) as total_payments,
-            COALESCE(rp.total_payments, 0) - COALESCE(rs.total_sales, 0) as difference
-        FROM reservations r
-        LEFT JOIN res_sales rs ON r.id = rs.reservation_id
-        LEFT JOIN res_payments rp ON r.id = rp.reservation_id
-        WHERE r.hotel_id = $3 AND r.reservation_client_id = $4
-        AND (rs.total_sales IS NOT NULL OR rp.total_payments IS NOT NULL)
+            COALESCE(sa.month_sales, 0) as month_sales,
+            COALESCE(pa.month_payments, 0) as month_payments,
+            COALESCE(sa.total_sales, 0) as total_sales,
+            COALESCE(pa.total_payments, 0) as total_payments,
+            COALESCE(pa.total_payments, 0) - COALESCE(sa.total_sales, 0) as total_difference
+        FROM res_list rl
+        JOIN reservations r ON rl.id = r.id
+        LEFT JOIN res_sales_agg sa ON rl.id = sa.reservation_id
+        LEFT JOIN res_payments_agg pa ON rl.id = pa.reservation_id
         ORDER BY r.check_in DESC
         `;
 
-        const result = await client.query(query, [startDate, endDate, hotelId, clientId]);
+        const result = await client.query(query, [hotelId, clientId, startDate, endDate]);
         return result.rows;
     } finally {
         if (shouldRelease) client.release();

@@ -292,11 +292,18 @@ watch(selectedDate, () => {
                                                 {{ formatDateToYMD(res.check_in) }} ～ {{ formatDateToYMD(res.check_out) }}
                                             </p>
                                         </div>
-                                        <Tag :value="translateReservationStatus(res.status)" severity="info" class="text-[10px]" />
+                                        <div class="flex flex-col items-end gap-1">
+                                            <Tag :value="translateReservationStatus(res.status)" severity="info" class="text-[10px]" />
+                                            <Tag v-if="Math.abs(res.total_difference) <= 1" value="全額受領済" severity="success" class="text-[9px]" />
+                                            <Tag v-else :value="res.total_difference > 0 ? '過入金' : '未収金'" :severity="res.total_difference > 0 ? 'warn' : 'danger'" class="text-[9px]" />
+                                        </div>
                                     </div>
-                                    <div class="grid grid-cols-2 gap-2 text-xs mb-3">
-                                        <div class="text-slate-500">売上: <span class="text-slate-700 dark:text-slate-300">{{ formatCurrency(res.total_sales) }}</span></div>
-                                        <div class="text-slate-500">入金: <span class="text-slate-700 dark:text-slate-300">{{ formatCurrency(res.total_payments) }}</span></div>
+                                    <div class="grid grid-cols-2 gap-2 text-xs mb-1">
+                                        <div class="text-slate-500">今月売上: <span class="text-slate-700 dark:text-slate-300">{{ formatCurrency(res.month_sales) }}</span></div>
+                                        <div class="text-slate-500">今月入金: <span class="text-slate-700 dark:text-slate-300">{{ formatCurrency(res.month_payments) }}</span></div>
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 mb-3 flex justify-between">
+                                        <span>全体合計: 売上 {{ formatCurrency(res.total_sales) }} / 入金 {{ formatCurrency(res.total_payments) }}</span>
                                     </div>
                                     <div class="flex gap-2">
                                         <Button icon="pi pi-pencil" label="修正" class="p-button-xs flex-1" severity="secondary" @click="openReservation(res.reservation_id)" />
