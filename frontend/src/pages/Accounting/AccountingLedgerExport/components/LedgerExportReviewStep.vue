@@ -80,7 +80,7 @@
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
                                         <span class="text-slate-600 dark:text-slate-400 font-medium">{{ group.hotel_name }}</span>
-                                        <i v-if="!group.is_dept_configured" class="pi pi-exclamation-triangle text-amber-500 text-xs" title="部門設定が未完了です"></i>
+                                        <i v-if="!group.is_dept_configured" class="pi pi-exclamation-triangle text-amber-500 text-xs" v-tooltip="'部門設定が未完了です'"></i>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
