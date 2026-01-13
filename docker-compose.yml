@@ -76,7 +76,7 @@ services:
 
   # pgAdmin Service
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:9.11
     container_name: wehub-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
