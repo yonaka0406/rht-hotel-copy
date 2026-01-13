@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-01-13
+
+- New Feature: Added Accounting Module with Sales Data Export functionality.
+
+---
+
 ## [1.3.10] - 2026-01-09
 
 - Fix: Resolved password reset errors by aligning frontend and backend validation rules, including mandatory special characters.
