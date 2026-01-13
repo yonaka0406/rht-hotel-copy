@@ -64,6 +64,7 @@ const AccountingMainPage = () => import('@/pages/Accounting/Main/AccountingMainP
 const AccountingDashboard = () => import('@/pages/Accounting/AccountingDashboard/AccountingDashboard.vue');
 const AccountingLedgerExport = () => import('@/pages/Accounting/AccountingLedgerExport/AccountingLedgerExport.vue');
 const AccountingSettings = () => import('@/pages/Accounting/AccountingSettings/AccountingSettings.vue');
+const AccountingReconciliation = () => import('@/pages/Accounting/AccountingReconciliation/AccountingReconciliation.vue');
 
 
 const routes = [
@@ -176,6 +177,7 @@ const routes = [
       { path: '', redirect: { name: 'AccountingDashboard' } },
       { path: 'dashboard', name: 'AccountingDashboard', component: AccountingDashboard },
       { path: 'ledger-export', name: 'AccountingLedgerExport', component: AccountingLedgerExport },
+      { path: 'reconciliation', name: 'AccountingReconciliation', component: AccountingReconciliation },
       { path: 'settings', name: 'AccountingSettings', component: AccountingSettings },
     ],
     meta: { requiresAuth: true, requiresAccounting: true }

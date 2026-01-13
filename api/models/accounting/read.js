@@ -405,6 +405,264 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
     }
 };
 
+/**
+ * Reconciliation Model: Overview (Grouped by Hotel)
+ */
+const getReconciliationOverview = async (requestId, startDate, endDate, hotelIds, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    try {
+        const query = `
+        WITH rr_base AS (
+            SELECT 
+                rd.hotel_id,
+                rd.id as rd_id,
+                CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END as total_rd_price,
+                rr.id as rr_id,
+                CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END as rr_price,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = ANY($3::int[])
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+        ),
+        rr_totals AS (
+            SELECT rd_id, SUM(rr_price) as sum_rr_price FROM rr_base GROUP BY rd_id
+        ),
+        plan_sales AS (
+            SELECT 
+                b.hotel_id,
+                CASE WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price) ELSE b.rr_price END as amount
+            FROM rr_base b
+            JOIN rr_totals t ON b.rd_id = t.rd_id
+        ),
+        addon_sales AS (
+            SELECT 
+                ra.hotel_id,
+                (ra.price * ra.quantity) as amount
+            FROM reservation_addons ra
+            JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND ra.hotel_id = ANY($3::int[])
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+        ),
+        hotel_sales AS (
+            SELECT hotel_id, SUM(amount) as total_sales FROM (
+                SELECT hotel_id, amount FROM plan_sales
+                UNION ALL
+                SELECT hotel_id, amount FROM addon_sales
+            ) s GROUP BY hotel_id
+        ),
+        hotel_payments AS (
+            SELECT hotel_id, SUM(value) as total_payments
+            FROM reservation_payments
+            WHERE date BETWEEN $1 AND $2
+            AND hotel_id = ANY($3::int[])
+            GROUP BY hotel_id
+        )
+        SELECT 
+            h.id as hotel_id,
+            h.name as hotel_name,
+            COALESCE(hs.total_sales, 0) as total_sales,
+            COALESCE(hp.total_payments, 0) as total_payments,
+            COALESCE(hp.total_payments, 0) - COALESCE(hs.total_sales, 0) as difference
+        FROM hotels h
+        LEFT JOIN hotel_sales hs ON h.id = hs.hotel_id
+        LEFT JOIN hotel_payments hp ON h.id = hp.hotel_id
+        WHERE h.id = ANY($3::int[])
+        ORDER BY h.id
+        `;
+
+        const result = await client.query(query, [startDate, endDate, hotelIds]);
+        return result.rows;
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Reconciliation Model: Hotel Details (Grouped by Client)
+ */
+const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endDate, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    try {
+        const query = `
+        WITH rr_base AS (
+            SELECT 
+                r.reservation_client_id,
+                rd.id as rd_id,
+                CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END as total_rd_price,
+                rr.id as rr_id,
+                CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END as rr_price,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = $3
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+        ),
+        rr_totals AS (
+            SELECT rd_id, SUM(rr_price) as sum_rr_price FROM rr_base GROUP BY rd_id
+        ),
+        plan_sales AS (
+            SELECT 
+                b.reservation_client_id,
+                CASE WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price) ELSE b.rr_price END as amount
+            FROM rr_base b
+            JOIN rr_totals t ON b.rd_id = t.rd_id
+        ),
+        addon_sales AS (
+            SELECT 
+                r.reservation_client_id,
+                (ra.price * ra.quantity) as amount
+            FROM reservation_addons ra
+            JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND ra.hotel_id = $3
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+        ),
+        client_sales AS (
+            SELECT reservation_client_id, SUM(amount) as total_sales FROM (
+                SELECT reservation_client_id, amount FROM plan_sales
+                UNION ALL
+                SELECT reservation_client_id, amount FROM addon_sales
+            ) s GROUP BY reservation_client_id
+        ),
+        client_payments AS (
+            SELECT r.reservation_client_id, SUM(rp.value) as total_payments
+            FROM reservation_payments rp
+            JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
+            WHERE rp.date BETWEEN $1 AND $2
+            AND rp.hotel_id = $3
+            GROUP BY r.reservation_client_id
+        )
+        SELECT 
+            c.id as client_id,
+            COALESCE(c.name_kanji, c.name_kana, c.name) as client_name,
+            COALESCE(cs.total_sales, 0) as total_sales,
+            COALESCE(cp.total_payments, 0) as total_payments,
+            COALESCE(cp.total_payments, 0) - COALESCE(cs.total_sales, 0) as difference
+        FROM clients c
+        LEFT JOIN client_sales cs ON c.id = cs.reservation_client_id
+        LEFT JOIN client_payments cp ON c.id = cp.reservation_client_id
+        WHERE (cs.total_sales IS NOT NULL OR cp.total_payments IS NOT NULL)
+        AND ABS(COALESCE(cp.total_payments, 0) - COALESCE(cs.total_sales, 0)) > 1
+        ORDER BY ABS(COALESCE(cp.total_payments, 0) - COALESCE(cs.total_sales, 0)) DESC
+        `;
+
+        const result = await client.query(query, [startDate, endDate, hotelId]);
+        return result.rows;
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Reconciliation Model: Client Details (Reservations)
+ */
+const getReconciliationClientDetails = async (requestId, hotelId, clientId, startDate, endDate, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    try {
+        const query = `
+        WITH rr_base AS (
+            SELECT 
+                r.id as reservation_id,
+                rd.id as rd_id,
+                CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END as total_rd_price,
+                rr.id as rr_id,
+                CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END as rr_price,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            WHERE rd.date BETWEEN $1 AND $2
+            AND rd.hotel_id = $3
+            AND r.reservation_client_id = $4
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+        ),
+        rr_totals AS (
+            SELECT rd_id, SUM(rr_price) as sum_rr_price FROM rr_base GROUP BY rd_id
+        ),
+        res_sales AS (
+            SELECT 
+                reservation_id,
+                SUM(amount) as total_sales
+            FROM (
+                SELECT 
+                    b.reservation_id,
+                    CASE WHEN b.rn = 1 THEN b.rr_price + (b.total_rd_price - t.sum_rr_price) ELSE b.rr_price END as amount
+                FROM rr_base b
+                JOIN rr_totals t ON b.rd_id = t.rd_id
+                UNION ALL
+                SELECT 
+                    r.id as reservation_id,
+                    (ra.price * ra.quantity) as amount
+                FROM reservation_addons ra
+                JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+                JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                WHERE rd.date BETWEEN $1 AND $2
+                AND ra.hotel_id = $3
+                AND r.reservation_client_id = $4
+                AND rd.billable = TRUE
+                AND r.status NOT IN ('hold', 'block')
+                AND r.type <> 'employee'
+            ) s GROUP BY reservation_id
+        ),
+        res_payments AS (
+            SELECT rp.reservation_id, SUM(rp.value) as total_payments
+            FROM reservation_payments rp
+            JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
+            WHERE rp.date BETWEEN $1 AND $2
+            AND rp.hotel_id = $3
+            AND r.reservation_client_id = $4
+            GROUP BY rp.reservation_id
+        )
+        SELECT 
+            r.id as reservation_id,
+            r.check_in,
+            r.check_out,
+            r.status,
+            COALESCE(rs.total_sales, 0) as total_sales,
+            COALESCE(rp.total_payments, 0) as total_payments,
+            COALESCE(rp.total_payments, 0) - COALESCE(rs.total_sales, 0) as difference
+        FROM reservations r
+        LEFT JOIN res_sales rs ON r.id = rs.reservation_id
+        LEFT JOIN res_payments rp ON r.id = rp.reservation_id
+        WHERE r.hotel_id = $3 AND r.reservation_client_id = $4
+        AND (rs.total_sales IS NOT NULL OR rp.total_payments IS NOT NULL)
+        ORDER BY r.check_in DESC
+        `;
+
+        const result = await client.query(query, [startDate, endDate, hotelId, clientId]);
+        return result.rows;
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     getAccountCodes,
     getMappings,
@@ -412,5 +670,8 @@ module.exports = {
     getManagementGroups,
     getTaxClasses,
     getDepartments,
-    getDashboardMetrics
+    getDashboardMetrics,
+    getReconciliationOverview,
+    getReconciliationHotelDetails,
+    getReconciliationClientDetails
 };

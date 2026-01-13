@@ -18,6 +18,9 @@ router.delete('/accounting/settings/departments/:id', authMiddleware_accounting,
 
 // Dashboard
 router.get('/accounting/dashboard/metrics', authMiddleware_accounting, accountingController.getDashboardMetrics);
+router.get('/accounting/dashboard/reconciliation', authMiddleware_accounting, accountingController.getReconciliationOverview);
+router.get('/accounting/dashboard/reconciliation/hotel/:hotelId', authMiddleware_accounting, accountingController.getReconciliationHotelDetails);
+router.get('/accounting/dashboard/reconciliation/hotel/:hotelId/client/:clientId', authMiddleware_accounting, accountingController.getReconciliationClientDetails);
 
 // Export
 router.get('/accounting/export/options', authMiddleware_accounting, accountingController.getExportOptions);

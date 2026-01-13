@@ -158,38 +158,38 @@ onMounted(async () => {
                     </section>
                 </div>
 
-                <!-- Right Column: At a Glance -->
+                <!-- Right Column: Status Overview -->
                 <div class="space-y-6">
                     <div class="flex items-center gap-3 mb-2">
-                        <div class="h-8 w-1 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></div>
-                        <h2 class="text-xl font-bold text-slate-800 dark:text-white">At a Glance</h2>
+                        <div class="h-8 w-1 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
+                        <h2 class="text-xl font-bold text-slate-800 dark:text-white">概況概要</h2>
                     </div>
 
                     <div class="space-y-4">
                         <!-- Total Payments Last Month -->
                         <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                             <div class="flex items-center justify-between mb-4">
-                                <div class="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                                    <i class="pi pi-wallet text-blue-600 dark:text-blue-400 text-lg"></i>
+                                <div class="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                                    <i class="pi pi-wallet text-slate-600 dark:text-slate-400 text-lg"></i>
                                 </div>
                                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">先月の入金合計</span>
                             </div>
                             <div class="mb-2">
                                 <p v-if="isLoading" class="text-3xl font-bold text-slate-900 dark:text-white animate-pulse">...</p>
-                                <p v-else class="text-3xl font-bold text-slate-900 dark:text-white">
+                                <p v-else class="text-3xl font-bold text-slate-900 dark:text-white text-center sm:text-left">
                                     {{ metrics.totalPayments ? `¥${metrics.totalPayments.toLocaleString()}` : '¥0' }}
                                 </p>
-                                <div v-if="!isLoading && metrics.totalSales !== null" class="mt-1">
+                                <div v-if="!isLoading && metrics.totalSales !== null" class="mt-1 text-center sm:text-left">
                                     <small :class="Math.abs(metrics.totalPayments - metrics.totalSales) > 1 ? 'text-rose-500 font-medium' : 'text-slate-500'">
                                         売上計上との差額: {{ (metrics.totalPayments - metrics.totalSales) > 0 ? '+' : '' }}{{ (metrics.totalPayments - metrics.totalSales).toLocaleString() }}
                                     </small>
                                 </div>
-                                <p class="text-sm font-medium text-slate-600 dark:text-slate-400 mt-1">カード・現金・請求書等</p>
+                                <p class="text-sm font-medium text-slate-600 dark:text-slate-400 mt-1 text-center sm:text-left text-[10px] sm:text-sm">カード・現金・請求書等</p>
                             </div>
                             <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
-                                    内訳を表示 <i class="pi pi-arrow-right text-[10px]"></i>
-                                </span>
+                                <button @click="$router.push({ name: 'AccountingReconciliation' })" class="w-full sm:w-auto text-xs font-semibold text-slate-500 hover:text-violet-600 flex items-center justify-center sm:justify-start gap-1 transition-colors cursor-pointer bg-transparent border-none p-0">
+                                    差異分析・詳細を表示 <i class="pi pi-arrow-right text-[10px]"></i>
+                                </button>
                             </div>
                         </div>
 

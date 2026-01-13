@@ -77,6 +77,36 @@ export function useAccountingStore() {
         }
     };
 
+    const fetchReconciliationOverview = async (params) => {
+        try {
+            const query = new URLSearchParams(params).toString();
+            const data = await get(`/accounting/dashboard/reconciliation?${query}`);
+            return data;
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const fetchReconciliationHotelDetails = async (hotelId, params) => {
+        try {
+            const query = new URLSearchParams(params).toString();
+            const data = await get(`/accounting/dashboard/reconciliation/hotel/${hotelId}?${query}`);
+            return data;
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    const fetchReconciliationClientDetails = async (hotelId, clientId, params) => {
+        try {
+            const query = new URLSearchParams(params).toString();
+            const data = await get(`/accounting/dashboard/reconciliation/hotel/${hotelId}/client/${clientId}?${query}`);
+            return data;
+        } catch (err) {
+            throw err;
+        }
+    };
+
 
     const upsertAccountCode = async (data) => {
         try {
@@ -182,6 +212,9 @@ export function useAccountingStore() {
         upsertDepartment,
         deleteDepartment,
         clearPreviewData,
-        fetchDashboardMetrics
+        fetchDashboardMetrics,
+        fetchReconciliationOverview,
+        fetchReconciliationHotelDetails,
+        fetchReconciliationClientDetails
     };
 }

@@ -38,6 +38,12 @@ const breadcrumbs = computed(() => {
     } else if (route.path === '/accounting/ledger-export') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
         crumbs.push({ label: '帳票出力' });
+    } else if (route.path === '/accounting/reconciliation') {
+        crumbs.push({ label: '会計', to: '/accounting/dashboard' });
+        crumbs.push({ label: '入金照合' });
+    } else if (route.path === '/accounting/settings') {
+        crumbs.push({ label: '会計', to: '/accounting/dashboard' });
+        crumbs.push({ label: '設定' });
     } else if (route.path.startsWith('/accounting')) {
         crumbs.push({ label: '会計' });
     }

@@ -62,6 +62,72 @@ const getDashboardMetrics = async (req, res, next) => {
     }
 };
 
+const getReconciliationOverview = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { startDate, endDate, hotelIds } = req.query;
+
+        // Same hotel ID resolution as metrics
+        let targetHotelIds = [];
+        if (hotelIds && hotelIds !== 'null' && hotelIds !== 'undefined') {
+            if (Array.isArray(hotelIds)) {
+                targetHotelIds = hotelIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+            } else {
+                if (typeof hotelIds === 'string' && hotelIds.includes(',')) {
+                    targetHotelIds = hotelIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+                } else {
+                    targetHotelIds = [parseInt(hotelIds)].filter(id => !isNaN(id));
+                }
+            }
+        }
+
+        if (targetHotelIds.length === 0) {
+            const hotelModel = require('../../models/hotel/read');
+            const allHotels = await hotelModel.getAllHotels(requestId);
+            targetHotelIds = allHotels.map(h => h.id);
+        }
+
+        const data = await accountingModel.getReconciliationOverview(requestId, startDate, endDate, targetHotelIds);
+        res.json(data);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getReconciliationHotelDetails = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { hotelId } = req.params;
+        const { startDate, endDate } = req.query;
+
+        validationUtils.validateNumericParam(hotelId, 'hotelId');
+
+        const data = await accountingModel.getReconciliationHotelDetails(requestId, parseInt(hotelId), startDate, endDate);
+        res.json(data);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getReconciliationClientDetails = async (req, res, next) => {
+    try {
+        const { requestId } = req;
+        const { hotelId, clientId } = req.params;
+        const { startDate, endDate } = req.query;
+
+        validationUtils.validateNumericParam(hotelId, 'hotelId');
+        validationUtils.validateUuidParam(clientId, 'clientId');
+
+        const data = await accountingModel.getReconciliationClientDetails(requestId, parseInt(hotelId), clientId, startDate, endDate);
+        res.json(data);
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
-    getDashboardMetrics
+    getDashboardMetrics,
+    getReconciliationOverview,
+    getReconciliationHotelDetails,
+    getReconciliationClientDetails
 };
