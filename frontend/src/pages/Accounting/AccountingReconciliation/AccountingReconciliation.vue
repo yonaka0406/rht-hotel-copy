@@ -209,7 +209,7 @@ watch(selectedDate, () => {
             </div>
 
             <!-- Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">合計売上 (税込)</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatCurrency(totals.sales) }}</p>
@@ -217,12 +217,6 @@ watch(selectedDate, () => {
                 <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">合計入金</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatCurrency(totals.payments) }}</p>
-                </div>
-                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700" :class="Math.abs(totals.payments - totals.sales) > 10 ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-emerald-500'">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">不一致額合計</p>
-                    <p class="text-2xl font-bold" :class="Math.abs(totals.payments - totals.sales) > 10 ? 'text-rose-600' : 'text-emerald-600'">
-                        {{ formatCurrency(totals.payments - totals.sales) }}
-                    </p>
                 </div>
             </div>
 
