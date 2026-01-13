@@ -8,7 +8,7 @@ const getAccountCodes = async (requestId, dbClient = null) => {
 
     const query = `
         SELECT * FROM acc_account_codes 
-        ORDER BY code ASC
+        ORDER BY code::BIGINT ASC
     `;
 
     try {
@@ -30,7 +30,7 @@ const getMappings = async (requestId, hotel_id, dbClient = null) => {
     // Fetch mappings for the specific hotel AND global mappings (hotel_id IS NULL)
     // We might want to filter or prioritize in the query, but fetching all relevant is safer.
     const query = `
-        SELECT am.*, ac.code as account_code, ac.name as account_name, ac.category as account_category
+        SELECT am.*, ac.code as account_code, ac.name as account_name, ac.category1 as account_category
         FROM acc_accounting_mappings am
         JOIN acc_account_codes ac ON am.account_code_id = ac.id
         WHERE am.hotel_id = $1 OR am.hotel_id IS NULL

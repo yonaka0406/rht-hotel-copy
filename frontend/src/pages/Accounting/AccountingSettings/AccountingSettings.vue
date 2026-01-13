@@ -1,159 +1,193 @@
 <template>
     <div class="bg-slate-50 dark:bg-slate-900 min-h-screen p-6 font-sans transition-colors duration-300">
-        <div class="max-w-7xl mx-auto flex flex-col items-center">
-            <!-- Header -->
-            <div class="mb-12 text-center w-full">
-                <div class="inline-flex items-center justify-center p-3 bg-violet-100 dark:bg-violet-900/30 rounded-2xl mb-4">
-                    <i class="pi pi-cog text-3xl text-violet-600 dark:text-violet-400"></i>
+        <div class="max-w-7xl mx-auto px-4">
+            <!-- Hero Row -->
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all duration-300">
+                <div class="flex items-center gap-6">
+                    <div class="flex-shrink-0 inline-flex items-center justify-center w-16 h-16 bg-violet-600 rounded-2xl shadow-lg shadow-violet-200 dark:shadow-none">
+                        <i class="pi pi-cog text-3xl text-white"></i>
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                            会計マスター設定
+                        </h1>
+                        <p class="text-slate-500 dark:text-slate-400 font-medium">
+                            勘定科目、管理区分、および税区分の管理を行います。
+                        </p>
+                    </div>
                 </div>
-                <h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-3">
-                    会計マスター設定
-                </h1>
-                <p class="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    勘定科目、管理区分、および税区分の管理を行います。
-                </p>
-            </div>
-
-            <!-- Tabs -->
-            <div class="w-full max-w-6xl mb-8 flex border-b border-slate-200 dark:border-slate-700">
-                <button 
-                    v-for="tab in tabs" 
-                    :key="tab.id"
-                    @click="activeTab = tab.id"
-                    class="px-8 py-4 font-black transition-all border-b-2"
-                    :class="activeTab === tab.id ? 'border-violet-600 text-violet-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
-                >
-                    {{ tab.label }}
+                
+                <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 px-6 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-black hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
+                    <i class="pi pi-arrow-left text-sm"></i>
+                    <span>ダッシュボードに戻る</span>
                 </button>
             </div>
 
-            <!-- Content Area -->
-            <div class="w-full max-w-6xl bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden p-8">
-                <div v-if="loading" class="flex flex-col items-center justify-center py-20">
-                    <i class="pi pi-spin pi-spinner text-4xl text-violet-600 mb-4"></i>
-                    <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">データ読み込み中...</p>
+            <!-- Tabs and Content Container -->
+            <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
+                <!-- Tabs Container -->
+                <div class="flex overflow-x-auto bg-slate-100/50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-2 gap-2">
+                    <button 
+                        v-for="tab in tabs" 
+                        :key="tab.id"
+                        @click="activeTab = tab.id"
+                        class="px-8 py-3 font-black rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                        :class="activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50 bg-transparent'"
+                    >
+                        {{ tab.label }}
+                    </button>
                 </div>
 
-                <div v-else>
-                    <!-- Account Codes Tab -->
-                    <div v-if="activeTab === 'codes'">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-black text-slate-900 dark:text-white">勘定科目一覧</h2>
-                            <button @click="openModal('code')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2">
-                                <i class="pi pi-plus"></i> 新規追加
-                            </button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="border-b border-slate-100 dark:border-slate-700">
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">コード</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">科目名</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">管理区分</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">状態</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="item in settings.codes" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                        <td class="py-4 px-4 font-black tabular-nums">{{ item.code }}</td>
-                                        <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                        <td class="py-4 px-4 text-sm text-slate-500">{{ getGroupName(item.management_group_id) }}</td>
-                                        <td class="py-4 px-4">
-                                            <span :class="item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'" class="text-[10px] font-black px-2 py-1 rounded-md uppercase">
-                                                {{ item.is_active ? '有効' : '無効' }}
-                                            </span>
-                                        </td>
-                                        <td class="py-4 px-4">
-                                            <div class="flex gap-2">
-                                                <button @click="editItem('code', item)" class="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-all"><i class="pi pi-pencil"></i></button>
-                                                <button @click="confirmDelete('code', item)" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><i class="pi pi-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                <!-- Content Area -->
+                <div class="p-8">
+                    <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+                        <i class="pi pi-spin pi-spinner text-4xl text-violet-600 mb-4"></i>
+                        <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">データ読み込み中...</p>
                     </div>
 
-                    <!-- Management Groups Tab -->
-                    <div v-if="activeTab === 'groups'">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-black text-slate-900 dark:text-white">管理区分設定</h2>
-                            <button @click="openModal('group')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2">
-                                <i class="pi pi-plus"></i> 新規追加
-                            </button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="border-b border-slate-100 dark:border-slate-700">
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">順序</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">区分名</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="item in settings.groups" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                        <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
-                                        <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                        <td class="py-4 px-4">
-                                            <div class="flex gap-2">
-                                                <button @click="editItem('group', item)" class="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-all"><i class="pi pi-pencil"></i></button>
-                                                <button @click="confirmDelete('group', item)" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><i class="pi pi-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <div v-else>
+                        <!-- Account Codes Tab -->
+                        <div v-if="activeTab === 'codes'">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white">勘定科目一覧</h2>
+                                <button @click="openModal('code')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
+                                    <i class="pi pi-plus"></i> 新規追加
+                                </button>
+                            </div>
 
-                    <!-- Tax Classes Tab -->
-                    <div v-if="activeTab === 'tax'">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-black text-slate-900 dark:text-white">税区分設定</h2>
-                            <button @click="openModal('tax')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2">
-                                <i class="pi pi-plus"></i> 新規追加
-                            </button>
+                            <!-- Group Filter Buttons -->
+                            <div class="flex flex-wrap gap-2 mb-8 p-1 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl w-fit">
+                                <button 
+                                    @click="selectedGroupFilter = null"
+                                    class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
+                                    :class="!selectedGroupFilter ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
+                                >
+                                    すべて
+                                </button>
+                                <button 
+                                    v-for="group in settings.groups" 
+                                    :key="group.id"
+                                    @click="selectedGroupFilter = group.id"
+                                    class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
+                                    :class="selectedGroupFilter === group.id ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
+                                >
+                                    {{ group.name }}
+                                </button>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-100 dark:border-slate-700">
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">コード</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">科目名</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">管理区分</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">状態</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="item in filteredCodes" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                            <td class="py-4 px-4 font-black tabular-nums">{{ item.code }}</td>
+                                            <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                            <td class="py-4 px-4 text-sm text-slate-500">{{ getGroupName(item.management_group_id) }}</td>
+                                            <td class="py-4 px-4">
+                                                <span :class="item.is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'" class="text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                                    {{ item.is_active ? '有効' : '無効' }}
+                                                </span>
+                                            </td>
+                                            <td class="py-4 px-4">
+                                                <div class="flex gap-2">
+                                                    <button @click="editItem('code', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('code', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="filteredCodes.length === 0">
+                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="border-b border-slate-100 dark:border-slate-700">
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">順序</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">税区分名 (システム)</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">弥生会計名</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-32">税率</th>
-                                        <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="item in settings.taxClasses" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                        <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
-                                        <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                        <td class="py-4 px-4 text-sm">{{ item.yayoi_name }}</td>
-                                        <td class="py-4 px-4 font-black tabular-nums">{{ (item.tax_rate * 100).toFixed(0) }}%</td>
-                                        <td class="py-4 px-4">
-                                            <div class="flex gap-2">
-                                                <button @click="editItem('tax', item)" class="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-all"><i class="pi pi-pencil"></i></button>
-                                                <button @click="confirmDelete('tax', item)" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><i class="pi pi-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+
+                        <!-- Management Groups Tab -->
+                        <div v-if="activeTab === 'groups'">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white">管理区分設定</h2>
+                                <button @click="openModal('group')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer">
+                                    <i class="pi pi-plus"></i> 新規追加
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-100 dark:border-slate-700">
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">順序</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">区分名</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="item in settings.groups" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                            <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
+                                            <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                            <td class="py-4 px-4">
+                                                <div class="flex gap-2">
+                                                    <button @click="editItem('group', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('group', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="settings.groups.length === 0">
+                                            <td colspan="3" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tax Classes Tab -->
+                        <div v-if="activeTab === 'tax'">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white">税区分設定</h2>
+                                <button @click="openModal('tax')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer">
+                                    <i class="pi pi-plus"></i> 新規追加
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-100 dark:border-slate-700">
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">順序</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">税区分名 (システム)</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">弥生会計名</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-32">税率</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="item in settings.taxClasses" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                            <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
+                                            <td class="py-4 px-4 font-bold">{{ item.name }}</td>
+                                            <td class="py-4 px-4 text-sm">{{ item.yayoi_name }}</td>
+                                            <td class="py-4 px-4 font-black tabular-nums">{{ (item.tax_rate * 100).toFixed(0) }}%</td>
+                                            <td class="py-4 px-4">
+                                                <div class="flex gap-2">
+                                                    <button @click="editItem('tax', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('tax', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="settings.taxClasses.length === 0">
+                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Back Button -->
-            <div class="mt-12">
-                <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 text-slate-500 hover:text-violet-600 font-bold transition-all">
-                    <i class="pi pi-arrow-left"></i>
-                    ダッシュボードに戻る
-                </button>
             </div>
         </div>
 
@@ -230,7 +264,7 @@
             </div>
         </Dialog>
 
-        <ConfirmDialog />
+        <ConfirmDialog group="accounting-settings" />
     </div>
 </template>
 
@@ -248,10 +282,12 @@ import ConfirmDialog from 'primevue/confirmdialog';
 
 const store = useAccountingStore();
 const confirm = useConfirm();
+const toast = useToast();
 // Note: Toast might need to be provided in main.js, assuming it is.
 const activeTab = ref('codes');
 const loading = ref(true);
 const saving = ref(false);
+const selectedGroupFilter = ref(null);
 
 const tabs = [
     { id: 'codes', label: '勘定科目' },
@@ -263,6 +299,11 @@ const settings = reactive({
     codes: [],
     groups: [],
     taxClasses: []
+});
+
+const filteredCodes = computed(() => {
+    if (!selectedGroupFilter.value) return settings.codes;
+    return settings.codes.filter(c => c.management_group_id === selectedGroupFilter.value);
 });
 
 const modal = reactive({
@@ -297,6 +338,12 @@ const fetchSettings = async () => {
         settings.taxClasses = data.taxClasses;
     } catch (err) {
         console.error('Failed to fetch accounting settings', err);
+        toast.add({ 
+            severity: 'error', 
+            summary: 'システムエラー', 
+            detail: '設定データの取得に失敗しました。ページを更新してください。', 
+            life: 5000 
+        });
     } finally {
         loading.value = false;
     }
@@ -360,8 +407,10 @@ const handleSave = async () => {
         
         modal.visible = false;
         await fetchSettings();
+        toast.add({ severity: 'success', summary: '成功', detail: '保存しました。', life: 3000 });
     } catch (err) {
         console.error('Save failed', err);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '保存に失敗しました。', life: 3000 });
     } finally {
         saving.value = false;
     }
@@ -369,18 +418,33 @@ const handleSave = async () => {
 
 const confirmDelete = (type, item) => {
     confirm.require({
+        group: 'accounting-settings',
         message: '本当に削除しますか？この操作は取り消せません。',
         header: '削除の確認',
         icon: 'pi pi-exclamation-triangle',
-        acceptClass: 'p-button-danger',
+        acceptLabel: 'はい',
+        rejectLabel: 'いいえ',
+        acceptProps: {
+            label: 'はい',
+            severity: 'danger',
+            class: 'px-6 py-2 rounded-xl font-bold'
+        },
+        rejectProps: {
+            label: 'いいえ',
+            severity: 'secondary',
+            variant: 'text',
+            class: 'px-6 py-2 rounded-xl font-bold font-medium'
+        },
         accept: async () => {
             try {
                 if (type === 'code') await store.deleteAccountCode(item.id);
                 else if (type === 'group') await store.deleteManagementGroup(item.id);
                 else if (type === 'tax') await store.deleteTaxClass(item.id);
                 await fetchSettings();
+                toast.add({ severity: 'success', summary: '成功', detail: '削除しました。', life: 3000 });
             } catch (err) {
                 console.error('Delete failed', err);
+                toast.add({ severity: 'error', summary: 'エラー', detail: '削除に失敗しました。', life: 3000 });
             }
         }
     });

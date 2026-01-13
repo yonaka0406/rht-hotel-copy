@@ -39,11 +39,12 @@ CREATE TABLE acc_tax_classes (
 
 -- Seed Tax Classes
 INSERT INTO acc_tax_classes (name, yayoi_name, tax_rate, display_order, created_by) VALUES
-('課税売上10%', '課税売上内10%', 0.10, 1, 1),
-('課税売上軽減8%', '課税売上内軽減8%', 0.08, 2, 1),
-('非課税売上', '非課売上', 0.00, 3, 1),
-('課税仕入10%', '課税仕入内10%', 0.10, 4, 1),
-('対象外', '対象外', 0.00, 99, 1);
+('対象外', '対象外', 0.00, 1, 1),
+('課税売上10%', '課税売上10%', 0.10, 2, 1),
+('課税売上8%(軽)', '課税売上8%(軽)', 0.08, 3, 1),
+('非課税売上', '非課税売上', 0.00, 4, 1),
+('課税対応仕入10%', '課対仕入10%', 0.10, 5, 1),
+('課税対応仕入8%(軽)', '課対仕入8%(軽)', 0.08, 6, 1);
 
 -- 3. Account Codes Master
 -- Defines the chart of accounts or specific codes used for external auditing/ledger.
