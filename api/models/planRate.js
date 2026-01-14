@@ -281,6 +281,21 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
     }
 };
 
+// Helper to normalize plan IDs
+const normalizePlanIds = (plansRate) => {
+    // Backend guards to ensure data integrity
+    // Convert 0 to null for plans_global_id and plans_hotel_id to satisfy database constraints
+    let plans_global_id = plansRate.plans_global_id === 0 ? null : plansRate.plans_global_id;
+    let plans_hotel_id = plansRate.plans_hotel_id === 0 ? null : plansRate.plans_hotel_id;
+
+    // Enforce mutual exclusion: if plans_hotel_id is present, it takes precedence over plans_global_id
+    if (plans_hotel_id) {
+        plans_global_id = null;
+    }
+
+    return { plans_global_id, plans_hotel_id };
+};
+
 // Create a new plans_rate
 const createPlansRate = async (requestId, plansRate) => {
     const pool = getPool(requestId);
@@ -306,10 +321,7 @@ const createPlansRate = async (requestId, plansRate) => {
         RETURNING *
     `;
 
-    // Backend guards to ensure data integrity
-    // Convert 0 to null for plans_global_id and plans_hotel_id to satisfy database constraints
-    const plans_global_id = plansRate.plans_global_id === 0 ? null : plansRate.plans_global_id;
-    const plans_hotel_id = plansRate.plans_hotel_id === 0 ? null : plansRate.plans_hotel_id;
+    const { plans_global_id, plans_hotel_id } = normalizePlanIds(plansRate);
     
     // For base_rate, always set include_in_cancel_fee to true
     const includeInCancelFee = plansRate.adjustment_type === 'base_rate' ? true : (plansRate.include_in_cancel_fee || false);
@@ -367,10 +379,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         RETURNING *
     `;
 
-    // Backend guards to ensure data integrity
-    // Convert 0 to null for plans_global_id and plans_hotel_id to satisfy database constraints
-    const plans_global_id = plansRate.plans_global_id === 0 ? null : plansRate.plans_global_id;
-    const plans_hotel_id = plansRate.plans_hotel_id === 0 ? null : plansRate.plans_hotel_id;
+    const { plans_global_id, plans_hotel_id } = normalizePlanIds(plansRate);
     
     // For base_rate, always set include_in_cancel_fee to true
     const includeInCancelFee = plansRate.adjustment_type === 'base_rate' ? true : (plansRate.include_in_cancel_fee || false);
