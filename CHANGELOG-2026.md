@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.11] - 2026-01-14
 
+- New Feature: Added provisory accommodation metrics (revenue and room count totals) to reporting.
+- New Feature: Provisory sales and night aggregations are now computed and displayed in future outlook reports.
+- New Feature: Enhanced reporting dashboards to track pending reservations alongside confirmed bookings.
 - Fix: Error when adding a new plan rate was fixed.
 - Fix: Add loading indicator to Dashboard page （ダッシュボードページにローディング指標を追加）
 - Fix: Fixed double percentage sign in occupancy charts tooltip and improved variance formatting.
