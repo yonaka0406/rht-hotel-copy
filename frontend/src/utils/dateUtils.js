@@ -159,3 +159,20 @@ export const formatDateToYYMMDD = (dateString) => {
   const day = date.getDate().toString().padStart(2, '0');
   return `${year}/${month}/${day}`;
 };
+
+export const formatDateMonth = (date) => {
+  if (!date) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+export const normalizeDate = (date) => {
+  if (!date) return null;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+export function getDaysInMonth(year, month) {
+  if (typeof year !== 'number' || typeof month !== 'number') return 0;
+  return new Date(year, month, 0).getDate();
+}

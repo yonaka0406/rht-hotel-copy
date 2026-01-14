@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { formatDateToYMD } from '@/utils/dateUtils';
+import { formatDateToYMD, formatDateMonth, normalizeDate, getDaysInMonth } from '@/utils/dateUtils';
 
 /**
  * Composable for aggregating sales and occupancy data for various reporting views.
@@ -38,28 +38,11 @@ export function useSalesOccDataAggr({
         return new Date(date.getFullYear(), 11, 31);
     };
 
-    function formatDateMonth(date) {
-        if (!date) return null;
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        return `${year}-${month}`;
-    }
-
-    const normalizeDate = (date) => {
-        if (!date) return null;
-        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    };
-
-    function getDaysInMonth(year, month) {
-        if (typeof year !== 'number' || typeof month !== 'number') return 0;
-        return new Date(year, month, 0).getDate();
-    }
-
     const searchAllHotels = (hotelId) => {
         if (!allHotels.value || allHotels.value.length === 0) {
             return [];
         }
-        if (hotelId === 0) {
+        if (Number(hotelId) === 0) {
             return [{ id: 0, name: '施設合計' }];
         }
         const foundHotel = allHotels.value.find(hotel => String(hotel.id) === String(hotelId));
@@ -732,10 +715,6 @@ export function useSalesOccDataAggr({
         kpiData,
         selectionMessage,
         hotelSortOrderMap,
-        searchAllHotels,
-        // Also expose date range helpers for the component if needed
-        formatDateMonth,
-        normalizeDate,
-        getDaysInMonth
+        searchAllHotels
     };
 }

@@ -39,13 +39,13 @@
 </template>
 <script setup>
 // Vue
-import { ref, computed, onMounted, toRefs, watch } from 'vue';
+import { ref, onMounted, toRefs, watch } from 'vue';
 
 import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
 import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
 import ReportingSingleMonthHotel from './components/ReportingSingleMonthHotel.vue';
 import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHotel.vue';
-import { formatDateToYMD } from '@/utils/dateUtils';
+import { formatDateToYMD, formatDateMonth } from '@/utils/dateUtils';
 
 // Defin Props
 const props = defineProps({
@@ -100,8 +100,7 @@ const {
     occupancyData,
     prevYearOccupancyData,
     kpiData,
-    selectionMessage,
-    formatDateMonth
+    selectionMessage
 } = useSalesOccDataAggr({
     selectedDate,
     period,
