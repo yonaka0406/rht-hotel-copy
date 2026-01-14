@@ -1,9 +1,21 @@
 <template>
     <!-- Loading State -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center min-h-screen space-y-4">
-        <ProgressSpinner size="large" />
+        <ProgressSpinner class="w-12 h-12" />
         <div class="text-lg font-medium text-gray-700 dark:text-gray-300">ダッシュボードデータを読み込み中...</div>
         <div class="text-sm text-gray-500 dark:text-gray-400">{{ loadingStatus }}</div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="loadError" class="flex flex-col items-center justify-center min-h-screen space-y-4 px-4 text-center">
+        <div class="p-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl max-w-md w-full">
+            <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">データの取得に失敗しました</h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-8">{{ loadError }}</p>
+            <Button label="再試行する" icon="pi pi-refresh" @click="loadDashboardData" class="w-full py-3" severity="contrast" />
+        </div>
     </div>
 
     <!-- Main Content -->
@@ -115,6 +127,7 @@ const reportStartDate = ref(formatDate(new Date(new Date().setDate(new Date().ge
 const reportEndDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() + 6))));
 const isLoading = ref(false);
 const loadingStatus = ref('');
+const loadError = ref(null);
 
 // Computed
 const startDate = computed(() => {
@@ -155,6 +168,7 @@ const goToReservation = () => {
 const loadDashboardData = async () => {
     isLoading.value = true;
     tableLoading.value = true;
+    loadError.value = null;
     try {
         loadingStatus.value = 'ホテル情報を取得中...';
         await fetchHotels();
@@ -192,7 +206,7 @@ const loadDashboardData = async () => {
         loadingStatus.value = 'データを処理中...';
     } catch (error) {
         console.error('Error loading dashboard data:', error);
-        loadingStatus.value = 'エラーが発生しました';
+        loadError.value = 'ダッシュボードデータの取得中にエラーが発生しました。ネットワーク接続を確認するか、しばらく時間をおいてから再度お試しください。';
     } finally {
         tableLoading.value = false;
         isLoading.value = false;
