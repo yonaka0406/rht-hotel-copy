@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix: Error when adding a new plan rate was fixed.
 - Fix: Add loading indicator to Dashboard page （ダッシュボードページにローディング指標を追加）
+- Fix: Fixed double percentage sign in occupancy charts tooltip and improved variance formatting.
 
 ---
 
