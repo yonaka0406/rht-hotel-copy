@@ -1,28 +1,50 @@
 <template>
-    <Panel class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <ProgressSpinner class="w-12 h-12" />
+        <div class="text-lg font-medium text-gray-700 dark:text-gray-300">ダッシュボードデータを読み込み中...</div>
+        <div class="text-sm text-gray-500 dark:text-gray-400">{{ loadingStatus }}</div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="loadError" class="flex flex-col items-center justify-center min-h-screen space-y-4 px-4 text-center">
+        <div class="p-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl max-w-md w-full">
+            <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="pi pi-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">データの取得に失敗しました</h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-8">{{ loadError }}</p>
+            <Button label="再試行する" icon="pi pi-refresh" @click="loadDashboardData" class="w-full py-3" severity="contrast" />
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <Panel v-else class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">
         <template #header>
             <DashboardHeader v-model:selectedDate="selectedDate" @open-dialog="openHelpDialog" />
         </template>
 
-        <!-- Charts Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2">
-            <OccupancyBarChart :xAxisData="barChartxAxis" :maxValue="barChartyAxisMax" :roomCountData="barChartyAxisBar"
-                :occRateData="barChartyAxisLine" :maleCountData="barChartyAxisMale"
-                :femaleCountData="barChartyAxisFemale" :unspecifiedCountData="barChartyAxisUnspecified" />
-            <OccupancyGaugeChart :gaugeData="gaugeData" />
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2 mt-2">
-            <PlanStackChart :xAxisData="barStackChartData.xAxis" :seriesData="barStackChartData.series"
-                :chartKey="chartKey" />
-            <AddonChart :xAxisData="barAddonChartData.xAxis" :seriesData="barAddonChartData.series"
-                :chartKey="chartKey" />
-        </div>
-
-        <!-- Reservation List -->
         <div>
-            <ReservationListTable :reservationList="reservationList" :loading="tableLoading"
-                @row-dblclick="openEditReservation" />
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2">
+                <OccupancyBarChart :xAxisData="barChartxAxis" :maxValue="barChartyAxisMax" :roomCountData="barChartyAxisBar"
+                    :occRateData="barChartyAxisLine" :maleCountData="barChartyAxisMale"
+                    :femaleCountData="barChartyAxisFemale" :unspecifiedCountData="barChartyAxisUnspecified" />
+                <OccupancyGaugeChart :gaugeData="gaugeData" />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-2 mt-2">
+                <PlanStackChart :xAxisData="barStackChartData.xAxis" :seriesData="barStackChartData.series"
+                    :chartKey="chartKey" />
+                <AddonChart :xAxisData="barAddonChartData.xAxis" :seriesData="barAddonChartData.series"
+                    :chartKey="chartKey" />
+            </div>
+
+            <!-- Reservation List -->
+            <div>
+                <ReservationListTable :reservationList="reservationList" :loading="tableLoading"
+                    @row-dblclick="openEditReservation" />
+            </div>
         </div>
 
         <!-- Reservation Edit Drawer -->
@@ -60,6 +82,7 @@ import AddonChart from './charts/AddonChart.vue';
 
 // PrimeVue
 import { Panel, Drawer, Button } from 'primevue';
+import ProgressSpinner from 'primevue/progressspinner';
 
 // Composables
 import { useReportStore } from '@/composables/useReportStore';
@@ -102,6 +125,9 @@ const helpDialogVisible = ref(false);
 const checkInOutReportData = ref(null);
 const reportStartDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() - 1))));
 const reportEndDate = ref(formatDate(new Date(new Date().setDate(new Date().getDate() + 6))));
+const isLoading = ref(false);
+const loadingStatus = ref('');
+const loadError = ref(null);
 
 // Computed
 const startDate = computed(() => {
@@ -140,18 +166,29 @@ const goToReservation = () => {
 };
 
 const loadDashboardData = async () => {
+    isLoading.value = true;
     tableLoading.value = true;
+    loadError.value = null;
     try {
+        loadingStatus.value = 'ホテル情報を取得中...';
         await fetchHotels();
         await fetchHotel();
+        
+        loadingStatus.value = '予約リストを取得中...';
         await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
 
         // Fetch chart data
+        loadingStatus.value = '稼働率チャートを取得中...';
         await fetchBarChartData(selectedHotelId.value, selectedDate.value);
+        
+        loadingStatus.value = 'プラン別売上を取得中...';
         await fetchBarStackChartData(selectedHotelId.value, startDate.value, endDate.value, selectedDate.value);
+        
+        loadingStatus.value = '稼働率ゲージを取得中...';
         await fetchGaugeChartData(selectedHotelId.value, startDate.value);
 
         // Fetch check-in/out report data
+        loadingStatus.value = 'チェックイン/アウトレポートを取得中...';
         const tempReportStartDate = new Date(selectedDate.value);
         tempReportStartDate.setDate(tempReportStartDate.getDate() - 1);
         reportStartDate.value = formatDate(tempReportStartDate);
@@ -165,10 +202,14 @@ const loadDashboardData = async () => {
             reportStartDate.value,
             reportEndDate.value
         );
+        
+        loadingStatus.value = 'データを処理中...';
     } catch (error) {
         console.error('Error loading dashboard data:', error);
+        loadError.value = 'ダッシュボードデータの取得中にエラーが発生しました。ネットワーク接続を確認するか、しばらく時間をおいてから再度お試しください。';
     } finally {
         tableLoading.value = false;
+        isLoading.value = false;
     }
 };
 
