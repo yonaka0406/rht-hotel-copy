@@ -286,10 +286,11 @@ export function useSalesOccDataAggr({
                 accommodation_revenue: 0,
                 other_revenue: 0,
                 forecast_revenue: 0,
-                pms_revenue: 0
+                pms_revenue: 0,
+                provisory_accommodation_revenue: 0 // New
             };
             selectedHotels.value.forEach(hotelId => {
-                monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, forecast_revenue: null, acc_revenue: null };
+                monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null, pms_provisory_accommodation_revenue: null, forecast_revenue: null, acc_revenue: null };
             });
             currentIterMonth.setMonth(currentIterMonth.getMonth() + 1);
         }
@@ -332,6 +333,11 @@ export function useSalesOccDataAggr({
                                         if (monthlyAggregates[monthKey][stringHotelIdKey].pms_other_revenue === null) monthlyAggregates[monthKey][stringHotelIdKey].pms_other_revenue = 0;
                                         monthlyAggregates[monthKey][stringHotelIdKey].pms_other_revenue += record.other_revenue;
                                     }
+                                    // New: Aggregate provisory accommodation price
+                                    if (typeof record.provisory_accommodation_price === 'number') {
+                                        if (monthlyAggregates[monthKey][stringHotelIdKey].pms_provisory_accommodation_revenue === null) monthlyAggregates[monthKey][stringHotelIdKey].pms_provisory_accommodation_revenue = 0;
+                                        monthlyAggregates[monthKey][stringHotelIdKey].pms_provisory_accommodation_revenue += record.provisory_accommodation_price;
+                                    }
                                 }
                             }
                         }
@@ -353,6 +359,7 @@ export function useSalesOccDataAggr({
                 const pmsRev = aggregatedMonthData.pms_revenue;
                 const pmsAccommodationRev = aggregatedMonthData.pms_accommodation_revenue;
                 const pmsOtherRev = aggregatedMonthData.pms_other_revenue;
+                const pmsProvisoryAccommodationRev = aggregatedMonthData.pms_provisory_accommodation_revenue; // New
                 const forecastRev = aggregatedMonthData.forecast_revenue;
                 const accRev = aggregatedMonthData.acc_revenue;
                 const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
@@ -360,18 +367,21 @@ export function useSalesOccDataAggr({
                 let otherRev = (pmsOtherRev || 0);
                 let accommodationRev = (accRev !== null && accRev > 0) ? accRev : (pmsAccommodationRev || 0);
                 let periodRev = accommodationRev + otherRev;
+                let provisoryAccommodationRev = pmsProvisoryAccommodationRev || 0; // New
 
                 monthlyTotalAggregates[monthKey].period_revenue += periodRev;
                 monthlyTotalAggregates[monthKey].accommodation_revenue += accommodationRev;
                 monthlyTotalAggregates[monthKey].other_revenue += otherRev;
                 monthlyTotalAggregates[monthKey].pms_revenue += (pmsRev || 0);
                 monthlyTotalAggregates[monthKey].forecast_revenue += (forecastRev || 0);
+                monthlyTotalAggregates[monthKey].provisory_accommodation_revenue += provisoryAccommodationRev; // New
 
                 result.push({
                     month: monthKey, hotel_id: outputHotelId, hotel_name: hotelName,
                     sort_order: hotelSortOrderMap.value.get(outputHotelId) ?? 999,
                     pms_revenue: pmsRev, forecast_revenue: forecastRev, acc_revenue: accRev, period_revenue: periodRev,
                     accommodation_revenue: accommodationRev, other_revenue: otherRev,
+                    provisory_accommodation_revenue: provisoryAccommodationRev, // New
                 });
             }
 

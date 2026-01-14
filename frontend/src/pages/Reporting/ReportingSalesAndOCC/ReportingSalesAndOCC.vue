@@ -268,6 +268,9 @@ const fetchData = async () => {
                     non_accommodation_stays: item.non_accommodation_stays !== undefined ? Number(item.non_accommodation_stays) : 0,
                     total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                     total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
+                    provisory_accommodation_price: item.provisory_accommodation_price !== undefined ? Number(item.provisory_accommodation_price) : 0,
+                    provisory_other_price: item.provisory_other_price !== undefined ? Number(item.provisory_other_price) : 0,
+                    provisory_room_count: item.provisory_room_count !== undefined ? Number(item.provisory_room_count) : 0,
                 })).filter(item => item.date !== null);
             } else newPrevPmsData[hKey] = [];
 
@@ -519,6 +522,9 @@ const fetchData = async () => {
                     non_accommodation_stays: item.non_accommodation_stays !== undefined ? Number(item.non_accommodation_stays) : 0,
                     total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                     total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
+                    provisory_accommodation_price: item.provisory_accommodation_price !== undefined ? Number(item.provisory_accommodation_price) : 0,
+                    provisory_other_price: item.provisory_other_price !== undefined ? Number(item.provisory_other_price) : 0,
+                    provisory_room_count: item.provisory_room_count !== undefined ? Number(item.provisory_room_count) : 0,
                 })).filter(item => item.date !== null);
                 newPmsTotalData[String(hotelId)] = mappedData;
             } else {

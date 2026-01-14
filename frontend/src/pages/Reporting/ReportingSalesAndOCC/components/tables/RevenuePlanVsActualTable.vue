@@ -26,7 +26,7 @@
                             </div>
                         </template>
                     </Column>
-                    <Column field="variance_amount" header="分散" sortable style="width: 30%">
+                    <Column field="variance_amount" header="分散" sortable style="width: 25%">
                         <template #body="{ data }">
                             <div class="flex justify-end mr-2">
                                 <span v-if="data.variance_amount != null">

@@ -69,6 +69,12 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
                 }
             }
 
+            if (allRows.length > 0) {
+                logger.debug(`[${operationName}] Sample data (first 2 rows per hotel):`, JSON.stringify(allRows, null, 2));
+            } else {
+                logger.debug(`[${operationName}] No data found for any hotel.`);
+            }
+
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
         } finally {
             client.release();

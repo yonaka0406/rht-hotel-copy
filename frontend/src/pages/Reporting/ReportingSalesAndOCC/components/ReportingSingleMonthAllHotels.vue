@@ -737,7 +737,7 @@ const exportCSV = (tableType) => {
 
     if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
         filename = '複数施設・年度・収益データ.csv';
-        const headers = ["施設", "月度", "計画売上 (円)", "売上合計 (円)", "分散額 (円)", "分散率 (%)"];
+        const headers = ["施設", "月度", "計画売上 (円)", "売上合計 (円)", "分散額 (円)", "分散率 (%)", "仮売上 (円)"];
         const csvRows = [headers.join(',')];
         props.revenueData.forEach(row => {
             const forecastRevenue = row.forecast_revenue || 0;
@@ -753,7 +753,8 @@ const exportCSV = (tableType) => {
                 forecastRevenue,
                 accommodationRevenue,
                 varianceAmount,
-                (forecastRevenue === 0 && accommodationRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
+                (forecastRevenue === 0 && accommodationRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2),
+                row.provisory_accommodation_revenue || 0
             ];
             csvRows.push(csvRow.join(','));
         });
