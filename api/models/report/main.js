@@ -540,7 +540,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         + COALESCE(ra.other_net_price_sum, 0)
       ) AS price,
 
-      /* Provisory Columns (from separate separate CTE) */
+      /* Provisory Columns (from separate CTE) */
       COALESCE(pds.provisory_room_count, 0) AS provisory_room_count,
       COALESCE(pds.provisory_accommodation_price, 0) AS provisory_accommodation_price,
       COALESCE(pds.provisory_other_price, 0) AS provisory_other_price

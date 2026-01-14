@@ -162,14 +162,18 @@ export const formatDateToYYMMDD = (dateString) => {
 
 export const formatDateMonth = (date) => {
   if (!date) return null;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
 };
 
 export const normalizeDate = (date) => {
   if (!date) return null;
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
 export function getDaysInMonth(year, month) {
