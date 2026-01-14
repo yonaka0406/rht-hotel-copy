@@ -397,6 +397,7 @@ export function useSalesOccDataAggr({
                 period_revenue: totals.period_revenue,
                 accommodation_revenue: totals.accommodation_revenue,
                 other_revenue: totals.other_revenue,
+                provisory_accommodation_revenue: totals.provisory_accommodation_revenue
             });
         });
 
