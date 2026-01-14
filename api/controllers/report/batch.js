@@ -207,15 +207,20 @@ const getBatchFutureOutlook = async (req, res) => {
 
                         // Aggregate daily PMS data to monthly
                         let pmsTotalRevenue = 0;
+                        let pmsAccommodationRevenue = 0;
                         if (Array.isArray(pmsData)) {
                             pmsTotalRevenue = pmsData.reduce((sum, day) => sum + (Number(day.price) || 0), 0);
+                            pmsAccommodationRevenue = pmsData.reduce((sum, day) => sum + (Number(day.accommodation_price) || 0), 0);
                         }
 
                         results[month.monthLabel][hotelId] = {
                             occupation: occupationData || [],
                             forecast: forecastData || [],
                             accounting: accountingData || [],
-                            pms: { revenue: pmsTotalRevenue }
+                            pms: {
+                                revenue: pmsTotalRevenue,
+                                accommodation_revenue: pmsAccommodationRevenue
+                            }
                         };
                     } catch (err) {
                         logger.error(`[${operationName}] Failed for hotel ${hotelId}, month ${month.monthLabel}. Error: ${err.message}`, { stack: err.stack });
