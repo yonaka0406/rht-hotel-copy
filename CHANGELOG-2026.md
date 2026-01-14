@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.11] - 2026-01-14
 
 - Fix: Error when adding a new plan rate was fixed.
+- Fix: Fixed double percentage sign in occupancy charts tooltip and improved variance formatting.
 
 ---
 
