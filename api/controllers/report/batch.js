@@ -225,7 +225,9 @@ const getBatchFutureOutlook = async (req, res) => {
                             accounting: accountingData || [],
                             pms: {
                                 revenue: pmsTotalRevenue,
-                                accommodation_revenue: pmsAccommodationRevenue
+                                accommodation_revenue: pmsAccommodationRevenue,
+                                provisory_revenue: Array.isArray(pmsData) ? pmsData.reduce((sum, day) => sum + (Number(day.provisory_accommodation_price) || 0) + (Number(day.provisory_other_price) || 0), 0) : 0,
+                                provisory_room_count: Array.isArray(pmsData) ? pmsData.reduce((sum, day) => sum + (Number(day.provisory_room_count) || 0), 0) : 0
                             }
                         };
                     } catch (err) {

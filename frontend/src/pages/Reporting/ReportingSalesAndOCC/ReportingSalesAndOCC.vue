@@ -391,6 +391,7 @@ const fetchData = async () => {
                     const outlook = [];
                     for (const [monthLabel, hotelDataMap] of Object.entries(futureData)) {
                         let totalActualSales = 0, totalForecastSales = 0, totalForecastRooms = 0, totalForecastStays = 0;
+                        let totalProvisorySales = 0, totalProvisoryNights = 0;
 
                         let accommodationConfirmedNights = 0;
                         let accommodationBookableRoomNights = 0;
@@ -443,6 +444,12 @@ const fetchData = async () => {
                                 }
                             }
 
+                            // Accumulate Provisory Data (Always from PMS)
+                            if (data.pms) {
+                                totalProvisorySales += Number(data.pms.provisory_revenue) || 0;
+                                totalProvisoryNights += Number(data.pms.provisory_room_count) || 0;
+                            }
+
                             totalActualSales += hotelActualSales;
                         }
                         const occDenominator = totalForecastRooms > 0 ? totalForecastRooms : accommodationNetAvailableRoomNights;
@@ -476,7 +483,9 @@ const fetchData = async () => {
                             prev_occ: prevOcc, // This is now accommodation specific
                             prev_confirmed_stays: prev.stays, // Added for hidden column
                             confirmed_nights: accommodationConfirmedNights,
-                            total_bookable_room_nights: accommodationBookableRoomNights,
+                            provisory_sales: totalProvisorySales,
+                            provisory_nights: totalProvisoryNights,
+                            total_bookable_room_nights: occDenominator,
                             blocked_nights: accommodationBlockedNights,
                             net_available_room_nights: accommodationNetAvailableRoomNights
                         });
