@@ -14,13 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.0] - 2026-01-14
 
 - New Feature: Added Accounting Module with Sales Data Export functionality.
-- Fix: Add loading indicator to Dashboard page （ダッシュボードページにローディング指標を追加）
 
 ---
 
 ## [1.3.11] - 2026-01-14
 
 - Fix: Error when adding a new plan rate was fixed.
+- Fix: Add loading indicator to Dashboard page （ダッシュボードページにローディング指標を追加）
 
 ---
 
