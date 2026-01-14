@@ -374,6 +374,124 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
       LEFT JOIN blocked_rooms br
         ON br.hotel_id = d.hotel_id
       AND br.date = d.date
+    ),
+
+    /* -------------------------------------------------------
+      Provisory Reservation Details
+    -------------------------------------------------------- */
+    rd_provisory_base AS MATERIALIZED (
+      SELECT
+        rd.id AS reservation_detail_id,
+        rd.reservation_id,
+        rd.hotel_id,
+        rd.date,
+        rd.room_id,
+        rd.number_of_people,
+        COALESCE(rd.is_accommodation, TRUE) AS is_accommodation,
+        rd.plan_type
+      FROM reservation_details rd
+      JOIN reservations r
+        ON r.id = rd.reservation_id
+      AND r.hotel_id = rd.hotel_id
+      WHERE
+            rd.hotel_id = $1
+        AND rd.date BETWEEN $2 AND $3
+        AND r.status = 'provisory'
+        AND rd.cancelled IS NULL
+        AND r.type <> 'employee'
+    ),
+
+    /* -------------------------------------------------------
+      Provisory Rates Aggregation
+    -------------------------------------------------------- */
+    rr_provisory_agg AS MATERIALIZED (
+      SELECT
+        hotel_id,
+        reservation_detail_id,
+        SUM(other_net_price) as other_net_price,
+        SUM(accommodation_net_price) as accommodation_net_price
+      FROM (
+        SELECT
+          rr.hotel_id,
+          rr.reservation_details_id AS reservation_detail_id,
+          FLOOR(
+            SUM(
+              CASE WHEN rr.sales_category = 'other'
+                   THEN (CASE WHEN rdb.plan_type IS NOT DISTINCT FROM 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
+                   ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
+          ) AS other_net_price,
+
+          FLOOR(
+            SUM(
+              CASE WHEN rr.sales_category IN ('accommodation') OR rr.sales_category IS NULL
+                   THEN (CASE WHEN rdb.plan_type IS NOT DISTINCT FROM 'per_room' THEN rr.price ELSE rr.price * rdb.number_of_people END)
+                   ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END))::numeric
+          ) AS accommodation_net_price
+
+        FROM reservation_rates rr
+        JOIN reservation_details rdb_inner ON rr.hotel_id = rdb_inner.hotel_id AND rr.reservation_details_id = rdb_inner.id
+        JOIN rd_provisory_base rdb ON rr.hotel_id = rdb.hotel_id AND rr.reservation_details_id = rdb.reservation_detail_id
+        WHERE rr.hotel_id = $1
+        GROUP BY rr.hotel_id, rr.reservation_details_id, (CASE WHEN COALESCE(rr.tax_rate, 0) > 1 THEN COALESCE(rr.tax_rate, 0) / 100.0 ELSE COALESCE(rr.tax_rate, 0) END)
+      ) AS per_tax_rate
+      GROUP BY hotel_id, reservation_detail_id
+    ),
+
+    /* -------------------------------------------------------
+      Provisory Addons Aggregation
+    -------------------------------------------------------- */
+    ra_provisory_agg AS MATERIALIZED (
+      SELECT
+        hotel_id,
+        reservation_detail_id,
+        SUM(other_net_price_sum) as other_net_price_sum,
+        SUM(accommodation_net_price_sum) as accommodation_net_price_sum
+      FROM (
+        SELECT
+          ra.hotel_id,
+          ra.reservation_detail_id,
+          FLOOR(
+            SUM(
+              CASE WHEN ra.sales_category = 'other' THEN ra.price * ra.quantity ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
+          ) AS other_net_price_sum,
+
+          FLOOR(
+            SUM(
+              CASE WHEN ra.sales_category IN ('accommodation') OR ra.sales_category IS NULL THEN ra.price * ra.quantity ELSE 0 END
+            )::numeric 
+            / (1 + (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END))::numeric
+          ) AS accommodation_net_price_sum
+
+        FROM reservation_addons ra
+        JOIN rd_provisory_base rdb ON ra.hotel_id = rdb.hotel_id AND ra.reservation_detail_id = rdb.reservation_detail_id
+        WHERE ra.hotel_id = $1
+        GROUP BY ra.hotel_id, ra.reservation_detail_id, (CASE WHEN COALESCE(ra.tax_rate, 0) > 1 THEN COALESCE(ra.tax_rate, 0) / 100.0 ELSE COALESCE(ra.tax_rate, 0) END)
+      ) AS per_tax_rate
+      GROUP BY hotel_id, reservation_detail_id
+    ),
+
+    /* -------------------------------------------------------
+      Provisory Stats Aggregated per Date
+    -------------------------------------------------------- */
+    provisory_daily_stats AS MATERIALIZED (
+      SELECT
+        rdb.hotel_id,
+        rdb.date,
+        COUNT(CASE WHEN rdb.is_accommodation THEN 1 END) AS provisory_room_count,
+        SUM(COALESCE(rr.accommodation_net_price, 0) + COALESCE(ra.accommodation_net_price_sum, 0)) AS provisory_accommodation_price,
+        SUM(COALESCE(rr.other_net_price, 0) + COALESCE(ra.other_net_price_sum, 0)) AS provisory_other_price
+      FROM rd_provisory_base rdb
+      LEFT JOIN rr_provisory_agg rr 
+        ON rdb.hotel_id = rr.hotel_id AND rdb.reservation_detail_id = rr.reservation_detail_id
+      LEFT JOIN ra_provisory_agg ra 
+        ON rdb.hotel_id = ra.hotel_id AND rdb.reservation_detail_id = ra.reservation_detail_id
+      GROUP BY rdb.hotel_id, rdb.date
     )
 
     /* -------------------------------------------------------
@@ -420,7 +538,12 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         + COALESCE(ra.accommodation_net_price_sum, 0)
         + COALESCE(rr.other_net_price, 0)
         + COALESCE(ra.other_net_price_sum, 0)
-      ) AS price
+      ) AS price,
+
+      /* Provisory Columns (from separate separate CTE) */
+      COALESCE(pds.provisory_room_count, 0) AS provisory_room_count,
+      COALESCE(pds.provisory_accommodation_price, 0) AS provisory_accommodation_price,
+      COALESCE(pds.provisory_other_price, 0) AS provisory_other_price
 
     FROM room_total rt
     LEFT JOIN rd_base rdb
@@ -435,11 +558,18 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
     LEFT JOIN rc_agg rc
       ON rc.hotel_id             = rdb.hotel_id
     AND rc.reservation_detail_id = rdb.reservation_detail_id
+    
+    LEFT JOIN provisory_daily_stats pds
+      ON pds.hotel_id = rt.hotel_id
+      AND pds.date = rt.date
 
     GROUP BY
       rt.date,
       rt.total_rooms,
-      rt.total_rooms_real
+      rt.total_rooms_real,
+      pds.provisory_room_count,
+      pds.provisory_accommodation_price,
+      pds.provisory_other_price
     ORDER BY rt.date;
  `;
   const values = [hotelId, dateStart, dateEnd];
