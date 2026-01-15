@@ -45,6 +45,22 @@ const parseYayoiFile = (buffer) => {
 };
 
 /**
+ * Helper to convert YYYY/MM/DD to YYYY-MM-DD
+ * @param {string} dateStr 
+ * @returns {string|null}
+ */
+const toIsoDate = (dateStr) => {
+    if (!dateStr) return null;
+    // Replace slashes with dashes
+    const iso = dateStr.replace(/\//g, '-');
+    // Basic validation YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+        return iso;
+    }
+    return null;
+};
+
+/**
  * Preview Yayoi Import
  */
 const previewImport = async (req, res) => {
@@ -63,25 +79,20 @@ const previewImport = async (req, res) => {
         const departments = new Set();
 
         for (const row of rows) {
-            const dateStr = row[3]; // Column D: 取引日付
+            const dateStr = toIsoDate(row[3]); // Column D: 取引日付
             if (dateStr) {
-                const date = new Date(dateStr);
-                if (!isNaN(date.getTime())) {
-                    if (!minDate || date < minDate) minDate = date;
-                    if (!maxDate || date > maxDate) maxDate = date;
-                }
+                if (!minDate || dateStr < minDate) minDate = dateStr;
+                if (!maxDate || dateStr > maxDate) maxDate = dateStr;
             }
             
             if (row[6]) departments.add(row[6]); // Column G: 借方部門
             if (row[12]) departments.add(row[12]); // Column M: 貸方部門
         }
 
-        const formatDate = (d) => d ? d.toISOString().split('T')[0] : null;
-
         res.json({
             rowCount: rows.length,
-            minDate: formatDate(minDate),
-            maxDate: formatDate(maxDate),
+            minDate: minDate,
+            maxDate: maxDate,
             departments: Array.from(departments),
             fileName: req.file.originalname
         });
@@ -114,13 +125,10 @@ const executeImport = async (req, res) => {
         let maxDate = null;
 
         for (const row of rows) {
-            const dateStr = row[3];
+            const dateStr = toIsoDate(row[3]);
             if (dateStr) {
-                const date = new Date(dateStr);
-                if (!isNaN(date.getTime())) {
-                    if (!minDate || date < minDate) minDate = date;
-                    if (!maxDate || date > maxDate) maxDate = date;
-                }
+                if (!minDate || dateStr < minDate) minDate = dateStr;
+                if (!maxDate || dateStr > maxDate) maxDate = dateStr;
             }
         }
 
@@ -128,17 +136,13 @@ const executeImport = async (req, res) => {
             return res.status(400).json({ error: 'Could not determine date range from file' });
         }
 
-        const formatDate = (d) => d.toISOString().split('T')[0];
-        const minDateStr = formatDate(minDate);
-        const maxDateStr = formatDate(maxDate);
-
         await client.query('BEGIN');
 
         // 1. Delete existing entries in date range
         // Note: The user said "delete all entries in this interval"
         await client.query(
             `DELETE FROM acc_yayoi_data WHERE transaction_date BETWEEN $1 AND $2`,
-            [minDateStr, maxDateStr]
+            [minDate, maxDate]
         );
 
         // 2. Map departments to hotel_ids
@@ -153,6 +157,7 @@ const executeImport = async (req, res) => {
         const insertData = rows.map(row => {
             // Find hotel_id from either debit or credit department
             const hotel_id = deptMap[row[6]] || deptMap[row[12]] || null;
+            const transactionDate = toIsoDate(row[3]);
             
             return [
                 hotel_id,
@@ -160,7 +165,7 @@ const executeImport = async (req, res) => {
                 row[0], // identification_flag
                 row[1], // slip_number
                 row[2], // settlement_type
-                row[3], // transaction_date
+                transactionDate, // transaction_date
                 row[4], // debit_account_code
                 row[5], // debit_sub_account
                 row[6], // debit_department
@@ -175,7 +180,7 @@ const executeImport = async (req, res) => {
                 row[15] || 0, // credit_tax_amount
                 row[16], // summary
                 row[17], // journal_number
-                row[18] || null, // due_date
+                toIsoDate(row[18]), // due_date (also convert to iso date)
                 row[19], // ledger_type
                 row[20], // source_name
                 row[21], // journal_memo
@@ -207,8 +212,8 @@ const executeImport = async (req, res) => {
         res.json({
             success: true,
             rowCount: rows.length,
-            minDate: minDateStr,
-            maxDate: maxDateStr,
+            minDate: minDate,
+            maxDate: maxDate,
             importBatchId
         });
 
