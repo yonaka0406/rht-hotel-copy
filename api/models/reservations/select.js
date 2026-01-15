@@ -73,6 +73,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
       r.ota_reservation_id,
       r.comment,
       r.has_important_comment,
+      r.created_at,
+      u_creator.name AS creator_name,
       rd.id AS id,
       rd.id AS reservation_detail_id,
       rd.date,
@@ -110,6 +112,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
         rooms rm ON rm.id = rd.room_id AND rm.hotel_id = rd.hotel_id
     JOIN
         room_types rt ON rt.id = rm.room_type_id AND rt.hotel_id = rm.hotel_id
+    LEFT JOIN
+        users u_creator ON u_creator.id = r.created_by
     JOIN (${EFF_SUBQUERY}) eff ON eff.reservation_id = r.id AND eff.hotel_id = r.hotel_id
     LEFT JOIN LATERAL (
         SELECT
