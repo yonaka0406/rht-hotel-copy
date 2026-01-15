@@ -40,9 +40,13 @@ class ApiService {
 
     // Default headers
     const headers = {
-      'Content-Type': 'application/json',
       ...options.headers
     };
+
+    // Only set default Content-Type to application/json if it's not FormData
+    if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // Add Authorization header if token exists
     if (token) {
@@ -111,18 +115,20 @@ class ApiService {
   }
 
   async post(endpoint, data, options = {}) {
+    const isFormData = data instanceof FormData;
     return this.request(endpoint, {
       ...options,
       method: 'POST',
-      body: JSON.stringify(data)
+      body: isFormData ? data : JSON.stringify(data)
     });
   }
 
   async put(endpoint, data, options = {}) {
+    const isFormData = data instanceof FormData;
     return this.request(endpoint, {
       ...options,
       method: 'PUT',
-      body: JSON.stringify(data)
+      body: isFormData ? data : JSON.stringify(data)
     });
   }
 

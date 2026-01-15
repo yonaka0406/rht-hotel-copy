@@ -3,6 +3,9 @@ const router = express.Router();
 const accountingController = require('../controllers/accounting');
 const { authMiddleware_accounting } = require('../middleware/authMiddleware');
 
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 // Settings Routes (Account Codes, Mappings, Groups, Tax Classes)
 router.get('/accounting/settings', authMiddleware_accounting, accountingController.getSettings);
 router.post('/accounting/settings/codes', authMiddleware_accounting, accountingController.upsertCode);
@@ -15,6 +18,10 @@ router.post('/accounting/settings/mappings', authMiddleware_accounting, accounti
 router.delete('/accounting/settings/mappings/:id', authMiddleware_accounting, accountingController.deleteMapping);
 router.post('/accounting/settings/departments', authMiddleware_accounting, accountingController.upsertDepartment);
 router.delete('/accounting/settings/departments/:id', authMiddleware_accounting, accountingController.deleteDepartment);
+
+// Import
+router.post('/accounting/import/preview', authMiddleware_accounting, upload.single('file'), accountingController.previewImport);
+router.post('/accounting/import/execute', authMiddleware_accounting, upload.single('file'), accountingController.executeImport);
 
 // Dashboard
 router.get('/accounting/dashboard/metrics', authMiddleware_accounting, accountingController.getDashboardMetrics);

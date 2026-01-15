@@ -20,12 +20,7 @@ export function useAccountingStore() {
     const { isLoading: loading, error, get, post, del } = useApi();
 
     const getExportOptions = async () => {
-        try {
-            const data = await get('/accounting/export/options');
-            return data;
-        } catch (err) {
-            throw err;
-        }
+        return await get('/accounting/export/options');
     };
 
     const fetchLedgerPreview = async (filters) => {
@@ -33,179 +28,118 @@ export function useAccountingStore() {
         const filtersChanged = stableStringify(lastFilters.value) !== stableStringify(filters);
 
         if (ledgerPreviewData.value.length === 0 || filtersChanged) {
-            try {
-                const response = await post('/accounting/export/preview', filters);
-                // Handle new response structure with data and validation
-                if (response && typeof response === 'object' && 'data' in response) {
-                    ledgerPreviewData.value = response.data || [];
-                    ledgerValidationData.value = response.validation || null;
-                } else {
-                    // Backward compatibility: if response is an array
-                    ledgerPreviewData.value = Array.isArray(response) ? response : [];
-                    ledgerValidationData.value = null;
-                }
-                lastFilters.value = JSON.parse(JSON.stringify(filters));
-                return { data: ledgerPreviewData.value, validation: ledgerValidationData.value };
-            } catch (err) {
-                throw err;
+            const response = await post('/accounting/export/preview', filters);
+            // Handle new response structure with data and validation
+            if (response && typeof response === 'object' && 'data' in response) {
+                ledgerPreviewData.value = response.data || [];
+                ledgerValidationData.value = response.validation || null;
+            } else {
+                // Backward compatibility: if response is an array
+                ledgerPreviewData.value = Array.isArray(response) ? response : [];
+                ledgerValidationData.value = null;
             }
+            lastFilters.value = JSON.parse(JSON.stringify(filters));
+            return { data: ledgerPreviewData.value, validation: ledgerValidationData.value };
         }
         return { data: ledgerPreviewData.value, validation: ledgerValidationData.value };
     };
 
     const downloadLedger = async (filters) => {
-        try {
-            const data = await post('/accounting/export/download', filters, {
-                responseType: 'blob'
-            });
+        const data = await post('/accounting/export/download', filters, {
+            responseType: 'blob'
+        });
 
-            const url = window.URL.createObjectURL(new Blob([data]));
-            const link = document.createElement('a');
-            link.href = url;
+        const url = window.URL.createObjectURL(new Blob([data]));
+        const link = document.createElement('a');
+        link.href = url;
 
-            let fileName = `sales_ledger_${filters.selectedMonth || 'export'}`;
-            fileName += filters.format === 'excel' ? '.xlsx' : '.csv';
+        let fileName = `sales_ledger_${filters.selectedMonth || 'export'}`;
+        fileName += filters.format === 'excel' ? '.xlsx' : '.csv';
 
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
 
-            setTimeout(() => window.URL.revokeObjectURL(url), 100);
-        } catch (err) {
-            throw err;
-        }
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
     };
 
     const getAccountingSettings = async (hotelId = null) => {
-        try {
-            const params = hotelId ? { hotel_id: hotelId } : {};
-            const data = await get('/accounting/settings', params);
-            return data;
-        } catch (err) {
-            throw err;
-        }
+        const params = hotelId ? { hotel_id: hotelId } : {};
+        return await get('/accounting/settings', params);
     };
 
     const fetchDashboardMetrics = async (params) => {
-        try {
-            const query = new URLSearchParams(params).toString();
-            const data = await get(`/accounting/dashboard/metrics?${query}`);
-            return data;
-        } catch (err) {
-            throw err;
-        }
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/dashboard/metrics?${query}`);
     };
 
     const fetchReconciliationOverview = async (params) => {
-        try {
-            const query = new URLSearchParams(params).toString();
-            const data = await get(`/accounting/dashboard/reconciliation?${query}`);
-            return data;
-        } catch (err) {
-            throw err;
-        }
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/dashboard/reconciliation?${query}`);
     };
 
     const fetchReconciliationHotelDetails = async (hotelId, params) => {
-        try {
-            const query = new URLSearchParams(params).toString();
-            const data = await get(`/accounting/dashboard/reconciliation/hotel/${hotelId}?${query}`);
-            return data;
-        } catch (err) {
-            throw err;
-        }
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/dashboard/reconciliation/hotel/${hotelId}?${query}`);
     };
 
     const fetchReconciliationClientDetails = async (hotelId, clientId, params) => {
-        try {
-            const query = new URLSearchParams(params).toString();
-            const data = await get(`/accounting/dashboard/reconciliation/hotel/${hotelId}/client/${clientId}?${query}`);
-            return data;
-        } catch (err) {
-            throw err;
-        }
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/dashboard/reconciliation/hotel/${hotelId}/client/${clientId}?${query}`);
     };
 
 
     const upsertAccountCode = async (data) => {
-        try {
-            return await post('/accounting/settings/codes', data);
-        } catch (err) {
-            throw err;
-        }
+        return await post('/accounting/settings/codes', data);
     };
 
     const deleteAccountCode = async (id) => {
-        try {
-            return await del(`/accounting/settings/codes/${id}`);
-        } catch (err) {
-            throw err;
-        }
+        return await del(`/accounting/settings/codes/${id}`);
     };
 
     const upsertMapping = async (data) => {
-        try {
-            return await post('/accounting/settings/mappings', data);
-        } catch (err) {
-            throw err;
-        }
+        return await post('/accounting/settings/mappings', data);
     };
 
     const deleteMapping = async (id) => {
-        try {
-            return await del(`/accounting/settings/mappings/${id}`);
-        } catch (err) {
-            throw err;
-        }
+        return await del(`/accounting/settings/mappings/${id}`);
     };
 
     const upsertManagementGroup = async (data) => {
-        try {
-            return await post('/accounting/settings/groups', data);
-        } catch (err) {
-            throw err;
-        }
+        return await post('/accounting/settings/groups', data);
     };
 
     const deleteManagementGroup = async (id) => {
-        try {
-            return await del(`/accounting/settings/groups/${id}`);
-        } catch (err) {
-            throw err;
-        }
+        return await del(`/accounting/settings/groups/${id}`);
     };
 
     const upsertTaxClass = async (data) => {
-        try {
-            return await post('/accounting/settings/tax-classes', data);
-        } catch (err) {
-            throw err;
-        }
+        return await post('/accounting/settings/tax-classes', data);
     };
 
     const deleteTaxClass = async (id) => {
-        try {
-            return await del(`/accounting/settings/tax-classes/${id}`);
-        } catch (err) {
-            throw err;
-        }
+        return await del(`/accounting/settings/tax-classes/${id}`);
     };
 
     const upsertDepartment = async (data) => {
-        try {
-            return await post('/accounting/settings/departments', data);
-        } catch (err) {
-            throw err;
-        }
+        return await post('/accounting/settings/departments', data);
     };
 
     const deleteDepartment = async (id) => {
-        try {
-            return await del(`/accounting/settings/departments/${id}`);
-        } catch (err) {
-            throw err;
-        }
+        return await del(`/accounting/settings/departments/${id}`);
+    };
+
+    const previewYayoiImport = async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return await post('/accounting/import/preview', formData);
+    };
+
+    const executeYayoiImport = async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return await post('/accounting/import/execute', formData);
     };
 
     const clearPreviewData = () => {
@@ -233,6 +167,8 @@ export function useAccountingStore() {
         deleteTaxClass,
         upsertDepartment,
         deleteDepartment,
+        previewYayoiImport,
+        executeYayoiImport,
         clearPreviewData,
         fetchDashboardMetrics,
         fetchReconciliationOverview,
