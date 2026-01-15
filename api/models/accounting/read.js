@@ -692,12 +692,17 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
                 rd.date,
                 CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END as total_rd_price,
                 rr.id as rr_id,
-                CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END as rr_price,
-                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
+                COALESCE(rr.tax_rate, 0.10) as tax_rate,
+                CASE 
+                    WHEN rr.id IS NOT NULL THEN
+                        CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END
+                    ELSE 0
+                END as rr_price,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
             JOIN res_list rl ON r.reservation_client_id = rl.reservation_client_id
-            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
             WHERE rd.hotel_id = $3
             AND rd.billable = TRUE
             AND r.status NOT IN ('hold', 'block')
@@ -808,11 +813,16 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
                 rd.date,
                 CASE WHEN rd.plan_type = 'per_room' THEN rd.price ELSE rd.price * rd.number_of_people END as total_rd_price,
                 rr.id as rr_id,
-                CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END as rr_price,
-                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
+                COALESCE(rr.tax_rate, 0.10) as tax_rate,
+                CASE 
+                    WHEN rr.id IS NOT NULL THEN
+                        CASE WHEN rd.plan_type = 'per_room' THEN rr.price ELSE rr.price * rd.number_of_people END
+                    ELSE 0
+                END as rr_price,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn
             FROM reservation_details rd
             JOIN res_list r ON rd.reservation_id = r.id
-            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
             WHERE rd.billable = TRUE
         ),
         rr_totals AS (

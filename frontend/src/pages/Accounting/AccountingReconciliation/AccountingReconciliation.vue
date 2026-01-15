@@ -36,6 +36,9 @@ const showReservationModal = ref(false);
 
 const statusFilter = ref('all');
 const typeFilter = ref('all');
+const rowsPerPage = ref(10);
+const rowsPerPageOptions = [10, 25, 50, 100];
+
 const filteredHotelDetails = computed(() => {
     let list = hotelDetails.value;
     
@@ -338,12 +341,36 @@ watch(selectedDate, () => {
                                         <Button label="その他" :severity="typeFilter === 'other' ? 'primary' : 'secondary'" size="small" text @click="typeFilter = 'other'" class="!py-1 !px-3 text-xs" />
                                     </div>
                                 </div>
+                                <div class="flex flex-wrap gap-4 items-center">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase w-12">表示件数:</span>
+                                    <div class="flex gap-1">
+                                        <Button 
+                                            v-for="option in rowsPerPageOptions" 
+                                            :key="option"
+                                            :label="`${option}件`" 
+                                            :severity="rowsPerPage === option ? 'primary' : 'secondary'" 
+                                            size="small" 
+                                            text 
+                                            @click="rowsPerPage = option" 
+                                            class="!py-1 !px-3 text-xs" 
+                                        />
+                                        <Button 
+                                            label="全て表示" 
+                                            :severity="rowsPerPage === 0 ? 'primary' : 'secondary'" 
+                                            size="small" 
+                                            text 
+                                            @click="rowsPerPage = 0" 
+                                            class="!py-1 !px-3 text-xs" 
+                                        />
+                                    </div>
+                                </div>
                             </div>
                             <DataTable 
                                 :value="filteredHotelDetails" 
                                 :loading="isHotelLoading"
                                 stripedRows
-                                paginator :rows="10"
+                                :paginator="rowsPerPage > 0"
+                                :rows="rowsPerPage"
                                 class="p-datatable-sm"
                                 @row-click="(e) => handleClientSelect(e.data)"
                                 rowHover
