@@ -25,7 +25,8 @@
                 <div class="flex-1">
                     <h3 class="font-bold text-lg text-amber-900 dark:text-amber-100 mb-2">データ整合性の警告</h3>
                     <p class="text-sm text-amber-800 dark:text-amber-200 mb-4">
-                        予約詳細（reservation_details）と料金明細（reservation_rates）の間に不一致が検出されました。
+                        予約詳細（reservation_details）に対応する料金明細（reservation_rates）が見つかりません。
+                        料金明細は正確な税区分を決定するために必要です。これらの予約は帳票に含まれない可能性があります。
                     </p>
                     
                     <div class="space-y-4">
@@ -82,8 +83,9 @@
                     <div class="mt-4 p-3 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
                         <p class="text-xs text-amber-900 dark:text-amber-100">
                             <i class="pi pi-info-circle mr-2"></i>
-                            <strong>推奨アクション:</strong> 料金明細が欠落している予約を確認し、必要に応じて料金を再計算してください。
-                            この不一致により、帳票の金額が実際の売上と異なる可能性があります。
+                            <strong>重要:</strong> 料金明細（reservation_rates）は税区分と税額の計算に使用されます。
+                            料金明細が欠落している予約は、正確な税区分で帳票に反映されない可能性があります。
+                            該当する予約を確認し、料金を再計算してください。
                         </p>
                     </div>
                 </div>
