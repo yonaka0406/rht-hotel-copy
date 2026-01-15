@@ -104,6 +104,47 @@
                             </template>
                         </Column>
                     </Row>
+                    <!-- 宿泊以外売上 row (appears after 合計) -->
+                    <Row v-if="salesByPlanTotals.other_sales > 0 || salesByPlanTotals.other_net_sales > 0">
+                        <Column footerStyle="text-align:left">
+                            <template #footer>
+                                <span>宿泊以外売上</span>
+                                <Badge value="宿泊以外" severity="warn" class="ml-2" />
+                            </template>
+                        </Column>
+                        <Column v-if="salesByPlanChartMode === 'tax_included'"
+                            :footer="salesByPlanTotals.other_sales.toLocaleString('ja-JP') + ' 円'"
+                            footerStyle="text-align:right" />
+                        <Column v-else :footer="salesByPlanTotals.other_net_sales.toLocaleString('ja-JP') + ' 円'"
+                            footerStyle="text-align:right" />
+                        <Column footer="0 円" footerStyle="text-align:right" />
+                        <Column v-if="salesByPlanChartMode === 'tax_included'" footerStyle="text-align:right">
+                            <template #footer>
+                                <span class="font-bold">{{ salesByPlanTotals.other_sales.toLocaleString('ja-JP') }} 円</span>
+                            </template>
+                        </Column>
+                        <Column v-else footerStyle="text-align:right">
+                            <template #footer>
+                                <span class="font-bold">{{ salesByPlanTotals.other_net_sales.toLocaleString('ja-JP') }} 円</span>
+                            </template>
+                        </Column>
+                        <Column v-if="salesByPlanChartMode !== 'tax_included'" footer="-" footerStyle="text-align:right" />
+                    </Row>
+                    <!-- 総売上 row (grand total including other sales) -->
+                    <Row v-if="salesByPlanTotals.other_sales > 0 || salesByPlanTotals.other_net_sales > 0">
+                        <Column footer="総売上" :colspan="3" footerStyle="text-align:left; font-weight:bold; background-color:#f8f9fa" />
+                        <Column v-if="salesByPlanChartMode === 'tax_included'" footerStyle="text-align:right; font-weight:bold; background-color:#f8f9fa">
+                            <template #footer>
+                                <span class="font-bold text-lg">{{ (salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales + salesByPlanTotals.other_sales).toLocaleString('ja-JP') }} 円</span>
+                            </template>
+                        </Column>
+                        <Column v-else footerStyle="text-align:right; font-weight:bold; background-color:#f8f9fa">
+                            <template #footer>
+                                <span class="font-bold text-lg">{{ (salesByPlanTotals.regular_net_sales + salesByPlanTotals.cancelled_net_sales + salesByPlanTotals.other_net_sales).toLocaleString('ja-JP') }} 円</span>
+                            </template>
+                        </Column>
+                        <Column v-if="salesByPlanChartMode !== 'tax_included'" footer="-" footerStyle="text-align:right; background-color:#f8f9fa" />
+                    </Row>
                 </ColumnGroup>
             </DataTable>
         </template>
@@ -195,7 +236,9 @@ const combinedSalesByPlan = computed(() => {
                 cancelled_sales: 0,
                 regular_net_sales: 0,
                 cancelled_net_sales: 0,
-                forecast_sales: 0
+                forecast_sales: 0,
+                other_sales: 0,
+                other_net_sales: 0
             };
         }
         
@@ -213,6 +256,9 @@ const combinedSalesByPlan = computed(() => {
                 // 宿泊売上 should only include accommodation_sales, not other_sales
                 combined[categoryKey].regular_sales += parseFloat(item.accommodation_sales || 0);
                 combined[categoryKey].regular_net_sales += parseFloat(item.accommodation_sales_net || 0);
+                // Track other_sales separately
+                combined[categoryKey].other_sales += parseFloat(item.other_sales || 0);
+                combined[categoryKey].other_net_sales += parseFloat(item.other_sales_net || 0);
             }
         }
     });
@@ -226,10 +272,12 @@ const processedSalesByPlan = computed(() => {
         const totalSales = item.regular_sales + item.cancelled_sales;
         const totalNetSales = item.regular_net_sales + item.cancelled_net_sales;
         const totalForecastSales = item.forecast_sales;
+        const totalOtherSales = item.other_sales;
+        const totalOtherNetSales = item.other_net_sales;
         
         // Include if any of the sales values are greater than 0
         // OR if it is an identified category (has Type or Package ID)
-        return totalSales > 0 || totalNetSales > 0 || totalForecastSales > 0 || item.has_category;
+        return totalSales > 0 || totalNetSales > 0 || totalForecastSales > 0 || totalOtherSales > 0 || totalOtherNetSales > 0 || item.has_category;
     });
 
     const sortedData = [...filteredData];
@@ -249,6 +297,7 @@ const processedSalesByPlan = computed(() => {
         if (a.plan_name > b.plan_name) return 1;
         return 0;
     });
+    
     return sortedData;
 });
 
@@ -259,12 +308,20 @@ const salesByPlanTotals = computed(() => {
         acc.regular_net_sales += item.regular_net_sales;
         acc.cancelled_net_sales += item.cancelled_net_sales;
         acc.forecast_sales += item.forecast_sales;
+        acc.other_sales += item.other_sales;
+        acc.other_net_sales += item.other_net_sales;
         return acc;
-    }, { regular_sales: 0, cancelled_sales: 0, regular_net_sales: 0, cancelled_net_sales: 0, forecast_sales: 0 });
+    }, { regular_sales: 0, cancelled_sales: 0, regular_net_sales: 0, cancelled_net_sales: 0, forecast_sales: 0, other_sales: 0, other_net_sales: 0 });
 
     totals.grand_total_sales = totals.regular_sales + totals.cancelled_sales;
     totals.grand_total_net_sales = totals.regular_net_sales + totals.cancelled_net_sales;
     totals.grand_total_forecast_sales = totals.forecast_sales;
+
+    console.log('[カテゴリー別宿泊売上内訳] 宿泊売上 (税抜):', totals.regular_net_sales.toLocaleString('ja-JP'), '円');
+    console.log('[カテゴリー別宿泊売上内訳] キャンセル売上 (税抜):', totals.cancelled_net_sales.toLocaleString('ja-JP'), '円');
+    console.log('[カテゴリー別宿泊売上内訳] 宿泊以外売上 (税抜):', totals.other_net_sales.toLocaleString('ja-JP'), '円');
+    console.log('[カテゴリー別宿泊売上内訳] 合計 (税抜):', totals.grand_total_net_sales.toLocaleString('ja-JP'), '円');
+    console.log('[カテゴリー別宿泊売上内訳] 総売上 (税抜):', (totals.grand_total_net_sales + totals.other_net_sales).toLocaleString('ja-JP'), '円');
 
     return totals;
 });
