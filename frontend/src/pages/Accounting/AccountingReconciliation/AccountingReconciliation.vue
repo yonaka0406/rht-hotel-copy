@@ -247,7 +247,7 @@ watch(selectedDate, () => {
                                 <span class="font-bold text-violet-600 dark:text-violet-400">{{ formatCurrency(totals.advance) }}</span>
                             </div>
                             <div class="flex items-center justify-end gap-3 text-[11px] mt-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                                <span class="text-slate-400">精算差異:</span>
+                                <span class="text-slate-400">精算差異 (売上 - 精算等):</span>
                                 <span :class="[
                                     Math.abs(totals.difference) > 10 ? 'text-rose-500 font-bold' : 'text-slate-500'
                                 ]">{{ formatCurrency(totals.difference) }}</span>
@@ -257,7 +257,8 @@ watch(selectedDate, () => {
                     <div class="mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                         <p class="text-[9px] text-slate-400 leading-relaxed">
                             ※ <strong>事前払:</strong> 対象月末時点で、チェックイン日が翌月以降となっている予約に対して行われた入金です。<br/>
-                            ※ <strong>精算等:</strong> 対象月末までにチェックイン済みの予約（滞在中の清算や過去分の回収等）に関連する入金です。
+                            ※ <strong>精算等:</strong> 対象月末までにチェックイン済みの予約（滞在中の清算や過去分の回収等）に関連する入金です。<br/>
+                            ※ <strong>精算差異:</strong> 売上と精算等入金の差額です。事前払は含まれません。
                         </p>
                     </div>
                 </div>
@@ -300,7 +301,7 @@ watch(selectedDate, () => {
                                     </div>
                                 </template>
                             </Column>
-                            <Column field="difference" header="精算差異" sortable>
+                            <Column field="difference" header="精算差異 (売上 - 精算等)" sortable>
                                 <template #body="{ data }">
                                     <span :class="[
                                         data.difference > 1 ? 'text-emerald-500 font-bold' : '',
@@ -361,7 +362,7 @@ watch(selectedDate, () => {
                                         </div>
                                     </template>
                                 </Column>
-                                <Column field="difference" header="当月精算差異" sortable>
+                                <Column field="difference" header="当月精算差異 (売上 - 精算等)" sortable>
                                     <template #body="{ data }">
                                         <span :class="[
                                             data.difference > 1 ? 'text-emerald-500 font-bold' : '',
