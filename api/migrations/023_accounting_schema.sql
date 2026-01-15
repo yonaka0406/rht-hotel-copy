@@ -1,3 +1,11 @@
+-- 0. Drop existing tables if they exist (Clean Slate)
+DROP TABLE IF EXISTS acc_departments CASCADE;
+DROP TABLE IF EXISTS acc_yayoi_data CASCADE;
+DROP TABLE IF EXISTS acc_accounting_mappings CASCADE;
+DROP TABLE IF EXISTS acc_account_codes CASCADE;
+DROP TABLE IF EXISTS acc_tax_classes CASCADE;
+DROP TABLE IF EXISTS acc_management_groups CASCADE;
+
 -- 1. Management Groups Master
 -- Categorizes accounts into high-level groups for reporting and sorting.
 CREATE TABLE acc_management_groups (
@@ -177,7 +185,7 @@ INSERT INTO acc_account_codes (code, name, category1, category2, category3, cate
 ('10110003', 'その他特別損失', '特別損失', '特別損失', '特別損失', NULL, 101100, 9, 1),
 ('11110001', '法人税等', '当期純損益', '当期純損益', '当期純損益', NULL, 111100, 10, 1);
 
--- 2. Accounting Mappings
+-- 4. Accounting Mappings
 -- Maps system entities (Plans, Addons, Categories) to Account Codes.
 -- Resolution Logic (to be implemented in code/query):
 -- 1. Check for specific Item mapping for the Hotel (e.g. Plan A in Hotel 1).
@@ -211,13 +219,11 @@ CREATE TABLE acc_accounting_mappings (
 CREATE INDEX idx_acc_accounting_mappings_lookup ON acc_accounting_mappings (hotel_id, target_type, target_id);
 CREATE INDEX idx_acc_accounting_mappings_account_code ON acc_accounting_mappings (account_code_id);
 
--- 3. Yayoi Export Data
+-- 5. Yayoi Export Data
 -- Stores aggregated transaction data ready for export in Yayoi format (25 Columns).
 -- This table is a staging area that mirrors the standard Yayoi Import CSV format.
-CREATE TABLE acc_yayoi_export_data (
-    id SERIAL PRIMARY KEY,
-    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
-    export_batch_id UUID, -- To group records by export session
+CREATE TABLE acc_yayoi_data (
+    batch_id UUID, -- To group records by export session
     
     -- 1(A) [必須] 識別フラグ (Identification Flag) | 4文字
     -- 2000:伝票以外, 2111:1行伝票, 2110:複数行1行目, 2100:中間行, 2101:最終行
@@ -315,17 +321,15 @@ CREATE TABLE acc_yayoi_export_data (
     adjustment_flag VARCHAR(5) NOT NULL DEFAULT 'no', 
     
     -- Internal Metadata (Not exported to Yayoi)
-    source_type VARCHAR(50), -- 'reservation', 'pos', 'manual'
-    source_id VARCHAR(50),   -- ID of the source record
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id)
 );
 
-CREATE INDEX idx_acc_yayoi_export_date ON acc_yayoi_export_data (hotel_id, transaction_date);
-CREATE INDEX idx_acc_yayoi_export_batch ON acc_yayoi_export_data (export_batch_id);
--- Create accounting departments table
--- Maps hotels to their accounting department codes (部門) for Yayoi exports
+CREATE INDEX idx_acc_yayoi_date ON acc_yayoi_data (transaction_date);
+CREATE INDEX idx_acc_yayoi_batch ON acc_yayoi_data (batch_id);
 
+-- 6. Accounting Departments Master
+-- Maps hotels to their accounting department codes (部門) for Yayoi exports
 CREATE TABLE acc_departments (
     id SERIAL PRIMARY KEY,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -349,4 +353,3 @@ CREATE INDEX idx_acc_departments_hotel ON acc_departments(hotel_id);
 INSERT INTO acc_departments (hotel_id, name, created_by) VALUES
 (24, 'WH室蘭', 1)
 ON CONFLICT (hotel_id) DO NOTHING;
--- Add more INSERT statements as needed for other hotels

@@ -155,12 +155,9 @@ const executeImport = async (req, res) => {
         // 3. Prepare bulk insert
         const importBatchId = uuidv4();
         const insertData = rows.map(row => {
-            // Find hotel_id from either debit or credit department
-            const hotel_id = deptMap[row[6]] || deptMap[row[12]] || null;
             const transactionDate = toIsoDate(row[3]);
             
             return [
-                hotel_id,
                 importBatchId,
                 row[0], // identification_flag
                 row[1], // slip_number
@@ -188,19 +185,19 @@ const executeImport = async (req, res) => {
                 row[23], // sticky_note2
                 row[24], // adjustment_flag
                 userId,
-                new Date() // imported_at
+                new Date() // created_at
             ];
         });
 
         const query = pgFormat(
             `INSERT INTO acc_yayoi_data (
-                hotel_id, import_batch_id, 
+                batch_id, 
                 identification_flag, slip_number, settlement_type, transaction_date,
                 debit_account_code, debit_sub_account, debit_department, debit_tax_class, debit_amount, debit_tax_amount,
                 credit_account_code, credit_sub_account, credit_department, credit_tax_class, credit_amount, credit_tax_amount,
                 summary, journal_number, due_date, ledger_type, source_name, journal_memo,
                 sticky_note1, sticky_note2, adjustment_flag,
-                imported_by, imported_at
+                created_by, created_at
             ) VALUES %L`,
             insertData
         );

@@ -10,11 +10,41 @@ const accountingStore = useAccountingStore();
 
 const metrics = ref({
     totalSales: null,
-    totalPayments: null
+    totalPayments: null,
+    lastImport: null
 });
 
 const isLoading = ref(true);
 const hasError = ref(false);
+
+// Computed properties for last import
+const lastImportDateFormatted = computed(() => {
+    if (!metrics.value.lastImport || !metrics.value.lastImport.created_at) return '未実施';
+    const date = new Date(metrics.value.lastImport.created_at);
+    return date.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+});
+
+const lastImportUser = computed(() => {
+    return metrics.value.lastImport?.user_name || '-';
+});
+
+const lastImportPeriodFormatted = computed(() => {
+    const info = metrics.value.lastImport;
+    if (!info || !info.min_date || !info.max_date) return '-';
+    
+    const formatDate = (dateStr) => {
+        const d = new Date(dateStr);
+        return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    };
+    
+    return `${formatDate(info.min_date)} 〜 ${formatDate(info.max_date)}`;
+});
 
 // Computed properties for user information
 const userName = computed(() => {
@@ -182,8 +212,8 @@ onMounted(async () => {
                                     <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">会計データのインポート</p>
                                     
                                     <div class="mt-2 mb-4">
-                                        <p class="text-xs text-slate-400">最終アップロード: <span class="font-medium text-slate-500 dark:text-slate-300">未実施</span></p>
-                                        <p class="text-[10px] text-slate-400 mt-1">-</p>
+                                        <p class="text-xs text-slate-400">最終アップロード: <span class="font-medium text-slate-500 dark:text-slate-300">{{ lastImportDateFormatted }}</span></p>
+                                        <p class="text-[10px] text-slate-400 mt-1">{{ lastImportUser }} • {{ lastImportPeriodFormatted }}</p>
                                     </div>
 
                                     <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">

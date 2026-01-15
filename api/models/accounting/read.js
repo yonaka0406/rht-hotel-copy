@@ -515,14 +515,42 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
             AND hotel_id = ANY($3::int[])
         `;
 
-        const [salesRes, paymentsRes] = await Promise.all([
+        // 3. Last Yayoi Import Info
+        const lastImportQuery = `
+            SELECT y.batch_id, y.created_at, y.created_by, u.name as user_name
+            FROM acc_yayoi_data y
+            LEFT JOIN users u ON y.created_by = u.id
+            ORDER BY y.created_at DESC
+            LIMIT 1
+        `;
+
+        const [salesRes, paymentsRes, lastImportRes] = await Promise.all([
             client.query(salesQuery, [startDate, endDate, hotelIds]),
-            client.query(paymentsQuery, [startDate, endDate, hotelIds])
+            client.query(paymentsQuery, [startDate, endDate, hotelIds]),
+            client.query(lastImportQuery)
         ]);
+
+        const lastImport = lastImportRes.rows[0] || null;
+        let lastImportPeriod = null;
+
+        if (lastImport && lastImport.batch_id) {
+            const periodRes = await client.query(
+                `SELECT MIN(transaction_date) as min_date, MAX(transaction_date) as max_date 
+                 FROM acc_yayoi_data 
+                 WHERE batch_id = $1`,
+                [lastImport.batch_id]
+            );
+            lastImportPeriod = periodRes.rows[0];
+        }
 
         return {
             totalSales: parseInt(salesRes.rows[0]?.total_sales || 0),
-            totalPayments: parseInt(paymentsRes.rows[0]?.total_payments || 0)
+            totalPayments: parseInt(paymentsRes.rows[0]?.total_payments || 0),
+            lastImport: lastImport ? {
+                ...lastImport,
+                min_date: lastImportPeriod?.min_date,
+                max_date: lastImportPeriod?.max_date
+            } : null
         };
 
     } catch (err) {
