@@ -39,7 +39,7 @@
 </template>
 <script setup>
 // Vue
-import { ref, onMounted, toRefs, watch } from 'vue';
+import { ref, onMounted, toRefs, watch, computed } from 'vue';
 
 import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
 import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
@@ -99,7 +99,6 @@ const {
     revenueData,
     occupancyData,
     prevYearOccupancyData,
-    kpiData,
     selectionMessage
 } = useSalesOccDataAggr({
     selectedDate,
@@ -117,16 +116,6 @@ const {
 const loading = ref(false);
 const isDownloadingExcel = ref(false);
 const isDownloadingPdf = ref(false);
-
-const selectionMessage = computed(() => {
-    if (!selectedDate.value) return '';
-    const periodStr = formatDateMonth(selectedDate.value).replace('-', '/');
-    const names = revenueData.value
-        .map(item => item.hotel_name)
-        .filter(name => name && name !== '施設合計' && name !== 'Unknown Hotel');
-    const uniqueNames = [...new Set(names)];
-    return `会計データがない場合はPMSの数値になっています。期間： ${periodStr}。選択中の施設： ${uniqueNames.join(', ')}`;
-});
 
 const hotelSortOrderMap = computed(() => {
     const map = new Map();
@@ -521,14 +510,17 @@ const fetchData = async () => {
                             month: monthLabel,
                             forecast_sales: totalForecastSales,
                             sales: totalActualSales,
+                            sales_with_provisory: totalActualSales + totalProvisorySales, // Add provisory sales
                             sales_diff: salesDiff,
                             prev_sales: prev.sales, // Added for hidden column
                             forecast_occ: forecastOcc,
                             occ: actualOccAccommodation, // This is now accommodation specific
+                            occ_with_provisory: occDenominator > 0 ? ((accommodationConfirmedNights + totalProvisoryNights) / occDenominator) * 100 : 0, // Add provisory occupancy
                             occ_diff: hasPrevData ? actualOccAccommodation - prevOcc : null, // Diff also accommodation specific
                             prev_occ: prevOcc, // This is now accommodation specific
                             prev_confirmed_stays: prev.stays, // Added for hidden column
                             confirmed_nights: accommodationConfirmedNights,
+                            confirmed_nights_with_provisory: accommodationConfirmedNights + totalProvisoryNights, // Add provisory nights
                             provisory_sales: totalProvisorySales,
                             provisory_nights: totalProvisoryNights,
                             total_bookable_room_nights: occDenominator,

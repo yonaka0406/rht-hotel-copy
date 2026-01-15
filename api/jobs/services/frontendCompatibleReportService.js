@@ -799,6 +799,8 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 let totalForecastRooms = 0;
                 let totalForecastStays = 0;
 
+                console.log(`[${requestId}] Processing month ${monthLabel}, initializing totalActualSalesWithProvisory=0`);
+
                 let accommodationConfirmedNights = 0;
                 let accommodationProvisoryNights = 0;
                 let accommodationBookableRoomNights = 0;
@@ -839,30 +841,41 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                     let hotelActualSalesWithProvisory = 0;
                     let hasAccounting = false;
 
+                    console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: data.accounting exists=${!!data.accounting}, length=${data.accounting?.length}, data.pms exists=${!!data.pms}`);
+
                     if (Array.isArray(data.accounting) && data.accounting.length > 0) {
                         let accSum = 0;
                         data.accounting.forEach(a => { accSum += Number(a.accommodation_revenue) || 0; });
                         if (accSum > 0) {
                             hotelActualSales = accSum;
-                            hotelActualSalesWithProvisory = accSum; // Accounting doesn't separate provisory
+                            // Accounting data doesn't separate provisory, so add provisory revenue from PMS
+                            const provisoryRevenue = (data.pms && Number(data.pms.provisory_revenue)) || 0;
+                            hotelActualSalesWithProvisory = accSum + provisoryRevenue;
                             hasAccounting = true;
                             
-                            logger.warn(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using ACCOUNTING data, Sales=${hotelActualSales}`);
+                            console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using ACCOUNTING data, Sales=${hotelActualSales}, Provisory=${provisoryRevenue}, SalesWithProvisory=${hotelActualSalesWithProvisory}, data.pms=${JSON.stringify(data.pms)}`);
                         }
                     }
 
                     if (!hasAccounting) {
-                        // Fallback to PMS. Use confirmed revenue for sales, total for sales_with_provisory
+                        // Fallback to PMS. Use confirmed revenue for sales, confirmed + provisory for sales_with_provisory
                         if (data.pms) {
-                            hotelActualSales = Number(data.pms.confirmed_revenue) || 0;
-                            hotelActualSalesWithProvisory = Number(data.pms.revenue) || 0;
+                            const confirmedRev = Number(data.pms.confirmed_revenue) || 0;
+                            const provisoryRev = Number(data.pms.provisory_revenue) || 0;
                             
-                            logger.warn(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using PMS data, Sales=${hotelActualSales}, SalesWithProvisory=${hotelActualSalesWithProvisory}, PMS.revenue=${data.pms.revenue}, PMS.confirmed=${data.pms.confirmed_revenue}, PMS.provisory=${data.pms.provisory_revenue}`);
+                            hotelActualSales = confirmedRev;
+                            hotelActualSalesWithProvisory = confirmedRev + provisoryRev;
+                            
+                            console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using PMS data, Sales=${hotelActualSales}, SalesWithProvisory=${hotelActualSalesWithProvisory}, PMS.confirmed=${data.pms.confirmed_revenue}, PMS.provisory=${data.pms.provisory_revenue}`);
+                        } else {
+                            console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: NO DATA - data.pms is null/undefined`);
                         }
                     }
 
                     totalActualSales += hotelActualSales;
                     totalActualSalesWithProvisory += hotelActualSalesWithProvisory;
+                    
+                    console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: hotelActualSales=${hotelActualSales}, hotelActualSalesWithProvisory=${hotelActualSalesWithProvisory}, totalActualSalesWithProvisory=${totalActualSalesWithProvisory}`);
                 }
 
                 const occDenominator = totalForecastRooms > 0 ? totalForecastRooms : accommodationNetAvailableRoomNights;
@@ -876,9 +889,9 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 const prevOcc = occDenominator > 0 ? (prev.stays / occDenominator) * 100 : 0;
                 const salesDiff = hasPrevData ? totalActualSales - prev.sales : null;
 
-                logger.warn(`[${requestId}] Month ${monthLabel} TOTALS: sales=${totalActualSales}, sales_with_provisory=${totalActualSalesWithProvisory}, confirmed_nights=${accommodationConfirmedNights}, provisory_nights=${accommodationProvisoryNights}`);
+                console.log(`[${requestId}] Month ${monthLabel} TOTALS BEFORE PUSH: sales=${totalActualSales}, sales_with_provisory=${totalActualSalesWithProvisory}, typeof=${typeof totalActualSalesWithProvisory}, confirmed_nights=${accommodationConfirmedNights}, provisory_nights=${accommodationProvisoryNights}`);
 
-                outlookData.push({
+                const outlookItem = {
                     metric_date: targetDate,
                     month: monthLabel,
                     forecast_sales: totalForecastSales,
@@ -899,7 +912,11 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                     net_available_room_nights: accommodationNetAvailableRoomNights,
                     forecast_stays: totalForecastStays,
                     forecast_rooms: totalForecastRooms
-                });
+                };
+                
+                console.log(`[${requestId}] Month ${monthLabel} outlookItem created:`, JSON.stringify(outlookItem));
+                
+                outlookData.push(outlookItem);
             }
             outlookData.sort((a, b) => a.month.localeCompare(b.month));
 
@@ -929,9 +946,12 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
         logger.debug(`[getFrontendCompatibleReportData] Generated report data - Revenue: ${revenueData.length}, Occupancy: ${occupancyData.length}, Outlook: ${outlookData.length}`);
         
-        // Debug: Log first outlook item
+        // Debug: Log all outlook items with sales_with_provisory
         if (outlookData.length > 0) {
-            logger.warn(`[getFrontendCompatibleReportData] First outlook item:`, JSON.stringify(outlookData[0]));
+            console.log(`[getFrontendCompatibleReportData] First outlook item:`, JSON.stringify(outlookData[0]));
+            outlookData.forEach((item, idx) => {
+                console.log(`[getFrontendCompatibleReportData] outlookData[${idx}]: month=${item.month}, sales=${item.sales}, sales_with_provisory=${item.sales_with_provisory}`);
+            });
         }
 
         return {

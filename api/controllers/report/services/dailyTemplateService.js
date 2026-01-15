@@ -53,10 +53,10 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
         // Use XlsxPopulate to load the template (preserves charts)
         const workbook = await XlsxPopulate.fromFileAsync(templatePath);
 
-        // Write Selection Message in 'レポート' sheet A45
+        // Write Selection Message in 'レポート' sheet A52
         const reportSheet = workbook.sheet('レポート');
         if (reportSheet && selectionMessage) {
-            reportSheet.cell('A45').value(selectionMessage);
+            reportSheet.cell('A52').value(selectionMessage);
         }
 
         const dataSheet = workbook.sheet('合計データ');
@@ -86,12 +86,17 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const rowNumber = index + 2; // xlsx-populate uses 1-based indexing
                     const row = dataSheet.row(rowNumber);
 
-                    console.log(`[dailyTemplateService] Row ${rowNumber}, Month ${item.month}: sales=${item.sales}, sales_with_provisory=${item.sales_with_provisory}`);
+                    // Ensure sales_with_provisory has a valid value, fallback to sales if undefined
+                    const salesWithProvisory = (item.sales_with_provisory !== undefined && item.sales_with_provisory !== null) 
+                        ? item.sales_with_provisory 
+                        : item.sales;
+
+                    console.log(`[dailyTemplateService] Row ${rowNumber}, Month ${item.month}: sales=${item.sales}, sales_with_provisory=${item.sales_with_provisory}, using=${salesWithProvisory}`);
 
                     row.cell(1).value(item.month);                                                                      // A: 月度
                     row.cell(2).value(item.forecast_sales);                                                             // B: 計画売上
                     row.cell(3).value(item.sales);                                                                      // C: 売上
-                    row.cell(4).value(item.sales_with_provisory || item.sales);                                        // D: 売上（仮予約含む）
+                    row.cell(4).value(salesWithProvisory);                                                              // D: 売上（仮予約含む）
                     row.cell(5).value(item.forecast_occ ? item.forecast_occ / 100 : 0).style("numberFormat", "0.0%"); // E: 計画稼働率
                     row.cell(6).value(item.occ ? item.occ / 100 : 0).style("numberFormat", "0.0%");                   // F: 稼働率
                     row.cell(7).value(item.occ_with_provisory ? item.occ_with_provisory / 100 : 0).style("numberFormat", "0.0%"); // G: 稼働率（仮予約含む）
