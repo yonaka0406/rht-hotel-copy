@@ -351,7 +351,7 @@ const validateLedgerDataIntegrity = async (requestId, filters, dbClient = null) 
             ) as significant_issues
         FROM discrepancies
         GROUP BY hotel_id, hotel_name
-        HAVING COUNT(*) > 0  -- Only return hotels with actual issues
+        HAVING SUM(CASE WHEN missing_rates THEN 1 ELSE 0 END) > 0  -- Only return hotels with missing rates
         ORDER BY hotel_id
     `;
 
