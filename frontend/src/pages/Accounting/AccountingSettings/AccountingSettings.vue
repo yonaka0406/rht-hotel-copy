@@ -45,7 +45,7 @@
                         <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">データ読み込み中...</p>
                     </div>
 
-                    <div v-else>
+                    <div v-else class="animate-fade-in">
                         <!-- Account Codes Tab -->
                         <div v-if="activeTab === 'codes'">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
@@ -147,8 +147,7 @@
                             </div>
                         </div>
 
-                        <!-- Tax Classes Tab -->
-                        <!-- Tax Classes Tab -->
+                        <!-- Tax Classes Tab -->                        
                         <div v-if="activeTab === 'tax'">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                                 <h2 class="text-2xl font-black text-slate-900 dark:text-white">税区分設定</h2>
@@ -329,7 +328,7 @@
                     <button @click="modal.visible = false" class="px-6 py-2 rounded-xl font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700 transition-all">
                         キャンセル
                     </button>
-                    <button @click="handleSave" :disabled="saving" class="bg-violet-600 text-white px-8 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 shadow-lg shadow-violet-200 dark:shadow-none">
+                    <button @click="handleSave" :disabled="saving || !isFormValid" class="bg-violet-600 text-white px-8 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 shadow-lg shadow-violet-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
                         <i v-if="saving" class="pi pi-spin pi-spinner"></i>
                         保存する
                     </button>
@@ -491,7 +490,24 @@ const editItem = (type, item) => {
     }
 };
 
+const isFormValid = computed(() => {
+    switch (modal.type) {
+        case 'code':
+            return form.code && form.name;
+        case 'group':
+            return form.name;
+        case 'tax':
+            return form.name && form.yayoi_name;
+        case 'dept':
+            return form.name;
+        default:
+            return false;
+    }
+});
+
 const handleSave = async () => {
+    if (!isFormValid.value) return;
+
     try {
         saving.value = true;
         let payload = { ...form };
