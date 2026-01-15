@@ -662,8 +662,8 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
     try {
         const query = `
         WITH res_list AS (
-            -- Step 1: Find all clients with activity in the hotel during the month
-            SELECT DISTINCT r.reservation_client_id
+            -- Step 1: Find all reservations (not just clients) with activity in the hotel during the month
+            SELECT DISTINCT r.id as reservation_id, r.reservation_client_id
             FROM reservations r
             LEFT JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
             LEFT JOIN reservation_payments rp ON r.id = rp.reservation_id AND r.hotel_id = rp.hotel_id
@@ -677,13 +677,13 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
         client_res_info AS (
             -- Get min check-in date and activity type for relevant reservations
             SELECT 
-                r.reservation_client_id,
+                rl.reservation_client_id,
                 MIN(r.check_in) as check_in,
                 BOOL_OR(r.type IN ('web', 'ota')) as is_ota_web
-            FROM reservations r
-            JOIN res_list rl ON r.reservation_client_id = rl.reservation_client_id
+            FROM res_list rl
+            JOIN reservations r ON rl.reservation_id = r.id
             WHERE r.hotel_id = $3
-            GROUP BY r.reservation_client_id
+            GROUP BY rl.reservation_client_id
         ),
         rr_base AS (
             SELECT 
@@ -701,7 +701,7 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
                 ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
-            JOIN res_list rl ON r.reservation_client_id = rl.reservation_client_id
+            JOIN res_list rl ON r.id = rl.reservation_id
             LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
             WHERE rd.hotel_id = $3
             AND rd.billable = TRUE
@@ -731,7 +731,7 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
                 FROM reservation_addons ra
                 JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
                 JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
-                JOIN res_list rl ON r.reservation_client_id = rl.reservation_client_id
+                JOIN res_list rl ON r.id = rl.reservation_id
                 WHERE rd.hotel_id = $3
                 AND rd.billable = TRUE
             ) s GROUP BY reservation_client_id
@@ -745,8 +745,10 @@ const getReconciliationHotelDetails = async (requestId, hotelId, startDate, endD
                 SUM(CASE WHEN rp.date <= $2 THEN rp.value ELSE 0 END) as cumulative_payments
             FROM reservation_payments rp
             JOIN reservations r ON rp.reservation_id = r.id AND rp.hotel_id = r.hotel_id
-            JOIN res_list rl ON r.reservation_client_id = rl.reservation_client_id
+            JOIN res_list rl ON r.id = rl.reservation_id
             WHERE rp.hotel_id = $3
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
             GROUP BY r.reservation_client_id
         )
         SELECT 
