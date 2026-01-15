@@ -172,6 +172,24 @@ onMounted(async () => {
                                         エクスポートへ進む <i class="pi pi-arrow-right"></i>
                                     </span>
                                 </button>
+
+                                <!-- Yayoi Accounting Import Card -->
+                                <button @click="$router.push({ name: 'AccountingYayoiImport' })" class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
+                                    <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                                        <i class="pi pi-upload text-xl text-violet-600 dark:text-violet-400"></i>
+                                    </div>
+                                    <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">弥生会計</span>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">会計データのインポート</p>
+                                    
+                                    <div class="mt-2 mb-4">
+                                        <p class="text-xs text-slate-400">最終アップロード: <span class="font-medium text-slate-500 dark:text-slate-300">未実施</span></p>
+                                        <p class="text-[10px] text-slate-400 mt-1">-</p>
+                                    </div>
+
+                                    <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
+                                        インポートへ進む <i class="pi pi-arrow-right"></i>
+                                    </span>
+                                </button>
                                 
                                 <!-- OTA Import (Placeholder) -->
                                 <div class="group bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed relative overflow-hidden flex flex-col items-center text-center h-full">
