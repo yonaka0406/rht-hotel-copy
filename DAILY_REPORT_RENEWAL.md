@@ -41,28 +41,58 @@ The `frontendCompatibleReportService.js` returns a comprehensive data object:
 {
     targetDate: string,           // Formatted target date
     period: string,              // 'month' or 'year'
-    revenueData: Array,          // Current year revenue data
+    revenueData: Array,          // Current year revenue data (with confirmed/provisory breakdown)
     occupancyData: Array,        // Current year occupancy data
     prevYearRevenueData: Array,  // Previous year revenue comparison
     prevYearOccupancyData: Array, // Previous year occupancy comparison
     dayOverDayChange: Object,    // Day-over-day changes (rooms, occ, sales)
-    occupationBreakdownAllHotels: Array, // Detailed occupation breakdown
+    occupationBreakdownAllHotels: Array, // Detailed occupation breakdown (with provisory_nights)
     kpiData: Object,             // 6-month KPI data (ADR, RevPAR)
-    outlookData: Array,          // Future outlook data (6 months)
+    outlookData: Array,          // Future outlook data (6 months) with provisory tracking
     selectionMessage: string,    // Dynamic report description
     allHotelNames: Array        // List of all hotel names
 }
 ```
+
+#### outlookData Structure (Enhanced with Provisory Data)
+
+Each item in `outlookData` now includes:
+- `sales`: Confirmed sales only
+- `sales_with_provisory`: Sales including provisory reservations
+- `occ`: Occupancy rate (confirmed only)
+- `occ_with_provisory`: Occupancy rate including provisory
+- `confirmed_nights`: Confirmed room nights only
+- `confirmed_nights_with_provisory`: Room nights including provisory
+- `forecast_rooms`: Total planned rooms (used as denominator for occupancy calculations)
 
 ### Data Mapping Summary (Current)
 
 | Sheet Name | Target Cell/Range | Data Type | Description |
 | :--- | :--- | :--- | :--- |
 | **レポート** | `A45` | String | `selectionMessage` (dynamic footer/note) |
-| **合計データ** | Rows 2,4,7,8 Cols V-AA | Object | **KPI Data**: 6-month Actual/Forecast ADR and RevPAR |
-| **合計データ** | Row 2 onwards | Array | **Outlook Data**: 6-month trends (sales, occ, room nights) |
+| **合計データ** | Rows 2,4,7,8 Cols W-AB | Object | **KPI Data**: 6-month Actual/Forecast ADR and RevPAR |
+| **合計データ** | Row 2 onwards | Array | **Outlook Data**: 6-month trends (sales, occ, room nights) with provisory data |
 | **合計データ** | Row 10 onwards | Array | **Facility Performance**: Side-by-side revenue and occupancy comparison |
 | **合計データ** | Cols O, P, Q | Formula | Dynamic scaling (e.g., `/10000`) for chart compatibility |
+
+#### Outlook Data Column Mapping (Row 2 onwards)
+
+| Column | Field | Description |
+| :--- | :--- | :--- |
+| A | 月度 | Month |
+| B | 計画売上 | Forecast Sales |
+| C | 売上 | Sales (confirmed only) |
+| D | 売上（仮予約含む） | Sales including provisory reservations |
+| E | 計画稼働率 | Forecast Occupancy Rate |
+| F | 稼働率 | Occupancy Rate (confirmed only) |
+| G | 稼働率（仮予約含む） | Occupancy Rate including provisory |
+| H | 前日集計日 | Previous Day Metric Date |
+| I | 前日実績売上 | Previous Day Actual Sales |
+| J | 前日稼働率 | Previous Day Occupancy Rate |
+| K | 前日確定泊数 | Previous Day Confirmed Stays |
+| L | 確定泊数 | Confirmed Nights (confirmed only) |
+| M | 確定泊数（仮予約含む） | Confirmed Nights including provisory |
+| N | 計画総室数 | Total Planned Rooms (denominator for occupancy calculation) |
 
 ## Implementation Status
 
@@ -188,6 +218,27 @@ const xlsxPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
 - **Parameter Validation**: Proper function signature validation to prevent undefined parameter errors
 
 ### 🐛 Recent Fixes
+
+#### Provisory Reservation Data Addition (2026-01-14)
+- **Change**: Added separate tracking for provisory (仮予約) reservations in daily report
+- **New Fields Added**:
+  - `confirmed_room_count`: Room count for confirmed reservations only
+  - `provisory_room_count`: Room count for provisory reservations
+  - `confirmed_accommodation_price`: Revenue from confirmed reservations
+  - `provisory_accommodation_price`: Revenue from provisory reservations
+  - `provisory_nights`: Night count for provisory reservations in occupation breakdown
+- **Excel Column Changes**:
+  - Column D: 売上（仮予約含む） - Sales including provisory
+  - Column G: 稼働率（仮予約含む） - Occupancy including provisory
+  - Column M: 確定泊数（仮予約含む） - Nights including provisory
+  - Column N: 計画総室数 - Total planned rooms (forecast denominator)
+  - ADR/RevPAR columns moved from V-AA to W-AB
+- **Affected Files**: 
+  - `api/models/report/main.js` - Added status tracking to selectCountReservation
+  - `api/models/report/occupation.js` - Added provisory_nights to selectOccupationBreakdownByMonth
+  - `api/jobs/services/frontendCompatibleReportService.js` - Added provisory data aggregation
+  - `api/controllers/report/services/dailyTemplateService.js` - Updated Excel column mapping
+- **Reason**: Business requirement to track and display provisional reservations separately from confirmed ones
 
 #### Selection Message Cell Position Update (2026-01-09)
 - **Change**: Updated `selectionMessage` target cell from `A39` to `A45` in the 'レポート' sheet

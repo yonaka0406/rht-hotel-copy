@@ -170,8 +170,12 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                     date: formatDate(item.date),
                     revenue: item.price !== undefined ? Number(item.price) : 0,
                     accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
+                    confirmed_accommodation_revenue: item.confirmed_accommodation_price !== undefined ? Number(item.confirmed_accommodation_price) : 0,
+                    provisory_accommodation_revenue: item.provisory_accommodation_price !== undefined ? Number(item.provisory_accommodation_price) : 0,
                     other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
                     room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
+                    confirmed_room_count: item.confirmed_room_count !== undefined ? Number(item.confirmed_room_count) : 0,
+                    provisory_room_count: item.provisory_room_count !== undefined ? Number(item.provisory_room_count) : 0,
                     non_accommodation_stays: item.non_accommodation_stays !== undefined ? Number(item.non_accommodation_stays) : 0,
                     total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                     total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
@@ -213,8 +217,12 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                     date: formatDate(item.date),
                     revenue: item.price !== undefined ? Number(item.price) : 0,
                     accommodation_revenue: item.accommodation_price !== undefined ? Number(item.accommodation_price) : 0,
+                    confirmed_accommodation_revenue: item.confirmed_accommodation_price !== undefined ? Number(item.confirmed_accommodation_price) : 0,
+                    provisory_accommodation_revenue: item.provisory_accommodation_price !== undefined ? Number(item.provisory_accommodation_price) : 0,
                     other_revenue: item.other_price !== undefined ? Number(item.other_price) : 0,
                     room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
+                    confirmed_room_count: item.confirmed_room_count !== undefined ? Number(item.confirmed_room_count) : 0,
+                    provisory_room_count: item.provisory_room_count !== undefined ? Number(item.provisory_room_count) : 0,
                     non_accommodation_stays: item.non_accommodation_stays !== undefined ? Number(item.non_accommodation_stays) : 0,
                     total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
                     total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
@@ -262,14 +270,24 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const monthlyAggregates = {};
         monthlyAggregates[monthKey] = {};
         monthlyAggregates[monthKey]['0'] = {
-            pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null,
-            forecast_revenue: null, acc_revenue: null
+            pms_revenue: null, 
+            pms_accommodation_revenue: null, 
+            pms_confirmed_accommodation_revenue: null,
+            pms_provisory_accommodation_revenue: null,
+            pms_other_revenue: null,
+            forecast_revenue: null, 
+            acc_revenue: null
         };
 
         hotelIds.forEach(hotelId => {
             monthlyAggregates[monthKey][String(hotelId)] = {
-                pms_revenue: null, pms_accommodation_revenue: null, pms_other_revenue: null,
-                forecast_revenue: null, acc_revenue: null
+                pms_revenue: null, 
+                pms_accommodation_revenue: null, 
+                pms_confirmed_accommodation_revenue: null,
+                pms_provisory_accommodation_revenue: null,
+                pms_other_revenue: null,
+                forecast_revenue: null, 
+                acc_revenue: null
             };
         });
 
@@ -295,6 +313,18 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                                         }
                                         monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_accommodation_revenue += record.accommodation_revenue;
                                     }
+                                    if (typeof record.confirmed_accommodation_revenue === 'number') {
+                                        if (monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_confirmed_accommodation_revenue === null) {
+                                            monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_confirmed_accommodation_revenue = 0;
+                                        }
+                                        monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_confirmed_accommodation_revenue += record.confirmed_accommodation_revenue;
+                                    }
+                                    if (typeof record.provisory_accommodation_revenue === 'number') {
+                                        if (monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_provisory_accommodation_revenue === null) {
+                                            monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_provisory_accommodation_revenue = 0;
+                                        }
+                                        monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_provisory_accommodation_revenue += record.provisory_accommodation_revenue;
+                                    }
                                     if (typeof record.other_revenue === 'number') {
                                         if (monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_other_revenue === null) {
                                             monthlyAggregates[recordMonthKey][stringHotelIdKey].pms_other_revenue = 0;
@@ -314,6 +344,18 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                                             monthlyAggregates[recordMonthKey]['0'].pms_accommodation_revenue = 0;
                                         }
                                         monthlyAggregates[recordMonthKey]['0'].pms_accommodation_revenue += record.accommodation_revenue;
+                                    }
+                                    if (typeof record.confirmed_accommodation_revenue === 'number') {
+                                        if (monthlyAggregates[recordMonthKey]['0'].pms_confirmed_accommodation_revenue === null) {
+                                            monthlyAggregates[recordMonthKey]['0'].pms_confirmed_accommodation_revenue = 0;
+                                        }
+                                        monthlyAggregates[recordMonthKey]['0'].pms_confirmed_accommodation_revenue += record.confirmed_accommodation_revenue;
+                                    }
+                                    if (typeof record.provisory_accommodation_revenue === 'number') {
+                                        if (monthlyAggregates[recordMonthKey]['0'].pms_provisory_accommodation_revenue === null) {
+                                            monthlyAggregates[recordMonthKey]['0'].pms_provisory_accommodation_revenue = 0;
+                                        }
+                                        monthlyAggregates[recordMonthKey]['0'].pms_provisory_accommodation_revenue += record.provisory_accommodation_revenue;
                                     }
                                     if (typeof record.other_revenue === 'number') {
                                         if (monthlyAggregates[recordMonthKey]['0'].pms_other_revenue === null) {
@@ -383,6 +425,8 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 const aggregatedMonthData = monthlyAggregates[monthKeyInLoop][hotelIdStringKeyInMonth];
                 const pmsRev = aggregatedMonthData.pms_revenue;
                 const pmsAccommodationRev = aggregatedMonthData.pms_accommodation_revenue;
+                const pmsConfirmedAccommodationRev = aggregatedMonthData.pms_confirmed_accommodation_revenue;
+                const pmsProvisoryAccommodationRev = aggregatedMonthData.pms_provisory_accommodation_revenue;
                 const pmsOtherRev = aggregatedMonthData.pms_other_revenue;
                 const forecastRev = aggregatedMonthData.forecast_revenue;
                 const accRev = aggregatedMonthData.acc_revenue;
@@ -391,6 +435,8 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 // Prioritize accounting revenue if available, otherwise use PMS (same as frontend)
                 let periodRev = (accRev !== null) ? accRev : (pmsRev || 0);
                 let accommodationRev = (accRev !== null) ? accRev : (pmsAccommodationRev || 0);
+                let confirmedAccommodationRev = (accRev !== null) ? accRev : (pmsConfirmedAccommodationRev || 0);
+                let provisoryAccommodationRev = (accRev !== null) ? 0 : (pmsProvisoryAccommodationRev || 0);
                 let otherRev = (accRev !== null) ? 0 : (pmsOtherRev || 0);
 
                 revenueData.push({
@@ -403,6 +449,8 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                     acc_revenue: accRev,
                     period_revenue: periodRev,
                     accommodation_revenue: accommodationRev,
+                    confirmed_accommodation_revenue: confirmedAccommodationRev,
+                    provisory_accommodation_revenue: provisoryAccommodationRev,
                     other_revenue: otherRev,
                 });
             }
@@ -451,8 +499,14 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
             monthlyOccupancyAggregates[monthKey]['0'].total_rooms += monthlyAvailableRoomDays;
             monthlyOccupancyAggregates[monthKey][String(hotelId)] = {
-                total_rooms: monthlyAvailableRoomDays, sold_rooms: 0, non_accommodation_stays: 0,
-                roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0
+                total_rooms: monthlyAvailableRoomDays, 
+                sold_rooms: 0, 
+                confirmed_sold_rooms: 0,
+                provisory_sold_rooms: 0,
+                non_accommodation_stays: 0,
+                roomDifferenceSum: 0, 
+                fc_total_rooms: 0, 
+                fc_sold_rooms: 0
             };
         });
 
@@ -466,9 +520,13 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                         if (recordMonthKey === monthKey) {
                             if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
                                 monthlyOccupancyAggregates[monthKey][stringHotelIdKey].sold_rooms += record.room_count;
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].confirmed_sold_rooms += (record.confirmed_room_count || 0);
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].provisory_sold_rooms += (record.provisory_room_count || 0);
                             }
                             if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
                                 monthlyOccupancyAggregates[monthKey]['0'].sold_rooms += record.room_count;
+                                monthlyOccupancyAggregates[monthKey]['0'].confirmed_sold_rooms += (record.confirmed_room_count || 0);
+                                monthlyOccupancyAggregates[monthKey]['0'].provisory_sold_rooms += (record.provisory_room_count || 0);
                             }
                             if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey] && typeof record.non_accommodation_stays === 'number') {
                                 monthlyOccupancyAggregates[monthKey][stringHotelIdKey].non_accommodation_stays += record.non_accommodation_stays;
@@ -637,10 +695,14 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const outlookData = [];
         let kpiData = { actualADR: [], forecastADR: [], actualRevPAR: [], forecastRevPAR: [] };
 
+        logger.warn(`[${requestId}] Starting outlook data generation...`);
+
         try {
             const latestDateStrRaw = await selectLatestDailyReportDate(requestId, dbClient);
             let targetDate = latestDateStrRaw;
             const todayDateString = formatDate(new Date());
+            
+            logger.warn(`[${requestId}] Latest date: ${latestDateStrRaw}, Today: ${todayDateString}`);
 
             // If the latest report date is today, shift back one day to compare against the last full day
             if (targetDate === todayDateString) {
@@ -648,6 +710,8 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 d.setDate(d.getDate() - 1);
                 targetDate = formatDate(d);
             }
+
+            logger.warn(`[${requestId}] Target date for outlook: ${targetDate}`);
 
             // Calculate 6 months: start from current month and next 5 (same as backend getBatchFutureOutlook)
             const months = [];
@@ -676,21 +740,36 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
                         // Aggregate daily PMS data to monthly
                         let pmsTotalRevenue = 0;
+                        let pmsConfirmedRevenue = 0;
+                        let pmsProvisoryRevenue = 0;
                         if (Array.isArray(pmsData)) {
                             // Use 'price' instead of 'accommodation_price' to include non-accommodation revenue (breakfast, parking, etc.)
                             // to match manual export logic in batch.js
                             pmsTotalRevenue = pmsData.reduce((sum, day) => sum + (Number(day.price) || 0), 0);
+                            pmsConfirmedRevenue = pmsData.reduce((sum, day) => sum + (Number(day.confirmed_accommodation_price) || 0), 0);
+                            pmsProvisoryRevenue = pmsData.reduce((sum, day) => sum + (Number(day.provisory_accommodation_price) || 0), 0);
+                            
+                            logger.warn(`[${requestId}] Hotel ${hotelId}, Month ${monthInfo.monthLabel}: PMS Total=${pmsTotalRevenue}, Confirmed=${pmsConfirmedRevenue}, Provisory=${pmsProvisoryRevenue}`);
                         }
 
                         futureData[monthInfo.monthLabel][hotelId] = {
                             occupation: occupationData || [],
                             forecast: forecastData || [],
                             accounting: accountingData || [],
-                            pms: { revenue: pmsTotalRevenue }
+                            pms: { 
+                                revenue: pmsTotalRevenue,
+                                confirmed_revenue: pmsConfirmedRevenue,
+                                provisory_revenue: pmsProvisoryRevenue
+                            }
                         };
                     } catch (err) {
                         logger.error(`[${requestId}] Failed for hotel ${hotelId}, month ${monthInfo.monthLabel}. Error: ${err.message}`);
-                        futureData[monthInfo.monthLabel][hotelId] = { occupation: [], forecast: [], accounting: [], pms: { revenue: 0 } };
+                        futureData[monthInfo.monthLabel][hotelId] = { 
+                            occupation: [], 
+                            forecast: [], 
+                            accounting: [], 
+                            pms: { revenue: 0, confirmed_revenue: 0, provisory_revenue: 0 } 
+                        };
                     }
                 }
             }
@@ -702,18 +781,26 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             if (Array.isArray(prevDayData)) {
                 prevDayData.forEach(item => {
                     const mk = formatDateMonth(new Date(item.month));
-                    if (!prevByMonth[mk]) prevByMonth[mk] = { sales: 0, stays: 0, rooms: 0 };
+                    if (!prevByMonth[mk]) prevByMonth[mk] = { sales: 0, sales_with_provisory: 0, stays: 0, rooms: 0 };
 
                     const dailySales = (Number(item.accommodation_net_sales) || 0) + (Number(item.other_net_sales) || 0) + (Number(item.accommodation_net_sales_cancelled) || 0) + (Number(item.other_net_sales_cancelled) || 0);
+                    const provisorySales = (Number(item.accommodation_net_sales_provisory) || 0) + (Number(item.other_net_sales_provisory) || 0);
+                    
                     prevByMonth[mk].sales += dailySales;
+                    prevByMonth[mk].sales_with_provisory += dailySales + provisorySales;
                     prevByMonth[mk].stays += Number(item.confirmed_stays) || 0;
                 });
             }
 
             for (const [monthLabel, hotelDataMap] of Object.entries(futureData)) {
-                let totalActualSales = 0, totalForecastSales = 0, totalForecastRooms = 0, totalForecastStays = 0;
+                let totalActualSales = 0;
+                let totalActualSalesWithProvisory = 0;
+                let totalForecastSales = 0;
+                let totalForecastRooms = 0;
+                let totalForecastStays = 0;
 
                 let accommodationConfirmedNights = 0;
+                let accommodationProvisoryNights = 0;
                 let accommodationBookableRoomNights = 0;
                 let accommodationBlockedNights = 0;
                 let accommodationNetAvailableRoomNights = 0;
@@ -732,6 +819,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
                             if (row.sales_category === 'accommodation') {
                                 accommodationConfirmedNights += Number(row.confirmed_nights) || 0;
+                                accommodationProvisoryNights += Number(row.provisory_nights) || 0;
                                 accommodationBlockedNights += Number(row.blocked_nights) || 0;
                             }
                         });
@@ -748,6 +836,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                     }
 
                     let hotelActualSales = 0;
+                    let hotelActualSalesWithProvisory = 0;
                     let hasAccounting = false;
 
                     if (Array.isArray(data.accounting) && data.accounting.length > 0) {
@@ -755,43 +844,56 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                         data.accounting.forEach(a => { accSum += Number(a.accommodation_revenue) || 0; });
                         if (accSum > 0) {
                             hotelActualSales = accSum;
+                            hotelActualSalesWithProvisory = accSum; // Accounting doesn't separate provisory
                             hasAccounting = true;
+                            
+                            logger.warn(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using ACCOUNTING data, Sales=${hotelActualSales}`);
                         }
                     }
 
                     if (!hasAccounting) {
-                        // Fallback to PMS. Note: Backend now aggregates into `pms` key.
-                        if (data.pms && typeof data.pms.revenue === 'number') {
-                            hotelActualSales = data.pms.revenue;
+                        // Fallback to PMS. Use confirmed revenue for sales, total for sales_with_provisory
+                        if (data.pms) {
+                            hotelActualSales = Number(data.pms.confirmed_revenue) || 0;
+                            hotelActualSalesWithProvisory = Number(data.pms.revenue) || 0;
+                            
+                            logger.warn(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using PMS data, Sales=${hotelActualSales}, SalesWithProvisory=${hotelActualSalesWithProvisory}, PMS.revenue=${data.pms.revenue}, PMS.confirmed=${data.pms.confirmed_revenue}, PMS.provisory=${data.pms.provisory_revenue}`);
                         }
                     }
 
                     totalActualSales += hotelActualSales;
+                    totalActualSalesWithProvisory += hotelActualSalesWithProvisory;
                 }
 
                 const occDenominator = totalForecastRooms > 0 ? totalForecastRooms : accommodationNetAvailableRoomNights;
                 const actualOccAccommodation = occDenominator > 0 ? (accommodationConfirmedNights / occDenominator) * 100 : 0;
+                const actualOccWithProvisory = occDenominator > 0 ? ((accommodationConfirmedNights + accommodationProvisoryNights) / occDenominator) * 100 : 0;
                 const forecastOcc = totalForecastRooms > 0 ? (totalForecastStays / totalForecastRooms) * 100 : 0;
 
                 const hasPrevData = !!prevByMonth[monthLabel];
-                const prev = prevByMonth[monthLabel] || { sales: 0, stays: 0, rooms: 0 };
+                const prev = prevByMonth[monthLabel] || { sales: 0, sales_with_provisory: 0, stays: 0, rooms: 0 };
 
                 const prevOcc = occDenominator > 0 ? (prev.stays / occDenominator) * 100 : 0;
                 const salesDiff = hasPrevData ? totalActualSales - prev.sales : null;
+
+                logger.warn(`[${requestId}] Month ${monthLabel} TOTALS: sales=${totalActualSales}, sales_with_provisory=${totalActualSalesWithProvisory}, confirmed_nights=${accommodationConfirmedNights}, provisory_nights=${accommodationProvisoryNights}`);
 
                 outlookData.push({
                     metric_date: targetDate,
                     month: monthLabel,
                     forecast_sales: totalForecastSales,
                     sales: totalActualSales,
+                    sales_with_provisory: totalActualSalesWithProvisory,
                     sales_diff: salesDiff,
                     prev_sales: prev.sales,
                     forecast_occ: forecastOcc,
                     occ: actualOccAccommodation,
+                    occ_with_provisory: actualOccWithProvisory,
                     occ_diff: hasPrevData ? actualOccAccommodation - prevOcc : null,
                     prev_occ: prevOcc,
                     prev_confirmed_stays: prev.stays,
                     confirmed_nights: accommodationConfirmedNights,
+                    confirmed_nights_with_provisory: accommodationConfirmedNights + accommodationProvisoryNights,
                     total_bookable_room_nights: accommodationBookableRoomNights,
                     blocked_nights: accommodationBlockedNights,
                     net_available_room_nights: accommodationNetAvailableRoomNights,
@@ -826,6 +928,11 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const selectionMessage = `会計データがない場合はPMSの数値になっています。期間： ${periodStr}。選択中の施設： ${uniqueNames.join(', ')}`;
 
         logger.debug(`[getFrontendCompatibleReportData] Generated report data - Revenue: ${revenueData.length}, Occupancy: ${occupancyData.length}, Outlook: ${outlookData.length}`);
+        
+        // Debug: Log first outlook item
+        if (outlookData.length > 0) {
+            logger.warn(`[getFrontendCompatibleReportData] First outlook item:`, JSON.stringify(outlookData[0]));
+        }
 
         return {
             targetDate: formatDate(validatedDate),

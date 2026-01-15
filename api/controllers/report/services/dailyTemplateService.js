@@ -62,14 +62,14 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
         const dataSheet = workbook.sheet('合計データ');
 
         if (dataSheet) {
-            // Write KPI Data (6 months)
+            // Write KPI Data (6 months) - ADR and RevPAR now in columns W-AB (23-28)
             if (kpiData) {
                 const writeKpiRow = (rowNum, dataArray) => {
                     if (Array.isArray(dataArray)) {
                         dataArray.forEach((val, i) => {
                             if (i < 6) {
-                                // Start from Column V (22)
-                                dataSheet.cell(rowNum, 22 + i).value(val).style("numberFormat", "#,##0");
+                                // Start from Column W (23) instead of V (22)
+                                dataSheet.cell(rowNum, 23 + i).value(val).style("numberFormat", "#,##0");
                             }
                         });
                     }
@@ -86,20 +86,23 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const rowNumber = index + 2; // xlsx-populate uses 1-based indexing
                     const row = dataSheet.row(rowNumber);
 
-                    row.cell(1).value(item.month);
-                    row.cell(2).value(item.forecast_sales);
-                    row.cell(3).value(item.sales);
-                    row.cell(4).value(item.confirmed_nights);
-                    row.cell(5).value(item.forecast_occ ? item.forecast_occ / 100 : 0).style("numberFormat", "0.0%");
-                    row.cell(6).value(item.occ ? item.occ / 100 : 0).style("numberFormat", "0.0%");
-                    row.cell(7).value(item.metric_date);
-                    row.cell(8).value(item.prev_sales);
-                    row.cell(9).value(item.prev_occ ? item.prev_occ / 100 : 0).style("numberFormat", "0.0%");
-                    row.cell(10).value(item.prev_confirmed_stays);
-                    row.cell(11).value(item.confirmed_nights);
-                    row.cell(12).value(item.total_bookable_room_nights);
-                    row.cell(13).value(item.blocked_nights);
-                    row.cell(14).value(item.net_available_room_nights);
+                    console.log(`[dailyTemplateService] Row ${rowNumber}, Month ${item.month}: sales=${item.sales}, sales_with_provisory=${item.sales_with_provisory}`);
+
+                    row.cell(1).value(item.month);                                                                      // A: 月度
+                    row.cell(2).value(item.forecast_sales);                                                             // B: 計画売上
+                    row.cell(3).value(item.sales);                                                                      // C: 売上
+                    row.cell(4).value(item.sales_with_provisory || item.sales);                                        // D: 売上（仮予約含む）
+                    row.cell(5).value(item.forecast_occ ? item.forecast_occ / 100 : 0).style("numberFormat", "0.0%"); // E: 計画稼働率
+                    row.cell(6).value(item.occ ? item.occ / 100 : 0).style("numberFormat", "0.0%");                   // F: 稼働率
+                    row.cell(7).value(item.occ_with_provisory ? item.occ_with_provisory / 100 : 0).style("numberFormat", "0.0%"); // G: 稼働率（仮予約含む）
+                    row.cell(8).value(item.metric_date);                                                                // H: 前日集計日
+                    row.cell(9).value(item.prev_sales);                                                                 // I: 前日実績売上
+                    row.cell(10).value(item.prev_occ ? item.prev_occ / 100 : 0).style("numberFormat", "0.0%");        // J: 前日稼働率
+                    row.cell(11).value(item.prev_confirmed_stays);                                                      // K: 前日確定泊数
+                    row.cell(12).value(item.confirmed_nights);                                                          // L: 確定泊数
+                    row.cell(13).value(item.confirmed_nights_with_provisory || item.confirmed_nights);                 // M: 確定泊数（仮予約含む）
+                    row.cell(14).value(item.forecast_rooms || item.total_bookable_room_nights);                        // N: 計画総室数
+                    // Note: Columns O-V are for formulas/other data, ADR/RevPAR moved to W-AB
                 });
             }
 
