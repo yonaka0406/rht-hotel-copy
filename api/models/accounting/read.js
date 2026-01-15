@@ -564,7 +564,7 @@ const getReconciliationOverview = async (requestId, startDate, endDate, hotelIds
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3::int[])
             AND rd.billable = TRUE
-            AND r.status NOT IN ('hold', 'block', 'cancelled')
+            AND r.status NOT IN ('hold', 'block')
             AND r.type <> 'employee'
         ),
         rr_totals AS (
@@ -596,7 +596,7 @@ const getReconciliationOverview = async (requestId, startDate, endDate, hotelIds
                 WHERE rd.date BETWEEN $1 AND $2
                 AND rd.hotel_id = ANY($3::int[])
                 AND rd.billable = TRUE
-                AND r.status NOT IN ('hold', 'block', 'cancelled')
+                AND r.status NOT IN ('hold', 'block')
                 AND r.type <> 'employee'
             ) s GROUP BY hotel_id, reservation_client_id
         ),
