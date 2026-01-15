@@ -18,6 +18,77 @@
             </div>
         </div>
 
+        <!-- Data Integrity Validation Warnings -->
+        <div v-if="ledgerValidationData && ledgerValidationData.length > 0" class="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-6 shadow-sm">
+            <div class="flex items-start gap-4">
+                <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-3xl mt-1"></i>
+                <div class="flex-1">
+                    <h3 class="font-bold text-lg text-amber-900 dark:text-amber-100 mb-2">データ整合性の警告</h3>
+                    <p class="text-sm text-amber-800 dark:text-amber-200 mb-4">
+                        予約詳細（reservation_details）と料金明細（reservation_rates）の間に不一致が検出されました。
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div v-for="hotel in ledgerValidationData" :key="hotel.hotel_id" class="bg-white dark:bg-slate-800 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <i class="pi pi-building text-amber-600 dark:text-amber-400"></i>
+                                    <span class="font-bold text-slate-900 dark:text-white">{{ hotel.hotel_name }}</span>
+                                </div>
+                                <span class="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded">
+                                    {{ hotel.discrepancy_count }} 件の不一致
+                                </span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">料金明細なし</span>
+                                    <span class="font-bold text-red-600 dark:text-red-400">{{ hotel.missing_rates_count }} 件</span>
+                                    <span class="text-xs text-slate-600 dark:text-slate-400">金額: ¥{{ parseInt(hotel.missing_rates_amount || 0).toLocaleString() }}</span>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">合計差額</span>
+                                    <span class="font-bold text-amber-600 dark:text-amber-400">¥{{ parseInt(hotel.total_difference).toLocaleString() }}</span>
+                                </div>
+                            </div>
+                            
+                            <div v-if="hotel.significant_issues && hotel.significant_issues.length > 0" class="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800">
+                                <details class="cursor-pointer">
+                                    <summary class="text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100">
+                                        重大な問題を表示 ({{ hotel.significant_issues.length }} 件)
+                                    </summary>
+                                    <div class="mt-3 space-y-2 max-h-60 overflow-y-auto">
+                                        <div v-for="(issue, idx) in hotel.significant_issues.slice(0, 10)" :key="idx" class="text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                            <div class="flex justify-between items-start mb-1">
+                                                <span class="font-mono text-slate-600 dark:text-slate-400">{{ issue.plan_name }}</span>
+                                                <span v-if="issue.missing_rates" class="text-red-600 dark:text-red-400 font-bold">料金明細なし</span>
+                                            </div>
+                                            <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                                                <span>予約詳細: ¥{{ parseInt(issue.rd_total_price).toLocaleString() }}</span>
+                                                <span>料金明細: ¥{{ parseInt(issue.rr_total_price).toLocaleString() }}</span>
+                                                <span class="font-bold text-amber-600 dark:text-amber-400">差額: ¥{{ parseInt(issue.difference).toLocaleString() }}</span>
+                                            </div>
+                                        </div>
+                                        <div v-if="hotel.significant_issues.length > 10" class="text-xs text-center text-slate-500 dark:text-slate-400 pt-2">
+                                            ... 他 {{ hotel.significant_issues.length - 10 }} 件
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
+                        <p class="text-xs text-amber-900 dark:text-amber-100">
+                            <i class="pi pi-info-circle mr-2"></i>
+                            <strong>推奨アクション:</strong> 料金明細が欠落している予約を確認し、必要に応じて料金を再計算してください。
+                            この不一致により、帳票の金額が実際の売上と異なる可能性があります。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Preview Table Card -->
         <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/20">
@@ -145,7 +216,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['back', 'next']);
-const { fetchLedgerPreview, ledgerPreviewData, loading } = useAccountingStore();
+const { fetchLedgerPreview, ledgerPreviewData, ledgerValidationData, loading } = useAccountingStore();
 
 const totalAmount = computed(() => {
     return ledgerPreviewData.value.reduce((sum, row) => sum + parseInt(row.total_amount || 0), 0);

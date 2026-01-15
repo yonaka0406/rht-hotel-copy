@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useApi } from './useApi';
 
 const ledgerPreviewData = ref([]);
+const ledgerValidationData = ref(null);
 const lastFilters = ref(null);
 
 export function useAccountingStore() {
@@ -22,15 +23,23 @@ export function useAccountingStore() {
 
         if (ledgerPreviewData.value.length === 0 || filtersChanged) {
             try {
-                const data = await post('/accounting/export/preview', filters);
-                ledgerPreviewData.value = data;
+                const response = await post('/accounting/export/preview', filters);
+                // Handle new response structure with data and validation
+                if (response && typeof response === 'object' && 'data' in response) {
+                    ledgerPreviewData.value = response.data || [];
+                    ledgerValidationData.value = response.validation || null;
+                } else {
+                    // Backward compatibility: if response is an array
+                    ledgerPreviewData.value = Array.isArray(response) ? response : [];
+                    ledgerValidationData.value = null;
+                }
                 lastFilters.value = JSON.parse(JSON.stringify(filters));
-                return data;
+                return { data: ledgerPreviewData.value, validation: ledgerValidationData.value };
             } catch (err) {
                 throw err;
             }
         }
-        return ledgerPreviewData.value;
+        return { data: ledgerPreviewData.value, validation: ledgerValidationData.value };
     };
 
     const downloadLedger = async (filters) => {
@@ -190,6 +199,7 @@ export function useAccountingStore() {
 
     const clearPreviewData = () => {
         ledgerPreviewData.value = [];
+        ledgerValidationData.value = null;
         lastFilters.value = null;
     };
 
@@ -197,6 +207,7 @@ export function useAccountingStore() {
         loading,
         error,
         ledgerPreviewData,
+        ledgerValidationData,
         getExportOptions,
         fetchLedgerPreview,
         downloadLedger,

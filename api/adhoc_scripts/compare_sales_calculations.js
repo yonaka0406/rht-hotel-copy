@@ -15,7 +15,7 @@ const pool = new Pool({
 });
 
 async function compareSalesCalculations() {
-    const hotelId = 15;
+    const hotelId = 14;
     const startDate = '2026-01-01';
     const endDate = '2026-01-31';
 

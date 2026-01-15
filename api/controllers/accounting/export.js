@@ -42,13 +42,22 @@ const getLedgerPreview = async (req, res) => {
         const lastDay = new Date(year, month, 0).getDate();
         const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-        const data = await accountingModel.getLedgerPreview(requestId, {
+        const filters = {
             startDate,
             endDate,
             hotelIds
-        });
+        };
 
-        res.json(data);
+        // Fetch ledger data and validation results in parallel
+        const [data, validation] = await Promise.all([
+            accountingModel.getLedgerPreview(requestId, filters),
+            accountingModel.validateLedgerDataIntegrity(requestId, filters)
+        ]);
+
+        res.json({
+            data,
+            validation: validation.length > 0 ? validation : null
+        });
     } catch (error) {
         logger.error(`[${requestId}] Error in getLedgerPreview:`, error);
         res.status(500).json({ message: 'Error fetching ledger preview' });

@@ -66,6 +66,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
         WITH rr_base AS (
             /* Get all rate lines and identify the one with the highest tax rate per detail */
             /* We include billable cancelled reservations here if they have rates (cancel fees) */
+            /* LEFT JOIN to include reservation_details without rates */
             SELECT 
                 rd.id as rd_id,
                 rd.hotel_id,
@@ -79,19 +80,23 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                     ELSE rd.price * rd.number_of_people 
                 END as total_rd_price,
                 rr.id as rr_id,
-                rr.tax_rate,
+                COALESCE(rr.tax_rate, 0.10) as tax_rate,
                 CASE 
-                    WHEN rd.plan_type = 'per_room' THEN rr.price 
-                    ELSE rr.price * rd.number_of_people 
+                    WHEN rr.id IS NOT NULL THEN
+                        CASE 
+                            WHEN rd.plan_type = 'per_room' THEN rr.price 
+                            ELSE rr.price * rd.number_of_people 
+                        END
+                    ELSE 0
                 END as rr_price,
-                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn,
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn,
                 (rd.cancelled IS NOT NULL) as is_cancelled
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
             LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
             LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
             LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
-            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3::int[])
             AND rd.billable = TRUE
@@ -239,6 +244,119 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
         return result.rows;
     } catch (err) {
         logger.error('Error retrieving ledger preview:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
+/**
+ * Validate data integrity between reservation_details and reservation_rates
+ * Returns discrepancies and missing rates for the given period
+ */
+const validateLedgerDataIntegrity = async (requestId, filters, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const { startDate, endDate, hotelIds } = filters;
+
+    const query = `
+        WITH rd_prices AS (
+            SELECT 
+                rd.id as rd_id,
+                rd.reservation_id,
+                rd.date,
+                rd.hotel_id,
+                h.name as hotel_name,
+                rd.plan_type,
+                rd.number_of_people,
+                rd.price as rd_price,
+                CASE 
+                    WHEN rd.plan_type = 'per_room' THEN rd.price 
+                    ELSE rd.price * rd.number_of_people 
+                END as rd_total_price,
+                COALESCE(ph.name, pg.name, 'プラン未設定') as plan_name
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN hotels h ON rd.hotel_id = h.id
+            LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+            LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+            WHERE rd.hotel_id = ANY($3::int[])
+            AND rd.date BETWEEN $1 AND $2
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+        ),
+        rr_prices AS (
+            SELECT 
+                rd.id as rd_id,
+                SUM(
+                    CASE 
+                        WHEN rd.plan_type = 'per_room' THEN rr.price 
+                        ELSE rr.price * rd.number_of_people 
+                    END
+                ) as rr_total_price
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            WHERE rd.hotel_id = ANY($3::int[])
+            AND rd.date BETWEEN $1 AND $2
+            AND rd.billable = TRUE
+            AND r.status NOT IN ('hold', 'block')
+            AND r.type <> 'employee'
+            GROUP BY rd.id, rd.plan_type
+        ),
+        discrepancies AS (
+            SELECT 
+                rdp.rd_id,
+                rdp.reservation_id,
+                rdp.date,
+                rdp.hotel_id,
+                rdp.hotel_name,
+                rdp.plan_name,
+                rdp.plan_type,
+                rdp.number_of_people,
+                rdp.rd_price,
+                rdp.rd_total_price,
+                COALESCE(rrp.rr_total_price, 0) as rr_total_price,
+                rdp.rd_total_price - COALESCE(rrp.rr_total_price, 0) as difference,
+                CASE WHEN rrp.rr_total_price IS NULL THEN TRUE ELSE FALSE END as missing_rates
+            FROM rd_prices rdp
+            LEFT JOIN rr_prices rrp ON rdp.rd_id = rrp.rd_id
+            WHERE rdp.rd_total_price != COALESCE(rrp.rr_total_price, 0)
+        )
+        SELECT 
+            hotel_id,
+            hotel_name,
+            COUNT(*) as discrepancy_count,
+            SUM(CASE WHEN missing_rates THEN 1 ELSE 0 END) as missing_rates_count,
+            SUM(difference) as total_difference,
+            SUM(CASE WHEN missing_rates THEN rd_total_price ELSE 0 END) as missing_rates_amount,
+            json_agg(
+                json_build_object(
+                    'rd_id', rd_id,
+                    'reservation_id', reservation_id,
+                    'date', date,
+                    'plan_name', plan_name,
+                    'rd_total_price', rd_total_price,
+                    'rr_total_price', rr_total_price,
+                    'difference', difference,
+                    'missing_rates', missing_rates
+                ) ORDER BY ABS(difference) DESC
+            ) FILTER (WHERE missing_rates OR ABS(difference) > 100) as significant_issues
+        FROM discrepancies
+        GROUP BY hotel_id, hotel_name
+        ORDER BY hotel_id
+    `;
+
+    const values = [startDate, endDate, hotelIds];
+
+    try {
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error validating ledger data integrity:', err);
         throw new Error('Database error');
     } finally {
         if (shouldRelease) client.release();
@@ -758,6 +876,7 @@ module.exports = {
     getAccountCodes,
     getMappings,
     getLedgerPreview,
+    validateLedgerDataIntegrity,
     getManagementGroups,
     getTaxClasses,
     getDepartments,
