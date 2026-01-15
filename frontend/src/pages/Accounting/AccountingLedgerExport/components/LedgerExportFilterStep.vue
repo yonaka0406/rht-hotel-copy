@@ -70,29 +70,44 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, computed } from 'vue';
+import { reactive, onMounted, computed, watch, ref } from 'vue';
 import { useHotelStore } from '@/composables/useHotelStore';
+import { useToast } from 'primevue/usetoast';
 import DatePicker from 'primevue/datepicker';
 import Listbox from 'primevue/listbox';
 
 const emit = defineEmits(['next']);
 const { hotels, fetchHotels, isLoadingHotelList: loading } = useHotelStore();
+const toast = useToast();
 
 const filters = reactive({
     selectedMonth: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), // Previous month
     hotelIds: []
 });
 
+const isInitialized = ref(false);
+
+// Watch for hotels data to be available to set default selection
+watch(hotels, (newHotels) => {
+    if (!isInitialized.value && newHotels && newHotels.length > 0) {
+        filters.hotelIds = newHotels.map(h => h.id);
+        isInitialized.value = true;
+    }
+}, { immediate: true });
+
 onMounted(async () => {
     try {
         if (hotels.value.length === 0) {
             await fetchHotels();
         }
-        
-        // Default to select all
-        filters.hotelIds = hotels.value.map(h => h.id);
     } catch (err) {
         console.error('Failed to load options', err);
+        toast.add({ 
+            severity: 'error', 
+            summary: '読み込みエラー', 
+            detail: 'ホテル情報の取得に失敗しました。', 
+            life: 3000 
+        });
     }
 });
 
@@ -114,15 +129,6 @@ const isFormValid = computed(() => {
 });
 
 const handleNext = () => {
-    // Calculate start and end dates based on selected month
-    const year = filters.selectedMonth.getFullYear();
-    const month = filters.selectedMonth.getMonth();
-    
-    // First day of month
-    const startDate = new Date(year, month, 1);
-    // Last day of month
-    const endDate = new Date(year, month + 1, 0);
-
     const formattedFilters = {
         hotelIds: filters.hotelIds,
         selectedMonth: `${filters.selectedMonth.getFullYear()}-${String(filters.selectedMonth.getMonth() + 1).padStart(2, '0')}`

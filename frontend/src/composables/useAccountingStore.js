@@ -5,6 +5,17 @@ const ledgerPreviewData = ref([]);
 const ledgerValidationData = ref(null);
 const lastFilters = ref(null);
 
+const stableStringify = (obj) => {
+    if (obj === null || typeof obj !== 'object') {
+        return JSON.stringify(obj);
+    }
+    if (Array.isArray(obj)) {
+        return '[' + obj.map(stableStringify).join(',') + ']';
+    }
+    const keys = Object.keys(obj).sort();
+    return '{' + keys.map(key => JSON.stringify(key) + ':' + stableStringify(obj[key])).join(',') + '}';
+};
+
 export function useAccountingStore() {
     const { isLoading: loading, error, get, post, del } = useApi();
 
@@ -19,7 +30,7 @@ export function useAccountingStore() {
 
     const fetchLedgerPreview = async (filters) => {
         // Only fetch if filters have changed or we have no data
-        const filtersChanged = JSON.stringify(lastFilters.value) !== JSON.stringify(filters);
+        const filtersChanged = stableStringify(lastFilters.value) !== stableStringify(filters);
 
         if (ledgerPreviewData.value.length === 0 || filtersChanged) {
             try {
