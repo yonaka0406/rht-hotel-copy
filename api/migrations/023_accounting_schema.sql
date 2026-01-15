@@ -1,4 +1,5 @@
--- 0. Drop existing tables if they exist (Clean Slate)
+-- 0. Drop existing tables and views if they exist (Clean Slate)
+DROP VIEW IF EXISTS acc_monthly_account_summary CASCADE;
 DROP TABLE IF EXISTS acc_departments CASCADE;
 DROP TABLE IF EXISTS acc_yayoi_data CASCADE;
 DROP TABLE IF EXISTS acc_accounting_mappings CASCADE;
@@ -353,3 +354,78 @@ CREATE INDEX idx_acc_departments_hotel ON acc_departments(hotel_id);
 INSERT INTO acc_departments (hotel_id, name, created_by) VALUES
 (24, 'WH室蘭', 1)
 ON CONFLICT (hotel_id) DO NOTHING;
+
+-- 7. Monthly Account Summary View
+-- Consolidates debit and credit entries by month, account, department, and tax class.
+-- 1. Debits are negated, Credits preserved.
+-- 2. Tax is adjusted based on tax_class: "控不" -> 0, "80%" -> 80% of original.
+-- 3. Net Amount = Inclusive Amount - Adjusted Tax.
+-- 4. Includes Management Group info for reporting.
+-- NOTE: Joining on account name because Yayoi raw data provides names in the "code" columns.
+CREATE VIEW acc_monthly_account_summary AS
+WITH adjusted_data AS (
+    -- Debit legs (negated)
+    SELECT 
+        transaction_date, 
+        debit_account_code as account_name, 
+        debit_sub_account as sub_account, 
+        debit_department as department, 
+        debit_tax_class as tax_class, 
+        -(debit_amount) as amount,
+        -(CASE 
+            WHEN debit_tax_class LIKE '%控不%' THEN 0 
+            WHEN debit_tax_class LIKE '%80%' THEN ROUND(debit_tax_amount * 0.8) 
+            ELSE debit_tax_amount 
+        END) as tax_amount
+    FROM acc_yayoi_data
+    WHERE debit_account_code IS NOT NULL AND debit_account_code <> ''
+
+    UNION ALL
+
+    -- Credit legs (positive)
+    SELECT 
+        transaction_date, 
+        credit_account_code as account_name, 
+        credit_sub_account as sub_account, 
+        credit_department as department, 
+        credit_tax_class as tax_class, 
+        credit_amount as amount,
+        (CASE 
+            WHEN credit_tax_class LIKE '%控不%' THEN 0 
+            WHEN credit_tax_class LIKE '%80%' THEN ROUND(credit_tax_amount * 0.8) 
+            ELSE credit_tax_amount 
+        END) as tax_amount
+    FROM acc_yayoi_data
+    WHERE credit_account_code IS NOT NULL AND credit_account_code <> ''
+),
+grouped_data AS (
+    SELECT 
+        DATE_TRUNC('month', transaction_date)::DATE as month,
+        account_name,
+        sub_account,
+        department,
+        tax_class,
+        SUM(amount) as total_amount,
+        SUM(tax_amount) as total_tax_amount,
+        SUM(amount - tax_amount) as total_net_amount
+    FROM adjusted_data
+    GROUP BY month, account_name, sub_account, department, tax_class
+)
+SELECT 
+    gd.month,
+    ac.code as account_code,
+    gd.account_name,
+    gd.sub_account,
+    gd.department,
+    gd.tax_class,
+    mg.name as management_group_name,
+    mg.display_order as management_group_display_order,
+    gd.total_amount,
+    gd.total_tax_amount,
+    gd.total_net_amount
+FROM grouped_data gd
+LEFT JOIN acc_account_codes ac ON gd.account_name = ac.name
+LEFT JOIN acc_management_groups mg ON ac.management_group_id = mg.id
+ORDER BY gd.month, mg.display_order, ac.code;
+
+COMMENT ON VIEW acc_monthly_account_summary IS 'Consolidated view of monthly account activity from Yayoi import data';
