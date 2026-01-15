@@ -55,7 +55,7 @@
                                         <a 
                                             v-for="(issue, idx) in hotel.significant_issues.filter(i => i.missing_rates)" 
                                             :key="idx" 
-                                            :href="`/reservations/${issue.reservation_id}`"
+                                            :href="`/reservations/edit/${issue.reservation_id}`"
                                             target="_blank"
                                             class="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-amber-300 dark:hover:border-amber-700 group cursor-pointer"
                                         >
