@@ -41,12 +41,12 @@
                             </div>
                             
                             <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div class="flex flex-col">
+                                <div v-if="hotel.missing_rates_count > 0" class="flex flex-col">
                                     <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">料金明細なし</span>
                                     <span class="font-bold text-red-600 dark:text-red-400">{{ hotel.missing_rates_count }} 件</span>
                                     <span class="text-xs text-slate-600 dark:text-slate-400">金額: ¥{{ parseInt(hotel.missing_rates_amount || 0).toLocaleString() }}</span>
                                 </div>
-                                <div class="flex flex-col">
+                                <div class="flex flex-col" :class="{ 'col-span-2': hotel.missing_rates_count === 0 }">
                                     <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">合計差額</span>
                                     <span class="font-bold text-amber-600 dark:text-amber-400">¥{{ parseInt(hotel.total_difference).toLocaleString() }}</span>
                                 </div>
@@ -55,10 +55,10 @@
                             <div v-if="hotel.significant_issues && hotel.significant_issues.length > 0" class="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800">
                                 <details class="cursor-pointer">
                                     <summary class="text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100">
-                                        重大な問題を表示 ({{ hotel.significant_issues.length }} 件)
+                                        詳細を表示 ({{ hotel.significant_issues.length }} 件)
                                     </summary>
                                     <div class="mt-3 space-y-2 max-h-60 overflow-y-auto">
-                                        <div v-for="(issue, idx) in hotel.significant_issues.slice(0, 10)" :key="idx" class="text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <div v-for="(issue, idx) in hotel.significant_issues" :key="idx" class="text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
                                             <div class="flex justify-between items-start mb-1">
                                                 <span class="font-mono text-slate-600 dark:text-slate-400">{{ issue.plan_name }}</span>
                                                 <span v-if="issue.missing_rates" class="text-red-600 dark:text-red-400 font-bold">料金明細なし</span>
@@ -68,9 +68,6 @@
                                                 <span>料金明細: ¥{{ parseInt(issue.rr_total_price).toLocaleString() }}</span>
                                                 <span class="font-bold text-amber-600 dark:text-amber-400">差額: ¥{{ parseInt(issue.difference).toLocaleString() }}</span>
                                             </div>
-                                        </div>
-                                        <div v-if="hotel.significant_issues.length > 10" class="text-xs text-center text-slate-500 dark:text-slate-400 pt-2">
-                                            ... 他 {{ hotel.significant_issues.length - 10 }} 件
                                         </div>
                                     </div>
                                 </details>

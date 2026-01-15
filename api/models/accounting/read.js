@@ -325,6 +325,10 @@ const validateLedgerDataIntegrity = async (requestId, filters, dbClient = null) 
             FROM rd_prices rdp
             LEFT JOIN rr_prices rrp ON rdp.rd_id = rrp.rd_id
             WHERE rdp.rd_total_price != COALESCE(rrp.rr_total_price, 0)
+                AND (
+                    rrp.rr_total_price IS NULL  -- Missing rates
+                    OR ABS(rdp.rd_total_price - COALESCE(rrp.rr_total_price, 0)) > 100  -- Significant discrepancy (>100 yen)
+                )
         )
         SELECT 
             hotel_id,
@@ -344,9 +348,10 @@ const validateLedgerDataIntegrity = async (requestId, filters, dbClient = null) 
                     'difference', difference,
                     'missing_rates', missing_rates
                 ) ORDER BY ABS(difference) DESC
-            ) FILTER (WHERE missing_rates OR ABS(difference) > 100) as significant_issues
+            ) as significant_issues
         FROM discrepancies
         GROUP BY hotel_id, hotel_name
+        HAVING COUNT(*) > 0  -- Only return hotels with actual issues
         ORDER BY hotel_id
     `;
 

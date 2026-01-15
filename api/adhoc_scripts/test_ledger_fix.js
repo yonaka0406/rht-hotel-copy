@@ -14,7 +14,7 @@ const pool = new Pool({
 });
 
 async function testLedgerFix() {
-    const hotelId = 14;
+    const hotelId = 15;
     const startDate = '2026-01-01';
     const endDate = '2026-01-31';
 
@@ -85,13 +85,13 @@ async function testLedgerFix() {
         const total = parseFloat(result.rows[0].total_amount || 0);
 
         console.log('\nUpdated Ledger Query Total:', total.toLocaleString('ja-JP'), '円');
-        console.log('Expected Total:', '5,472,700 円');
-        console.log('Match:', Math.abs(total - 5472700) < 1 ? '✓' : '✗');
+        console.log('Expected Total:', '8,975,100 円');
+        console.log('Match:', Math.abs(total - 8975100) < 1 ? '✓' : '✗');
 
-        if (Math.abs(total - 5472700) < 1) {
+        if (Math.abs(total - 8975100) < 1) {
             console.log('\n✓ SUCCESS! The ledger query now matches the monthly report.');
         } else {
-            console.log('\n✗ Still a discrepancy of:', (total - 5472700).toLocaleString('ja-JP'), '円');
+            console.log('\n✗ Still a discrepancy of:', (total - 8975100).toLocaleString('ja-JP'), '円');
         }
 
     } catch (error) {
