@@ -1,27 +1,52 @@
 <template>
     <!-- Top Panel -->
-    <div v-if="reservationStatus === '予約不可'" class="grid grid-cols-3 gap-2 gap-y-4 flex items-center">
-        <div class="flex">
-            <InputText type="text" v-model="reservationInfo.client_name" disabled
-                style="background-color: transparent;" />
-        </div>
-        <div class="flex items-start mr-2 mb-2">
-            <p class="font-bold">開始日：</p>
-            <span>{{ reservationInfo.check_in }}</span>
-        </div>
-        <div class="flex items-start mr-2 mb-2">
-            <p class="font-bold">終了日：</p>
-            <span>{{ reservationInfo.check_out }}</span>
-        </div>
-        <div class="col-span-3">
-            <p class="font-bold mb-1">備考：<span class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
-            <Textarea v-model="reservationInfo.comment"
-                :disabled="reservationInfo.client_id !== '22222222-2222-2222-2222-222222222222'"
-                @keydown="handleKeydown"
-                :style="{ 'background-color': reservationInfo.client_id === '22222222-2222-2222-2222-222222222222' ? 'white' : 'transparent' }"
-                fluid />
-        </div>
+<div v-if="reservationStatus === '予約不可'" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+    <!-- 顧客名 (全幅) -->
+    <div class="col-span-1 sm:col-span-2">
+        <InputText 
+            type="text" 
+            v-model="reservationInfo.client_name" 
+            disabled
+            style="background-color: transparent;" 
+            class="w-full" 
+        />
     </div>
+
+    <!-- 1行目: 開始日と終了日 -->
+    <div class="flex flex-wrap items-center gap-x-2">
+        <p class="font-bold whitespace-nowrap text-sm">開始日：</p>
+        <span class="whitespace-nowrap">{{ reservationInfo.check_in }}</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-x-2">
+        <p class="font-bold whitespace-nowrap text-sm">終了日：</p>
+        <span class="whitespace-nowrap">{{ reservationInfo.check_out }}</span>
+    </div>
+
+    <!-- 2行目: 作成者と作成日時 -->
+    <div class="flex flex-wrap items-center gap-x-2">
+        <p class="font-bold whitespace-nowrap text-sm">作成者：</p>
+        <span class="whitespace-nowrap">{{ reservationInfo.creator_name }}</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-x-2">
+        <p class="font-bold whitespace-nowrap text-sm">作成日時：</p>
+        <span class="whitespace-nowrap">
+            {{ formatDate(getJstDateTime(reservationInfo.created_at)) }} 
+            {{ formatTime(getJstDateTime(reservationInfo.created_at)) }}
+        </span>
+    </div>
+
+    <!-- 備考 (全幅) -->
+    <div class="col-span-1 sm:col-span-2 mt-2">
+        <p class="font-bold mb-1 text-sm">備考：<span class="text-xs text-gray-400 font-normal">(タブキーで編集確定)</span></p>
+        <Textarea 
+            v-model="reservationInfo.comment"
+            :disabled="reservationInfo.client_id !== '22222222-2222-2222-2222-222222222222'"
+            @keydown="handleKeydown"
+            :style="{ 'background-color': reservationInfo.client_id === '22222222-2222-2222-2222-222222222222' ? 'white' : 'transparent' }"
+            fluid 
+        />
+    </div>
+</div>
     <div v-else class="grid grid-cols-2 gap-2 gap-y-4">
         <Message v-if="!allGroupsPeopleCountMatch" severity="warn" :closable="false" class="col-span-2">
             <div class="flex items-center">
@@ -458,7 +483,40 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 import { validate as uuidValidate } from 'uuid';
 import { reservationTypeOptions, reservationPaymentTimingOptions, translateReservationStatus, translateReservationType } from '@/utils/reservationUtils';
-import { formatDate, formatTime } from '@/utils/dateUtils';
+import { formatDate, formatTime, formatDateTime } from '@/utils/dateUtils';
+
+// Helper function to convert UTC date string to JST Date object
+const getJstDateTime = (utcDateString) => {
+  if (!utcDateString) return null;
+
+  try {
+    // Normalize space to 'T' for ISO 8601 compatibility
+    const isoString = utcDateString.replace(' ', 'T');
+    
+    // Robustly detect explicit timezone: 'Z', '+HH:MM', '-HH:MM', '+HHMM', '-HHMM'
+    const hasTimeZone = /[Zz]|[+-]\d{2}(?::?\d{2})?$/.test(isoString);
+    
+    // If no timezone is present, we assume it's UTC and append 'Z' to ensure reliable parsing
+    const finalIsoString = hasTimeZone ? isoString : isoString + 'Z';
+    const date = new Date(finalIsoString);
+
+    if (isNaN(date.getTime())) {
+      console.warn(`Invalid date string: ${utcDateString}`);
+      return null;
+    }
+
+    /**
+     * Convert to JST (UTC+9).
+     * We shift the internal UTC time by 9 hours so that local time methods 
+     * (e.g. getFullYear, getHours) return the values for the JST timezone 
+     * regardless of the environment's local timezone.
+     */
+    return new Date(date.getTime() + (9 * 60 * 60 * 1000));
+  } catch (error) {
+    console.error(`Error in getJstDateTime for value "${utcDateString}":`, error);
+    return null;
+  }
+};
 
 import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
 

@@ -29,10 +29,11 @@
                     </template>
                     <template #footer>
                         <Divider />
-                        <ul class="pl-2 ml-2 my-0 leading-normal">
+                        <ul class="pl-2 ml-2 my-0 leading-normal text-sm">
                             <li class="text-gray-700 dark:text-gray-300">少なくとも1つの小文字</li>
                             <li class="text-gray-700 dark:text-gray-300">少なくとも1つの大文字</li>
                             <li class="text-gray-700 dark:text-gray-300">少なくとも1つの数値</li>
+                            <li class="text-gray-700 dark:text-gray-300">少なくとも1つの記号</li>
                             <li class="text-gray-700 dark:text-gray-300">最低8文字</li>
                         </ul>
                     </template>
@@ -48,6 +49,7 @@
                     id="confirmPassword"
                     v-model="confirmPassword"                    
                     toggleMask
+                    :feedback="false"
                     class="w-full"
                     :class="{'p-invalid': confirmPasswordError}"
                     type="password"
@@ -106,12 +108,12 @@
     const errorMessage = ref(null);
 
     const validatePassword = () => {   
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]).{8,}$/;
 
         if (!password.value) {
             passwordError.value = "パスワードが必要です。";
         } else if (!passwordRegex.test(password.value)) {
-            passwordError.value = "パスワードには少なくとも 8 文字、大文字 1 文字、小文字 1 文字、数字 1 文字を含める必要があります。";
+            passwordError.value = "パスワードには少なくとも8文字、大文字1文字、小文字1文字、数字1文字、および記号1文字を含める必要があります。";
         } else {
             passwordError.value = null;
         }
@@ -147,7 +149,7 @@
             const responseData = await response.json();
 
             if (!response.ok) {
-                throw new Error(responseData.message || 'サーバーエラーが発生しました。');
+                throw new Error(responseData.error || responseData.message || 'サーバーエラーが発生しました。');
             }
 
             successMessage.value = responseData.message;

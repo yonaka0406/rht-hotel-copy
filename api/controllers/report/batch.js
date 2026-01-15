@@ -69,6 +69,12 @@ const processBatchRequest = async (req, res, dataFetcher, operationName) => {
                 }
             }
 
+            if (allRows.length > 0) {
+                logger.debug(`[${operationName}] Sample data (first 2 rows per hotel):`, JSON.stringify(allRows, null, 2));
+            } else {
+                logger.debug(`[${operationName}] No data found for any hotel.`);
+            }
+
             res.json({ results, errors: Object.keys(errors).length > 0 ? errors : undefined });
         } finally {
             client.release();
@@ -207,15 +213,22 @@ const getBatchFutureOutlook = async (req, res) => {
 
                         // Aggregate daily PMS data to monthly
                         let pmsTotalRevenue = 0;
+                        let pmsAccommodationRevenue = 0;
                         if (Array.isArray(pmsData)) {
                             pmsTotalRevenue = pmsData.reduce((sum, day) => sum + (Number(day.price) || 0), 0);
+                            pmsAccommodationRevenue = pmsData.reduce((sum, day) => sum + (Number(day.accommodation_price) || 0), 0);
                         }
 
                         results[month.monthLabel][hotelId] = {
                             occupation: occupationData || [],
                             forecast: forecastData || [],
                             accounting: accountingData || [],
-                            pms: { revenue: pmsTotalRevenue }
+                            pms: {
+                                revenue: pmsTotalRevenue,
+                                accommodation_revenue: pmsAccommodationRevenue,
+                                provisory_revenue: Array.isArray(pmsData) ? pmsData.reduce((sum, day) => sum + (Number(day.provisory_accommodation_price) || 0) + (Number(day.provisory_other_price) || 0), 0) : 0,
+                                provisory_room_count: Array.isArray(pmsData) ? pmsData.reduce((sum, day) => sum + (Number(day.provisory_room_count) || 0), 0) : 0
+                            }
                         };
                     } catch (err) {
                         logger.error(`[${operationName}] Failed for hotel ${hotelId}, month ${month.monthLabel}. Error: ${err.message}`, { stack: err.stack });
