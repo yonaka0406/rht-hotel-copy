@@ -454,14 +454,19 @@ const getDashboardMetrics = async (requestId, startDate, endDate, hotelIds, dbCl
                     ELSE rd.price * rd.number_of_people 
                 END as total_rd_price,
                 rr.id as rr_id,
+                COALESCE(rr.tax_rate, 0.10) as tax_rate,
                 CASE 
-                    WHEN rd.plan_type = 'per_room' THEN rr.price 
-                    ELSE rr.price * rd.number_of_people 
+                    WHEN rr.id IS NOT NULL THEN
+                        CASE 
+                            WHEN rd.plan_type = 'per_room' THEN rr.price 
+                            ELSE rr.price * rd.number_of_people 
+                        END
+                    ELSE 0
                 END as rr_price,
-                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY rr.tax_rate DESC, rr.id DESC) as rn
+                ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn
             FROM reservation_details rd
             JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
-            JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+            LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
             WHERE rd.date BETWEEN $1 AND $2
             AND rd.hotel_id = ANY($3::int[])
             AND rd.billable = TRUE
