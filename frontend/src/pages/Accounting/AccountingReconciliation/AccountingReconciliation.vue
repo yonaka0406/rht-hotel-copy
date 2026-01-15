@@ -20,7 +20,7 @@ const hotelStore = useHotelStore();
 const selectedDate = ref(new Date());
 const isLoading = ref(false);
 const overviewData = ref([]);
-const totals = ref({ sales: 0, payments: 0, advance: 0, settlement: 0 });
+const totals = ref({ sales: 0, payments: 0, advance: 0, settlement: 0, difference: 0 });
 
 // Drill down state
 const selectedHotel = ref(null);

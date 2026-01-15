@@ -41,7 +41,8 @@
                     'w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ring-2 transition-all duration-300',
                     currentStep >= 3 ? 'bg-violet-600 text-white ring-violet-200' : 'bg-white dark:bg-slate-800 text-slate-500 ring-slate-200 dark:ring-slate-700'
                 ]">
-                    3
+                    <i v-if="currentStep > 3" class="pi pi-check text-sm"></i>
+                    <span v-else>3</span>
                 </div>
                 <p :class="['text-xs font-bold mt-2 whitespace-nowrap', currentStep >= 3 ? 'text-violet-600 dark:text-violet-400' : 'text-slate-500']">
                     出力確認
