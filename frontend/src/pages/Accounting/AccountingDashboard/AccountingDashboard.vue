@@ -14,6 +14,7 @@ const metrics = ref({
 });
 
 const isLoading = ref(true);
+const hasError = ref(false);
 
 // Computed properties for user information
 const userName = computed(() => {
@@ -39,9 +40,24 @@ const userRole = computed(() => {
     return '閲覧者';
 });
 
+const paymentsSalesDiff = computed(() => {
+    if (metrics.value.totalPayments === null || metrics.value.totalSales === null) {
+        return null;
+    }
+    const payments = Number(metrics.value.totalPayments);
+    const sales = Number(metrics.value.totalSales);
+    
+    if (isNaN(payments) || isNaN(sales)) {
+        return null;
+    }
+    
+    return payments - sales;
+});
+
 onMounted(async () => {
     try {
         isLoading.value = true;
+        hasError.value = false;
         if (!logged_user.value || !logged_user.value.length) {
             await fetchUser();
         }
@@ -65,6 +81,7 @@ onMounted(async () => {
         metrics.value = data;
     } catch (e) {
         console.error('Failed to load dashboard metrics', e);
+        hasError.value = true;
     } finally {
         isLoading.value = false;
         await nextTick();
@@ -80,6 +97,20 @@ onMounted(async () => {
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto">
             
+            <!-- Error Banner -->
+            <div v-if="hasError" class="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-3">
+                <i class="pi pi-exclamation-circle text-red-600 dark:text-red-400 text-xl"></i>
+                <div class="flex-1">
+                    <h3 class="text-sm font-bold text-red-800 dark:text-red-300">データの読み込みに失敗しました</h3>
+                    <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+                        ダッシュボードの指標を取得できませんでした。ネットワーク接続を確認するか、しばらく経ってから再読み込みしてください。
+                    </p>
+                </div>
+                <button @click="router.go(0)" class="px-3 py-1.5 bg-white dark:bg-slate-800 text-xs font-bold text-red-600 dark:text-red-400 rounded-lg shadow-sm border border-red-100 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors">
+                    再読み込み
+                </button>
+            </div>
+
             <!-- Hero Section (Compact) -->
             <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
@@ -179,9 +210,9 @@ onMounted(async () => {
                                 <p v-else class="text-3xl font-bold text-slate-900 dark:text-white text-center sm:text-left">
                                     {{ metrics.totalPayments ? `¥${metrics.totalPayments.toLocaleString()}` : '¥0' }}
                                 </p>
-                                <div v-if="!isLoading && metrics.totalSales !== null" class="mt-1 text-center sm:text-left">
-                                    <small :class="Math.abs(metrics.totalPayments - metrics.totalSales) > 1 ? 'text-rose-500 font-medium' : 'text-slate-500'">
-                                        売上計上との差額: {{ (metrics.totalPayments - metrics.totalSales) > 0 ? '+' : '' }}{{ (metrics.totalPayments - metrics.totalSales).toLocaleString() }}
+                                <div v-if="!isLoading && paymentsSalesDiff !== null" class="mt-1 text-center sm:text-left">
+                                    <small :class="Math.abs(paymentsSalesDiff) > 1 ? 'text-rose-500 font-medium' : 'text-slate-500'">
+                                        売上計上との差額: {{ paymentsSalesDiff > 0 ? '+' : '' }}{{ paymentsSalesDiff.toLocaleString() }}
                                     </small>
                                 </div>
                                 <p class="text-sm font-medium text-slate-600 dark:text-slate-400 mt-1 text-center sm:text-left text-[10px] sm:text-sm">カード・現金・請求書等</p>
@@ -211,7 +242,7 @@ onMounted(async () => {
 
         <!-- FAB (Settings) -->
         <div class="fixed bottom-6 right-6 z-50">
-            <button @click="$router.push({ name: 'AccountingSettings' })" class="w-14 h-14 bg-violet-600 text-white rounded-full shadow-lg hover:shadow-violet-600/40 hover:bg-violet-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group cursor-pointer">
+            <button @click="$router.push({ name: 'AccountingSettings' })" aria-label="会計設定を開く" class="w-14 h-14 bg-violet-600 text-white rounded-full shadow-lg hover:shadow-violet-600/40 hover:bg-violet-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group cursor-pointer">
                 <i class="pi pi-cog text-xl group-hover:rotate-90 transition-transform duration-500"></i>
             </button>
         </div>

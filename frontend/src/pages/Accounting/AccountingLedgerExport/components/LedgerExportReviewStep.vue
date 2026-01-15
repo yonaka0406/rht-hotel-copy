@@ -6,14 +6,14 @@
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">対象月</span>
                 <div class="flex items-center gap-2">
                     <i class="pi pi-calendar text-violet-600 dark:text-violet-400 text-lg"></i>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ filters.selectedMonth.replace('-', ' / ') }}</p>
+                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ displayMonth }}</p>
                 </div>
             </div>
             <div class="bg-white dark:bg-slate-800 p-5 flex flex-col gap-1">
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">選択されたホテル</span>
                 <div class="flex items-center gap-2">
                     <i class="pi pi-building text-violet-600 dark:text-violet-400 text-lg"></i>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ filters.hotelIds.length }} ホテル</p>
+                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ hotelCount }} ホテル</p>
                 </div>
             </div>
         </div>
@@ -43,7 +43,7 @@
                             
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-slate-600 dark:text-slate-400">影響額</span>
-                                <span class="font-bold text-red-600 dark:text-red-400 text-lg">¥{{ parseInt(hotel.missing_rates_amount || 0).toLocaleString() }}</span>
+                                <span class="font-bold text-red-600 dark:text-red-400 text-lg">¥{{ parseInt(hotel.missing_rates_amount || 0, 10).toLocaleString() }}</span>
                             </div>
                             
                             <div v-if="hotel.significant_issues && hotel.significant_issues.length > 0" class="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800">
@@ -69,7 +69,7 @@
                                                         <i class="pi pi-calendar text-[10px]"></i>
                                                         {{ new Date(issue.date).toLocaleDateString('ja-JP') }}
                                                     </span>
-                                                    <span class="font-bold text-red-600 dark:text-red-400">¥{{ parseInt(issue.rd_total_price).toLocaleString() }}</span>
+                                                    <span class="font-bold text-red-600 dark:text-red-400">¥{{ parseInt(issue.rd_total_price || 0, 10).toLocaleString() }}</span>
                                                 </div>
                                             </div>
                                             <i class="pi pi-external-link text-amber-600 dark:text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"></i>
@@ -121,6 +121,11 @@
             <div v-if="loading" class="py-24 flex flex-col items-center justify-center gap-4">
                 <i class="pi pi-spin pi-spinner text-5xl text-violet-600"></i>
                 <span class="text-slate-500 font-bold">データを集計中...</span>
+            </div>
+
+            <div v-else-if="error" class="py-24 text-center">
+                <i class="pi pi-exclamation-circle text-4xl text-red-500 mb-4 block"></i>
+                <p class="text-red-500 font-medium">{{ error }}</p>
             </div>
 
             <div v-else-if="ledgerPreviewData.length === 0" class="py-24 text-center">
@@ -185,7 +190,7 @@
                                     <span class="text-[10px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{{ row.tax_category }}</span>
                                 </td>
                                 <td class="px-6 py-4 text-right tabular-nums text-slate-600 dark:text-slate-400">
-                                    ¥{{ parseInt(row.total_amount).toLocaleString() }}
+                                    ¥{{ parseInt(row.total_amount || 0, 10).toLocaleString() }}
                                 </td>
                             </tr>
                         </template>
@@ -220,9 +225,19 @@ const props = defineProps({
 
 const emit = defineEmits(['back', 'next']);
 const { fetchLedgerPreview, ledgerPreviewData, ledgerValidationData, loading } = useAccountingStore();
+const error = ref(null);
+
+const displayMonth = computed(() => {
+    if (!props.filters?.selectedMonth) return '';
+    return props.filters.selectedMonth.replace('-', ' / ');
+});
+
+const hotelCount = computed(() => {
+    return props.filters?.hotelIds?.length || 0;
+});
 
 const totalAmount = computed(() => {
-    return ledgerPreviewData.value.reduce((sum, row) => sum + parseInt(row.total_amount || 0), 0);
+    return ledgerPreviewData.value.reduce((sum, row) => sum + parseInt(row.total_amount || 0, 10), 0);
 });
 
 const hasUnmappedRows = computed(() => {
@@ -241,7 +256,8 @@ const formattedPreview = computed(() => {
                 categories: []
             };
         }
-        groups[row.hotel_id].total += parseInt(row.total_amount);
+        const amount = parseInt(row.total_amount || '0', 10);
+        groups[row.hotel_id].total += isNaN(amount) ? 0 : amount;
         groups[row.hotel_id].categories.push(row);
     });
     return Object.values(groups);
@@ -249,9 +265,11 @@ const formattedPreview = computed(() => {
 
 onMounted(async () => {
     try {
+        error.value = null;
         await fetchLedgerPreview(props.filters);
     } catch (err) {
         console.error('Failed to fetch preview data', err);
+        error.value = 'データの取得に失敗しました。もう一度お試しください。';
     }
 });
 
