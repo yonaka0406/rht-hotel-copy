@@ -18,7 +18,8 @@ export function useManageRoles() {
         { name: "ユーザー管理", code: "manage_users" },
         { name: "顧客管理", code: "manage_clients" },
         { name: "データ編集可能", code: "crud_ok" },
-        { name: "レポート閲覧", code: "view_reports" }
+        { name: "レポート閲覧", code: "view_reports" },
+        { name: "会計モジュール", code: "accounting" }
     ]);
 
     const fetchRoles = async () => {

@@ -109,7 +109,9 @@ const totalAccommodationSales = computed(() => {
         return resDate >= startDateForCalc && resDate <= endDateForCalc;
     });
     
-    return filteredReservations.reduce((sum, res) => sum + parseFloat(res.accommodation_price || 0), 0);
+    const result = filteredReservations.reduce((sum, res) => sum + parseFloat(res.accommodation_price || 0), 0);
+    console.log('[売上カード] 宿泊売上:', result.toLocaleString('ja-JP'), '円');
+    return result;
 });
 
 const totalOtherSales = computed(() => {
@@ -123,11 +125,15 @@ const totalOtherSales = computed(() => {
         return resDate >= startDateForCalc && resDate <= endDateForCalc;
     });
     
-    return filteredReservations.reduce((sum, res) => sum + parseFloat(res.other_price || 0), 0);
+    const result = filteredReservations.reduce((sum, res) => sum + parseFloat(res.other_price || 0), 0);
+    console.log('[売上カード] その他売上:', result.toLocaleString('ja-JP'), '円');
+    return result;
 });
 
 const totalSales = computed(() => {
-    return totalAccommodationSales.value + totalOtherSales.value;
+    const result = totalAccommodationSales.value + totalOtherSales.value;
+    console.log('[売上カード] 合計:', result.toLocaleString('ja-JP'), '円');
+    return result;
 });
 const processLineChartData = () => {
     if (!props.allReservationsData || !lineChart.value) {

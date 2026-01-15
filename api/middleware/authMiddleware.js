@@ -417,6 +417,43 @@ const authMiddlewareBookingEngine = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware to check for 'accounting' permission.
+ * Ensures user is authenticated, active, and has 'accounting' permission.
+ * Refreshes session.
+ */
+const authMiddleware_accounting = (req, res, next) => {
+  const tokenVerification = verifyTokenFromHeader(req);
+
+  if (tokenVerification.error) {
+    let statusCode = 401;
+    if (tokenVerification.errorType === 'USER_INACTIVE') {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({ 
+      error: tokenVerification.error,
+      errorType: tokenVerification.errorType 
+    });
+  }
+
+  const { decoded, token: originalToken } = tokenVerification;
+  req.user = decoded;
+
+  if (originalToken) {
+    sessionService.refreshSession(decoded.id, originalToken)
+      .catch(error => console.error('Session refresh error in authMiddleware_accounting:', error));
+  } else {
+    console.error('Original token not available for session refresh in authMiddleware_accounting.');
+  }
+
+  if (!decoded.permissions || decoded.permissions.accounting !== true) {
+    return res.status(403).json({ error: 'Forbidden: You do not have permission to access accounting module.' });
+  }
+
+  next();
+};
+
 module.exports = {
   authMiddleware,
   authMiddlewareCRUDAccess,
@@ -424,6 +461,7 @@ module.exports = {
   authMiddleware_manageUsers, 
   authMiddleware_manageDB, 
   authMiddleware_manageClients,
+  authMiddleware_accounting,
   authMiddlewareWaitlistToken,
   authMiddlewareBookingEngine
 };

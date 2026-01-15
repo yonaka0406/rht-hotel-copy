@@ -60,6 +60,13 @@ const ReportingActiveReservationsChange = () => import('@/pages/Reporting/Report
 const ReportingMonthlyReservationEvolution = () => import('@/pages/Reporting/ReportingMonthlyReservationEvolution/ReportingMonthlyReservationEvolution.vue');
 const AboutPage = () => import('@/pages/About/AboutPage.vue');
 
+const AccountingMainPage = () => import('@/pages/Accounting/Main/AccountingMainPage.vue');
+const AccountingDashboard = () => import('@/pages/Accounting/AccountingDashboard/AccountingDashboard.vue');
+const AccountingLedgerExport = () => import('@/pages/Accounting/AccountingLedgerExport/AccountingLedgerExport.vue');
+const AccountingYayoiImport = () => import('@/pages/Accounting/AccountingYayoiImport/AccountingYayoiImport.vue');
+const AccountingSettings = () => import('@/pages/Accounting/AccountingSettings/AccountingSettings.vue');
+const AccountingReconciliation = () => import('@/pages/Accounting/AccountingReconciliation/AccountingReconciliation.vue');
+
 
 const routes = [
   {
@@ -165,6 +172,19 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/accounting',
+    component: AccountingMainPage,
+    children: [
+      { path: '', redirect: { name: 'AccountingDashboard' } },
+      { path: 'dashboard', name: 'AccountingDashboard', component: AccountingDashboard },
+      { path: 'ledger-export', name: 'AccountingLedgerExport', component: AccountingLedgerExport },
+      { path: 'yayoi-import', name: 'AccountingYayoiImport', component: AccountingYayoiImport },
+      { path: 'reconciliation', name: 'AccountingReconciliation', component: AccountingReconciliation },
+      { path: 'settings', name: 'AccountingSettings', component: AccountingSettings },
+    ],
+    meta: { requiresAuth: true, requiresAccounting: true }
+  },
+  {
     path: '/about',
     name: 'About',
     component: AboutPage,
@@ -195,6 +215,13 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    } else {
+      return { top: 0, behavior: 'auto' };
+    }
+  },
 });
 
 // Navigation guard for authentication
@@ -272,6 +299,48 @@ router.beforeEach((to, from, next) => {
 
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     const isAdminRoute = to.path.startsWith('/admin');
+    const isAccountingRoute = to.path.startsWith('/accounting');
+
+    // For accounting routes, verify permissions via API
+    if (isAccountingRoute) {
+      const checkAccountingPermission = async () => {
+        try {
+          const response = await fetch('/api/user/get', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+            },
+            credentials: 'include',
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            if (userData && userData[0] && userData[0].permissions && userData[0].permissions.accounting) {
+              // User has accounting permission, continue with normal auth flow
+              const apiUrl = isAdminRoute ? '/api/adminProtected' : '/api/protected';
+              verifyToken(apiUrl).then((isValid) => {
+                if (isValid) {
+                  next();
+                }
+              });
+            } else {
+              // User doesn't have accounting permission
+              return next({ name: 'Dashboard' });
+            }
+          } else {
+            // API call failed, redirect to dashboard
+            return next({ name: 'Dashboard' });
+          }
+        } catch (error) {
+          console.error('Error checking accounting permissions:', error);
+          return next({ name: 'Dashboard' });
+        }
+      };
+
+      checkAccountingPermission();
+      return;
+    }
+
     const apiUrl = isAdminRoute ? '/api/adminProtected' : '/api/protected';
 
     verifyToken(apiUrl).then((isValid) => {

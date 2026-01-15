@@ -222,6 +222,7 @@ const importRoutes = require('./routes/importRoutes');
 const logRoutes = require('./routes/logRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const projectRoutes = require('./routes/projectRoutes');
+const accountingRoutes = require('./routes/accountingRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
 const waitlistRoutes = require('./routes/waitlistRoutes'); // Import waitlist routes
 const bookingEngineRoutes = require('./routes/bookingEngineRoutes'); // Import booking engine routes
@@ -248,6 +249,7 @@ app.use('/api', importRoutes);
 app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
+app.use('/api', accountingRoutes);
 app.use('/api', xmlRoutes);
 app.use('/api', waitlistRoutes);
 app.use('/api/search', searchRoutes); // Search functionality routes
