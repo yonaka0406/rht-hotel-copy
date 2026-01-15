@@ -204,9 +204,6 @@ watch(selectedDate, () => {
             <!-- Header -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div class="flex items-center gap-4">
-                    <button @click="$router.push({ name: 'AccountingDashboard' })" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
-                        <i class="pi pi-arrow-left text-slate-600 dark:text-slate-400"></i>
-                    </button>
                     <div>
                         <h1 class="text-2xl font-bold text-slate-900 dark:text-white">入金照合・差異分析</h1>
                         <p class="text-sm text-slate-500 dark:text-slate-400">売上計上額と実際の入金額の突合を行います</p>
