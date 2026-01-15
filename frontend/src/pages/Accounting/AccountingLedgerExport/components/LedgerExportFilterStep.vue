@@ -79,7 +79,7 @@ const emit = defineEmits(['next']);
 const { hotels, fetchHotels, isLoadingHotelList: loading } = useHotelStore();
 
 const filters = reactive({
-    selectedMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    selectedMonth: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), // Previous month
     hotelIds: []
 });
 
