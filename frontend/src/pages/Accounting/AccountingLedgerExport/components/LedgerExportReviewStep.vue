@@ -40,34 +40,39 @@
                                 </span>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div class="flex flex-col">
-                                    <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">料金明細なし</span>
-                                    <span class="font-bold text-red-600 dark:text-red-400">{{ hotel.missing_rates_count }} 件</span>
-                                    <span class="text-xs text-slate-600 dark:text-slate-400">金額: ¥{{ parseInt(hotel.missing_rates_amount || 0).toLocaleString() }}</span>
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">影響額</span>
-                                    <span class="font-bold text-amber-600 dark:text-amber-400">¥{{ parseInt(hotel.missing_rates_amount || 0).toLocaleString() }}</span>
-                                </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-600 dark:text-slate-400">影響額</span>
+                                <span class="font-bold text-red-600 dark:text-red-400 text-lg">¥{{ parseInt(hotel.missing_rates_amount || 0).toLocaleString() }}</span>
                             </div>
                             
                             <div v-if="hotel.significant_issues && hotel.significant_issues.length > 0" class="mt-4 pt-4 border-t border-amber-200 dark:border-amber-800">
-                                <details class="cursor-pointer">
-                                    <summary class="text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100">
+                                <details class="cursor-pointer" open>
+                                    <summary class="text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 mb-3">
                                         詳細を表示 ({{ hotel.missing_rates_count }} 件)
                                     </summary>
                                     <div class="mt-3 space-y-2 max-h-60 overflow-y-auto">
-                                        <div v-for="(issue, idx) in hotel.significant_issues.filter(i => i.missing_rates)" :key="idx" class="text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
-                                            <div class="flex justify-between items-start mb-1">
-                                                <span class="font-mono text-slate-600 dark:text-slate-400">{{ issue.plan_name }}</span>
-                                                <span class="text-red-600 dark:text-red-400 font-bold">料金明細なし</span>
+                                        <a 
+                                            v-for="(issue, idx) in hotel.significant_issues.filter(i => i.missing_rates)" 
+                                            :key="idx" 
+                                            :href="`/reservations/${issue.reservation_id}`"
+                                            target="_blank"
+                                            class="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-amber-300 dark:hover:border-amber-700 group cursor-pointer"
+                                        >
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="font-mono text-slate-700 dark:text-slate-300 font-medium">{{ issue.plan_name }}</span>
+                                                    <span class="text-red-600 dark:text-red-400 font-bold text-[10px] bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded">料金明細なし</span>
+                                                </div>
+                                                <div class="flex items-center gap-4 text-slate-500 dark:text-slate-400">
+                                                    <span class="flex items-center gap-1">
+                                                        <i class="pi pi-calendar text-[10px]"></i>
+                                                        {{ new Date(issue.date).toLocaleDateString('ja-JP') }}
+                                                    </span>
+                                                    <span class="font-bold text-red-600 dark:text-red-400">¥{{ parseInt(issue.rd_total_price).toLocaleString() }}</span>
+                                                </div>
                                             </div>
-                                            <div class="flex justify-between text-slate-500 dark:text-slate-400">
-                                                <span>予約日: {{ new Date(issue.date).toLocaleDateString('ja-JP') }}</span>
-                                                <span class="font-bold text-red-600 dark:text-red-400">金額: ¥{{ parseInt(issue.rd_total_price).toLocaleString() }}</span>
-                                            </div>
-                                        </div>
+                                            <i class="pi pi-external-link text-amber-600 dark:text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"></i>
+                                        </a>
                                     </div>
                                 </details>
                             </div>
