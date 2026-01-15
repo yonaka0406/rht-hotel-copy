@@ -207,18 +207,23 @@ const calculateMetrics = () => {
         return resDate >= startDateForCalc && resDate <= endDateForCalc;
     });
 
-    let totalRevenue = 0;
+    let totalAccommodationRevenue = 0;
+    let totalOtherRevenue = 0;
     let totalRoomsSold = 0;
 
     filteredMetricsReservations.forEach(res => {
-        totalRevenue += parseFloat(res.accommodation_price || 0);
+        totalAccommodationRevenue += parseFloat(res.accommodation_price || 0);
+        totalOtherRevenue += parseFloat(res.other_price || 0);
         if (parseFloat(res.accommodation_price || 0) > 0) {
             totalRoomsSold += parseInt(res.room_count || 0);
         }
     });
 
-    // Assign Total Revenue to displayedCumulativeSales
-    displayedCumulativeSales.value = Math.round(totalRevenue);
+    // For ADR and RevPAR calculations, use accommodation revenue only
+    const totalRevenue = totalAccommodationRevenue;
+
+    // displayedCumulativeSales shows accommodation revenue only (existing behavior)
+    displayedCumulativeSales.value = Math.round(totalAccommodationRevenue);
 
     // ADR
     // ADR
