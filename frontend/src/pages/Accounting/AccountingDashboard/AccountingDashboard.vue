@@ -220,6 +220,21 @@ onMounted(async () => {
                                         インポートへ進む <i class="pi pi-arrow-right"></i>
                                     </span>
                                 </button>
+
+                                <!-- Profit & Loss Statement Card -->
+                                <button @click="$router.push({ name: 'AccountingProfitLoss' })" class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
+                                    <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                                        <i class="pi pi-chart-bar text-xl text-violet-600 dark:text-violet-400"></i>
+                                    </div>
+                                    <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">損益計算書</span>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">P&L Statement</p>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                        部門別・ホテル別の損益分析
+                                    </p>
+                                    <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
+                                        レポートを表示 <i class="pi pi-arrow-right"></i>
+                                    </span>
+                                </button>
                                 
                                 <!-- OTA Import (Placeholder) -->
                                 <div class="group bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed relative overflow-hidden flex flex-col items-center text-center h-full">

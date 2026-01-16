@@ -6,43 +6,84 @@ The Accounting Module is designed to manage financial operations, auditing, and 
 
 ## Current Status
 
-**Last Updated:** 2026-01-13
+**Last Updated:** 2026-01-16
 
 ### Implemented Features
 
+- **Database Schema (Migration 023)**:
+  - **Master Tables**:
+    - `acc_management_groups`: 10 predefined groups (売上高, 売上原価, 人件費, etc.)
+    - `acc_tax_classes`: Tax categories with Yayoi names and rates (10%, 8%, non-taxable)
+    - `acc_account_codes`: 100+ predefined account codes with category hierarchy
+    - `acc_departments`: Hotel-to-Yayoi department code mappings with historical support
+      - `is_current`: Distinguishes current vs historical mappings
+      - `valid_from`/`valid_to`: Optional date ranges for historical tracking
+  - **Operational Tables**:
+    - `acc_accounting_mappings`: Multi-level mapping system (plan_hotel → plan_type_category → plan_package_category → addon)
+    - `acc_yayoi_data`: 25-column staging table for Yayoi CSV exports
+  - **Views**:
+    - `acc_monthly_account_summary`: Consolidated monthly view with debit/credit aggregation and tax adjustments
+    - `acc_profit_loss`: P&L statement view with hotel resolution using current and historical department mappings
+  - **Indexes**: Optimized for lookup performance on mappings, date ranges, and department resolution
+
 - **Infrastructure & Routing**:
-  - Route configuration (`/accounting`) with child routes.
-  - Navigation integration (Desktop & Mobile sidebars).
-  - Route guards protecting the module (`requiresAccounting` meta flag).
+  - Route configuration (`/accounting`) with child routes
+  - Navigation integration (Desktop & Mobile sidebars)
+  - Route guards protecting the module (`requiresAccounting` meta flag)
+
 - **Access Control (RBAC)**:
-  - New `accounting` permission added to database roles.
-  - Frontend permission checks.
-  - Backend middleware `authMiddleware_accounting`.
+  - New `accounting` permission added to database roles
+  - Frontend permission checks
+  - Backend middleware `authMiddleware_accounting`
+
 - **Dashboard (`AccountingDashboard.vue`)**:
-  - Implemented strictly following the UI/UX design.
-  - "Data Export" card linked to the Ledger Export wizard.
-  - "OTA Import" and "Sales Reconciliation" cards marked as *Coming Soon*.
-  - "At a Glance" section marked as *In Development*.
+  - Implemented strictly following the UI/UX design
+  - "Data Export" card linked to the Ledger Export wizard
+  - "Yayoi Import" card with last import info
+  - "P&L Statement" card linked to Profit & Loss page
+  - "OTA Import" card marked as *Coming Soon*
+  - "At a Glance" section with metrics
+
 - **Master Settings (`AccountingSettings.vue`)**:
   - **Tabs**:
-    - **Account Codes**: CRUD, mapping to Management Groups and Tax Classes.
-    - **Management Groups**: CRUD for grouping account codes.
-    - **Tax Classes**: CRUD for tax settings (Yayoi names, rates) with 0%/10% filter.
-    - **Departments**: Management of Hotel <-> Yayoi Department Code mappings.
-  - **UI**: Modal-based editing, confirmation dialogs, read-only hotel names in Department edit.
-  - **Backend**: Full CRUD endpoints in `accounting` controller and model.
+    - **Account Codes**: CRUD, mapping to Management Groups and Tax Classes
+    - **Management Groups**: CRUD for grouping account codes
+    - **Tax Classes**: CRUD for tax settings (Yayoi names, rates) with 0%/10% filter
+    - **Departments**: Management of Hotel <-> Yayoi Department Code mappings with historical support
+  - **UI**: Modal-based editing, confirmation dialogs, read-only hotel names in Department edit
+  - **Backend**: Full CRUD endpoints in `accounting` controller and model
+
 - **Ledger Export (Sales Journal)**:
-  - **UI**: 3-Step Wizard (`LedgerExportStepper`).
-    1. **Filter**: Month selection (YYYY-MM), Hotel multi-select.
-    2. **Review**: Preview table with Debit (Hotel) and Credit (Sales) rows. Visual warning for unmapped Departments.
-    3. **Confirmation**: Download button (CSV) and summary stats.
+  - **UI**: 3-Step Wizard (`LedgerExportStepper`)
+    1. **Filter**: Month selection (YYYY-MM), Hotel multi-select
+    2. **Review**: Preview table with Debit (Hotel) and Credit (Sales) rows. Visual warning for unmapped Departments
+    3. **Confirmation**: Download button (CSV) and summary stats
   - **Backend**:
     - `getLedgerPreview`: Complex query aggregating sales data, joining with `acc_account_codes`, `acc_departments`, etc.
-    - `downloadLedger`: Logic to generate Yayoi-importable CSV format.
+    - `downloadLedger`: Logic to generate Yayoi-importable CSV format
   - **Features**:
-    - Auto-mapping of Hotel IDs to Department names (or fallback to Hotel Name with warning).
-    - Error handling with Toast notifications.
-    - Robust number handling for currency totals.
+    - Auto-mapping of Hotel IDs to Department names (or fallback to Hotel Name with warning)
+    - Error handling with Toast notifications
+    - Robust number handling for currency totals
+
+- **Profit & Loss Statement (`AccountingProfitLoss.vue`)**:
+  - **UI**: Comprehensive P&L report with flexible filtering
+    - Period selection (start/end month)
+    - View by: Monthly, Hotel, Department, Hotel×Month, Department×Month
+    - Hotel multi-select filter
+    - Hierarchical display by Management Group
+    - Calculated totals: Gross Profit, Operating Profit, Ordinary Profit, Profit Before Tax, Net Profit
+    - CSV export functionality
+  - **Backend**:
+    - `getProfitLoss`: Detailed P&L data with flexible grouping
+    - `getProfitLossSummary`: Aggregated summaries by management group
+    - `getAvailableMonths`: List of available data periods
+    - `getAvailableDepartments`: Department/hotel combinations
+  - **Features**:
+    - Automatic hotel resolution using both current and historical department mappings
+    - Responsive table with sticky headers
+    - Real-time calculation of P&L metrics
+    - Japanese/English bilingual labels
 
 ## UI/UX Design Specification
 
@@ -85,36 +126,118 @@ The dashboard consists of the following sections:
 
 ### 1. Monthly Data Export (Auditing)
 
-- **Goal**: Allow authorized users to download comprehensive hotel operation data for monthly audits.
-- **Status**: **Completed**.
+- **Goal**: Allow authorized users to download comprehensive hotel operation data for monthly audits
+- **Status**: **Completed**
 - **Implementation**:
-  - Frontend: `AccountingLedgerExport` directory.
-  - Backend: `accounting/export.js` controller, `accounting/read.js` model.
+  - Frontend: `AccountingLedgerExport` directory
+  - Backend: `accounting/export.js` controller, `accounting/read.js` model
+  - Database: Migration 023 with full schema support
 
-### 2. OTA Payment Reconciliation
+### 2. Plan/Addon Accounting Mappings
 
-- **Goal**: Upload OTA payment detail files to the system.
-- **UI Component**: "Upload OTA Slips" Action Card.
-- **Status**: **Planned** (Card placeholder implemented).
+- **Goal**: Map hotel plans and addons to specific account codes for automated journal entry generation
+- **Status**: **Schema Ready** (Implementation pending)
+- **Database**: `acc_accounting_mappings` table with multi-level resolution:
+  1. Specific Item mapping (plan_hotel, addon_hotel)
+  2. Category mapping (plan_type_category, plan_package_category)
+  3. Global Category mapping (addon_global)
+- **Next Steps**:
+  - Build UI for mapping management in Settings
+  - Implement resolution logic in backend queries
+  - Integrate with booking/sales data for automatic journal generation
 
-### 3. Sales Data Reconciliation
+### 3. Yayoi Data Import & Processing
 
-- **Goal**: Automated comparison between system sales data and uploaded payment records.
-- **UI Component**: "Sales Comparison" Action Card.
-- **Status**: **Planned** (Card placeholder implemented).
+- **Goal**: Import Yayoi accounting data for reconciliation and analysis
+- **Status**: **Schema Ready** (Implementation pending)
+- **Database**: `acc_yayoi_data` table (25 columns matching Yayoi CSV format)
+- **View**: `acc_monthly_account_summary` for consolidated reporting
+- **Next Steps**:
+  - Build CSV import parser (25-column Yayoi format)
+  - Implement data validation and error handling
+  - Create UI for import workflow
+  - Build reconciliation reports using the monthly summary view
 
-### 4. Dashboard Metrics (Analytics)
+### 4. OTA Payment Reconciliation
 
-- **Goal**: Provide real-time visibility into financial health.
-- **Status**: **Planned** (Section placeholder implemented).
+- **Goal**: Upload OTA payment detail files and reconcile with PMS bookings
+- **UI Component**: "Upload OTA Slips" Action Card
+- **Status**: **Planned** (Card placeholder implemented)
+- **Next Steps**:
+  - Design database schema for OTA payment records
+  - Implement file upload and parsing (CSV/Excel)
+  - Build matching logic (PMS bookings ↔ OTA records)
+
+### 5. Sales Data Reconciliation
+
+- **Goal**: Automated comparison between system sales data and uploaded payment records
+- **UI Component**: "Sales Comparison" Action Card
+- **Status**: **Planned** (Card placeholder implemented)
+- **Dependencies**: Requires OTA Payment Reconciliation (#4) and Yayoi Import (#3)
+
+### 6. Dashboard Metrics (Analytics)
+
+- **Goal**: Provide real-time visibility into financial health
+- **Status**: **Planned** (Section placeholder implemented)
+- **Potential Metrics**:
+  - Monthly revenue by management group
+  - Tax summary by class
+  - Unmapped transactions count
+  - Reconciliation status indicators
+
+## Technical Architecture
+
+### Mapping Resolution Logic
+
+The system uses a hierarchical resolution strategy for account code mappings:
+
+```
+1. Check: Specific Item + Hotel (e.g., Plan A in Hotel 1)
+   └─> acc_accounting_mappings WHERE hotel_id = X AND target_type = 'plan_hotel' AND target_id = Y
+
+2. Fallback: Category + Hotel (e.g., "Overnight" category in Hotel 1)
+   └─> acc_accounting_mappings WHERE hotel_id = X AND target_type = 'plan_type_category' AND target_id = Z
+
+3. Fallback: Global Category (e.g., "Overnight" category default)
+   └─> acc_accounting_mappings WHERE hotel_id IS NULL AND target_type = 'plan_type_category' AND target_id = Z
+
+4. Error: No mapping found
+```
+
+### Yayoi CSV Format
+
+The `acc_yayoi_data` table mirrors the 25-column Yayoi import format:
+- Columns A-Y: Identification flag, slip number, dates, debit/credit accounts, tax classes, amounts, etc.
+- Supports multi-line journal entries (identification_flag: 2110, 2100, 2101)
+- Tax adjustments: 控不 → 0%, 80% → 80% of original tax amount
+
+### Monthly Summary View
+
+`acc_monthly_account_summary` provides consolidated reporting:
+- Debits are negated, Credits are positive
+- Tax adjustments applied based on tax class
+- Net Amount = Inclusive Amount - Adjusted Tax
+- Grouped by: month, account, sub-account, department, tax class
+- Joined with management groups for hierarchical reporting
 
 ## Next Steps
 
-1. **Release v1.0 (Current Branch)**:
-    - Verify CSV export format with Yayoi constraints.
-    - Additional testing of Department mappings.
-    - Merge current accounting features (`feat/accounting-module`) to main.
-2. **Phase 2: OTA Reconciliation**:
-    - Design database schema for uploaded OTA records.
-    - Implement file upload and parsing (CSV/Excel) for OTA slips.
-    - Implement reconciliation logic (matching PMS bookings with OTA records).
+1. **Phase 1.5: Mapping Management** (Current Priority):
+   - Build UI for Plan/Addon → Account Code mappings
+   - Implement backend resolution logic
+   - Test with sample booking data
+
+2. **Phase 2: Yayoi Integration**:
+   - CSV import functionality for `acc_yayoi_data`
+   - Validation and error reporting
+   - Monthly summary reports using the view
+
+3. **Phase 3: OTA Reconciliation**:
+   - Design schema for OTA payment records
+   - File upload and parsing (CSV/Excel)
+   - Matching logic (PMS ↔ OTA)
+
+4. **Phase 4: Analytics Dashboard**:
+   - Real-time metrics using monthly summary view
+   - Visual charts and trend analysis
+   - Export capabilities for management reports

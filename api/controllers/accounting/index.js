@@ -2,10 +2,12 @@ const settings = require('./settings');
 const exportCtrl = require('./export');
 const dashboard = require('./dashboard');
 const importCtrl = require('./import');
+const profitLoss = require('./profitLoss');
 
 module.exports = {
     ...settings,
     ...exportCtrl,
     ...dashboard,
-    ...importCtrl
+    ...importCtrl,
+    ...profitLoss
 };

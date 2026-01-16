@@ -331,29 +331,38 @@ CREATE INDEX idx_acc_yayoi_batch ON acc_yayoi_data (batch_id);
 
 -- 6. Accounting Departments Master
 -- Maps hotels to their accounting department codes (部門) for Yayoi exports
+-- Supports both current and historical department name mappings
 CREATE TABLE acc_departments (
     id SERIAL PRIMARY KEY,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     name VARCHAR(24) NOT NULL, -- Yayoi department name (部門) e.g., "WH室蘭"
+    is_current BOOLEAN DEFAULT true, -- true = current mapping, false = historical mapping
+    valid_from DATE, -- Optional: When this mapping became valid
+    valid_to DATE, -- Optional: When this mapping ended (NULL for current)
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by INT REFERENCES users(id),
-    UNIQUE (hotel_id),
-    UNIQUE (name)
+    UNIQUE (hotel_id, name), -- Allow same hotel to have multiple historical names
+    CHECK (NOT (is_current = true AND valid_to IS NOT NULL)) -- Current mappings cannot have end date
 );
 
-COMMENT ON TABLE acc_departments IS 'Maps hotels to accounting department codes for Yayoi exports';
+COMMENT ON TABLE acc_departments IS 'Maps hotels to accounting department codes for Yayoi exports. Supports historical mappings.';
 COMMENT ON COLUMN acc_departments.name IS 'Accounting department name (部門) used in Yayoi CSV exports';
+COMMENT ON COLUMN acc_departments.is_current IS 'true = current mapping for exports, false = historical mapping for imports';
+COMMENT ON COLUMN acc_departments.valid_from IS 'Optional: Start date for this department name';
+COMMENT ON COLUMN acc_departments.valid_to IS 'Optional: End date for this department name (NULL for current)';
 
--- Create index for lookups
+-- Create indexes for lookups
 CREATE INDEX idx_acc_departments_hotel ON acc_departments(hotel_id);
+CREATE INDEX idx_acc_departments_current ON acc_departments(hotel_id, is_current) WHERE is_current = true;
+CREATE INDEX idx_acc_departments_name ON acc_departments(name);
 
 -- Seed department codes for existing hotels
 -- Update these values according to your actual hotel-to-department mapping
-INSERT INTO acc_departments (hotel_id, name, created_by) VALUES
-(24, 'WH室蘭', 1)
-ON CONFLICT (hotel_id) DO NOTHING;
+INSERT INTO acc_departments (hotel_id, name, is_current, created_by) VALUES
+(24, 'WH室蘭', true, 1)
+ON CONFLICT (hotel_id, name) DO NOTHING;
 
 -- 7. Monthly Account Summary View
 -- Consolidates debit and credit entries by month, account, department, and tax class.
@@ -429,3 +438,88 @@ LEFT JOIN acc_management_groups mg ON ac.management_group_id = mg.id
 ORDER BY gd.month, mg.display_order, ac.code;
 
 COMMENT ON VIEW acc_monthly_account_summary IS 'Consolidated view of monthly account activity from Yayoi import data';
+
+-- 8. Profit & Loss View with Hotel Resolution
+-- Resolves department names to hotels using both current and historical mappings
+-- Groups by management group for P&L statement structure
+CREATE VIEW acc_profit_loss AS
+WITH department_hotel_map AS (
+    -- Get all department to hotel mappings (current and historical)
+    SELECT DISTINCT
+        ad.name as department_name,
+        ad.hotel_id,
+        h.name as hotel_name
+    FROM acc_departments ad
+    JOIN hotels h ON ad.hotel_id = h.id
+),
+pl_data AS (
+    SELECT 
+        amas.month,
+        amas.department,
+        dhm.hotel_id,
+        dhm.hotel_name,
+        amas.management_group_name,
+        amas.management_group_display_order,
+        amas.account_code,
+        amas.account_name,
+        SUM(amas.total_net_amount) as net_amount
+    FROM acc_monthly_account_summary amas
+    LEFT JOIN department_hotel_map dhm ON amas.department = dhm.department_name
+    WHERE amas.management_group_name IS NOT NULL -- Only P&L accounts (not balance sheet)
+    GROUP BY 
+        amas.month,
+        amas.department,
+        dhm.hotel_id,
+        dhm.hotel_name,
+        amas.management_group_name,
+        amas.management_group_display_order,
+        amas.account_code,
+        amas.account_name
+)
+SELECT 
+    month,
+    department,
+    hotel_id,
+    hotel_name,
+    management_group_name,
+    management_group_display_order,
+    account_code,
+    account_name,
+    net_amount,
+    -- Running totals for P&L sections
+    CASE 
+        WHEN management_group_display_order = 1 THEN net_amount -- 売上高
+        ELSE 0
+    END as revenue,
+    CASE 
+        WHEN management_group_display_order = 2 THEN net_amount -- 売上原価
+        ELSE 0
+    END as cost_of_sales,
+    CASE 
+        WHEN management_group_display_order IN (3, 4, 5) THEN net_amount -- 人件費, 経費, 減価償却費
+        ELSE 0
+    END as operating_expenses,
+    CASE 
+        WHEN management_group_display_order = 6 THEN net_amount -- 営業外収入
+        ELSE 0
+    END as non_operating_income,
+    CASE 
+        WHEN management_group_display_order = 7 THEN net_amount -- 営業外費用
+        ELSE 0
+    END as non_operating_expenses,
+    CASE 
+        WHEN management_group_display_order = 8 THEN net_amount -- 特別利益
+        ELSE 0
+    END as extraordinary_income,
+    CASE 
+        WHEN management_group_display_order = 9 THEN net_amount -- 特別損失
+        ELSE 0
+    END as extraordinary_losses,
+    CASE 
+        WHEN management_group_display_order = 10 THEN net_amount -- 法人税等
+        ELSE 0
+    END as income_tax
+FROM pl_data
+ORDER BY month, hotel_id, management_group_display_order, account_code;
+
+COMMENT ON VIEW acc_profit_loss IS 'P&L statement view with hotel resolution and management group categorization';

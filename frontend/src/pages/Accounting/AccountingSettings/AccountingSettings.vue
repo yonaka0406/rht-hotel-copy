@@ -212,7 +212,7 @@
                         <div v-if="activeTab === 'dept'">
                             <div class="flex justify-between items-center mb-6">
                                 <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門設定</h2>
-                                <!-- New button removed as we list all hotels -->
+                                <p class="text-sm text-slate-500">現在の部門マッピングと履歴データを管理します</p>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
@@ -220,15 +220,31 @@
                                         <tr class="border-b border-slate-100 dark:border-slate-700">
                                             <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">店舗名</th>
                                             <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">部門名 (弥生会計)</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">状態</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">有効期間</th>
                                             <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="item in settings.departments" :key="item.hotel_id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                        <tr v-for="item in settings.departments" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                             <td class="py-4 px-4 font-bold">{{ item.hotel_name }}</td>
                                             <td class="py-4 px-4">
                                                 <span v-if="item.name" class="font-black text-slate-700 dark:text-slate-300">{{ item.name }}</span>
                                                 <span v-else class="text-slate-400 text-sm font-medium">未設定</span>
+                                            </td>
+                                            <td class="py-4 px-4">
+                                                <span v-if="item.is_current" class="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                                    現在
+                                                </span>
+                                                <span v-else class="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                                    履歴
+                                                </span>
+                                            </td>
+                                            <td class="py-4 px-4 text-sm text-slate-500">
+                                                <span v-if="item.valid_from || item.valid_to">
+                                                    {{ formatDate(item.valid_from) }} 〜 {{ formatDate(item.valid_to) || '現在' }}
+                                                </span>
+                                                <span v-else class="text-slate-400">-</span>
                                             </td>
                                             <td class="py-4 px-4">
                                                 <div class="flex gap-2">
@@ -238,7 +254,7 @@
                                             </td>
                                         </tr>
                                         <tr v-if="settings.departments.length === 0">
-                                            <td colspan="3" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -322,6 +338,28 @@
                         <label class="text-xs font-black text-slate-500 uppercase">部門名 (弥生会計) <span class="text-rose-500">*</span></label>
                         <InputText v-model="form.name" placeholder="例: WH室蘭" class="w-full" />
                     </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-black text-slate-500 uppercase">状態</label>
+                        <div class="flex items-center gap-3">
+                            <Checkbox v-model="form.is_current" :binary="true" inputId="is_current" />
+                            <label for="is_current" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                現在のマッピング (エクスポートに使用)
+                            </label>
+                        </div>
+                        <p class="text-xs text-slate-500">チェックを外すと履歴データとして保存されます (インポート時の解決に使用)</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-black text-slate-500 uppercase">有効開始日</label>
+                            <DatePicker v-model="form.valid_from" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" class="w-full" />
+                            <p class="text-xs text-slate-500">任意: この部門名が有効になった日</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-xs font-black text-slate-500 uppercase">有効終了日</label>
+                            <DatePicker v-model="form.valid_to" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" class="w-full" :disabled="form.is_current" />
+                            <p class="text-xs text-slate-500">任意: この部門名が終了した日</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
@@ -351,6 +389,7 @@ import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
+import DatePicker from 'primevue/datepicker';
 import ConfirmDialog from 'primevue/confirmdialog';
 
 const store = useAccountingStore();
@@ -408,7 +447,10 @@ const form = reactive({
     display_order: 0,
     yayoi_name: '',
     tax_rate_percent: 10,
-    hotel_id: null
+    hotel_id: null,
+    is_current: true,
+    valid_from: null,
+    valid_to: null
 });
 
 const modalTitle = computed(() => {
@@ -448,6 +490,12 @@ const getHotelName = (id) => {
     return h ? h.name : '-';
 };
 
+const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const openModal = (type) => {
     modal.type = type;
     modal.isEdit = false;
@@ -463,6 +511,9 @@ const openModal = (type) => {
     form.yayoi_name = '';
     form.tax_rate_percent = 10;
     form.hotel_id = null;
+    form.is_current = true;
+    form.valid_from = null;
+    form.valid_to = null;
 };
 
 const editItem = (type, item) => {
@@ -486,7 +537,10 @@ const editItem = (type, item) => {
         form.is_active = item.is_active;
     } else if (type === 'dept') {
         form.hotel_id = item.hotel_id;
-        form.name = item.name || ''; // Handle null name
+        form.name = item.name || '';
+        form.is_current = item.is_current !== undefined ? item.is_current : true;
+        form.valid_from = item.valid_from ? new Date(item.valid_from) : null;
+        form.valid_to = item.valid_to ? new Date(item.valid_to) : null;
     }
 };
 
@@ -514,6 +568,16 @@ const handleSave = async () => {
         
         if (modal.type === 'tax') {
             payload.tax_rate = payload.tax_rate_percent / 100;
+        }
+
+        if (modal.type === 'dept') {
+            // Format dates for backend
+            if (payload.valid_from) {
+                payload.valid_from = payload.valid_from.toISOString().split('T')[0];
+            }
+            if (payload.valid_to) {
+                payload.valid_to = payload.valid_to.toISOString().split('T')[0];
+            }
         }
 
         if (modal.type === 'code') await store.upsertAccountCode(payload);
