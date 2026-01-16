@@ -1333,38 +1333,163 @@ export default {
           }
           rows.push(row);
         });
-      } else {
-        // Standard view export
-        const headers = [];
-        if (showMonthColumn.value) headers.push('月');
-        if (showHotelColumn.value) headers.push('ホテル');
-        if (showDepartmentColumn.value) headers.push('部門');
-        headers.push('管理グループ', '勘定科目コード', '勘定科目名', '金額');
-        rows.push(headers);
-
-        groupedData.value.forEach(group => {
-          group.rows.forEach(row => {
-            const csvRow = [];
-            if (showMonthColumn.value) csvRow.push(formatMonth(row.month));
-            if (showHotelColumn.value) csvRow.push(row.hotel_name || '未割当');
-            if (showDepartmentColumn.value) csvRow.push(row.department || '-');
-            csvRow.push(
-              group.name,
-              row.account_code || '',
-              row.account_name,
-              row.net_amount
-            );
-            rows.push(csvRow);
-          });
+      } else if (filters.value.groupBy === 'hotel') {
+        // Hotel view: export with hotels as columns
+        const headers = ['勘定科目'];
+        uniqueHotels.value.forEach(hotel => {
+          headers.push(hotel.hotel_name);
         });
-
-        // Add totals
-        rows.push([]);
-        rows.push(['売上総利益', '', '', '', totals.value.grossProfit]);
-        rows.push(['営業利益', '', '', '', totals.value.operatingProfit]);
-        rows.push(['経常利益', '', '', '', totals.value.ordinaryProfit]);
-        rows.push(['税引前当期純利益', '', '', '', totals.value.profitBeforeTax]);
-        rows.push(['当期純利益', '', '', '', totals.value.netProfit]);
+        rows.push(headers);
+        
+        groupedData.value.forEach(group => {
+          rows.push([group.name]);
+          
+          group.accounts.forEach(account => {
+            const row = [account.account_name];
+            uniqueHotels.value.forEach(hotel => {
+              row.push(account.amountsByHotel[hotel.hotel_id]?.amount || 0);
+            });
+            rows.push(row);
+          });
+          
+          const subtotalRow = [`${group.name} 小計`];
+          uniqueHotels.value.forEach(hotel => {
+            subtotalRow.push(group.subtotalByHotel[hotel.hotel_id]?.amount || 0);
+          });
+          rows.push(subtotalRow);
+          rows.push([]);
+        });
+      } else if (filters.value.groupBy === 'department') {
+        // Department view: export with departments as columns
+        const headers = ['勘定科目'];
+        uniqueDepartments.value.forEach(dept => {
+          headers.push(dept);
+        });
+        rows.push(headers);
+        
+        groupedData.value.forEach(group => {
+          rows.push([group.name]);
+          
+          group.accounts.forEach(account => {
+            const row = [account.account_name];
+            uniqueDepartments.value.forEach(dept => {
+              row.push(account.amountsByDepartment[dept] || 0);
+            });
+            rows.push(row);
+          });
+          
+          const subtotalRow = [`${group.name} 小計`];
+          uniqueDepartments.value.forEach(dept => {
+            subtotalRow.push(group.subtotalByDepartment[dept] || 0);
+          });
+          rows.push(subtotalRow);
+          rows.push([]);
+        });
+      } else if (filters.value.groupBy === 'hotel_month') {
+        // Hotel_Month view: export with months as columns, grouped by hotel
+        const headers = ['勘定科目'];
+        uniqueMonths.value.forEach(month => {
+          headers.push(formatMonth(month));
+        });
+        rows.push(headers);
+        
+        groupedData.value.forEach(hotelGroup => {
+          // Hotel header
+          rows.push([hotelGroup.hotel_name]);
+          rows.push([]);
+          
+          hotelGroup.managementGroups.forEach(group => {
+            rows.push([group.name]);
+            
+            group.accounts.forEach(account => {
+              const row = [account.account_name];
+              uniqueMonths.value.forEach(month => {
+                row.push(account.amountsByMonth[month] || 0);
+              });
+              rows.push(row);
+            });
+            
+            const subtotalRow = [`${group.name} 小計`];
+            uniqueMonths.value.forEach(month => {
+              subtotalRow.push(group.subtotalByMonth[month] || 0);
+            });
+            rows.push(subtotalRow);
+            rows.push([]);
+          });
+          
+          // Profit totals for this hotel
+          const profitRows = [
+            { label: '売上総利益', key: 'grossProfit' },
+            { label: '営業利益', key: 'operatingProfit' },
+            { label: '経常利益', key: 'ordinaryProfit' },
+            { label: '税引前当期純利益', key: 'profitBeforeTax' },
+            { label: '当期純利益', key: 'netProfit' }
+          ];
+          
+          profitRows.forEach(profit => {
+            const row = [profit.label];
+            uniqueMonths.value.forEach(month => {
+              row.push(totals.value[hotelGroup.hotel_id]?.[month]?.[profit.key] || 0);
+            });
+            rows.push(row);
+          });
+          rows.push([]);
+          rows.push([]);
+        });
+      } else if (filters.value.groupBy === 'department_month') {
+        // Department_Month view: export with months as columns, grouped by department
+        const headers = ['勘定科目'];
+        uniqueMonths.value.forEach(month => {
+          headers.push(formatMonth(month));
+        });
+        rows.push(headers);
+        
+        groupedData.value.forEach(deptGroup => {
+          // Department header
+          const deptHeader = deptGroup.hotel_name 
+            ? `${deptGroup.department} (${deptGroup.hotel_name})`
+            : deptGroup.department;
+          rows.push([deptHeader]);
+          rows.push([]);
+          
+          deptGroup.managementGroups.forEach(group => {
+            rows.push([group.name]);
+            
+            group.accounts.forEach(account => {
+              const row = [account.account_name];
+              uniqueMonths.value.forEach(month => {
+                row.push(account.amountsByMonth[month] || 0);
+              });
+              rows.push(row);
+            });
+            
+            const subtotalRow = [`${group.name} 小計`];
+            uniqueMonths.value.forEach(month => {
+              subtotalRow.push(group.subtotalByMonth[month] || 0);
+            });
+            rows.push(subtotalRow);
+            rows.push([]);
+          });
+          
+          // Profit totals for this department
+          const profitRows = [
+            { label: '売上総利益', key: 'grossProfit' },
+            { label: '営業利益', key: 'operatingProfit' },
+            { label: '経常利益', key: 'ordinaryProfit' },
+            { label: '税引前当期純利益', key: 'profitBeforeTax' },
+            { label: '当期純利益', key: 'netProfit' }
+          ];
+          
+          profitRows.forEach(profit => {
+            const row = [profit.label];
+            uniqueMonths.value.forEach(month => {
+              row.push(totals.value[deptGroup.department]?.[month]?.[profit.key] || 0);
+            });
+            rows.push(row);
+          });
+          rows.push([]);
+          rows.push([]);
+        });
       }
 
       const csv = rows.map(row => row.join(',')).join('\n');
