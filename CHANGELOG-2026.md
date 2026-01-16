@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.1] - 2026-01-16
+
+- New Feature: Implemented previous year occupancy calculation logic in backend to match frontend consistency.
+- New Feature: Aligned future outlook aggregation logic with Net Accommodation Sales for accurate performance tracking.
+- Improvement: Enhanced daily report template with updated layout and improved cell mapping.
+- Fix: Resolved temporary file resource leak in the daily report background generation job.
+- Fix: Improved numeric data safety in Excel reports by correctly handling zero values using nullish coalescing.
+
+---
+
 ## [1.4.0] - 2026-01-15
 
 - New Feature: Added Accounting Module with Sales Data Export functionality.
