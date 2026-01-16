@@ -69,7 +69,7 @@ Each item in `outlookData` now includes:
 
 | Sheet Name | Target Cell/Range | Data Type | Description |
 | :--- | :--- | :--- | :--- |
-| **レポート** | `A45` | String | `selectionMessage` (dynamic footer/note) |
+| **レポート** | `A52` | String | `selectionMessage` (dynamic footer/note) |
 | **合計データ** | Rows 2,4,7,8 Cols W-AB | Object | **KPI Data**: 6-month Actual/Forecast ADR and RevPAR |
 | **合計データ** | Row 2 onwards | Array | **Outlook Data**: 6-month trends (sales, occ, room nights) with provisory data |
 | **合計データ** | Row 10 onwards | Array | **Facility Performance**: Side-by-side revenue and occupancy comparison |
@@ -218,6 +218,18 @@ const xlsxPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
 - **Parameter Validation**: Proper function signature validation to prevent undefined parameter errors
 
 ### 🐛 Recent Fixes
+
+#### Previous Year Occupancy Implementation (2026-01-16)
+- **Change**: Added `prevYearOccupancyData` calculation logic to `frontendCompatibleReportService.js`.
+- **Details**:
+    - Replicated frontend logic for calculating monthly total rooms (considering hotel opening dates shifted to the previous year).
+    - Aggregated sold rooms from PMS data for the previous year period.
+    - Calculated occupancy rates for individual hotels and the total facility.
+- **Reason**: To match frontend implementation and provide accurate year-over-year occupancy comparisons in the report.
+
+#### Template & Selection Message Position Update (2026-01-16)
+- **Change**: Updated the Excel template (`デイリーテンプレート.xlsx`) and moved the `selectionMessage` cell from `A45` to `A52` in the 'レポート' sheet.
+- **Reason**: Final template adjustments for the renewed report layout.
 
 #### Filtered Logs for Debugging (2026-01-16)
 - **Change**: Updated `frontendCompatibleReportService.js` to filter logs for future outlook data, showing only hotel ID 35.

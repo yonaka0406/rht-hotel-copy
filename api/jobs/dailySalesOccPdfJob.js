@@ -22,6 +22,8 @@ const runDailySalesOccPdfJob = async () => {
 
     let dbClient = null;
     let jobSuccess = false;
+    let excelPath = null;
+    let pdfPath = null;
 
     try {
         // For jobs, explicitly choose the pool based on NODE_ENV
@@ -76,10 +78,10 @@ const runDailySalesOccPdfJob = async () => {
 
         // Debug: Also generate Excel to check raw data
         logger.info(`[${requestId}] Generating Excel for debugging...`);
-        const excelPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
+        excelPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
         logger.warn(`[${requestId}] Excel file generated at: ${excelPath}`);
 
-        const pdfPath = await generateDailyReportPdf(reportData, requestId, 'pdf');
+        pdfPath = await generateDailyReportPdf(reportData, requestId, 'pdf');
 
         if (!pdfPath || !fs.existsSync(pdfPath)) {
             throw new Error('PDF generation failed, file not found.');
@@ -121,14 +123,6 @@ const runDailySalesOccPdfJob = async () => {
 
         logger.info(`[${requestId}] Email sent successfully.`);
 
-        // 4. Cleanup
-        try {
-            await fs.promises.unlink(pdfPath);
-            logger.info(`[${requestId}] Cleaned up temporary PDF file.`);
-        } catch (cleanupError) {
-            logger.warn(`[${requestId}] Failed to cleanup PDF file: ${cleanupError.message}`);
-        }
-
         jobSuccess = true;
         logger.warn(`[${requestId}] ========== JOB COMPLETED SUCCESSFULLY ==========`);
 
@@ -159,6 +153,25 @@ const runDailySalesOccPdfJob = async () => {
         if (dbClient) {
             dbClient.release();
             logger.debug(`[${requestId}] Database connection released.`);
+        }
+
+        // Cleanup temporary files in finally to ensure they are removed regardless of success/fail
+        if (excelPath && fs.existsSync(excelPath)) {
+            try {
+                await fs.promises.unlink(excelPath);
+                logger.info(`[${requestId}] Cleaned up temporary Excel debug file.`);
+            } catch (cleanupError) {
+                logger.warn(`[${requestId}] Failed to cleanup Excel file: ${cleanupError.message}`);
+            }
+        }
+
+        if (pdfPath && fs.existsSync(pdfPath)) {
+            try {
+                await fs.promises.unlink(pdfPath);
+                logger.info(`[${requestId}] Cleaned up temporary PDF file.`);
+            } catch (cleanupError) {
+                logger.warn(`[${requestId}] Failed to cleanup PDF file: ${cleanupError.message}`);
+            }
         }
     }
 };
