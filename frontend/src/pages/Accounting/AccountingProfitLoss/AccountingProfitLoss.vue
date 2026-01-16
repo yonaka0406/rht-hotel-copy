@@ -1549,10 +1549,22 @@ export default {
         });
       }
 
-      const csv = rows.map(row => row.join(',')).join('\n');
+      // Helper function to escape CSV cells
+      const escapeCSVCell = (cell) => {
+        if (cell === null || cell === undefined) return '""';
+        const str = String(cell);
+        // If cell contains comma, newline, or double quote, wrap in quotes and escape quotes
+        if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return `"${str}"`;
+      };
+
+      const csv = rows.map(row => row.map(escapeCSVCell).join(',')).join('\n');
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      link.href = url;
       
       // Add filter indicator to filename if filtered
       let filename = `PL_${filters.value.startMonth}_${filters.value.endMonth}`;
@@ -1561,6 +1573,11 @@ export default {
       }
       link.download = `${filename}.csv`;
       link.click();
+
+      // Revoke the blob URL to prevent memory leaks
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
 
       toast.add({ severity: 'success', summary: '成功', detail: 'CSVファイルをダウンロードしました', life: 3000 });
     };
