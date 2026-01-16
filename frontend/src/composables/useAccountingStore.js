@@ -142,6 +142,22 @@ export function useAccountingStore() {
         return await post('/accounting/import/execute', formData);
     };
 
+    const fetchProfitLossMonths = async () => {
+        return await get('/accounting/profit-loss/months');
+    };
+
+    const fetchProfitLossDepartments = async () => {
+        return await get('/accounting/profit-loss/departments');
+    };
+
+    const fetchProfitLoss = async (params) => {
+        return await post('/accounting/profit-loss', params);
+    };
+
+    const fetchProfitLossSummary = async (params) => {
+        return await post('/accounting/profit-loss/summary', params);
+    };
+
     const clearPreviewData = () => {
         ledgerPreviewData.value = [];
         ledgerValidationData.value = null;
@@ -169,6 +185,10 @@ export function useAccountingStore() {
         deleteDepartment,
         previewYayoiImport,
         executeYayoiImport,
+        fetchProfitLossMonths,
+        fetchProfitLossDepartments,
+        fetchProfitLoss,
+        fetchProfitLossSummary,
         clearPreviewData,
         fetchDashboardMetrics,
         fetchReconciliationOverview,

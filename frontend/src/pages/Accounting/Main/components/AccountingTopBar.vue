@@ -35,9 +35,15 @@ const breadcrumbs = computed(() => {
     // Always add Accounting
     if (route.path === '/accounting/dashboard') {
         crumbs.push({ label: '会計' });
+    } else if (route.path === '/accounting/profit-loss') {
+        crumbs.push({ label: '会計', to: '/accounting/dashboard' });
+        crumbs.push({ label: '損益計算書' });
     } else if (route.path === '/accounting/ledger-export') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
         crumbs.push({ label: '帳票出力' });
+    } else if (route.path === '/accounting/yayoi-import') {
+        crumbs.push({ label: '会計', to: '/accounting/dashboard' });
+        crumbs.push({ label: '弥生会計' });
     } else if (route.path === '/accounting/reconciliation') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
         crumbs.push({ label: '入金照合' });

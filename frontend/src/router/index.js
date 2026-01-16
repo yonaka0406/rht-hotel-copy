@@ -66,6 +66,7 @@ const AccountingLedgerExport = () => import('@/pages/Accounting/AccountingLedger
 const AccountingYayoiImport = () => import('@/pages/Accounting/AccountingYayoiImport/AccountingYayoiImport.vue');
 const AccountingSettings = () => import('@/pages/Accounting/AccountingSettings/AccountingSettings.vue');
 const AccountingReconciliation = () => import('@/pages/Accounting/AccountingReconciliation/AccountingReconciliation.vue');
+const AccountingProfitLoss = () => import('@/pages/Accounting/AccountingProfitLoss/AccountingProfitLoss.vue');
 
 
 const routes = [
@@ -177,6 +178,7 @@ const routes = [
     children: [
       { path: '', redirect: { name: 'AccountingDashboard' } },
       { path: 'dashboard', name: 'AccountingDashboard', component: AccountingDashboard },
+      { path: 'profit-loss', name: 'AccountingProfitLoss', component: AccountingProfitLoss },
       { path: 'ledger-export', name: 'AccountingLedgerExport', component: AccountingLedgerExport },
       { path: 'yayoi-import', name: 'AccountingYayoiImport', component: AccountingYayoiImport },
       { path: 'reconciliation', name: 'AccountingReconciliation', component: AccountingReconciliation },
