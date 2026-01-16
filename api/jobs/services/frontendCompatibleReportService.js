@@ -838,9 +838,129 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             return Number(a.hotel_id) - Number(b.hotel_id);
         });
 
+
         logger.debug(`[getFrontendCompatibleReportData] Generated ${prevYearRevenueData.length} previous year revenue records`);
 
+        // Generate previous year occupancy data (matching frontend logic)
+        const prevYearMonthlyOccupancyAggregates = {};
+        const prevYearOccupancyTotals = {};
 
+        // Initialize aggregates for the previous year month
+        const prevYearOccMonthKey = formatDateMonth(prevYearDate);
+        prevYearMonthlyOccupancyAggregates[prevYearOccMonthKey] = {};
+        prevYearOccupancyTotals[prevYearOccMonthKey] = { total_rooms: 0, sold_rooms: 0 };
+
+        // Calculate days in the previous year month
+        const prevYear = prevYearDate.getFullYear();
+        const prevMonthIndex = prevYearDate.getMonth();
+        const daysInPrevYearMonth = getDaysInMonth(prevYear, prevMonthIndex + 1);
+        const firstDayOfPrevYearMonth = normalizeDate(new Date(prevYear, prevMonthIndex, 1));
+        const lastDayOfPrevYearMonth = normalizeDate(new Date(prevYear, prevMonthIndex, daysInPrevYearMonth));
+
+        // Calculate total_rooms for each hotel (matching frontend logic)
+        hotelIds.forEach(hotelId => {
+            const hotel = allHotels.find(h => h.id === hotelId);
+            let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
+            let effectiveDaysForHotelInMonth = daysInPrevYearMonth;
+
+            // Consider hotel open date (shift to previous year)
+            if (hotel && hotel.open_date) {
+                const openDate = normalizeDate(new Date(hotel.open_date));
+                if (openDate && !isNaN(openDate.getTime())) {
+                    const prevYearOpenDate = new Date(openDate);
+                    prevYearOpenDate.setFullYear(prevYearOpenDate.getFullYear() - 1);
+
+                    // If hotel opened after the month ended, 0 days
+                    if (prevYearOpenDate > lastDayOfPrevYearMonth) {
+                        effectiveDaysForHotelInMonth = 0;
+                    }
+                    // If hotel opened during the month, calculate days from open date to month end
+                    else if (prevYearOpenDate > firstDayOfPrevYearMonth) {
+                        effectiveDaysForHotelInMonth = lastDayOfPrevYearMonth.getDate() - prevYearOpenDate.getDate() + 1;
+                    }
+                }
+            }
+
+            effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
+            const monthlyAvailableRoomDays = physicalRooms * effectiveDaysForHotelInMonth;
+
+            prevYearMonthlyOccupancyAggregates[prevYearOccMonthKey][String(hotelId)] = {
+                total_rooms: monthlyAvailableRoomDays,
+                sold_rooms: 0
+            };
+        });
+
+        // Aggregate sold rooms from previous year PMS data
+        for (const stringHotelIdKey in prevYearPmsTotalData) {
+            const pmsRecords = prevYearPmsTotalData[stringHotelIdKey];
+            if (Array.isArray(pmsRecords)) {
+                pmsRecords.forEach(record => {
+                    if (record && record.date) {
+                        const recordDateObj = normalizeDate(new Date(record.date));
+                        if (!recordDateObj) return;
+                        const monthKey = formatDateMonth(recordDateObj);
+
+                        if (prevYearMonthlyOccupancyAggregates[monthKey] && prevYearMonthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
+                            if (record.room_count !== undefined) {
+                                prevYearMonthlyOccupancyAggregates[monthKey][stringHotelIdKey].sold_rooms += Number(record.room_count) || 0;
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Build previous year occupancy data array (matching frontend logic)
+        Object.keys(prevYearMonthlyOccupancyAggregates).sort().forEach(monthKey => {
+            const monthData = prevYearMonthlyOccupancyAggregates[monthKey];
+            const totals = prevYearOccupancyTotals[monthKey];
+
+            for (const hotelId in monthData) {
+                const data = monthData[hotelId];
+                const total_rooms = data.total_rooms || 0;
+                const occupancyRate = total_rooms > 0 ? (data.sold_rooms / total_rooms) * 100 : 0;
+                const parsedHotelId = parseInt(hotelId, 10);
+                const hotelName = searchAllHotels(parsedHotelId)[0]?.name || 'Unknown Hotel';
+
+                // Accumulate totals
+                totals.total_rooms += total_rooms;
+                totals.sold_rooms += data.sold_rooms;
+
+                prevYearOccupancyData.push({
+                    month: monthKey,
+                    hotel_id: parsedHotelId,
+                    hotel_name: hotelName,
+                    sort_order: hotelSortOrderMap.get(parsedHotelId) ?? 999,
+                    sold_rooms: data.sold_rooms,
+                    total_rooms: total_rooms,
+                    occ: parseFloat(occupancyRate.toFixed(2))
+                });
+            }
+
+            // Add facility total (施設合計)
+            const totalOcc = totals.total_rooms > 0 ? (totals.sold_rooms / totals.total_rooms) * 100 : 0;
+            prevYearOccupancyData.push({
+                month: monthKey,
+                hotel_id: 0,
+                hotel_name: '施設合計',
+                sort_order: -1,
+                sold_rooms: totals.sold_rooms,
+                total_rooms: totals.total_rooms,
+                occ: parseFloat(totalOcc.toFixed(2))
+            });
+        });
+
+        // Sort previous year occupancy data (same as frontend)
+        prevYearOccupancyData.sort((a, b) => {
+            const orderA = a.sort_order ?? 999;
+            const orderB = b.sort_order ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            if (a.month < b.month) return -1;
+            if (a.month > b.month) return 1;
+            return Number(a.hotel_id) - Number(b.hotel_id);
+        });
+
+        logger.debug(`[getFrontendCompatibleReportData] Generated ${prevYearOccupancyData.length} previous year occupancy records`);
 
         // Generate future outlook data (matching frontend logic exactly)
         const outlookData = [];
