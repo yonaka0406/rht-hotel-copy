@@ -740,16 +740,16 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
                         // Aggregate daily PMS data to monthly
                         let pmsTotalRevenue = 0;
-                        let pmsConfirmedRevenue = 0;
+                        let pmsAccommodationRevenue = 0;
                         let pmsProvisoryRevenue = 0;
+                        let pmsProvisoryRoomCount = 0;
                         if (Array.isArray(pmsData)) {
-                            // Use 'price' instead of 'accommodation_price' to include non-accommodation revenue (breakfast, parking, etc.)
-                            // to match manual export logic in batch.js
                             pmsTotalRevenue = pmsData.reduce((sum, day) => sum + (Number(day.price) || 0), 0);
-                            pmsConfirmedRevenue = pmsData.reduce((sum, day) => sum + (Number(day.confirmed_accommodation_price) || 0), 0);
-                            pmsProvisoryRevenue = pmsData.reduce((sum, day) => sum + (Number(day.provisory_accommodation_price) || 0), 0);
+                            pmsAccommodationRevenue = pmsData.reduce((sum, day) => sum + (Number(day.accommodation_price) || 0), 0);
+                            pmsProvisoryRevenue = pmsData.reduce((sum, day) => sum + (Number(day.provisory_accommodation_price) || 0) + (Number(day.provisory_other_price) || 0), 0);
+                            pmsProvisoryRoomCount = pmsData.reduce((sum, day) => sum + (Number(day.provisory_room_count) || 0), 0);
                             
-                            if (hotelId === '35') logger.warn(`[${requestId}] Hotel ${hotelId}, Month ${monthInfo.monthLabel}: PMS Total=${pmsTotalRevenue}, Confirmed=${pmsConfirmedRevenue}, Provisory=${pmsProvisoryRevenue}`);
+                            if (hotelId === '35') logger.warn(`[${requestId}] Hotel ${hotelId}, Month ${monthInfo.monthLabel}: PMS Total=${pmsTotalRevenue}, Acc=${pmsAccommodationRevenue}, Provisory=${pmsProvisoryRevenue}`);
                         }
 
                         futureData[monthInfo.monthLabel][hotelId] = {
@@ -758,8 +758,9 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                             accounting: accountingData || [],
                             pms: { 
                                 revenue: pmsTotalRevenue,
-                                confirmed_revenue: pmsConfirmedRevenue,
-                                provisory_revenue: pmsProvisoryRevenue
+                                accommodation_revenue: pmsAccommodationRevenue,
+                                provisory_revenue: pmsProvisoryRevenue,
+                                provisory_room_count: pmsProvisoryRoomCount
                             }
                         };
                     } catch (err) {
@@ -853,22 +854,23 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                             hotelActualSalesWithProvisory = accSum + provisoryRevenue;
                             hasAccounting = true;
                             
-                            if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using ACCOUNTING data, Sales=${hotelActualSales}, Provisory=${provisoryRevenue}, SalesWithProvisory=${hotelActualSalesWithProvisory}, data.pms=${JSON.stringify(data.pms)}`);
+                            if (hotelId === '35') logger.warn(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using ACCOUNTING data, Sales=${hotelActualSales}, Provisory=${provisoryRevenue}, SalesWithProvisory=${hotelActualSalesWithProvisory}`);
                         }
                     }
 
                     if (!hasAccounting) {
-                        // Fallback to PMS. Use confirmed revenue for sales, confirmed + provisory for sales_with_provisory
+                        // Fallback to PMS. Use accommodation_revenue (Net Accommodation Sales) for sales,
+                        // matching the logic for budget comparison.
                         if (data.pms) {
-                            const confirmedRev = Number(data.pms.confirmed_revenue) || 0;
+                            const accRev = Number(data.pms.accommodation_revenue) || 0;
                             const provisoryRev = Number(data.pms.provisory_revenue) || 0;
                             
-                            hotelActualSales = confirmedRev;
-                            hotelActualSalesWithProvisory = confirmedRev + provisoryRev;
+                            hotelActualSales = accRev;
+                            hotelActualSalesWithProvisory = accRev + provisoryRev;
                             
-                            if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using PMS data, Sales=${hotelActualSales}, SalesWithProvisory=${hotelActualSalesWithProvisory}, PMS.confirmed=${data.pms.confirmed_revenue}, PMS.provisory=${data.pms.provisory_revenue}`);
+                            if (hotelId === '35') logger.warn(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using PMS data, Sales(Net Acc)=${hotelActualSales}, SalesWithProvisory=${hotelActualSalesWithProvisory}, PMS.acc_rev=${data.pms.accommodation_revenue}, PMS.provisory=${data.pms.provisory_revenue}`);
                         } else {
-                            if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: NO DATA - data.pms is null/undefined`);
+                            if (hotelId === '35') logger.warn(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: NO DATA - data.pms is null/undefined`);
                         }
                     }
 

@@ -223,6 +223,12 @@ const xlsxPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
 - **Change**: Updated `frontendCompatibleReportService.js` to filter logs for future outlook data, showing only hotel ID 35.
 - **Reason**: To reduce noise and focus debugging efforts on a specific hotel's data.
 
+#### Future Outlook Data Logic Alignment (2026-01-16)
+- **Change**: Updated `frontendCompatibleReportService.js` future outlook section to match `getBatchFutureOutlook` controller logic.
+  - Added `accommodation_revenue` and `provisory_revenue` (accommodation + other) to PMS aggregation.
+  - Switched `hotelActualSales` fallback to use `accommodation_revenue` (Net Accommodation Sales) instead of `revenue` (Total Sales).
+- **Reason**: To ensure consistency with the frontend and provide accurate comparisons against budget numbers (which focus on accommodation revenue).
+
 #### Provisory Reservation Data Addition (2026-01-14)
 - **Change**: Added separate tracking for provisory (仮予約) reservations in daily report
 - **New Fields Added**:
