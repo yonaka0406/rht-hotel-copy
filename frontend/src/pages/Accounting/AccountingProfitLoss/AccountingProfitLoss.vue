@@ -187,25 +187,25 @@
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">営業利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.operatingProfit || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">経常利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.ordinaryProfit || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.profitBeforeTax || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-200 dark:border-blue-800">
-                    <td class="py-4 px-4 text-base font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-base font-black text-blue-900 dark:text-blue-200 text-right tabular-nums min-w-[120px]">
+                    <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
+                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
                       {{ formatCurrency(totals[month]?.netProfit || 0) }}
                     </td>
                   </tr>
@@ -218,19 +218,19 @@
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td :colspan="columnCount - 1" class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 text-right">営業利益</td>
-                    <td class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums">{{ formatCurrency(totals.operatingProfit) }}</td>
+                    <td class="py-4 px-4 text-sm font-black text-right tabular-nums" :class="totals.operatingProfit < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">{{ formatCurrency(totals.operatingProfit) }}</td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td :colspan="columnCount - 1" class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 text-right">経常利益</td>
-                    <td class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums">{{ formatCurrency(totals.ordinaryProfit) }}</td>
+                    <td class="py-4 px-4 text-sm font-black text-right tabular-nums" :class="totals.ordinaryProfit < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">{{ formatCurrency(totals.ordinaryProfit) }}</td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td :colspan="columnCount - 1" class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 text-right">税引前当期純利益</td>
-                    <td class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums">{{ formatCurrency(totals.profitBeforeTax) }}</td>
+                    <td class="py-4 px-4 text-sm font-black text-right tabular-nums" :class="totals.profitBeforeTax < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">{{ formatCurrency(totals.profitBeforeTax) }}</td>
                   </tr>
                   <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-200 dark:border-blue-800">
-                    <td :colspan="columnCount - 1" class="py-4 px-4 text-base font-black text-blue-800 dark:text-blue-300 text-right">当期純利益</td>
-                    <td class="py-4 px-4 text-base font-black text-blue-900 dark:text-blue-200 text-right tabular-nums">{{ formatCurrency(totals.netProfit) }}</td>
+                    <td :colspan="columnCount - 1" class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 text-right">当期純利益</td>
+                    <td class="py-4 px-4 text-sm font-black text-right tabular-nums whitespace-nowrap" :class="totals.netProfit < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">{{ formatCurrency(totals.netProfit) }}</td>
                   </tr>
                 </template>
               </tbody>
