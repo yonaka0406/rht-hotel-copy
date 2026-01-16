@@ -87,8 +87,8 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const row = dataSheet.row(rowNumber);
 
                     // Ensure sales_with_provisory has a valid value, fallback to sales if undefined
-                    const salesWithProvisory = (item.sales_with_provisory !== undefined && item.sales_with_provisory !== null) 
-                        ? item.sales_with_provisory 
+                    const salesWithProvisory = (item.sales_with_provisory !== undefined && item.sales_with_provisory !== null)
+                        ? item.sales_with_provisory
                         : item.sales;
 
                     console.log(`[dailyTemplateService] Row ${rowNumber}, Month ${item.month}: sales=${item.sales}, sales_with_provisory=${item.sales_with_provisory}, using=${salesWithProvisory}`);
@@ -105,8 +105,8 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     row.cell(10).value(item.prev_occ ? item.prev_occ / 100 : 0).style("numberFormat", "0.0%");        // J: 前日稼働率
                     row.cell(11).value(item.prev_confirmed_stays);                                                      // K: 前日確定泊数
                     row.cell(12).value(item.confirmed_nights);                                                          // L: 確定泊数
-                    row.cell(13).value(item.confirmed_nights_with_provisory || item.confirmed_nights);                 // M: 確定泊数（仮予約含む）
-                    row.cell(14).value(item.forecast_rooms || item.total_bookable_room_nights);                        // N: 計画総室数
+                    row.cell(13).value(item.confirmed_nights_with_provisory ?? item.confirmed_nights);                 // M: 確定泊数（仮予約含む）
+                    row.cell(14).value(item.forecast_rooms ?? item.total_bookable_room_nights);                        // N: 計画総室数
                     // Note: Columns O-V are for formulas/other data, ADR/RevPAR moved to W-AB
                 });
             }
