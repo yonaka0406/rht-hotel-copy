@@ -13,9 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.1] - 2026-01-16
 
+- New Feature: Added Profit & Loss Statement feature with flexible grouping (by month, hotel, or department), date range filtering, and CSV export.
+- New Feature: Added support for importing raw Yayoi accounting data (25-column format) with a dedicated import panel including preview and validation.
+- New Feature: Enhanced Accounting settings management for account codes, tax classes, and departments (including validity tracking).
 - New Feature: Implemented previous year occupancy calculation logic in backend to match frontend consistency.
-- New Feature: Aligned future outlook aggregation logic with Net Accommodation Sales for accurate performance tracking.
+- New Feature: Aligned future outlook aggregation logic with Net Accommodation Sales for accurate performance tracking in Daily Report.
 - Improvement: Enhanced daily report template with updated layout and improved cell mapping.
+- Fix: Improved accuracy of reconciliation calculations across summary and detailed views.
 - Fix: Resolved temporary file resource leak in the daily report background generation job.
 - Fix: Improved numeric data safety in Excel reports by correctly handling zero values using nullish coalescing.
 
@@ -38,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New Feature: Provisory sales and night aggregations are now computed and displayed in future outlook reports.
 - New Feature: Enhanced reporting dashboards to track pending reservations alongside confirmed bookings.
 - Fix: Error when adding a new plan rate was fixed.
-- Fix: Add loading indicator to Dashboard page （ダッシュボードページにローディング指標を追加）
+- Fix: Add loading indicator to Dashboard page.
 - Fix: Fixed double percentage sign in occupancy charts tooltip and improved variance formatting.
 - Improvement: Aligned the numbers displayed in the report for accommodation only both in the chart and the future outlook.
 
