@@ -219,6 +219,10 @@ const xlsxPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
 
 ### 🐛 Recent Fixes
 
+#### Filtered Logs for Debugging (2026-01-16)
+- **Change**: Updated `frontendCompatibleReportService.js` to filter logs for future outlook data, showing only hotel ID 35.
+- **Reason**: To reduce noise and focus debugging efforts on a specific hotel's data.
+
 #### Provisory Reservation Data Addition (2026-01-14)
 - **Change**: Added separate tracking for provisory (仮予約) reservations in daily report
 - **New Fields Added**:

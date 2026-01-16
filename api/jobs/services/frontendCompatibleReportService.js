@@ -749,7 +749,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                             pmsConfirmedRevenue = pmsData.reduce((sum, day) => sum + (Number(day.confirmed_accommodation_price) || 0), 0);
                             pmsProvisoryRevenue = pmsData.reduce((sum, day) => sum + (Number(day.provisory_accommodation_price) || 0), 0);
                             
-                            logger.warn(`[${requestId}] Hotel ${hotelId}, Month ${monthInfo.monthLabel}: PMS Total=${pmsTotalRevenue}, Confirmed=${pmsConfirmedRevenue}, Provisory=${pmsProvisoryRevenue}`);
+                            if (hotelId === '35') logger.warn(`[${requestId}] Hotel ${hotelId}, Month ${monthInfo.monthLabel}: PMS Total=${pmsTotalRevenue}, Confirmed=${pmsConfirmedRevenue}, Provisory=${pmsProvisoryRevenue}`);
                         }
 
                         futureData[monthInfo.monthLabel][hotelId] = {
@@ -841,7 +841,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                     let hotelActualSalesWithProvisory = 0;
                     let hasAccounting = false;
 
-                    console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: data.accounting exists=${!!data.accounting}, length=${data.accounting?.length}, data.pms exists=${!!data.pms}`);
+                    if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: data.accounting exists=${!!data.accounting}, length=${data.accounting?.length}, data.pms exists=${!!data.pms}`);
 
                     if (Array.isArray(data.accounting) && data.accounting.length > 0) {
                         let accSum = 0;
@@ -853,7 +853,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                             hotelActualSalesWithProvisory = accSum + provisoryRevenue;
                             hasAccounting = true;
                             
-                            console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using ACCOUNTING data, Sales=${hotelActualSales}, Provisory=${provisoryRevenue}, SalesWithProvisory=${hotelActualSalesWithProvisory}, data.pms=${JSON.stringify(data.pms)}`);
+                            if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using ACCOUNTING data, Sales=${hotelActualSales}, Provisory=${provisoryRevenue}, SalesWithProvisory=${hotelActualSalesWithProvisory}, data.pms=${JSON.stringify(data.pms)}`);
                         }
                     }
 
@@ -866,16 +866,16 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                             hotelActualSales = confirmedRev;
                             hotelActualSalesWithProvisory = confirmedRev + provisoryRev;
                             
-                            console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using PMS data, Sales=${hotelActualSales}, SalesWithProvisory=${hotelActualSalesWithProvisory}, PMS.confirmed=${data.pms.confirmed_revenue}, PMS.provisory=${data.pms.provisory_revenue}`);
+                            if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: Using PMS data, Sales=${hotelActualSales}, SalesWithProvisory=${hotelActualSalesWithProvisory}, PMS.confirmed=${data.pms.confirmed_revenue}, PMS.provisory=${data.pms.provisory_revenue}`);
                         } else {
-                            console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: NO DATA - data.pms is null/undefined`);
+                            if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: NO DATA - data.pms is null/undefined`);
                         }
                     }
 
                     totalActualSales += hotelActualSales;
                     totalActualSalesWithProvisory += hotelActualSalesWithProvisory;
                     
-                    console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: hotelActualSales=${hotelActualSales}, hotelActualSalesWithProvisory=${hotelActualSalesWithProvisory}, totalActualSalesWithProvisory=${totalActualSalesWithProvisory}`);
+                    if (hotelId === '35') console.log(`[${requestId}] Month ${monthLabel}, Hotel ${hotelId}: hotelActualSales=${hotelActualSales}, hotelActualSalesWithProvisory=${hotelActualSalesWithProvisory}, totalActualSalesWithProvisory=${totalActualSalesWithProvisory}`);
                 }
 
                 const occDenominator = totalForecastRooms > 0 ? totalForecastRooms : accommodationNetAvailableRoomNights;
