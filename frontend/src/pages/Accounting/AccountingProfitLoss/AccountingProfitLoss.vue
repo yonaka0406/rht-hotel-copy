@@ -224,9 +224,11 @@
                 <template v-if="filters.groupBy === 'month'">
                   <template v-for="(group, groupIndex) in groupedData" :key="groupIndex">
                     <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                      <td :colspan="uniqueMonths.length + 1 + (showTotalColumn ? 1 : 0)" class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10">
+                      <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                         {{ group.name }}
                       </td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
+                      <td v-if="showTotalColumn" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                     </tr>
                     <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
@@ -253,9 +255,10 @@
                 <template v-else-if="filters.groupBy === 'hotel'">
                   <template v-for="(group, groupIndex) in groupedData" :key="groupIndex">
                     <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                      <td :colspan="uniqueHotels.length + 1" class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10">
+                      <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                         {{ group.name }}
                       </td>
+                      <td v-for="hotel in uniqueHotels" :key="hotel.hotel_id" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                     </tr>
                     <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
@@ -276,9 +279,10 @@
                 <template v-else-if="filters.groupBy === 'department'">
                   <template v-for="(group, groupIndex) in groupedData" :key="groupIndex">
                     <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                      <td :colspan="uniqueDepartments.length + 1" class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10">
+                      <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                         {{ group.name }}
                       </td>
+                      <td v-for="dept in uniqueDepartments" :key="dept" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                     </tr>
                     <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
@@ -308,9 +312,10 @@
                     <!-- Management Groups for this hotel -->
                     <template v-for="(group, groupIndex) in hotelGroup.managementGroups" :key="`${hotelIndex}-${groupIndex}`">
                       <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                        <td :colspan="uniqueMonths.length + 1" class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10">
+                        <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                           {{ group.name }}
                         </td>
+                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                       </tr>
                       <tr v-for="(account, accountIndex) in group.accounts" :key="`${hotelIndex}-${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                         <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
@@ -373,9 +378,10 @@
                     <!-- Management Groups for this department -->
                     <template v-for="(group, groupIndex) in deptGroup.managementGroups" :key="`${deptIndex}-${groupIndex}`">
                       <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                        <td :colspan="uniqueMonths.length + 1" class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10">
+                        <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                           {{ group.name }}
                         </td>
+                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                       </tr>
                       <tr v-for="(account, accountIndex) in group.accounts" :key="`${deptIndex}-${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                         <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
