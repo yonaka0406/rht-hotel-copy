@@ -479,26 +479,6 @@
                         {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.netProfit || 0), 0)) }}
                       </td>
                     </tr>
-                      </td>
-                    </tr>
-                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">経常利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
-                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.ordinaryProfit || 0) }}
-                      </td>
-                    </tr>
-                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
-                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.profitBeforeTax || 0) }}
-                      </td>
-                    </tr>
-                    <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-b-2 border-blue-200 dark:border-blue-800">
-                      <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[deptGroup.department]?.[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
-                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.netProfit || 0) }}
-                      </td>
-                    </tr>
                   </template>
                 </template>
 
