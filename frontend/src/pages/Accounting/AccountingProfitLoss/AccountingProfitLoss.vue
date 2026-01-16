@@ -102,7 +102,23 @@
         <div v-else-if="plData.length > 0" class="p-8">
           <!-- Actions Bar -->
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-black text-slate-900 dark:text-white">損益計算書</h2>
+            <div class="flex items-center gap-4">
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white">損益計算書</h2>
+              
+              <!-- Total Column Checkbox (only for month view) -->
+              <div v-if="filters.groupBy === 'month'" class="flex items-center gap-2">
+                <input 
+                  type="checkbox" 
+                  id="showTotalColumn" 
+                  v-model="showTotalColumn"
+                  class="w-4 h-4 text-violet-600 bg-slate-100 border-slate-300 rounded focus:ring-violet-500 dark:focus:ring-violet-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
+                />
+                <label for="showTotalColumn" class="text-sm font-medium text-slate-600 dark:text-slate-400 cursor-pointer">
+                  合計列を表示
+                </label>
+              </div>
+            </div>
+            
             <button @click="exportToCSV" class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
               <i class="pi pi-download"></i>
               <span>CSV出力</span>
@@ -120,6 +136,9 @@
                     <th v-for="month in uniqueMonths" :key="month" class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
                       {{ formatMonth(month) }}
                     </th>
+                    <th v-if="showTotalColumn" class="py-4 px-4 font-black text-violet-600 dark:text-violet-400 text-xs uppercase tracking-widest text-right min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
+                      合計
+                    </th>
                   </template>
                   
                   <!-- For other views: Standard columns -->
@@ -136,7 +155,7 @@
                 <template v-for="(group, groupIndex) in groupedData" :key="groupIndex">
                   <!-- Management Group Header -->
                   <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                    <td :colspan="filters.groupBy === 'month' ? uniqueMonths.length + 1 : columnCount" class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10">
+                    <td :colspan="filters.groupBy === 'month' ? (uniqueMonths.length + 1 + (showTotalColumn ? 1 : 0)) : columnCount" class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10">
                       {{ group.name }}
                     </td>
                   </tr>
@@ -148,6 +167,9 @@
                       <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(account.amountsByMonth[month] || 0) }}
                       </td>
+                      <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
+                        {{ formatCurrency(periodTotals[group.name]?.accounts[account.account_code] || 0) }}
+                      </td>
                     </tr>
                     
                     <!-- Group Subtotal -->
@@ -155,6 +177,9 @@
                       <td class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ group.name }} 小計</td>
                       <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(group.subtotalByMonth[month] || 0) }}
+                      </td>
+                      <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                        {{ formatCurrency(periodTotals[group.name]?.subtotal || 0) }}
                       </td>
                     </tr>
                   </template>
@@ -184,11 +209,17 @@
                     <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
                       {{ formatCurrency(totals[month]?.grossProfit || 0) }}
                     </td>
+                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                      {{ formatCurrency(grandPeriodTotals.grossProfit || 0) }}
+                    </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">営業利益</td>
                     <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.operatingProfit || 0) }}
+                    </td>
+                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                      {{ formatCurrency(grandPeriodTotals.operatingProfit || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
@@ -196,17 +227,26 @@
                     <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.ordinaryProfit || 0) }}
                     </td>
+                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                      {{ formatCurrency(grandPeriodTotals.ordinaryProfit || 0) }}
+                    </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
                     <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
                     <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.profitBeforeTax || 0) }}
                     </td>
+                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                      {{ formatCurrency(grandPeriodTotals.profitBeforeTax || 0) }}
+                    </td>
                   </tr>
                   <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-200 dark:border-blue-800">
                     <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
                     <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
                       {{ formatCurrency(totals[month]?.netProfit || 0) }}
+                    </td>
+                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                      {{ formatCurrency(grandPeriodTotals.netProfit || 0) }}
                     </td>
                   </tr>
                 </template>
@@ -250,7 +290,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -274,6 +314,7 @@ export default {
     const availableMonths = ref([]);
     const availableDepartments = ref([]);
     const selectedDepartments = ref([]);
+    const showTotalColumn = ref(true);
 
     const filters = ref({
       startMonth: '',
@@ -316,6 +357,76 @@ export default {
       
       const months = [...new Set(plData.value.map(row => row.month))];
       return months.sort();
+    });
+
+    // Calculate period totals for the total column
+    const periodTotals = computed(() => {
+      if (filters.value.groupBy !== 'month' || !showTotalColumn.value) return {};
+      
+      const totals = {};
+      
+      groupedData.value.forEach(group => {
+        let groupTotal = 0;
+        group.accounts.forEach(account => {
+          let accountTotal = 0;
+          uniqueMonths.value.forEach(month => {
+            accountTotal += parseFloat(account.amountsByMonth[month] || 0);
+          });
+          
+          if (!totals[group.name]) {
+            totals[group.name] = { accounts: {} };
+          }
+          totals[group.name].accounts[account.account_code] = accountTotal;
+          groupTotal += accountTotal;
+        });
+        totals[group.name].subtotal = groupTotal;
+      });
+      
+      return totals;
+    });
+
+    const grandPeriodTotals = computed(() => {
+      if (filters.value.groupBy !== 'month' || !showTotalColumn.value) return {};
+      
+      const revenue = plData.value
+        .filter(r => r.management_group_display_order === 1)
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+      
+      const costOfSales = plData.value
+        .filter(r => r.management_group_display_order === 2)
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+      
+      const operatingExpenses = plData.value
+        .filter(r => [3, 4, 5].includes(r.management_group_display_order))
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+      
+      const nonOperatingIncome = plData.value
+        .filter(r => r.management_group_display_order === 6)
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+      
+      const nonOperatingExpenses = plData.value
+        .filter(r => r.management_group_display_order === 7)
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+      
+      const extraordinaryIncome = plData.value
+        .filter(r => r.management_group_display_order === 8)
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+      
+      const extraordinaryLosses = plData.value
+        .filter(r => r.management_group_display_order === 9)
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+      
+      const incomeTax = plData.value
+        .filter(r => r.management_group_display_order === 10)
+        .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+
+      return {
+        grossProfit: revenue + costOfSales,
+        operatingProfit: revenue + costOfSales + operatingExpenses,
+        ordinaryProfit: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses,
+        profitBeforeTax: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses + extraordinaryIncome + extraordinaryLosses,
+        netProfit: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses + extraordinaryIncome + extraordinaryLosses + incomeTax
+      };
     });
 
     const groupedData = computed(() => {
@@ -656,6 +767,44 @@ export default {
       loadInitialData();
     });
 
+    // Watch for start month changes - adjust end month if needed
+    watch(() => filters.value.startMonth, (newStart, oldStart) => {
+      if (!newStart || !filters.value.endMonth) return;
+      
+      const startDate = new Date(newStart);
+      const endDate = new Date(filters.value.endMonth);
+      
+      // If start is after end, set end to start
+      if (startDate > endDate) {
+        filters.value.endMonth = newStart;
+        toast.add({ 
+          severity: 'info', 
+          summary: '期間調整', 
+          detail: '開始月が終了月より後のため、終了月を調整しました', 
+          life: 3000 
+        });
+      }
+    });
+
+    // Watch for end month changes - adjust start month if needed
+    watch(() => filters.value.endMonth, (newEnd, oldEnd) => {
+      if (!newEnd || !filters.value.startMonth) return;
+      
+      const startDate = new Date(filters.value.startMonth);
+      const endDate = new Date(newEnd);
+      
+      // If end is before start, set start to end
+      if (endDate < startDate) {
+        filters.value.startMonth = newEnd;
+        toast.add({ 
+          severity: 'info', 
+          summary: '期間調整', 
+          detail: '終了月が開始月より前のため、開始月を調整しました', 
+          life: 3000 
+        });
+      }
+    });
+
     return {
       loading,
       plData,
@@ -664,7 +813,10 @@ export default {
       selectedDepartments,
       filters,
       groupByOptions,
+      showTotalColumn,
       uniqueMonths,
+      periodTotals,
+      grandPeriodTotals,
       showMonthColumn,
       showHotelColumn,
       showDepartmentColumn,
