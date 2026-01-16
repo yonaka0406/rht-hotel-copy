@@ -14,7 +14,7 @@ const { getProdPool, getDevPool } = require('../config/database');
 const runDailySalesOccPdfJob = async () => {
     const requestId = `JOB-SALES-OCC-${uuidv4()}`;
     const startTime = new Date();
-    
+
     logger.warn(`[${requestId}] ========== DAILY SALES & OCC PDF JOB STARTED ==========`);
     logger.warn(`[${requestId}] Job Start Time: ${startTime.toISOString()}`);
     logger.warn(`[${requestId}] Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -22,13 +22,15 @@ const runDailySalesOccPdfJob = async () => {
 
     let dbClient = null;
     let jobSuccess = false;
+    let excelPath = null;
+    let pdfPath = null;
 
     try {
         // For jobs, explicitly choose the pool based on NODE_ENV
         // This ensures jobs always use the correct database regardless of request context
         let pool;
         let databaseName;
-        
+
         if (process.env.NODE_ENV === 'production') {
             pool = getProdPool();
             databaseName = process.env.PROD_PG_DATABASE;
@@ -38,10 +40,10 @@ const runDailySalesOccPdfJob = async () => {
             databaseName = process.env.PG_DATABASE;
             logger.warn(`[${requestId}] Using DEVELOPMENT database pool`);
         }
-        
+
         logger.warn(`[${requestId}] Target Database: ${databaseName}`);
         logger.warn(`[${requestId}] NODE_ENV: ${process.env.NODE_ENV}`);
-        
+
         dbClient = await pool.connect();
         logger.warn(`[${requestId}] Database connection established successfully`);
 
@@ -50,10 +52,10 @@ const runDailySalesOccPdfJob = async () => {
 
         // 1. Fetch Data
         logger.info(`[${requestId}] Fetching report data for ${formattedDate}...`);
-        
+
         // Use the frontend-compatible service to ensure data consistency with downloaded reports
         // Use today's date to match frontend manual download behavior (both use fresh data)
-        const reportData = await getFrontendCompatibleReportData(requestId, today, dbClient);
+        const reportData = await getFrontendCompatibleReportData(requestId, today, 'month', dbClient);
 
         logger.info(`[${requestId}] Fetched ${reportData?.revenueData?.length || 0} revenue rows and ${reportData?.occupancyData?.length || 0} occupancy rows.`);
 
@@ -73,13 +75,13 @@ const runDailySalesOccPdfJob = async () => {
 
         // 2. Generate PDF
         logger.info(`[${requestId}] Generating PDF...`);
-        
+
         // Debug: Also generate Excel to check raw data
         logger.info(`[${requestId}] Generating Excel for debugging...`);
-        const excelPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
+        excelPath = await generateDailyReportPdf(reportData, requestId, 'xlsx');
         logger.warn(`[${requestId}] Excel file generated at: ${excelPath}`);
-        
-        const pdfPath = await generateDailyReportPdf(reportData, requestId, 'pdf');
+
+        pdfPath = await generateDailyReportPdf(reportData, requestId, 'pdf');
 
         if (!pdfPath || !fs.existsSync(pdfPath)) {
             throw new Error('PDF generation failed, file not found.');
@@ -121,21 +123,13 @@ const runDailySalesOccPdfJob = async () => {
 
         logger.info(`[${requestId}] Email sent successfully.`);
 
-        // 4. Cleanup
-        try {
-            await fs.promises.unlink(pdfPath);
-            logger.info(`[${requestId}] Cleaned up temporary PDF file.`);
-        } catch (cleanupError) {
-            logger.warn(`[${requestId}] Failed to cleanup PDF file: ${cleanupError.message}`);
-        }
-
         jobSuccess = true;
         logger.warn(`[${requestId}] ========== JOB COMPLETED SUCCESSFULLY ==========`);
 
     } catch (error) {
         logger.error(`[${requestId}] ========== JOB FAILED ==========`);
         logger.error(`[${requestId}] Job failed: ${error.message}`, { stack: error.stack });
-        
+
         // Log additional context for debugging
         logger.error(`[${requestId}] Error Details:`, {
             errorName: error.name,
@@ -146,19 +140,38 @@ const runDailySalesOccPdfJob = async () => {
             errorLine: error.line,
             errorRoutine: error.routine
         });
-        
+
     } finally {
         const endTime = new Date();
         const duration = endTime - startTime;
-        
+
         logger.warn(`[${requestId}] Job End Time: ${endTime.toISOString()}`);
         logger.warn(`[${requestId}] Total Duration: ${duration}ms (${(duration / 1000).toFixed(2)}s)`);
         logger.warn(`[${requestId}] Job Status: ${jobSuccess ? 'SUCCESS' : 'FAILED'}`);
         logger.warn(`[${requestId}] ========== DAILY SALES & OCC PDF JOB FINISHED ==========`);
-        
+
         if (dbClient) {
             dbClient.release();
             logger.debug(`[${requestId}] Database connection released.`);
+        }
+
+        // Cleanup temporary files in finally to ensure they are removed regardless of success/fail
+        if (excelPath && fs.existsSync(excelPath)) {
+            try {
+                await fs.promises.unlink(excelPath);
+                logger.info(`[${requestId}] Cleaned up temporary Excel debug file.`);
+            } catch (cleanupError) {
+                logger.warn(`[${requestId}] Failed to cleanup Excel file: ${cleanupError.message}`);
+            }
+        }
+
+        if (pdfPath && fs.existsSync(pdfPath)) {
+            try {
+                await fs.promises.unlink(pdfPath);
+                logger.info(`[${requestId}] Cleaned up temporary PDF file.`);
+            } catch (cleanupError) {
+                logger.warn(`[${requestId}] Failed to cleanup PDF file: ${cleanupError.message}`);
+            }
         }
     }
 };
@@ -175,7 +188,7 @@ const scheduleDailySalesOccPdfJob = () => {
         logger.warn(`Day of Week: ${triggerTime.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Tokyo' })}`);
         logger.warn(`Local Time (JST): ${triggerTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
         logger.warn(`About to execute runDailySalesOccPdfJob...`);
-        
+
         runDailySalesOccPdfJob().catch(error => {
             logger.error(`Unhandled error in scheduled job execution:`, {
                 message: error.message,

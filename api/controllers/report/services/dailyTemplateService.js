@@ -53,32 +53,32 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
         // Use XlsxPopulate to load the template (preserves charts)
         const workbook = await XlsxPopulate.fromFileAsync(templatePath);
 
-        // Write Selection Message in 'レポート' sheet A39
+        // Write Selection Message in 'レポート' sheet A52
         const reportSheet = workbook.sheet('レポート');
         if (reportSheet && selectionMessage) {
-            reportSheet.cell('A39').value(selectionMessage);
+            reportSheet.cell('A52').value(selectionMessage);
         }
 
         const dataSheet = workbook.sheet('合計データ');
 
         if (dataSheet) {
-            // Write KPI Data starting at M10 (Col 13)
+            // Write KPI Data (6 months) - ADR and RevPAR now in columns W-AB (23-28)
             if (kpiData) {
-                const kpiStartRow = 10;
-                dataSheet.cell(kpiStartRow, 13).value('KPI').style({ bold: true });
+                const writeKpiRow = (rowNum, dataArray) => {
+                    if (Array.isArray(dataArray)) {
+                        dataArray.forEach((val, i) => {
+                            if (i < 6) {
+                                // Start from Column W (23) instead of V (22)
+                                dataSheet.cell(rowNum, 23 + i).value(val).style("numberFormat", "#,##0");
+                            }
+                        });
+                    }
+                };
 
-                const kpiLabels = [
-                    { label: 'ADR', value: kpiData.actualADR },
-                    { label: '計画 ADR', value: kpiData.forecastADR },
-                    { label: 'RevPAR', value: kpiData.actualRevPAR },
-                    { label: '計画 RevPAR', value: kpiData.forecastRevPAR }
-                ];
-
-                kpiLabels.forEach((kpi, index) => {
-                    const rowNum = kpiStartRow + 1 + index;
-                    dataSheet.cell(rowNum, 13).value(kpi.label);
-                    dataSheet.cell(rowNum, 14).value(kpi.value).style("numberFormat", "#,##0");
-                });
+                writeKpiRow(2, kpiData.actualADR);
+                writeKpiRow(4, kpiData.actualRevPAR);
+                writeKpiRow(7, kpiData.forecastADR);
+                writeKpiRow(8, kpiData.forecastRevPAR);
             }
 
             if (Array.isArray(outlookData)) {
@@ -86,20 +86,28 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const rowNumber = index + 2; // xlsx-populate uses 1-based indexing
                     const row = dataSheet.row(rowNumber);
 
-                    row.cell(1).value(item.month);
-                    row.cell(2).value(item.forecast_sales);
-                    row.cell(3).value(item.sales);
-                    row.cell(4).value(item.confirmed_nights);
-                    row.cell(5).value(item.forecast_occ ? item.forecast_occ / 100 : 0).style("numberFormat", "0.0%");
-                    row.cell(6).value(item.occ ? item.occ / 100 : 0).style("numberFormat", "0.0%");
-                    row.cell(7).value(item.metric_date);
-                    row.cell(8).value(item.prev_sales);
-                    row.cell(9).value(item.prev_occ ? item.prev_occ / 100 : 0).style("numberFormat", "0.0%");
-                    row.cell(10).value(item.prev_confirmed_stays);
-                    row.cell(11).value(item.confirmed_nights);
-                    row.cell(12).value(item.total_bookable_room_nights);
-                    row.cell(13).value(item.blocked_nights);
-                    row.cell(14).value(item.net_available_room_nights);
+                    // Ensure sales_with_provisory has a valid value, fallback to sales if undefined
+                    const salesWithProvisory = (item.sales_with_provisory !== undefined && item.sales_with_provisory !== null)
+                        ? item.sales_with_provisory
+                        : item.sales;
+
+                    console.log(`[dailyTemplateService] Row ${rowNumber}, Month ${item.month}: sales=${item.sales}, sales_with_provisory=${item.sales_with_provisory}, using=${salesWithProvisory}`);
+
+                    row.cell(1).value(item.month);                                                                      // A: 月度
+                    row.cell(2).value(item.forecast_sales);                                                             // B: 計画売上
+                    row.cell(3).value(item.sales);                                                                      // C: 売上
+                    row.cell(4).value(salesWithProvisory);                                                              // D: 売上（仮予約含む）
+                    row.cell(5).value(item.forecast_occ ? item.forecast_occ / 100 : 0).style("numberFormat", "0.0%"); // E: 計画稼働率
+                    row.cell(6).value(item.occ ? item.occ / 100 : 0).style("numberFormat", "0.0%");                   // F: 稼働率
+                    row.cell(7).value(item.occ_with_provisory ? item.occ_with_provisory / 100 : 0).style("numberFormat", "0.0%"); // G: 稼働率（仮予約含む）
+                    row.cell(8).value(item.metric_date);                                                                // H: 前日集計日
+                    row.cell(9).value(item.prev_sales);                                                                 // I: 前日実績売上
+                    row.cell(10).value(item.prev_occ ? item.prev_occ / 100 : 0).style("numberFormat", "0.0%");        // J: 前日稼働率
+                    row.cell(11).value(item.prev_confirmed_stays);                                                      // K: 前日確定泊数
+                    row.cell(12).value(item.confirmed_nights);                                                          // L: 確定泊数
+                    row.cell(13).value(item.confirmed_nights_with_provisory ?? item.confirmed_nights);                 // M: 確定泊数（仮予約含む）
+                    row.cell(14).value(item.forecast_rooms ?? item.total_bookable_room_nights);                        // N: 計画総室数
+                    // Note: Columns O-V are for formulas/other data, ADR/RevPAR moved to W-AB
                 });
             }
 
@@ -108,13 +116,16 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 const startRow = 10;
 
                 // Headers
-                const headers = [
-                    '施設名', '計画売上', '売上', '売上差異', '前年売上', '前年比差異(売上)',
-                    '施設名', '計画稼働率', '稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'
-                ];
+                const revHeaders = ['施設名', '計画売上', '売上', '売上差異', '前年売上', '前年比差異(売上)'];
+                const occHeaders = ['施設名', '計画稼働率', '稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'];
+
                 const headerRow = dataSheet.row(startRow);
-                headers.forEach((header, index) => {
+                revHeaders.forEach((header, index) => {
                     headerRow.cell(index + 1).value(header).style({ bold: true });
+                });
+                occHeaders.forEach((header, index) => {
+                    // Start from Column H (8)
+                    headerRow.cell(index + 8).value(header).style({ bold: true });
                 });
 
                 // Prepare combined data for sorting
@@ -179,13 +190,13 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const currentRow = startRow + 1 + index;
                     const row = dataSheet.row(currentRow);
 
-                    // Occupancy section (Cols 7-12)
-                    row.cell(7).value(item.hotel_name);
-                    row.cell(8).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(9).value(item.actualOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(10).value(item.occVariance / 100).style("numberFormat", "0.0%");
-                    row.cell(11).value(item.prevOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(12).value(item.yoyOccVariance / 100).style("numberFormat", "0.0%");
+                    // Occupancy section (Starts from Col 8 / H)
+                    row.cell(8).value(item.hotel_name);
+                    row.cell(9).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(10).value(item.actualOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(11).value(item.occVariance / 100).style("numberFormat", "0.0%");
+                    row.cell(12).value(item.prevOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(13).value(item.yoyOccVariance / 100).style("numberFormat", "0.0%");
                 });
             }
         }

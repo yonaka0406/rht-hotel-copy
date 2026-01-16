@@ -39,7 +39,7 @@
 </template>
 <script setup>
 // Vue
-import { ref, onMounted, toRefs, watch } from 'vue';
+import { ref, onMounted, toRefs, watch, computed } from 'vue';
 
 import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
 import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
@@ -99,7 +99,6 @@ const {
     revenueData,
     occupancyData,
     prevYearOccupancyData,
-    kpiData,
     selectionMessage
 } = useSalesOccDataAggr({
     selectedDate,
@@ -117,6 +116,42 @@ const {
 const loading = ref(false);
 const isDownloadingExcel = ref(false);
 const isDownloadingPdf = ref(false);
+
+const hotelSortOrderMap = computed(() => {
+    const map = new Map();
+    if (allHotels.value) {
+        allHotels.value.forEach(h => {
+            map.set(Number(h.id), (h.sort_order !== null && h.sort_order !== undefined) ? h.sort_order : 999);
+        });
+    }
+    map.set(0, -1); // 施設合計 always first
+    return map;
+});
+
+// KPI Calculations for Export (6 months)
+const kpiData = computed(() => {
+    if (!futureOutlookData.value || futureOutlookData.value.length === 0) {
+        return {
+            actualADR: [],
+            forecastADR: [],
+            actualRevPAR: [],
+            forecastRevPAR: []
+        };
+    }
+
+    // Limit to 6 months
+    const targetMonths = futureOutlookData.value.slice(0, 6);
+
+    return {
+        actualADR: targetMonths.map(m => m.confirmed_nights ? Math.round(m.sales / m.confirmed_nights) : 0),
+        forecastADR: targetMonths.map(m => m.forecast_stays ? Math.round(m.forecast_sales / m.forecast_stays) : 0),
+        actualRevPAR: targetMonths.map(m => {
+            const denom = m.forecast_rooms > 0 ? m.forecast_rooms : m.net_available_room_nights;
+            return denom ? Math.round(m.sales / denom) : 0;
+        }),
+        forecastRevPAR: targetMonths.map(m => m.forecast_rooms ? Math.round(m.forecast_sales / m.forecast_rooms) : 0)
+    };
+});
 
 const reportTriggerKey = ref(Date.now());
 const comparisonDate = ref(null);
@@ -475,19 +510,24 @@ const fetchData = async () => {
                             month: monthLabel,
                             forecast_sales: totalForecastSales,
                             sales: totalActualSales,
+                            sales_with_provisory: totalActualSales + totalProvisorySales, // Add provisory sales
                             sales_diff: salesDiff,
                             prev_sales: prev.sales, // Added for hidden column
                             forecast_occ: forecastOcc,
                             occ: actualOccAccommodation, // This is now accommodation specific
+                            occ_with_provisory: occDenominator > 0 ? ((accommodationConfirmedNights + totalProvisoryNights) / occDenominator) * 100 : 0, // Add provisory occupancy
                             occ_diff: hasPrevData ? actualOccAccommodation - prevOcc : null, // Diff also accommodation specific
                             prev_occ: prevOcc, // This is now accommodation specific
                             prev_confirmed_stays: prev.stays, // Added for hidden column
                             confirmed_nights: accommodationConfirmedNights,
+                            confirmed_nights_with_provisory: accommodationConfirmedNights + totalProvisoryNights, // Add provisory nights
                             provisory_sales: totalProvisorySales,
                             provisory_nights: totalProvisoryNights,
                             total_bookable_room_nights: occDenominator,
                             blocked_nights: accommodationBlockedNights,
-                            net_available_room_nights: accommodationNetAvailableRoomNights
+                            net_available_room_nights: accommodationNetAvailableRoomNights,
+                            forecast_stays: totalForecastStays,
+                            forecast_rooms: totalForecastRooms
                         });
                     }
                     outlook.sort((a, b) => a.month.localeCompare(b.month));

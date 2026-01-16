@@ -237,6 +237,10 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
                       AND r.type <> 'employee'
                       AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS undecided_nights,
 
+            COUNT(CASE WHEN r.status = 'provisory'
+                      AND r.type <> 'employee'
+                      AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS provisory_nights,
+
             COUNT(CASE WHEN r.status IN ('confirmed','checked_in','checked_out')
                       AND r.type <> 'employee'
                       AND COALESCE(rd.is_accommodation, TRUE) = TRUE THEN 1 END) AS confirmed_nights,
@@ -281,6 +285,7 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
             pd.plan_name,
             pd.sales_category,
             pd.undecided_nights,
+            pd.provisory_nights,
             pd.confirmed_nights,
             pd.employee_nights,
             pd.blocked_nights,
@@ -304,6 +309,7 @@ const selectOccupationBreakdownByMonth = async (requestId, hotelId, startDate, e
             NULL AS sales_category,
 
             SUM(pd.undecided_nights) AS undecided_nights,
+            SUM(pd.provisory_nights) AS provisory_nights,
             SUM(pd.confirmed_nights) AS confirmed_nights,
             SUM(pd.employee_nights) AS employee_nights,
             SUM(pd.blocked_nights) AS blocked_nights,
