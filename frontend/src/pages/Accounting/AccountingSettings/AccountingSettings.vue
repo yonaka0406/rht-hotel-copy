@@ -210,7 +210,7 @@
 
                         <!-- Departments Tab -->
                         <div v-if="activeTab === 'dept'">
-                            <div class="flex justify-between items-center mb-6">
+                            <div class="mb-6">
                                 <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門設定</h2>
                                 <p class="text-sm text-slate-500">現在の部門マッピングと履歴データを管理します</p>
                             </div>
