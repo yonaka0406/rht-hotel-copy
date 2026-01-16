@@ -325,6 +325,38 @@
                         </td>
                       </tr>
                     </template>
+                    
+                    <!-- Profit Totals for this hotel -->
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">売上総利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                        {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.grossProfit || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">営業利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[hotelGroup.hotel_id]?.[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                        {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.operatingProfit || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">経常利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[hotelGroup.hotel_id]?.[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                        {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.ordinaryProfit || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[hotelGroup.hotel_id]?.[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                        {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.profitBeforeTax || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-b-2 border-blue-200 dark:border-blue-800">
+                      <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[hotelGroup.hotel_id]?.[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
+                        {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.netProfit || 0) }}
+                      </td>
+                    </tr>
                   </template>
                 </template>
                 
@@ -358,6 +390,38 @@
                         </td>
                       </tr>
                     </template>
+                    
+                    <!-- Profit Totals for this department -->
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">売上総利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.grossProfit || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">営業利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.operatingProfit || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">経常利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.ordinaryProfit || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.profitBeforeTax || 0) }}
+                      </td>
+                    </tr>
+                    <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-b-2 border-blue-200 dark:border-blue-800">
+                      <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[deptGroup.department]?.[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
+                        {{ formatCurrency(totals[deptGroup.department]?.[month]?.netProfit || 0) }}
+                      </td>
+                    </tr>
                   </template>
                 </template>
 
@@ -944,6 +1008,122 @@ export default {
         });
         
         return totalsByMonth;
+      }
+      
+      if (filters.value.groupBy === 'hotel_month') {
+        // For hotel_month view, calculate totals by hotel and month
+        const totalsByHotelMonth = {};
+        
+        groupedData.value.forEach(hotelGroup => {
+          const hotelKey = hotelGroup.hotel_id;
+          totalsByHotelMonth[hotelKey] = {};
+          
+          uniqueMonths.value.forEach(month => {
+            const hotelMonthData = filteredPlData.value.filter(r => 
+              (r.hotel_id || 'null') === hotelKey && r.month === month
+            );
+            
+            const revenue = hotelMonthData
+              .filter(r => r.management_group_display_order === 1)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const costOfSales = hotelMonthData
+              .filter(r => r.management_group_display_order === 2)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const operatingExpenses = hotelMonthData
+              .filter(r => [3, 4, 5].includes(r.management_group_display_order))
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const nonOperatingIncome = hotelMonthData
+              .filter(r => r.management_group_display_order === 6)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const nonOperatingExpenses = hotelMonthData
+              .filter(r => r.management_group_display_order === 7)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const extraordinaryIncome = hotelMonthData
+              .filter(r => r.management_group_display_order === 8)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const extraordinaryLosses = hotelMonthData
+              .filter(r => r.management_group_display_order === 9)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const incomeTax = hotelMonthData
+              .filter(r => r.management_group_display_order === 10)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+
+            totalsByHotelMonth[hotelKey][month] = {
+              grossProfit: revenue + costOfSales,
+              operatingProfit: revenue + costOfSales + operatingExpenses,
+              ordinaryProfit: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses,
+              profitBeforeTax: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses + extraordinaryIncome + extraordinaryLosses,
+              netProfit: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses + extraordinaryIncome + extraordinaryLosses + incomeTax
+            };
+          });
+        });
+        
+        return totalsByHotelMonth;
+      }
+      
+      if (filters.value.groupBy === 'department_month') {
+        // For department_month view, calculate totals by department and month
+        const totalsByDeptMonth = {};
+        
+        groupedData.value.forEach(deptGroup => {
+          const deptKey = deptGroup.department;
+          totalsByDeptMonth[deptKey] = {};
+          
+          uniqueMonths.value.forEach(month => {
+            const deptMonthData = filteredPlData.value.filter(r => 
+              r.department === deptKey && r.month === month
+            );
+            
+            const revenue = deptMonthData
+              .filter(r => r.management_group_display_order === 1)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const costOfSales = deptMonthData
+              .filter(r => r.management_group_display_order === 2)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const operatingExpenses = deptMonthData
+              .filter(r => [3, 4, 5].includes(r.management_group_display_order))
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const nonOperatingIncome = deptMonthData
+              .filter(r => r.management_group_display_order === 6)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const nonOperatingExpenses = deptMonthData
+              .filter(r => r.management_group_display_order === 7)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const extraordinaryIncome = deptMonthData
+              .filter(r => r.management_group_display_order === 8)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const extraordinaryLosses = deptMonthData
+              .filter(r => r.management_group_display_order === 9)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+            
+            const incomeTax = deptMonthData
+              .filter(r => r.management_group_display_order === 10)
+              .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
+
+            totalsByDeptMonth[deptKey][month] = {
+              grossProfit: revenue + costOfSales,
+              operatingProfit: revenue + costOfSales + operatingExpenses,
+              ordinaryProfit: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses,
+              profitBeforeTax: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses + extraordinaryIncome + extraordinaryLosses,
+              netProfit: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses + extraordinaryIncome + extraordinaryLosses + incomeTax
+            };
+          });
+        });
+        
+        return totalsByDeptMonth;
       }
       
       // For other views, calculate single totals
