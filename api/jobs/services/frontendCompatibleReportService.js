@@ -686,9 +686,160 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             return Number(a.hotel_id) - Number(b.hotel_id);
         });
 
-        // Generate previous year data (simplified)
+
+        // Generate previous year data (matching frontend logic)
         const prevYearRevenueData = [];
         const prevYearOccupancyData = [];
+
+        // Build previous year revenue data (same logic as frontend prevYearRevenueData computed)
+        const prevYearMonthlyAggregates = {};
+        const prevYearMonthlyTotalAggregates = {};
+
+        // Initialize aggregates for the previous year month
+        const prevYearMonthKey = formatDateMonth(prevYearDate);
+        prevYearMonthlyAggregates[prevYearMonthKey] = {};
+        prevYearMonthlyTotalAggregates[prevYearMonthKey] = {
+            period_revenue: 0,
+            accommodation_revenue: 0,
+            other_revenue: 0,
+            pms_revenue: 0
+        };
+
+        hotelIds.forEach(hotelId => {
+            prevYearMonthlyAggregates[prevYearMonthKey][String(hotelId)] = {
+                pms_revenue: null,
+                pms_accommodation_revenue: null,
+                pms_other_revenue: null,
+                acc_revenue: null
+            };
+        });
+
+        // Aggregate previous year PMS data
+        for (const stringHotelIdKey in prevYearPmsTotalData) {
+            const hotelDataArray = prevYearPmsTotalData[stringHotelIdKey];
+            if (Array.isArray(hotelDataArray)) {
+                hotelDataArray.forEach(record => {
+                    if (record && record.date) {
+                        const monthKey = formatDateMonth(new Date(record.date));
+                        if (prevYearMonthlyAggregates[monthKey]) {
+                            if (prevYearMonthlyAggregates[monthKey][stringHotelIdKey]) {
+                                if (typeof record.revenue === 'number') {
+                                    if (prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_revenue === null) {
+                                        prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_revenue = 0;
+                                    }
+                                    prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_revenue += record.revenue;
+                                }
+                                if (typeof record.accommodation_revenue === 'number') {
+                                    if (prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_accommodation_revenue === null) {
+                                        prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_accommodation_revenue = 0;
+                                    }
+                                    prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_accommodation_revenue += record.accommodation_revenue;
+                                }
+                                if (typeof record.other_revenue === 'number') {
+                                    if (prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_other_revenue === null) {
+                                        prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_other_revenue = 0;
+                                    }
+                                    prevYearMonthlyAggregates[monthKey][stringHotelIdKey].pms_other_revenue += record.other_revenue;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Aggregate previous year accounting data
+        for (const stringHotelIdKey in prevYearAccountingTotalData) {
+            const hotelDataArray = prevYearAccountingTotalData[stringHotelIdKey];
+            if (Array.isArray(hotelDataArray)) {
+                hotelDataArray.forEach(record => {
+                    if (record && record.date && typeof record.revenue === 'number') {
+                        const monthKey = formatDateMonth(new Date(record.date));
+                        if (prevYearMonthlyAggregates[monthKey]) {
+                            if (prevYearMonthlyAggregates[monthKey][stringHotelIdKey]) {
+                                if (prevYearMonthlyAggregates[monthKey][stringHotelIdKey].acc_revenue === null) {
+                                    prevYearMonthlyAggregates[monthKey][stringHotelIdKey].acc_revenue = 0;
+                                }
+                                prevYearMonthlyAggregates[monthKey][stringHotelIdKey].acc_revenue += record.revenue;
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Build previous year revenue data array (matching frontend logic)
+        Object.keys(prevYearMonthlyAggregates).sort().forEach(monthKey => {
+            const monthData = prevYearMonthlyAggregates[monthKey];
+
+            for (const hotelIdStringKey in monthData) {
+                const outputHotelId = hotelIdStringKey === '0' ? 0 : parseInt(hotelIdStringKey, 10);
+                const aggregatedMonthData = monthData[hotelIdStringKey];
+                const pmsRev = aggregatedMonthData.pms_revenue;
+                const pmsAccommodationRev = aggregatedMonthData.pms_accommodation_revenue;
+                const pmsOtherRev = aggregatedMonthData.pms_other_revenue;
+                const accRev = aggregatedMonthData.acc_revenue;
+                const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
+
+                // Match frontend logic: accounting revenue takes priority for accommodation
+                let otherRev = (pmsOtherRev || 0);
+                let accommodationRev = (accRev !== null && accRev > 0) ? accRev : (pmsAccommodationRev || 0);
+                let periodRev = accommodationRev + otherRev;
+
+                // Accumulate totals
+                prevYearMonthlyTotalAggregates[monthKey].period_revenue += periodRev;
+                prevYearMonthlyTotalAggregates[monthKey].accommodation_revenue += accommodationRev;
+                prevYearMonthlyTotalAggregates[monthKey].other_revenue += otherRev;
+                prevYearMonthlyTotalAggregates[monthKey].pms_revenue += (pmsRev || 0);
+
+                // Calculate current year month for reference
+                const [y, m] = monthKey.split('-');
+                const currentYearMonth = `${parseInt(y) + 1}-${m}`;
+
+                prevYearRevenueData.push({
+                    month: monthKey,
+                    current_year_month: currentYearMonth,
+                    hotel_id: outputHotelId,
+                    hotel_name: hotelName,
+                    sort_order: hotelSortOrderMap.get(outputHotelId) ?? 999,
+                    pms_revenue: pmsRev,
+                    acc_revenue: accRev,
+                    period_revenue: periodRev,
+                    accommodation_revenue: accommodationRev,
+                    other_revenue: otherRev,
+                });
+            }
+
+            // Add facility total (施設合計)
+            const totals = prevYearMonthlyTotalAggregates[monthKey];
+            const [y, m] = monthKey.split('-');
+            const currentYearMonth = `${parseInt(y) + 1}-${m}`;
+            prevYearRevenueData.push({
+                month: monthKey,
+                current_year_month: currentYearMonth,
+                hotel_id: 0,
+                hotel_name: '施設合計',
+                sort_order: -1,
+                pms_revenue: totals.pms_revenue,
+                acc_revenue: null,
+                period_revenue: totals.period_revenue,
+                accommodation_revenue: totals.accommodation_revenue,
+                other_revenue: totals.other_revenue,
+            });
+        });
+
+        // Sort previous year revenue data (same as frontend)
+        prevYearRevenueData.sort((a, b) => {
+            const orderA = a.sort_order ?? 999;
+            const orderB = b.sort_order ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            if (a.month < b.month) return -1;
+            if (a.month > b.month) return 1;
+            return Number(a.hotel_id) - Number(b.hotel_id);
+        });
+
+        logger.debug(`[getFrontendCompatibleReportData] Generated ${prevYearRevenueData.length} previous year revenue records`);
+
 
 
         // Generate future outlook data (matching frontend logic exactly)
