@@ -27,7 +27,7 @@
       <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
         <!-- Filters Section -->
         <div class="p-8 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Period Filter - Takes 2 columns on large screens -->
             <div class="flex flex-col gap-2 lg:col-span-2">
               <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">期間</label>
@@ -60,27 +60,6 @@
               <Select v-model="filters.groupBy" :options="groupByOptions" optionLabel="label" optionValue="value" fluid />
             </div>
 
-            <!-- Hotel/Department Filter -->
-            <div class="flex flex-col gap-2">
-              <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">部門</label>
-              <MultiSelect
-                v-model="selectedDepartments"
-                :options="availableDepartments"
-                optionLabel="department"
-                placeholder="全部門"
-                :maxSelectedLabels="1"
-                fluid
-              >
-                <template #option="slotProps">
-                  <div class="flex items-center gap-2">
-                    <span>{{ slotProps.option.department }}</span>
-                    <span v-if="slotProps.option.hotel_name" class="text-xs text-slate-400">({{ slotProps.option.hotel_name }})</span>
-                    <span v-else class="text-xs text-amber-600">(未割当)</span>
-                  </div>
-                </template>
-              </MultiSelect>
-            </div>
-
             <!-- Action Button -->
             <div class="flex flex-col gap-2 justify-end">
               <button @click="loadData" :disabled="loading" class="bg-violet-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed">
@@ -102,7 +81,7 @@
         <div v-else-if="plData.length > 0" class="p-8">
           <!-- Actions Bar -->
           <div class="flex justify-between items-center mb-6">
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 flex-wrap">
               <h2 class="text-2xl font-black text-slate-900 dark:text-white">損益計算書</h2>
               
               <!-- Total Column Checkbox (only for month view) -->
@@ -117,12 +96,57 @@
                   合計列を表示
                 </label>
               </div>
+              
+              <!-- Department Filter Toggle -->
+              <button 
+                @click="showDepartmentFilter = !showDepartmentFilter"
+                class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer"
+              >
+                <i class="pi pi-filter"></i>
+                <span>部門フィルター</span>
+                <span v-if="selectedDepartments.length > 0" class="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {{ selectedDepartments.length }}
+                </span>
+              </button>
             </div>
             
             <button @click="exportToCSV" class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
               <i class="pi pi-download"></i>
               <span>CSV出力</span>
             </button>
+          </div>
+          
+          <!-- Department Filter Panel -->
+          <div v-if="showDepartmentFilter" class="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-black text-slate-700 dark:text-slate-300">部門を選択</h3>
+              <button 
+                v-if="selectedDepartments.length > 0"
+                @click="selectedDepartments = []"
+                class="text-xs font-medium text-violet-600 hover:text-violet-700 cursor-pointer"
+              >
+                すべてクリア
+              </button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+              <label 
+                v-for="dept in departmentsInData" 
+                :key="dept.department"
+                class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-200 transition-all cursor-pointer"
+              >
+                <input 
+                  type="checkbox" 
+                  :value="dept"
+                  v-model="selectedDepartments"
+                  class="w-4 h-4 text-violet-600 bg-slate-100 border-slate-300 rounded focus:ring-violet-500 dark:focus:ring-violet-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
+                />
+                <div class="flex flex-col">
+                  <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ dept.department }}</span>
+                  <span v-if="dept.hotel_name" class="text-xs text-slate-400">({{ dept.hotel_name }})</span>
+                  <span v-else class="text-xs text-amber-600">(未割当)</span>
+                </div>
+              </label>
+            </div>
           </div>
 
           <!-- Table -->
@@ -315,6 +339,7 @@ export default {
     const availableDepartments = ref([]);
     const selectedDepartments = ref([]);
     const showTotalColumn = ref(true);
+    const showDepartmentFilter = ref(false);
 
     const filters = ref({
       startMonth: '',
@@ -351,11 +376,41 @@ export default {
       return count;
     });
 
+    // Get unique departments from fetched data
+    const departmentsInData = computed(() => {
+      if (!plData.value.length) return [];
+      
+      const deptMap = new Map();
+      plData.value.forEach(row => {
+        if (row.department && !deptMap.has(row.department)) {
+          deptMap.set(row.department, {
+            department: row.department,
+            hotel_name: row.hotel_name,
+            hotel_id: row.hotel_id
+          });
+        }
+      });
+      
+      return Array.from(deptMap.values()).sort((a, b) => 
+        a.department.localeCompare(b.department, 'ja')
+      );
+    });
+
+    // Filter data by selected departments
+    const filteredPlData = computed(() => {
+      if (selectedDepartments.value.length === 0) {
+        return plData.value;
+      }
+      
+      const selectedDeptNames = selectedDepartments.value.map(d => d.department);
+      return plData.value.filter(row => selectedDeptNames.includes(row.department));
+    });
+
     // Get unique months for column headers
     const uniqueMonths = computed(() => {
       if (filters.value.groupBy !== 'month') return [];
       
-      const months = [...new Set(plData.value.map(row => row.month))];
+      const months = [...new Set(filteredPlData.value.map(row => row.month))];
       return months.sort();
     });
 
@@ -388,35 +443,35 @@ export default {
     const grandPeriodTotals = computed(() => {
       if (filters.value.groupBy !== 'month' || !showTotalColumn.value) return {};
       
-      const revenue = plData.value
+      const revenue = filteredPlData.value
         .filter(r => r.management_group_display_order === 1)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const costOfSales = plData.value
+      const costOfSales = filteredPlData.value
         .filter(r => r.management_group_display_order === 2)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const operatingExpenses = plData.value
+      const operatingExpenses = filteredPlData.value
         .filter(r => [3, 4, 5].includes(r.management_group_display_order))
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const nonOperatingIncome = plData.value
+      const nonOperatingIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 6)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const nonOperatingExpenses = plData.value
+      const nonOperatingExpenses = filteredPlData.value
         .filter(r => r.management_group_display_order === 7)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const extraordinaryIncome = plData.value
+      const extraordinaryIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 8)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const extraordinaryLosses = plData.value
+      const extraordinaryLosses = filteredPlData.value
         .filter(r => r.management_group_display_order === 9)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const incomeTax = plData.value
+      const incomeTax = filteredPlData.value
         .filter(r => r.management_group_display_order === 10)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
 
@@ -430,13 +485,13 @@ export default {
     });
 
     const groupedData = computed(() => {
-      if (!plData.value.length) return [];
+      if (!filteredPlData.value.length) return [];
 
       // For month view, pivot data to show months as columns
       if (filters.value.groupBy === 'month') {
         const groups = {};
         
-        plData.value.forEach(row => {
+        filteredPlData.value.forEach(row => {
           const groupKey = row.management_group_name;
           const accountKey = `${groupKey}|${row.account_code}`;
           
@@ -482,7 +537,7 @@ export default {
       // For other views, aggregate data based on groupBy setting
       const aggregated = {};
       
-      plData.value.forEach(row => {
+      filteredPlData.value.forEach(row => {
         // Create a unique key based on groupBy setting
         let key;
         if (filters.value.groupBy === 'hotel') {
@@ -538,35 +593,35 @@ export default {
         const totalsByMonth = {};
         
         uniqueMonths.value.forEach(month => {
-          const revenue = plData.value
+          const revenue = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 1)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
           
-          const costOfSales = plData.value
+          const costOfSales = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 2)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
           
-          const operatingExpenses = plData.value
+          const operatingExpenses = filteredPlData.value
             .filter(r => r.month === month && [3, 4, 5].includes(r.management_group_display_order))
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
           
-          const nonOperatingIncome = plData.value
+          const nonOperatingIncome = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 6)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
           
-          const nonOperatingExpenses = plData.value
+          const nonOperatingExpenses = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 7)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
           
-          const extraordinaryIncome = plData.value
+          const extraordinaryIncome = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 8)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
           
-          const extraordinaryLosses = plData.value
+          const extraordinaryLosses = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 9)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
           
-          const incomeTax = plData.value
+          const incomeTax = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 10)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
 
@@ -583,35 +638,35 @@ export default {
       }
       
       // For other views, calculate single totals
-      const revenue = plData.value
+      const revenue = filteredPlData.value
         .filter(r => r.management_group_display_order === 1)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const costOfSales = plData.value
+      const costOfSales = filteredPlData.value
         .filter(r => r.management_group_display_order === 2)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const operatingExpenses = plData.value
+      const operatingExpenses = filteredPlData.value
         .filter(r => [3, 4, 5].includes(r.management_group_display_order))
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const nonOperatingIncome = plData.value
+      const nonOperatingIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 6)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const nonOperatingExpenses = plData.value
+      const nonOperatingExpenses = filteredPlData.value
         .filter(r => r.management_group_display_order === 7)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const extraordinaryIncome = plData.value
+      const extraordinaryIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 8)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const extraordinaryLosses = plData.value
+      const extraordinaryLosses = filteredPlData.value
         .filter(r => r.management_group_display_order === 9)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
       
-      const incomeTax = plData.value
+      const incomeTax = filteredPlData.value
         .filter(r => r.management_group_display_order === 10)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
 
@@ -694,15 +749,13 @@ export default {
           groupBy: filters.value.groupBy
         };
 
-        if (selectedDepartments.value.length > 0) {
-          params.departmentNames = selectedDepartments.value.map(d => d.department);
-        }
-
         const response = await accountingStore.fetchProfitLoss(params);
         const data = response?.data || response;
 
         if (data && data.length > 0) {
           plData.value = data;
+          // Reset department selection when new data is loaded
+          selectedDepartments.value = [];
         } else {
           plData.value = [];
           toast.add({ severity: 'info', summary: '情報', detail: '指定された条件でデータが見つかりませんでした', life: 3000 });
@@ -716,42 +769,106 @@ export default {
     };
 
     const exportToCSV = () => {
-      if (!plData.value.length) {
+      if (!filteredPlData.value.length) {
         toast.add({ severity: 'warn', summary: '警告', detail: 'エクスポートするデータがありません', life: 3000 });
         return;
       }
 
-      const headers = [];
-      if (showMonthColumn.value) headers.push('月');
-      if (showHotelColumn.value) headers.push('ホテル');
-      if (showDepartmentColumn.value) headers.push('部門');
-      headers.push('管理グループ', '勘定科目コード', '勘定科目名', '金額');
-
-      const rows = [headers];
-
-      groupedData.value.forEach(group => {
-        group.rows.forEach(row => {
-          const csvRow = [];
-          if (showMonthColumn.value) csvRow.push(formatMonth(row.month));
-          if (showHotelColumn.value) csvRow.push(row.hotel_name || '未割当');
-          if (showDepartmentColumn.value) csvRow.push(row.department || '-');
-          csvRow.push(
-            group.name,
-            row.account_code || '',
-            row.account_name,
-            row.net_amount
-          );
-          rows.push(csvRow);
+      const rows = [];
+      
+      // For month view, export with months as columns
+      if (filters.value.groupBy === 'month') {
+        // Headers
+        const headers = ['勘定科目'];
+        uniqueMonths.value.forEach(month => {
+          headers.push(formatMonth(month));
         });
-      });
+        if (showTotalColumn.value) {
+          headers.push('合計');
+        }
+        rows.push(headers);
+        
+        // Data rows
+        groupedData.value.forEach(group => {
+          // Group header
+          rows.push([group.name]);
+          
+          // Account rows
+          group.accounts.forEach(account => {
+            const row = [account.account_name];
+            uniqueMonths.value.forEach(month => {
+              row.push(account.amountsByMonth[month] || 0);
+            });
+            if (showTotalColumn.value) {
+              row.push(periodTotals.value[group.name]?.accounts[account.account_code] || 0);
+            }
+            rows.push(row);
+          });
+          
+          // Group subtotal
+          const subtotalRow = [`${group.name} 小計`];
+          uniqueMonths.value.forEach(month => {
+            subtotalRow.push(group.subtotalByMonth[month] || 0);
+          });
+          if (showTotalColumn.value) {
+            subtotalRow.push(periodTotals.value[group.name]?.subtotal || 0);
+          }
+          rows.push(subtotalRow);
+          rows.push([]); // Empty row
+        });
+        
+        // Grand totals
+        const profitRows = [
+          { label: '売上総利益', key: 'grossProfit' },
+          { label: '営業利益', key: 'operatingProfit' },
+          { label: '経常利益', key: 'ordinaryProfit' },
+          { label: '税引前当期純利益', key: 'profitBeforeTax' },
+          { label: '当期純利益', key: 'netProfit' }
+        ];
+        
+        profitRows.forEach(profit => {
+          const row = [profit.label];
+          uniqueMonths.value.forEach(month => {
+            row.push(totals.value[month]?.[profit.key] || 0);
+          });
+          if (showTotalColumn.value) {
+            row.push(grandPeriodTotals.value[profit.key] || 0);
+          }
+          rows.push(row);
+        });
+      } else {
+        // Standard view export
+        const headers = [];
+        if (showMonthColumn.value) headers.push('月');
+        if (showHotelColumn.value) headers.push('ホテル');
+        if (showDepartmentColumn.value) headers.push('部門');
+        headers.push('管理グループ', '勘定科目コード', '勘定科目名', '金額');
+        rows.push(headers);
 
-      // Add totals
-      rows.push([]);
-      rows.push(['売上総利益', '', '', '', totals.value.grossProfit]);
-      rows.push(['営業利益', '', '', '', totals.value.operatingProfit]);
-      rows.push(['経常利益', '', '', '', totals.value.ordinaryProfit]);
-      rows.push(['税引前当期純利益', '', '', '', totals.value.profitBeforeTax]);
-      rows.push(['当期純利益', '', '', '', totals.value.netProfit]);
+        groupedData.value.forEach(group => {
+          group.rows.forEach(row => {
+            const csvRow = [];
+            if (showMonthColumn.value) csvRow.push(formatMonth(row.month));
+            if (showHotelColumn.value) csvRow.push(row.hotel_name || '未割当');
+            if (showDepartmentColumn.value) csvRow.push(row.department || '-');
+            csvRow.push(
+              group.name,
+              row.account_code || '',
+              row.account_name,
+              row.net_amount
+            );
+            rows.push(csvRow);
+          });
+        });
+
+        // Add totals
+        rows.push([]);
+        rows.push(['売上総利益', '', '', '', totals.value.grossProfit]);
+        rows.push(['営業利益', '', '', '', totals.value.operatingProfit]);
+        rows.push(['経常利益', '', '', '', totals.value.ordinaryProfit]);
+        rows.push(['税引前当期純利益', '', '', '', totals.value.profitBeforeTax]);
+        rows.push(['当期純利益', '', '', '', totals.value.netProfit]);
+      }
 
       const csv = rows.map(row => row.join(',')).join('\n');
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -814,6 +931,8 @@ export default {
       filters,
       groupByOptions,
       showTotalColumn,
+      showDepartmentFilter,
+      departmentsInData,
       uniqueMonths,
       periodTotals,
       grandPeriodTotals,
