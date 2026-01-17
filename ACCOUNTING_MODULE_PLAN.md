@@ -150,14 +150,17 @@ The dashboard consists of the following sections:
 ### 3. Yayoi Data Import & Processing
 
 - **Goal**: Import Yayoi accounting data for reconciliation and analysis
-- **Status**: **Schema Ready** (Implementation pending)
-- **Database**: `acc_yayoi_data` table (25 columns matching Yayoi CSV format)
-- **View**: `acc_monthly_account_summary` for consolidated reporting
-- **Next Steps**:
-  - Build CSV import parser (25-column Yayoi format)
-  - Implement data validation and error handling
-  - Create UI for import workflow
-  - Build reconciliation reports using the monthly summary view
+- **Status**: **Completed**
+- **Implementation**:
+  - Frontend: `AccountingYayoiImport.vue` (3-step wizard)
+  - Backend: `accounting/import.js` controller (Shift-JIS parser, bulk insert)
+  - Database: `acc_yayoi_data` table, `acc_monthly_account_summary` view
+- **Features**:
+  - Shift-JIS CSV/TXT support
+  - Validation: Warning for unknown account codes and unmapped departments
+  - Transactional logic: Overwrites data in the imported date range to prevent duplicates
+  - Automatic tax adjustments in the summary view
+
 
 ### 4. OTA Payment Reconciliation
 
