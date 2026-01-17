@@ -4,6 +4,8 @@
 
 The Accounting Module is designed to manage financial operations, auditing, and reconciliation within the RHT Hotel system. It features a distinct "Lilac/Purple" theme to differentiate it from other operational modules.
 
+**Note:** As implementation progresses, the documentation in `docs/features/accounting/` should be updated accordingly to reflect new features, technical changes, and validation procedures.
+
 ## Current Status
 
 **Last Updated:** 2026-01-16
