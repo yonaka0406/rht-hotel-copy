@@ -210,6 +210,7 @@
 
                         <!-- Departments Tab -->
                         <div v-if="activeTab === 'dept'">
+                            <!-- ... existing department content ... -->
                             <div class="mb-6">
                                 <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門設定</h2>
                                 <p class="text-sm text-slate-500">現在の部門マッピングと履歴データを管理します</p>
@@ -260,6 +261,81 @@
                                 </table>
                             </div>
                         </div>
+
+                        <!-- Mappings Tab -->
+                        <div v-if="activeTab === 'mapping'">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                                <div>
+                                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">勘定科目マッピング</h2>
+                                    <p class="text-sm text-slate-500">プランやアドオンを勘定科目に紐付けます</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex flex-col gap-1">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">対象ホテルを選択</label>
+                                        <Select 
+                                            v-model="selectedMappingHotelId" 
+                                            :options="hotelStore.safeHotels.value" 
+                                            optionLabel="name" 
+                                            optionValue="id" 
+                                            placeholder="ホテルを選択" 
+                                            class="w-64"
+                                            @change="fetchSettings"
+                                        />
+                                    </div>
+                                    <button @click="openModal('mapping')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none self-end">
+                                        <i class="pi pi-plus"></i> マッピング追加
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-100 dark:border-slate-700">
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">対象タイプ</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">対象アイテム</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">ホテル</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">勘定科目</th>
+                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="item in settings.mappings" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                            <td class="py-4 px-4">
+                                                <span class="text-[10px] font-black px-2 py-1 rounded-md uppercase" :class="getTargetTypeBadgeClass(item.target_type)">
+                                                    {{ getTargetTypeLabel(item.target_type) }}
+                                                </span>
+                                            </td>
+                                            <td class="py-4 px-4 font-bold">{{ getTargetName(item) }}</td>
+                                            <td class="py-4 px-4 text-sm text-slate-500">
+                                                <span v-if="item.hotel_id" class="flex items-center gap-1">
+                                                    <i class="pi pi-building text-[10px]"></i> {{ getHotelName(item.hotel_id) }}
+                                                </span>
+                                                <span v-else class="text-violet-600 font-bold italic flex items-center gap-1">
+                                                    <i class="pi pi-globe text-[10px]"></i> 共通設定
+                                                </span>
+                                            </td>
+                                            <td class="py-4 px-4 font-black">
+                                                <div class="flex flex-col">
+                                                    <span class="text-slate-900 dark:text-white">{{ item.account_name }}</span>
+                                                    <span class="text-[10px] text-slate-400 tabular-nums">{{ item.account_code }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-4 px-4">
+                                                <div class="flex gap-2">
+                                                    <button @click="editItem('mapping', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('mapping', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="settings.mappings.length === 0">
+                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -362,6 +438,66 @@
                     </div>
                 </div>
 
+                <!-- Mapping Form -->
+                <div v-if="modal.type === 'mapping'" class="space-y-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-black text-slate-500 uppercase">対象ホテル</label>
+                        <Select v-model="form.hotel_id" :options="hotelStore.safeHotels.value" optionLabel="name" optionValue="id" showClear placeholder="共通（すべてのホテル）" class="w-full" />
+                    </div>
+                    
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-black text-slate-500 uppercase">対象タイプ <span class="text-rose-500">*</span></label>
+                        <Select 
+                            v-model="form.target_type" 
+                            :options="[
+                                { label: '個別プラン', value: 'plan_hotel' },
+                                { label: 'プラン区分', value: 'plan_type_category' },
+                                { label: '個別アドオン', value: 'addon_hotel' },
+                                { label: '共通アドオン', value: 'addon_global' },
+                                { label: 'キャンセル料', value: 'cancellation' }
+                            ]" 
+                            optionLabel="label" 
+                            optionValue="value" 
+                            placeholder="タイプを選択" 
+                            class="w-full"
+                            @change="form.target_id = null"
+                        />
+                    </div>
+
+                    <div v-if="form.target_type && form.target_type !== 'cancellation'" class="flex flex-col gap-2">
+                        <label class="text-xs font-black text-slate-500 uppercase">対象アイテム <span class="text-rose-500">*</span></label>
+                        <Select 
+                            v-model="form.target_id" 
+                            :options="getTargetOptions(form.target_type)" 
+                            optionLabel="name" 
+                            optionValue="id" 
+                            placeholder="アイテムを選択" 
+                            class="w-full"
+                            filter
+                        />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-black text-slate-500 uppercase">紐付ける勘定科目 <span class="text-rose-500">*</span></label>
+                        <Select 
+                            v-model="form.account_code_id" 
+                            :options="settings.codes" 
+                            optionLabel="name" 
+                            optionValue="id" 
+                            placeholder="科目を選択" 
+                            class="w-full"
+                            filter
+                        >
+                            <template #option="slotProps">
+                                <div class="flex justify-between items-center w-full">
+                                    <span>{{ slotProps.option.name }}</span>
+                                    <span class="text-[10px] tabular-nums text-slate-400">{{ slotProps.option.code }}</span>
+                                </div>
+                            </template>
+                        </Select>
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                     <button @click="modal.visible = false" class="px-6 py-2 rounded-xl font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700 transition-all">
                         キャンセル
@@ -407,15 +543,26 @@ const tabs = [
     { id: 'codes', label: '勘定科目' },
     { id: 'groups', label: '管理区分' },
     { id: 'tax', label: '税区分' },
-    { id: 'dept', label: '部門設定' }
+    { id: 'dept', label: '部門設定' },
+    { id: 'mapping', label: 'マッピング' }
 ];
 
 const settings = reactive({
     codes: [],
     groups: [],
     taxClasses: [],
-    departments: []
+    departments: [],
+    mappings: [],
+    mappingMasterData: {
+        plans: [],
+        categories: [],
+        packageCategories: [],
+        addonsGlobal: [],
+        addonsHotel: []
+    }
 });
+
+const selectedMappingHotelId = ref(null);
 
 const filteredCodes = computed(() => {
     if (!selectedGroupFilter.value) return settings.codes;
@@ -455,18 +602,22 @@ const form = reactive({
 
 const modalTitle = computed(() => {
     const action = modal.isEdit ? '編集' : '新規作成';
-    const targets = { code: '勘定科目', group: '管理区分', tax: '税区分', dept: '部門' };
+    const targets = { code: '勘定科目', group: '管理区分', tax: '税区分', dept: '部門', mapping: 'マッピング' };
     return `${targets[modal.type]}${action}`;
 });
 
 const fetchSettings = async () => {
     try {
         loading.value = true;
-        const data = await store.getAccountingSettings();
+        const data = await store.getAccountingSettings(selectedMappingHotelId.value);
         settings.codes = data.codes;
         settings.groups = data.groups;
         settings.taxClasses = data.taxClasses;
         settings.departments = data.departments;
+        settings.mappings = data.mappings;
+        if (data.mappingMasterData) {
+            settings.mappingMasterData = data.mappingMasterData;
+        }
     } catch (err) {
         console.error('Failed to fetch accounting settings', err);
         toast.add({ 
@@ -514,6 +665,9 @@ const openModal = (type) => {
     form.is_current = true;
     form.valid_from = null;
     form.valid_to = null;
+    form.target_type = null;
+    form.target_id = null;
+    form.account_code_id = null;
 };
 
 const editItem = (type, item) => {
@@ -522,7 +676,10 @@ const editItem = (type, item) => {
     modal.visible = true;
     
     form.id = item.id;
-    form.name = item.name;
+    
+    if (type !== 'mapping') {
+        form.name = item.name;
+    }
     
     if (type === 'code') {
         form.code = item.code;
@@ -541,6 +698,11 @@ const editItem = (type, item) => {
         form.is_current = item.is_current !== undefined ? item.is_current : true;
         form.valid_from = item.valid_from ? new Date(item.valid_from) : null;
         form.valid_to = item.valid_to ? new Date(item.valid_to) : null;
+    } else if (type === 'mapping') {
+        form.hotel_id = item.hotel_id;
+        form.target_type = item.target_type;
+        form.target_id = item.target_id;
+        form.account_code_id = item.account_code_id;
     }
 };
 
@@ -554,6 +716,8 @@ const isFormValid = computed(() => {
             return form.name && form.yayoi_name;
         case 'dept':
             return form.name;
+        case 'mapping':
+            return form.target_type && (form.target_type === 'cancellation' || form.target_id) && form.account_code_id;
         default:
             return false;
     }
@@ -580,10 +744,15 @@ const handleSave = async () => {
             }
         }
 
+        if (modal.type === 'mapping' && payload.target_type === 'cancellation') {
+            payload.target_id = 0;
+        }
+
         if (modal.type === 'code') await store.upsertAccountCode(payload);
         else if (modal.type === 'group') await store.upsertManagementGroup(payload);
         else if (modal.type === 'tax') await store.upsertTaxClass(payload);
         else if (modal.type === 'dept') await store.upsertDepartment(payload);
+        else if (modal.type === 'mapping') await store.upsertMapping(payload);
         
         modal.visible = false;
         await fetchSettings();
@@ -621,6 +790,7 @@ const confirmDelete = (type, item) => {
                 else if (type === 'group') await store.deleteManagementGroup(item.id);
                 else if (type === 'tax') await store.deleteTaxClass(item.id);
                 else if (type === 'dept') await store.deleteDepartment(item.id);
+                else if (type === 'mapping') await store.deleteMapping(item.id);
                 await fetchSettings();
                 toast.add({ severity: 'success', summary: '成功', detail: '削除しました。', life: 3000 });
             } catch (err) {
@@ -629,6 +799,71 @@ const confirmDelete = (type, item) => {
             }
         }
     });
+};
+
+// Mapping Helper Functions
+const getTargetTypeLabel = (type) => {
+    const labels = {
+        plan_hotel: '個別プラン',
+        plan_type_category: 'プラン区分',
+        plan_package_category: 'パッケージ区分',
+        addon_hotel: '個別アドオン',
+        addon_global: '共通アドオン',
+        cancellation: 'キャンセル料'
+    };
+    return labels[type] || type;
+};
+
+const getTargetTypeBadgeClass = (type) => {
+    const classes = {
+        plan_hotel: 'bg-indigo-100 text-indigo-700',
+        plan_type_category: 'bg-violet-100 text-violet-700',
+        plan_package_category: 'bg-purple-100 text-purple-700',
+        addon_hotel: 'bg-emerald-100 text-emerald-700',
+        addon_global: 'bg-teal-100 text-teal-700',
+        cancellation: 'bg-rose-100 text-rose-700'
+    };
+    return classes[type] || 'bg-slate-100 text-slate-700';
+};
+
+const getTargetName = (item) => {
+    if (item.target_type === 'cancellation') return '全体';
+    
+    if (item.target_type === 'plan_hotel') {
+        const p = settings.mappingMasterData.plans.find(x => x.id === item.target_id);
+        return p ? p.name : `プランID: ${item.target_id}`;
+    }
+    
+    if (item.target_type === 'plan_type_category') {
+        const c = settings.mappingMasterData.categories.find(x => x.id === item.target_id);
+        return c ? c.name : `区分ID: ${item.target_id}`;
+    }
+
+    if (item.target_type === 'plan_package_category') {
+        const c = settings.mappingMasterData.packageCategories.find(x => x.id === item.target_id);
+        return c ? c.name : `パッケージID: ${item.target_id}`;
+    }
+    
+    if (item.target_type === 'addon_global') {
+        const a = settings.mappingMasterData.addonsGlobal.find(x => x.id === item.target_id);
+        return a ? a.name : `アドオンID: ${item.target_id}`;
+    }
+    
+    if (item.target_type === 'addon_hotel') {
+        const a = settings.mappingMasterData.addonsHotel.find(x => x.id === item.target_id);
+        return a ? a.name : `アドオンID: ${item.target_id}`;
+    }
+    
+    return `ID: ${item.target_id}`;
+};
+
+const getTargetOptions = (type) => {
+    if (type === 'plan_hotel') return settings.mappingMasterData.plans;
+    if (type === 'plan_type_category') return settings.mappingMasterData.categories;
+    if (type === 'plan_package_category') return settings.mappingMasterData.packageCategories;
+    if (type === 'addon_global') return settings.mappingMasterData.addonsGlobal;
+    if (type === 'addon_hotel') return settings.mappingMasterData.addonsHotel;
+    return [];
 };
 
 onMounted(async () => {

@@ -73,6 +73,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                 rd.plans_hotel_id,
                 rd.plans_global_id,
                 ph.plan_type_category_id,
+                ph.plan_package_category_id,
                 ptc.name as category_name,
                 COALESCE(ph.name, pg.name, '未設定') as plan_name,
                 CASE 
@@ -116,6 +117,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                 'plan' as source_type,
                 b.plans_hotel_id as target_id,
                 b.plan_type_category_id,
+                b.plan_package_category_id,
                 CASE 
                     WHEN b.is_cancelled THEN 'キャンセル' 
                     WHEN b.plan_name LIKE '%マンスリー%' THEN COALESCE(b.category_name || ' - ', '') || 'マンスリー'
@@ -138,6 +140,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                 COALESCE(ra.addons_hotel_id, ra.addons_global_id) as target_id,
                 ra.addons_global_id,
                 NULL::int as plan_type_category_id,
+                NULL::int as plan_package_category_id,
                 CASE WHEN rd.cancelled IS NOT NULL THEN 'キャンセル' ELSE ra.addon_name END as display_name,
                 ra.tax_rate,
                 (ra.price * ra.quantity) as amount,
@@ -160,6 +163,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                 CASE WHEN is_cancelled THEN 0 ELSE target_id END as target_id,
                 NULL::int as addons_global_id, 
                 plan_type_category_id, 
+                plan_package_category_id,
                 display_name, 
                 tax_rate, 
                 amount 
@@ -171,6 +175,7 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                 CASE WHEN is_cancelled THEN 0 ELSE target_id END, 
                 addons_global_id, 
                 NULL, 
+                NULL,
                 display_name, 
                 tax_rate, 
                 amount 
@@ -188,6 +193,8 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                                 (am.target_type = 'plan_hotel' AND am.target_id = cs.target_id AND am.hotel_id = cs.hotel_id)
                                 OR
                                 (am.target_type = 'plan_type_category' AND am.target_id = cs.plan_type_category_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
+                                OR
+                                (am.target_type = 'plan_package_category' AND am.target_id = cs.plan_package_category_id AND (am.hotel_id = cs.hotel_id OR am.hotel_id IS NULL))
                             ))
                             OR
                             (cs.mapping_target = 'addon_hotel' AND (
@@ -204,9 +211,9 @@ const getLedgerPreview = async (requestId, filters, dbClient = null) => {
                             CASE 
                                 WHEN am.target_type IN ('plan_hotel', 'addon_hotel') THEN 1
                                 WHEN am.target_type = 'cancellation' AND am.hotel_id IS NOT NULL THEN 1.5
-                                WHEN am.target_type IN ('plan_type_category', 'addon_global') AND am.hotel_id IS NOT NULL THEN 2
+                                WHEN am.target_type IN ('plan_type_category', 'plan_package_category', 'addon_global') AND am.hotel_id IS NOT NULL THEN 2
                                 WHEN am.target_type = 'cancellation' AND am.hotel_id IS NULL THEN 2.5
-                                WHEN am.target_type IN ('plan_type_category', 'addon_global') AND am.hotel_id IS NULL THEN 3
+                                WHEN am.target_type IN ('plan_type_category', 'plan_package_category', 'addon_global') AND am.hotel_id IS NULL THEN 3
                                 ELSE 4
                             END ASC
                         LIMIT 1
