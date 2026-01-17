@@ -543,8 +543,7 @@ const tabs = [
     { id: 'codes', label: '勘定科目' },
     { id: 'groups', label: '管理区分' },
     { id: 'tax', label: '税区分' },
-    { id: 'dept', label: '部門設定' },
-    { id: 'mapping', label: 'マッピング' }
+    { id: 'dept', label: '部門設定' }
 ];
 
 const settings = reactive({
