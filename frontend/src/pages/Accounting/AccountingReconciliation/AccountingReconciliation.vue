@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import DatePicker from 'primevue/datepicker';
@@ -13,6 +14,7 @@ import ReservationEdit from '@/pages/MainPage/Reservation/ReservationEdit.vue';
 import { formatDateToYMD } from '@/utils/dateUtils';
 import { translateReservationStatus } from '@/utils/reservationUtils';
 
+const router = useRouter();
 const accountingStore = useAccountingStore();
 const hotelStore = useHotelStore();
 
@@ -210,17 +212,23 @@ watch(selectedDate, () => {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
-                    <span class="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2 whitespace-nowrap">対象月:</span>
-                    <DatePicker 
-                        v-model="selectedDate" 
-                        view="month" 
-                        dateFormat="yy/mm" 
-                        showIcon 
-                        iconDisplay="input"
-                        fluid
-                        class="flex-1"
-                    />
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
+                        <span class="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2 whitespace-nowrap">対象月:</span>
+                        <DatePicker 
+                            v-model="selectedDate" 
+                            view="month" 
+                            dateFormat="yy/mm" 
+                            showIcon 
+                            iconDisplay="input"
+                            fluid
+                            class="flex-1"
+                        />
+                    </div>
+                    <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer whitespace-nowrap h-[46px]">
+                        <i class="pi pi-arrow-left text-sm"></i>
+                        <span>ダッシュボード</span>
+                    </button>
                 </div>
             </div>
 

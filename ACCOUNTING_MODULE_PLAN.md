@@ -191,6 +191,18 @@ The dashboard consists of the following sections:
   - Unmapped transactions count
   - Reconciliation status indicators
 
+### 7. UI/UX Consistency (Navigation)
+
+- **Goal**: Ensure consistent navigation across all accounting module pages
+- **Status**: **In Progress**
+- **Requirements**:
+  - All sub-pages must include a standardized "Back to Dashboard" button in the header/hero section.
+  - Button style: `bg-slate-50` with hover effects `hover:text-violet-600`, consistent padding and rounding.
+  - Pages to update:
+    - Ledger Export (`AccountingLedgerExport`)
+    - Yayoi Import (`AccountingYayoiImport`)
+    - Reconciliation (`AccountingReconciliation`)
+
 ## Technical Architecture
 
 ### Mapping Resolution Logic

@@ -13,7 +13,7 @@
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">管理区分</label>
-                    <Select v-model="form.management_group_id" :options="settings.groups" optionLabel="name" optionValue="id" placeholder="区分を選択" fluid />
+                    <Select v-model="form.management_group_id" :options="settings.groups" optionLabel="name" optionValue="id" placeholder="区分を選択" showClear fluid />
                 </div>
                 <div class="flex items-center gap-2">
                     <Checkbox v-model="form.is_active" :binary="true" />
