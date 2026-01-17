@@ -114,7 +114,12 @@
                         <!-- Management Groups Tab -->
                         <div v-if="activeTab === 'groups'">
                             <div class="flex justify-between items-center mb-6">
-                                <h2 class="text-2xl font-black text-slate-900 dark:text-white">管理区分設定</h2>
+                                <div>
+                                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">管理区分設定</h2>
+                                    <p class="text-xs text-slate-500 mt-1 italic font-medium">
+                                        ※ これらの区分は損益計算書（P&L）のアカウント専用です。
+                                    </p>
+                                </div>
                                 <button @click="openModal('group')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer">
                                     <i class="pi pi-plus"></i> 新規追加
                                 </button>
