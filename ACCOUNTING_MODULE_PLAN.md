@@ -136,15 +136,16 @@ The dashboard consists of the following sections:
 ### 2. Plan/Addon Accounting Mappings
 
 - **Goal**: Map hotel plans and addons to specific account codes for automated journal entry generation
-- **Status**: **Schema Ready** (Implementation pending)
-- **Database**: `acc_accounting_mappings` table with multi-level resolution:
-  1. Specific Item mapping (plan_hotel, addon_hotel)
-  2. Category mapping (plan_type_category, plan_package_category)
-  3. Global Category mapping (addon_global)
-- **Next Steps**:
-  - Build UI for mapping management in Settings
-  - Implement resolution logic in backend queries
-  - Integrate with booking/sales data for automatic journal generation
+- **Status**: **Completed**
+- **Implementation**:
+  - Frontend: `AccountingSettings.vue` (Mapping Tab)
+  - Backend: `accounting/settings.js` controller, `accounting/read.js` model (resolution logic)
+  - Database: Migration 024 updating mapping target constraints
+- **Features**:
+  - Hierarchical resolution (Plan -> Type Category -> Package Category -> Account Code)
+  - Hotel-specific and Global fallback mappings
+  - Cancellation fee mapping support
+
 
 ### 3. Yayoi Data Import & Processing
 
