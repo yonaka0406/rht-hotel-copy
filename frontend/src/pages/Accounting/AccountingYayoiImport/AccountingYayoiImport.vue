@@ -218,6 +218,40 @@ const formatDate = (dateStr) => {
                                     {{ dept || '(空)' }}
                                 </span>
                             </div>
+                            
+                            <div v-if="importSummary.unmappedDepartments.length > 0" class="mt-6 p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl flex items-start gap-3">
+                                <i class="pi pi-exclamation-circle text-rose-600 dark:text-rose-400 mt-1"></i>
+                                <div>
+                                    <p class="text-sm font-bold text-rose-800 dark:text-rose-300">未登録の部門が検出されました</p>
+                                    <p class="text-xs text-rose-700 dark:text-rose-400 mt-1 leading-relaxed">
+                                        以下の部門名は「部門設定」に登録されていません。インポートは可能ですが、レポートで正しく集計されない可能性があります。
+                                    </p>
+                                    <div class="mt-3 flex flex-wrap gap-1">
+                                        <span v-for="dept in importSummary.unmappedDepartments" :key="dept" class="px-2 py-1 bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-[10px] font-bold rounded">
+                                            {{ dept }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Unknown Accounts List -->
+                        <div v-if="importSummary.unknownAccounts.length > 0" class="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-6">未登録の勘定科目</h3>
+                            <div class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-start gap-3">
+                                <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 mt-1"></i>
+                                <div>
+                                    <p class="text-sm font-bold text-amber-800 dark:text-amber-300">マスタに存在しない科目が検出されました</p>
+                                    <p class="text-xs text-amber-700 dark:text-amber-400 mt-1 leading-relaxed">
+                                        以下の科目は「勘定科目マスタ」に登録されていません。インポート後、レポートに表示されない可能性があります。
+                                    </p>
+                                    <div class="mt-3 flex flex-wrap gap-1">
+                                        <span v-for="acc in importSummary.unknownAccounts" :key="acc" class="px-2 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded">
+                                            {{ acc }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
