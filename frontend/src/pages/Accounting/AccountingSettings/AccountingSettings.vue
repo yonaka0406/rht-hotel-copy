@@ -342,168 +342,16 @@
         </div>
 
         <!-- Master Data Modal -->
-        <Dialog v-model:visible="modal.visible" :header="modalTitle" modal class="w-full max-w-lg">
-            <div class="p-2 space-y-6">
-                <!-- Account Code Form -->
-                <div v-if="modal.type === 'code'" class="space-y-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">勘定コード <span class="text-rose-500">*</span></label>
-                        <InputText v-model="form.code" placeholder="例: 4110004" class="w-full" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">勘定科目名 <span class="text-rose-500">*</span></label>
-                        <InputText v-model="form.name" placeholder="例: 宿泊事業売上" class="w-full" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">管理区分</label>
-                        <Select v-model="form.management_group_id" :options="settings.groups" optionLabel="name" optionValue="id" placeholder="区分を選択" class="w-full" />
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <Checkbox v-model="form.is_active" :binary="true" />
-                        <label class="text-sm font-bold text-slate-700 dark:text-slate-300">有効化する</label>
-                    </div>
-                </div>
-
-                <!-- Management Group Form -->
-                <div v-if="modal.type === 'group'" class="space-y-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">区分名 <span class="text-rose-500">*</span></label>
-                        <InputText v-model="form.name" placeholder="例: 売上高" class="w-full" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">表示順序</label>
-                        <InputNumber v-model="form.display_order" placeholder="例: 10" class="w-full" />
-                    </div>
-                </div>
-
-                <!-- Tax Class Form -->
-                <div v-if="modal.type === 'tax'" class="space-y-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">システム内表示名 <span class="text-rose-500">*</span></label>
-                        <InputText v-model="form.name" placeholder="例: 課税売上10%" class="w-full" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">弥生会計出力名 <span class="text-rose-500">*</span></label>
-                        <InputText v-model="form.yayoi_name" placeholder="例: 課税売上内10%" class="w-full" />
-                    </div>
-                    <div class="flex flex-row gap-4">
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="text-xs font-black text-slate-500 uppercase">税率 (%)</label>
-                            <InputNumber v-model="form.tax_rate_percent" :min="0" :max="100" placeholder="例: 10" class="w-full" />
-                        </div>
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="text-xs font-black text-slate-500 uppercase">表示順序</label>
-                            <InputNumber v-model="form.display_order" class="w-full" />
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <Checkbox v-model="form.is_active" :binary="true" />
-                        <label class="text-sm font-bold text-slate-700 dark:text-slate-300">有効化する</label>
-                    </div>
-                </div>
-
-                <!-- Department Form -->
-                <div v-if="modal.type === 'dept'" class="space-y-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">対象店舗</label>
-                        <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-300">
-                             {{ getHotelName(form.hotel_id) }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">部門名 (弥生会計) <span class="text-rose-500">*</span></label>
-                        <InputText v-model="form.name" placeholder="例: WH室蘭" class="w-full" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">状態</label>
-                        <div class="flex items-center gap-3">
-                            <Checkbox v-model="form.is_current" :binary="true" inputId="is_current" />
-                            <label for="is_current" class="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                現在のマッピング (エクスポートに使用)
-                            </label>
-                        </div>
-                        <p class="text-xs text-slate-500">チェックを外すと履歴データとして保存されます (インポート時の解決に使用)</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-xs font-black text-slate-500 uppercase">有効開始日</label>
-                            <DatePicker v-model="form.valid_from" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" class="w-full" />
-                            <p class="text-xs text-slate-500">任意: この部門名が有効になった日</p>
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="text-xs font-black text-slate-500 uppercase">有効終了日</label>
-                            <DatePicker v-model="form.valid_to" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" class="w-full" :disabled="form.is_current" />
-                            <p class="text-xs text-slate-500">任意: この部門名が終了した日</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mapping Form -->
-                <div v-if="modal.type === 'mapping'" class="space-y-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">対象ホテル</label>
-                        <Select v-model="form.hotel_id" :options="hotelStore.safeHotels.value" optionLabel="name" optionValue="id" showClear placeholder="共通（すべてのホテル）" class="w-full" />
-                    </div>
-                    
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">対象タイプ <span class="text-rose-500">*</span></label>
-                        <Select 
-                            v-model="form.target_type" 
-                            :options="[
-                                { label: '個別プラン', value: 'plan_hotel' },
-                                { label: 'プラン区分', value: 'plan_type_category' },
-                                { label: '個別アドオン', value: 'addon_hotel' },
-                                { label: '共通アドオン', value: 'addon_global' },
-                                { label: 'キャンセル料', value: 'cancellation' }
-                            ]" 
-                            optionLabel="label" 
-                            optionValue="value" 
-                            placeholder="タイプを選択" 
-                            class="w-full"
-                            @change="form.target_id = null"
-                        />
-                    </div>
-
-                    <div v-if="form.target_type && form.target_type !== 'cancellation'" class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">対象アイテム <span class="text-rose-500">*</span></label>
-                        <Select 
-                            v-model="form.target_id" 
-                            :options="getTargetOptions(form.target_type)" 
-                            optionLabel="name" 
-                            optionValue="id" 
-                            placeholder="アイテムを選択" 
-                            class="w-full"
-                            filter
-                        />
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">紐付ける勘定科目 <span class="text-rose-500">*</span></label>
-                        <Select 
-                            v-model="form.account_code_id" 
-                            :options="settings.codes" 
-                            optionLabel="name" 
-                            optionValue="id" 
-                            placeholder="科目を選択" 
-                            class="w-full"
-                            filter
-                        >
-                            <template #option="slotProps">
-                                <div class="flex justify-between items-center w-full">
-                                    <span>{{ slotProps.option.name }}</span>
-                                    <span class="text-[10px] tabular-nums text-slate-400">{{ slotProps.option.code }}</span>
-                                </div>
-                            </template>
-                        </Select>
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-                    <Button label="キャンセル" @click="modal.visible = false" severity="secondary" text class="px-6 py-2 rounded-xl font-bold" />
-                    <Button label="保存する" @click="handleSave" :loading="saving" :disabled="!isFormValid" class="px-8 py-2 rounded-xl font-bold bg-violet-600 border-violet-600 hover:bg-violet-700 hover:border-violet-700" />
-                </div>
-            </div>
-        </Dialog>
+        <SettingsDialog 
+            v-model:visible="modal.visible"
+            :type="modal.type"
+            :is-edit="modal.isEdit"
+            :initial-data="form"
+            :settings="settings"
+            :hotels="hotelStore.safeHotels.value"
+            :saving="saving"
+            @save="handleSave"
+        />
 
         <ConfirmDialog group="accounting-settings" />
     </div>
@@ -515,14 +363,9 @@ import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import InputNumber from 'primevue/inputnumber';
-import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
-import DatePicker from 'primevue/datepicker';
 import ConfirmDialog from 'primevue/confirmdialog';
-import Button from 'primevue/button';
+import SettingsDialog from './components/dialogs/SettingsDialog.vue';
 
 const store = useAccountingStore();
 const hotelStore = useHotelStore();
@@ -593,12 +436,6 @@ const form = reactive({
     is_current: true,
     valid_from: null,
     valid_to: null
-});
-
-const modalTitle = computed(() => {
-    const action = modal.isEdit ? '編集' : '新規作成';
-    const targets = { code: '勘定科目', group: '管理区分', tax: '税区分', dept: '部門', mapping: 'マッピング' };
-    return `${targets[modal.type]}${action}`;
 });
 
 const fetchSettings = async () => {
@@ -701,29 +538,10 @@ const editItem = (type, item) => {
     }
 };
 
-const isFormValid = computed(() => {
-    switch (modal.type) {
-        case 'code':
-            return form.code && form.name;
-        case 'group':
-            return form.name;
-        case 'tax':
-            return form.name && form.yayoi_name;
-        case 'dept':
-            return form.name;
-        case 'mapping':
-            return form.target_type && (form.target_type === 'cancellation' || form.target_id) && form.account_code_id;
-        default:
-            return false;
-    }
-});
-
-const handleSave = async () => {
-    if (!isFormValid.value) return;
-
+const handleSave = async (formData) => {
     try {
         saving.value = true;
-        let payload = { ...form };
+        let payload = { ...formData };
         
         if (modal.type === 'tax') {
             payload.tax_rate = payload.tax_rate_percent / 100;
@@ -850,15 +668,6 @@ const getTargetName = (item) => {
     }
     
     return `ID: ${item.target_id}`;
-};
-
-const getTargetOptions = (type) => {
-    if (type === 'plan_hotel') return settings.mappingMasterData.plans;
-    if (type === 'plan_type_category') return settings.mappingMasterData.categories;
-    if (type === 'plan_package_category') return settings.mappingMasterData.packageCategories;
-    if (type === 'addon_global') return settings.mappingMasterData.addonsGlobal;
-    if (type === 'addon_hotel') return settings.mappingMasterData.addonsHotel;
-    return [];
 };
 
 onMounted(async () => {
