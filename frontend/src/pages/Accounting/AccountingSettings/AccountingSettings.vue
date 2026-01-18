@@ -2,25 +2,21 @@
     <div class="bg-slate-50 dark:bg-slate-900 min-h-screen p-6 font-sans transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4">
             <!-- Hero Row -->
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all duration-300">
-                <div class="flex items-center gap-6">
-                    <div class="flex-shrink-0 inline-flex items-center justify-center w-16 h-16 bg-violet-600 rounded-2xl shadow-lg shadow-violet-200 dark:shadow-none">
-                        <i class="pi pi-cog text-3xl text-white"></i>
-                    </div>
-                    <div class="text-left">
-                        <h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
+                        <i class="pi pi-arrow-left text-sm"></i>
+                        <span>戻る</span>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
                             会計マスター設定
                         </h1>
-                        <p class="text-slate-500 dark:text-slate-400 font-medium">
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                             勘定科目、管理区分、および税区分の管理を行います。
                         </p>
                     </div>
                 </div>
-                
-                <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 px-6 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-black hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
-                    <i class="pi pi-arrow-left text-sm"></i>
-                    <span>ダッシュボードに戻る</span>
-                </button>
             </div>
 
             <!-- Tabs and Content Container -->
