@@ -198,7 +198,8 @@ The dashboard consists of the following sections:
 - **Requirements**:
   - All sub-pages include a standardized "Back to Dashboard" button in the header/hero section.
   - Standardized Hero sections across all main pages (P&L, Reconciliation, Ledger Export, Settings).
-  - Robust Dark Mode support for all PrimeVue components (DatePicker, Select, Listbox) using Pass-Through props and scoped CSS overrides.
+  - Robust Dark Mode support for all PrimeVue components (DatePicker, Select) using Pass-Through props and scoped CSS overrides.
+  - Replaced `Listbox` with custom HTML implementation in `LedgerExportFilterStep` for better dark mode compatibility and scroll control.
 - **Implementation**:
   - Navigation standardization in `feat(accounting): standardize navigation UI`
   - Hero area standardization in `style(accounting): standardized hero areas`
