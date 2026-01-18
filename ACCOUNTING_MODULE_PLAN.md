@@ -8,7 +8,7 @@ The Accounting Module is designed to manage financial operations, auditing, and 
 
 ## Current Status
 
-**Last Updated:** 2026-01-16
+**Last Updated:** 2026-01-18
 
 ### Implemented Features
 
@@ -32,6 +32,7 @@ The Accounting Module is designed to manage financial operations, auditing, and 
   - Route configuration (`/accounting`) with child routes
   - Navigation integration (Desktop & Mobile sidebars)
   - Route guards protecting the module (`requiresAccounting` meta flag)
+  - **Global API Utility**: Enhanced `apiService.js` to automatically handle `options.params` for GET requests using `URLSearchParams`.
 
 - **Access Control (RBAC)**:
   - New `accounting` permission added to database roles
@@ -43,8 +44,22 @@ The Accounting Module is designed to manage financial operations, auditing, and 
   - "Data Export" card linked to the Ledger Export wizard
   - "Yayoi Import" card with last import info
   - "P&L Statement" card linked to Profit & Loss page
+  - "Receivables" card linked to Accounts Receivable management
   - "OTA Import" card marked as *Coming Soon*
   - "At a Glance" section with metrics
+
+- **Receivables Management (`AccountingReceivables.vue`)**:
+  - **UI**: Dedicated view for managing outstanding balances per sub-account (client)
+    - **Filter**: Search by sub-account name, filter by minimum balance, and a **"Exclude Latest Month"** checkbox to differentiate between current billing and historical arrears.
+    - **History Sidebar**: Detailed monthly breakdown showing:
+      - **加算額 (Additions)**: New sales/receivables generated.
+      - **減少額 (Reductions)**: Payments collected or credit adjustments.
+      - **純増減 (Net Change)**: The resulting impact on the balance.
+      - **月末残高 (Ending Balance)**: The cumulative state at month-end.
+    - **CRM Integration**: "Client Search" dialog to find matching clients in the system and trigger follow-up actions (notes, calls, tasks) directly.
+  - **Backend**: 
+    - `getReceivableBalances`: Identifies the latest available month and calculates total balance vs. current month sales.
+    - `getReceivableSubAccountHistory`: Uses a `UNION ALL` strategy to correctly attribute debits (increases) and credits (decreases) to sub-accounts.
 
 - **Master Settings (`AccountingSettings.vue`)**:
   - **Tabs**:
@@ -209,33 +224,38 @@ The dashboard consists of the following sections:
 ### 8. Receivables Management (Client Accounts)
 
 - **Goal**: Track outstanding balances per client by analyzing the `売掛金` (Accounts Receivable) sub-account cumulative data.
-- **Problem**: The accounting system uses sub-accounts for client names, but there is no direct mapping to the system's client IDs. A single client might also have multiple IDs in the CRM.
-- **Solution**: 
-  - Create a view that lists clients with outstanding balances based on `売掛金` sub-accounts.
-  - Instead of complex auto-mapping, provide a "Client Search" feature within this view.
-  - Allow the accounting user to search for the corresponding client in the CRM and trigger follow-up actions (e.g., set status, add note) directly from the accounting interface.
-- **Status**: **Planned**
+- **Status**: **Completed**
+- **Implementation**:
+  - Frontend: `AccountingReceivables` directory
+  - Backend: `accounting/receivables/` controller, `accounting/receivables/` model
+- **Features**: 
+  - Dynamic filtering to exclude the latest month's sales (differentiating current from overdue).
+  - Detailed monthly history with separate tracking of additions (sales) and reductions (payments).
+  - Integrated client search and CRM action triggering.
 
 ## Technical Architecture
 
 ### Mapping Resolution Logic
+... (existing content) ...
 
-The system uses a hierarchical resolution strategy for account code mappings:
+### Receivables Calculation Logic
 
-```
-1. Check: Specific Item + Hotel (e.g., Plan A in Hotel 1)
-   └─> acc_accounting_mappings WHERE hotel_id = X AND target_type = 'plan_hotel' AND target_id = Y
+To ensure precision in client balances and history, the system uses a `UNION ALL` strategy rather than netting movements within a single grouping. This correctly captures scenarios where '売掛金' appears on both the debit and credit side of a transaction (e.g., transfers between clients or internal adjustments).
 
-2. Fallback: Category + Hotel (e.g., "Overnight" category in Hotel 1)
-   └─> acc_accounting_mappings WHERE hotel_id = X AND target_type = 'plan_type_category' AND target_id = Z
-
-3. Fallback: Global Category (e.g., "Overnight" category default)
-   └─> acc_accounting_mappings WHERE hotel_id IS NULL AND target_type = 'plan_type_category' AND target_id = Z
-
-4. Error: No mapping found
+```sql
+WITH movements AS (
+    SELECT debit_sub_account as sub_account, debit_amount as increase, 0 as decrease
+    FROM acc_yayoi_data WHERE debit_account_code = '売掛金'
+    UNION ALL
+    SELECT credit_sub_account as sub_account, 0 as increase, credit_amount as decrease
+    FROM acc_yayoi_data WHERE credit_account_code = '売掛金'
+)
+...
 ```
 
 ### Yayoi CSV Format
+... (existing content) ...
+
 
 The `acc_yayoi_data` table mirrors the 25-column Yayoi import format:
 - Columns A-Y: Identification flag, slip number, dates, debit/credit accounts, tax classes, amounts, etc.
@@ -253,31 +273,16 @@ The `acc_yayoi_data` table mirrors the 25-column Yayoi import format:
 
 ## Next Steps
 
-1. **Phase 1.5: Mapping Management** (Current Priority):
-   - Build UI for Plan/Addon → Account Code mappings
-   - Implement backend resolution logic
-   - Test with sample booking data
-
-2. **Phase 2: Yayoi Integration**:
-   - CSV import functionality for `acc_yayoi_data`
-   - Validation and error reporting
-   - Monthly summary reports using the view
-
-3. **Phase 3: OTA Reconciliation**:
+1. **Phase 3: OTA Reconciliation**:
    - Design schema for OTA payment records
    - File upload and parsing (CSV/Excel)
    - Matching logic (PMS ↔ OTA)
 
-4. **Phase 4: Analytics Dashboard**:
+2. **Phase 4: Analytics Dashboard**:
    - Real-time metrics using monthly summary view
    - Visual charts and trend analysis
    - Export capabilities for management reports
 
-5. **Phase 5: Receivables Management**:
-   - Build view for `売掛金` sub-account analysis
-   - Implement client search functionality connecting to CRM
-   - Add action triggers for client follow-up
-
-6. **Phase 6: Payment Reconciliation Expansion**:
+3. **Phase 6: Payment Reconciliation Expansion**:
    - Integrate `現金` (Cash) and `預金` (Bank) accounts into the Sales Comparison screen
    - Develop matching logic for PMS payments vs. accounting ledger entries
