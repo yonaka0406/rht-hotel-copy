@@ -15,17 +15,51 @@ const getReceivableBalances = async (requestId, options = {}, dbClient = null) =
         
         logger.debug(`[ReceivablesModel] getReceivableBalances called. RequestId: ${requestId}, Options: ${JSON.stringify(options)}`);
         
-        // We aggregate ALL data up to the current state to get the actual balance.
         const query = `
+            WITH latest_date AS (
+                SELECT DATE_TRUNC('month', MAX(transaction_date))::DATE as max_month 
+                FROM acc_yayoi_data 
+                WHERE debit_account_code = '売掛金' OR credit_account_code = '売掛金'
+            ),
+            balances AS (
+                SELECT 
+                    COALESCE(debit_sub_account, credit_sub_account) as sub_account,
+                    SUM(
+                        CASE 
+                            WHEN debit_account_code = '売掛金' THEN debit_amount 
+                            ELSE 0 
+                        END
+                    ) - 
+                    SUM(
+                        CASE 
+                            WHEN credit_account_code = '売掛金' THEN credit_amount 
+                            ELSE 0 
+                        END
+                    ) as balance,
+                    MAX(transaction_date) as last_activity_date
+                FROM acc_yayoi_data
+                WHERE debit_account_code = '売掛金' OR credit_account_code = '売掛金'
+                GROUP BY COALESCE(debit_sub_account, credit_sub_account)
+            ),
+            latest_sales AS (
+                SELECT 
+                    debit_sub_account as sub_account,
+                    SUM(debit_amount) as amount
+                FROM acc_yayoi_data, latest_date
+                WHERE debit_account_code = '売掛金' 
+                  AND DATE_TRUNC('month', transaction_date)::DATE = latest_date.max_month
+                GROUP BY debit_sub_account
+            )
             SELECT 
-                sub_account,
-                -SUM(total_amount) as balance,
-                MAX(month) as last_activity_month
-            FROM acc_monthly_account_summary
-            WHERE account_name = '売掛金'
-            GROUP BY sub_account
-            HAVING -SUM(total_amount) != 0
-            ORDER BY balance DESC;
+                b.sub_account,
+                b.balance,
+                b.last_activity_date as last_activity_month,
+                COALESCE(ls.amount, 0) as latest_month_sales,
+                (SELECT max_month FROM latest_date) as latest_data_month
+            FROM balances b
+            LEFT JOIN latest_sales ls ON b.sub_account = ls.sub_account
+            WHERE b.balance != 0
+            ORDER BY b.balance DESC;
         `;
         
         const result = await client.query(query);
@@ -39,7 +73,6 @@ const getReceivableBalances = async (requestId, options = {}, dbClient = null) =
         if (!dbClient) client.release();
     }
 };
-
 /**
  * Fetches the monthly history of a specific sub-account under '売掛金'.
  */

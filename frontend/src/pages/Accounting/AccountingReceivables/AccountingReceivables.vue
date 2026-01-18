@@ -37,6 +37,10 @@
               </div>
               
               <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="flex items-center gap-2 mr-2">
+                  <input type="checkbox" id="excludeLatest" v-model="excludeLatestSales" class="w-4 h-4 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-800" />
+                  <label for="excludeLatest" class="text-sm text-slate-600 dark:text-slate-400 font-bold cursor-pointer select-none">当月発生分を除外</label>
+                </div>
                 <div class="relative flex-1 md:w-64">
                   <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                   <input 
@@ -331,6 +335,7 @@ const tableSearch = ref('');
 const linkDialogVisible = ref(false);
 const selectedSubAccount = ref(null); // For Dialog
 const selectedRow = ref(null); // For DataTable selection
+const excludeLatestSales = ref(false);
 
 // History State
 const selectedSubAccountForHistory = ref(null);
@@ -360,15 +365,34 @@ const actionTypes = [
 
 // Computed
 const totalReceivables = computed(() => {
-    return balances.value.reduce((sum, item) => sum + parseFloat(item.balance || 0), 0);
+    return balances.value.reduce((sum, item) => {
+        let balance = Number(item.balance || 0);
+        if (excludeLatestSales.value) {
+            balance -= Number(item.latest_month_sales || 0);
+        }
+        return sum + balance;
+    }, 0);
 });
 
 const filteredBalances = computed(() => {
-    if (!tableSearch.value) return balances.value;
-    const query = tableSearch.value.toLowerCase();
-    return balances.value.filter(item => 
-        item.sub_account.toLowerCase().includes(query)
-    );
+    let result = balances.value;
+    
+    if (tableSearch.value) {
+        const query = tableSearch.value.toLowerCase();
+        result = result.filter(item => 
+            item.sub_account.toLowerCase().includes(query)
+        );
+    }
+
+    if (excludeLatestSales.value) {
+        // Map to new objects with adjusted balance and filter out those with no remaining balance
+        result = result.map(item => ({
+            ...item,
+            balance: Number(item.balance || 0) - Number(item.latest_month_sales || 0)
+        })).filter(item => item.balance > 0);
+    }
+    
+    return result;
 });
 
 const isActionValid = computed(() => {
