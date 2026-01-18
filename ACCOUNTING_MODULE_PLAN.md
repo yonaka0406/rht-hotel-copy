@@ -176,10 +176,11 @@ The dashboard consists of the following sections:
 
 ### 5. Sales Data Reconciliation
 
-- **Goal**: Automated comparison between system sales data and uploaded payment records
-- **UI Component**: "Sales Comparison" Action Card
-- **Status**: **Planned** (Card placeholder implemented)
-- **Dependencies**: Requires OTA Payment Reconciliation (#4) and Yayoi Import (#3)
+- **Goal**: Automated comparison between system sales data and uploaded payment records.
+- **UI Component**: "Sales Comparison" Action Card.
+- **Status**: **Planned** (Card placeholder implemented).
+- **Expansion**: Extend the existing reconciliation screen to include `現金` (Cash) and `預金` (Bank/Deposit) accounts from the accounting data to match against payments registered in the PMS.
+- **Dependencies**: Requires OTA Payment Reconciliation (#4) and Yayoi Import (#3).
 
 ### 6. Dashboard Metrics (Analytics)
 
@@ -276,3 +277,7 @@ The `acc_yayoi_data` table mirrors the 25-column Yayoi import format:
    - Build view for `売掛金` sub-account analysis
    - Implement client search functionality connecting to CRM
    - Add action triggers for client follow-up
+
+6. **Phase 6: Payment Reconciliation Expansion**:
+   - Integrate `現金` (Cash) and `預金` (Bank) accounts into the Sales Comparison screen
+   - Develop matching logic for PMS payments vs. accounting ledger entries
