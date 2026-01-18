@@ -53,27 +53,26 @@
                         {{ allHotelsSelected ? 'すべて解除' : 'すべて選択' }}
                     </button>
                 </div>
-                <Listbox 
-                    v-model="filters.hotelIds" 
-                    :options="hotels" 
-                    optionLabel="name" 
-                    optionValue="id" 
-                    multiple 
-                    class="w-full flex-1 accounting-listbox" 
-                    :pt="{
-                        root: { class: 'h-full flex flex-col border-none' },
-                        list: { class: 'custom-scrollbar h-full p-0' },
-                        content: { class: 'p-0' },
-                        item: ({ context }) => ({
-                            class: [
-                                'transition-colors duration-200 p-3',
-                                context.selected 
-                                    ? 'bg-violet-100 text-violet-700 dark:bg-violet-600 dark:text-white font-bold' 
-                                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
-                            ]
-                        })
-                    }"
-                />
+                <div class="flex flex-col gap-6 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                     <div class="w-full overflow-hidden">
+                        <div class="custom-scrollbar overflow-y-auto h-64 flex flex-col gap-2 pr-2">
+                            <div 
+                                v-for="hotel in hotels" 
+                                :key="hotel.id"
+                                @click="toggleHotel(hotel.id)"
+                                class="p-3 rounded-lg cursor-pointer transition-all border flex items-center justify-between select-none"
+                                :class="[
+                                    isSelected(hotel.id) 
+                                        ? 'bg-violet-600 border-violet-600 text-white font-bold shadow-md shadow-violet-200 dark:shadow-none' 
+                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-600'
+                                ]"
+                            >
+                                <span>{{ hotel.name }}</span>
+                                <i v-if="isSelected(hotel.id)" class="pi pi-check text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -93,7 +92,6 @@ import { reactive, onMounted, computed, watch, ref } from 'vue';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useToast } from 'primevue/usetoast';
 import DatePicker from 'primevue/datepicker';
-import Listbox from 'primevue/listbox';
 
 const emit = defineEmits(['next']);
 const { hotels, fetchHotels, isLoadingHotelList: loading } = useHotelStore();
@@ -140,6 +138,19 @@ const toggleAllHotels = () => {
     } else {
         filters.hotelIds = hotels.value.map(h => h.id);
     }
+};
+
+const toggleHotel = (hotelId) => {
+    const index = filters.hotelIds.indexOf(hotelId);
+    if (index === -1) {
+        filters.hotelIds.push(hotelId);
+    } else {
+        filters.hotelIds.splice(index, 1);
+    }
+};
+
+const isSelected = (hotelId) => {
+    return filters.hotelIds.includes(hotelId);
 };
 
 const isFormValid = computed(() => {
@@ -200,34 +211,5 @@ const handleNext = () => {
 .dark :deep(.accounting-datepicker .p-datepicker-dropdown) {
     background-color: #1e293b !important;
     color: #f8fafc !important;
-}
-
-:deep(.accounting-listbox) {
-    border-radius: 12px;
-    overflow: hidden;
-    background: #f8fafc; /* slate-50 */
-    border-color: #e2e8f0; /* slate-200 */
-}
-
-/* Aggressive Dark Mode Overrides for Listbox */
-.dark :deep(.accounting-listbox),
-.dark :deep(.accounting-listbox .p-listbox-list),
-.dark :deep(.accounting-listbox .p-listbox-list-container) {
-    background-color: #0f172a !important;
-    border-color: #334155 !important;
-    color: #f8fafc !important;
-}
-
-.dark :deep(.accounting-listbox .p-listbox-header) {
-    background-color: #1e293b !important;
-    border-color: #334155 !important;
-    color: #f8fafc !important;
-}
-
-:deep(.accounting-listbox .p-listbox-item) {
-    padding: 1rem 1.25rem;
-    font-size: 15px;
-    font-weight: 500;
-    transition: all 0.2s;
 }
 </style>
