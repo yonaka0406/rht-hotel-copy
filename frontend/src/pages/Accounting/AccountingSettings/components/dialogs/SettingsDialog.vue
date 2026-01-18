@@ -276,6 +276,8 @@ const handleSave = () => {
 const close = () => {
     emit('update:visible', false);
 };
+</script>
+
 <style scoped>
 /* Dark Mode Component Fixes */
 .dark :deep(.p-inputtext),
