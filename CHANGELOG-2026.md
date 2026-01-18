@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.2] - 2026-01-19
+
+- New Feature: Added Receivables Management interface with sub-account balance tracking, monthly history, filtering, and client follow-up actions via CRM integration.
+- New Feature: New accounting mappings management feature with support for multiple mapping types including cancellation fees.
+- New Feature: Import preview now validates accounts and departments against master data.
+- Fix: Improved dark mode styling consistency across accounting pages.
+- Fix: Fixed CRM actions to include unassigned follow-ups.
+- Documentation: Added Accounting Module documentation with feature overview and guides.
+
+---
+
 ## [1.4.1] - 2026-01-16
 
 - New Feature: Added Profit & Loss Statement feature with flexible grouping (by month, hotel, or department), date range filtering, and CSV export.
@@ -28,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.0] - 2026-01-15
 
 - New Feature: Added Accounting Module with Sales Data Export functionality.
+
 ---
 
 ## [1.3.12] - 2026-01-15
