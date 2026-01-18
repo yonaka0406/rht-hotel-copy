@@ -140,7 +140,7 @@ const searchClients = async (requestId, searchTerm, dbClient = null) => {
                 name_kanji ILIKE $1 OR 
                 email ILIKE $1 OR 
                 phone ILIKE $1 OR
-                customer_id ILIKE $1
+                customer_id::TEXT ILIKE $1
             )
             AND id NOT IN ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
             ORDER BY COALESCE(name_kanji, name_kana, name) ASC
