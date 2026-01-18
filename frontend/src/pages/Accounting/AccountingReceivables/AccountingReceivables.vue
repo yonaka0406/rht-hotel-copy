@@ -200,147 +200,28 @@
       </div>
     </div>
 
-    <!-- Client Linking & Action Dialog -->
-    <Dialog 
-      v-model:visible="linkDialogVisible" 
-      :header="selectedSubAccount?.sub_account + ' のフォローアップ'" 
-      modal 
-      class="max-w-2xl w-full mx-4"
-      :pt="{
-        root: { class: 'dark:bg-slate-800 dark:border-slate-700 rounded-3xl border-none shadow-2xl' },
-        header: { class: 'dark:bg-slate-800 dark:text-white p-6 border-b border-slate-100 dark:border-slate-700' },
-        content: { class: 'p-0 dark:bg-slate-800' }
-      }"
-    >
-      <div class="p-6">
-        <!-- Step 1: Search Client -->
-        <div v-if="!linkedClient">
-          <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 font-medium">
-            システム内のクライアントを検索して連携してください。
-          </p>
-          <div class="relative mb-6">
-            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <input 
-              v-model="clientSearchQuery" 
-              @input="debounceSearch"
-              type="text" 
-              placeholder="名前、電話番号、メールアドレスで検索..." 
-              class="w-full pl-11 pr-4 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-base focus:ring-2 focus:ring-violet-500 outline-none transition-all dark:text-white"
-            />
-          </div>
-
-          <div v-if="isSearching" class="py-10 text-center">
-            <i class="pi pi-spin pi-spinner text-2xl text-violet-600"></i>
-          </div>
-
-          <div v-else-if="searchResults.length > 0" class="flex flex-col gap-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-            <div 
-              v-for="client in searchResults" 
-              :key="client.id"
-              @click="selectClient(client)"
-              class="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-violet-500 dark:hover:border-violet-400 hover:shadow-md transition-all cursor-pointer group"
-            >
-              <div class="flex justify-between items-center">
-                <div>
-                  <h4 class="font-bold text-slate-900 dark:text-white group-hover:text-violet-600 transition-colors">
-                    {{ client.name_kanji || client.name }} 
-                    <span v-if="client.name_kana" class="text-xs font-medium text-slate-400 ml-2">({{ client.name_kana }})</span>
-                  </h4>
-                  <div class="flex items-center gap-4 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    <span v-if="client.phone" class="flex items-center gap-1"><i class="pi pi-phone"></i> {{ client.phone }}</span>
-                    <span v-if="client.email" class="flex items-center gap-1"><i class="pi pi-envelope"></i> {{ client.email }}</span>
-                  </div>
-                </div>
-                <i class="pi pi-chevron-right text-slate-300 group-hover:text-violet-400 transition-all"></i>
-              </div>
-            </div>
-          </div>
-
-          <div v-else-if="clientSearchQuery.length >= 2" class="py-10 text-center bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-            <i class="pi pi-user-minus text-3xl text-slate-300 mb-2"></i>
-            <p class="text-slate-500 font-medium">一致するクライアントが見つかりません</p>
-          </div>
-        </div>
-
-        <!-- Step 2: Create CRM Action -->
-        <div v-else class="animate-fade-in">
-          <div class="bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-900/50 p-4 rounded-2xl mb-8 flex justify-between items-center">
-            <div class="flex items-center gap-4">
-              <div class="bg-violet-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-lg shadow-violet-200 dark:shadow-none">
-                {{ (linkedClient.name_kanji || linkedClient.name).charAt(0) }}
-              </div>
-              <div>
-                <p class="text-xs font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest">連携中のクライアント</p>
-                <h4 class="font-bold text-slate-900 dark:text-white">{{ linkedClient.name_kanji || linkedClient.name }}</h4>
-              </div>
-            </div>
-            <button @click="linkedClient = null" class="text-xs font-bold text-slate-400 hover:text-red-500 transition-all cursor-pointer bg-transparent border-none">
-              変更する
-            </button>
-          </div>
-
-          <div class="flex flex-col gap-6">
-            <div class="flex flex-col gap-2">
-              <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">アクション内容</label>
-              <textarea 
-                v-model="crmAction.details"
-                rows="4"
-                placeholder="督促の電話、メール送信、状況確認など..."
-                class="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all dark:text-white resize-none"
-              ></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-2">
-                <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">タイプ</label>
-                <Select v-model="crmAction.action_type" :options="actionTypes" optionLabel="label" optionValue="value" fluid />
-              </div>
-              <div class="flex flex-col gap-2">
-                <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">期限</label>
-                <DatePicker v-model="crmAction.due_date" dateFormat="yy/mm/dd" fluid />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="flex items-center justify-between p-6 border-t border-slate-100 dark:border-slate-700">
-          <button @click="closeLinkDialog" class="px-6 py-3 bg-transparent text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer">
-            キャンセル
-          </button>
-          <button 
-            v-if="linkedClient"
-            @click="submitCRMAction" 
-            :disabled="!isActionValid || isSubmitting"
-            class="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-all shadow-lg shadow-violet-200 dark:shadow-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <i v-if="isSubmitting" class="pi pi-spin pi-spinner"></i>
-            <span>アクションを追加</span>
-          </button>
-        </div>
-      </template>
-    </Dialog>
+    <!-- Client Linking & Follow-up Dialog -->
+    <ReceivablesFollowUpDialog 
+      v-model:visible="linkDialogVisible"
+      :sub-account="selectedSubAccount"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAccountingReceivables } from '@/composables/useAccountingReceivables';
 import { useToast } from 'primevue/usetoast';
-import axios from 'axios';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import Dialog from 'primevue/dialog';
-import Select from 'primevue/select';
-import DatePicker from 'primevue/datepicker';
 import Checkbox from 'primevue/checkbox';
 import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
+import ReceivablesFollowUpDialog from './components/dialogs/ReceivablesFollowUpDialog.vue';
 
 const toast = useToast();
-const { balances, searchResults, loading, fetchBalances, searchClients, fetchHistory } = useAccountingReceivables();
+const { balances, loading, fetchBalances, fetchHistory } = useAccountingReceivables();
 
 const tableSearch = ref('');
 const linkDialogVisible = ref(false);
@@ -354,25 +235,6 @@ const selectedSubAccountHistory = ref(false);
 const historyData = ref([]);
 const historyLoading = ref(false);
 const selectedHistoryBalance = ref(0);
-
-const clientSearchQuery = ref('');
-const isSearching = ref(false);
-const linkedClient = ref(null);
-const isSubmitting = ref(false);
-
-const crmAction = reactive({
-    details: '',
-    action_type: 'call',
-    due_date: new Date()
-});
-
-const actionTypes = [
-    { label: '電話', value: 'call' },
-    { label: 'メール', value: 'email' },
-    { label: '訪問', value: 'visit' },
-    { label: '会議', value: 'meeting' },
-    { label: 'タスク', value: 'task' }
-];
 
 // Computed
 const totalReceivables = computed(() => {
@@ -404,10 +266,6 @@ const filteredBalances = computed(() => {
     }
     
     return result;
-});
-
-const isActionValid = computed(() => {
-    return crmAction.details.trim().length > 0;
 });
 
 const maxHistoryBalance = computed(() => {
@@ -456,80 +314,7 @@ const onRowSelect = async (event) => {
 
 const openLinkDialog = (item) => {
     selectedSubAccount.value = item;
-    clientSearchQuery.value = item.sub_account;
-    linkedClient.value = null;
-    crmAction.details = `売掛金フォローアップ: ${formatCurrency(item.balance)} の支払いについて`;
     linkDialogVisible.value = true;
-    
-    // Auto trigger initial search
-    debounceSearch();
-};
-
-const closeLinkDialog = () => {
-    linkDialogVisible.value = false;
-    selectedSubAccount.value = null;
-    linkedClient.value = null;
-    clientSearchQuery.value = '';
-};
-
-let searchTimeout = null;
-const debounceSearch = () => {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    
-    if (clientSearchQuery.value.trim().length < 2) {
-        searchResults.value = [];
-        return;
-    }
-
-    isSearching.value = true;
-    searchTimeout = setTimeout(async () => {
-        await searchClients(clientSearchQuery.value);
-        isSearching.value = false;
-    }, 500);
-};
-
-const selectClient = (client) => {
-    linkedClient.value = client;
-};
-
-const submitCRMAction = async () => {
-    if (!linkedClient.value || isSubmitting.value) return;
-    
-    isSubmitting.value = true;
-    try {
-        const payload = {
-            actionFields: {
-                client_id: linkedClient.value.id,
-                action_type: crmAction.action_type,
-                subject: '売掛金フォローアップ',
-                details: crmAction.details,
-                due_date: crmAction.due_date,
-                status: 'pending'
-            }
-        };
-        
-        const response = await axios.post('/crm/action', payload);
-        
-        if (response.status === 201 || response.status === 200) {
-            toast.add({
-                severity: 'success',
-                summary: '成功',
-                detail: 'CRMアクションを追加しました。',
-                life: 3000
-            });
-            closeLinkDialog();
-        }
-    } catch (error) {
-        console.error('Error submitting CRM action:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: 'アクションの追加に失敗しました。',
-            life: 3000
-        });
-    } finally {
-        isSubmitting.value = false;
-    }
 };
 
 onMounted(() => {
