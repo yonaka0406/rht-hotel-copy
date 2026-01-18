@@ -226,6 +226,9 @@ watch(selectedDate, () => {
                         iconDisplay="input"
                         fluid
                         class="flex-1"
+                        :pt="{
+                            input: { class: 'dark:bg-slate-900 dark:text-slate-50 dark:border-slate-700' }
+                        }"
                     />
                 </div>
             </div>
@@ -508,5 +511,18 @@ watch(selectedDate, () => {
 :deep(.p-button-xs) {
     padding: 0.4rem 0.6rem;
     font-size: 0.75rem;
+}
+
+/* DatePicker Dark Mode Fixes */
+.dark :deep(.p-datepicker .p-inputtext),
+.dark :deep(.p-datepicker .p-datepicker-input) {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+.dark :deep(.p-datepicker .p-datepicker-dropdown) {
+    background: #1e293b !important;
+    color: #f8fafc !important;
 }
 </style>

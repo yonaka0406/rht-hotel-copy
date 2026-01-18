@@ -191,17 +191,18 @@ The dashboard consists of the following sections:
   - Unmapped transactions count
   - Reconciliation status indicators
 
-### 7. UI/UX Consistency (Navigation)
+### 7. UI/UX Consistency & Dark Mode Support
 
-- **Goal**: Ensure consistent navigation across all accounting module pages
-- **Status**: **In Progress**
+- **Goal**: Ensure consistent navigation and visual fidelity across all accounting module pages, including full dark mode support.
+- **Status**: **Completed**
 - **Requirements**:
-  - All sub-pages must include a standardized "Back to Dashboard" button in the header/hero section.
-  - Button style: `bg-slate-50` with hover effects `hover:text-violet-600`, consistent padding and rounding.
-  - Pages to update:
-    - Ledger Export (`AccountingLedgerExport`)
-    - Yayoi Import (`AccountingYayoiImport`)
-    - Reconciliation (`AccountingReconciliation`)
+  - All sub-pages include a standardized "Back to Dashboard" button in the header/hero section.
+  - Standardized Hero sections across all main pages (P&L, Reconciliation, Ledger Export, Settings).
+  - Robust Dark Mode support for all PrimeVue components (DatePicker, Select, Listbox) using Pass-Through props and scoped CSS overrides.
+- **Implementation**:
+  - Navigation standardization in `feat(accounting): standardize navigation UI`
+  - Hero area standardization in `style(accounting): standardized hero areas`
+  - Dark mode fixes across `AccountingLedgerExport`, `AccountingProfitLoss`, `AccountingReconciliation`, and `SettingsDialog`.
 
 ## Technical Architecture
 

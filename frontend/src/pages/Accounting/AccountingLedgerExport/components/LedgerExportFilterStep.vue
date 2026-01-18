@@ -22,7 +22,17 @@
                 <div class="flex flex-col gap-6 bg-slate-50 dark:bg-slate-900/50 p-8 rounded-xl border border-slate-200 dark:border-slate-700 h-full">
                     <div class="flex flex-col gap-3">
                         <label class="text-base text-slate-500 font-bold">期間を選択</label>
-                        <DatePicker v-model="filters.selectedMonth" view="month" dateFormat="yy/mm" showIcon fluid class="accounting-datepicker" />
+                        <DatePicker 
+                            v-model="filters.selectedMonth" 
+                            view="month" 
+                            dateFormat="yy/mm" 
+                            showIcon 
+                            fluid 
+                            class="accounting-datepicker" 
+                            :pt="{
+                                input: { class: 'dark:bg-slate-900 dark:text-slate-50 dark:border-slate-700' }
+                            }"
+                        />
                     </div>
                     <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                         <p class="text-sm text-slate-400 font-medium leading-relaxed">
@@ -162,14 +172,25 @@ const handleNext = () => {
 
 :deep(.accounting-datepicker .p-inputtext) {
     background: white;
+    color: #1e293b;
     border-radius: 8px;
     font-size: 16px;
     font-weight: 600;
     padding: 0.75rem 1rem;
 }
-.dark :deep(.accounting-datepicker .p-inputtext) {
-    background: #0f172a;
-    border-color: #334155;
+
+/* Aggressive Dark Mode Overrides */
+.dark :deep(.accounting-datepicker .p-inputtext),
+.dark :deep(.accounting-datepicker input),
+.dark :deep(.p-datepicker.accounting-datepicker .p-inputtext) {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+.dark :deep(.accounting-datepicker .p-datepicker-dropdown) {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
 }
 
 :deep(.accounting-listbox) {
@@ -191,13 +212,18 @@ const handleNext = () => {
     transition: all 0.2s;
 }
 
+.dark :deep(.accounting-listbox .p-listbox-item) {
+    color: #cbd5e1; /* slate-300 for unselected items */
+}
+
 :deep(.accounting-listbox .p-listbox-item.p-highlight) {
     background: #ede9fe; /* violet-50/100ish */
     color: #7c3aed; /* violet-600 */
 }
 
 .dark :deep(.accounting-listbox .p-listbox-item.p-highlight) {
-    background: rgba(124, 58, 237, 0.2); /* violet-600/20 */
-    color: #a78bfa; /* violet-400 */
+    background: #7c3aed !important; /* Standard violet-600 */
+    color: #ffffff !important;
+    font-weight: 700;
 }
 </style>

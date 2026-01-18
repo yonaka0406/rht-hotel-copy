@@ -81,19 +81,18 @@
                     </div>
                     <p class="text-xs text-slate-500">チェックを外すと履歴データとして保存されます (インポート時の解決に使用)</p>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">有効開始日</label>
-                        <DatePicker v-model="form.valid_from" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" fluid />
-                        <p class="text-xs text-slate-500">任意: この部門名が有効になった日</p>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-xs font-black text-slate-500 uppercase">有効終了日</label>
-                        <DatePicker v-model="form.valid_to" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" fluid :disabled="form.is_current" />
-                        <p class="text-xs text-slate-500">任意: この部門名が終了した日</p>
-                    </div>
-                </div>
-            </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="flex flex-col gap-2">
+                                            <label class="text-xs font-black text-slate-500 uppercase">有効開始日</label>
+                                            <DatePicker v-model="form.valid_from" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" fluid :pt="{ input: { class: 'dark:bg-slate-900 dark:text-slate-50 dark:border-slate-700' } }" />
+                                            <p class="text-xs text-slate-500">任意: この部門名が有効になった日</p>
+                                        </div>
+                                        <div class="flex flex-col gap-2">
+                                            <label class="text-xs font-black text-slate-500 uppercase">有効終了日</label>
+                                            <DatePicker v-model="form.valid_to" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" fluid :disabled="form.is_current" :pt="{ input: { class: 'dark:bg-slate-900 dark:text-slate-50 dark:border-slate-700' } }" />
+                                            <p class="text-xs text-slate-500">任意: この部門名が終了した日</p>
+                                        </div>
+                                    </div>            </div>
 
             <!-- Mapping Form -->
             <div v-if="type === 'mapping'" class="space-y-4">
@@ -277,4 +276,24 @@ const handleSave = () => {
 const close = () => {
     emit('update:visible', false);
 };
-</script>
+<style scoped>
+/* Dark Mode Component Fixes */
+.dark :deep(.p-inputtext),
+.dark :deep(.p-inputnumber-input),
+.dark :deep(.p-select),
+.dark :deep(.p-datepicker-input) {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+.dark :deep(.p-select-label.p-placeholder) {
+    color: #64748b !important; /* slate-500 */
+}
+
+.dark :deep(.p-datepicker-dropdown),
+.dark :deep(.p-select-dropdown) {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+}
+</style>

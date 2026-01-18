@@ -1656,4 +1656,23 @@ export default {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Dark Mode Component Fixes */
+.dark :deep(.p-select) {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+.dark :deep(.p-select-label) {
+    color: #f8fafc !important;
+}
+
+.dark :deep(.p-select-label.p-placeholder) {
+    color: #64748b !important; /* slate-500 */
+}
+
+.dark :deep(.p-select-dropdown) {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+}
 </style>
