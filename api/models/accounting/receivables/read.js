@@ -41,7 +41,8 @@ const getReceivableBalances = async (requestId, options = {}, dbClient = null) =
                     sub_account,
                     SUM(amount) as amount
                 FROM all_movements, latest_date
-                WHERE DATE_TRUNC('month', transaction_date)::DATE = latest_date.max_month
+                WHERE amount > 0 
+                  AND DATE_TRUNC('month', transaction_date)::DATE = latest_date.max_month
                 GROUP BY sub_account
             )
             SELECT 
