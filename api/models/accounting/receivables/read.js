@@ -38,12 +38,11 @@ const getReceivableBalances = async (requestId, options = {}, dbClient = null) =
             ),
             latest_sales AS (
                 SELECT 
-                    debit_sub_account as sub_account,
-                    SUM(debit_amount) as amount
-                FROM acc_yayoi_data, latest_date
-                WHERE debit_account_code = '売掛金' 
-                  AND DATE_TRUNC('month', transaction_date)::DATE = latest_date.max_month
-                GROUP BY debit_sub_account
+                    sub_account,
+                    SUM(amount) as amount
+                FROM all_movements, latest_date
+                WHERE DATE_TRUNC('month', transaction_date)::DATE = latest_date.max_month
+                GROUP BY sub_account
             )
             SELECT 
                 b.sub_account,
