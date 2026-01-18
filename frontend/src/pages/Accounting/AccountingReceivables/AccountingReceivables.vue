@@ -38,19 +38,20 @@
               
               <div class="flex items-center gap-4 w-full md:w-auto">
                 <div class="flex items-center gap-2 mr-2">
-                  <input type="checkbox" id="excludeLatest" v-model="excludeLatestSales" class="w-4 h-4 text-violet-600 rounded focus:ring-violet-500 border-gray-300 dark:border-slate-600 dark:bg-slate-800" />
+                  <Checkbox id="excludeLatest" v-model="excludeLatestSales" :binary="true" />
                   <label for="excludeLatest" class="text-sm text-slate-600 dark:text-slate-400 font-bold cursor-pointer select-none">当月発生分を除外</label>
                 </div>
-                <div class="relative flex-1 md:w-64">
-                  <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                  <input 
-                    v-model="tableSearch" 
-                    type="text" 
-                    placeholder="サブアカウント名で検索..." 
-                    class="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all dark:text-white"
-                  />
+                <div class="flex-1 md:w-64">
+                  <IconField>
+                    <InputIcon class="pi pi-search" />
+                    <InputText 
+                      v-model="tableSearch" 
+                      placeholder="サブアカウント名で検索..." 
+                      fluid
+                    />
+                  </IconField>
                 </div>
-                <button @click="loadBalances" :disabled="loading" class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 hover:text-violet-600 transition-all cursor-pointer shadow-sm disabled:opacity-50">
+                <button @click="loadBalances" :disabled="loading" class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 hover:text-violet-600 transition-all cursor-pointer shadow-sm disabled:opacity-50 h-[42px]">
                   <i class="pi pi-refresh" :class="{ 'pi-spin': loading }"></i>
                 </button>
               </div>
@@ -327,6 +328,10 @@ import Column from 'primevue/column';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
+import Checkbox from 'primevue/checkbox';
+import InputText from 'primevue/inputtext';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
 
 const toast = useToast();
 const { balances, searchResults, loading, fetchBalances, searchClients, fetchHistory } = useAccountingReceivables();

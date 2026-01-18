@@ -16,30 +16,25 @@ const getReceivableBalances = async (requestId, options = {}, dbClient = null) =
         logger.debug(`[ReceivablesModel] getReceivableBalances called. RequestId: ${requestId}, Options: ${JSON.stringify(options)}`);
         
         const query = `
-            WITH latest_date AS (
+            WITH all_movements AS (
+                SELECT debit_sub_account as sub_account, debit_amount as amount, transaction_date
+                FROM acc_yayoi_data WHERE debit_account_code = '売掛金'
+                UNION ALL
+                SELECT credit_sub_account as sub_account, -credit_amount as amount, transaction_date
+                FROM acc_yayoi_data WHERE credit_account_code = '売掛金'
+            ),
+            latest_date AS (
                 SELECT DATE_TRUNC('month', MAX(transaction_date))::DATE as max_month 
-                FROM acc_yayoi_data 
-                WHERE debit_account_code = '売掛金' OR credit_account_code = '売掛金'
+                FROM all_movements
             ),
             balances AS (
                 SELECT 
-                    COALESCE(debit_sub_account, credit_sub_account) as sub_account,
-                    SUM(
-                        CASE 
-                            WHEN debit_account_code = '売掛金' THEN debit_amount 
-                            ELSE 0 
-                        END
-                    ) - 
-                    SUM(
-                        CASE 
-                            WHEN credit_account_code = '売掛金' THEN credit_amount 
-                            ELSE 0 
-                        END
-                    ) as balance,
+                    sub_account,
+                    SUM(amount) as balance,
                     MAX(transaction_date) as last_activity_date
-                FROM acc_yayoi_data
-                WHERE debit_account_code = '売掛金' OR credit_account_code = '売掛金'
-                GROUP BY COALESCE(debit_sub_account, credit_sub_account)
+                FROM all_movements
+                WHERE sub_account IS NOT NULL
+                GROUP BY sub_account
             ),
             latest_sales AS (
                 SELECT 
@@ -81,14 +76,21 @@ const getReceivableSubAccountHistory = async (requestId, subAccount, dbClient = 
     const client = dbClient || await pool.connect();
     try {
         const query = `
-            WITH monthly_sums AS (
+            WITH movements AS (
+                SELECT transaction_date, debit_amount as increase, 0 as decrease
+                FROM acc_yayoi_data 
+                WHERE debit_account_code = '売掛金' AND debit_sub_account = $1
+                UNION ALL
+                SELECT transaction_date, 0 as increase, credit_amount as decrease
+                FROM acc_yayoi_data 
+                WHERE credit_account_code = '売掛金' AND credit_sub_account = $1
+            ),
+            monthly_sums AS (
                 SELECT 
                     DATE_TRUNC('month', transaction_date)::DATE as month,
-                    SUM(CASE WHEN debit_account_code = '売掛金' AND debit_sub_account = $1 THEN debit_amount ELSE 0 END) as total_increase,
-                    SUM(CASE WHEN credit_account_code = '売掛金' AND credit_sub_account = $1 THEN credit_amount ELSE 0 END) as total_decrease
-                FROM acc_yayoi_data
-                WHERE (debit_account_code = '売掛金' AND debit_sub_account = $1)
-                   OR (credit_account_code = '売掛金' AND credit_sub_account = $1)
+                    SUM(increase) as total_increase,
+                    SUM(decrease) as total_decrease
+                FROM movements
                 GROUP BY month
             ),
             cumulative AS (
