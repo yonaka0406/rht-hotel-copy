@@ -57,6 +57,7 @@ The Accounting Module is designed to manage financial operations, auditing, and 
       - **純増減 (Net Change)**: The resulting impact on the balance.
       - **月末残高 (Ending Balance)**: The cumulative state at month-end.
     - **CRM Integration**: "Client Search" dialog to find matching clients in the system and trigger follow-up actions (notes, calls, tasks) directly.
+    - **Responsive Design**: Optimized search filter layout to switch to stacked view on tablet screens (<1024px) to prevent input overflow.
   - **Backend**: 
     - `getReceivableBalances`: Identifies the latest available month and calculates total balance vs. current month sales.
     - `getReceivableSubAccountHistory`: Uses a `UNION ALL` strategy to correctly attribute debits (increases) and credits (decreases) to sub-accounts.

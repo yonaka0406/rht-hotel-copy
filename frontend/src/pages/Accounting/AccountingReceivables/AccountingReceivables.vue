@@ -25,35 +25,41 @@
         <div class="lg:col-span-8">
           <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
             <!-- Summary/Filters -->
-            <div class="p-8 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div class="flex items-center gap-6">
-                <div class="bg-violet-100 dark:bg-violet-900/40 p-4 rounded-2xl">
-                  <i class="pi pi-wallet text-2xl text-violet-600 dark:text-violet-400"></i>
+            <div class="p-8 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col gap-4">
+              <div class="flex flex-col lg:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-6">
+                  <div class="bg-violet-100 dark:bg-violet-900/40 p-4 rounded-2xl">
+                    <i class="pi pi-wallet text-2xl text-violet-600 dark:text-violet-400"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">売掛金総額</p>
+                    <p class="text-3xl font-black text-slate-900 dark:text-white">{{ formatCurrency(totalReceivables) }}</p>
+                  </div>
                 </div>
-                <div>
-                  <p class="text-xs font-black text-slate-400 uppercase tracking-widest">売掛金総額</p>
-                  <p class="text-3xl font-black text-slate-900 dark:text-white">{{ formatCurrency(totalReceivables) }}</p>
+                
+                <div class="flex items-center gap-4 w-full lg:w-auto">
+                  <div class="flex-1 lg:w-80">
+                    <IconField fluid>
+                      <InputIcon class="pi pi-search" />
+                      <InputText 
+                        v-model="tableSearch" 
+                        placeholder="サブアカウント名で検索..." 
+                        fluid
+                      />
+                    </IconField>
+                  </div>
+                  <button @click="loadBalances" :disabled="loading" class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 hover:text-violet-600 transition-all cursor-pointer shadow-sm disabled:opacity-50 h-[42px]">
+                    <i class="pi pi-refresh" :class="{ 'pi-spin': loading }"></i>
+                  </button>
                 </div>
               </div>
-              
-              <div class="flex items-center gap-4 w-full md:w-auto">
-                <div class="flex items-center gap-2 mr-2">
+
+              <!-- Filter Row -->
+              <div class="flex justify-end">
+                <div class="flex items-center gap-3 bg-white dark:bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <Checkbox id="excludeLatest" v-model="excludeLatestSales" :binary="true" />
-                  <label for="excludeLatest" class="text-sm text-slate-600 dark:text-slate-400 font-bold cursor-pointer select-none">当月発生分を除外</label>
+                  <label for="excludeLatest" class="text-xs text-slate-600 dark:text-slate-400 font-bold cursor-pointer select-none">当月発生分を除外（繰越残高のみ表示）</label>
                 </div>
-                <div class="flex-1 md:w-64">
-                  <IconField>
-                    <InputIcon class="pi pi-search" />
-                    <InputText 
-                      v-model="tableSearch" 
-                      placeholder="サブアカウント名で検索..." 
-                      fluid
-                    />
-                  </IconField>
-                </div>
-                <button @click="loadBalances" :disabled="loading" class="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 hover:text-violet-600 transition-all cursor-pointer shadow-sm disabled:opacity-50 h-[42px]">
-                  <i class="pi pi-refresh" :class="{ 'pi-spin': loading }"></i>
-                </button>
               </div>
             </div>
 
