@@ -107,7 +107,7 @@
                   <template #body="slotProps">
                      <button 
                         @click.stop="openLinkDialog(slotProps.data)"
-                        class="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-all"
+                        class="p-2 bg-transparent text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-lg transition-all"
                         v-tooltip.top="'CRM連携・フォローアップ'"
                       >
                         <i class="pi pi-user-plus"></i>
@@ -274,7 +274,7 @@
                 <h4 class="font-bold text-slate-900 dark:text-white">{{ linkedClient.name_kanji || linkedClient.name }}</h4>
               </div>
             </div>
-            <button @click="linkedClient = null" class="text-xs font-bold text-slate-400 hover:text-red-500 transition-all cursor-pointer">
+            <button @click="linkedClient = null" class="text-xs font-bold text-slate-400 hover:text-red-500 transition-all cursor-pointer bg-transparent border-none">
               変更する
             </button>
           </div>
@@ -306,7 +306,7 @@
 
       <template #footer>
         <div class="flex items-center justify-between p-6 border-t border-slate-100 dark:border-slate-700">
-          <button @click="closeLinkDialog" class="px-6 py-3 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer">
+          <button @click="closeLinkDialog" class="px-6 py-3 bg-transparent text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition-all cursor-pointer">
             キャンセル
           </button>
           <button 

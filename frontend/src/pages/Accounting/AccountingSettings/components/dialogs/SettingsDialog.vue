@@ -155,7 +155,7 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-                <Button label="キャンセル" @click="close" severity="secondary" text class="px-6 py-2 rounded-xl font-bold" />
+                <Button label="キャンセル" @click="close" severity="secondary" text class="px-6 py-2 rounded-xl font-bold !bg-transparent" />
                 <Button label="保存する" @click="handleSave" :loading="saving" :disabled="!isFormValid" class="px-8 py-2 rounded-xl font-bold bg-violet-600 border-violet-600 hover:bg-violet-700 hover:border-violet-700" />
             </div>
         </div>
