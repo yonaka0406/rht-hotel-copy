@@ -202,9 +202,12 @@ const handleNext = () => {
 }
 
 /* Aggressive Dark Mode Overrides for Listbox */
-.dark :deep(.accounting-listbox) {
+.dark :deep(.accounting-listbox),
+.dark :deep(.accounting-listbox .p-listbox-list),
+.dark :deep(.accounting-listbox .p-listbox-list-container) {
     background-color: #0f172a !important;
     border-color: #334155 !important;
+    color: #f8fafc !important;
 }
 
 .dark :deep(.accounting-listbox .p-listbox-header) {
