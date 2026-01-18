@@ -16,7 +16,7 @@
           </Badge>
         </Tab>
         <Tab value="2" as="div" class="flex items-center gap-2">
-          <span class="font-bold whitespace-nowrap">予約歴・営業歴</span>
+          <span class="font-bold whitespace-nowrap">予約・対応履歴</span>
         </Tab>
         <Tab v-if="selectedClient?.client?.legal_or_natural_person === 'legal'" value="3" as="div"
           class="flex items-center gap-2">

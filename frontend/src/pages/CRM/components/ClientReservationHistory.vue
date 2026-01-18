@@ -138,7 +138,7 @@
     const crmActions = ref(null);
 
     // Toggle State
-    const toggleOptions = ref(['予約のみ', '営業含む']);
+    const toggleOptions = ref(['予約のみ', '対応含む']);
     const selectedToggle = ref('予約のみ');
 
     // --- Action Form Dialog State ---
