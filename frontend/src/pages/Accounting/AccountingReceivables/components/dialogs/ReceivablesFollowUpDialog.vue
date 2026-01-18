@@ -98,8 +98,8 @@
                         v-for="tab in ['history', 'new']" 
                         :key="tab"
                         @click="activeTab = tab"
-                        class="px-6 py-4 text-sm font-bold transition-all relative"
-                        :class="activeTab === tab ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600 bg-transparent border-none'"
+                        class="px-6 py-4 text-sm font-bold transition-all relative bg-transparent border-none cursor-pointer"
+                        :class="activeTab === tab ? 'text-violet-600' : 'text-slate-400 hover:text-slate-600'"
                     >
                         {{ tab === 'history' ? '過去の履歴' : '新規アクション' }}
                         <div v-if="activeTab === tab" class="absolute bottom-0 left-0 w-full h-0.5 bg-violet-600"></div>
