@@ -61,9 +61,17 @@
                     multiple 
                     class="w-full flex-1 accounting-listbox" 
                     :pt="{
-                        list: { class: 'custom-scrollbar h-full' },
-                        root: { class: 'h-full flex flex-col' },
-                        item: { class: 'dark:text-slate-300' }
+                        root: { class: 'h-full flex flex-col border-none' },
+                        list: { class: 'custom-scrollbar h-full p-0' },
+                        content: { class: 'p-0' },
+                        item: ({ context }) => ({
+                            class: [
+                                'transition-colors duration-200 p-3',
+                                context.selected 
+                                    ? 'bg-violet-100 text-violet-700 dark:bg-violet-600 dark:text-white font-bold' 
+                                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                            ]
+                        })
                     }"
                 />
             </div>
@@ -221,22 +229,5 @@ const handleNext = () => {
     font-size: 15px;
     font-weight: 500;
     transition: all 0.2s;
-}
-
-.dark :deep(.accounting-listbox .p-listbox-item),
-.dark :deep(.accounting-listbox .p-listbox-item-content) {
-    background-color: #0f172a !important;
-    color: #cbd5e1 !important; /* slate-300 for unselected items */
-}
-
-:deep(.accounting-listbox .p-listbox-item.p-highlight) {
-    background: #ede9fe; /* violet-50/100ish */
-    color: #7c3aed; /* violet-600 */
-}
-
-.dark :deep(.accounting-listbox .p-listbox-item.p-highlight) {
-    background: #7c3aed !important; /* Standard violet-600 */
-    color: #ffffff !important;
-    font-weight: 700;
 }
 </style>
