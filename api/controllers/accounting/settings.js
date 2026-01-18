@@ -19,6 +19,50 @@ const getSettings = async (req, res, next) => {
         ]);
 
         const targetHotelId = (hotel_id && hotel_id !== 'undefined' && hotel_id !== 'null') ? parseInt(hotel_id) : null;
+        
+        // Fetch additional master data for mappings if hotel_id is provided
+        let mappingMasterData = {
+            plans: [],
+            categories: [],
+            addonsGlobal: [],
+            addonsHotel: []
+        };
+
+        if (targetHotelId) {
+            const planModel = require('../../models/plan');
+            const addonModel = require('../../models/addons');
+
+            const [plans, categories, packageCategories, addonsGlobal, addonsHotel] = await Promise.all([
+                planModel.selectHotelPlans(requestId, targetHotelId),
+                planModel.selectAllPlanTypeCategories(requestId),
+                planModel.selectAllPlanPackageCategories(requestId),
+                addonModel.getAllGlobalAddons(requestId),
+                addonModel.getAllHotelAddons(requestId, targetHotelId)
+            ]);
+
+            mappingMasterData = {
+                plans,
+                categories,
+                packageCategories,
+                addonsGlobal,
+                addonsHotel
+            };
+        } else {
+            // Even if no hotel_id, we might want global categories and addons for global mappings
+            const planModel = require('../../models/plan');
+            const addonModel = require('../../models/addons');
+            
+            const [categories, packageCategories, addonsGlobal] = await Promise.all([
+                planModel.selectAllPlanTypeCategories(requestId),
+                planModel.selectAllPlanPackageCategories(requestId),
+                addonModel.getAllGlobalAddons(requestId)
+            ]);
+            
+            mappingMasterData.categories = categories;
+            mappingMasterData.packageCategories = packageCategories;
+            mappingMasterData.addonsGlobal = addonsGlobal;
+        }
+
         const mappings = await accountingModel.getMappings(requestId, targetHotelId);
 
         res.json({
@@ -26,7 +70,8 @@ const getSettings = async (req, res, next) => {
             groups,
             taxClasses,
             departments,
-            mappings
+            mappings,
+            mappingMasterData
         });
     } catch (err) {
         next(err);

@@ -4,9 +4,11 @@
 
 The Accounting Module is designed to manage financial operations, auditing, and reconciliation within the RHT Hotel system. It features a distinct "Lilac/Purple" theme to differentiate it from other operational modules.
 
+**Note:** As implementation progresses, the documentation in `docs/features/accounting/` should be updated accordingly to reflect new features, technical changes, and validation procedures.
+
 ## Current Status
 
-**Last Updated:** 2026-01-16
+**Last Updated:** 2026-01-18
 
 ### Implemented Features
 
@@ -30,6 +32,7 @@ The Accounting Module is designed to manage financial operations, auditing, and 
   - Route configuration (`/accounting`) with child routes
   - Navigation integration (Desktop & Mobile sidebars)
   - Route guards protecting the module (`requiresAccounting` meta flag)
+  - **Global API Utility**: Enhanced `apiService.js` to automatically handle `options.params` for GET requests using `URLSearchParams`.
 
 - **Access Control (RBAC)**:
   - New `accounting` permission added to database roles
@@ -41,8 +44,23 @@ The Accounting Module is designed to manage financial operations, auditing, and 
   - "Data Export" card linked to the Ledger Export wizard
   - "Yayoi Import" card with last import info
   - "P&L Statement" card linked to Profit & Loss page
+  - "Receivables" card linked to Accounts Receivable management
   - "OTA Import" card marked as *Coming Soon*
   - "At a Glance" section with metrics
+
+- **Receivables Management (`AccountingReceivables.vue`)**:
+  - **UI**: Dedicated view for managing outstanding balances per sub-account (client)
+    - **Filter**: Search by sub-account name, filter by minimum balance, and a **"Exclude Latest Month"** checkbox to differentiate between current billing and historical arrears.
+    - **History Sidebar**: Detailed monthly breakdown showing:
+      - **加算額 (Additions)**: New sales/receivables generated.
+      - **減少額 (Reductions)**: Payments collected or credit adjustments.
+      - **純増減 (Net Change)**: The resulting impact on the balance.
+      - **月末残高 (Ending Balance)**: The cumulative state at month-end.
+    - **CRM Integration**: "Client Search" dialog to find matching clients in the system and trigger follow-up actions (notes, calls, tasks) directly.
+    - **Responsive Design**: Optimized search filter layout to switch to stacked view on tablet screens (<1024px) to prevent input overflow.
+  - **Backend**: 
+    - `getReceivableBalances`: Identifies the latest available month and calculates total balance vs. current month sales.
+    - `getReceivableSubAccountHistory`: Uses a `UNION ALL` strategy to correctly attribute debits (increases) and credits (decreases) to sub-accounts.
 
 - **Master Settings (`AccountingSettings.vue`)**:
   - **Tabs**:
@@ -136,27 +154,31 @@ The dashboard consists of the following sections:
 ### 2. Plan/Addon Accounting Mappings
 
 - **Goal**: Map hotel plans and addons to specific account codes for automated journal entry generation
-- **Status**: **Schema Ready** (Implementation pending)
-- **Database**: `acc_accounting_mappings` table with multi-level resolution:
-  1. Specific Item mapping (plan_hotel, addon_hotel)
-  2. Category mapping (plan_type_category, plan_package_category)
-  3. Global Category mapping (addon_global)
-- **Next Steps**:
-  - Build UI for mapping management in Settings
-  - Implement resolution logic in backend queries
-  - Integrate with booking/sales data for automatic journal generation
+- **Status**: **Completed**
+- **Implementation**:
+  - Frontend: `AccountingSettings.vue` (Mapping Tab)
+  - Backend: `accounting/settings.js` controller, `accounting/read.js` model (resolution logic)
+  - Database: Migration 024 updating mapping target constraints
+- **Features**:
+  - Hierarchical resolution (Plan -> Type Category -> Package Category -> Account Code)
+  - Hotel-specific and Global fallback mappings
+  - Cancellation fee mapping support
+
 
 ### 3. Yayoi Data Import & Processing
 
 - **Goal**: Import Yayoi accounting data for reconciliation and analysis
-- **Status**: **Schema Ready** (Implementation pending)
-- **Database**: `acc_yayoi_data` table (25 columns matching Yayoi CSV format)
-- **View**: `acc_monthly_account_summary` for consolidated reporting
-- **Next Steps**:
-  - Build CSV import parser (25-column Yayoi format)
-  - Implement data validation and error handling
-  - Create UI for import workflow
-  - Build reconciliation reports using the monthly summary view
+- **Status**: **Completed**
+- **Implementation**:
+  - Frontend: `AccountingYayoiImport.vue` (3-step wizard)
+  - Backend: `accounting/import.js` controller (Shift-JIS parser, bulk insert)
+  - Database: `acc_yayoi_data` table, `acc_monthly_account_summary` view
+- **Features**:
+  - Shift-JIS CSV/TXT support
+  - Validation: Warning for unknown account codes and unmapped departments
+  - Transactional logic: Overwrites data in the imported date range to prevent duplicates
+  - Automatic tax adjustments in the summary view
+
 
 ### 4. OTA Payment Reconciliation
 
@@ -170,10 +192,11 @@ The dashboard consists of the following sections:
 
 ### 5. Sales Data Reconciliation
 
-- **Goal**: Automated comparison between system sales data and uploaded payment records
-- **UI Component**: "Sales Comparison" Action Card
-- **Status**: **Planned** (Card placeholder implemented)
-- **Dependencies**: Requires OTA Payment Reconciliation (#4) and Yayoi Import (#3)
+- **Goal**: Automated comparison between system sales data and uploaded payment records.
+- **UI Component**: "Sales Comparison" Action Card.
+- **Status**: **Planned** (Card placeholder implemented).
+- **Expansion**: Extend the existing reconciliation screen to include `現金` (Cash) and `預金` (Bank/Deposit) accounts from the accounting data to match against payments registered in the PMS.
+- **Dependencies**: Requires OTA Payment Reconciliation (#4) and Yayoi Import (#3).
 
 ### 6. Dashboard Metrics (Analytics)
 
@@ -185,26 +208,55 @@ The dashboard consists of the following sections:
   - Unmapped transactions count
   - Reconciliation status indicators
 
+### 7. UI/UX Consistency & Dark Mode Support
+
+- **Goal**: Ensure consistent navigation and visual fidelity across all accounting module pages, including full dark mode support.
+- **Status**: **Completed**
+- **Requirements**:
+  - All sub-pages include a standardized "Back to Dashboard" button in the header/hero section.
+  - Standardized Hero sections across all main pages (P&L, Reconciliation, Ledger Export, Settings).
+  - Robust Dark Mode support for all PrimeVue components (DatePicker, Select) using Pass-Through props and scoped CSS overrides.
+  - Replaced `Listbox` with custom HTML implementation in `LedgerExportFilterStep` for better dark mode compatibility and scroll control.
+- **Implementation**:
+  - Navigation standardization in `feat(accounting): standardize navigation UI`
+  - Hero area standardization in `style(accounting): standardized hero areas`
+  - Dark mode fixes across `AccountingLedgerExport`, `AccountingProfitLoss`, `AccountingReconciliation`, and `SettingsDialog`.
+
+### 8. Receivables Management (Client Accounts)
+
+- **Goal**: Track outstanding balances per client by analyzing the `売掛金` (Accounts Receivable) sub-account cumulative data.
+- **Status**: **Completed**
+- **Implementation**:
+  - Frontend: `AccountingReceivables` directory
+  - Backend: `accounting/receivables/` controller, `accounting/receivables/` model
+- **Features**: 
+  - Dynamic filtering to exclude the latest month's sales (differentiating current from overdue).
+  - Detailed monthly history with separate tracking of additions (sales) and reductions (payments).
+  - Integrated client search and CRM action triggering.
+
 ## Technical Architecture
 
 ### Mapping Resolution Logic
+... (existing content) ...
 
-The system uses a hierarchical resolution strategy for account code mappings:
+### Receivables Calculation Logic
 
-```
-1. Check: Specific Item + Hotel (e.g., Plan A in Hotel 1)
-   └─> acc_accounting_mappings WHERE hotel_id = X AND target_type = 'plan_hotel' AND target_id = Y
+To ensure precision in client balances and history, the system uses a `UNION ALL` strategy rather than netting movements within a single grouping. This correctly captures scenarios where '売掛金' appears on both the debit and credit side of a transaction (e.g., transfers between clients or internal adjustments).
 
-2. Fallback: Category + Hotel (e.g., "Overnight" category in Hotel 1)
-   └─> acc_accounting_mappings WHERE hotel_id = X AND target_type = 'plan_type_category' AND target_id = Z
-
-3. Fallback: Global Category (e.g., "Overnight" category default)
-   └─> acc_accounting_mappings WHERE hotel_id IS NULL AND target_type = 'plan_type_category' AND target_id = Z
-
-4. Error: No mapping found
+```sql
+WITH movements AS (
+    SELECT debit_sub_account as sub_account, debit_amount as increase, 0 as decrease
+    FROM acc_yayoi_data WHERE debit_account_code = '売掛金'
+    UNION ALL
+    SELECT credit_sub_account as sub_account, 0 as increase, credit_amount as decrease
+    FROM acc_yayoi_data WHERE credit_account_code = '売掛金'
+)
+...
 ```
 
 ### Yayoi CSV Format
+... (existing content) ...
+
 
 The `acc_yayoi_data` table mirrors the 25-column Yayoi import format:
 - Columns A-Y: Identification flag, slip number, dates, debit/credit accounts, tax classes, amounts, etc.
@@ -222,22 +274,16 @@ The `acc_yayoi_data` table mirrors the 25-column Yayoi import format:
 
 ## Next Steps
 
-1. **Phase 1.5: Mapping Management** (Current Priority):
-   - Build UI for Plan/Addon → Account Code mappings
-   - Implement backend resolution logic
-   - Test with sample booking data
-
-2. **Phase 2: Yayoi Integration**:
-   - CSV import functionality for `acc_yayoi_data`
-   - Validation and error reporting
-   - Monthly summary reports using the view
-
-3. **Phase 3: OTA Reconciliation**:
+1. **Phase 3: OTA Reconciliation**:
    - Design schema for OTA payment records
    - File upload and parsing (CSV/Excel)
    - Matching logic (PMS ↔ OTA)
 
-4. **Phase 4: Analytics Dashboard**:
+2. **Phase 4: Analytics Dashboard**:
    - Real-time metrics using monthly summary view
    - Visual charts and trend analysis
    - Export capabilities for management reports
+
+3. **Phase 6: Payment Reconciliation Expansion**:
+   - Integrate `現金` (Cash) and `預金` (Bank) accounts into the Sales Comparison screen
+   - Develop matching logic for PMS payments vs. accounting ledger entries

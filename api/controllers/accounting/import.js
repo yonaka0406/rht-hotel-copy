@@ -64,6 +64,7 @@ const toIsoDate = (dateStr) => {
  * Preview Yayoi Import
  */
 const previewImport = async (req, res) => {
+    const { requestId } = req;
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -74,9 +75,21 @@ const previewImport = async (req, res) => {
             return res.status(400).json({ error: 'No valid data found in file' });
         }
 
+        // Get master data for validation
+        const accountingModel = require('../../models/accounting');
+        const [codes, departmentsMaster] = await Promise.all([
+            accountingModel.getAccountCodes(requestId),
+            accountingModel.getDepartments(requestId)
+        ]);
+
+        const validAccountNames = new Set(codes.map(c => c.name));
+        const validDeptNames = new Set(departmentsMaster.map(d => d.name).filter(Boolean));
+
         let minDate = null;
         let maxDate = null;
-        const departments = new Set();
+        const departmentsInFile = new Set();
+        const unknownAccounts = new Set();
+        const unmappedDepartments = new Set();
 
         for (const row of rows) {
             const dateStr = toIsoDate(row[3]); // Column D: 取引日付
@@ -85,15 +98,31 @@ const previewImport = async (req, res) => {
                 if (!maxDate || dateStr > maxDate) maxDate = dateStr;
             }
             
-            if (row[6]) departments.add(row[6]); // Column G: 借方部門
-            if (row[12]) departments.add(row[12]); // Column M: 貸方部門
+            const debitAccount = row[4];
+            const creditAccount = row[10];
+            const debitDept = row[6];
+            const creditDept = row[12];
+
+            if (debitAccount && !validAccountNames.has(debitAccount)) unknownAccounts.add(debitAccount);
+            if (creditAccount && !validAccountNames.has(creditAccount)) unknownAccounts.add(creditAccount);
+
+            if (debitDept) {
+                departmentsInFile.add(debitDept);
+                if (!validDeptNames.has(debitDept)) unmappedDepartments.add(debitDept);
+            }
+            if (creditDept) {
+                departmentsInFile.add(creditDept);
+                if (!validDeptNames.has(creditDept)) unmappedDepartments.add(creditDept);
+            }
         }
 
         res.json({
             rowCount: rows.length,
             minDate: minDate,
             maxDate: maxDate,
-            departments: Array.from(departments),
+            departments: Array.from(departmentsInFile),
+            unknownAccounts: Array.from(unknownAccounts),
+            unmappedDepartments: Array.from(unmappedDepartments),
             fileName: req.file.originalname
         });
     } catch (error) {

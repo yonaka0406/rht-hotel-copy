@@ -13,7 +13,7 @@ const selectUserActions = async (requestId, id) => {
             JOIN
         clients    
             ON clients.id = crm_actions.client_id
-            JOIN
+            LEFT JOIN
         users
             on users.id = crm_actions.assigned_to
       WHERE crm_actions.assigned_to = $1
@@ -41,7 +41,7 @@ const selectClientActions = async (requestId, id) => {
             JOIN
         clients    
             ON clients.id = crm_actions.client_id
-            JOIN
+            LEFT JOIN
         users
             on users.id = crm_actions.assigned_to
       WHERE crm_actions.client_id = $1 AND crm_actions.action_datetime IS NOT NULL
@@ -69,7 +69,7 @@ const selectAllActions = async (requestId) => {
             JOIN
         clients    
             ON clients.id = crm_actions.client_id
-            JOIN
+            LEFT JOIN
         users
             ON users.id = crm_actions.assigned_to
       ORDER BY 

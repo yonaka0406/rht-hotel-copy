@@ -67,6 +67,7 @@ const AccountingYayoiImport = () => import('@/pages/Accounting/AccountingYayoiIm
 const AccountingSettings = () => import('@/pages/Accounting/AccountingSettings/AccountingSettings.vue');
 const AccountingReconciliation = () => import('@/pages/Accounting/AccountingReconciliation/AccountingReconciliation.vue');
 const AccountingProfitLoss = () => import('@/pages/Accounting/AccountingProfitLoss/AccountingProfitLoss.vue');
+const AccountingReceivables = () => import('@/pages/Accounting/AccountingReceivables/AccountingReceivables.vue');
 
 
 const routes = [
@@ -183,6 +184,7 @@ const routes = [
       { path: 'yayoi-import', name: 'AccountingYayoiImport', component: AccountingYayoiImport },
       { path: 'reconciliation', name: 'AccountingReconciliation', component: AccountingReconciliation },
       { path: 'settings', name: 'AccountingSettings', component: AccountingSettings },
+      { path: 'receivables', name: 'AccountingReceivables', component: AccountingReceivables },
     ],
     meta: { requiresAuth: true, requiresAccounting: true }
   },

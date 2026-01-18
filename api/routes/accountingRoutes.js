@@ -40,4 +40,9 @@ router.post('/accounting/profit-loss/summary', authMiddleware_accounting, accoun
 router.get('/accounting/profit-loss/months', authMiddleware_accounting, accountingController.getAvailableMonths);
 router.get('/accounting/profit-loss/departments', authMiddleware_accounting, accountingController.getAvailableDepartments);
 
+// Receivables
+router.get('/accounting/receivables/balances', authMiddleware_accounting, accountingController.getBalances);
+router.get('/accounting/receivables/history', authMiddleware_accounting, accountingController.getHistory);
+router.get('/accounting/receivables/search-clients', authMiddleware_accounting, accountingController.searchClients);
+
 module.exports = router;

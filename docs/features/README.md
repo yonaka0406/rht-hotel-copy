@@ -9,6 +9,7 @@ This section provides comprehensive documentation of all features and capabiliti
 - **[Billing System](billing-system/)** - Billing, invoicing, and payments
 - **[Waitlist System](waitlist-system/)** - Waitlist and queue management
 - **[Reporting & Analytics](reporting-analytics/)** - Reports and business intelligence
+- **[Accounting Module](accounting/)** - Financial reporting and reconciliation
 
 ## Feature Overview
 
@@ -172,6 +173,27 @@ Check-In → Check-Out → Generate Invoice
 - **Dashboard**: Real-time metrics dashboard
 
 **[Complete Reporting & Analytics Guide](reporting-analytics/)**
+
+## Accounting Module
+
+### 🧮 **Accounting Features**
+
+#### Financial Reporting
+- **Profit & Loss**: Automated P&L generation by month, hotel, or department
+- **Management Groups**: Hierarchical categorization of accounts
+- **Tax Classes**: Automated tax calculation and reporting
+
+#### Ledger & Auditing
+- **Sales Journal**: Automated generation of sales journals
+- **Yayoi Export**: Export data in standard Yayoi format for accounting software
+- **Mapping System**: Flexible mapping of plans and addons to account codes
+
+#### Data Reconciliation
+- **Sales vs Payments**: Match system sales with received payments
+- **Drill-down Analysis**: Investigate discrepancies at the client and reservation level
+- **Validation**: Mathematical verification of financial consistency
+
+**[Complete Accounting Module Guide](accounting/)**
 
 ## Feature Integration
 

@@ -3,11 +3,13 @@ const exportCtrl = require('./export');
 const dashboard = require('./dashboard');
 const importCtrl = require('./import');
 const profitLoss = require('./profitLoss');
+const receivables = require('./receivables');
 
 module.exports = {
     ...settings,
     ...exportCtrl,
     ...dashboard,
     ...importCtrl,
-    ...profitLoss
+    ...profitLoss,
+    ...receivables
 };

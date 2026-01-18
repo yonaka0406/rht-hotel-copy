@@ -184,6 +184,7 @@ Refer to the [Testing Strategy](development/README.md#testing-strategy) for deta
 - **[Client Management](features/client-management/README.md)** - CRM and client features
 - **[Billing System](features/billing-system/README.md)** - Billing and invoicing
 - **[Waitlist System](features/waitlist-system/README.md)** - Waitlist management
+- **[Accounting Module](features/accounting/README.md)** - Financial reporting and reconciliation
 
 ### 🛠️ Development
 - **[Development Guidelines](development/README.md)** - Development standards and practices

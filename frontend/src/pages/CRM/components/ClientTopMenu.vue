@@ -82,7 +82,7 @@ const items = ref([
         ]
     },
     {
-        label: '営業活動',
+        label: '活動・対応',
         icon: 'pi pi-crown',
         items: [
             {

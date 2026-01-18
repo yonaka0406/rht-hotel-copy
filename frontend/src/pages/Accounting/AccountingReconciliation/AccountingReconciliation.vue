@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 import DatePicker from 'primevue/datepicker';
@@ -13,6 +14,7 @@ import ReservationEdit from '@/pages/MainPage/Reservation/ReservationEdit.vue';
 import { formatDateToYMD } from '@/utils/dateUtils';
 import { translateReservationStatus } from '@/utils/reservationUtils';
 
+const router = useRouter();
 const accountingStore = useAccountingStore();
 const hotelStore = useHotelStore();
 
@@ -202,8 +204,12 @@ watch(selectedDate, () => {
     <div class="bg-slate-50 dark:bg-slate-900 min-h-screen p-6 font-sans transition-colors duration-300">
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
+                    <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
+                        <i class="pi pi-arrow-left text-sm"></i>
+                        <span>戻る</span>
+                    </button>
                     <div>
                         <h1 class="text-2xl font-bold text-slate-900 dark:text-white">入金照合・差異分析</h1>
                         <p class="text-sm text-slate-500 dark:text-slate-400">売上計上額と実際の入金額の突合を行います</p>
@@ -220,6 +226,9 @@ watch(selectedDate, () => {
                         iconDisplay="input"
                         fluid
                         class="flex-1"
+                        :pt="{
+                            input: { class: 'dark:bg-slate-900 dark:text-slate-50 dark:border-slate-700' }
+                        }"
                     />
                 </div>
             </div>
@@ -502,5 +511,18 @@ watch(selectedDate, () => {
 :deep(.p-button-xs) {
     padding: 0.4rem 0.6rem;
     font-size: 0.75rem;
+}
+
+/* DatePicker Dark Mode Fixes */
+.dark :deep(.p-datepicker .p-inputtext),
+.dark :deep(.p-datepicker .p-datepicker-input) {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+.dark :deep(.p-datepicker .p-datepicker-dropdown) {
+    background: #1e293b !important;
+    color: #f8fafc !important;
 }
 </style>
