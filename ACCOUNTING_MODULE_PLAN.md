@@ -205,6 +205,16 @@ The dashboard consists of the following sections:
   - Hero area standardization in `style(accounting): standardized hero areas`
   - Dark mode fixes across `AccountingLedgerExport`, `AccountingProfitLoss`, `AccountingReconciliation`, and `SettingsDialog`.
 
+### 8. Receivables Management (Client Accounts)
+
+- **Goal**: Track outstanding balances per client by analyzing the `売掛金` (Accounts Receivable) sub-account cumulative data.
+- **Problem**: The accounting system uses sub-accounts for client names, but there is no direct mapping to the system's client IDs. A single client might also have multiple IDs in the CRM.
+- **Solution**: 
+  - Create a view that lists clients with outstanding balances based on `売掛金` sub-accounts.
+  - Instead of complex auto-mapping, provide a "Client Search" feature within this view.
+  - Allow the accounting user to search for the corresponding client in the CRM and trigger follow-up actions (e.g., set status, add note) directly from the accounting interface.
+- **Status**: **Planned**
+
 ## Technical Architecture
 
 ### Mapping Resolution Logic
@@ -261,3 +271,8 @@ The `acc_yayoi_data` table mirrors the 25-column Yayoi import format:
    - Real-time metrics using monthly summary view
    - Visual charts and trend analysis
    - Export capabilities for management reports
+
+5. **Phase 5: Receivables Management**:
+   - Build view for `売掛金` sub-account analysis
+   - Implement client search functionality connecting to CRM
+   - Add action triggers for client follow-up
