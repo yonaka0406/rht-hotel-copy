@@ -87,9 +87,17 @@
                 
                 <Column field="sub_account" header="サブアカウント（顧客名）" sortable class="font-bold text-slate-700 dark:text-slate-300"></Column>
                 
-                <Column field="balance" header="残高" sortable class="text-right">
+                <Column field="latest_month_sales" header="当月発生額" sortable class="text-right">
                   <template #body="slotProps">
-                    <span :class="slotProps.data.balance > 0 ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-900 dark:text-white'">
+                    <span class="text-slate-500 dark:text-slate-400 tabular-nums">
+                      {{ formatCurrency(slotProps.data.latest_month_sales) }}
+                    </span>
+                  </template>
+                </Column>
+
+                <Column field="balance" :header="excludeLatestSales ? '繰越残高' : '残高'" sortable class="text-right">
+                  <template #body="slotProps">
+                    <span :class="slotProps.data.balance > 0 ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-400 dark:text-slate-500'">
                       {{ formatCurrency(slotProps.data.balance) }}
                     </span>
                   </template>
@@ -250,6 +258,8 @@ const totalReceivables = computed(() => {
 const filteredBalances = computed(() => {
     let result = balances.value;
     
+    console.log('[Receivables] Filter State - Exclude Latest:', excludeLatestSales.value);
+
     if (tableSearch.value) {
         const query = tableSearch.value.toLowerCase();
         result = result.filter(item => 
@@ -258,11 +268,23 @@ const filteredBalances = computed(() => {
     }
 
     if (excludeLatestSales.value) {
-        // Map to new objects with adjusted balance and filter out those with no remaining balance
-        result = result.map(item => ({
-            ...item,
-            balance: Number(item.balance || 0) - Number(item.latest_month_sales || 0)
-        })).filter(item => item.balance > 0);
+        // Map to new objects with adjusted balance
+        result = result.map(item => {
+            const adjustedBalance = Number(item.balance || 0) - Number(item.latest_month_sales || 0);
+            
+            if (item.sub_account.includes('阿部建設')) {
+                console.log('[Receivables] Debug Client (阿部建設):', {
+                    raw_balance: item.balance,
+                    latest_additions: item.latest_month_sales,
+                    adjusted_balance: adjustedBalance
+                });
+            }
+
+            return {
+                ...item,
+                balance: adjustedBalance
+            };
+        });
     }
     
     return result;
