@@ -62,14 +62,23 @@
                     </div>
                     
                     <div class="bg-white dark:bg-slate-900 border border-violet-100 dark:border-violet-900/50 p-4 rounded-2xl mb-6 shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <div class="bg-violet-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold">
-                                {{ (linkedClient.name_kanji || linkedClient.name).charAt(0) }}
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <div class="bg-violet-600 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold flex-shrink-0">
+                                    {{ (linkedClient.name_kanji || linkedClient.name).charAt(0) }}
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h4 class="font-bold text-slate-900 dark:text-white truncate">{{ linkedClient.name_kanji || linkedClient.name }}</h4>
+                                    <p class="text-[10px] text-slate-400 truncate">{{ linkedClient.email || linkedClient.phone || '連絡先未登録' }}</p>
+                                </div>
                             </div>
-                            <div class="overflow-hidden">
-                                <h4 class="font-bold text-slate-900 dark:text-white truncate">{{ linkedClient.name_kanji || linkedClient.name }}</h4>
-                                <p class="text-[10px] text-slate-400 truncate">{{ linkedClient.email || linkedClient.phone || '連絡先未登録' }}</p>
-                            </div>
+                            <button 
+                                @click="openClientProfile" 
+                                class="p-2 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-violet-600 rounded-lg transition-all border-none cursor-pointer flex-shrink-0"
+                                v-tooltip.top="'CRMでプロフィールを開く'"
+                            >
+                                <i class="pi pi-external-link"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -197,6 +206,7 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAccountingReceivables } from '@/composables/useAccountingReceivables';
 import { useCRMStore } from '@/composables/useCRMStore';
 import { useToast } from 'primevue/usetoast';
@@ -212,6 +222,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible', 'success']);
 
+const router = useRouter();
 const toast = useToast();
 const { searchResults, searchClients } = useAccountingReceivables();
 const { client_actions, fetchClientActions, addAction } = useCRMStore();
@@ -319,6 +330,15 @@ const selectClient = async (client) => {
     } finally {
         isLoadingActions.value = false;
     }
+};
+
+const openClientProfile = () => {
+    if (!linkedClient.value) return;
+    const routeData = router.resolve({
+        name: 'ClientEdit',
+        params: { clientId: linkedClient.value.id }
+    });
+    window.open(routeData.href, '_blank');
 };
 
 const submitCRMAction = async () => {
