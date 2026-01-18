@@ -62,7 +62,8 @@
                     class="w-full flex-1 accounting-listbox" 
                     :pt="{
                         list: { class: 'custom-scrollbar h-full' },
-                        root: { class: 'h-full flex flex-col' }
+                        root: { class: 'h-full flex flex-col' },
+                        item: { class: 'dark:text-slate-300' }
                     }"
                 />
             </div>
@@ -200,9 +201,16 @@ const handleNext = () => {
     border-color: #e2e8f0; /* slate-200 */
 }
 
+/* Aggressive Dark Mode Overrides for Listbox */
 .dark :deep(.accounting-listbox) {
-    background: rgba(15, 23, 42, 0.5); /* slate-900/50 */
-    border-color: #334155; /* slate-700 */
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+.dark :deep(.accounting-listbox .p-listbox-header) {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
 }
 
 :deep(.accounting-listbox .p-listbox-item) {
@@ -213,7 +221,7 @@ const handleNext = () => {
 }
 
 .dark :deep(.accounting-listbox .p-listbox-item) {
-    color: #cbd5e1; /* slate-300 for unselected items */
+    color: #cbd5e1 !important; /* slate-300 for unselected items */
 }
 
 :deep(.accounting-listbox .p-listbox-item.p-highlight) {
