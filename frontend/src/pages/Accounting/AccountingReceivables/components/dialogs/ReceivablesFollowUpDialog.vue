@@ -122,7 +122,7 @@
                                 <div class="flex justify-between items-start mb-2 pl-2">
                                     <div class="flex items-center gap-2">
                                         <span class="text-xs font-black px-2 py-0.5 rounded-md uppercase" :class="getActionTypeBadge(action.action_type)">
-                                            {{ translateActionType(action.action_type) }}
+                                            {{ translateCrmActionType(action.action_type) }}
                                         </span>
                                         <h5 class="font-bold text-slate-900 dark:text-white text-sm">{{ action.subject }}</h5>
                                     </div>
@@ -203,6 +203,7 @@ import { useToast } from 'primevue/usetoast';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
+import { translateCrmActionType } from '@/utils/clientUtils';
 
 const props = defineProps({
     visible: Boolean,
@@ -359,18 +360,6 @@ const submitCRMAction = async () => {
     } finally {
         isSubmitting.value = false;
     }
-};
-
-const translateActionType = (type) => {
-    const types = {
-        call: '電話',
-        email: 'メール',
-        visit: '訪問',
-        meeting: '会議',
-        task: 'タスク',
-        note: 'メモ'
-    };
-    return types[type] || type;
 };
 
 const getActionTypeBadge = (type) => {
