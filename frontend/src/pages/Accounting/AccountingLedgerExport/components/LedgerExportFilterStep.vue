@@ -223,7 +223,9 @@ const handleNext = () => {
     transition: all 0.2s;
 }
 
-.dark :deep(.accounting-listbox .p-listbox-item) {
+.dark :deep(.accounting-listbox .p-listbox-item),
+.dark :deep(.accounting-listbox .p-listbox-item-content) {
+    background-color: #0f172a !important;
     color: #cbd5e1 !important; /* slate-300 for unselected items */
 }
 
