@@ -186,7 +186,7 @@ onMounted(async () => {
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <!-- Data Export Card -->
                                 <button @click="$router.push({ name: 'AccountingLedgerExport' })" class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
                                     <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
@@ -200,6 +200,21 @@ onMounted(async () => {
                                     </p>
                                     <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
                                         エクスポートへ進む <i class="pi pi-arrow-right"></i>
+                                    </span>
+                                </button>
+
+                                <!-- Receivables Management Card -->
+                                <button @click="$router.push({ name: 'AccountingReceivables' })" class="group flex flex-col items-center p-6 bg-slate-50 dark:bg-slate-900/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 border border-slate-100 dark:border-slate-700 rounded-xl transition-all duration-200 cursor-pointer text-center h-full">
+                                    <div class="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-4 border border-slate-100 dark:border-slate-700">
+                                        <i class="pi pi-wallet text-xl text-violet-600 dark:text-violet-400"></i>
+                                    </div>
+                                    <span class="font-semibold text-slate-900 dark:text-white text-lg mb-2">売掛金管理</span>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">顧客別の残高確認・督促</p>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                        サブアカウント別の残高を確認しフォローアップ
+                                    </p>
+                                    <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all mt-auto">
+                                        管理画面を表示 <i class="pi pi-arrow-right"></i>
                                     </span>
                                 </button>
 

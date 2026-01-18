@@ -47,6 +47,9 @@ const breadcrumbs = computed(() => {
     } else if (route.path === '/accounting/reconciliation') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
         crumbs.push({ label: '入金照合' });
+    } else if (route.path === '/accounting/receivables') {
+        crumbs.push({ label: '会計', to: '/accounting/dashboard' });
+        crumbs.push({ label: '売掛金管理' });
     } else if (route.path === '/accounting/settings') {
         crumbs.push({ label: '会計', to: '/accounting/dashboard' });
         crumbs.push({ label: '設定' });
