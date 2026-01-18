@@ -120,7 +120,8 @@ const getReceivableSubAccountHistory = async (requestId, subAccount, dbClient = 
  * Used for linking receivables (sub-accounts) to actual client records.
  */
 const searchClients = async (requestId, searchTerm, dbClient = null) => {
-    const client = dbClient || await pool.get(requestId).connect();
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
     try {
         const query = `
             SELECT 
