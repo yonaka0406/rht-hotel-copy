@@ -1,4 +1,5 @@
-const { pool } = require('../../../config/database');
+const { getPool } = require('../../../config/database');
+const logger = require('../../../config/logger');
 
 /**
  * Fetches all sub-accounts under '売掛金' with their cumulative balances.
@@ -7,22 +8,14 @@ const { pool } = require('../../../config/database');
  * @param {object} dbClient Optional database client for transactions
  */
 const getReceivableBalances = async (requestId, options = {}, dbClient = null) => {
-    const client = dbClient || await pool.get(requestId).connect();
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
     try {
         const { minBalance = 0 } = options;
         
-        // We aggregate ALL data up to the current state to get the actual balance.
-        // Debit (amount < 0 in our view for assets) means increase in Receivables?
-        // Wait, let's check acc_monthly_account_summary logic:
-        // Debit legs: -(debit_amount) as amount -> So debits are negative.
-        // Credit legs: credit_amount as amount -> So credits are positive.
-        // For Assets (like 売掛金):
-        // Increase (Debit) is negative in our view.
-        // Decrease (Credit) is positive in our view.
-        // Balance = Sum(Debits) - Sum(Credits).
-        // In our view: Sum(amount) will be (Credits - Debits).
-        // If we want Balance = Debits - Credits, we need -Sum(amount).
+        logger.debug(`[ReceivablesModel] getReceivableBalances called. RequestId: ${requestId}, Options: ${JSON.stringify(options)}`);
         
+        // We aggregate ALL data up to the current state to get the actual balance.
         const query = `
             SELECT 
                 sub_account,
@@ -36,7 +29,52 @@ const getReceivableBalances = async (requestId, options = {}, dbClient = null) =
         `;
         
         const result = await client.query(query);
+        logger.debug(`[ReceivablesModel] Query executed. Found ${result.rows.length} rows.`);
+        
         return result.rows;
+    } catch (err) {
+        logger.error(`[ReceivablesModel] Error in getReceivableBalances: ${err.message}`, { stack: err.stack });
+        throw err;
+    } finally {
+        if (!dbClient) client.release();
+    }
+};
+
+/**
+ * Fetches the monthly history of a specific sub-account under '売掛金'.
+ */
+const getReceivableSubAccountHistory = async (requestId, subAccount, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    try {
+        const query = `
+            WITH monthly_sums AS (
+                SELECT 
+                    DATE_TRUNC('month', transaction_date)::DATE as month,
+                    SUM(CASE WHEN debit_account_code = '売掛金' AND debit_sub_account = $1 THEN debit_amount ELSE 0 END) as total_increase,
+                    SUM(CASE WHEN credit_account_code = '売掛金' AND credit_sub_account = $1 THEN credit_amount ELSE 0 END) as total_decrease
+                FROM acc_yayoi_data
+                WHERE (debit_account_code = '売掛金' AND debit_sub_account = $1)
+                   OR (credit_account_code = '売掛金' AND credit_sub_account = $1)
+                GROUP BY month
+            ),
+            cumulative AS (
+                SELECT 
+                    month,
+                    total_increase,
+                    total_decrease,
+                    (total_increase - total_decrease) as monthly_change,
+                    SUM(total_increase - total_decrease) OVER (ORDER BY month) as cumulative_balance
+                FROM monthly_sums
+            )
+            SELECT * FROM cumulative
+            ORDER BY month DESC;
+        `;
+        const result = await client.query(query, [subAccount]);
+        return result.rows;
+    } catch (err) {
+        logger.error(`[ReceivablesModel] Error in getReceivableSubAccountHistory: ${err.message}`, { stack: err.stack });
+        throw err;
     } finally {
         if (!dbClient) client.release();
     }
@@ -81,5 +119,6 @@ const searchClients = async (requestId, searchTerm, dbClient = null) => {
 
 module.exports = {
     getReceivableBalances,
-    searchClients
+    searchClients,
+    getReceivableSubAccountHistory
 };
