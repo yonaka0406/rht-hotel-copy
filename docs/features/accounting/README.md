@@ -12,6 +12,7 @@ This section provides documentation for the Accounting Module, covering financia
 ## Overview
 
 The Accounting Module is designed to streamline hotel financial operations by providing:
+
 1. Automated journal entry generation based on reservation data.
 2. Comprehensive P&L reporting with hierarchical management group categorization.
 3. Multi-level mapping resolution for plans, addons, and categories to account codes.
