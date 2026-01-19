@@ -50,13 +50,13 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
     
     if (startMonth) {
       fallbackQuery += ` AND month >= $${paramIndex}`;
-      params.push(startMonth.substring(0, 7) + '-01'); // Convert YYYY-MM to YYYY-MM-01
+      params.push(startMonth); // startMonth is already in YYYY-MM-DD format
       paramIndex++;
     }
     
     if (endMonth) {
       fallbackQuery += ` AND month <= $${paramIndex}`;
-      params.push(endMonth.substring(0, 7) + '-01'); // Convert YYYY-MM to YYYY-MM-01
+      params.push(endMonth); // endMonth is already in YYYY-MM-DD format
       paramIndex++;
     }
     
