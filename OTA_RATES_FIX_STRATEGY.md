@@ -68,6 +68,7 @@ Create a standalone test file (e.g., `api/tests/reproduce_ota_rates.js`) to repl
     2.  Invoke the `addOTAReservation` function directly with this data.
     3.  Capture and log the results for the `reservations`, `reservation_details`, and `reservation_rates` tables to the console.
 *   **Goal:** Confirm that we can replicate the missing rates error for the "bad" reservation and successful rate creation for the "good" reservation in a controlled environment.
+*   **Results (2026-01-19):** ✅ Reproduced. The test confirmed that `RYa0m6e3zw` (Bad) results in 0 rates, while `RYa0kay7fr_3` (Good) creates rates correctly.
 
 ### Step 3: Debugging
 *   Add logging in `addOTAReservation` to inspect the structure of `RoomAndRoomRateInformation` just before iteration.
