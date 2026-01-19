@@ -24,9 +24,9 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
     
     let fallbackQuery = `
       SELECT 
-        (month || '-01')::date as transaction_date,
-        EXTRACT(MONTH FROM (month || '-01')::date) as month_num,
-        month,
+        month as transaction_date,
+        EXTRACT(MONTH FROM month) as month_num,
+        TO_CHAR(month, 'YYYY-MM') as month,
         account_code,
         account_name,
         '' as sub_account,
@@ -50,18 +50,17 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
     const params = [];
     let paramIndex = 1;
     
-    // Temporarily disable date filtering to test
-    // if (startMonth) {
-    //   fallbackQuery += ` AND month >= $${paramIndex}`;
-    //   params.push(startMonth); // startMonth is already in YYYY-MM-DD format
-    //   paramIndex++;
-    // }
+    if (startMonth) {
+      fallbackQuery += ` AND month >= $${paramIndex}`;
+      params.push(startMonth); // startMonth is already in YYYY-MM-DD format
+      paramIndex++;
+    }
     
-    // if (endMonth) {
-    //   fallbackQuery += ` AND month <= $${paramIndex}`;
-    //   params.push(endMonth); // endMonth is already in YYYY-MM-DD format
-    //   paramIndex++;
-    // }
+    if (endMonth) {
+      fallbackQuery += ` AND month <= $${paramIndex}`;
+      params.push(endMonth); // endMonth is already in YYYY-MM-DD format
+      paramIndex++;
+    }
     
     if (departmentNames && departmentNames.length > 0) {
       fallbackQuery += ` AND department = ANY($${paramIndex})`;
