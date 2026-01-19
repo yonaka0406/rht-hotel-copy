@@ -44,7 +44,7 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
           COALESCE(management_group_name, '') || ' - ' || COALESCE(account_name, '') as summary,
           management_group_name,
           management_group_display_order,
-          COALESCE(management_group_display_order::text || '_' || management_group_name, '') as management_group_formatted,
+          COALESCE(LPAD(management_group_display_order::text, 2, '0') || '_' || management_group_name, '') as management_group_formatted,
           hotel_id,
           hotel_name
         FROM acc_profit_loss
@@ -100,15 +100,21 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         yd.debit_sub_account as sub_account,
         yd.debit_department as department,
         yd.debit_tax_class as tax_class,
-        yd.debit_amount as amount_with_tax,
-        yd.debit_tax_amount as tax_amount,
+        CASE 
+          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN -yd.debit_amount -- Revenue accounts: debit is negative
+          ELSE yd.debit_amount -- Expense accounts: debit is positive
+        END as amount_with_tax,
+        CASE 
+          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN -yd.debit_tax_amount -- Revenue accounts: debit is negative
+          ELSE yd.debit_tax_amount -- Expense accounts: debit is positive
+        END as tax_amount,
         yd.credit_account_code as counterpart_account_code,
         yd.credit_sub_account as counterpart_sub_account,
         yd.credit_department as counterpart_department,
         yd.summary,
         mg.name as management_group_name,
         mg.display_order as management_group_display_order,
-        COALESCE(mg.display_order::text || '_' || mg.name, '') as management_group_formatted,
+        COALESCE(LPAD(mg.display_order::text, 2, '0') || '_' || mg.name, '') as management_group_formatted,
         dhm.hotel_id,
         dhm.hotel_name
       FROM acc_yayoi_data yd
@@ -158,15 +164,21 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         yd.credit_sub_account as sub_account,
         yd.credit_department as department,
         yd.credit_tax_class as tax_class,
-        -yd.credit_amount as amount_with_tax, -- Negative for credit entries
-        -yd.credit_tax_amount as tax_amount,
+        CASE 
+          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN yd.credit_amount -- Revenue accounts: credit is positive
+          ELSE -yd.credit_amount -- Expense accounts: credit is negative
+        END as amount_with_tax,
+        CASE 
+          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN yd.credit_tax_amount -- Revenue accounts: credit is positive
+          ELSE -yd.credit_tax_amount -- Expense accounts: credit is negative
+        END as tax_amount,
         yd.debit_account_code as counterpart_account_code,
         yd.debit_sub_account as counterpart_sub_account,
         yd.debit_department as counterpart_department,
         yd.summary,
         mg.name as management_group_name,
         mg.display_order as management_group_display_order,
-        COALESCE(mg.display_order::text || '_' || mg.name, '') as management_group_formatted,
+        COALESCE(LPAD(mg.display_order::text, 2, '0') || '_' || mg.name, '') as management_group_formatted,
         dhm.hotel_id,
         dhm.hotel_name
       FROM acc_yayoi_data yd
