@@ -61,11 +61,19 @@ Analyze `api/models/reservations/main.js`, specifically searching for how `RoomA
 *   Check if it correctly handles `RoomAndRoomRateInformation` being an **Array** vs an **Object**. XML-to-JSON conversion often results in a single object if there's only one child, and an array if there are multiple. If the code expects one and gets the other, it might fail silently or skip the loop.
 *   Check for the insertion logic into `reservation_rates`.
 
-### Step 2: Debugging
+### Step 2: Reproduction Test
+Create a standalone test file (e.g., `api/tests/reproduce_ota_rates.js`) to replicate the issue before making changes.
+*   **Methodology:**
+    1.  Read the `reservation_data` (JSON derived from the original XML) from the `ota_reservation_queue` table for both the "bad" (`RYa0m6e3zw`) and "good" (`RYa0kay7fr_3`) examples.
+    2.  Invoke the `addOTAReservation` function directly with this data.
+    3.  Capture and log the results for the `reservations`, `reservation_details`, and `reservation_rates` tables to the console.
+*   **Goal:** Confirm that we can replicate the missing rates error for the "bad" reservation and successful rate creation for the "good" reservation in a controlled environment.
+
+### Step 3: Debugging
 *   Add logging in `addOTAReservation` to inspect the structure of `RoomAndRoomRateInformation` just before iteration.
 *   Verify if the code is entering the loop that inserts rates.
 
-### Step 3: Fix Implementation
+### Step 4: Fix Implementation
 *   Modify `addOTAReservation` to robustly handle both Array and Object formats for `RoomAndRoomRateInformation` and `RoomRateInformation`.
 *   Ensure that missing or malformed rate data logs a clear error rather than failing silently.
 
