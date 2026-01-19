@@ -1610,6 +1610,13 @@ export default {
         const response = await fetchProfitLossDetailed(detailedFilters);
         console.log('[CSV Export] API response:', response);
         
+        // Verify response is truthy and has success status
+        if (!response || !response.success) {
+          console.error('[CSV Export] Invalid or failed response from fetchProfitLossDetailed:', response);
+          toast.add({ severity: 'error', summary: 'エラー', detail: '詳細データの取得に失敗しました', life: 3000 });
+          return;
+        }
+        
         const detailedData = response.data || [];
         console.log('[CSV Export] Detailed data count:', detailedData.length);
 
