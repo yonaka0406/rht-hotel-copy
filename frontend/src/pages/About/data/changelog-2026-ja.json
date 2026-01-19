@@ -27,6 +27,10 @@
         {
           "type": "documentation",
           "description": "機能概要とガイドを含む会計モジュールのドキュメントを追加しました。"
+        },
+        {
+          "type": "fix",
+          "description": "OTA予約の予約料金レコードが欠落する問題を修正しました。"
         }
       ]
     },

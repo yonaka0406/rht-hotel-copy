@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New Feature: Import preview now validates accounts and departments against master data.
 - Fix: Improved dark mode styling consistency across accounting pages.
 - Fix: Fixed CRM actions to include unassigned follow-ups.
-- Documentation: Added Accounting Module documentation with feature overview and guides.
+- Fix: Fixed missing reservation rate records for OTA reservations.
+- Fix: Reservation rates now automatically created during OTA reservation processing.
 
 ---
 
