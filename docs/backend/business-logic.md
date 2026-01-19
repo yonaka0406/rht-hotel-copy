@@ -669,6 +669,20 @@ const processCheckOut = async (requestId, reservationId) => {
 };
 ```
 
+### Hold Reservation Lifecycle and Cleanup
+
+"Hold" reservations are temporary records created at the beginning of a multi-step booking process to secure availability.
+
+#### Transactional Integrity
+
+To prevent orphaned reservations, the `addReservationHold` model must respect the transactional boundary of its caller. 
+
+**Root Cause of Orphans:**
+Previously, `addReservationHold` managed its own transaction (`BEGIN/COMMIT`) even when passed an external database client. This resulted in the reservation being committed immediately, even if subsequent steps in the controller (like adding room details) failed and triggered a rollback.
+
+**Correct Implementation:**
+The model now checks if it was provided with an external client. If so, it uses that client without starting or committing a transaction, ensuring that a failure later in the process correctly rolls back the initial "hold" record.
+
 ## Best Practices
 
 ### 1. Always Validate Input
