@@ -16,6 +16,8 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
     const { startMonth, endMonth, departmentNames } = filters;
     
     console.log('[P&L Model] Detailed Filters:', { startMonth, endMonth, departmentNames });
+    console.log('[P&L Model] Date formats - startMonth type:', typeof startMonth, 'value:', startMonth);
+    console.log('[P&L Model] Date formats - endMonth type:', typeof endMonth, 'value:', endMonth);
   
     // Always use the acc_profit_loss view to match the main P&L page
     console.log('[P&L Model] Using acc_profit_loss view for consistency');
