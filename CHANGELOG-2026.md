@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.2] - 2026-01-19
 
+- New Feature: Introduced detailed CSV export for profit & loss data.
 - New Feature: Added Receivables Management interface with sub-account balance tracking, monthly history, filtering, and client follow-up actions via CRM integration.
 - New Feature: New accounting mappings management feature with support for multiple mapping types including cancellation fees.
 - New Feature: Import preview now validates accounts and departments against master data.
