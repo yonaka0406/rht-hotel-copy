@@ -70,7 +70,7 @@ async function runScenario(client, requestId, otaReservationId, label) {
         if (result.success) {
              // 4. Query results
              const resResult = await client.query(
-                 `SELECT id, number_of_people FROM reservations WHERE ota_reservation_id = $1 AND hotel_id = $2`,
+                 `SELECT id, number_of_people FROM reservations WHERE ota_reservation_id = $1 AND hotel_id = $2 ORDER BY created_at DESC LIMIT 1`,
                  [otaReservationId, hotel_id]
              );
              

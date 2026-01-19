@@ -71,12 +71,11 @@ Create a standalone test file (e.g., `api/tests/reproduce_ota_rates.js`) to repl
 *   **Results (2026-01-19):** ✅ Reproduced. The test confirmed that `RYa0m6e3zw` (Bad) results in 0 rates, while `RYa0kay7fr_3` (Good) creates rates correctly.
 
 ### Step 3: Debugging
-*   Add logging in `addOTAReservation` to inspect the structure of `RoomAndRoomRateInformation` just before iteration.
-*   Verify if the code is entering the loop that inserts rates.
+*   **Result:** Identified that `insertReservationRate` was missing in `addOTAReservation` logic (Line ~2603).
 
 ### Step 4: Fix Implementation
-*   Modify `addOTAReservation` to robustly handle both Array and Object formats for `RoomAndRoomRateInformation` and `RoomRateInformation`.
-*   Ensure that missing or malformed rate data logs a clear error rather than failing silently.
+*   **Action:** Added `await insertReservationRate(requestId, rateData, internalClient);`.
+*   **Verification:** Re-ran reproduction test. Both scenarios now PASS.
 
 ## 6. Remediation (Data Fix)
 Once the code is fixed for new reservations, we need to fix the existing ones.
