@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New Feature: Aligned future outlook aggregation logic with Net Accommodation Sales for accurate performance tracking in Daily Report.
 - Improvement: Enhanced daily report template with updated layout and improved cell mapping.
 - Fix: Improved accuracy of reconciliation calculations across summary and detailed views.
+- Fix: Improved transaction and database connection handling for reservation holds to prevent orphaned holds and ensure proper cleanup.
 - Fix: Resolved temporary file resource leak in the daily report background generation job.
 - Fix: Improved numeric data safety in Excel reports by correctly handling zero values using nullish coalescing.
 
