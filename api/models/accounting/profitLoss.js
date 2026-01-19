@@ -100,14 +100,8 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         yd.debit_sub_account as sub_account,
         yd.debit_department as department,
         yd.debit_tax_class as tax_class,
-        CASE 
-          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN -yd.debit_amount -- Revenue accounts: debit is negative
-          ELSE yd.debit_amount -- Expense accounts: debit is positive
-        END as amount_with_tax,
-        CASE 
-          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN -yd.debit_tax_amount -- Revenue accounts: debit is negative
-          ELSE yd.debit_tax_amount -- Expense accounts: debit is positive
-        END as tax_amount,
+        -yd.debit_amount as amount_with_tax,
+        -yd.debit_tax_amount as tax_amount,
         yd.credit_account_code as counterpart_account_code,
         yd.credit_sub_account as counterpart_sub_account,
         yd.credit_department as counterpart_department,
@@ -129,6 +123,7 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         JOIN hotels h ON ad.hotel_id = h.id
       ) dhm ON yd.debit_department = dhm.department_name
       WHERE 1=1
+        AND mg.name IS NOT NULL -- Only P&L accounts with management groups
     `;
     
     const params = [];
@@ -164,14 +159,8 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         yd.credit_sub_account as sub_account,
         yd.credit_department as department,
         yd.credit_tax_class as tax_class,
-        CASE 
-          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN yd.credit_amount -- Revenue accounts: credit is positive
-          ELSE -yd.credit_amount -- Expense accounts: credit is negative
-        END as amount_with_tax,
-        CASE 
-          WHEN mg.name IN ('売上高', '営業外収入', '特別利益') THEN yd.credit_tax_amount -- Revenue accounts: credit is positive
-          ELSE -yd.credit_tax_amount -- Expense accounts: credit is negative
-        END as tax_amount,
+        yd.credit_amount as amount_with_tax,
+        yd.credit_tax_amount as tax_amount,
         yd.debit_account_code as counterpart_account_code,
         yd.debit_sub_account as counterpart_sub_account,
         yd.debit_department as counterpart_department,
@@ -193,6 +182,7 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         JOIN hotels h ON ad.hotel_id = h.id
       ) dhm ON yd.credit_department = dhm.department_name
       WHERE 1=1
+        AND mg.name IS NOT NULL -- Only P&L accounts with management groups
     `;
     
     // Reset paramIndex for the second part of UNION
