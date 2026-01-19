@@ -61,8 +61,7 @@ INSERT INTO reservation_rates (
     sales_category,
     created_by,
     updated_by,
-    created_at,
-    updated_at
+    created_at    
 )
 SELECT 
     rd.hotel_id,
@@ -76,8 +75,7 @@ SELECT
     'accommodation' AS sales_category,
     1 AS created_by,            -- System/Admin user
     1 AS updated_by,            -- System/Admin user
-    NOW() AS created_at,
-    NOW() AS updated_at
+    NOW() AS created_at
 FROM reservations r 
 JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id 
 WHERE r.type = 'ota' 
