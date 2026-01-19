@@ -202,7 +202,7 @@ CREATE TABLE acc_accounting_mappings (
     -- 'plan_package_category': Plan Package (e.g. 'Standard', 'Monthly')
     -- 'addon_hotel': Specific Hotel Addon
     -- 'addon_global': Global Addon definition
-    target_type VARCHAR(50) NOT NULL CHECK (target_type IN ('plan_hotel', 'plan_type_category', 'plan_package_category', 'addon_hotel', 'addon_global')),
+    target_type VARCHAR(50) NOT NULL CHECK (target_type IN ('plan_hotel', 'plan_type_category', 'plan_package_category', 'addon_hotel', 'addon_global', 'cancellation')),
     target_id INT NOT NULL, 
     
     account_code_id INT NOT NULL REFERENCES acc_account_codes(id),
