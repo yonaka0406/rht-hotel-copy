@@ -44,6 +44,7 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
           COALESCE(management_group_name, '') || ' - ' || COALESCE(account_name, '') as summary,
           management_group_name,
           management_group_display_order,
+          COALESCE(management_group_display_order::text || '_' || management_group_name, '') as management_group_formatted,
           hotel_id,
           hotel_name
         FROM acc_profit_loss
@@ -107,6 +108,7 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         yd.summary,
         mg.name as management_group_name,
         mg.display_order as management_group_display_order,
+        COALESCE(mg.display_order::text || '_' || mg.name, '') as management_group_formatted,
         dhm.hotel_id,
         dhm.hotel_name
       FROM acc_yayoi_data yd
@@ -164,6 +166,7 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         yd.summary,
         mg.name as management_group_name,
         mg.display_order as management_group_display_order,
+        COALESCE(mg.display_order::text || '_' || mg.name, '') as management_group_formatted,
         dhm.hotel_id,
         dhm.hotel_name
       FROM acc_yayoi_data yd

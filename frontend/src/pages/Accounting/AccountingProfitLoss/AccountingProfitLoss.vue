@@ -1674,7 +1674,7 @@ export default {
             '',                                  // 区分4 (empty)
             item.account_code || '',             // 順番コード (account code)
             '',                                  // 直接CF（相手） (empty)
-            item.management_group_name || ''     // 経営グループ
+            item.management_group_formatted || '' // 経営グループ (formatted as order_name)
           ];
           rows.push(row);
         });
