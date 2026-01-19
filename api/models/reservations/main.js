@@ -2615,6 +2615,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           include_in_cancel_fee: true,
           created_by: 1
         };
+        await insertReservationRate(requestId, rateData, internalClient);
         if (addons && Array.isArray(addons) && addons.length > 0) {
           for (const addon of addons) {
             let taxTypeId = addon.tax_type_id;
