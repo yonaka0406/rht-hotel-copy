@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix: Improved dark mode styling consistency across accounting pages.
 - Fix: Fixed CRM actions to include unassigned follow-ups.
 - Fix: Fixed missing reservation rate records for OTA reservations.
-- Fix: Reservation rates now automatically created during OTA reservation processing.
 
 ---
 
