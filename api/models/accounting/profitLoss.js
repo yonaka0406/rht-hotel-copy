@@ -50,17 +50,18 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
     const params = [];
     let paramIndex = 1;
     
-    if (startMonth) {
-      fallbackQuery += ` AND month >= $${paramIndex}`;
-      params.push(startMonth); // startMonth is already in YYYY-MM-DD format
-      paramIndex++;
-    }
+    // Temporarily disable date filtering to test
+    // if (startMonth) {
+    //   fallbackQuery += ` AND month >= $${paramIndex}`;
+    //   params.push(startMonth); // startMonth is already in YYYY-MM-DD format
+    //   paramIndex++;
+    // }
     
-    if (endMonth) {
-      fallbackQuery += ` AND month <= $${paramIndex}`;
-      params.push(endMonth); // endMonth is already in YYYY-MM-DD format
-      paramIndex++;
-    }
+    // if (endMonth) {
+    //   fallbackQuery += ` AND month <= $${paramIndex}`;
+    //   params.push(endMonth); // endMonth is already in YYYY-MM-DD format
+    //   paramIndex++;
+    // }
     
     if (departmentNames && departmentNames.length > 0) {
       fallbackQuery += ` AND department = ANY($${paramIndex})`;
