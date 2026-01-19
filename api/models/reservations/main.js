@@ -235,15 +235,19 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
 
 // Function to Add
 const addReservationHold = async (requestId, reservation, client = null, roomsToReserve = []) => {
-  const pool = client || getPool(requestId);
+  const pool = getPool(requestId);
+  let dbClient = client;
   let shouldReleaseClient = false;
-  if (!client) {
-    client = await pool.connect();
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
     shouldReleaseClient = true;
   }
 
   try {
-    await client.query('BEGIN');
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
 
     // Insert reservation
     const reservationQuery = `
@@ -261,22 +265,26 @@ const addReservationHold = async (requestId, reservation, client = null, roomsTo
       reservation.created_by,
       reservation.updated_by
     ];
-    const reservationResult = await client.query(reservationQuery, reservationValues);
+    const reservationResult = await dbClient.query(reservationQuery, reservationValues);
     const newReservation = reservationResult.rows[0];
 
-    await client.query('COMMIT');
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
     return newReservation;
   } catch (err) {
-    try {
-      await client.query('ROLLBACK');
-    } catch (rbErr) {
-      logger.error('Error rolling back transaction:', rbErr);
+    if (shouldReleaseClient) {
+      try {
+        await dbClient.query('ROLLBACK');
+      } catch (rbErr) {
+        logger.error('Error rolling back transaction:', rbErr);
+      }
     }
     logger.error('Error adding reservation hold:', err);
     throw err; // Rethrow the original error
   } finally {
     if (shouldReleaseClient) {
-      client.release();
+      dbClient.release();
     }
   }
 };
