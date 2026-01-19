@@ -1,6 +1,36 @@
 const profitLossModel = require('../../models/accounting/profitLoss');
 
 /**
+ * POST /api/accounting/profit-loss/detailed
+ * Get detailed P&L data with tax information for CSV export
+ */
+async function getProfitLossDetailed(req, res) {
+  try {
+    const { startMonth, endMonth, departmentNames } = req.body;
+    
+    const filters = {
+      startMonth: startMonth || null,
+      endMonth: endMonth || null,
+      departmentNames: departmentNames && Array.isArray(departmentNames) ? departmentNames : null
+    };
+    
+    const data = await profitLossModel.getProfitLossDetailed(req.id, filters);
+    
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error('Error fetching detailed P&L data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch detailed P&L data',
+      error: error.message
+    });
+  }
+}
+
+/**
  * POST /api/accounting/profit-loss
  * Get detailed P&L data
  */
@@ -107,6 +137,7 @@ async function getAvailableDepartments(req, res) {
 
 module.exports = {
   getProfitLoss,
+  getProfitLossDetailed,
   getProfitLossSummary,
   getAvailableMonths,
   getAvailableDepartments
