@@ -592,11 +592,47 @@ function generateSummary(pmsEvents, otaEvents, timeline) {
     };
 }
 
+/**
+ * Get OTA XML data for a specific queue entry
+ */
+async function getOTAXMLData(queueId) {
+    const client = await pool.connect();
+    try {
+        const query = `
+            SELECT 
+                id,
+                service_name,
+                xml_body,
+                current_request_id,
+                status,
+                retries,
+                last_error,
+                created_at,
+                processed_at,
+                hotel_id
+            FROM ota_xml_queue 
+            WHERE id = $1
+        `;
+        
+        const result = await client.query(query, [queueId]);
+        
+        if (result.rows.length === 0) {
+            return null;
+        }
+        
+        return result.rows[0];
+
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     getCurrentStateSnapshot,
     getPMSEvents,
     getOTAEvents,
     getReservationLifecycle,
     mergeTimeline,
-    generateSummary
+    generateSummary,
+    getOTAXMLData
 };
