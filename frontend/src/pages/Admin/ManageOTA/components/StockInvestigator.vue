@@ -726,11 +726,19 @@ const getVerificationClass = () => {
   const totalRooms = currentState.totalRooms;
   const currentAvailable = currentState.calculatedAvailableStock;
   
-  const expectedAvailable = totalRooms 
-    - stats.totalInserts 
-    + stats.totalDeletes 
-    + stats.updatesActiveToCancelled 
-    - stats.updatesCancelledToActive;
+  let expectedAvailable;
+  
+  // Use CASCADE DELETE aware calculation if available
+  if (stats.totalActive !== undefined) {
+    expectedAvailable = totalRooms - stats.totalActive;
+  } else {
+    // Fallback to old calculation method
+    expectedAvailable = totalRooms 
+      - stats.totalInserts 
+      + stats.totalDeletes 
+      + stats.updatesActiveToCancelled 
+      - stats.updatesCancelledToActive;
+  }
   
   const discrepancy = expectedAvailable - currentAvailable;
   
@@ -749,20 +757,32 @@ const getVerificationMessage = () => {
   const totalRooms = currentState.totalRooms;
   const currentAvailable = currentState.calculatedAvailableStock;
   
-  // Calculate expected available rooms based on operations
-  // Formula: totalRooms - activeInserts + deletes + activeToCancelled - cancelledToActive
-  const expectedAvailable = totalRooms 
-    - stats.totalInserts  // Active inserts reduce availability
-    + stats.totalDeletes  // Deletes increase availability  
-    + stats.updatesActiveToCancelled  // Cancellations increase availability
-    - stats.updatesCancelledToActive; // Un-cancellations reduce availability
-  
-  const discrepancy = expectedAvailable - currentAvailable;
-  
-  if (discrepancy === 0) {
-    return `✅ 計算一致: ${totalRooms} - ${stats.totalInserts} + ${stats.totalDeletes} + ${stats.updatesActiveToCancelled} - ${stats.updatesCancelledToActive} = ${expectedAvailable}`;
+  // Use CASCADE DELETE aware calculation if available
+  if (stats.totalActive !== undefined) {
+    // New calculation using CASCADE DELETE aware lifecycle data
+    const expectedAvailable = totalRooms - stats.totalActive;
+    const discrepancy = expectedAvailable - currentAvailable;
+    
+    if (discrepancy === 0) {
+      return `✅ 計算一致: ${totalRooms} - ${stats.totalActive} (有効予約) = ${expectedAvailable}`;
+    } else {
+      return `⚠️ 計算不一致: 期待値 ${expectedAvailable} vs 実際 ${currentAvailable} (差異: ${discrepancy})`;
+    }
   } else {
-    return `⚠️ 計算不一致: 期待値 ${expectedAvailable} vs 実際 ${currentAvailable} (差異: ${discrepancy})`;
+    // Fallback to old calculation method
+    const expectedAvailable = totalRooms 
+      - stats.totalInserts  // Active inserts reduce availability
+      + stats.totalDeletes  // Deletes increase availability  
+      + stats.updatesActiveToCancelled  // Cancellations increase availability
+      - stats.updatesCancelledToActive; // Un-cancellations reduce availability
+    
+    const discrepancy = expectedAvailable - currentAvailable;
+    
+    if (discrepancy === 0) {
+      return `✅ 計算一致: ${totalRooms} - ${stats.totalInserts} + ${stats.totalDeletes} + ${stats.updatesActiveToCancelled} - ${stats.updatesCancelledToActive} = ${expectedAvailable}`;
+    } else {
+      return `⚠️ 計算不一致: 期待値 ${expectedAvailable} vs 実際 ${currentAvailable} (差異: ${discrepancy})`;
+    }
   }
 };
 

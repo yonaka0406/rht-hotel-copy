@@ -470,11 +470,6 @@ function mergeTimeline(pmsEvents, otaEvents) {
         // Ensure room_count_change is always set
         event.room_count_change = event.room_count_change || 0;
         
-        // Debug logging for first few events
-        if (index < 5) {
-            console.log(`Event ${index}: ${event.event_type} ${event.action}, cancelled: ${event.cancelled}, room_count_change: ${event.room_count_change}`);
-        }
-        
         // Group logic: same timestamp, same client, same action, same event_type
         if (currentGroup && 
             currentGroup.timestamp === event.timestamp &&
@@ -514,49 +509,96 @@ function mergeTimeline(pmsEvents, otaEvents) {
 /**
  * Generate summary and gap analysis
  */
-function generateSummary(pmsEvents, otaEvents, timeline) {
+function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = null) {
     const pmsEventCount = pmsEvents.length;
     const otaEventCount = otaEvents.length;
     
-    // Calculate detailed operation statistics
+    // Calculate detailed operation statistics using CASCADE DELETE aware lifecycle data
     const operationStats = {
         totalInserts: 0,
         totalDeletes: 0,
         totalUpdates: 0,
         updatesCancelledToActive: 0,  // cancelled -> active (room becomes occupied)
         updatesActiveToCancelled: 0,  // active -> cancelled (room becomes available)
-        netRoomChange: 0
+        netRoomChange: 0,
+        // Add CASCADE DELETE aware counts
+        totalActive: 0,
+        totalCancelled: 0,
+        totalDeleted: 0,
+        cascadeDeleted: 0
     };
     
-    pmsEvents.forEach(event => {
-        if (event.event_type === 'reservation_detail') {
-            if (event.action === 'INSERT') {
-                operationStats.totalInserts++;
-                // Only count as room change if not cancelled at insertion
-                if (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null') {
-                    operationStats.netRoomChange -= 1;
-                }
-            } else if (event.action === 'DELETE') {
-                operationStats.totalDeletes++;
-                operationStats.netRoomChange += 1;
-            } else if (event.action === 'UPDATE') {
-                operationStats.totalUpdates++;
-                
-                const wasActive = (event.cancelled_old === null || event.cancelled_old === '' || event.cancelled_old === 'null');
-                const isActive = (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null');
-                
-                if (wasActive && !isActive) {
-                    // Room was occupied, now cancelled (room becomes available)
-                    operationStats.updatesActiveToCancelled++;
-                    operationStats.netRoomChange += 1;
-                } else if (!wasActive && isActive) {
-                    // Room was cancelled, now active (room becomes occupied)
-                    operationStats.updatesCancelledToActive++;
-                    operationStats.netRoomChange -= 1;
+    // If we have CASCADE DELETE aware lifecycle data, use it for accurate statistics
+    if (reservationLifecycle && reservationLifecycle.length > 0) {
+        // Count by final status from lifecycle analysis
+        reservationLifecycle.forEach(record => {
+            if (record.final_status === 'active') {
+                operationStats.totalActive++;
+            } else if (record.final_status === 'cancelled') {
+                operationStats.totalCancelled++;
+            } else if (record.final_status === 'deleted') {
+                operationStats.totalDeleted++;
+                if (record.parent_was_deleted) {
+                    operationStats.cascadeDeleted++;
                 }
             }
-        }
-    });
+        });
+        
+        // Calculate operations from lifecycle data
+        reservationLifecycle.forEach(record => {
+            if (record.first_action === 'INSERT') {
+                operationStats.totalInserts++;
+            }
+            if (record.last_action === 'DELETE') {
+                operationStats.totalDeletes++;
+            }
+            if (record.last_action === 'UPDATE') {
+                operationStats.totalUpdates++;
+                // Determine if it's a cancellation change
+                const isCancelled = record.last_cancelled_status && 
+                                  record.last_cancelled_status !== '' && 
+                                  record.last_cancelled_status !== 'null';
+                if (record.final_status === 'cancelled' && isCancelled) {
+                    operationStats.updatesActiveToCancelled++;
+                }
+            }
+        });
+        
+        // Calculate net room change: active records reduce availability
+        operationStats.netRoomChange = -operationStats.totalActive;
+        
+    } else {
+        // Fallback to old calculation method if no lifecycle data
+        pmsEvents.forEach(event => {
+            if (event.event_type === 'reservation_detail') {
+                if (event.action === 'INSERT') {
+                    operationStats.totalInserts++;
+                    // Only count as room change if not cancelled at insertion
+                    if (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null') {
+                        operationStats.netRoomChange -= 1;
+                    }
+                } else if (event.action === 'DELETE') {
+                    operationStats.totalDeletes++;
+                    operationStats.netRoomChange += 1;
+                } else if (event.action === 'UPDATE') {
+                    operationStats.totalUpdates++;
+                    
+                    const wasActive = (event.cancelled_old === null || event.cancelled_old === '' || event.cancelled_old === 'null');
+                    const isActive = (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null');
+                    
+                    if (wasActive && !isActive) {
+                        // Room was occupied, now cancelled (room becomes available)
+                        operationStats.updatesActiveToCancelled++;
+                        operationStats.netRoomChange += 1;
+                    } else if (!wasActive && isActive) {
+                        // Room was cancelled, now active (room becomes occupied)
+                        operationStats.updatesCancelledToActive++;
+                        operationStats.netRoomChange -= 1;
+                    }
+                }
+            }
+        });
+    }
     
     // Simple gap detection: look for PMS events without corresponding OTA events within a time window
     const gaps = [];

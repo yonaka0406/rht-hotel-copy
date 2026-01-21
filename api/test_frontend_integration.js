@@ -41,6 +41,16 @@ async function testFrontendIntegration() {
         if (statusCode === 200 && responseData) {
             console.log('\n✅ API call successful!');
             
+            // Debug: Log the entire response structure
+            console.log('\n🔍 Response Structure:');
+            console.log('Keys:', Object.keys(responseData));
+            if (responseData.summary) {
+                console.log('Summary keys:', Object.keys(responseData.summary));
+                if (responseData.summary.operationStats) {
+                    console.log('OperationStats keys:', Object.keys(responseData.summary.operationStats));
+                }
+            }
+            
             // Check current state
             const currentState = responseData.currentState;
             console.log('\n📊 Current State:');
@@ -80,6 +90,18 @@ async function testFrontendIntegration() {
                 console.log(`   Total Deletes: ${summary.operationStats.totalDeletes}`);
                 console.log(`   Total Updates: ${summary.operationStats.totalUpdates}`);
                 console.log(`   Net Room Change: ${summary.operationStats.netRoomChange}`);
+                
+                // CASCADE DELETE aware statistics
+                if (summary.operationStats.totalActive !== undefined) {
+                    console.log('\n🎯 CASCADE DELETE Aware Statistics:');
+                    console.log(`   Total Active: ${summary.operationStats.totalActive}`);
+                    console.log(`   Total Cancelled: ${summary.operationStats.totalCancelled}`);
+                    console.log(`   Total Deleted: ${summary.operationStats.totalDeleted}`);
+                    console.log(`   Cascade Deleted: ${summary.operationStats.cascadeDeleted}`);
+                    console.log(`   ✅ Using CASCADE DELETE aware calculation`);
+                } else {
+                    console.log('\n⚠️  Using fallback calculation (CASCADE DELETE aware data not available)');
+                }
             }
             
             // Verify the fix

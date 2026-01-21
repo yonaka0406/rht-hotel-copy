@@ -59,8 +59,8 @@ const investigateStock = async (req, res) => {
         // 5. Merge and sort timeline
         investigation.eventTimeline = mergeTimeline(pmsEvents, otaEvents);
 
-        // 6. Generate summary and gap analysis
-        investigation.summary = generateSummary(pmsEvents, otaEvents, investigation.eventTimeline);
+        // 6. Generate summary and gap analysis using CASCADE DELETE aware data
+        investigation.summary = generateSummary(pmsEvents, otaEvents, investigation.eventTimeline, reservationLifecycle);
 
         // 7. Add lifecycle data
         investigation.reservationLifecycle = reservationLifecycle;
