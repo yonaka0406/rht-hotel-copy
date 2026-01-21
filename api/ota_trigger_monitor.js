@@ -282,6 +282,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
         console.log('\n2. CHECKING FOR MISSING OTA REQUESTS:');
         
         const missingTriggers = [];
+        const silentSkips = [];
         const batchSize = 10; // Process in small batches for better performance
         
         for (let i = 0; i < triggerCandidates.rows.length; i += batchSize) {
@@ -289,6 +290,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             
             // Process batch in parallel for better performance
             const batchPromises = batch.map(async (log) => {
+                // First check for OTA requests within 5 minutes
                 const otaCheck = await client.query(`
                     SELECT 
                         created_at,
@@ -306,10 +308,29 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                 `, [log.hotel_id, log.log_time]);
                 
                 if (otaCheck.rows.length === 0) {
+                    // No OTA request found - check if this might be a silent skip
+                    // Look for any OTA requests within a wider window (30 minutes) to see if there was activity
+                    const widerOtaCheck = await client.query(`
+                        SELECT 
+                            created_at,
+                            service_name,
+                            EXTRACT(EPOCH FROM (created_at - $2::timestamp))/60 as minutes_gap
+                        FROM ota_xml_queue 
+                        WHERE 
+                            hotel_id = $1
+                            AND created_at > $2::timestamp - interval '15 minutes'
+                            AND created_at <= $2::timestamp + interval '30 minutes'
+                            AND service_name LIKE '%Stock%'
+                        ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $2::timestamp)))
+                        LIMIT 1
+                    `, [log.hotel_id, log.log_time]);
+                    
                     return {
                         ...log,
                         gap_reason: 'NO_OTA_WITHIN_5_MIN',
-                        next_ota: null
+                        next_ota: null,
+                        nearby_ota: widerOtaCheck.rows[0] || null,
+                        possible_silent_skip: widerOtaCheck.rows.length === 0 // No OTA activity at all suggests silent skip
                     };
                 } else {
                     return {
@@ -322,10 +343,14 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             
             const batchResults = await Promise.all(batchPromises);
             
-            // Collect missing triggers
+            // Categorize results
             batchResults.forEach(result => {
                 if (result.gap_reason) {
-                    missingTriggers.push(result);
+                    if (result.possible_silent_skip) {
+                        silentSkips.push(result);
+                    } else {
+                        missingTriggers.push(result);
+                    }
                 }
             });
             
@@ -343,17 +368,26 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
         // 3. Generate report
         const totalCandidates = triggerCandidates.rows.length;
         const totalMissing = missingTriggers.length;
-        const successRate = ((totalCandidates - totalMissing) / totalCandidates * 100);
+        const totalSilentSkips = silentSkips.length;
+        const totalWithOTA = totalCandidates - totalMissing - totalSilentSkips;
+        const successRate = ((totalWithOTA) / totalCandidates * 100);
         
         console.log(`\n3. MONITORING REPORT:`);
         console.log(`   Total candidates: ${totalCandidates}`);
+        console.log(`   With OTA triggers: ${totalWithOTA}`);
         console.log(`   Missing triggers: ${totalMissing}`);
+        console.log(`   Possible silent skips: ${totalSilentSkips}`);
         console.log(`   Success rate: ${successRate.toFixed(1)}%`);
         
-        if (totalMissing === 0) {
+        if (totalMissing === 0 && totalSilentSkips === 0) {
             console.log(`   ✅ All reservation changes have corresponding OTA requests`);
+        } else if (totalMissing === 0 && totalSilentSkips > 0) {
+            console.log(`   ⚠️  ${totalSilentSkips} possible silent skips (stocks may have already matched)`);
         } else {
             console.log(`   🚨 ${totalMissing} reservation changes are missing OTA requests`);
+            if (totalSilentSkips > 0) {
+                console.log(`   ℹ️  ${totalSilentSkips} additional cases may be silent skips`);
+            }
             
             // Show details of missing triggers
             console.log('\n   MISSING TRIGGERS:');
@@ -362,7 +396,22 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                 console.log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${trigger.hotel_id} (${trigger.hotel_name})`);
                 console.log(`        ${trigger.action} - ${trigger.client_name || 'Unknown Client'} - Status: ${trigger.status}`);
                 console.log(`        Check-in: ${trigger.check_in}, Log ID: ${trigger.id}`);
+                if (trigger.nearby_ota) {
+                    const nearbyGap = Math.round(trigger.nearby_ota.minutes_gap * 100) / 100;
+                    console.log(`        Nearby OTA: ${nearbyGap} min gap (${trigger.nearby_ota.service_name})`);
+                }
             });
+            
+            // Show silent skips if any
+            if (totalSilentSkips > 0) {
+                console.log('\n   POSSIBLE SILENT SKIPS:');
+                silentSkips.forEach((skip, i) => {
+                    const jst = new Date(skip.log_time.getTime() + (9 * 60 * 60 * 1000));
+                    console.log(`     ${i + 1}. ${jst.toISOString()} JST - Hotel ${skip.hotel_id} (${skip.hotel_name})`);
+                    console.log(`        ${skip.action} - ${skip.client_name || 'Unknown Client'} - Status: ${skip.status}`);
+                    console.log(`        Reason: No OTA activity nearby (stocks may have matched)`);
+                });
+            }
             
             // Pattern analysis for missing triggers
             if (totalMissing > 1) {
@@ -432,11 +481,15 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             success: true,
             totalCandidates,
             missingTriggers: totalMissing,
+            silentSkips: totalSilentSkips,
             successRate,
             executionTime,
             missingTriggerDetails: missingTriggers,
+            silentSkipDetails: silentSkips,
             remediationResults,
-            message: totalMissing === 0 ? 'All triggers working correctly' : `${totalMissing} missing triggers detected${autoRemediate ? ' - remediation attempted' : ''}`
+            message: totalMissing === 0 ? 
+                (totalSilentSkips === 0 ? 'All triggers working correctly' : `${totalSilentSkips} possible silent skips detected`) : 
+                `${totalMissing} missing triggers detected${autoRemediate ? ' - remediation attempted' : ''}${totalSilentSkips > 0 ? `, ${totalSilentSkips} possible silent skips` : ''}`
         };
         
     } catch (error) {
