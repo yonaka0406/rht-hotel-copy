@@ -93,6 +93,12 @@
           </AccordionContent>
         </AccordionPanel>
         <AccordionPanel value="4">
+          <AccordionHeader>在庫調査ツール</AccordionHeader>
+          <AccordionContent>
+            <StockInvestigator />
+          </AccordionContent>
+        </AccordionPanel>
+        <AccordionPanel value="5">
           <AccordionHeader>XML手動操作</AccordionHeader>
           <AccordionContent>
             <Card class="mt-4">
@@ -205,6 +211,7 @@
   // Components
   import OtaQueueTable from '@/pages/Admin/ManageOTA/components/OtaQueueTable.vue';
   import OtaXmlQueueTable from './components/OtaXmlQueueTable.vue';
+  import StockInvestigator from './components/StockInvestigator.vue';
   
   // Helper
   const formatDateTime = (dateString) => {
