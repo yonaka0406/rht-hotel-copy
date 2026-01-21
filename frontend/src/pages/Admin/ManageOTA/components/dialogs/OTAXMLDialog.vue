@@ -1,10 +1,11 @@
 <template>
   <Dialog 
-    v-model:visible="visible" 
+    :visible="visible" 
     modal 
     :header="dialogTitle"
     :style="{ width: '90vw', maxWidth: '1200px' }"
     class="ota-xml-dialog"
+    @update:visible="$emit('update:visible', $event)"
     @hide="$emit('hide')"
   >
     <div v-if="loading" class="flex justify-center items-center py-8">
@@ -142,7 +143,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(['hide']);
+const emit = defineEmits(['hide', 'update:visible']);
 
 // Reactive data
 const loading = ref(false);

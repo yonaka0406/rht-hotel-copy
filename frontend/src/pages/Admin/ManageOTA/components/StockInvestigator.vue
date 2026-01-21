@@ -432,7 +432,7 @@
 
     <!-- OTA XML Dialog -->
     <OTAXMLDialog
-      :visible="xmlDialogVisible"
+      v-model:visible="xmlDialogVisible"
       :xml-id="selectedXMLId"
       :service-name="selectedServiceName"
       @hide="closeXMLDialog"
