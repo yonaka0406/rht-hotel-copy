@@ -7,6 +7,8 @@ const {
     generateSummary,
     getOTAXMLData
 } = require('../../models/ota/investigation');
+const { checkMissingOTATriggers } = require('../../ota_trigger_monitor');
+const { defaultMonitor: otaTriggerMonitor } = require('../../jobs/otaTriggerMonitorJob');
 
 /**
  * OTA Stock Investigation Controller
@@ -109,7 +111,74 @@ const getXMLData = async (req, res) => {
     }
 };
 
+/**
+ * Get OTA trigger monitoring status
+ * GET /api/ota/trigger-monitor/status
+ */
+const getTriggerMonitorStatus = async (req, res) => {
+    try {
+        const status = otaTriggerMonitor.getStatus();
+        
+        res.json({
+            success: true,
+            status: {
+                isRunning: status.isRunning,
+                lastCheck: status.lastCheck,
+                options: status.options,
+                uptime: status.isRunning ? new Date() - (status.lastCheck?.timestamp || new Date()) : null
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in getTriggerMonitorStatus:', error);
+        res.status(500).json({
+            error: 'Internal server error while getting trigger monitor status',
+            details: error.message
+        });
+    }
+};
+
+/**
+ * Run manual OTA trigger monitoring check
+ * POST /api/ota/trigger-monitor/check
+ */
+const runTriggerMonitorCheck = async (req, res) => {
+    try {
+        const { hoursBack = 1, autoRemediate = false } = req.body;
+        
+        // Validate input
+        if (hoursBack < 0.1 || hoursBack > 24) {
+            return res.status(400).json({
+                error: 'Invalid hoursBack parameter. Must be between 0.1 and 24.'
+            });
+        }
+        
+        // Run the check with optional auto-remediation
+        const result = await checkMissingOTATriggers(hoursBack, {
+            autoRemediate,
+            baseUrl: req.envConfig?.backendUrl || 'http://localhost:5000'
+        });
+        
+        res.json({
+            success: true,
+            result,
+            timestamp: new Date().toISOString(),
+            hoursBack,
+            autoRemediate
+        });
+
+    } catch (error) {
+        console.error('Error in runTriggerMonitorCheck:', error);
+        res.status(500).json({
+            error: 'Internal server error while running trigger monitor check',
+            details: error.message
+        });
+    }
+};
+
 module.exports = {
     investigateStock,
-    getXMLData
+    getXMLData,
+    getTriggerMonitorStatus,
+    runTriggerMonitorCheck
 };

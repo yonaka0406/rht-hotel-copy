@@ -24,6 +24,7 @@ const { scheduleDailyDigestEmailJob } = require('./jobs/dailyDigestEmailJob');
 const { scheduleDailySalesOccPdfJob } = require('./jobs/dailySalesOccPdfJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 const { startOtaXmlPoller, stopOtaXmlPoller, POLL_INTERVAL } = require('./jobs/otaXmlPoller.js');
+const { defaultMonitor: otaTriggerMonitor } = require('./jobs/otaTriggerMonitorJob.js');
 
 const app = express();
 const { closeSingletonBrowser } = require('./services/playwrightService');
@@ -667,6 +668,10 @@ const shutdown = async (signal) => {
 
   if (process.env.NODE_ENV === 'production') {
     stopOtaXmlPoller(); // Stop the poller using its dedicated function
+    
+    // Stop OTA trigger monitoring
+    otaTriggerMonitor.stop();
+    logger.info('OTA trigger monitoring stopped');
   }
 
   logger.info('Graceful shutdown complete.');
@@ -715,7 +720,13 @@ if (process.env.NODE_ENV === 'production') {
   startGoogleSheetsPoller();
   startOtaXmlPoller(); // Start the poller using its dedicated function
   scheduleDailyDigestEmailJob();
-  scheduleDailySalesOccPdfJob();  // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
+  scheduleDailySalesOccPdfJob();
+  
+  // Start OTA trigger monitoring
+  otaTriggerMonitor.start();
+  logger.info('OTA trigger monitoring started');
+  
+  // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
   logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
 }
