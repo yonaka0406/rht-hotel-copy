@@ -16,7 +16,7 @@ class OTATriggerMonitorJob {
             criticalThreshold: options.criticalThreshold || 80, // Critical if success rate below 80%
             enableAlerts: options.enableAlerts !== false, // Default to true
             enableLogging: options.enableLogging !== false, // Default to true
-            autoRemediate: options.autoRemediate || false, // Default to false for safety
+            autoRemediate: options.autoRemediate !== false, // Default to true
             baseUrl: options.baseUrl || 'http://localhost:5000',
             ...options
         };
@@ -387,7 +387,8 @@ const defaultMonitor = new OTATriggerMonitorJob({
     alertThreshold: 95,
     criticalThreshold: 80,
     enableAlerts: true,
-    enableLogging: true
+    enableLogging: true,
+    autoRemediate: true  // Enable auto-remediation by default
 });
 
 module.exports = {
