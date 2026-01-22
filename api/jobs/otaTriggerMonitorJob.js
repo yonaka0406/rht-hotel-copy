@@ -8,6 +8,17 @@ const { checkMissingOTATriggers } = require('../ota_trigger_monitor');
 const { sendGenericEmail } = require('../utils/emailUtils');
 const logger = require('../config/logger');
 
+// Helper to prevent HTML injection
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 class OTATriggerMonitorJob {
     constructor(options = {}) {
         this.options = {
@@ -324,7 +335,7 @@ ${level === 'CRITICAL' ? '緊急対応が必要です' : level === 'ERROR' ? '�
                     <tr><td style="padding: 5px; font-weight: bold;">総候補数:</td><td style="padding: 5px;">${totalCandidates}</td></tr>
                     <tr><td style="padding: 5px; font-weight: bold;">未送信トリガー:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${missingTriggers}件</td></tr>
                     ` : errorMessage ? `
-                    <tr><td style="padding: 5px; font-weight: bold;">エラーメッセージ:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${errorMessage}</td></tr>
+                    <tr><td style="padding: 5px; font-weight: bold;">エラーメッセージ:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${escapeHtml(errorMessage)}</td></tr>
                     <tr><td style="padding: 5px; font-weight: bold;">発生時刻:</td><td style="padding: 5px;">${timestamp} JST</td></tr>
                     ` : `
                     <tr><td style="padding: 5px; font-weight: bold;">状況:</td><td style="padding: 5px;">詳細情報なし</td></tr>
