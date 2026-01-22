@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { convertExcelToPdf } = require('../../../services/libreOfficeService');
+const { getFrontendCompatibleReportData } = require('../../../jobs/services/frontendCompatibleReportService');
+const { getPool } = require('../../../config/database');
 
 const cleanupFiles = (filePaths) => {
     filePaths.forEach(filePath => {
@@ -111,32 +113,29 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 });
             }
 
-            // Write All Facilities Revenue & Occupancy Overview starting from Row 10
-            if (Array.isArray(revenueData) && Array.isArray(occupancyData)) {
-                const startRow = 10;
+            // Helper function to write facility performance metrics
+            const writeFacilityPerformance = (sheet, startRow, monthStr, filteredRevenue, filteredOccupancy, options = {}) => {
+                const { writeFormulas = false, writeHeaders = true } = options;
+                const monthDate = monthStr ? new Date(`${monthStr}-01`) : null;
 
-                // Get month from outlook data to create a date object for '月度' column
-                const monthString = outlookData?.[0]?.month;
-                const monthDate = monthString ? new Date(`${monthString}-01`) : null;
+                if (writeHeaders) {
+                    const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異'];
+                    const occHeaders = ['施設名', '月度', '計画稼働率', '見込み稼働率', '稼働率差異'];
 
-                // Headers
-                const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異'];
-                const occHeaders = ['施設名', '月度', '計画稼働率', '見込み稼働率', '稼働率差異'];
-
-                const headerRow = dataSheet.row(startRow);
-                revHeaders.forEach((header, index) => {
-                    headerRow.cell(index + 1).value(header).style({ bold: true });
-                });
-                occHeaders.forEach((header, index) => {
-                    // Start from Column H (8)
-                    headerRow.cell(index + 8).value(header).style({ bold: true });
-                });
+                    const headerRow = sheet.row(startRow);
+                    revHeaders.forEach((header, index) => {
+                        headerRow.cell(index + 1).value(header).style({ bold: true });
+                    });
+                    occHeaders.forEach((header, index) => {
+                        headerRow.cell(index + 8).value(header).style({ bold: true });
+                    });
+                }
 
                 // Prepare combined data for sorting
-                const hotelMetrics = revenueData
+                const hotelMetrics = filteredRevenue
                     .filter(item => item.hotel_id !== 0)
                     .map(revItem => {
-                        const occItem = occupancyData.find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
+                        const occItem = filteredOccupancy.find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
 
                         const forecastRevenue = revItem.forecast_revenue ?? 0;
                         const actualRevenue = revItem.accommodation_revenue ?? 0;
@@ -164,9 +163,8 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 // Write data side-by-side
                 revenueSorted.forEach((item, index) => {
                     const currentRow = startRow + 1 + index;
-                    const row = dataSheet.row(currentRow);
+                    const row = sheet.row(currentRow);
 
-                    // Revenue section (Cols 1-5, F and G are blank)
                     row.cell(1).value(item.hotel_name);
                     if (monthDate) {
                         row.cell(2).value(monthDate).style("numberFormat", "yyyy/mm/dd");
@@ -175,17 +173,17 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     row.cell(4).value(item.actualRevenue).style("numberFormat", "#,##0");
                     row.cell(5).value(item.revenueVariance).style("numberFormat", "#,##0");
 
-                    // Formulas for columns O, P, Q (division by 10000) - adjusted for new column layout
-                    row.cell(15).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
-                    row.cell(16).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
-                    row.cell(17).formula(`E${currentRow}/10000`).style("numberFormat", "#,##0");
+                    if (writeFormulas) {
+                        row.cell(15).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
+                        row.cell(16).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
+                        row.cell(17).formula(`E${currentRow}/10000`).style("numberFormat", "#,##0");
+                    }
                 });
 
                 occupancySorted.forEach((item, index) => {
                     const currentRow = startRow + 1 + index;
-                    const row = dataSheet.row(currentRow);
+                    const row = sheet.row(currentRow);
 
-                    // Occupancy section (Starts from Col 8 / H)
                     row.cell(8).value(item.hotel_name);
                     if (monthDate) {
                         row.cell(9).value(monthDate).style("numberFormat", "yyyy/mm/dd");
@@ -194,6 +192,42 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     row.cell(11).value(item.actualOcc / 100).style("numberFormat", "0.0%");
                     row.cell(12).value(item.occVariance / 100).style("numberFormat", "0.0%");
                 });
+
+                return hotelMetrics.length;
+            };
+
+            // Write All Facilities Revenue & Occupancy Overview starting from Row 10
+            if (Array.isArray(revenueData) && Array.isArray(occupancyData)) {
+                // Determine current month from outlookData
+                const currentMonthStr = outlookData?.[0]?.month;
+
+                // 1. Current Month Section on '合計データ'
+                const currentRevData = revenueData.filter(r => r.month === currentMonthStr);
+                const currentOccData = occupancyData.filter(o => o.month === currentMonthStr);
+
+                writeFacilityPerformance(dataSheet, 10, currentMonthStr, currentRevData, currentOccData, { writeFormulas: true, writeHeaders: true });
+
+                // 2. Next Month (M+1) on '合計データ2'
+                const nextMonth1Str = outlookData?.[1]?.month;
+                if (nextMonth1Str) {
+                    const dataSheet2 = workbook.sheet('合計データ2') || workbook.addSheet('合計データ2');
+                    const nextRev1Data = revenueData.filter(r => r.month === nextMonth1Str);
+                    const nextOcc1Data = occupancyData.filter(o => o.month === nextMonth1Str);
+                    if (dataSheet2 && (nextRev1Data.length > 0 || nextOcc1Data.length > 0)) {
+                        writeFacilityPerformance(dataSheet2, 1, nextMonth1Str, nextRev1Data, nextOcc1Data, { writeHeaders: true });
+                    }
+                }
+
+                // 3. Month After Next (M+2) on '合計データ3'
+                const nextMonth2Str = outlookData?.[2]?.month;
+                if (nextMonth2Str) {
+                    const dataSheet3 = workbook.sheet('合計データ3') || workbook.addSheet('合計データ3');
+                    const nextRev2Data = revenueData.filter(r => r.month === nextMonth2Str);
+                    const nextOcc2Data = occupancyData.filter(o => o.month === nextMonth2Str);
+                    if (dataSheet3 && (nextRev2Data.length > 0 || nextOcc2Data.length > 0)) {
+                        writeFacilityPerformance(dataSheet3, 1, nextMonth2Str, nextRev2Data, nextOcc2Data, { writeHeaders: true });
+                    }
+                }
             }
         }
 
@@ -224,13 +258,25 @@ const getDailyTemplatePdf = async (req, res) => {
     const {
         targetDate,
         format: outputFormat = 'pdf',
+        period = 'month'
     } = req.body;
 
     let generatedFilePath = null;
+    let dbClient = null;
     try {
-        generatedFilePath = await generateDailyReportPdf(req.body, requestId, outputFormat);
+        // Fetch fresh, full data using the backend service to ensure multi-month data for sheets like '合計データ2'
+        dbClient = await getPool(requestId).connect();
+        const fullReportData = await getFrontendCompatibleReportData(requestId, targetDate, period, dbClient);
 
-        const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        // Merge backend-calculated data with frontend metadata if any
+        const combinedData = {
+            ...req.body,
+            ...fullReportData
+        };
+
+        generatedFilePath = await generateDailyReportPdf(combinedData, requestId, outputFormat);
+
+        const formattedDate = targetDate ? String(targetDate).replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const filename = `daily_report_${formattedDate}.${outputFormat}`;
 
         if (outputFormat === 'xlsx') {
@@ -254,6 +300,8 @@ const getDailyTemplatePdf = async (req, res) => {
     } catch (error) {
         if (!res.headersSent) res.status(500).json({ message: 'Failed to generate file', error: error.message });
         if (generatedFilePath) cleanupFiles([generatedFilePath]);
+    } finally {
+        if (dbClient) dbClient.release();
     }
 };
 
