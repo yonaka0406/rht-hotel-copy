@@ -6,6 +6,7 @@
 
 require('dotenv').config();
 const { pool } = require('./config/database');
+const { sendGenericEmail } = require('./utils/emailUtils');
 
 /**
  * Group missing triggers by overlapping date ranges to avoid duplicate requests
@@ -56,8 +57,139 @@ function groupTriggersByDateRanges(missingTriggers) {
 }
 
 /**
- * Perform automatic remediation for missing OTA triggers
+ * Send email notification for OTA trigger issues
  */
+async function sendOTANotificationEmail(type, data) {
+    const emailRecipient = 'dx@redhorse-group.co.jp';
+    
+    try {
+        const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+        let subject, text, html;
+
+        if (type === 'INCONSISTENCY') {
+            const { missingTriggers, totalCandidates, successRate, hoursBack } = data;
+            
+            subject = `🚨 OTA連携エラー検出 - 成功率${successRate.toFixed(1)}%`;
+            
+            text = `OTA連携監視アラート
+
+時刻: ${timestamp} JST
+監視期間: 過去${hoursBack}時間
+成功率: ${successRate.toFixed(1)}%
+総候補数: ${totalCandidates}
+未送信トリガー: ${missingTriggers.length}件
+
+未送信トリガー詳細:
+${missingTriggers.map((trigger, i) => 
+    `${i + 1}. ホテル${trigger.hotel_id} (${trigger.hotel_name})
+   操作: ${trigger.action} - 顧客: ${trigger.client_name || '不明'}
+   時刻: ${new Date(trigger.log_time.getTime() + 9*60*60*1000).toISOString()} JST
+   チェックイン: ${trigger.check_in}, ステータス: ${trigger.status}`
+).join('\n\n')}
+
+OTA同期システムの調査が必要です。`;
+
+            html = `
+            <div style="font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 800px; margin: 0 auto;">
+                <h2 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;">
+                    🚨 OTA連携エラー検出
+                </h2>
+                
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <h3>アラート概要</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 5px; font-weight: bold;">時刻:</td><td style="padding: 5px;">${timestamp} JST</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">監視期間:</td><td style="padding: 5px;">過去${hoursBack}時間</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">成功率:</td><td style="padding: 5px; color: #e74c3c; font-weight: bold;">${successRate.toFixed(1)}%</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">総候補数:</td><td style="padding: 5px;">${totalCandidates}</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">未送信トリガー:</td><td style="padding: 5px; color: #e74c3c; font-weight: bold;">${missingTriggers.length}件</td></tr>
+                    </table>
+                </div>
+
+                <h3>未送信トリガー詳細</h3>
+                <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                    ${missingTriggers.map((trigger, i) => `
+                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #dee2e6;">
+                            <strong>${i + 1}. ホテル${trigger.hotel_id} (${trigger.hotel_name})</strong><br>
+                            <strong>操作:</strong> ${trigger.action} - <strong>顧客:</strong> ${trigger.client_name || '不明'}<br>
+                            <strong>時刻:</strong> ${new Date(trigger.log_time.getTime() + 9*60*60*1000).toISOString()} JST<br>
+                            <strong>チェックイン:</strong> ${trigger.check_in} - <strong>ステータス:</strong> ${trigger.status}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <p style="margin-top: 20px; color: #6c757d;">
+                    OTA同期システムの緊急調査が必要です。
+                </p>
+            </div>`;
+
+        } else if (type === 'REMEDIATION') {
+            const { remediationResults, missingTriggers } = data;
+            
+            subject = `⚡ OTA自動修復実行 - ${remediationResults.successful}件修復完了`;
+            
+            text = `OTA自動修復レポート
+
+時刻: ${timestamp} JST
+成功: ${remediationResults.successful}件
+失敗: ${remediationResults.failed}件
+スキップ: ${remediationResults.skipped}件
+処理総数: ${missingTriggers}件
+
+修復詳細:
+${remediationResults.details.map((detail, i) => 
+    `${i + 1}. ホテル${detail.hotel_id} - ${detail.date_range}
+   ステータス: ${detail.status === 'success' ? '成功' : detail.status === 'failed' ? '失敗' : 'スキップ'}
+   トリガー数: ${detail.triggers_count}件
+   ${detail.error ? `エラー: ${detail.error}` : ''}
+   ${detail.reason ? `理由: ${detail.reason}` : ''}`
+).join('\n\n')}
+
+自動修復が完了しました。`;
+
+            html = `
+            <div style="font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 800px; margin: 0 auto;">
+                <h2 style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 10px;">
+                    ⚡ OTA自動修復実行
+                </h2>
+                
+                <div style="background-color: #d4edda; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <h3>修復概要</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 5px; font-weight: bold;">時刻:</td><td style="padding: 5px;">${timestamp} JST</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">成功:</td><td style="padding: 5px; color: #28a745; font-weight: bold;">${remediationResults.successful}件</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">失敗:</td><td style="padding: 5px; color: #dc3545; font-weight: bold;">${remediationResults.failed}件</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">スキップ:</td><td style="padding: 5px;">${remediationResults.skipped}件</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">処理総数:</td><td style="padding: 5px;">${missingTriggers}件</td></tr>
+                    </table>
+                </div>
+
+                <h3>修復詳細</h3>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
+                    ${remediationResults.details.map((detail, i) => `
+                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #dee2e6;">
+                            <strong>${i + 1}. ホテル${detail.hotel_id} - ${detail.date_range}</strong><br>
+                            <strong>ステータス:</strong> <span style="color: ${detail.status === 'success' ? '#28a745' : detail.status === 'failed' ? '#dc3545' : '#ffc107'};">${detail.status === 'success' ? '成功' : detail.status === 'failed' ? '失敗' : 'スキップ'}</span><br>
+                            <strong>トリガー数:</strong> ${detail.triggers_count}件
+                            ${detail.error ? `<br><strong>エラー:</strong> <span style="color: #dc3545;">${detail.error}</span>` : ''}
+                            ${detail.reason ? `<br><strong>理由:</strong> ${detail.reason}` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <p style="margin-top: 20px; color: #6c757d;">
+                    自動修復が完了しました。結果をご確認ください。
+                </p>
+            </div>`;
+        }
+
+        await sendGenericEmail(emailRecipient, subject, text, html);
+        console.log(`   ✅ Email notification sent to ${emailRecipient}`);
+        
+    } catch (error) {
+        console.error(`   ❌ Failed to send email notification: ${error.message}`);
+    }
+}
 async function performAutoRemediation(missingTriggers, baseUrl) {
     const results = {
         successful: 0,
@@ -389,6 +521,15 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                 console.log(`   ℹ️  ${totalSilentSkips} additional cases may be silent skips`);
             }
             
+            // Send email notification for inconsistency
+            console.log('\n   📧 SENDING EMAIL NOTIFICATION:');
+            await sendOTANotificationEmail('INCONSISTENCY', {
+                missingTriggers,
+                totalCandidates,
+                successRate,
+                hoursBack
+            });
+            
             // Show details of missing triggers
             console.log('\n   MISSING TRIGGERS:');
             missingTriggers.forEach((trigger, i) => {
@@ -447,6 +588,13 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             console.log(`     Successful requests: ${remediationResults.successful}`);
             console.log(`     Failed requests: ${remediationResults.failed}`);
             console.log(`     Skipped (overlapping): ${remediationResults.skipped}`);
+            
+            // Send email notification for remediation
+            console.log('\n   📧 SENDING REMEDIATION EMAIL NOTIFICATION:');
+            await sendOTANotificationEmail('REMEDIATION', {
+                remediationResults,
+                missingTriggers: missingTriggers.length
+            });
         }
         
         // 6. Performance metrics

@@ -5,6 +5,7 @@
  */
 
 const { checkMissingOTATriggers } = require('../ota_trigger_monitor');
+const { sendGenericEmail } = require('../utils/emailUtils');
 const logger = require('../config/logger');
 
 class OTATriggerMonitorJob {
@@ -184,9 +185,17 @@ class OTATriggerMonitorJob {
         
         logger[logLevel](`OTA TRIGGER ALERT [${level}]: ${message}`, data);
 
-        // TODO: Implement your alerting mechanism here
+        // Send email notification if enabled
+        if (this.options.enableAlerts) {
+            try {
+                await this.sendEmailAlert(level, message, data);
+            } catch (error) {
+                logger.error('Failed to send email alert', { error: error.message });
+            }
+        }
+        
+        // TODO: Implement additional alerting mechanisms here
         // Examples:
-        // - Send email notification
         // - Send Slack/Teams message
         // - Create monitoring system ticket
         // - Send webhook to external monitoring service
@@ -211,6 +220,95 @@ class OTATriggerMonitorJob {
             }
         }
         */
+    }
+
+    /**
+     * Send email alert for OTA trigger issues
+     */
+    async sendEmailAlert(level, message, data) {
+        const emailRecipient = 'dx@redhorse-group.co.jp';
+        const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+        const { successRate, missingTriggers, totalCandidates } = data;
+        
+        let subject, text, html;
+        let bgColor, textColor, icon;
+        
+        // Set styling based on alert level
+        switch (level) {
+            case 'CRITICAL':
+                bgColor = '#f8d7da';
+                textColor = '#721c24';
+                icon = '🚨';
+                break;
+            case 'WARNING':
+                bgColor = '#fff3cd';
+                textColor = '#856404';
+                icon = '⚠️';
+                break;
+            default:
+                bgColor = '#d1ecf1';
+                textColor = '#0c5460';
+                icon = 'ℹ️';
+        }
+        
+        const levelJapanese = level === 'CRITICAL' ? '緊急' : level === 'WARNING' ? '警告' : '情報';
+        
+        subject = `${icon} OTA連携アラート [${levelJapanese}] - 成功率${successRate.toFixed(1)}%`;
+        
+        text = `OTA連携監視アラート
+
+レベル: ${levelJapanese}
+時刻: ${timestamp} JST
+メッセージ: ${message}
+
+システム状況:
+- 成功率: ${successRate.toFixed(1)}%
+- 総候補数: ${totalCandidates}
+- 未送信トリガー: ${missingTriggers}件
+
+${level === 'CRITICAL' ? '緊急対応が必要です' : '適宜調査をお願いします'}
+
+これはOTA連携監視システムからの自動アラートです。`;
+
+        html = `
+        <div style="font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: ${bgColor}; color: ${textColor}; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: ${textColor};">
+                    ${icon} OTA連携アラート [${levelJapanese}]
+                </h2>
+            </div>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3>アラート詳細</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 5px; font-weight: bold;">レベル:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${levelJapanese}</td></tr>
+                    <tr><td style="padding: 5px; font-weight: bold;">時刻:</td><td style="padding: 5px;">${timestamp} JST</td></tr>
+                    <tr><td style="padding: 5px; font-weight: bold;">メッセージ:</td><td style="padding: 5px;">${message}</td></tr>
+                </table>
+            </div>
+
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3>システム状況</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 5px; font-weight: bold;">成功率:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${successRate.toFixed(1)}%</td></tr>
+                    <tr><td style="padding: 5px; font-weight: bold;">総候補数:</td><td style="padding: 5px;">${totalCandidates}</td></tr>
+                    <tr><td style="padding: 5px; font-weight: bold;">未送信トリガー:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${missingTriggers}件</td></tr>
+                </table>
+            </div>
+
+            <div style="background-color: ${level === 'CRITICAL' ? '#f8d7da' : '#e2e3e5'}; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; font-weight: bold; color: ${level === 'CRITICAL' ? '#721c24' : '#383d41'};">
+                    ${level === 'CRITICAL' ? '🚨 緊急対応が必要です' : '📋 適宜調査をお願いします'}
+                </p>
+            </div>
+
+            <p style="color: #6c757d; font-size: 12px; margin-top: 20px;">
+                これはOTA連携監視システムからの自動アラートです。
+            </p>
+        </div>`;
+
+        await sendGenericEmail(emailRecipient, subject, text, html);
+        logger.info(`Email alert sent to ${emailRecipient}`, { level, successRate });
     }
 
     /**
