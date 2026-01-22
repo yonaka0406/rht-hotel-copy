@@ -214,7 +214,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const nextRev1Data = revenueData.filter(r => r.month === nextMonth1Str);
                     const nextOcc1Data = occupancyData.filter(o => o.month === nextMonth1Str);
                     if (dataSheet2 && (nextRev1Data.length > 0 || nextOcc1Data.length > 0)) {
-                        writeFacilityPerformance(dataSheet2, 1, nextMonth1Str, nextRev1Data, nextOcc1Data, { writeHeaders: true });
+                        writeFacilityPerformance(dataSheet2, 2, nextMonth1Str, nextRev1Data, nextOcc1Data, { writeHeaders: true });
                     }
                 }
 
@@ -225,7 +225,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const nextRev2Data = revenueData.filter(r => r.month === nextMonth2Str);
                     const nextOcc2Data = occupancyData.filter(o => o.month === nextMonth2Str);
                     if (dataSheet3 && (nextRev2Data.length > 0 || nextOcc2Data.length > 0)) {
-                        writeFacilityPerformance(dataSheet3, 1, nextMonth2Str, nextRev2Data, nextOcc2Data, { writeHeaders: true });
+                        writeFacilityPerformance(dataSheet3, 2, nextMonth2Str, nextRev2Data, nextOcc2Data, { writeHeaders: true });
                     }
                 }
             }
