@@ -54,7 +54,7 @@ const selectReservationHistory = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(query, values);   
+        const result = await pool.query(query, values);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
@@ -125,8 +125,12 @@ const selectReservationInventoryChange = async (requestId, id) => {
             WHERE 
                 lr.id = $1
                 AND lr.table_name LIKE 'reservation_details_%'
-                AND lr.action = 'UPDATE'
-                AND lr.changes->'old'->>'room_id' IS DISTINCT FROM lr.changes->'new'->>'room_id'
+                AND (lr.action = 'UPDATE' OR lr.action = 'INSERT')
+                -- For UPDATE: check if room_id changed. For INSERT: logic always proceeds as new_room_id exists.
+                AND (
+                    lr.action = 'INSERT' OR
+                    lr.changes->'old'->>'room_id' IS DISTINCT FROM lr.changes->'new'->>'room_id'
+                )
         )
         SELECT
             ld.id,
@@ -142,7 +146,9 @@ const selectReservationInventoryChange = async (requestId, id) => {
         LEFT JOIN rooms new_room ON 
             new_room.id = ld.new_room_id::int AND 
             new_room.hotel_id = ld.hotel_id
-        WHERE old_room.room_type_id IS DISTINCT FROM new_room.room_type_id
+        WHERE 
+            ld.action = 'INSERT' OR
+            old_room.room_type_id IS DISTINCT FROM new_room.room_type_id
     `;
     const values = [id];
     try {
@@ -150,7 +156,7 @@ const selectReservationInventoryChange = async (requestId, id) => {
         if (result.rows.length === 0) {
             const detailsResult = await pool.query(detailsQuery, values);
             return detailsResult.rows;
-        }        
+        }
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
@@ -220,8 +226,9 @@ const selectReservationGoogleInventoryChange = async (requestId, id) => {
             WHERE 
                 lr.id = $1
                 AND lr.table_name LIKE 'reservation_details_%'
-                AND lr.action = 'UPDATE'
+                AND (lr.action = 'UPDATE' OR lr.action = 'INSERT')
                 AND (
+                    lr.action = 'INSERT' OR
                     lr.changes->'old'->>'room_id' IS DISTINCT FROM lr.changes->'new'->>'room_id' OR
                     lr.changes->'old'->>'plans_global_id' IS DISTINCT FROM lr.changes->'new'->>'plans_global_id' OR
                     lr.changes->'old'->>'plans_hotel_id' IS DISTINCT FROM lr.changes->'new'->>'plans_hotel_id'
@@ -242,7 +249,7 @@ const selectReservationGoogleInventoryChange = async (requestId, id) => {
         if (result.rows.length === 0) {
             const detailsResult = await pool.query(detailsQuery, values);
             return detailsResult.rows;
-        }        
+        }
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
@@ -303,7 +310,7 @@ const selectClientHistory = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(query, values);   
+        const result = await pool.query(query, values);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
@@ -313,7 +320,7 @@ const selectClientHistory = async (requestId, id) => {
 
 module.exports = {
     selectReservationHistory,
-    selectReservationInventoryChange, 
+    selectReservationInventoryChange,
     selectReservationGoogleInventoryChange,
     selectClientHistory,
 };
