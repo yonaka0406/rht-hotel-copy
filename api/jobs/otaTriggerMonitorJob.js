@@ -11,7 +11,8 @@ const logger = require('../config/logger');
 class OTATriggerMonitorJob {
     constructor(options = {}) {
         this.options = {
-            checkIntervalHours: options.checkIntervalHours || 1,
+            checkIntervalHours: options.checkIntervalHours || 55/60, // Default: 55 minutes
+            monitoringWindowHours: options.monitoringWindowHours || 1, // Default: 60 minutes lookback
             alertThreshold: options.alertThreshold || 95, // Alert if success rate below 95%
             criticalThreshold: options.criticalThreshold || 80, // Critical if success rate below 80%
             enableAlerts: options.enableAlerts !== false, // Default to true
@@ -38,6 +39,7 @@ class OTATriggerMonitorJob {
         this.isRunning = true;
         logger.info('Starting OTA Trigger Monitor Job', {
             checkIntervalHours: this.options.checkIntervalHours,
+            monitoringWindowHours: this.options.monitoringWindowHours,
             alertThreshold: this.options.alertThreshold,
             criticalThreshold: this.options.criticalThreshold,
             autoRemediate: this.options.autoRemediate
@@ -82,7 +84,7 @@ class OTATriggerMonitorJob {
                 logger.info('Running OTA trigger monitoring check');
             }
 
-            const result = await checkMissingOTATriggers(this.options.checkIntervalHours, {
+            const result = await checkMissingOTATriggers(this.options.monitoringWindowHours, {
                 autoRemediate: this.options.autoRemediate,
                 baseUrl: this.options.baseUrl
             });
@@ -381,9 +383,10 @@ function createOTATriggerMonitor(options = {}) {
     return new OTATriggerMonitorJob(options);
 }
 
-// Default instance for immediate use
+// Default instance for immediate use - runs every 55 minutes, monitors last 60 minutes
 const defaultMonitor = new OTATriggerMonitorJob({
-    checkIntervalHours: 1,
+    checkIntervalHours: 55/60,  // 55 minutes = 0.9167 hours
+    monitoringWindowHours: 1,   // Look at last 60 minutes
     alertThreshold: 95,
     criticalThreshold: 80,
     enableAlerts: true,

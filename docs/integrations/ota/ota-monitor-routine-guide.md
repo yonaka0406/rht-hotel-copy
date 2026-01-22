@@ -282,23 +282,33 @@ node api/ota_trigger_monitor.js 24
 The following configuration values are hardcoded in the system to avoid environment variable complexity:
 
 ```javascript
-// Hardcoded Monitor Configuration
+// Hardcoded Monitor Configuration - Safe Overlap Strategy
 const DEFAULT_CONFIG = {
   OTA_MONITOR_ENABLED: true,
   OTA_AUTO_REMEDIATE: true,
-  OTA_CHECK_INTERVAL: 3600000,  // 1 hour in milliseconds
+  OTA_CHECK_INTERVAL: 55 * 60 * 1000,  // 55 minutes in milliseconds
+  OTA_MONITORING_WINDOW: 60 * 60 * 1000, // 60 minutes lookback window
   OTA_ALERT_THRESHOLD: 95,      // Alert if success rate < 95%
   OTA_CRITICAL_THRESHOLD: 80,   // Critical if success rate < 80%
   EMAIL_NOTIFICATIONS: true
 };
 ```
 
+### Safe Overlap Strategy
+
+**Monitoring Schedule**: Runs every **55 minutes**, monitors last **60 minutes**
+- ✅ **5-minute overlap** ensures no gaps in monitoring coverage
+- ✅ **Prevents missed events** during monitoring intervals
+- ✅ **Redundant coverage** for critical time periods
+- ✅ **Fail-safe design** catches issues even if one check fails
+
 ### Runtime Configuration
 
 ```javascript
-// Monitor Configuration (hardcoded defaults)
+// Monitor Configuration (hardcoded defaults with safe overlap)
 const monitorConfig = {
-  checkIntervalHours: 1,        // Derived from OTA_CHECK_INTERVAL
+  checkIntervalHours: 55/60,    // Run every 55 minutes (0.9167 hours)
+  monitoringWindowHours: 1,     // Look at last 60 minutes
   alertThreshold: 95,           // OTA_ALERT_THRESHOLD
   criticalThreshold: 80,        // OTA_CRITICAL_THRESHOLD
   enableAlerts: true,           // EMAIL_NOTIFICATIONS

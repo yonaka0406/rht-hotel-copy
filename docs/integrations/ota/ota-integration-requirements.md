@@ -15,6 +15,12 @@
 **AND** the system **SHALL** trigger an OTA inventory update within 5 minutes  
 **WHERE** the reservation affects current or future inventory (check_out >= current_date).
 
+**WHEN** the monitoring system runs its scheduled checks  
+**THEN** the system **SHALL** execute every 55 minutes  
+**AND** the system **SHALL** analyze the last 60 minutes of activity  
+**AND** the system **SHALL** provide 5-minute overlap between monitoring cycles  
+**AND** the system **SHALL** ensure no gaps in monitoring coverage even if one check fails.
+
 **WHEN** an OTA inventory update fails to trigger within the specified timeframe  
 **THEN** the system **SHALL** categorize the failure as either:
 - Missing trigger (true system failure)
@@ -223,13 +229,15 @@
 
 **WHEN** system configuration needs to be managed  
 **THEN** the system **SHALL** use hardcoded configuration values for OTA monitoring settings  
-**AND** the system **SHALL** use the following default values:
+**AND** the system **SHALL** use the following default values with safe overlap strategy:
 - Monitor enabled: true
 - Auto-remediation enabled: true  
-- Check interval: 1 hour (3600000ms)
+- Check interval: 55 minutes (3300000ms)
+- Monitoring window: 60 minutes (3600000ms)
 - Alert threshold: 95% success rate
 - Critical threshold: 80% success rate
 - Email notifications: enabled  
+**AND** the system **SHALL** provide 5-minute overlap between monitoring cycles for fail-safe coverage  
 **AND** the system **SHALL** eliminate the need for environment variable configuration  
 **AND** the system **SHALL** provide consistent behavior across all environments.
 
