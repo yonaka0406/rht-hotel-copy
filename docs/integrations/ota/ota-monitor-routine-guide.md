@@ -392,7 +392,7 @@ top -p $(pgrep -f ota_trigger_monitor)
 # Test email configuration
 node -e "
 const { sendGenericEmail } = require('./api/utils/emailUtils');
-sendGenericEmail('dx@redhorse-group.co.jp', 'Test', 'Test message', '<p>Test</p>')
+sendGenericEmail('test@example.com', 'Test', 'Test message', '<p>Test</p>')
   .then(() => console.log('Email sent'))
   .catch(err => console.error('Email failed:', err));
 "
