@@ -1,161 +1,132 @@
 /**
- * Test CASCADE DELETE handling in selectReservationInventoryChange
- * Verify that parent reservation DELETEs properly return affected reservation_details dates
+ * Test the updated selectReservationInventoryChange and selectReservationGoogleInventoryChange
+ * functions with CASCADE DELETE scenarios
  */
 
 require('dotenv').config();
 const { pool } = require('../../config/database');
-const { selectReservationInventoryChange } = require('../../models/log');
+const { selectReservationInventoryChange, selectReservationGoogleInventoryChange } = require('../../models/log');
 
 async function testCascadeDeleteHandling() {
-    console.log('🧪 Testing CASCADE DELETE Handling');
-    console.log('==================================\n');
+    console.log('🔍 Testing CASCADE DELETE Handling in OTA Trigger Functions');
+    console.log('=======================================================\n');
     
     const client = await pool.connect();
     try {
-        // 1. Find some parent reservation DELETE logs to test with
-        console.log('1. FINDING PARENT RESERVATION DELETE LOGS:');
+        // 1. Find a recent parent reservation DELETE log
+        console.log('1. FINDING RECENT PARENT DELETE LOG:');
         
-        const parentDeletesQuery = `
+        const parentDeleteQuery = `
             SELECT 
                 lr.id as log_id,
                 lr.log_time,
                 lr.table_name,
                 lr.changes->>'id' as deleted_reservation_id,
-                (lr.changes->>'hotel_id')::int as hotel_id,
-                lr.changes->>'check_in' as check_in,
-                lr.changes->>'check_out' as check_out
+                (lr.changes->>'hotel_id')::int as hotel_id
             FROM logs_reservation lr
             WHERE 
                 lr.action = 'DELETE'
-                AND lr.table_name LIKE 'reservations_%'
-                AND lr.log_time >= CURRENT_DATE - INTERVAL '30 days'
-            ORDER BY lr.log_time DESC
-            LIMIT 5
-        `;
-        
-        const parentDeletesResult = await client.query(parentDeletesQuery);
-        console.log(`   Found ${parentDeletesResult.rows.length} parent reservation DELETE logs in last 30 days`);
-        
-        if (parentDeletesResult.rows.length === 0) {
-            console.log('   ❌ No parent DELETE logs found to test with');
-            return;
-        }
-        
-        // 2. Test each parent DELETE log
-        for (const parentDelete of parentDeletesResult.rows) {
-            console.log(`\n2. TESTING PARENT DELETE LOG ${parentDelete.log_id}:`);
-            console.log(`   Deleted reservation: ${parentDelete.deleted_reservation_id}`);
-            console.log(`   Hotel: ${parentDelete.hotel_id}`);
-            console.log(`   Check-in: ${parentDelete.check_in}`);
-            console.log(`   Log time: ${parentDelete.log_time}`);
-            
-            // Check if this reservation had any reservation_details
-            const detailsCheckQuery = `
-                SELECT 
-                    date,
-                    room_id,
-                    cancelled
-                FROM reservation_details
-                WHERE reservation_id = $1
-                ORDER BY date
-            `;
-            
-            const detailsCheckResult = await client.query(detailsCheckQuery, [parentDelete.deleted_reservation_id]);
-            console.log(`   Associated reservation_details: ${detailsCheckResult.rows.length}`);
-            
-            if (detailsCheckResult.rows.length > 0) {
-                console.log('   Details:');
-                detailsCheckResult.rows.forEach((detail, i) => {
-                    console.log(`     ${i + 1}. Date: ${detail.date}, Room: ${detail.room_id}, Cancelled: ${detail.cancelled || 'null'}`);
-                });
-                
-                // 3. Test the selectReservationInventoryChange function
-                console.log('\n   Testing selectReservationInventoryChange function:');
-                
-                try {
-                    const result = await selectReservationInventoryChange('default', parentDelete.log_id);
-                    
-                    if (result && result.length > 0) {
-                        console.log(`   ✅ Function returned ${result.length} affected dates:`);
-                        result.forEach((row, i) => {
-                            console.log(`     ${i + 1}. Action: ${row.action}, Date: ${row.check_in}, Hotel: ${row.hotel_id}`);
-                            console.log(`        Table: ${row.table_name}`);
-                        });
-                        
-                        // Verify the dates match what we expect
-                        const expectedDates = detailsCheckResult.rows.map(d => d.date);
-                        const returnedDates = result.map(r => r.check_in);
-                        
-                        const allDatesMatched = expectedDates.every(date => 
-                            returnedDates.includes(date)
-                        );
-                        
-                        if (allDatesMatched && expectedDates.length === returnedDates.length) {
-                            console.log(`   ✅ All expected dates returned correctly`);
-                        } else {
-                            console.log(`   ⚠️  Date mismatch:`);
-                            console.log(`      Expected: ${expectedDates.join(', ')}`);
-                            console.log(`      Returned: ${returnedDates.join(', ')}`);
-                        }
-                        
-                    } else {
-                        console.log(`   ❌ Function returned no results`);
-                        console.log(`   📋 This suggests the CASCADE DELETE handling is not working`);
-                    }
-                    
-                } catch (error) {
-                    console.log(`   ❌ Function call failed: ${error.message}`);
-                }
-                
-            } else {
-                console.log('   📋 No reservation_details found - cannot test CASCADE DELETE');
-            }
-            
-            console.log('   ' + '─'.repeat(60));
-        }
-        
-        // 4. Test with a non-DELETE log to ensure normal behavior still works
-        console.log('\n4. TESTING NON-DELETE LOG (CONTROL TEST):');
-        
-        const nonDeleteQuery = `
-            SELECT lr.id as log_id
-            FROM logs_reservation lr
-            WHERE 
-                lr.action != 'DELETE'
                 AND lr.table_name LIKE 'reservations_%'
                 AND lr.log_time >= CURRENT_DATE - INTERVAL '7 days'
             ORDER BY lr.log_time DESC
             LIMIT 1
         `;
         
-        const nonDeleteResult = await client.query(nonDeleteQuery);
+        const parentDeleteResult = await client.query(parentDeleteQuery);
         
-        if (nonDeleteResult.rows.length > 0) {
-            const logId = nonDeleteResult.rows[0].log_id;
-            console.log(`   Testing with non-DELETE log ID: ${logId}`);
-            
-            try {
-                const result = await selectReservationInventoryChange('default', logId);
-                console.log(`   ✅ Non-DELETE log processed normally (${result ? result.length : 0} results)`);
-            } catch (error) {
-                console.log(`   ❌ Non-DELETE log failed: ${error.message}`);
-            }
+        if (parentDeleteResult.rows.length === 0) {
+            console.log('   ❌ No parent DELETE logs found in last 7 days');
+            return;
         }
         
-        // 5. Summary
-        console.log('\n5. TEST SUMMARY:');
-        console.log('   CASCADE DELETE handling has been implemented in:');
-        console.log('   - selectReservationInventoryChange()');
-        console.log('   - selectReservationGoogleInventoryChange()');
-        console.log('');
-        console.log('   The functions now:');
-        console.log('   ✅ Detect parent reservation DELETE operations');
-        console.log('   ✅ Find affected reservation_details dates');
-        console.log('   ✅ Return those dates for OTA synchronization');
-        console.log('   ✅ Handle CASCADE DELETE inventory impact');
-        console.log('');
-        console.log('   This should resolve the missing OTA updates for reservation cancellations!');
+        const parentDelete = parentDeleteResult.rows[0];
+        console.log(`   ✅ Found parent DELETE log: ${parentDelete.log_id}`);
+        console.log(`   Reservation ID: ${parentDelete.deleted_reservation_id}`);
+        console.log(`   Hotel: ${parentDelete.hotel_id}`);
+        console.log(`   Time: ${parentDelete.log_time}`);
+        
+        // 2. Test selectReservationInventoryChange with this parent DELETE log
+        console.log('\n2. TESTING selectReservationInventoryChange:');
+        
+        try {
+            const inventoryResult = await selectReservationInventoryChange('default', parentDelete.log_id);
+            console.log(`   ✅ Function returned ${inventoryResult.length} rows:`);
+            
+            inventoryResult.forEach((row, i) => {
+                console.log(`     ${i + 1}. ID: ${row.id}, Action: ${row.action}`);
+                console.log(`        Table: ${row.table_name}`);
+                console.log(`        Date: ${row.check_in} - ${row.check_out}`);
+                console.log(`        Hotel: ${row.hotel_id}`);
+            });
+            
+            if (inventoryResult.length > 0) {
+                console.log('   ✅ CASCADE DELETE handling works for selectReservationInventoryChange!');
+            } else {
+                console.log('   ❌ No results returned - CASCADE DELETE handling may not be working');
+            }
+            
+        } catch (error) {
+            console.log(`   ❌ Error in selectReservationInventoryChange: ${error.message}`);
+        }
+        
+        // 3. Test selectReservationGoogleInventoryChange with this parent DELETE log
+        console.log('\n3. TESTING selectReservationGoogleInventoryChange:');
+        
+        try {
+            const googleResult = await selectReservationGoogleInventoryChange('default', parentDelete.log_id);
+            console.log(`   ✅ Function returned ${googleResult.length} rows:`);
+            
+            googleResult.forEach((row, i) => {
+                console.log(`     ${i + 1}. ID: ${row.id}, Action: ${row.action}`);
+                console.log(`        Table: ${row.table_name}`);
+                console.log(`        Date: ${row.check_in} - ${row.check_out}`);
+                console.log(`        Hotel: ${row.hotel_id}`);
+            });
+            
+            if (googleResult.length > 0) {
+                console.log('   ✅ CASCADE DELETE handling works for selectReservationGoogleInventoryChange!');
+            } else {
+                console.log('   ❌ No results returned - CASCADE DELETE handling may not be working');
+            }
+            
+        } catch (error) {
+            console.log(`   ❌ Error in selectReservationGoogleInventoryChange: ${error.message}`);
+        }
+        
+        // 4. Verify the results match what we expect
+        console.log('\n4. VERIFICATION:');
+        
+        const verificationQuery = `
+            SELECT COUNT(*) as expected_count
+            FROM logs_reservation lr
+            WHERE 
+                lr.action = 'DELETE'
+                AND lr.table_name = 'reservation_details_' || $2
+                AND (lr.changes->>'reservation_id')::uuid = $1::uuid
+                AND lr.log_time BETWEEN $3::timestamp - INTERVAL '10 minutes' AND $3::timestamp + INTERVAL '10 minutes'
+        `;
+        
+        const verificationResult = await client.query(verificationQuery, [
+            parentDelete.deleted_reservation_id,
+            parentDelete.hotel_id,
+            parentDelete.log_time
+        ]);
+        
+        const expectedCount = parseInt(verificationResult.rows[0].expected_count);
+        console.log(`   Expected ${expectedCount} reservation_details DELETE logs`);
+        
+        // Compare with actual function results
+        const inventoryCount = await selectReservationInventoryChange('default', parentDelete.log_id);
+        const googleCount = await selectReservationGoogleInventoryChange('default', parentDelete.log_id);
+        
+        console.log(`   selectReservationInventoryChange returned: ${inventoryCount.length} rows`);
+        console.log(`   selectReservationGoogleInventoryChange returned: ${googleCount.length} rows`);
+        
+        if (inventoryCount.length === expectedCount && googleCount.length === expectedCount) {
+            console.log('   ✅ All functions return the expected number of rows!');
+        } else {
+            console.log('   ⚠️  Row counts don\'t match expected values');
+        }
         
     } catch (error) {
         console.error('❌ Test failed:', error.message);
@@ -165,7 +136,6 @@ async function testCascadeDeleteHandling() {
     }
 }
 
-// Run the test
 testCascadeDeleteHandling().then(() => {
     console.log('\n✅ CASCADE DELETE handling test completed');
     process.exit(0);
