@@ -227,10 +227,18 @@ class OTATriggerMonitorJob {
     /**
      * Send email alert for OTA trigger issues
      */
-    async sendEmailAlert(level, message, data) {
+    async sendEmailAlert(level, message, data = {}) {
         const emailRecipient = 'dx@redhorse-group.co.jp';
         const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-        const { successRate, missingTriggers, totalCandidates } = data;
+        
+        // Ensure data is an object to prevent null/undefined access
+        const safeData = data || {};
+        
+        // Defensive validation of data inputs with fallback values
+        const successRate = typeof safeData.successRate === 'number' ? safeData.successRate : null;
+        const missingTriggers = typeof safeData.missingTriggers === 'number' ? safeData.missingTriggers : 0;
+        const totalCandidates = typeof safeData.totalCandidates === 'number' ? safeData.totalCandidates : 0;
+        const errorMessage = safeData.error || safeData.message || null;
         
         let subject, text, html;
         let bgColor, textColor, icon;
@@ -241,6 +249,11 @@ class OTATriggerMonitorJob {
                 bgColor = '#f8d7da';
                 textColor = '#721c24';
                 icon = '🚨';
+                break;
+            case 'ERROR':
+                bgColor = '#f8d7da';
+                textColor = '#721c24';
+                icon = '❌';
                 break;
             case 'WARNING':
                 bgColor = '#fff3cd';
@@ -253,22 +266,36 @@ class OTATriggerMonitorJob {
                 icon = 'ℹ️';
         }
         
-        const levelJapanese = level === 'CRITICAL' ? '緊急' : level === 'WARNING' ? '警告' : '情報';
+        const levelJapanese = level === 'CRITICAL' ? '緊急' : level === 'WARNING' ? '警告' : level === 'ERROR' ? 'エラー' : '情報';
         
-        subject = `${icon} OTA連携アラート [${levelJapanese}] - 成功率${successRate.toFixed(1)}%`;
+        // Build subject with defensive handling
+        const successRateText = successRate !== null ? `成功率${successRate.toFixed(1)}%` : 'システムエラー';
+        subject = `${icon} OTA連携アラート [${levelJapanese}] - ${successRateText}`;
         
+        // Build text content with defensive handling
+        let systemStatus = '';
+        if (successRate !== null) {
+            systemStatus = `システム状況:
+- 成功率: ${successRate.toFixed(1)}%
+- 総候補数: ${totalCandidates}
+- 未送信トリガー: ${missingTriggers}件`;
+        } else if (errorMessage) {
+            systemStatus = `エラー詳細:
+- エラーメッセージ: ${errorMessage}
+- 発生時刻: ${timestamp} JST`;
+        } else {
+            systemStatus = `システム状況: 詳細情報なし`;
+        }
+
         text = `OTA連携監視アラート
 
 レベル: ${levelJapanese}
 時刻: ${timestamp} JST
 メッセージ: ${message}
 
-システム状況:
-- 成功率: ${successRate.toFixed(1)}%
-- 総候補数: ${totalCandidates}
-- 未送信トリガー: ${missingTriggers}件
+${systemStatus}
 
-${level === 'CRITICAL' ? '緊急対応が必要です' : '適宜調査をお願いします'}
+${level === 'CRITICAL' ? '緊急対応が必要です' : level === 'ERROR' ? 'システム管理者にお問い合わせください' : '適宜調査をお願いします'}
 
 これはOTA連携監視システムからの自動アラートです。`;
 
@@ -290,17 +317,24 @@ ${level === 'CRITICAL' ? '緊急対応が必要です' : '適宜調査をお願�
             </div>
 
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3>システム状況</h3>
+                <h3>${successRate !== null ? 'システム状況' : 'エラー詳細'}</h3>
                 <table style="width: 100%; border-collapse: collapse;">
+                    ${successRate !== null ? `
                     <tr><td style="padding: 5px; font-weight: bold;">成功率:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${successRate.toFixed(1)}%</td></tr>
                     <tr><td style="padding: 5px; font-weight: bold;">総候補数:</td><td style="padding: 5px;">${totalCandidates}</td></tr>
                     <tr><td style="padding: 5px; font-weight: bold;">未送信トリガー:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${missingTriggers}件</td></tr>
+                    ` : errorMessage ? `
+                    <tr><td style="padding: 5px; font-weight: bold;">エラーメッセージ:</td><td style="padding: 5px; color: ${textColor}; font-weight: bold;">${errorMessage}</td></tr>
+                    <tr><td style="padding: 5px; font-weight: bold;">発生時刻:</td><td style="padding: 5px;">${timestamp} JST</td></tr>
+                    ` : `
+                    <tr><td style="padding: 5px; font-weight: bold;">状況:</td><td style="padding: 5px;">詳細情報なし</td></tr>
+                    `}
                 </table>
             </div>
 
-            <div style="background-color: ${level === 'CRITICAL' ? '#f8d7da' : '#e2e3e5'}; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p style="margin: 0; font-weight: bold; color: ${level === 'CRITICAL' ? '#721c24' : '#383d41'};">
-                    ${level === 'CRITICAL' ? '🚨 緊急対応が必要です' : '📋 適宜調査をお願いします'}
+            <div style="background-color: ${level === 'CRITICAL' ? '#f8d7da' : level === 'ERROR' ? '#f8d7da' : '#e2e3e5'}; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0; font-weight: bold; color: ${level === 'CRITICAL' ? '#721c24' : level === 'ERROR' ? '#721c24' : '#383d41'};">
+                    ${level === 'CRITICAL' ? '🚨 緊急対応が必要です' : level === 'ERROR' ? '🔧 システム管理者にお問い合わせください' : '📋 適宜調査をお願いします'}
                 </p>
             </div>
 
@@ -310,7 +344,11 @@ ${level === 'CRITICAL' ? '緊急対応が必要です' : '適宜調査をお願�
         </div>`;
 
         await sendGenericEmail(emailRecipient, subject, text, html);
-        logger.info(`Email alert sent to ${emailRecipient}`, { level, successRate });
+        logger.info(`Email alert sent to ${emailRecipient}`, { 
+            level, 
+            successRate: successRate !== null ? successRate : 'N/A',
+            hasError: !!errorMessage 
+        });
     }
 
     /**

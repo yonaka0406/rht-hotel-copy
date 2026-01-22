@@ -76,6 +76,18 @@ node api/adhoc_scripts/ota_stock/test_enhanced_monitoring.js
 node api/adhoc_scripts/ota_stock/test_auto_remediation.js
 ```
 
+### 7. `test_email_error_handling.js`
+**Purpose**: Tests defensive email alert error handling
+- Validates error case handling without crashes
+- Tests null/undefined data object handling
+- Confirms all alert levels (INFO, WARNING, CRITICAL, ERROR)
+- Used for: Email system robustness validation
+
+**Usage**:
+```bash
+node api/adhoc_scripts/ota_stock/test_email_error_handling.js
+```
+
 ## Validation Workflow
 
 ### Daily Validation
@@ -109,6 +121,9 @@ node api/adhoc_scripts/ota_stock/test_auto_remediation.js
 
 # 3. Configuration validation
 node api/adhoc_scripts/ota_stock/test_safe_overlap_config.js
+
+# 4. Email error handling validation
+node api/adhoc_scripts/ota_stock/test_email_error_handling.js
 ```
 
 ## Script Dependencies
