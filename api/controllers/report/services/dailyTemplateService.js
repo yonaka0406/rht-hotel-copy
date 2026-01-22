@@ -31,8 +31,6 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
         targetDate,
         revenueData,
         occupancyData,
-        prevYearRevenueData,
-        prevYearOccupancyData,
         selectionMessage,
         kpiData
     } = data;

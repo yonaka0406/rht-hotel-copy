@@ -995,19 +995,19 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
         try {
             const latestDateStrRaw = await selectLatestDailyReportDate(requestId, dbClient);
-            let targetDate = latestDateStrRaw;
+            let outlookTargetDate = latestDateStrRaw;
             const todayDateString = formatDate(new Date());
 
             logger.warn(`[${requestId}] Latest date: ${latestDateStrRaw}, Today: ${todayDateString}`);
 
             // If the latest report date is today, shift back one day to compare against the last full day
-            if (targetDate === todayDateString) {
-                const d = new Date(targetDate);
+            if (outlookTargetDate === todayDateString) {
+                const d = new Date(outlookTargetDate);
                 d.setDate(d.getDate() - 1);
-                targetDate = formatDate(d);
+                outlookTargetDate = formatDate(d);
             }
 
-            logger.warn(`[${requestId}] Target date for outlook: ${targetDate}`);
+            logger.warn(`[${requestId}] Target date for outlook: ${outlookTargetDate}`);
 
             // Calculate 6 months: start from current month and next 5 (same as backend getBatchFutureOutlook)
             const months = [];
@@ -1072,7 +1072,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             }
 
             // Get previous day data for comparison
-            const prevDayData = targetDate ? await selectDailyReportDataByHotel(requestId, targetDate, hotelIds, dbClient) : [];
+            const prevDayData = outlookTargetDate ? await selectDailyReportDataByHotel(requestId, outlookTargetDate, hotelIds, dbClient) : [];
 
             const prevByMonth = {};
             if (Array.isArray(prevDayData)) {
@@ -1191,7 +1191,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 console.log(`[${requestId}] Month ${monthLabel} TOTALS BEFORE PUSH: sales=${totalActualSales}, sales_with_provisory=${totalActualSalesWithProvisory}, typeof=${typeof totalActualSalesWithProvisory}, confirmed_nights=${accommodationConfirmedNights}, provisory_nights=${accommodationProvisoryNights}`);
 
                 const outlookItem = {
-                    metric_date: targetDate,
+                    metric_date: outlookTargetDate,
                     month: monthLabel,
                     forecast_sales: totalForecastSales,
                     sales: totalActualSales,
