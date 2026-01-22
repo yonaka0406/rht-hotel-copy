@@ -156,57 +156,49 @@ const selectReservationInventoryChange = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(reservationQuery, values);
-        if (result.rows.length === 0) {
-            // Check if this was a parent reservation DELETE that would CASCADE to reservation_details
-            const parentDeleteQuery = `
-                WITH parent_delete AS (
-                    SELECT 
-                        lr.changes->>'id' as deleted_reservation_id,
-                        (lr.changes->>'hotel_id')::int as hotel_id,
-                        lr.table_name,
-                        lr.log_time
-                    FROM logs_reservation lr
-                    WHERE lr.id = $1 
-                    AND lr.table_name LIKE 'reservations_%'
-                    AND lr.action = 'DELETE'
-                ),
-                related_details_deletes AS (
-                    SELECT DISTINCT
-                        rd_logs.record_id,
-                        COALESCE(rd_logs.changes->>'date', rd_logs.changes->'old'->>'date') as affected_date,
-                        (COALESCE(rd_logs.changes->>'hotel_id', rd_logs.changes->'old'->>'hotel_id'))::int as hotel_id,
-                        rd_logs.changes->>'room_id' as room_id
-                    FROM parent_delete pd
-                    JOIN logs_reservation rd_logs ON 
-                        rd_logs.table_name = 'reservation_details_' || pd.hotel_id
-                        AND rd_logs.action = 'DELETE'
-                        AND (rd_logs.changes->>'reservation_id')::uuid = pd.deleted_reservation_id::uuid
-                        AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
-                )
+        // First check if this was a parent reservation DELETE that would CASCADE to reservation_details
+        const parentDeleteQuery = `
+            WITH parent_delete AS (
                 SELECT 
-                    rdd.record_id as id,
-                    'DELETE' as action,
-                    'reservation_details_' || pd.hotel_id as table_name,
-                    rdd.affected_date as check_in,
-                    rdd.affected_date as check_out,
-                    pd.hotel_id
-                FROM parent_delete pd
-                CROSS JOIN related_details_deletes rdd
-                WHERE rdd.hotel_id = pd.hotel_id
-            `;
+                    lr.changes->>'id' as deleted_reservation_id,
+                    (lr.changes->>'hotel_id')::int as hotel_id,
+                    lr.table_name,
+                    lr.log_time
+                FROM logs_reservation lr
+                WHERE lr.id = $1 
+                AND lr.table_name LIKE 'reservations_%'
+                AND lr.action = 'DELETE'
+            )
+            SELECT 
+                rd_logs.record_id as id,
+                'DELETE' as action,
+                rd_logs.table_name,
+                COALESCE(rd_logs.changes->>'date', rd_logs.changes->'old'->>'date') as check_in,
+                COALESCE(rd_logs.changes->>'date', rd_logs.changes->'old'->>'date') as check_out,
+                (COALESCE(rd_logs.changes->>'hotel_id', rd_logs.changes->'old'->>'hotel_id'))::int as hotel_id
+            FROM parent_delete pd
+            JOIN logs_reservation rd_logs ON 
+                rd_logs.table_name = 'reservation_details_' || pd.hotel_id
+                AND rd_logs.action = 'DELETE'
+                AND (rd_logs.changes->>'reservation_id')::uuid = pd.deleted_reservation_id::uuid
+                AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
+        `;
 
-            const parentResult = await pool.query(parentDeleteQuery, values);
-            if (parentResult.rows.length > 0) {
-                // Return affected dates from CASCADE DELETE
-                return parentResult.rows;
-            }
-
-            // Fallback to existing reservation_details logic
-            const detailsResult = await pool.query(detailsQuery, values);
-            return detailsResult.rows;
+        const parentResult = await pool.query(parentDeleteQuery, values);
+        if (parentResult.rows.length > 0) {
+            // Return affected dates from CASCADE DELETE (individual reservation_details)
+            return parentResult.rows;
         }
-        return result.rows;
+
+        // If no CASCADE DELETE logs found, check the main reservation query
+        const result = await pool.query(reservationQuery, values);
+        if (result.rows.length > 0) {
+            return result.rows;
+        }
+
+        // Fallback to existing reservation_details logic
+        const detailsResult = await pool.query(detailsQuery, values);
+        return detailsResult.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
@@ -296,57 +288,49 @@ const selectReservationGoogleInventoryChange = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(reservationQuery, values);
-        if (result.rows.length === 0) {
-            // Check if this was a parent reservation DELETE that would CASCADE to reservation_details
-            const parentDeleteQuery = `
-                WITH parent_delete AS (
-                    SELECT 
-                        lr.changes->>'id' as deleted_reservation_id,
-                        (lr.changes->>'hotel_id')::int as hotel_id,
-                        lr.table_name,
-                        lr.log_time
-                    FROM logs_reservation lr
-                    WHERE lr.id = $1 
-                    AND lr.table_name LIKE 'reservations_%'
-                    AND lr.action = 'DELETE'
-                ),
-                related_details_deletes AS (
-                    SELECT DISTINCT
-                        rd_logs.record_id,
-                        rd_logs.changes->>'date' as affected_date,
-                        (rd_logs.changes->>'hotel_id')::int as hotel_id,
-                        rd_logs.changes->>'room_id' as room_id
-                    FROM parent_delete pd
-                    JOIN logs_reservation rd_logs ON 
-                        rd_logs.table_name = 'reservation_details_' || pd.hotel_id
-                        AND rd_logs.action = 'DELETE'
-                        AND (rd_logs.changes->>'reservation_id')::uuid = pd.deleted_reservation_id::uuid
-                        AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
-                )
+        // First check if this was a parent reservation DELETE that would CASCADE to reservation_details
+        const parentDeleteQuery = `
+            WITH parent_delete AS (
                 SELECT 
-                    rdd.record_id as id,
-                    'DELETE' as action,
-                    'reservation_details_' || pd.hotel_id as table_name,
-                    rdd.affected_date as check_in,
-                    rdd.affected_date as check_out,
-                    pd.hotel_id
-                FROM parent_delete pd
-                CROSS JOIN related_details_deletes rdd
-                WHERE rdd.hotel_id = pd.hotel_id
-            `;
+                    lr.changes->>'id' as deleted_reservation_id,
+                    (lr.changes->>'hotel_id')::int as hotel_id,
+                    lr.table_name,
+                    lr.log_time
+                FROM logs_reservation lr
+                WHERE lr.id = $1 
+                AND lr.table_name LIKE 'reservations_%'
+                AND lr.action = 'DELETE'
+            )
+            SELECT 
+                rd_logs.record_id as id,
+                'DELETE' as action,
+                rd_logs.table_name,
+                rd_logs.changes->>'date' as check_in,
+                rd_logs.changes->>'date' as check_out,
+                (rd_logs.changes->>'hotel_id')::int as hotel_id
+            FROM parent_delete pd
+            JOIN logs_reservation rd_logs ON 
+                rd_logs.table_name = 'reservation_details_' || pd.hotel_id
+                AND rd_logs.action = 'DELETE'
+                AND (rd_logs.changes->>'reservation_id')::uuid = pd.deleted_reservation_id::uuid
+                AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
+        `;
 
-            const parentResult = await pool.query(parentDeleteQuery, values);
-            if (parentResult.rows.length > 0) {
-                // Return affected dates from CASCADE DELETE
-                return parentResult.rows;
-            }
-
-            // Fallback to existing reservation_details logic
-            const detailsResult = await pool.query(detailsQuery, values);
-            return detailsResult.rows;
+        const parentResult = await pool.query(parentDeleteQuery, values);
+        if (parentResult.rows.length > 0) {
+            // Return affected dates from CASCADE DELETE (individual reservation_details)
+            return parentResult.rows;
         }
-        return result.rows;
+
+        // If no CASCADE DELETE logs found, check the main reservation query
+        const result = await pool.query(reservationQuery, values);
+        if (result.rows.length > 0) {
+            return result.rows;
+        }
+
+        // Fallback to existing reservation_details logic
+        const detailsResult = await pool.query(detailsQuery, values);
+        return detailsResult.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
