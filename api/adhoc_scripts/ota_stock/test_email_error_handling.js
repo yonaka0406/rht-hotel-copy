@@ -78,8 +78,18 @@ async function testEmailErrorHandling() {
     } catch (error) {
         console.log('   ❌ Mixed data case failed:', error.message);
     }
+
+    console.log('\n7. Testing HTML Escaping in Error Messages:');
+    try {
+        await monitor.sendEmailAlert('ERROR', 'Testing HTML Escaping', {
+            error: 'Error with <script>alert("XSS")</script> and & symbols'
+        });
+        console.log('   ✅ HTML escaping case handled successfully');
+    } catch (error) {
+        console.log('   ❌ HTML escaping case failed:', error.message);
+    }
     
-    console.log('\n7. Testing All Alert Levels:');
+    console.log('\n8. Testing All Alert Levels:');
     const testCases = [
         { level: 'INFO', data: { successRate: 99.1, missingTriggers: 1, totalCandidates: 120 } },
         { level: 'WARNING', data: { successRate: 92.5, missingTriggers: 8, totalCandidates: 107 } },
