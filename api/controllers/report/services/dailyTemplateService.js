@@ -115,9 +115,13 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
             if (Array.isArray(revenueData) && Array.isArray(occupancyData)) {
                 const startRow = 10;
 
+                // Get month from outlook data to create a date object for '月度' column
+                const monthString = outlookData?.[0]?.month;
+                const monthDate = monthString ? new Date(`${monthString}-01`) : null;
+
                 // Headers
-                const revHeaders = ['施設名', '計画売上', '売上', '売上差異', '前年売上', '前年比差異(売上)'];
-                const occHeaders = ['施設名', '計画稼働率', '稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'];
+                const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異'];
+                const occHeaders = ['施設名', '月度', '計画稼働率', '見込み稼働率', '稼働率差異'];
 
                 const headerRow = dataSheet.row(startRow);
                 revHeaders.forEach((header, index) => {
@@ -133,33 +137,23 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     .filter(item => item.hotel_id !== 0)
                     .map(revItem => {
                         const occItem = occupancyData.find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
-                        const prevRevItem = (prevYearRevenueData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
-                        const prevOccItem = (prevYearOccupancyData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
 
-                        const forecastRevenue = revItem.forecast_revenue || 0;
-                        const actualRevenue = revItem.period_revenue || revItem.acc_revenue || revItem.pms_revenue || 0;
+                        const forecastRevenue = revItem.forecast_revenue ?? 0;
+                        const actualRevenue = revItem.accommodation_revenue ?? 0;
                         const revenueVariance = actualRevenue - forecastRevenue;
-                        const prevRevenue = prevRevItem.period_revenue || prevRevItem.acc_revenue || prevRevItem.pms_revenue || 0;
-                        const yoyRevenueVariance = actualRevenue - prevRevenue;
 
                         const forecastOcc = occItem.fc_occ || 0;
                         const actualOcc = occItem.occ || 0;
                         const occVariance = actualOcc - forecastOcc;
-                        const prevOcc = prevOccItem.occ || 0;
-                        const yoyOccVariance = actualOcc - prevOcc;
 
                         return {
                             hotel_name: revItem.hotel_name,
                             forecastRevenue,
                             actualRevenue,
                             revenueVariance,
-                            prevRevenue,
-                            yoyRevenueVariance,
                             forecastOcc,
                             actualOcc,
                             occVariance,
-                            prevOcc,
-                            yoyOccVariance
                         };
                     });
 
@@ -172,18 +166,19 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     const currentRow = startRow + 1 + index;
                     const row = dataSheet.row(currentRow);
 
-                    // Revenue section (Cols 1-6)
+                    // Revenue section (Cols 1-5, F and G are blank)
                     row.cell(1).value(item.hotel_name);
-                    row.cell(2).value(item.forecastRevenue).style("numberFormat", "#,##0");
-                    row.cell(3).value(item.actualRevenue).style("numberFormat", "#,##0");
-                    row.cell(4).value(item.revenueVariance).style("numberFormat", "#,##0");
-                    row.cell(5).value(item.prevRevenue).style("numberFormat", "#,##0");
-                    row.cell(6).value(item.yoyRevenueVariance).style("numberFormat", "#,##0");
+                    if (monthDate) {
+                        row.cell(2).value(monthDate).style("numberFormat", "yyyy/mm/dd");
+                    }
+                    row.cell(3).value(item.forecastRevenue).style("numberFormat", "#,##0");
+                    row.cell(4).value(item.actualRevenue).style("numberFormat", "#,##0");
+                    row.cell(5).value(item.revenueVariance).style("numberFormat", "#,##0");
 
-                    // Formulas for columns O, P, Q (division by 10000)
-                    row.cell(15).formula(`B${currentRow}/10000`).style("numberFormat", "#,##0");
-                    row.cell(16).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
-                    row.cell(17).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
+                    // Formulas for columns O, P, Q (division by 10000) - adjusted for new column layout
+                    row.cell(15).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
+                    row.cell(16).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
+                    row.cell(17).formula(`E${currentRow}/10000`).style("numberFormat", "#,##0");
                 });
 
                 occupancySorted.forEach((item, index) => {
@@ -192,11 +187,12 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
 
                     // Occupancy section (Starts from Col 8 / H)
                     row.cell(8).value(item.hotel_name);
-                    row.cell(9).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(10).value(item.actualOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(11).value(item.occVariance / 100).style("numberFormat", "0.0%");
-                    row.cell(12).value(item.prevOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(13).value(item.yoyOccVariance / 100).style("numberFormat", "0.0%");
+                    if (monthDate) {
+                        row.cell(9).value(monthDate).style("numberFormat", "yyyy/mm/dd");
+                    }
+                    row.cell(10).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(11).value(item.actualOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(12).value(item.occVariance / 100).style("numberFormat", "0.0%");
                 });
             }
         }

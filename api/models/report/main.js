@@ -214,7 +214,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
             rd.hotel_id = $1
         AND rd.date BETWEEN $2 AND $3
         AND rd.billable = TRUE
-        AND r.status NOT IN ('hold','block')
+        AND r.status NOT IN ('hold','block','provisory')
         AND r.type <> 'employee'
     ),
 
@@ -506,6 +506,10 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         CASE WHEN NOT rdb.cancelled AND rdb.is_accommodation
             THEN rdb.reservation_detail_id END
       ) AS room_count,
+       COUNT(
+        CASE WHEN NOT rdb.cancelled AND rdb.is_accommodation
+            THEN rdb.reservation_detail_id END
+      ) AS confirmed_room_count,
 
       COUNT(
         CASE WHEN NOT rdb.cancelled AND NOT rdb.is_accommodation
@@ -527,6 +531,10 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd, db
         COALESCE(rr.accommodation_net_price, 0)
         + COALESCE(ra.accommodation_net_price_sum, 0)
       ) AS accommodation_price,
+      SUM(
+        COALESCE(rr.accommodation_net_price, 0)
+        + COALESCE(ra.accommodation_net_price_sum, 0)
+      ) AS confirmed_accommodation_price,
 
       SUM(
         COALESCE(rr.other_net_price, 0)
