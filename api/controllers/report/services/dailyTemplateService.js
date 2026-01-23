@@ -117,7 +117,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 const monthDate = monthStr ? new Date(`${monthStr}-01`) : null;
 
                 if (writeHeaders) {
-                    const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異'];
+                    const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異', '仮売上'];
                     const occHeaders = ['施設名', '月度', '計画稼働率', '見込み稼働率', '稼働率差異'];
 
                     const headerRow = sheet.row(startRow);
@@ -137,6 +137,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
 
                         const forecastRevenue = revItem.forecast_revenue ?? 0;
                         const actualRevenue = revItem.accommodation_revenue ?? 0;
+                        const provisoryRevenue = revItem.provisory_accommodation_revenue ?? 0;
                         const revenueVariance = actualRevenue - forecastRevenue;
 
                         const forecastOcc = occItem.fc_occ || 0;
@@ -147,6 +148,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                             hotel_name: revItem.hotel_name,
                             forecastRevenue,
                             actualRevenue,
+                            provisoryRevenue,
                             revenueVariance,
                             forecastOcc,
                             actualOcc,
@@ -170,6 +172,9 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     row.cell(3).value(item.forecastRevenue).style("numberFormat", "#,##0");
                     row.cell(4).value(item.actualRevenue).style("numberFormat", "#,##0");
                     row.cell(5).value(item.revenueVariance).style("numberFormat", "#,##0");
+                    if (item.provisoryRevenue !== 0) {
+                        row.cell(6).value(item.provisoryRevenue).style("numberFormat", "#,##0");
+                    }
 
                     if (writeFormulas) {
                         row.cell(15).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
