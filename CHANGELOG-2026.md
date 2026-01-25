@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.3] - 2026-01-23
+
+- New Feature: Added OTA Stock Investigation Tool for diagnosing stock discrepancies between PMS and OTA systems, with event timeline analysis and gap detection.
+- New Feature: Added OTA Trigger Monitoring System with automatic remediation, email alerts, and manual check capabilities.
+- New Feature: Added cron job logging infrastructure for tracking scheduled task execution and performance metrics.
+
+---
+
 ## [1.4.2] - 2026-01-19
 
 - New Feature: Introduced detailed CSV export for profit & loss data.
