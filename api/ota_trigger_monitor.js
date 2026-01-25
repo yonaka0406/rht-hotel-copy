@@ -13,33 +13,33 @@ const { sendGenericEmail } = require('./utils/emailUtils');
  */
 function groupTriggersByDateRanges(missingTriggers) {
     const groups = [];
-    
+
     // Sort triggers by hotel_id and check_in date
     const sortedTriggers = [...missingTriggers].sort((a, b) => {
         if (a.hotel_id !== b.hotel_id) return a.hotel_id - b.hotel_id;
         return new Date(a.check_in) - new Date(b.check_in);
     });
-    
+
     for (const trigger of sortedTriggers) {
         // Find existing group with overlapping dates for the same hotel
-        const existingGroup = groups.find(group => 
+        const existingGroup = groups.find(group =>
             group.hotel_id === trigger.hotel_id &&
             group.check_in <= trigger.check_out &&
             group.check_out >= trigger.check_in
         );
-        
+
         if (existingGroup) {
             // Extend the existing group's date range
             existingGroup.check_in = new Date(Math.min(
                 new Date(existingGroup.check_in),
                 new Date(trigger.check_in)
             )).toISOString().split('T')[0];
-            
+
             existingGroup.check_out = new Date(Math.max(
                 new Date(existingGroup.check_out),
                 new Date(trigger.check_out)
             )).toISOString().split('T')[0];
-            
+
             existingGroup.triggers.push(trigger);
         } else {
             // Create new group
@@ -52,7 +52,7 @@ function groupTriggersByDateRanges(missingTriggers) {
             });
         }
     }
-    
+
     return groups;
 }
 
@@ -61,16 +61,16 @@ function groupTriggersByDateRanges(missingTriggers) {
  */
 async function sendOTANotificationEmail(type, data) {
     const emailRecipient = 'dx@redhorse-group.co.jp';
-    
+
     try {
         const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
         let subject, text, html;
 
         if (type === 'INCONSISTENCY') {
             const { missingTriggers, totalCandidates, successRate, hoursBack } = data;
-            
+
             subject = `🚨 OTA連携エラー検出 - 成功率${successRate.toFixed(1)}%`;
-            
+
             text = `OTA連携監視アラート
 
 時刻: ${timestamp} JST
@@ -80,12 +80,12 @@ async function sendOTANotificationEmail(type, data) {
 未送信トリガー: ${missingTriggers.length}件
 
 未送信トリガー詳細:
-${missingTriggers.map((trigger, i) => 
-    `${i + 1}. ホテル${trigger.hotel_id} (${trigger.hotel_name})
+${missingTriggers.map((trigger, i) =>
+                `${i + 1}. ホテル${trigger.hotel_id} (${trigger.hotel_name})
    操作: ${trigger.action} - 顧客: ${trigger.client_name || '不明'}
-   時刻: ${new Date(trigger.log_time.getTime() + 9*60*60*1000).toISOString()} JST
+   時刻: ${new Date(trigger.log_time.getTime() + 9 * 60 * 60 * 1000).toISOString()} JST
    チェックイン: ${trigger.check_in}, ステータス: ${trigger.status}`
-).join('\n\n')}
+            ).join('\n\n')}
 
 OTA同期システムの調査が必要です。`;
 
@@ -112,7 +112,7 @@ OTA同期システムの調査が必要です。`;
                         <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #dee2e6;">
                             <strong>${i + 1}. ホテル${trigger.hotel_id} (${trigger.hotel_name})</strong><br>
                             <strong>操作:</strong> ${trigger.action} - <strong>顧客:</strong> ${trigger.client_name || '不明'}<br>
-                            <strong>時刻:</strong> ${new Date(trigger.log_time.getTime() + 9*60*60*1000).toISOString()} JST<br>
+                            <strong>時刻:</strong> ${new Date(trigger.log_time.getTime() + 9 * 60 * 60 * 1000).toISOString()} JST<br>
                             <strong>チェックイン:</strong> ${trigger.check_in} - <strong>ステータス:</strong> ${trigger.status}
                         </div>
                     `).join('')}
@@ -125,9 +125,9 @@ OTA同期システムの調査が必要です。`;
 
         } else if (type === 'REMEDIATION') {
             const { remediationResults, missingTriggers } = data;
-            
+
             subject = `⚡ OTA自動修復実行 - ${remediationResults.successful}件修復完了`;
-            
+
             text = `OTA自動修復レポート
 
 時刻: ${timestamp} JST
@@ -137,13 +137,13 @@ OTA同期システムの調査が必要です。`;
 処理総数: ${missingTriggers}件
 
 修復詳細:
-${remediationResults.details.map((detail, i) => 
-    `${i + 1}. ホテル${detail.hotel_id} - ${detail.date_range}
+${remediationResults.details.map((detail, i) =>
+                `${i + 1}. ホテル${detail.hotel_id} - ${detail.date_range}
    ステータス: ${detail.status === 'success' ? '成功' : detail.status === 'failed' ? '失敗' : 'スキップ'}
    トリガー数: ${detail.triggers_count}件
    ${detail.error ? `エラー: ${detail.error}` : ''}
    ${detail.reason ? `理由: ${detail.reason}` : ''}`
-).join('\n\n')}
+            ).join('\n\n')}
 
 自動修復が完了しました。`;
 
@@ -185,7 +185,7 @@ ${remediationResults.details.map((detail, i) =>
 
         await sendGenericEmail(emailRecipient, subject, text, html);
         console.log(`   ✅ Email notification sent to ${emailRecipient}`);
-        
+
     } catch (error) {
         console.error(`   ❌ Failed to send email notification: ${error.message}`);
     }
@@ -197,19 +197,19 @@ async function performAutoRemediation(missingTriggers, baseUrl) {
         skipped: 0,
         details: []
     };
-    
+
     // Group triggers by overlapping date ranges
     const groups = groupTriggersByDateRanges(missingTriggers);
-    
+
     console.log(`   Grouped ${missingTriggers.length} triggers into ${groups.length} date range groups`);
-    
+
     for (const group of groups) {
         try {
             console.log(`   Processing Hotel ${group.hotel_id}: ${group.check_in} to ${group.check_out} (${group.triggers.length} triggers)`);
-            
+
             // Make the inventory request through the same channel as the main application
             const inventoryUrl = `${baseUrl}/api/report/res/inventory/${group.hotel_id}/${group.check_in}/${group.check_out}`;
-            
+
             const response = await fetch(inventoryUrl, {
                 method: 'GET',
                 headers: {
@@ -217,15 +217,15 @@ async function performAutoRemediation(missingTriggers, baseUrl) {
                     // Note: Internal calls may not need Authorization header depending on your setup
                 }
             });
-            
+
             if (response.ok) {
                 const inventoryData = await response.json();
-                
+
                 // If we have inventory data, trigger the site controller update
                 // This follows the same pattern as in api/index.js listenForTableChanges
                 if (inventoryData && inventoryData.length > 0) {
                     const scUrl = `${baseUrl}/api/sc/tl/inventory/multiple/${group.hotel_id}/remediation`;
-                    
+
                     const scResponse = await fetch(scUrl, {
                         method: 'POST',
                         headers: {
@@ -233,7 +233,7 @@ async function performAutoRemediation(missingTriggers, baseUrl) {
                         },
                         body: JSON.stringify(inventoryData),
                     });
-                    
+
                     if (scResponse.ok) {
                         results.successful++;
                         results.details.push({
@@ -260,7 +260,7 @@ async function performAutoRemediation(missingTriggers, baseUrl) {
             } else {
                 throw new Error(`Inventory request failed: ${response.status} ${response.statusText}`);
             }
-            
+
         } catch (error) {
             results.failed++;
             results.details.push({
@@ -272,33 +272,33 @@ async function performAutoRemediation(missingTriggers, baseUrl) {
             });
             console.log(`     ❌ Failed Hotel ${group.hotel_id}: ${error.message}`);
         }
-        
+
         // Small delay between requests to avoid overwhelming the system
         await new Promise(resolve => setTimeout(resolve, 100));
     }
-    
+
     return results;
 }
 
 async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
     console.log(`🔍 Checking for missing OTA triggers in the last ${hoursBack} hour(s)...\n`);
-    
+
     const {
         autoRemediate = false,
         baseUrl = 'http://localhost:5000'
     } = options;
-    
+
     const client = await pool.connect();
     try {
         const startTime = new Date();
-        
+
         // Calculate time range
         const endTime = new Date();
         const checkStartTime = new Date(endTime.getTime() - (hoursBack * 60 * 60 * 1000));
-        
+
         console.log(`📅 Time Range: ${checkStartTime.toISOString()} to ${endTime.toISOString()}`);
-        console.log(`   JST: ${new Date(checkStartTime.getTime() + 9*60*60*1000).toISOString()} to ${new Date(endTime.getTime() + 9*60*60*1000).toISOString()}\n`);
-        
+        console.log(`   JST: ${new Date(checkStartTime.getTime() + 9 * 60 * 60 * 1000).toISOString()} to ${new Date(endTime.getTime() + 9 * 60 * 60 * 1000).toISOString()}\n`);
+
         // 1. Find all trigger candidates in the last hour
         const triggerCandidates = await client.query(`
             WITH trigger_logs AS (
@@ -379,9 +379,9 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             LEFT JOIN hotels h ON fl.hotel_id = h.id
             ORDER BY fl.log_time DESC
         `, [checkStartTime, endTime]);
-        
+
         console.log(`1. TRIGGER CANDIDATES FOUND: ${triggerCandidates.rows.length}`);
-        
+
         if (triggerCandidates.rows.length === 0) {
             console.log('   ✅ No reservation changes in the last hour - nothing to check\n');
             return {
@@ -392,7 +392,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                 message: 'No activity in the monitored period'
             };
         }
-        
+
         // Show summary by hotel
         const hotelSummary = {};
         triggerCandidates.rows.forEach(candidate => {
@@ -404,22 +404,22 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             }
             hotelSummary[candidate.hotel_id].count++;
         });
-        
+
         console.log('   By Hotel:');
         Object.entries(hotelSummary).forEach(([hotelId, summary]) => {
             console.log(`     Hotel ${hotelId} (${summary.name}): ${summary.count} changes`);
         });
-        
+
         // 2. Check each candidate for missing OTA requests
         console.log('\n2. CHECKING FOR MISSING OTA REQUESTS:');
-        
+
         const missingTriggers = [];
         const silentSkips = [];
         const batchSize = 10; // Process in small batches for better performance
-        
+
         for (let i = 0; i < triggerCandidates.rows.length; i += batchSize) {
             const batch = triggerCandidates.rows.slice(i, i + batchSize);
-            
+
             // Process batch in parallel for better performance
             const batchPromises = batch.map(async (log) => {
                 // First check for OTA requests within 5 minutes
@@ -438,7 +438,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                     ORDER BY created_at ASC
                     LIMIT 1
                 `, [log.hotel_id, log.log_time]);
-                
+
                 if (otaCheck.rows.length === 0) {
                     // No OTA request found - check if this might be a silent skip
                     // Look for any OTA requests within a wider window (30 minutes) to see if there was activity
@@ -456,7 +456,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                         ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $2::timestamp)))
                         LIMIT 1
                     `, [log.hotel_id, log.log_time]);
-                    
+
                     return {
                         ...log,
                         gap_reason: 'NO_OTA_WITHIN_5_MIN',
@@ -472,9 +472,9 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                     };
                 }
             });
-            
+
             const batchResults = await Promise.all(batchPromises);
-            
+
             // Categorize results
             batchResults.forEach(result => {
                 if (result.gap_reason) {
@@ -485,32 +485,32 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                     }
                 }
             });
-            
+
             // Progress update for large batches
             if (triggerCandidates.rows.length > 20) {
                 const processed = Math.min(i + batchSize, triggerCandidates.rows.length);
-                process.stdout.write(`\r   Progress: ${processed}/${triggerCandidates.rows.length} (${Math.round(processed/triggerCandidates.rows.length*100)}%)`);
+                process.stdout.write(`\r   Progress: ${processed}/${triggerCandidates.rows.length} (${Math.round(processed / triggerCandidates.rows.length * 100)}%)`);
             }
         }
-        
+
         if (triggerCandidates.rows.length > 20) {
             console.log(''); // New line after progress
         }
-        
+
         // 3. Generate report
         const totalCandidates = triggerCandidates.rows.length;
         const totalMissing = missingTriggers.length;
         const totalSilentSkips = silentSkips.length;
         const totalWithOTA = totalCandidates - totalMissing - totalSilentSkips;
         const successRate = ((totalWithOTA) / totalCandidates * 100);
-        
+
         console.log(`\n3. MONITORING REPORT:`);
         console.log(`   Total candidates: ${totalCandidates}`);
         console.log(`   With OTA triggers: ${totalWithOTA}`);
         console.log(`   Missing triggers: ${totalMissing}`);
         console.log(`   Possible silent skips: ${totalSilentSkips}`);
         console.log(`   Success rate: ${successRate.toFixed(1)}%`);
-        
+
         if (totalMissing === 0 && totalSilentSkips === 0) {
             console.log(`   ✅ All reservation changes have corresponding OTA requests`);
         } else if (totalMissing === 0 && totalSilentSkips > 0) {
@@ -520,7 +520,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             if (totalSilentSkips > 0) {
                 console.log(`   ℹ️  ${totalSilentSkips} additional cases may be silent skips`);
             }
-            
+
             // Send email notification for inconsistency
             console.log('\n   📧 SENDING EMAIL NOTIFICATION:');
             await sendOTANotificationEmail('INCONSISTENCY', {
@@ -529,7 +529,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                 successRate,
                 hoursBack
             });
-            
+
             // Show details of missing triggers
             console.log('\n   MISSING TRIGGERS:');
             missingTriggers.forEach((trigger, i) => {
@@ -542,7 +542,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                     console.log(`        Nearby OTA: ${nearbyGap} min gap (${trigger.nearby_ota.service_name})`);
                 }
             });
-            
+
             // Show silent skips if any
             if (totalSilentSkips > 0) {
                 console.log('\n   POSSIBLE SILENT SKIPS:');
@@ -553,15 +553,15 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                     console.log(`        Reason: No OTA activity nearby (stocks may have matched)`);
                 });
             }
-            
+
             // Pattern analysis for missing triggers
             if (totalMissing > 1) {
                 console.log('\n   PATTERN ANALYSIS:');
-                
+
                 const actionCounts = {};
                 const statusCounts = {};
                 const hotelCounts = {};
-                
+
                 missingTriggers.forEach(trigger => {
                     actionCounts[trigger.action] = (actionCounts[trigger.action] || 0) + 1;
                     if (trigger.status) {
@@ -569,26 +569,26 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                     }
                     hotelCounts[trigger.hotel_id] = (hotelCounts[trigger.hotel_id] || 0) + 1;
                 });
-                
-                console.log(`     By Action: ${Object.entries(actionCounts).map(([k,v]) => `${k}:${v}`).join(', ')}`);
-                console.log(`     By Status: ${Object.entries(statusCounts).map(([k,v]) => `${k}:${v}`).join(', ')}`);
-                console.log(`     By Hotel: ${Object.entries(hotelCounts).map(([k,v]) => `Hotel ${k}:${v}`).join(', ')}`);
+
+                console.log(`     By Action: ${Object.entries(actionCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+                console.log(`     By Status: ${Object.entries(statusCounts).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+                console.log(`     By Hotel: ${Object.entries(hotelCounts).map(([k, v]) => `Hotel ${k}:${v}`).join(', ')}`);
             }
         }
-        
+
         // 5. Automatic remediation if enabled
         let remediationResults = null;
         if (autoRemediate && missingTriggers.length > 0) {
             console.log(`\n5. AUTOMATIC REMEDIATION:`);
             console.log(`   Auto-remediation enabled - attempting to fix ${missingTriggers.length} missing triggers`);
-            
+
             remediationResults = await performAutoRemediation(missingTriggers, baseUrl);
-            
+
             console.log(`   Remediation completed:`);
             console.log(`     Successful requests: ${remediationResults.successful}`);
             console.log(`     Failed requests: ${remediationResults.failed}`);
             console.log(`     Skipped (overlapping): ${remediationResults.skipped}`);
-            
+
             // Send email notification for remediation
             console.log('\n   📧 SENDING REMEDIATION EMAIL NOTIFICATION:');
             await sendOTANotificationEmail('REMEDIATION', {
@@ -596,16 +596,16 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
                 missingTriggers: missingTriggers.length
             });
         }
-        
+
         // 6. Performance metrics
         const executionTime = new Date() - startTime;
         console.log(`\n${autoRemediate ? '6' : '5'}. PERFORMANCE METRICS:`);
         console.log(`   Execution time: ${executionTime}ms`);
         console.log(`   Candidates per second: ${(totalCandidates / (executionTime / 1000)).toFixed(1)}`);
-        
+
         // 7. Recommendations based on results
         console.log(`\n${autoRemediate ? '7' : '6'}. RECOMMENDATIONS:`);
-        
+
         if (successRate === 100) {
             console.log(`   ✅ System operating normally - continue monitoring`);
         } else if (successRate >= 95) {
@@ -624,7 +624,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             console.log(`   - Verify PostgreSQL notification system`);
             console.log(`   - Manual OTA sync required for all affected reservations`);
         }
-        
+
         return {
             success: true,
             totalCandidates,
@@ -635,11 +635,11 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
             missingTriggerDetails: missingTriggers,
             silentSkipDetails: silentSkips,
             remediationResults,
-            message: totalMissing === 0 ? 
-                (totalSilentSkips === 0 ? 'All triggers working correctly' : `${totalSilentSkips} possible silent skips detected`) : 
+            message: totalMissing === 0 ?
+                (totalSilentSkips === 0 ? 'All triggers working correctly' : `${totalSilentSkips} possible silent skips detected`) :
                 `${totalMissing} missing triggers detected${autoRemediate ? ' - remediation attempted' : ''}${totalSilentSkips > 0 ? `, ${totalSilentSkips} possible silent skips` : ''}`
         };
-        
+
     } catch (error) {
         console.error('Error during OTA trigger monitoring:', error);
         return {
@@ -655,7 +655,7 @@ async function checkMissingOTATriggers(hoursBack = 1, options = {}) {
 // Main execution
 async function main() {
     const args = process.argv.slice(2);
-    
+
     // Check for help flag
     if (args.includes('--help') || args.includes('-h')) {
         console.log('🔍 OTA TRIGGER MONITORING SYSTEM');
@@ -678,36 +678,36 @@ async function main() {
         console.log('  - Use with caution in production environments');
         process.exit(0);
     }
-    
+
     const hoursBack = args[0] ? parseInt(args[0]) : 1;
     const autoRemediate = args.includes('--auto-remediate') || args.includes('true');
-    
+
     console.log('🔍 OTA TRIGGER MONITORING SYSTEM');
     console.log('================================\n');
-    
+
     if (autoRemediate) {
         console.log('⚡ AUTO-REMEDIATION ENABLED\n');
     }
-    
+
     const result = await checkMissingOTATriggers(hoursBack, {
         autoRemediate,
         baseUrl: 'http://localhost:5000'
     });
-    
+
     console.log('\n================================');
     console.log(`📊 FINAL STATUS: ${result.success ? (result.successRate === 100 ? '✅ HEALTHY' : result.successRate >= 95 ? '⚠️  MINOR ISSUES' : result.successRate >= 80 ? '🟡 DEGRADED' : '🚨 CRITICAL') : '❌ ERROR'}`);
-    
+
     if (result.success) {
         console.log(`   Success Rate: ${result.successRate.toFixed(1)}%`);
         console.log(`   Execution Time: ${result.executionTime}ms`);
-        
+
         if (result.remediationResults) {
             console.log(`   Remediation: ${result.remediationResults.successful} successful, ${result.remediationResults.failed} failed, ${result.remediationResults.skipped} skipped`);
         }
     }
-    
+
     console.log(`   Message: ${result.message}`);
-    
+
     // Exit with appropriate code for monitoring systems
     process.exit(result.success && result.successRate === 100 ? 0 : 1);
 }

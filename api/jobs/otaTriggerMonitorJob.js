@@ -7,6 +7,7 @@
 const { checkMissingOTATriggers } = require('../ota_trigger_monitor');
 const { sendGenericEmail } = require('../utils/emailUtils');
 const logger = require('../config/logger');
+const { startLog, completeLog } = require('../models/cron_logs');
 
 // Helper to prevent HTML injection
 function escapeHtml(str) {
@@ -22,7 +23,7 @@ function escapeHtml(str) {
 class OTATriggerMonitorJob {
     constructor(options = {}) {
         this.options = {
-            checkIntervalHours: options.checkIntervalHours || 55/60, // Default: 55 minutes
+            checkIntervalHours: options.checkIntervalHours || 55 / 60, // Default: 55 minutes
             monitoringWindowHours: options.monitoringWindowHours || 1, // Default: 60 minutes lookback
             alertThreshold: options.alertThreshold || 95, // Alert if success rate below 95%
             criticalThreshold: options.criticalThreshold || 80, // Critical if success rate below 80%
@@ -32,10 +33,20 @@ class OTATriggerMonitorJob {
             baseUrl: options.baseUrl || 'http://localhost:5000',
             ...options
         };
-        
+
         this.isRunning = false;
         this.lastCheck = null;
         this.intervalId = null;
+    }
+
+    /**
+     * Update configuration
+     */
+    configure(options = {}) {
+        this.options = { ...this.options, ...options };
+        if (this.options.enableLogging) {
+            logger.info('OTA Trigger Monitor configuration updated', options);
+        }
     }
 
     /**
@@ -53,7 +64,8 @@ class OTATriggerMonitorJob {
             monitoringWindowHours: this.options.monitoringWindowHours,
             alertThreshold: this.options.alertThreshold,
             criticalThreshold: this.options.criticalThreshold,
-            autoRemediate: this.options.autoRemediate
+            autoRemediate: this.options.autoRemediate,
+            baseUrl: this.options.baseUrl
         });
 
         // Run initial check
@@ -88,23 +100,33 @@ class OTATriggerMonitorJob {
      * Run a single monitoring check
      */
     async runCheck() {
+        // Concurrency guard
+        if (this.isChecking) {
+            logger.warn('OTA trigger monitoring check skipped - previous check still running');
+            return;
+        }
+
+        const logId = await startLog('OTA Trigger Monitor');
+        this.isChecking = true;
         const checkStartTime = new Date();
-        
+
         try {
             if (this.options.enableLogging) {
-                logger.info('Running OTA trigger monitoring check');
+                logger.info('Running OTA trigger monitoring check', { baseUrl: this.options.baseUrl });
             }
 
             const result = await checkMissingOTATriggers(this.options.monitoringWindowHours, {
                 autoRemediate: this.options.autoRemediate,
                 baseUrl: this.options.baseUrl
             });
-            
+
             this.lastCheck = {
                 timestamp: checkStartTime,
                 result: result,
                 duration: new Date() - checkStartTime
             };
+
+            await completeLog(logId, result.success ? 'success' : 'failed', result);
 
             // Log results
             if (this.options.enableLogging) {
@@ -131,6 +153,8 @@ class OTATriggerMonitorJob {
             }
 
         } catch (error) {
+            await completeLog(logId, 'failed', { error: error.message, stack: error.stack });
+
             logger.error('OTA trigger monitoring check failed', {
                 error: error.message,
                 stack: error.stack,
@@ -150,6 +174,8 @@ class OTATriggerMonitorJob {
                     timestamp: checkStartTime
                 });
             }
+        } finally {
+            this.isChecking = false;
         }
     }
 
@@ -193,9 +219,9 @@ class OTATriggerMonitorJob {
      */
     async sendAlert(level, message, data) {
         // Log the alert
-        const logLevel = level === 'CRITICAL' ? 'error' : 
-                        level === 'WARNING' ? 'warn' : 'info';
-        
+        const logLevel = level === 'CRITICAL' ? 'error' :
+            level === 'WARNING' ? 'warn' : 'info';
+
         logger[logLevel](`OTA TRIGGER ALERT [${level}]: ${message}`, data);
 
         // Send email notification if enabled
@@ -206,33 +232,6 @@ class OTATriggerMonitorJob {
                 logger.error('Failed to send email alert', { error: error.message });
             }
         }
-        
-        // TODO: Implement additional alerting mechanisms here
-        // Examples:
-        // - Send Slack/Teams message
-        // - Create monitoring system ticket
-        // - Send webhook to external monitoring service
-        
-        // Example webhook implementation:
-        /*
-        if (this.options.webhookUrl) {
-            try {
-                await fetch(this.options.webhookUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        level,
-                        message,
-                        data,
-                        timestamp: new Date().toISOString(),
-                        service: 'OTA Trigger Monitor'
-                    })
-                });
-            } catch (error) {
-                logger.error('Failed to send webhook alert', { error: error.message });
-            }
-        }
-        */
     }
 
     /**
@@ -241,19 +240,19 @@ class OTATriggerMonitorJob {
     async sendEmailAlert(level, message, data = {}) {
         const emailRecipient = 'dx@redhorse-group.co.jp';
         const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-        
+
         // Ensure data is an object to prevent null/undefined access
         const safeData = data || {};
-        
+
         // Defensive validation of data inputs with fallback values
         const successRate = typeof safeData.successRate === 'number' ? safeData.successRate : null;
         const missingTriggers = typeof safeData.missingTriggers === 'number' ? safeData.missingTriggers : 0;
         const totalCandidates = typeof safeData.totalCandidates === 'number' ? safeData.totalCandidates : 0;
         const errorMessage = safeData.error || safeData.message || null;
-        
+
         let subject, text, html;
         let bgColor, textColor, icon;
-        
+
         // Set styling based on alert level
         switch (level) {
             case 'CRITICAL':
@@ -276,13 +275,13 @@ class OTATriggerMonitorJob {
                 textColor = '#0c5460';
                 icon = 'ℹ️';
         }
-        
+
         const levelJapanese = level === 'CRITICAL' ? '緊急' : level === 'WARNING' ? '警告' : level === 'ERROR' ? 'エラー' : '情報';
-        
+
         // Build subject with defensive handling
         const successRateText = successRate !== null ? `成功率${successRate.toFixed(1)}%` : 'システムエラー';
         subject = `${icon} OTA連携アラート [${levelJapanese}] - ${successRateText}`;
-        
+
         // Build text content with defensive handling
         let systemStatus = '';
         if (successRate !== null) {
@@ -355,10 +354,10 @@ ${level === 'CRITICAL' ? '緊急対応が必要です' : level === 'ERROR' ? '�
         </div>`;
 
         await sendGenericEmail(emailRecipient, subject, text, html);
-        logger.info(`Email alert sent to ${emailRecipient}`, { 
-            level, 
+        logger.info(`Email alert sent to ${emailRecipient}`, {
+            level,
             successRate: successRate !== null ? successRate : 'N/A',
-            hasError: !!errorMessage 
+            hasError: !!errorMessage
         });
     }
 
@@ -371,7 +370,7 @@ ${level === 'CRITICAL' ? '緊急対応が必要です' : level === 'ERROR' ? '�
         // - Store in database table for trend analysis
         // - Send to time-series database (InfluxDB, etc.)
         // - Store in monitoring system (Prometheus, etc.)
-        
+
         // Example database storage:
         /*
         const { pool } = require('../config/database');
@@ -434,7 +433,7 @@ function createOTATriggerMonitor(options = {}) {
 
 // Default instance for immediate use - runs every 55 minutes, monitors last 60 minutes
 const defaultMonitor = new OTATriggerMonitorJob({
-    checkIntervalHours: 55/60,  // 55 minutes = 0.9167 hours
+    checkIntervalHours: 55 / 60,  // 55 minutes = 0.9167 hours
     monitoringWindowHours: 1,   // Look at last 60 minutes
     alertThreshold: 95,
     criticalThreshold: 80,

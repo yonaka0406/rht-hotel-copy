@@ -668,7 +668,7 @@ const shutdown = async (signal) => {
 
   if (process.env.NODE_ENV === 'production') {
     stopOtaXmlPoller(); // Stop the poller using its dedicated function
-    
+
     // Stop OTA trigger monitoring
     otaTriggerMonitor.stop();
     logger.info('OTA trigger monitoring stopped');
@@ -721,11 +721,12 @@ if (process.env.NODE_ENV === 'production') {
   startOtaXmlPoller(); // Start the poller using its dedicated function
   scheduleDailyDigestEmailJob();
   scheduleDailySalesOccPdfJob();
-  
+
   // Start OTA trigger monitoring
+  otaTriggerMonitor.configure({ baseUrl: `http://localhost:${PORT}` });
   otaTriggerMonitor.start();
-  logger.info('OTA trigger monitoring started');
-  
+  logger.info('OTA trigger monitoring started', { port: PORT });
+
   // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
   logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
