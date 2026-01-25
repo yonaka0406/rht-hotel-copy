@@ -87,23 +87,23 @@ async function processQueueItem(item) {
             statusCode: 200, // Default status code
             _headersSent: false, // Mimic headersSent flag
 
-            status: function(code) {
+            status: function (code) {
                 this.statusCode = code;
                 return this; // Allow chaining
             },
-            json: function(obj) {
+            json: function (obj) {
                 // Record the JSON response if needed for debugging, or just no-op
                 // logger.debug('dummyRes.json called', { response: obj });
                 this._jsonResponse = obj;
                 this._headersSent = true;
             },
-            send: function(body) {
+            send: function (body) {
                 // Record the body if needed, or just no-op
                 // logger.debug('dummyRes.send called', { response: body });
                 this._body = body;
                 this._headersSent = true;
             },
-            end: function() {
+            end: function () {
                 // No-op, just to prevent errors
                 this._headersSent = true;
             },
@@ -144,7 +144,7 @@ async function processQueueItem(item) {
         });
     }
 
-    if (success) {        
+    if (success) {
         try {
             await updateOTAXmlQueue(null, item.id, 'completed');
             logger.info(`Successfully processed queued item ID: ${item.id}`, { queueId: item.id });
@@ -162,6 +162,8 @@ async function processQueueItem(item) {
     }
 }
 
+const { startLog, completeLog } = require('../models/cron_logs');
+
 let isPolling = false;
 let pollerIntervalId = null; // Internal interval ID for this module
 
@@ -175,17 +177,31 @@ async function otaXmlPoller() {
     const requestId = `ota-poller-${Date.now()}`; // Unique requestId for this poller cycle
     logger.debug('Starting OTA XML Poller cycle', { requestId });
 
+    let logId = null;
+
     try {
         const pendingRequests = await fetchPendingRequests(BATCH_SIZE);
         if (pendingRequests.length === 0) {
             logger.debug('No pending OTA XML requests found.', { requestId });
         } else {
+            // Start logging only when there is work
+            logId = await startLog('OTA XML Poller');
+
             logger.info(`Fetched ${pendingRequests.length} pending OTA XML requests.`, { requestId });
             // Process items in parallel, but submitXMLTemplate itself is rate-limited by semaphore
             await Promise.all(pendingRequests.map(processQueueItem));
+
+            await completeLog(logId, 'success', { processedItems: pendingRequests.length });
         }
     } catch (error) {
         logger.error('Error in OTA XML Poller cycle:', { requestId, error: error.message, stack: error.stack });
+        if (logId) {
+            await completeLog(logId, 'failed', { error: error.message });
+        } else {
+            // If we failed before starting the log (e.g., fetchPendingRequests error), log it now
+            const errLogId = await startLog('OTA XML Poller');
+            await completeLog(errLogId, 'failed', { error: error.message, phase: 'initialization' });
+        }
     } finally {
         isPolling = false;
         logger.debug('Finished OTA XML Poller cycle', { requestId });

@@ -24,6 +24,7 @@ const { scheduleDailyDigestEmailJob } = require('./jobs/dailyDigestEmailJob');
 const { scheduleDailySalesOccPdfJob } = require('./jobs/dailySalesOccPdfJob');
 const { startGoogleSheetsPoller } = require('./jobs/googleSheetsPoller.js');
 const { startOtaXmlPoller, stopOtaXmlPoller, POLL_INTERVAL } = require('./jobs/otaXmlPoller.js');
+const { defaultMonitor: otaTriggerMonitor } = require('./jobs/otaTriggerMonitorJob.js');
 
 const app = express();
 const { closeSingletonBrowser } = require('./services/playwrightService');
@@ -223,6 +224,7 @@ const logRoutes = require('./routes/logRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const accountingRoutes = require('./routes/accountingRoutes');
+const otaRoutes = require('./routes/otaRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
 const waitlistRoutes = require('./routes/waitlistRoutes'); // Import waitlist routes
 const bookingEngineRoutes = require('./routes/bookingEngineRoutes'); // Import booking engine routes
@@ -250,6 +252,7 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', accountingRoutes);
+app.use('/api', otaRoutes);
 app.use('/api', xmlRoutes);
 app.use('/api', waitlistRoutes);
 app.use('/api/search', searchRoutes); // Search functionality routes
@@ -665,6 +668,10 @@ const shutdown = async (signal) => {
 
   if (process.env.NODE_ENV === 'production') {
     stopOtaXmlPoller(); // Stop the poller using its dedicated function
+
+    // Stop OTA trigger monitoring
+    otaTriggerMonitor.stop();
+    logger.info('OTA trigger monitoring stopped');
   }
 
   logger.info('Graceful shutdown complete.');
@@ -713,7 +720,14 @@ if (process.env.NODE_ENV === 'production') {
   startGoogleSheetsPoller();
   startOtaXmlPoller(); // Start the poller using its dedicated function
   scheduleDailyDigestEmailJob();
-  scheduleDailySalesOccPdfJob();  // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
+  scheduleDailySalesOccPdfJob();
+
+  // Start OTA trigger monitoring
+  otaTriggerMonitor.configure({ baseUrl: `http://localhost:${PORT}` });
+  otaTriggerMonitor.start();
+  logger.info('OTA trigger monitoring started', { port: PORT });
+
+  // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration, Daily Metrics) started for production environment.');
 } else {
   logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
 }

@@ -10,7 +10,10 @@ const getStartDateForPeriod = (numberOfMonths) => {
     return date.toISOString().split('T')[0]; // YYYY-MM-DD
 };
 
+const { startLog, completeLog } = require('../models/cron_logs');
+
 const assignLoyaltyTiers = async () => {
+    const logId = await startLog('Loyalty Tier Assignment');
     console.log('Starting loyalty tier assignment job...');
 
     // Get a client from the production pool
@@ -164,6 +167,7 @@ const assignLoyaltyTiers = async () => {
 
         await client.query('COMMIT');
         //console.log('Loyalty tier assignment job completed successfully.');
+        await completeLog(logId, 'success', { message: 'Loyalty tier assignment completed' });
 
         // Log final counts for verification
         const finalCounts = await client.query(`
@@ -177,6 +181,7 @@ const assignLoyaltyTiers = async () => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error in loyalty tier assignment job:', error);
+        await completeLog(logId, 'failed', { error: error.message });
         throw error;
     } finally {
         try {
