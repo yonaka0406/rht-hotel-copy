@@ -10,7 +10,10 @@ const UPDATE_WAITLIST_SQL = `
   WHERE status = 'waiting' AND requested_check_in_date < CURRENT_DATE
 `;
 
+const { startLog, completeLog } = require('../models/cron_logs');
+
 const runWaitlistExpirationJob = async () => {
+  const logId = await startLog('Waitlist Expiration');
   logger.info('[WaitlistJob] Starting waitlist expiration job...');
   const client = await db.getProdPool().connect();
   try {
@@ -18,9 +21,11 @@ const runWaitlistExpirationJob = async () => {
     const result = await client.query(UPDATE_WAITLIST_SQL);
     await client.query('COMMIT');
     logger.info(`[WaitlistJob] Updated ${result.rowCount} waitlist entries to 'expired' (check-in before today).`);
+    await completeLog(logId, 'success', { message: `Updated ${result.rowCount} waitlist entries` });
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('[WaitlistJob] Error updating waitlist entries:', err);
+    await completeLog(logId, 'failed', { error: err.message });
     throw err;
   } finally {
     client.release();

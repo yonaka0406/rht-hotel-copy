@@ -1,8 +1,12 @@
 const cron = require('node-cron');
 const db = require('../config/database');
+const logger = require('../config/logger');
+
+const { startLog, completeLog } = require('../models/cron_logs');
 
 const performDailyMetricsCalculation = async () => {
-    console.log('Starting daily plan metrics calculation job...');    
+    const logId = await startLog('Daily Plan Metrics');
+    logger.info('Starting daily plan metrics calculation job...');
     const client = await db.getProdPool().connect();
 
     try {
@@ -147,10 +151,12 @@ const performDailyMetricsCalculation = async () => {
         }
 
         await client.query('COMMIT');
-        console.log('Daily plan metrics calculation job completed successfully.');
+        logger.info('Daily plan metrics calculation job completed successfully.');
+        await completeLog(logId, 'success', { message: 'Daily plan metrics calculation job completed' });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Error in daily plan metrics calculation job:', error);
+        logger.error('Error in daily plan metrics calculation job:', error);
+        await completeLog(logId, 'failed', { error: error.message });
     } finally {
         client.release();
     }
@@ -162,7 +168,7 @@ const scheduleDailyMetricsJob = () => {
         scheduled: true,
         timezone: "Asia/Tokyo"
     });
-    console.log('Daily plan metrics calculation job scheduled daily at 16:30.');
+    logger.info('Daily plan metrics calculation job scheduled daily at 16:30.');
 };
 
 module.exports = { scheduleDailyMetricsJob };
