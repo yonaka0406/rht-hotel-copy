@@ -1,5 +1,12 @@
-const { pool } = require('../../config/database');
+const { getProdPool, getDevPool } = require('../../config/database');
 const logger = require('../../config/logger');
+
+/**
+ * Helper to get the correct pool based on environment
+ */
+const getPool = () => {
+    return process.env.NODE_ENV === 'production' ? getProdPool() : getDevPool();
+};
 
 /**
  * Start logging a cron job execution
@@ -7,7 +14,7 @@ const logger = require('../../config/logger');
  * @returns {Promise<string>} - The ID of the log entry
  */
 const startLog = async (jobName) => {
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const query = `
             INSERT INTO logs_cron (job_name, status, start_time)
@@ -33,7 +40,7 @@ const startLog = async (jobName) => {
 const completeLog = async (logId, status, details = {}) => {
     if (!logId) return;
 
-    const client = await pool.connect();
+    const client = await getPool().connect();
     try {
         const query = `
             UPDATE logs_cron

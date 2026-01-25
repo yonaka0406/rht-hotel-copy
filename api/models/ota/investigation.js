@@ -1,4 +1,4 @@
-const { pool } = require('../../config/database');
+const { getPool } = require('../../config/database');
 const xml2js = require('xml2js');
 
 /**
@@ -9,8 +9,8 @@ const xml2js = require('xml2js');
 /**
  * Get current state snapshot for the target date
  */
-async function getCurrentStateSnapshot(hotelId, date) {
-    const client = await pool.connect();
+async function getCurrentStateSnapshot(requestId, hotelId, date) {
+    const client = await getPool(requestId).connect();
     try {
         // Get total rooms
         const roomsQuery = `
@@ -65,8 +65,8 @@ async function getCurrentStateSnapshot(hotelId, date) {
  * Uses CTE approach to get min/max log dates and JOIN to get creation and final state info
  * Now includes check for parent reservation DELETE logs to handle CASCADE deletions
  */
-async function getReservationLifecycle(hotelId, date) {
-    const client = await pool.connect();
+async function getReservationLifecycle(requestId, hotelId, date) {
+    const client = await getPool(requestId).connect();
     try {
         // CTE approach: get min/max log dates, then JOIN to get creation and final state info
         const lifecycleQuery = `
@@ -202,8 +202,8 @@ async function getReservationLifecycle(hotelId, date) {
  * Get PMS events that affect the target date from reservation_details logs
  * Includes INSERT, DELETE, and UPDATE operations that affect room availability
  */
-async function getPMSEvents(hotelId, date) {
-    const client = await pool.connect();
+async function getPMSEvents(requestId, hotelId, date) {
+    const client = await getPool(requestId).connect();
     try {
         const events = [];
 
@@ -303,8 +303,8 @@ async function getPMSEvents(hotelId, date) {
 /**
  * Get OTA XML queue events related to stock adjustments
  */
-async function getOTAEvents(hotelId, date) {
-    const client = await pool.connect();
+async function getOTAEvents(requestId, hotelId, date) {
+    const client = await getPool(requestId).connect();
     try {
         // Get OTA XML queue entries for stock-related services
         // Look for entries that contain the target date in XML body, regardless of created_at
@@ -326,11 +326,11 @@ async function getOTAEvents(hotelId, date) {
             ORDER BY created_at DESC
             LIMIT 200
         `;
-        
+
         // Convert date to YYYYMMDD format for XML search
         const yyyymmdd = date.replace(/-/g, '');
         const xmlDatePattern = `%${yyyymmdd}%`;
-        
+
         const otaResult = await client.query(otaQuery, [hotelId, xmlDatePattern]);
         const events = [];
 
@@ -375,21 +375,21 @@ async function checkXMLContainsDate(xmlBody, targetDate) {
             targetDate.replace(/-/g, ''), // YYYYMMDD (most common in XML)
             targetDate.replace(/-/g, '/'), // YYYY/MM/DD
         ];
-        
+
         // Quick string search first
         const hasDateInXML = dateFormats.some(format => xmlBody.includes(format));
         if (hasDateInXML) {
             return true;
         }
-        
+
         // Fallback to XML parsing if string search fails
         const parser = new xml2js.Parser();
         const result = await parser.parseStringPromise(xmlBody);
-        
+
         // Convert to string and search for date patterns
         const xmlString = JSON.stringify(result);
         return dateFormats.some(format => xmlString.includes(format));
-        
+
     } catch (error) {
         console.warn('XML parsing error:', error.message);
         // Fallback to simple string search
@@ -403,17 +403,17 @@ async function checkXMLContainsDate(xmlBody, targetDate) {
  */
 function mergeTimeline(pmsEvents, otaEvents) {
     const allEvents = [...pmsEvents, ...otaEvents];
-    
+
     // Sort by timestamp (newest first for display)
     allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
+
     // Create a map to track reservation_detail records and their relationships
     const recordMap = new Map();
-    
+
     // Group events that happen at the same time for the same client
     const groupedEvents = [];
     let currentGroup = null;
-    
+
     allEvents.forEach((event, index) => {
         // Calculate the impact of this event on room availability
         if (event.event_type === 'reservation_detail') {
@@ -424,18 +424,18 @@ function mergeTimeline(pmsEvents, otaEvents) {
                 } else {
                     event.room_count_change = 0; // Cancelled reservation doesn't affect availability
                 }
-                
+
                 // Track this record for future DELETE operations
                 recordMap.set(event.id, {
                     guest_name: event.guest_name,
                     room_number: event.room_number,
                     insert_timestamp: event.timestamp
                 });
-                
+
             } else if (event.action === 'DELETE') {
                 // When a reservation_detail is deleted (room becomes available)
                 event.room_count_change = 1; // Room becomes available
-                
+
                 // Check if we have the original INSERT for this record
                 const originalRecord = recordMap.get(event.id);
                 if (originalRecord) {
@@ -445,12 +445,12 @@ function mergeTimeline(pmsEvents, otaEvents) {
                 } else {
                     event.is_related_to_insert = false;
                 }
-                
+
             } else if (event.action === 'UPDATE') {
                 // For updates, check if cancelled status changed
                 const wasActive = (event.cancelled_old === null || event.cancelled_old === '' || event.cancelled_old === 'null');
                 const isActive = (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null');
-                
+
                 if (wasActive && !isActive) {
                     // Room was occupied, now cancelled (room becomes available)
                     event.room_count_change = 1;
@@ -466,30 +466,30 @@ function mergeTimeline(pmsEvents, otaEvents) {
             // OTA events don't change room count, they sync the current state
             event.room_count_change = 0;
         }
-        
+
         // Ensure room_count_change is always set
         event.room_count_change = event.room_count_change || 0;
-        
+
         // Group logic: same timestamp, same client, same action, same event_type
-        if (currentGroup && 
+        if (currentGroup &&
             currentGroup.timestamp === event.timestamp &&
             currentGroup.guest_name === event.guest_name &&
             currentGroup.action === event.action &&
             currentGroup.event_type === event.event_type &&
             event.event_type === 'reservation_detail') {
-            
+
             // Add to current group
             currentGroup.room_numbers = currentGroup.room_numbers || [currentGroup.room_number];
             currentGroup.room_numbers.push(event.room_number);
             currentGroup.room_count_change += event.room_count_change;
             currentGroup.grouped_count = (currentGroup.grouped_count || 1) + 1;
-            
+
         } else {
             // Start new group or add single event
             if (currentGroup) {
                 groupedEvents.push(currentGroup);
             }
-            
+
             currentGroup = {
                 ...event,
                 grouped_count: 1,
@@ -497,12 +497,12 @@ function mergeTimeline(pmsEvents, otaEvents) {
             };
         }
     });
-    
+
     // Don't forget the last group
     if (currentGroup) {
         groupedEvents.push(currentGroup);
     }
-    
+
     return groupedEvents;
 }
 
@@ -512,7 +512,7 @@ function mergeTimeline(pmsEvents, otaEvents) {
 function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = null) {
     const pmsEventCount = pmsEvents.length;
     const otaEventCount = otaEvents.length;
-    
+
     // Calculate detailed operation statistics using CASCADE DELETE aware lifecycle data
     const operationStats = {
         totalInserts: 0,
@@ -527,7 +527,7 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
         totalDeleted: 0,
         cascadeDeleted: 0
     };
-    
+
     // If we have CASCADE DELETE aware lifecycle data, use it for accurate statistics
     if (reservationLifecycle && reservationLifecycle.length > 0) {
         // Count by final status from lifecycle analysis
@@ -543,7 +543,7 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
                 }
             }
         });
-        
+
         // Calculate operations from lifecycle data
         reservationLifecycle.forEach(record => {
             if (record.first_action === 'INSERT') {
@@ -555,18 +555,18 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
             if (record.last_action === 'UPDATE') {
                 operationStats.totalUpdates++;
                 // Determine if it's a cancellation change
-                const isCancelled = record.last_cancelled_status && 
-                                  record.last_cancelled_status !== '' && 
-                                  record.last_cancelled_status !== 'null';
+                const isCancelled = record.last_cancelled_status &&
+                    record.last_cancelled_status !== '' &&
+                    record.last_cancelled_status !== 'null';
                 if (record.final_status === 'cancelled' && isCancelled) {
                     operationStats.updatesActiveToCancelled++;
                 }
             }
         });
-        
+
         // Calculate net room change: active records reduce availability
         operationStats.netRoomChange = -operationStats.totalActive;
-        
+
     } else {
         // Fallback to old calculation method if no lifecycle data
         pmsEvents.forEach(event => {
@@ -582,10 +582,10 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
                     operationStats.netRoomChange += 1;
                 } else if (event.action === 'UPDATE') {
                     operationStats.totalUpdates++;
-                    
+
                     const wasActive = (event.cancelled_old === null || event.cancelled_old === '' || event.cancelled_old === 'null');
                     const isActive = (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null');
-                    
+
                     if (wasActive && !isActive) {
                         // Room was occupied, now cancelled (room becomes available)
                         operationStats.updatesActiveToCancelled++;
@@ -599,27 +599,27 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
             }
         });
     }
-    
+
     // Simple gap detection: look for PMS events without corresponding OTA events within a time window
     const gaps = [];
     const timeWindow = 5 * 60 * 1000; // 5 minutes in milliseconds
-    
+
     pmsEvents.forEach(pmsEvent => {
         const pmsTime = new Date(pmsEvent.timestamp);
         const hasCorrespondingOTA = otaEvents.some(otaEvent => {
             const otaTime = new Date(otaEvent.timestamp);
             return Math.abs(otaTime - pmsTime) <= timeWindow;
         });
-        
+
         if (!hasCorrespondingOTA && pmsEvent.event_type === 'reservation_detail') {
             gaps.push({
                 pmsEvent,
                 expectedOTATime: new Date(pmsTime.getTime() + 60000), // Expected 1 minute later
-                message: `予約詳細${pmsEvent.action === 'INSERT' ? '追加' : pmsEvent.action === 'DELETE' ? '削除' : '更新'}から${timeWindow/60000}分以内にOTA在庫調整が見つかりませんでした`
+                message: `予約詳細${pmsEvent.action === 'INSERT' ? '追加' : pmsEvent.action === 'DELETE' ? '削除' : '更新'}から${timeWindow / 60000}分以内にOTA在庫調整が見つかりませんでした`
             });
         }
     });
-    
+
     return {
         totalPMSEvents: pmsEventCount,
         totalOTAEvents: otaEventCount,
@@ -637,8 +637,8 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
 /**
  * Get OTA XML data for a specific queue entry
  */
-async function getOTAXMLData(queueId) {
-    const client = await pool.connect();
+async function getOTAXMLData(requestId, queueId) {
+    const client = await getPool(requestId).connect();
     try {
         const query = `
             SELECT 
@@ -655,13 +655,13 @@ async function getOTAXMLData(queueId) {
             FROM ota_xml_queue 
             WHERE id = $1
         `;
-        
+
         const result = await client.query(query, [queueId]);
-        
+
         if (result.rows.length === 0) {
             return null;
         }
-        
+
         return result.rows[0];
 
     } finally {

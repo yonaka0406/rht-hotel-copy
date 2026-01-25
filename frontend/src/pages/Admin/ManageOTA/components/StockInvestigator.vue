@@ -12,7 +12,7 @@
           <div class="p-field mt-6">
             <FloatLabel>
               <Select id="hotel" v-model="selectedHotelId" :options="hotels" optionLabel="name" optionValue="id"
-                placeholder="ホテルを選択" class="w-full" filter />
+                class="w-full" filter />
               <label for="hotel">ホテル</label>
             </FloatLabel>
           </div>

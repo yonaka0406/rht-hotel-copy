@@ -1,4 +1,4 @@
-const { 
+const {
     getCurrentStateSnapshot,
     getPMSEvents,
     getOTAEvents,
@@ -23,7 +23,7 @@ const { defaultMonitor: otaTriggerMonitor } = require('../../jobs/otaTriggerMoni
 const investigateStock = async (req, res) => {
     try {
         const { hotelId, date } = req.query;
-        
+
         if (!hotelId || !date) {
             return res.status(400).json({
                 error: 'Missing required parameters: hotelId and date'
@@ -47,16 +47,16 @@ const investigateStock = async (req, res) => {
         };
 
         // 1. Get current state snapshot
-        investigation.currentState = await getCurrentStateSnapshot(hotelId, date);
+        investigation.currentState = await getCurrentStateSnapshot(req.requestId, hotelId, date);
 
         // 2. Get PMS events (reservations and maintenance affecting the target date)
-        const pmsEvents = await getPMSEvents(hotelId, date);
+        const pmsEvents = await getPMSEvents(req.requestId, hotelId, date);
 
         // 3. Get OTA XML queue events
-        const otaEvents = await getOTAEvents(hotelId, date);
+        const otaEvents = await getOTAEvents(req.requestId, hotelId, date);
 
         // 4. Get reservation lifecycle summary
-        const reservationLifecycle = await getReservationLifecycle(hotelId, date);
+        const reservationLifecycle = await getReservationLifecycle(req.requestId, hotelId, date);
 
         // 5. Merge and sort timeline
         investigation.eventTimeline = mergeTimeline(pmsEvents, otaEvents);
@@ -85,15 +85,15 @@ const investigateStock = async (req, res) => {
 const getXMLData = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         if (!id) {
             return res.status(400).json({
                 error: 'Missing required parameter: id'
             });
         }
 
-        const xmlData = await getOTAXMLData(id);
-        
+        const xmlData = await getOTAXMLData(req.requestId, id);
+
         if (!xmlData) {
             return res.status(404).json({
                 error: 'OTA XML data not found'
@@ -118,7 +118,7 @@ const getXMLData = async (req, res) => {
 const getTriggerMonitorStatus = async (req, res) => {
     try {
         const status = otaTriggerMonitor.getStatus();
-        
+
         res.json({
             success: true,
             status: {
@@ -145,20 +145,20 @@ const getTriggerMonitorStatus = async (req, res) => {
 const runTriggerMonitorCheck = async (req, res) => {
     try {
         const { hoursBack = 1, autoRemediate = false } = req.body;
-        
+
         // Validate input
         if (hoursBack < 0.1 || hoursBack > 24) {
             return res.status(400).json({
                 error: 'Invalid hoursBack parameter. Must be between 0.1 and 24.'
             });
         }
-        
+
         // Run the check with optional auto-remediation
         const result = await checkMissingOTATriggers(hoursBack, {
             autoRemediate,
             baseUrl: req.envConfig?.backendUrl || 'http://localhost:5000'
         });
-        
+
         res.json({
             success: true,
             result,
