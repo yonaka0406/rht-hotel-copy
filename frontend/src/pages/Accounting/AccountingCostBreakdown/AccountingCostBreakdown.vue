@@ -426,6 +426,16 @@ const analyticsSummary = computed(() => {
             console.log('  Hotels:', hotelCount);
             console.log('  Average per hotel per month:', currentYearAvg.toLocaleString());
             
+            // Last 12 months calculation (unchanged)
+            const last12mMonthlyData = monthlyData.filter(d => new Date(d.month) >= twelveMonthsAgo);
+            const totalLast12mCost = last12mMonthlyData.reduce((sum, d) => sum + Number(d.cost), 0);
+            last12mAvg = last12mMonthlyData.length > 0 ? totalLast12mCost / last12mMonthlyData.length / hotelCount : 0;
+            
+            console.log('Last 12M Calculation:');
+            console.log('  Filtered Months:', last12mMonthlyData.length);
+            console.log('  Total Cost:', totalLast12mCost.toLocaleString());
+            console.log('  Average per hotel per month:', last12mAvg.toLocaleString());
+            
             // Debug: Show each month included in current year calculation for 水道光熱費
             if (account.code === '6110105' || account.name === '水道光熱費') {
                 console.log('  DEBUG - All Hotels Current Year months included (STRING-BASED, JANUARY+ ONLY):');
@@ -443,16 +453,6 @@ const analyticsSummary = computed(() => {
                 console.log(`    Current Year: Only ${latestDataYear} months from January onwards`);
                 console.log(`    Last 12M: Includes ${latestDataYear-1}-12 if available`);
             }
-
-            // Last 12 months calculation (unchanged)
-            const last12mMonthlyData = monthlyData.filter(d => new Date(d.month) >= twelveMonthsAgo);
-            const totalLast12mCost = last12mMonthlyData.reduce((sum, d) => sum + Number(d.cost), 0);
-            last12mAvg = last12mMonthlyData.length > 0 ? totalLast12mCost / last12mMonthlyData.length / hotelCount : 0;
-            
-            console.log('Last 12M Calculation:');
-            console.log('  Filtered Months:', last12mMonthlyData.length);
-            console.log('  Total Cost:', totalLast12mCost.toLocaleString());
-            console.log('  Average per hotel per month:', last12mAvg.toLocaleString());
             
         } else {
             console.log('CALCULATION MODE: Specific Hotel', selectedHotelId.value);
