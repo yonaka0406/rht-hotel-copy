@@ -32,11 +32,25 @@
                                 @update:modelValue="loadData" />
                         </div>
 
+                        <!-- Reference Month Filter -->
+                        <div class="flex flex-col gap-2">
+                            <label
+                                class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                                <span>基準月 (12ヶ月累計)</span>
+                                <span v-if="latestMonth"
+                                    class="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                                    最終更新: {{ latestMonthLabel }}
+                                </span>
+                            </label>
+                            <Select v-model="selectedMonth" :options="monthOptions" optionLabel="label"
+                                optionValue="value" placeholder="基準月を選択" fluid />
+                        </div>
+
                         <!-- Hotel Filter -->
                         <div class="flex flex-col gap-2">
                             <label
                                 class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                                対象施設
+                                対象施設 (マッピング済み)
                             </label>
                             <Select v-model="selectedHotelId" :options="hotelOptions" optionLabel="label"
                                 optionValue="value" placeholder="施設を選択" fluid />
@@ -90,7 +104,7 @@
                                     <td class="py-4 px-6">
                                         <div class="flex flex-col">
                                             <span class="font-bold text-slate-700 dark:text-slate-200">{{ item.name
-                                            }}</span>
+                                                }}</span>
                                             <span class="text-[10px] text-slate-400 font-medium">{{ item.code }}</span>
                                         </div>
                                     </td>
@@ -210,18 +224,42 @@ const hotelStore = useHotelStore();
 
 const topN = ref(5);
 const selectedHotelId = ref(0); // 0 = All Hotels
+const selectedMonth = ref(null);
 const loading = ref(true);
 const rawData = ref({ topAccounts: [], timeSeries: [] });
+const mappedHotels = ref([]); // Hotels that have assigned departments
 
-// Hotel options for select
+// Hotel options for select - Only show mapped hotels
 const hotelOptions = computed(() => {
-    const options = [{ label: 'すべての施設', value: 0 }];
-    if (hotelStore.hotels?.length) {
-        hotelStore.hotels.forEach(h => {
-            options.push({ label: h.name, value: h.id });
+    const options = [{ label: 'すべての施設 (全体平均と比較)', value: 0 }];
+    if (mappedHotels.value?.length) {
+        mappedHotels.value.forEach(h => {
+            options.push({ label: h.hotel_name, value: h.hotel_id });
         });
     }
     return options;
+});
+
+// Month options from time series
+const monthOptions = computed(() => {
+    if (!rawData.value?.timeSeries?.length) return [];
+
+    const months = [...new Set(rawData.value.timeSeries.map(d => d.month))];
+    return months.sort().reverse().map(m => ({
+        label: `${m.substring(0, 4)}年${m.substring(5, 7)}月`,
+        value: m
+    }));
+});
+
+const latestMonth = computed(() => {
+    if (!rawData.value?.timeSeries?.length) return null;
+    const months = rawData.value.timeSeries.map(d => d.month);
+    return months.sort().reverse()[0];
+});
+
+const latestMonthLabel = computed(() => {
+    if (!latestMonth.value) return '';
+    return `${latestMonth.value.substring(0, 4)}/${latestMonth.value.substring(5, 7)}`;
 });
 
 const topAccounts = computed(() => rawData.value?.topAccounts || []);
@@ -232,8 +270,8 @@ const topAccounts = computed(() => rawData.value?.topAccounts || []);
 const analyticsSummary = computed(() => {
     if (!topAccounts.value?.length || !rawData.value?.timeSeries?.length) return [];
 
-    const now = new Date();
-    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 12, 1);
+    const referenceDate = selectedMonth.value ? new Date(selectedMonth.value) : (latestMonth.value ? new Date(latestMonth.value) : new Date());
+    const twelveMonthsAgo = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 11, 1);
 
     return topAccounts.value.map(account => {
         const accountData = rawData.value.timeSeries.filter(d => d.account_code === account.code);
@@ -419,6 +457,11 @@ const loadData = async () => {
         const response = await accountingStore.fetchCostBreakdown({ topN: topN.value });
         if (response?.success && response.data) {
             rawData.value = response.data;
+
+            // Set default selected month if not set
+            if (!selectedMonth.value && latestMonth.value) {
+                selectedMonth.value = latestMonth.value;
+            }
         } else {
             rawData.value = { topAccounts: [], timeSeries: [] };
         }
@@ -429,8 +472,21 @@ const loadData = async () => {
     }
 };
 
+const fetchMappings = async () => {
+    try {
+        const response = await accountingStore.getAvailableDepartments();
+        if (response?.success) {
+            // Filter to only include hotels that have a department name
+            mappedHotels.value = response.data.filter(d => d.name && d.is_current);
+        }
+    } catch (e) {
+        console.error('Failed to fetch departments', e);
+    }
+};
+
 onMounted(() => {
     loadData();
+    fetchMappings();
     if (!hotelStore.hotels?.length) {
         hotelStore.fetchHotels();
     }
