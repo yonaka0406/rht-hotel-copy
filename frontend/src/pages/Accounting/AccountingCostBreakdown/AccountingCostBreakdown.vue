@@ -156,8 +156,8 @@
                 <div
                     class="lg:col-span-12 xl:col-span-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl p-6 h-full flex flex-col">
                     <div class="mb-4">
-                        <h2 class="text-lg font-black text-slate-800 dark:text-white">コストバランス比較</h2>
-                        <p class="text-xs text-slate-400 mt-1">選択施設と全体平均の構造比較</p>
+                        <h2 class="text-lg font-black text-slate-800 dark:text-white">売上インパクト分析</h2>
+                        <p class="text-xs text-slate-400 mt-1">各経費科目の売上に対する影響度比較</p>
                     </div>
                     <div class="flex-1 min-h-[400px]">
                         <v-chart class="h-full w-full" :option="radarOption" autoresize />
@@ -656,16 +656,21 @@ const analyticsSummary = computed(() => {
 const radarOption = computed(() => {
     const indicators = analyticsSummary.value.map(item => ({
         name: item.name,
-        // Max value should be slightly higher than the max cost found among the 3 metrics
-        max: Math.max(...analyticsSummary.value.map(i => Math.max(i.lifetimeAvg, i.last12mAvg, i.globalAvg))) * 1.1 || 100
+        // Max value should be slightly higher than the max revenue impact percentage
+        max: Math.max(...analyticsSummary.value.map(i => i.revenueImpact)) * 1.2 || 5
     }));
 
     return {
         tooltip: {
-            trigger: 'item'
+            trigger: 'item',
+            formatter: (params) => {
+                const dataIndex = params.dataIndex;
+                const item = analyticsSummary.value[dataIndex];
+                return `${item.name}<br/>${params.seriesName}: ${params.value.toFixed(1)}%`;
+            }
         },
         legend: {
-            data: ['通期平均', '直近12ヶ月', '全体平均'],
+            data: ['売上比率 (Revenue Impact)'],
             bottom: 0,
             textStyle: { color: '#94a3b8' }
         },
@@ -693,26 +698,14 @@ const radarOption = computed(() => {
         },
         series: [
             {
-                name: 'コスト構造比較',
+                name: '売上比率',
                 type: 'radar',
                 data: [
                     {
-                        value: analyticsSummary.value.map(i => i.lifetimeAvg),
-                        name: '通期平均',
-                        itemStyle: { color: '#6366f1' },
-                        areaStyle: { opacity: 0.1 }
-                    },
-                    {
-                        value: analyticsSummary.value.map(i => i.last12mAvg),
-                        name: '直近12ヶ月',
-                        itemStyle: { color: '#ec4899' },
-                        areaStyle: { opacity: 0.1 }
-                    },
-                    {
-                        value: analyticsSummary.value.map(i => i.globalAvg),
-                        name: '全体平均',
-                        itemStyle: { color: '#94a3b8' },
-                        lineStyle: { type: 'dashed' }
+                        value: analyticsSummary.value.map(i => i.revenueImpact),
+                        name: '売上比率 (Revenue Impact)',
+                        itemStyle: { color: '#8b5cf6' },
+                        areaStyle: { opacity: 0.2 }
                     }
                 ]
             }
