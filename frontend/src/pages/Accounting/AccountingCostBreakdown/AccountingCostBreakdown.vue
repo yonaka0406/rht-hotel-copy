@@ -293,9 +293,30 @@ const analyticsSummary = computed(() => {
     const referenceDate = selectedMonth.value ? new Date(selectedMonth.value) : (latestMonth.value ? new Date(latestMonth.value) : new Date());
     const twelveMonthsAgo = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 11, 1);
 
+    // Get "current year" based on the latest available data, not actual current year
+    console.log('DEBUG: latestMonth.value =', latestMonth.value);
+    console.log('DEBUG: new Date(latestMonth.value) =', latestMonth.value ? new Date(latestMonth.value) : 'null');
+    
+    const latestDataYear = latestMonth.value ? new Date(latestMonth.value).getFullYear() : new Date().getFullYear();
+    const currentYearStart = new Date(latestDataYear, 0, 1); // January 1st of the data year
+    const currentYearEnd = latestMonth.value ? new Date(latestMonth.value) : new Date();
+    
+    console.log('DEBUG: latestDataYear =', latestDataYear);
+    console.log('DEBUG: currentYearStart =', currentYearStart);
+
+    // Helper function to format dates without timezone issues
+    const formatDateLocal = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+    };
+
     console.log('=== COST BREAKDOWN CALCULATIONS ===');
     console.log('Reference Date (Latest Available):', referenceDate.toISOString().substring(0, 7));
     console.log('12 Months Ago (from latest data):', twelveMonthsAgo.toISOString().substring(0, 7));
+    console.log('Data Year (from latest available data):', latestDataYear);
+    console.log('Current Year Start (FIXED):', formatDateLocal(currentYearStart));
+    console.log('Current Year End:', currentYearEnd.toISOString().substring(0, 7));
     console.log('Selected Hotel ID:', selectedHotelId.value);
     console.log('Raw Time Series Data:', rawData.value.timeSeries.length, 'records');
 
@@ -304,15 +325,69 @@ const analyticsSummary = computed(() => {
         
         const accountData = rawData.value.timeSeries.filter(d => d.account_code === account.code);
         console.log('Account Data Records:', accountData.length);
+        
+        // Special detailed logging for 水道光熱費 and Hotel 10
+        if (account.code === '6110105' || account.name === '水道光熱費') {
+            console.log('\n=== DETAILED ANALYSIS FOR 水道光熱費 ===');
+            
+            // Show all data for this account
+            console.log('All data for this account:');
+            accountData.forEach(d => {
+                console.log(`  ${d.month}: Hotel ${d.hotel_id} - Cost: ${Number(d.cost).toLocaleString()}, Sales: ${Number(d.sales).toLocaleString()}`);
+            });
+            
+            // Focus on selected hotel data (or Hotel 27 for detailed analysis)
+            const selectedHotelForAnalysis = selectedHotelId.value === 0 ? 27 : selectedHotelId.value;
+            const selectedHotelData = accountData.filter(d => d.hotel_id === selectedHotelForAnalysis);
+            console.log(`\nHotel ${selectedHotelForAnalysis} month-by-month data:`);
+            selectedHotelData.sort((a, b) => new Date(a.month) - new Date(b.month)).forEach(d => {
+                console.log(`  ${d.month}: Cost: ¥${Number(d.cost).toLocaleString()}, Sales: ¥${Number(d.sales).toLocaleString()}`);
+            });
+            
+            console.log('\nDate range analysis:');
+            console.log('  Current Year Start (FIXED):', formatDateLocal(currentYearStart));
+            console.log('  Current Year End:', currentYearEnd.toISOString().substring(0, 7));
+            console.log('  12 Months Ago:', twelveMonthsAgo.toISOString().substring(0, 7));
+            console.log('  Reference Date:', referenceDate.toISOString().substring(0, 7));
+            console.log('  Latest Data Year:', latestDataYear);
+            
+            // Show which months fall into each category for the selected hotel
+            const currentYearMonths = selectedHotelData.filter(d => {
+                const monthDate = new Date(d.month);
+                return monthDate >= currentYearStart && monthDate <= currentYearEnd;
+            });
+            
+            const last12Months = selectedHotelData.filter(d => new Date(d.month) >= twelveMonthsAgo);
+            
+            console.log(`\nHotel ${selectedHotelForAnalysis} - Current Year months (通期平均):`);
+            currentYearMonths.forEach(d => {
+                console.log(`  ${d.month}: ¥${Number(d.cost).toLocaleString()}`);
+            });
+            
+            console.log(`\nHotel ${selectedHotelForAnalysis} - Last 12 months (直近12ヶ月):`);
+            last12Months.forEach(d => {
+                console.log(`  ${d.month}: ¥${Number(d.cost).toLocaleString()}`);
+            });
+            
+            // Calculate and show the averages
+            const currentYearTotal = currentYearMonths.reduce((sum, d) => sum + Number(d.cost), 0);
+            const currentYearAverage = currentYearMonths.length > 0 ? currentYearTotal / currentYearMonths.length : 0;
+            
+            const last12MonthsTotal = last12Months.reduce((sum, d) => sum + Number(d.cost), 0);
+            const last12MonthsAverage = last12Months.length > 0 ? last12MonthsTotal / last12Months.length : 0;
+            
+            console.log(`\nCalculated Averages for Hotel ${selectedHotelForAnalysis}:`);
+            console.log(`  通期平均 (${currentYearMonths.length} months): ¥${currentYearAverage.toLocaleString()}`);
+            console.log(`  直近12ヶ月 (${last12Months.length} months): ¥${last12MonthsAverage.toLocaleString()}`);
+            console.log(`  Should be different? ${currentYearAverage !== last12MonthsAverage ? 'YES' : 'NO'}`);
+            
+            console.log('=== END DETAILED ANALYSIS ===\n');
+        }
+        
         console.log('Account Data Sample:', accountData.slice(0, 3));
 
         // 1. Calculate metrics for the SELECTED scope
         let currentYearAvg, last12mAvg;
-        
-        // Get "current year" based on the latest available data, not actual current year
-        const latestDataYear = latestMonth.value ? new Date(latestMonth.value).getFullYear() : new Date().getFullYear();
-        const currentYearStart = new Date(latestDataYear, 0, 1); // January 1st of the data year
-        const currentYearEnd = latestMonth.value ? new Date(latestMonth.value) : new Date();
         
         console.log('Data Year (from latest available data):', latestDataYear);
         console.log('Current Year Range:', currentYearStart.toISOString().substring(0, 7), 'to', currentYearEnd.toISOString().substring(0, 7));
@@ -329,10 +404,16 @@ const analyticsSummary = computed(() => {
             console.log('Unique Hotels:', uniqueHotels, `(${hotelCount} hotels)`);
             console.log('Monthly Data Sample:', monthlyData.slice(0, 3));
             
-            // Current Year Average (based on latest data year)
+            // Current Year Average (based on latest data year) - using string comparison to avoid timezone issues
             const currentYearData = monthlyData.filter(d => {
-                const monthDate = new Date(d.month);
-                return monthDate >= currentYearStart && monthDate <= currentYearEnd;
+                // Extract year from the ISO string (e.g., "2025" from "2025-11-30T15:00:00.000Z")
+                const monthString = d.month.substring(0, 7); // "YYYY-MM"
+                const year = parseInt(monthString.substring(0, 4));
+                const month = parseInt(monthString.substring(5, 7));
+                
+                // Only include months from the data year (2025) starting from January
+                // This excludes December of previous year (2024-12) that might be included in last 12 months
+                return year === latestDataYear && month >= 1;
             });
             const totalCurrentYearCost = currentYearData.reduce((sum, d) => sum + Number(d.cost), 0);
             currentYearAvg = currentYearData.length > 0 ? totalCurrentYearCost / currentYearData.length / hotelCount : 0;
@@ -344,6 +425,24 @@ const analyticsSummary = computed(() => {
             console.log('  Total Cost:', totalCurrentYearCost.toLocaleString());
             console.log('  Hotels:', hotelCount);
             console.log('  Average per hotel per month:', currentYearAvg.toLocaleString());
+            
+            // Debug: Show each month included in current year calculation for 水道光熱費
+            if (account.code === '6110105' || account.name === '水道光熱費') {
+                console.log('  DEBUG - All Hotels Current Year months included (STRING-BASED, JANUARY+ ONLY):');
+                currentYearData.forEach(d => {
+                    const monthString = d.month.substring(0, 7);
+                    console.log(`    ${d.month} (${monthString}): ¥${Number(d.cost).toLocaleString()}`);
+                });
+                
+                console.log('  DEBUG - All Hotels Last 12 months included:');
+                last12mMonthlyData.forEach(d => {
+                    console.log(`    ${d.month}: ¥${Number(d.cost).toLocaleString()}`);
+                });
+                
+                console.log('  DEBUG - Key difference:');
+                console.log(`    Current Year: Only ${latestDataYear} months from January onwards`);
+                console.log(`    Last 12M: Includes ${latestDataYear-1}-12 if available`);
+            }
 
             // Last 12 months calculation (unchanged)
             const last12mMonthlyData = monthlyData.filter(d => new Date(d.month) >= twelveMonthsAgo);
@@ -363,10 +462,16 @@ const analyticsSummary = computed(() => {
             console.log('Hotel Data Records:', hotelData.length);
             console.log('Hotel Data Sample:', hotelData.slice(0, 3));
             
-            // Current Year Average (based on latest data year)
+            // Current Year Average (based on latest data year) - using string comparison to avoid timezone issues
             const currentYearHotelData = hotelData.filter(d => {
-                const monthDate = new Date(d.month);
-                return monthDate >= currentYearStart && monthDate <= currentYearEnd;
+                // Extract year-month from the ISO string (e.g., "2025-11" from "2025-11-30T15:00:00.000Z")
+                const monthString = d.month.substring(0, 7); // "YYYY-MM"
+                const year = parseInt(monthString.substring(0, 4));
+                const month = parseInt(monthString.substring(5, 7));
+                
+                // Only include months from the data year (2025) starting from January
+                // This excludes December of previous year (2024-12) that might be included in last 12 months
+                return year === latestDataYear && month >= 1;
             });
             const totalCurrentYearCost = currentYearHotelData.reduce((sum, d) => sum + Number(d.cost), 0);
             currentYearAvg = currentYearHotelData.length > 0 ? totalCurrentYearCost / currentYearHotelData.length : 0;
@@ -377,8 +482,28 @@ const analyticsSummary = computed(() => {
             console.log('  Date Range:', currentYearHotelData.length > 0 ? `${currentYearHotelData[0]?.month} to ${currentYearHotelData[currentYearHotelData.length - 1]?.month}` : 'No data');
             console.log('  Total Cost:', totalCurrentYearCost.toLocaleString());
             console.log('  Average per month:', currentYearAvg.toLocaleString());
+            
+            // Debug: Show each month included in current year calculation
+            if (account.code === '6110105' || account.name === '水道光熱費') {
+                console.log('  DEBUG - Current Year months included (STRING-BASED, JANUARY+ ONLY):');
+                currentYearHotelData.forEach(d => {
+                    const monthString = d.month.substring(0, 7);
+                    console.log(`    ${d.month} (${monthString}): ¥${Number(d.cost).toLocaleString()}`);
+                });
+                
+                console.log('  DEBUG - Last 12 months included:');
+                last12mHotelData.forEach(d => {
+                    console.log(`    ${d.month}: ¥${Number(d.cost).toLocaleString()}`);
+                });
+                
+                console.log('  DEBUG - Key difference:');
+                console.log(`    Current Year: Only ${latestDataYear} months from January onwards`);
+                console.log(`    Last 12M: Includes ${latestDataYear-1}-12 if available`);
+                console.log('  DEBUG - Are the arrays identical?', 
+                    JSON.stringify(currentYearHotelData.map(d => d.month)) === JSON.stringify(last12mHotelData.map(d => d.month)));
+            }
 
-            // Last 12 months calculation (unchanged)
+            // Last 12 months calculation
             const last12mHotelData = hotelData.filter(d => new Date(d.month) >= twelveMonthsAgo);
             const totalLast12mCost = last12mHotelData.reduce((sum, d) => sum + Number(d.cost), 0);
             last12mAvg = last12mHotelData.length > 0 ? totalLast12mCost / last12mHotelData.length : 0;
@@ -387,45 +512,60 @@ const analyticsSummary = computed(() => {
             console.log('  Filtered Months:', last12mHotelData.length);
             console.log('  Total Cost:', totalLast12mCost.toLocaleString());
             console.log('  Average per month:', last12mAvg.toLocaleString());
+            
+            // Debug: Show each month included in last 12 months calculation
+            if (account.code === '6110105' || account.name === '水道光熱費') {
+                console.log('  DEBUG - Last 12 months included:');
+                last12mHotelData.forEach(d => {
+                    console.log(`    ${d.month}: ¥${Number(d.cost).toLocaleString()}`);
+                });
+                
+                console.log('  DEBUG - Are the arrays identical?', 
+                    JSON.stringify(currentYearHotelData.map(d => d.month)) === JSON.stringify(last12mHotelData.map(d => d.month)));
+            }
         }
 
         // 2. Global Average (Benchmark)
         console.log('GLOBAL AVERAGE CALCULATION:');
-        let globalAvg;
         
-        if (selectedHotelId.value === 0) {
-            // When "All Hotels" is selected, benchmark should equal the current year average
-            // because we're comparing "all hotels" against "all hotels"
-            globalAvg = currentYearAvg;
-            console.log('All Hotels Selected - Benchmark equals Current Year Average:', globalAvg.toLocaleString());
-        } else {
-            // When specific hotel is selected, benchmark is the average across all hotels (using data year)
-            const allHotelData = accountData;
-            const uniqueHotels = [...new Set(allHotelData.map(d => d.hotel_id))];
-            
-            console.log('Specific Hotel Selected - Calculating benchmark across all hotels:', uniqueHotels);
-            console.log('Using Data Year for Benchmark:', latestDataYear);
-            
-            // Calculate per-hotel data year averages, then average those
-            const hotelDataYearAverages = uniqueHotels.map(hotelId => {
-                const hotelMonthlyData = allHotelData.filter(d => d.hotel_id === hotelId);
-                const hotelDataYearData = hotelMonthlyData.filter(d => {
-                    const monthDate = new Date(d.month);
-                    return monthDate >= currentYearStart && monthDate <= currentYearEnd;
-                });
-                const hotelDataYearTotal = hotelDataYearData.reduce((sum, d) => sum + Number(d.cost), 0);
-                const hotelDataYearAvg = hotelDataYearData.length > 0 ? hotelDataYearTotal / hotelDataYearData.length : 0;
+        // Always calculate benchmark as average of individual hotel performances
+        const allHotelData = accountData;
+        const uniqueHotels = [...new Set(allHotelData.map(d => d.hotel_id))];
+        
+        console.log('Calculating benchmark across all hotels:', uniqueHotels);
+        console.log('Using Data Year for Benchmark:', latestDataYear);
+        
+        // Calculate per-hotel data year averages, then average those
+        const hotelDataYearAverages = uniqueHotels.map(hotelId => {
+            const hotelMonthlyData = allHotelData.filter(d => d.hotel_id === hotelId);
+            const hotelDataYearData = hotelMonthlyData.filter(d => {
+                // Extract year-month from the ISO string and ensure it's from the data year starting from January
+                const monthString = d.month.substring(0, 7); // "YYYY-MM"
+                const year = parseInt(monthString.substring(0, 4));
+                const month = parseInt(monthString.substring(5, 7));
                 
-                console.log(`  Hotel ${hotelId}: ${hotelDataYearData.length} months (data year), total: ${hotelDataYearTotal.toLocaleString()}, avg: ${hotelDataYearAvg.toLocaleString()}`);
-                return hotelDataYearAvg;
+                // Only include months from the data year (2025) starting from January
+                return year === latestDataYear && month >= 1;
             });
+            const hotelDataYearTotal = hotelDataYearData.reduce((sum, d) => sum + Number(d.cost), 0);
+            const hotelDataYearAvg = hotelDataYearData.length > 0 ? hotelDataYearTotal / hotelDataYearData.length : 0;
             
-            globalAvg = hotelDataYearAverages.length > 0
-                ? hotelDataYearAverages.reduce((sum, avg) => sum + avg, 0) / hotelDataYearAverages.length
-                : 0;
-                
-            console.log('Global Average Result (Data Year):', globalAvg.toLocaleString());
-        }
+            console.log(`  Hotel ${hotelId}: ${hotelDataYearData.length} months (data year), total: ${hotelDataYearTotal.toLocaleString()}, avg: ${hotelDataYearAvg.toLocaleString()}`);
+            return hotelDataYearAvg;
+        });
+        
+        const globalAvg = hotelDataYearAverages.length > 0
+            ? hotelDataYearAverages.reduce((sum, avg) => sum + avg, 0) / hotelDataYearAverages.length
+            : 0;
+            
+        console.log('Global Average Result (Average of individual hotels):', globalAvg.toLocaleString());
+        
+        // Debug: Compare the three values
+        console.log('COMPARISON:');
+        console.log('  通期平均 (Current Year):', currentYearAvg.toLocaleString());
+        console.log('  直近12ヶ月 (Last 12M):', last12mAvg.toLocaleString());
+        console.log('  全体平均 (Global):', globalAvg.toLocaleString());
+        console.log('  Are they all equal?', currentYearAvg === last12mAvg && last12mAvg === globalAvg);
 
         // 3. Revenue Impact - what percentage this expense represents of total revenue
         console.log('REVENUE IMPACT CALCULATION:');
