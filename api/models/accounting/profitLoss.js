@@ -301,12 +301,13 @@ async function getAvailableDepartments(requestId, dbClient = null) {
   try {
     const query = `
       SELECT DISTINCT 
-        department,
-        hotel_id,
-        hotel_name
-      FROM acc_profit_loss
-      WHERE department IS NOT NULL
-      ORDER BY department
+        ad.name as department,
+        ad.hotel_id,
+        h.name as hotel_name
+      FROM acc_departments ad
+      JOIN hotels h ON ad.hotel_id = h.id
+      WHERE ad.is_current = true
+      ORDER BY h.name
     `;
     
     const result = await client.query(query);

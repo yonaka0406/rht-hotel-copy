@@ -104,7 +104,7 @@
                                     <td class="py-4 px-6">
                                         <div class="flex flex-col">
                                             <span class="font-bold text-slate-700 dark:text-slate-200">{{ item.name
-                                                }}</span>
+                                            }}</span>
                                             <span class="text-[10px] text-slate-400 font-medium">{{ item.code }}</span>
                                         </div>
                                     </td>
@@ -476,8 +476,19 @@ const fetchMappings = async () => {
     try {
         const response = await accountingStore.getAvailableDepartments();
         if (response?.success) {
-            // Filter to only include hotels that have a department name
-            mappedHotels.value = response.data.filter(d => d.name && d.is_current);
+            // Aggregate unique hotels from all historical department mappings
+            const hotelMap = new Map();
+            response.data.forEach(d => {
+                if (d.hotel_id && !hotelMap.has(d.hotel_id)) {
+                    hotelMap.set(d.hotel_id, {
+                        hotel_id: d.hotel_id,
+                        hotel_name: d.hotel_name
+                    });
+                }
+            });
+            mappedHotels.value = Array.from(hotelMap.values()).sort((a, b) =>
+                (a.hotel_name || '').localeCompare(b.hotel_name || '', 'ja')
+            );
         }
     } catch (e) {
         console.error('Failed to fetch departments', e);
