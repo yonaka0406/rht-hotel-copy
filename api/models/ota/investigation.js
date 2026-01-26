@@ -409,6 +409,10 @@ async function getPMSEvents(requestId, hotelId, date) {
             }
         }
 
+        // Sort events by timestamp to ensure proper chronological order
+        // This is important because phantom delete events are added after regular events
+        events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
         return events;
 
     } finally {
@@ -760,6 +764,9 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
             });
         }
     });
+
+    // Sort gaps by timestamp to ensure chronological order
+    gaps.sort((a, b) => new Date(a.pmsEvent.timestamp) - new Date(b.pmsEvent.timestamp));
 
     return {
         totalPMSEvents: pmsEventCount,
