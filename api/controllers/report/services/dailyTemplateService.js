@@ -145,9 +145,9 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                         const provisoryRevenue = revItem.provisory_accommodation_revenue ?? 0;
                         const revenueVariance = actualRevenue - forecastRevenue;
 
-                        const forecastOcc = occItem.fc_occ || 0;
-                        const actualOcc = occItem.occ || 0;
-                        const actualOccWithProvisory = occItem.occ_with_provisory || 0;
+                        const forecastOcc = occItem.fc_occ ?? 0;
+                        const actualOcc = occItem.occ ?? 0;
+                        const actualOccWithProvisory = occItem.occ_with_provisory ?? 0;
                         const occVariance = actualOcc - forecastOcc;
 
                         return {
@@ -275,7 +275,20 @@ const getDailyTemplatePdf = async (req, res) => {
     let generatedFilePath = null;
     let dbClient = null;
     try {
-        const { hotelIds = [] } = req.body;
+        let { hotelIds = [] } = req.body;
+
+        // Validation and normalization of hotelIds
+        if (!Array.isArray(hotelIds)) {
+            if (hotelIds !== null && hotelIds !== undefined) {
+                hotelIds = [hotelIds];
+            } else {
+                hotelIds = [];
+            }
+        }
+
+        // Sanitize: ensure valid types and filter out nulls/undefined
+        hotelIds = hotelIds.filter(id => id !== null && id !== undefined);
+
         // Fetch fresh, full data using the backend service to ensure multi-month data for sheets like '合計データ2'
         dbClient = await getPool(requestId).connect();
         const fullReportData = await getFrontendCompatibleReportData(requestId, targetDate, period, dbClient, hotelIds);
@@ -283,7 +296,8 @@ const getDailyTemplatePdf = async (req, res) => {
         // Merge backend-calculated data with frontend metadata if any
         const combinedData = {
             ...req.body,
-            ...fullReportData
+            ...fullReportData,
+            hotelIds // Override with sanitized array
         };
 
         generatedFilePath = await generateDailyReportPdf(combinedData, requestId, outputFormat);

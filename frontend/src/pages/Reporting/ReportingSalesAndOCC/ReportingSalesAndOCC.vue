@@ -117,16 +117,7 @@ const loading = ref(false);
 const isDownloadingExcel = ref(false);
 const isDownloadingPdf = ref(false);
 
-const hotelSortOrderMap = computed(() => {
-    const map = new Map();
-    if (allHotels.value) {
-        allHotels.value.forEach(h => {
-            map.set(Number(h.id), (h.sort_order !== null && h.sort_order !== undefined) ? h.sort_order : 999);
-        });
-    }
-    map.set(0, -1); // 施設合計 always first
-    return map;
-});
+
 
 // KPI Calculations for Export (6 months)
 const kpiData = computed(() => {
@@ -163,7 +154,7 @@ const handleDownload = async (format) => {
     try {
         await downloadDailyTemplate({
             futureOutlookData: futureOutlookData.value,
-            comparisonDate: comparisonDate.value,
+            comparisonDate: selectedDate.value,
             format,
             revenueData: revenueData.value,
             occupancyData: occupancyData.value,
@@ -430,7 +421,6 @@ const fetchData = async () => {
                         let totalProvisorySales = 0, totalProvisoryNights = 0;
 
                         let accommodationConfirmedNights = 0;
-                        let accommodationBookableRoomNights = 0;
                         let accommodationBlockedNights = 0;
                         let accommodationNetAvailableRoomNights = 0;
 
@@ -452,7 +442,7 @@ const fetchData = async () => {
                                     }
                                 });
 
-                                accommodationBookableRoomNights += hotelBookable;
+
                                 accommodationNetAvailableRoomNights += hotelNetAvailable;
                             }
                             if (Array.isArray(data.forecast)) { data.forecast.forEach(f => { totalForecastSales += Number(f.accommodation_revenue) || 0; totalForecastRooms += Number(f.available_room_nights) || 0; totalForecastStays += Number(f.rooms_sold_nights) || 0; }); }
