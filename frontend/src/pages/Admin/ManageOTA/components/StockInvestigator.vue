@@ -200,7 +200,7 @@
                     <div v-else-if="slotProps.data.action === 'DELETE' && slotProps.data.is_phantom_delete">
                       <strong>{{ slotProps.data.guest_name }}</strong>
                       <span class="text-orange-600 text-xs ml-2">
-                        👻 (ファントム削除: 親予約削除によるCASCADE)
+                        👻 (ファントム削除: 予約削除によるCASCADE)
                       </span>
                     </div>
                     <div v-else>
