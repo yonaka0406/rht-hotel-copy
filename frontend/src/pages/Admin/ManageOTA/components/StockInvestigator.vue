@@ -197,6 +197,12 @@
                         ({{ formatDateTime(slotProps.data.original_insert_timestamp) }}に追加された予約の削除)
                       </span>
                     </div>
+                    <div v-else-if="slotProps.data.action === 'DELETE' && slotProps.data.is_phantom_delete">
+                      <strong>{{ slotProps.data.guest_name }}</strong>
+                      <span class="text-orange-600 text-xs ml-2">
+                        👻 (ファントム削除: 親予約削除によるCASCADE)
+                      </span>
+                    </div>
                     <div v-else>
                       <strong>{{ slotProps.data.guest_name }}</strong>
                     </div>
@@ -218,6 +224,10 @@
                       <span v-if="slotProps.data.action === 'DELETE' && slotProps.data.is_related_to_insert"
                         class="text-blue-600 text-xs">
                         🔗 関連削除
+                      </span>
+                      <span v-if="slotProps.data.action === 'DELETE' && slotProps.data.is_phantom_delete"
+                        class="text-orange-600 text-xs">
+                        👻 ファントム削除
                       </span>
                     </div>
                   </div>

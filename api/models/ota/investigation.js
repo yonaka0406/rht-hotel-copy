@@ -309,12 +309,13 @@ async function getPMSEvents(requestId, hotelId, date) {
             });
         });
 
-        // 2. Identify CASCADE DELETIONS: Get reservation table deletions
+        // 2. Identify CASCADE DELETIONS: Get reservation table deletions and check for affected records
         const reservationDeletionsQuery = `
             SELECT 
                 record_id::uuid as reservation_id,
                 log_time,
-                changes->>'client_name' as client_name
+                changes->>'client_name' as client_name,
+                changes->>'id' as deleted_reservation_id
             FROM logs_reservation
             WHERE table_name = $1 AND action = 'DELETE'
         `;
@@ -324,91 +325,87 @@ async function getPMSEvents(requestId, hotelId, date) {
             const deletedResIds = resDeletionsResult.rows.map(r => r.reservation_id);
             const resDeletionTimeMap = new Map(resDeletionsResult.rows.map(r => [r.reservation_id.toString(), r.log_time]));
 
-            // Find all logs for details belonging to these reservations that affect our date
-            // We use record_id, action, changes, log_time, and reservation_id (extracted from changes)
-            const bulkCascadeQuery = `
+            // Find all reservation_details records that:
+            // 1. Belong to deleted reservations
+            // 2. Affect the target date
+            // 3. Don't have explicit DELETE logs (phantom deletes)
+            const phantomDeleteQuery = `
+                WITH deleted_reservation_details AS (
+                    -- Find all reservation_details records for deleted reservations that affect target date
+                    SELECT DISTINCT
+                        lr.record_id,
+                        (lr.changes->>'reservation_id')::uuid as reservation_id,
+                        lr.changes->>'room_id' as room_id,
+                        lr.changes->>'date' as log_date,
+                        lr.log_time as insert_time,
+                        lr.changes->>'cancelled' as cancelled
+                    FROM logs_reservation lr
+                    WHERE lr.table_name = $1
+                    AND lr.action = 'INSERT'
+                    AND (lr.changes->>'date')::date = $3
+                    AND (lr.changes->>'reservation_id')::uuid = ANY($2::uuid[])
+                ),
+                explicit_deletes AS (
+                    -- Find records that have explicit DELETE logs
+                    SELECT DISTINCT lr.record_id
+                    FROM logs_reservation lr
+                    WHERE lr.table_name = $1
+                    AND lr.action = 'DELETE'
+                    AND (lr.changes->>'date')::date = $3
+                )
                 SELECT 
-                    lr.record_id,
-                    lr.action,
-                    lr.changes,
-                    lr.log_time,
-                    CASE 
-                        WHEN lr.action IN ('INSERT', 'DELETE') THEN (lr.changes->>'reservation_id')::uuid
-                        WHEN lr.action = 'UPDATE' THEN COALESCE((lr.changes->'new'->>'reservation_id')::uuid, (lr.changes->'old'->>'reservation_id')::uuid)
-                    END as reservation_id
-                FROM logs_reservation lr
-                WHERE lr.table_name = $1
-                  AND (
-                      (lr.action IN ('INSERT', 'DELETE') AND (lr.changes->>'reservation_id')::uuid = ANY($2::uuid[]) AND (lr.changes->>'date')::date = $3)
-                      OR
-                      (lr.action = 'UPDATE' AND (
-                          COALESCE((lr.changes->'new'->>'reservation_id')::uuid, (lr.changes->'old'->>'reservation_id')::uuid) = ANY($2::uuid[])
-                          AND
-                          ((lr.changes->'new'->>'date')::date = $3 OR (changes->'old'->>'date')::date = $3)
-                      ))
-                  )
-                ORDER BY lr.record_id, lr.log_time ASC
+                    drd.record_id,
+                    drd.reservation_id,
+                    drd.room_id,
+                    drd.cancelled,
+                    drd.insert_time
+                FROM deleted_reservation_details drd
+                LEFT JOIN explicit_deletes ed ON drd.record_id = ed.record_id
+                WHERE ed.record_id IS NULL  -- Only records without explicit DELETE logs
+                AND (drd.cancelled IS NULL OR drd.cancelled = '' OR drd.cancelled = 'null')  -- Only active records
             `;
-            const bulkDetailsLogs = await client.query(bulkCascadeQuery, [detailsTableName, deletedResIds, date]);
 
-            // Reconstruct state for each record_id in the bulk logs
-            const recordsState = new Map();
-            bulkDetailsLogs.rows.forEach(log => {
-                const resDelTime = resDeletionTimeMap.get(log.reservation_id.toString());
-                // Only consider logs from BEFORE the reservation was deleted
-                if (log.log_time < resDelTime) {
-                    recordsState.set(log.record_id, {
-                        last_action: log.action,
-                        changes: log.changes,
-                        reservation_id: log.reservation_id.toString(),
-                        log_time: log.log_time
-                    });
-                }
+            const phantomDeletesResult = await client.query(phantomDeleteQuery, [detailsTableName, deletedResIds, date]);
+
+            // Create phantom DELETE events for records that were CASCADE deleted
+            phantomDeletesResult.rows.forEach(record => {
+                const parentDeletionTime = resDeletionTimeMap.get(record.reservation_id.toString());
+                const parentDeletion = resDeletionsResult.rows.find(r => r.reservation_id.toString() === record.reservation_id.toString());
+                const clientName = parentDeletion?.client_name || 'Unknown (Phantom Delete)';
+
+                events.push({
+                    id: record.record_id,
+                    reservation_id: record.reservation_id.toString(),
+                    event_type: 'reservation_detail',
+                    action: 'DELETE',
+                    is_cascade: true,
+                    is_phantom_delete: true,
+                    timestamp: parentDeletionTime,
+                    date: date,
+                    room_id: record.room_id ? parseInt(record.room_id) : null,
+                    guest_name: clientName,
+                    note: 'Phantom delete: CASCADE deletion from parent reservation without individual log'
+                });
             });
 
-            // Find which records ended in a non-deleted state
-            for (const [recordId, state] of recordsState.entries()) {
-                if (detailRecordIdsInLogs.has(recordId)) continue; // Already handled by explicit log
+            // Enrich phantom delete events with room info
+            const phantomEvents = events.filter(e => e.is_phantom_delete);
+            if (phantomEvents.length > 0) {
+                const roomIds = [...new Set(phantomEvents.map(e => e.room_id).filter(id => id !== null))];
+                if (roomIds.length > 0) {
+                    const roomsDetailQuery = `SELECT id, room_number, for_sale, is_staff_room FROM rooms WHERE hotel_id = $1 AND id = ANY($2::int[])`;
+                    const roomsResult = await client.query(roomsDetailQuery, [hotelId, roomIds]);
+                    const roomLookup = new Map(roomsResult.rows.map(r => [r.id, r]));
 
-                const changes = state.changes;
-                const isUpdate = state.last_action === 'UPDATE';
-                const cancelledVal = isUpdate ? changes.new?.cancelled : changes.cancelled;
-
-                if (state.last_action !== 'DELETE' && (cancelledVal === null || cancelledVal === '' || cancelledVal === undefined || cancelledVal === 'null')) {
-                    const roomId = isUpdate ? (changes.new?.room_id || changes.old?.room_id) : changes.room_id;
-                    const cascadeTime = resDeletionTimeMap.get(state.reservation_id);
-
-                    events.push({
-                        id: recordId,
-                        reservation_id: state.reservation_id,
-                        event_type: 'reservation_detail',
-                        action: 'DELETE',
-                        is_cascade: true,
-                        timestamp: cascadeTime,
-                        date: date,
-                        room_id: roomId ? parseInt(roomId) : null,
-                        note: 'Cascade deletion from reservation'
+                    phantomEvents.forEach(e => {
+                        const room = roomLookup.get(e.room_id);
+                        if (room) {
+                            e.room_number = room.room_number;
+                            e.for_sale = room.for_sale;
+                            e.is_staff_room = room.is_staff_room;
+                        }
                     });
                 }
-            }
-
-            // Enrich cascade events with room info
-            const cascadeEvents = events.filter(e => e.is_cascade);
-            if (cascadeEvents.length > 0) {
-                const roomIds = [...new Set(cascadeEvents.map(e => e.room_id))];
-                const roomsDetailQuery = `SELECT id, room_number, for_sale, is_staff_room FROM rooms WHERE hotel_id = $1 AND id = ANY($2::int[])`;
-                const roomsResult = await client.query(roomsDetailQuery, [hotelId, roomIds]);
-                const roomLookup = new Map(roomsResult.rows.map(r => [r.id, r]));
-
-                cascadeEvents.forEach(e => {
-                    const room = roomLookup.get(e.room_id);
-                    if (room) {
-                        e.room_number = room.room_number;
-                        e.for_sale = room.for_sale;
-                        e.is_staff_room = room.is_staff_room;
-                    }
-                    e.guest_name = 'Unknown (Cascade)';
-                });
             }
         }
 
