@@ -153,16 +153,11 @@
                 </div>
 
                 <!-- Radar Chart -->
-                <div
-                    class="lg:col-span-12 xl:col-span-5 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl p-6 h-full flex flex-col">
-                    <div class="mb-4">
-                        <h2 class="text-lg font-black text-slate-800 dark:text-white">売上インパクト分析</h2>
-                        <p class="text-xs text-slate-400 mt-1">各経費科目の売上に対する影響度比較</p>
-                    </div>
-                    <div class="flex-1 min-h-[400px]">
-                        <v-chart class="h-full w-full" :option="radarOption" autoresize />
-                    </div>
-                </div>
+                <RevenueImpactRadarChart 
+                    :analyticsSummary="analyticsSummary" 
+                    :rawData="rawData"
+                    :mappedHotels="mappedHotels"
+                />
             </div>
 
             <!-- Dispersion (Scatter) Charts Grid -->
@@ -225,6 +220,9 @@ import {
     GridComponent
 } from 'echarts/components';
 import VChart from 'vue-echarts';
+
+// Import components
+import RevenueImpactRadarChart from './components/RevenueImpactRadarChart.vue';
 
 // Register ECharts modules
 use([
@@ -648,69 +646,6 @@ const analyticsSummary = computed(() => {
     console.log('=== END CALCULATIONS ===\n');
     
     return sortedSummary;
-});
-
-/**
- * Radar Chart configuration
- */
-const radarOption = computed(() => {
-    const indicators = analyticsSummary.value.map(item => ({
-        name: item.name,
-        // Max value should be slightly higher than the max revenue impact percentage
-        max: Math.max(...analyticsSummary.value.map(i => i.revenueImpact)) * 1.2 || 5
-    }));
-
-    return {
-        tooltip: {
-            trigger: 'item',
-            formatter: (params) => {
-                const dataIndex = params.dataIndex;
-                const item = analyticsSummary.value[dataIndex];
-                return `${item.name}<br/>${params.seriesName}: ${params.value.toFixed(1)}%`;
-            }
-        },
-        legend: {
-            data: ['売上比率 (Revenue Impact)'],
-            bottom: 0,
-            textStyle: { color: '#94a3b8' }
-        },
-        radar: {
-            indicator: indicators,
-            shape: 'circle',
-            splitNumber: 5,
-            axisName: {
-                color: '#64748b',
-                fontWeight: 'bold'
-            },
-            splitLine: {
-                lineStyle: {
-                    color: ['rgba(148, 163, 184, 0.1)']
-                }
-            },
-            splitArea: {
-                show: false
-            },
-            axisLine: {
-                lineStyle: {
-                    color: 'rgba(148, 163, 184, 0.2)'
-                }
-            }
-        },
-        series: [
-            {
-                name: '売上比率',
-                type: 'radar',
-                data: [
-                    {
-                        value: analyticsSummary.value.map(i => i.revenueImpact),
-                        name: '売上比率 (Revenue Impact)',
-                        itemStyle: { color: '#8b5cf6' },
-                        areaStyle: { opacity: 0.2 }
-                    }
-                ]
-            }
-        ]
-    };
 });
 
 /**
