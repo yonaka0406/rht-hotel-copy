@@ -4,7 +4,8 @@
       <!-- Hero Row -->
       <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex items-center gap-4">
-          <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
+          <button @click="$router.push({ name: 'AccountingDashboard' })"
+            class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
             <i class="pi pi-arrow-left text-sm"></i>
             <span>戻る</span>
           </button>
@@ -20,7 +21,8 @@
       </div>
 
       <!-- Main Content Card -->
-      <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
+      <div
+        class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
         <!-- Filters Section -->
         <div class="p-8 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -52,13 +54,16 @@
 
             <!-- View By Filter -->
             <div class="flex flex-col gap-2">
-              <label class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">表示単位</label>
-              <Select v-model="filters.groupBy" :options="groupByOptions" optionLabel="label" optionValue="value" fluid />
+              <label
+                class="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">表示単位</label>
+              <Select v-model="filters.groupBy" :options="groupByOptions" optionLabel="label" optionValue="value"
+                fluid />
             </div>
 
             <!-- Action Button -->
             <div class="flex flex-col gap-2 justify-end">
-              <button @click="loadData" :disabled="loading" class="bg-violet-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed">
+              <button @click="loadData" :disabled="loading"
+                class="bg-violet-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed">
                 <i v-if="loading" class="pi pi-spin pi-spinner"></i>
                 <i v-else class="pi pi-search"></i>
                 <span>{{ loading ? '読み込み中...' : '表示' }}</span>
@@ -79,78 +84,77 @@
           <div class="flex justify-between items-center mb-6">
             <div class="flex items-center gap-4 flex-wrap">
               <h2 class="text-2xl font-black text-slate-900 dark:text-white">損益計算書</h2>
-              
+
               <!-- Total Column Checkbox (for month, hotel_month, and department_month views) -->
-              <div v-if="['month', 'hotel_month', 'department_month'].includes(filters.groupBy)" class="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  id="showTotalColumn" 
-                  v-model="showTotalColumn"
-                  class="w-4 h-4 text-violet-600 bg-slate-100 border-slate-300 rounded focus:ring-violet-500 dark:focus:ring-violet-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
-                />
-                <label for="showTotalColumn" class="text-sm font-medium text-slate-600 dark:text-slate-400 cursor-pointer">
+              <div v-if="['month', 'hotel_month', 'department_month'].includes(filters.groupBy)"
+                class="flex items-center gap-2">
+                <input type="checkbox" id="showTotalColumn" v-model="showTotalColumn"
+                  class="w-4 h-4 text-violet-600 bg-slate-100 border-slate-300 rounded focus:ring-violet-500 dark:focus:ring-violet-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer" />
+                <label for="showTotalColumn"
+                  class="text-sm font-medium text-slate-600 dark:text-slate-400 cursor-pointer">
                   合計列を表示
                 </label>
               </div>
-              
+
               <!-- Department Filter Toggle -->
-              <button 
-                @click="showDepartmentFilter = !showDepartmentFilter"
-                class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer"
-              >
+              <button @click="showDepartmentFilter = !showDepartmentFilter"
+                class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
                 <i class="pi pi-filter"></i>
                 <span>部門フィルター</span>
-                <span v-if="selectedDepartments.length > 0" class="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                <span v-if="selectedDepartments.length > 0"
+                  class="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                   {{ selectedDepartments.length }}
                 </span>
               </button>
+
+              <!-- Facility Filter Toggle -->
+              <button @click="showHotelFilter = !showHotelFilter"
+                class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
+                <i class="pi pi-building"></i>
+                <span>施設フィルター</span>
+                <span v-if="selectedHotels.length > 0"
+                  class="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {{ selectedHotels.length }}
+                </span>
+              </button>
             </div>
-            
+
             <div class="flex items-center gap-2">
-              <button @click="exportToCSV" class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
+              <button @click="exportToCSV"
+                class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
                 <i class="pi pi-download"></i>
                 <span>CSV出力</span>
               </button>
-              <button @click="exportDetailedCSV" class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white border border-violet-600 rounded-xl font-bold hover:bg-violet-700 transition-all cursor-pointer">
+              <button @click="exportDetailedCSV"
+                class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white border border-violet-600 rounded-xl font-bold hover:bg-violet-700 transition-all cursor-pointer">
                 <i class="pi pi-file-export"></i>
                 <span>詳細CSV出力</span>
               </button>
             </div>
           </div>
-          
+
           <!-- Department Filter Panel -->
-          <div v-if="showDepartmentFilter" class="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+          <div v-if="showDepartmentFilter"
+            class="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-black text-slate-700 dark:text-slate-300">部門を選択</h3>
               <div class="flex items-center gap-2">
-                <button 
-                  v-if="selectedDepartments.length < departmentsInData.length"
+                <button v-if="selectedDepartments.length < departmentsInData.length"
                   @click="selectedDepartments = [...departmentsInData]"
-                  class="text-xs font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 cursor-pointer"
-                >
+                  class="text-xs font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 cursor-pointer">
                   すべて選択
                 </button>
-                <button 
-                  v-if="selectedDepartments.length > 0"
-                  @click="selectedDepartments = []"
-                  class="text-xs font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 cursor-pointer"
-                >
+                <button v-if="selectedDepartments.length > 0" @click="selectedDepartments = []"
+                  class="text-xs font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 cursor-pointer">
                   すべてクリア
                 </button>
               </div>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
-              <label 
-                v-for="dept in departmentsInData" 
-                :key="dept.department"
-                class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-200 transition-all cursor-pointer"
-              >
-                <input 
-                  type="checkbox" 
-                  :value="dept"
-                  v-model="selectedDepartments"
-                  class="w-4 h-4 text-violet-600 bg-slate-100 border-slate-300 rounded focus:ring-violet-500 dark:focus:ring-violet-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer"
-                />
+              <label v-for="dept in departmentsInData" :key="dept.department"
+                class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-200 transition-all cursor-pointer">
+                <input type="checkbox" :value="dept" v-model="selectedDepartments"
+                  class="w-4 h-4 text-violet-600 bg-slate-100 border-slate-300 rounded focus:ring-violet-500 dark:focus:ring-violet-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer" />
                 <div class="flex flex-col">
                   <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ dept.department }}</span>
                   <span v-if="dept.hotel_name" class="text-xs text-slate-400">({{ dept.hotel_name }})</span>
@@ -159,9 +163,36 @@
               </label>
             </div>
           </div>
-          
+
+          <!-- Hotel Filter Panel -->
+          <div v-if="showHotelFilter"
+            class="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-black text-slate-700 dark:text-slate-300">施設を選択</h3>
+              <div class="flex items-center gap-2">
+                <button v-if="selectedHotels.length < hotelsInData.length" @click="selectedHotels = [...hotelsInData]"
+                  class="text-xs font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 cursor-pointer">
+                  すべて選択
+                </button>
+                <button v-if="selectedHotels.length > 0" @click="selectedHotels = []"
+                  class="text-xs font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 cursor-pointer">
+                  すべてクリア
+                </button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+              <label v-for="hotel in hotelsInData" :key="hotel.hotel_id"
+                class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-200 transition-all cursor-pointer">
+                <input type="checkbox" :value="hotel" v-model="selectedHotels"
+                  class="w-4 h-4 text-violet-600 bg-slate-100 border-slate-300 rounded focus:ring-violet-500 dark:focus:ring-violet-600 dark:ring-offset-slate-800 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 cursor-pointer" />
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ hotel.hotel_name }}</span>
+              </label>
+            </div>
+          </div>
+
           <!-- Filter Warning -->
-          <div v-if="selectedDepartments.length > 0 && selectedDepartments.length < departmentsInData.length" class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-3">
+          <div v-if="selectedDepartments.length > 0 && selectedDepartments.length < departmentsInData.length"
+            class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-3">
             <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-lg flex-shrink-0 mt-0.5"></i>
             <div class="flex-1">
               <p class="text-sm font-bold text-amber-800 dark:text-amber-300">部分データ表示中</p>
@@ -169,12 +200,27 @@
                 {{ selectedDepartments.length }} / {{ departmentsInData.length }} 部門が選択されています。表示されているデータは選択された部門のみです。
               </p>
               <div class="mt-2 flex flex-wrap gap-1">
-                <span 
-                  v-for="dept in selectedDepartments" 
-                  :key="dept.department"
-                  class="inline-flex items-center px-2 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-xs font-medium rounded"
-                >
+                <span v-for="dept in selectedDepartments" :key="dept.department"
+                  class="inline-flex items-center px-2 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-xs font-medium rounded">
                   {{ dept.department }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hotel Filter Warning -->
+          <div v-if="selectedHotels.length > 0 && selectedHotels.length < hotelsInData.length"
+            class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3">
+            <i class="pi pi-info-circle text-blue-600 dark:text-blue-400 text-lg flex-shrink-0 mt-0.5"></i>
+            <div class="flex-1">
+              <p class="text-sm font-bold text-blue-800 dark:text-blue-300">施設を絞り込み中</p>
+              <p class="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                {{ selectedHotels.length }} / {{ hotelsInData.length }} 施設が選択されています。
+              </p>
+              <div class="mt-2 flex flex-wrap gap-1">
+                <span v-for="hotel in selectedHotels" :key="hotel.hotel_id"
+                  class="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium rounded">
+                  {{ hotel.hotel_name }}
                 </span>
               </div>
             </div>
@@ -187,38 +233,52 @@
                 <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
                   <!-- Month view: Account Name + Month Columns -->
                   <template v-if="filters.groupBy === 'month'">
-                    <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">勘定科目</th>
-                    <th v-for="month in uniqueMonths" :key="month" class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
+                    <th
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">
+                      勘定科目</th>
+                    <th v-for="month in uniqueMonths" :key="month"
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
                       {{ formatMonth(month) }}
                     </th>
-                    <th v-if="showTotalColumn" class="py-4 px-4 font-black text-violet-600 dark:text-violet-400 text-xs uppercase tracking-widest text-right min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
+                    <th v-if="showTotalColumn"
+                      class="py-4 px-4 font-black text-violet-600 dark:text-violet-400 text-xs uppercase tracking-widest text-right min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
                       合計
                     </th>
                   </template>
-                  
+
                   <!-- Hotel view: Account Name + Hotel Columns -->
                   <template v-else-if="filters.groupBy === 'hotel'">
-                    <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">勘定科目</th>
-                    <th v-for="hotel in uniqueHotels" :key="hotel.hotel_id" class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
+                    <th
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">
+                      勘定科目</th>
+                    <th v-for="hotel in uniqueHotels" :key="hotel.hotel_id"
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
                       {{ hotel.hotel_name }}
                     </th>
                   </template>
-                  
+
                   <!-- Department view: Account Name + Department Columns -->
                   <template v-else-if="filters.groupBy === 'department'">
-                    <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">勘定科目</th>
-                    <th v-for="dept in uniqueDepartments" :key="dept" class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
+                    <th
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">
+                      勘定科目</th>
+                    <th v-for="dept in uniqueDepartments" :key="dept"
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
                       {{ dept }}
                     </th>
                   </template>
-                  
+
                   <!-- Hotel_Month or Department_Month view: Account Name + Month Columns -->
                   <template v-else-if="filters.groupBy === 'hotel_month' || filters.groupBy === 'department_month'">
-                    <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">勘定科目</th>
-                    <th v-for="month in uniqueMonths" :key="month" class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
+                    <th
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 min-w-[200px] max-w-[200px] w-[200px]">
+                      勘定科目</th>
+                    <th v-for="month in uniqueMonths" :key="month"
+                      class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest text-right min-w-[120px]">
                       {{ formatMonth(month) }}
                     </th>
-                    <th v-if="showTotalColumn" class="py-4 px-4 font-black text-violet-600 dark:text-violet-400 text-xs uppercase tracking-widest text-right min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
+                    <th v-if="showTotalColumn"
+                      class="py-4 px-4 font-black text-violet-600 dark:text-violet-400 text-xs uppercase tracking-widest text-right min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
                       合計
                     </th>
                   </template>
@@ -229,256 +289,400 @@
                 <template v-if="filters.groupBy === 'month'">
                   <template v-for="(group, groupIndex) in groupedData" :key="groupIndex">
                     <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                      <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
+                      <td
+                        class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                         {{ group.name }}
                       </td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                       <td v-if="showTotalColumn" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                     </tr>
-                    <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                    <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`"
+                      class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td
+                        class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                        {{ account.account_name }}</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(account.amountsByMonth[month] || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
+                      <td v-if="showTotalColumn"
+                        class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
                         {{ formatCurrency(periodTotals[group.name]?.accounts[account.account_code] || 0) }}
                       </td>
                     </tr>
                     <tr class="bg-slate-100 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
-                      <td class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ group.name }} 小計</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                      <td
+                        class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                        {{ group.name }} 小計</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(group.subtotalByMonth[month] || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                      <td v-if="showTotalColumn"
+                        class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
                         {{ formatCurrency(periodTotals[group.name]?.subtotal || 0) }}
                       </td>
                     </tr>
                   </template>
                 </template>
-                
+
                 <!-- Hotel View -->
                 <template v-else-if="filters.groupBy === 'hotel'">
                   <template v-for="(group, groupIndex) in groupedData" :key="groupIndex">
                     <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                      <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
+                      <td
+                        class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                         {{ group.name }}
                       </td>
-                      <td v-for="hotel in uniqueHotels" :key="hotel.hotel_id" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
+                      <td v-for="hotel in uniqueHotels" :key="hotel.hotel_id"
+                        class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                     </tr>
-                    <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
-                      <td v-for="hotel in uniqueHotels" :key="hotel.hotel_id" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                    <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`"
+                      class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td
+                        class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                        {{ account.account_name }}</td>
+                      <td v-for="hotel in uniqueHotels" :key="hotel.hotel_id"
+                        class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(account.amountsByHotel[hotel.hotel_id]?.amount || 0) }}
                       </td>
                     </tr>
                     <tr class="bg-slate-100 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
-                      <td class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ group.name }} 小計</td>
-                      <td v-for="hotel in uniqueHotels" :key="hotel.hotel_id" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                      <td
+                        class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                        {{ group.name }} 小計</td>
+                      <td v-for="hotel in uniqueHotels" :key="hotel.hotel_id"
+                        class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(group.subtotalByHotel[hotel.hotel_id]?.amount || 0) }}
                       </td>
                     </tr>
                   </template>
                 </template>
-                
+
                 <!-- Department View -->
                 <template v-else-if="filters.groupBy === 'department'">
                   <template v-for="(group, groupIndex) in groupedData" :key="groupIndex">
                     <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                      <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
+                      <td
+                        class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                         {{ group.name }}
                       </td>
-                      <td v-for="dept in uniqueDepartments" :key="dept" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
+                      <td v-for="dept in uniqueDepartments" :key="dept"
+                        class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                     </tr>
-                    <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
-                      <td v-for="dept in uniqueDepartments" :key="dept" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                    <tr v-for="(account, accountIndex) in group.accounts" :key="`${groupIndex}-${accountIndex}`"
+                      class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td
+                        class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                        {{ account.account_name }}</td>
+                      <td v-for="dept in uniqueDepartments" :key="dept"
+                        class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(account.amountsByDepartment[dept] || 0) }}
                       </td>
                     </tr>
                     <tr class="bg-slate-100 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
-                      <td class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ group.name }} 小計</td>
-                      <td v-for="dept in uniqueDepartments" :key="dept" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                      <td
+                        class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                        {{ group.name }} 小計</td>
+                      <td v-for="dept in uniqueDepartments" :key="dept"
+                        class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(group.subtotalByDepartment[dept] || 0) }}
                       </td>
                     </tr>
                   </template>
                 </template>
-                
+
                 <!-- Hotel_Month View: Group by hotel, then management groups -->
                 <template v-else-if="filters.groupBy === 'hotel_month'">
                   <template v-for="(hotelGroup, hotelIndex) in groupedData" :key="hotelIndex">
                     <!-- Hotel Header -->
                     <tr class="bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-200 dark:border-blue-800">
-                      <td class="py-4 px-4 font-black text-blue-800 dark:text-blue-300 text-base sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">
+                      <td
+                        class="py-4 px-4 font-black text-blue-800 dark:text-blue-300 text-base sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">
                         {{ hotelGroup.hotel_name }}
                       </td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 bg-blue-50 dark:bg-blue-900/20"></td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 bg-blue-50 dark:bg-blue-900/20">
+                      </td>
                       <td v-if="showTotalColumn" class="py-4 px-4 bg-blue-50 dark:bg-blue-900/20"></td>
                     </tr>
-                    
+
                     <!-- Management Groups for this hotel -->
-                    <template v-for="(group, groupIndex) in hotelGroup.managementGroups" :key="`${hotelIndex}-${groupIndex}`">
-                      <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                        <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
+                    <template v-for="(group, groupIndex) in hotelGroup.managementGroups"
+                      :key="`${hotelIndex}-${groupIndex}`">
+                      <tr
+                        class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
+                        <td
+                          class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                           {{ group.name }}
                         </td>
-                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
+                        <td v-for="month in uniqueMonths" :key="month"
+                          class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                         <td v-if="showTotalColumn" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                       </tr>
-                      <tr v-for="(account, accountIndex) in group.accounts" :key="`${hotelIndex}-${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                        <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
-                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                      <tr v-for="(account, accountIndex) in group.accounts"
+                        :key="`${hotelIndex}-${groupIndex}-${accountIndex}`"
+                        class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td
+                          class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                          {{ account.account_name }}</td>
+                        <td v-for="month in uniqueMonths" :key="month"
+                          class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                           {{ formatCurrency(account.amountsByMonth[month] || 0) }}
                         </td>
-                        <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
-                          {{ formatCurrency(Object.values(account.amountsByMonth).reduce((sum, val) => sum + (parseFloat(val) || 0), 0)) }}
+                        <td v-if="showTotalColumn"
+                          class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
+                          {{formatCurrency(Object.values(account.amountsByMonth).reduce((sum, val) => sum +
+                            (parseFloat(val) || 0), 0))}}
                         </td>
                       </tr>
                       <tr class="bg-slate-100 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
-                        <td class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ group.name }} 小計</td>
-                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                        <td
+                          class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                          {{ group.name }} 小計</td>
+                        <td v-for="month in uniqueMonths" :key="month"
+                          class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                           {{ formatCurrency(group.subtotalByMonth[month] || 0) }}
                         </td>
-                        <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
-                          {{ formatCurrency(Object.values(group.subtotalByMonth).reduce((sum, val) => sum + (parseFloat(val) || 0), 0)) }}
+                        <td v-if="showTotalColumn"
+                          class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                          {{formatCurrency(Object.values(group.subtotalByMonth).reduce((sum, val) => sum +
+                            (parseFloat(val) || 0), 0))}}
                         </td>
                       </tr>
                     </template>
-                    
+
                     <!-- Profit Totals for this hotel -->
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">売上総利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        売上総利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.grossProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.grossProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[hotelGroup.hotel_id]?.[m]?.grossProfit ||
+                            0), 0))}}
                       </td>
                     </tr>
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">営業利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[hotelGroup.hotel_id]?.[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        営業利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                        :class="(totals[hotelGroup.hotel_id]?.[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                         {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.operatingProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.operatingProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.operatingProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.operatingProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[hotelGroup.hotel_id]?.[m]?.operatingProfit
+                            || 0), 0))}}
                       </td>
                     </tr>
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">経常利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[hotelGroup.hotel_id]?.[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        経常利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                        :class="(totals[hotelGroup.hotel_id]?.[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                         {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.ordinaryProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.ordinaryProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.ordinaryProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.ordinaryProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[hotelGroup.hotel_id]?.[m]?.ordinaryProfit ||
+                            0), 0))}}
                       </td>
                     </tr>
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[hotelGroup.hotel_id]?.[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        税引前当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                        :class="(totals[hotelGroup.hotel_id]?.[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                         {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.profitBeforeTax || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.profitBeforeTax || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.profitBeforeTax || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.profitBeforeTax || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[hotelGroup.hotel_id]?.[m]?.profitBeforeTax
+                            || 0), 0))}}
                       </td>
                     </tr>
-                    <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-b-2 border-blue-200 dark:border-blue-800">
-                      <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[hotelGroup.hotel_id]?.[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
+                    <tr
+                      class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-b-2 border-blue-200 dark:border-blue-800">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">
+                        当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap"
+                        :class="(totals[hotelGroup.hotel_id]?.[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
                         {{ formatCurrency(totals[hotelGroup.hotel_id]?.[month]?.netProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.netProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.netProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[hotelGroup.hotel_id]?.[m]?.netProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[hotelGroup.hotel_id]?.[m]?.netProfit || 0),
+                          0))}}
                       </td>
                     </tr>
                   </template>
                 </template>
-                
+
                 <!-- Department_Month View: Group by department, then management groups -->
                 <template v-else-if="filters.groupBy === 'department_month'">
                   <template v-for="(deptGroup, deptIndex) in groupedData" :key="deptIndex">
                     <!-- Department Header -->
                     <tr class="bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-200 dark:border-blue-800">
-                      <td class="py-4 px-4 font-black text-blue-800 dark:text-blue-300 text-base sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">
-                        {{ deptGroup.department }} <span v-if="deptGroup.hotel_name" class="text-sm font-medium">({{ deptGroup.hotel_name }})</span>
+                      <td
+                        class="py-4 px-4 font-black text-blue-800 dark:text-blue-300 text-base sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">
+                        {{ deptGroup.department }} <span v-if="deptGroup.hotel_name" class="text-sm font-medium">({{
+                          deptGroup.hotel_name }})</span>
                       </td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 bg-blue-50 dark:bg-blue-900/20"></td>
+                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 bg-blue-50 dark:bg-blue-900/20">
+                      </td>
                       <td v-if="showTotalColumn" class="py-4 px-4 bg-blue-50 dark:bg-blue-900/20"></td>
                     </tr>
-                    
+
                     <!-- Management Groups for this department -->
-                    <template v-for="(group, groupIndex) in deptGroup.managementGroups" :key="`${deptIndex}-${groupIndex}`">
-                      <tr class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
-                        <td class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
+                    <template v-for="(group, groupIndex) in deptGroup.managementGroups"
+                      :key="`${deptIndex}-${groupIndex}`">
+                      <tr
+                        class="bg-violet-50 dark:bg-violet-900/20 border-b border-violet-100 dark:border-violet-900/50">
+                        <td
+                          class="py-3 px-4 font-black text-violet-700 dark:text-violet-300 text-sm sticky left-0 bg-violet-50 dark:bg-violet-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-violet-100 dark:border-violet-900/50">
                           {{ group.name }}
                         </td>
-                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
+                        <td v-for="month in uniqueMonths" :key="month"
+                          class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                         <td v-if="showTotalColumn" class="py-3 px-4 bg-violet-50 dark:bg-violet-900/20"></td>
                       </tr>
-                      <tr v-for="(account, accountIndex) in group.accounts" :key="`${deptIndex}-${groupIndex}-${accountIndex}`" class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                        <td class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ account.account_name }}</td>
-                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                      <tr v-for="(account, accountIndex) in group.accounts"
+                        :key="`${deptIndex}-${groupIndex}-${accountIndex}`"
+                        class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td
+                          class="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                          {{ account.account_name }}</td>
+                        <td v-for="month in uniqueMonths" :key="month"
+                          class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                           {{ formatCurrency(account.amountsByMonth[month] || 0) }}
                         </td>
-                        <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
-                          {{ formatCurrency(Object.values(account.amountsByMonth).reduce((sum, val) => sum + (parseFloat(val) || 0), 0)) }}
+                        <td v-if="showTotalColumn"
+                          class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-50 dark:bg-violet-900/20">
+                          {{formatCurrency(Object.values(account.amountsByMonth).reduce((sum, val) => sum +
+                            (parseFloat(val) || 0), 0))}}
                         </td>
                       </tr>
                       <tr class="bg-slate-100 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
-                        <td class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">{{ group.name }} 小計</td>
-                        <td v-for="month in uniqueMonths" :key="month" class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
+                        <td
+                          class="py-3 px-4 text-sm font-black text-slate-700 dark:text-slate-300 sticky left-0 bg-slate-100 dark:bg-slate-800 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-slate-200 dark:border-slate-700">
+                          {{ group.name }} 小計</td>
+                        <td v-for="month in uniqueMonths" :key="month"
+                          class="py-3 px-4 text-sm font-black text-slate-900 dark:text-white text-right tabular-nums min-w-[120px]">
                           {{ formatCurrency(group.subtotalByMonth[month] || 0) }}
                         </td>
-                        <td v-if="showTotalColumn" class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
-                          {{ formatCurrency(Object.values(group.subtotalByMonth).reduce((sum, val) => sum + (parseFloat(val) || 0), 0)) }}
+                        <td v-if="showTotalColumn"
+                          class="py-3 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                          {{formatCurrency(Object.values(group.subtotalByMonth).reduce((sum, val) => sum +
+                            (parseFloat(val) || 0), 0))}}
                         </td>
                       </tr>
                     </template>
-                    
+
                     <!-- Profit Totals for this department -->
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">売上総利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        売上総利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
                         {{ formatCurrency(totals[deptGroup.department]?.[month]?.grossProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.grossProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[deptGroup.department]?.[m]?.grossProfit ||
+                            0), 0))}}
                       </td>
                     </tr>
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">営業利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        営業利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                        :class="(totals[deptGroup.department]?.[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                         {{ formatCurrency(totals[deptGroup.department]?.[month]?.operatingProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.operatingProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.operatingProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.operatingProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[deptGroup.department]?.[m]?.operatingProfit
+                            || 0), 0))}}
                       </td>
                     </tr>
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">経常利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        経常利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                        :class="(totals[deptGroup.department]?.[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                         {{ formatCurrency(totals[deptGroup.department]?.[month]?.ordinaryProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.ordinaryProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.ordinaryProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.ordinaryProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[deptGroup.department]?.[m]?.ordinaryProfit
+                            || 0), 0))}}
                       </td>
                     </tr>
                     <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                      <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[deptGroup.department]?.[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                        税引前当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                        :class="(totals[deptGroup.department]?.[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                         {{ formatCurrency(totals[deptGroup.department]?.[month]?.profitBeforeTax || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.profitBeforeTax || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.profitBeforeTax || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.profitBeforeTax || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[deptGroup.department]?.[m]?.profitBeforeTax
+                            || 0), 0))}}
                       </td>
                     </tr>
-                    <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-b-2 border-blue-200 dark:border-blue-800">
-                      <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
-                      <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[deptGroup.department]?.[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
+                    <tr
+                      class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-b-2 border-blue-200 dark:border-blue-800">
+                      <td
+                        class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">
+                        当期純利益</td>
+                      <td v-for="month in uniqueMonths" :key="month"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap"
+                        :class="(totals[deptGroup.department]?.[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
                         {{ formatCurrency(totals[deptGroup.department]?.[month]?.netProfit || 0) }}
                       </td>
-                      <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap bg-violet-100 dark:bg-violet-900/30" :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.netProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
-                        {{ formatCurrency(uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.netProfit || 0), 0)) }}
+                      <td v-if="showTotalColumn"
+                        class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap bg-violet-100 dark:bg-violet-900/30"
+                        :class="uniqueMonths.reduce((sum, m) => sum + (totals[deptGroup.department]?.[m]?.netProfit || 0), 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                        {{formatCurrency(uniqueMonths.reduce((sum, m) => sum +
+                          (totals[deptGroup.department]?.[m]?.netProfit || 0),
+                          0))}}
                       </td>
                     </tr>
                   </template>
@@ -487,47 +691,75 @@
                 <!-- Grand Totals (only for month view) -->
                 <template v-if="filters.groupBy === 'month'">
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                    <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">売上総利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
+                    <td
+                      class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                      売上総利益</td>
+                    <td v-for="month in uniqueMonths" :key="month"
+                      class="py-4 px-4 text-sm font-black text-amber-900 dark:text-amber-200 text-right tabular-nums min-w-[120px]">
                       {{ formatCurrency(totals[month]?.grossProfit || 0) }}
                     </td>
-                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
+                    <td v-if="showTotalColumn"
+                      class="py-4 px-4 text-sm font-black text-violet-900 dark:text-violet-200 text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30">
                       {{ formatCurrency(grandPeriodTotals.grossProfit || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                    <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">営業利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                    <td
+                      class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                      営業利益</td>
+                    <td v-for="month in uniqueMonths" :key="month"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                      :class="(totals[month]?.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.operatingProfit || 0) }}
                     </td>
-                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                    <td v-if="showTotalColumn"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                      :class="(grandPeriodTotals.operatingProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
                       {{ formatCurrency(grandPeriodTotals.operatingProfit || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                    <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">経常利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                    <td
+                      class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                      経常利益</td>
+                    <td v-for="month in uniqueMonths" :key="month"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                      :class="(totals[month]?.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.ordinaryProfit || 0) }}
                     </td>
-                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                    <td v-if="showTotalColumn"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                      :class="(grandPeriodTotals.ordinaryProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
                       {{ formatCurrency(grandPeriodTotals.ordinaryProfit || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
-                    <td class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">税引前当期純利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]" :class="(totals[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
+                    <td
+                      class="py-4 px-4 text-sm font-black text-amber-800 dark:text-amber-300 sticky left-0 bg-amber-50 dark:bg-amber-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-amber-100 dark:border-amber-900/50">
+                      税引前当期純利益</td>
+                    <td v-for="month in uniqueMonths" :key="month"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px]"
+                      :class="(totals[month]?.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-900 dark:text-amber-200'">
                       {{ formatCurrency(totals[month]?.profitBeforeTax || 0) }}
                     </td>
-                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                    <td v-if="showTotalColumn"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] bg-violet-100 dark:bg-violet-900/30"
+                      :class="(grandPeriodTotals.profitBeforeTax || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
                       {{ formatCurrency(grandPeriodTotals.profitBeforeTax || 0) }}
                     </td>
                   </tr>
                   <tr class="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-200 dark:border-blue-800">
-                    <td class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">当期純利益</td>
-                    <td v-for="month in uniqueMonths" :key="month" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap" :class="(totals[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
+                    <td
+                      class="py-4 px-4 text-sm font-black text-blue-800 dark:text-blue-300 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 min-w-[200px] max-w-[200px] w-[200px] border-r border-blue-200 dark:border-blue-800">
+                      当期純利益</td>
+                    <td v-for="month in uniqueMonths" :key="month"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap"
+                      :class="(totals[month]?.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-900 dark:text-blue-200'">
                       {{ formatCurrency(totals[month]?.netProfit || 0) }}
                     </td>
-                    <td v-if="showTotalColumn" class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap bg-violet-100 dark:bg-violet-900/30" :class="(grandPeriodTotals.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
+                    <td v-if="showTotalColumn"
+                      class="py-4 px-4 text-sm font-black text-right tabular-nums min-w-[120px] whitespace-nowrap bg-violet-100 dark:bg-violet-900/30"
+                      :class="(grandPeriodTotals.netProfit || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-violet-900 dark:text-violet-200'">
                       {{ formatCurrency(grandPeriodTotals.netProfit || 0) }}
                     </td>
                   </tr>
@@ -567,14 +799,16 @@ export default {
     const toast = useToast();
     const accountingStore = useAccountingStore();
     const hotelStore = useHotelStore();
-    
+
     const loading = ref(false);
     const plData = ref([]);
     const availableMonths = ref([]);
     const availableDepartments = ref([]);
     const selectedDepartments = ref([]);
+    const selectedHotels = ref([]);
     const showTotalColumn = ref(true);
     const showDepartmentFilter = ref(false);
+    const showHotelFilter = ref(false);
 
     const filters = ref({
       startMonth: '',
@@ -614,7 +848,7 @@ export default {
     // Get unique departments from fetched data
     const departmentsInData = computed(() => {
       if (!plData.value.length) return [];
-      
+
       const deptMap = new Map();
       plData.value.forEach(row => {
         if (row.department && !deptMap.has(row.department)) {
@@ -625,26 +859,54 @@ export default {
           });
         }
       });
-      
-      return Array.from(deptMap.values()).sort((a, b) => 
+
+      return Array.from(deptMap.values()).sort((a, b) =>
         a.department.localeCompare(b.department, 'ja')
       );
     });
 
-    // Filter data by selected departments
+    // Get unique hotels from fetched data
+    const hotelsInData = computed(() => {
+      if (!plData.value.length) return [];
+
+      const hotelMap = new Map();
+      plData.value.forEach(row => {
+        const hotelId = row.hotel_id;
+        const key = hotelId === null || hotelId === undefined ? 'null' : hotelId;
+        if (!hotelMap.has(key)) {
+          hotelMap.set(key, {
+            hotel_id: hotelId,
+            hotel_name: row.hotel_name || '未割当'
+          });
+        }
+      });
+
+      return Array.from(hotelMap.values()).sort((a, b) =>
+        (a.hotel_name || '').localeCompare(b.hotel_name || '', 'ja')
+      );
+    });
+
+    // Filter data by selected departments and facilities
     const filteredPlData = computed(() => {
-      if (selectedDepartments.value.length === 0) {
-        return plData.value;
+      let data = plData.value;
+
+      if (selectedDepartments.value.length > 0) {
+        const selectedDeptNames = selectedDepartments.value.map(d => d.department);
+        data = data.filter(row => selectedDeptNames.includes(row.department));
       }
-      
-      const selectedDeptNames = selectedDepartments.value.map(d => d.department);
-      return plData.value.filter(row => selectedDeptNames.includes(row.department));
+
+      if (selectedHotels.value.length > 0) {
+        const selectedHotelIds = selectedHotels.value.map(h => h.hotel_id);
+        data = data.filter(row => selectedHotelIds.includes(row.hotel_id));
+      }
+
+      return data;
     });
 
     // Get unique months for column headers
     const uniqueMonths = computed(() => {
       if (!['month', 'hotel_month', 'department_month'].includes(filters.value.groupBy)) return [];
-      
+
       const months = [...new Set(filteredPlData.value.map(row => row.month))];
       return months.sort();
     });
@@ -652,7 +914,7 @@ export default {
     // Get unique hotels for column headers
     const uniqueHotels = computed(() => {
       if (filters.value.groupBy !== 'hotel') return [];
-      
+
       const hotelMap = new Map();
       filteredPlData.value.forEach(row => {
         const hotelKey = row.hotel_id || 'null';
@@ -663,14 +925,14 @@ export default {
           });
         }
       });
-      
+
       return Array.from(hotelMap.values());
     });
 
     // Get unique departments for column headers
     const uniqueDepartments = computed(() => {
       if (filters.value.groupBy !== 'department') return [];
-      
+
       const depts = [...new Set(filteredPlData.value.map(row => row.department))];
       return depts.sort((a, b) => a.localeCompare(b, 'ja'));
     });
@@ -678,9 +940,9 @@ export default {
     // Calculate period totals for the total column
     const periodTotals = computed(() => {
       if (filters.value.groupBy !== 'month' || !showTotalColumn.value) return {};
-      
+
       const totals = {};
-      
+
       groupedData.value.forEach(group => {
         let groupTotal = 0;
         group.accounts.forEach(account => {
@@ -688,7 +950,7 @@ export default {
           uniqueMonths.value.forEach(month => {
             accountTotal += parseFloat(account.amountsByMonth[month] || 0);
           });
-          
+
           if (!totals[group.name]) {
             totals[group.name] = { accounts: {} };
           }
@@ -697,41 +959,41 @@ export default {
         });
         totals[group.name].subtotal = groupTotal;
       });
-      
+
       return totals;
     });
 
     const grandPeriodTotals = computed(() => {
       if (filters.value.groupBy !== 'month' || !showTotalColumn.value) return {};
-      
+
       const revenue = filteredPlData.value
         .filter(r => r.management_group_display_order === 1)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const costOfSales = filteredPlData.value
         .filter(r => r.management_group_display_order === 2)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const operatingExpenses = filteredPlData.value
         .filter(r => [3, 4, 5].includes(r.management_group_display_order))
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const nonOperatingIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 6)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const nonOperatingExpenses = filteredPlData.value
         .filter(r => r.management_group_display_order === 7)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const extraordinaryIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 8)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const extraordinaryLosses = filteredPlData.value
         .filter(r => r.management_group_display_order === 9)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const incomeTax = filteredPlData.value
         .filter(r => r.management_group_display_order === 10)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
@@ -751,11 +1013,11 @@ export default {
       // For month view, pivot data to show months as columns
       if (filters.value.groupBy === 'month') {
         const groups = {};
-        
+
         filteredPlData.value.forEach(row => {
           const groupKey = row.management_group_name;
           const accountKey = `${groupKey}|${row.account_code}`;
-          
+
           if (!groups[groupKey]) {
             groups[groupKey] = {
               name: groupKey,
@@ -764,7 +1026,7 @@ export default {
               subtotalByMonth: {}
             };
           }
-          
+
           if (!groups[groupKey].accounts[accountKey]) {
             groups[groupKey].accounts[accountKey] = {
               account_code: row.account_code,
@@ -772,20 +1034,20 @@ export default {
               amountsByMonth: {}
             };
           }
-          
+
           const month = row.month;
           if (!groups[groupKey].accounts[accountKey].amountsByMonth[month]) {
             groups[groupKey].accounts[accountKey].amountsByMonth[month] = 0;
           }
-          
+
           groups[groupKey].accounts[accountKey].amountsByMonth[month] += parseFloat(row.net_amount || 0);
-          
+
           if (!groups[groupKey].subtotalByMonth[month]) {
             groups[groupKey].subtotalByMonth[month] = 0;
           }
           groups[groupKey].subtotalByMonth[month] += parseFloat(row.net_amount || 0);
         });
-        
+
         // Convert to array format
         return Object.values(groups)
           .map(group => ({
@@ -798,11 +1060,11 @@ export default {
       // For hotel view, pivot data to show hotels as columns
       if (filters.value.groupBy === 'hotel') {
         const groups = {};
-        
+
         filteredPlData.value.forEach(row => {
           const groupKey = row.management_group_name;
           const accountKey = `${groupKey}|${row.account_code}`;
-          
+
           if (!groups[groupKey]) {
             groups[groupKey] = {
               name: groupKey,
@@ -811,7 +1073,7 @@ export default {
               subtotalByHotel: {}
             };
           }
-          
+
           if (!groups[groupKey].accounts[accountKey]) {
             groups[groupKey].accounts[accountKey] = {
               account_code: row.account_code,
@@ -819,19 +1081,19 @@ export default {
               amountsByHotel: {}
             };
           }
-          
+
           const hotelKey = row.hotel_id || 'null';
           const hotelName = row.hotel_name || '未割当';
-          
+
           if (!groups[groupKey].accounts[accountKey].amountsByHotel[hotelKey]) {
             groups[groupKey].accounts[accountKey].amountsByHotel[hotelKey] = {
               amount: 0,
               hotel_name: hotelName
             };
           }
-          
+
           groups[groupKey].accounts[accountKey].amountsByHotel[hotelKey].amount += parseFloat(row.net_amount || 0);
-          
+
           if (!groups[groupKey].subtotalByHotel[hotelKey]) {
             groups[groupKey].subtotalByHotel[hotelKey] = {
               amount: 0,
@@ -840,7 +1102,7 @@ export default {
           }
           groups[groupKey].subtotalByHotel[hotelKey].amount += parseFloat(row.net_amount || 0);
         });
-        
+
         return Object.values(groups)
           .map(group => ({
             ...group,
@@ -852,11 +1114,11 @@ export default {
       // For department view, pivot data to show departments as columns
       if (filters.value.groupBy === 'department') {
         const groups = {};
-        
+
         filteredPlData.value.forEach(row => {
           const groupKey = row.management_group_name;
           const accountKey = `${groupKey}|${row.account_code}`;
-          
+
           if (!groups[groupKey]) {
             groups[groupKey] = {
               name: groupKey,
@@ -865,7 +1127,7 @@ export default {
               subtotalByDepartment: {}
             };
           }
-          
+
           if (!groups[groupKey].accounts[accountKey]) {
             groups[groupKey].accounts[accountKey] = {
               account_code: row.account_code,
@@ -873,21 +1135,21 @@ export default {
               amountsByDepartment: {}
             };
           }
-          
+
           const dept = row.department;
-          
+
           if (!groups[groupKey].accounts[accountKey].amountsByDepartment[dept]) {
             groups[groupKey].accounts[accountKey].amountsByDepartment[dept] = 0;
           }
-          
+
           groups[groupKey].accounts[accountKey].amountsByDepartment[dept] += parseFloat(row.net_amount || 0);
-          
+
           if (!groups[groupKey].subtotalByDepartment[dept]) {
             groups[groupKey].subtotalByDepartment[dept] = 0;
           }
           groups[groupKey].subtotalByDepartment[dept] += parseFloat(row.net_amount || 0);
         });
-        
+
         return Object.values(groups)
           .map(group => ({
             ...group,
@@ -899,11 +1161,11 @@ export default {
       // For hotel_month view: group by hotel, then show months as columns
       if (filters.value.groupBy === 'hotel_month') {
         const hotelGroups = {};
-        
+
         filteredPlData.value.forEach(row => {
           const hotelKey = row.hotel_id || 'null';
           const hotelName = row.hotel_name || '未割当';
-          
+
           if (!hotelGroups[hotelKey]) {
             hotelGroups[hotelKey] = {
               hotel_id: hotelKey,
@@ -911,10 +1173,10 @@ export default {
               managementGroups: {}
             };
           }
-          
+
           const groupKey = row.management_group_name;
           const accountKey = `${groupKey}|${row.account_code}`;
-          
+
           if (!hotelGroups[hotelKey].managementGroups[groupKey]) {
             hotelGroups[hotelKey].managementGroups[groupKey] = {
               name: groupKey,
@@ -923,7 +1185,7 @@ export default {
               subtotalByMonth: {}
             };
           }
-          
+
           if (!hotelGroups[hotelKey].managementGroups[groupKey].accounts[accountKey]) {
             hotelGroups[hotelKey].managementGroups[groupKey].accounts[accountKey] = {
               account_code: row.account_code,
@@ -931,20 +1193,20 @@ export default {
               amountsByMonth: {}
             };
           }
-          
+
           const month = row.month;
           if (!hotelGroups[hotelKey].managementGroups[groupKey].accounts[accountKey].amountsByMonth[month]) {
             hotelGroups[hotelKey].managementGroups[groupKey].accounts[accountKey].amountsByMonth[month] = 0;
           }
-          
+
           hotelGroups[hotelKey].managementGroups[groupKey].accounts[accountKey].amountsByMonth[month] += parseFloat(row.net_amount || 0);
-          
+
           if (!hotelGroups[hotelKey].managementGroups[groupKey].subtotalByMonth[month]) {
             hotelGroups[hotelKey].managementGroups[groupKey].subtotalByMonth[month] = 0;
           }
           hotelGroups[hotelKey].managementGroups[groupKey].subtotalByMonth[month] += parseFloat(row.net_amount || 0);
         });
-        
+
         return Object.values(hotelGroups).map(hotel => ({
           ...hotel,
           managementGroups: Object.values(hotel.managementGroups)
@@ -959,10 +1221,10 @@ export default {
       // For department_month view: group by department, then show months as columns
       if (filters.value.groupBy === 'department_month') {
         const deptGroups = {};
-        
+
         filteredPlData.value.forEach(row => {
           const dept = row.department;
-          
+
           if (!deptGroups[dept]) {
             deptGroups[dept] = {
               department: dept,
@@ -970,10 +1232,10 @@ export default {
               managementGroups: {}
             };
           }
-          
+
           const groupKey = row.management_group_name;
           const accountKey = `${groupKey}|${row.account_code}`;
-          
+
           if (!deptGroups[dept].managementGroups[groupKey]) {
             deptGroups[dept].managementGroups[groupKey] = {
               name: groupKey,
@@ -982,7 +1244,7 @@ export default {
               subtotalByMonth: {}
             };
           }
-          
+
           if (!deptGroups[dept].managementGroups[groupKey].accounts[accountKey]) {
             deptGroups[dept].managementGroups[groupKey].accounts[accountKey] = {
               account_code: row.account_code,
@@ -990,20 +1252,20 @@ export default {
               amountsByMonth: {}
             };
           }
-          
+
           const month = row.month;
           if (!deptGroups[dept].managementGroups[groupKey].accounts[accountKey].amountsByMonth[month]) {
             deptGroups[dept].managementGroups[groupKey].accounts[accountKey].amountsByMonth[month] = 0;
           }
-          
+
           deptGroups[dept].managementGroups[groupKey].accounts[accountKey].amountsByMonth[month] += parseFloat(row.net_amount || 0);
-          
+
           if (!deptGroups[dept].managementGroups[groupKey].subtotalByMonth[month]) {
             deptGroups[dept].managementGroups[groupKey].subtotalByMonth[month] = 0;
           }
           deptGroups[dept].managementGroups[groupKey].subtotalByMonth[month] += parseFloat(row.net_amount || 0);
         });
-        
+
         return Object.values(deptGroups).map(dept => ({
           ...dept,
           managementGroups: Object.values(dept.managementGroups)
@@ -1023,36 +1285,36 @@ export default {
       if (filters.value.groupBy === 'month') {
         // For month view, calculate totals by month
         const totalsByMonth = {};
-        
+
         uniqueMonths.value.forEach(month => {
           const revenue = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 1)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-          
+
           const costOfSales = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 2)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-          
+
           const operatingExpenses = filteredPlData.value
             .filter(r => r.month === month && [3, 4, 5].includes(r.management_group_display_order))
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-          
+
           const nonOperatingIncome = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 6)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-          
+
           const nonOperatingExpenses = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 7)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-          
+
           const extraordinaryIncome = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 8)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-          
+
           const extraordinaryLosses = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 9)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-          
+
           const incomeTax = filteredPlData.value
             .filter(r => r.month === month && r.management_group_display_order === 10)
             .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
@@ -1065,51 +1327,51 @@ export default {
             netProfit: revenue + costOfSales + operatingExpenses + nonOperatingIncome + nonOperatingExpenses + extraordinaryIncome + extraordinaryLosses + incomeTax
           };
         });
-        
+
         return totalsByMonth;
       }
-      
+
       if (filters.value.groupBy === 'hotel_month') {
         // For hotel_month view, calculate totals by hotel and month
         const totalsByHotelMonth = {};
-        
+
         groupedData.value.forEach(hotelGroup => {
           const hotelKey = hotelGroup.hotel_id;
           totalsByHotelMonth[hotelKey] = {};
-          
+
           uniqueMonths.value.forEach(month => {
-            const hotelMonthData = filteredPlData.value.filter(r => 
+            const hotelMonthData = filteredPlData.value.filter(r =>
               (r.hotel_id || 'null') === hotelKey && r.month === month
             );
-            
+
             const revenue = hotelMonthData
               .filter(r => r.management_group_display_order === 1)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const costOfSales = hotelMonthData
               .filter(r => r.management_group_display_order === 2)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const operatingExpenses = hotelMonthData
               .filter(r => [3, 4, 5].includes(r.management_group_display_order))
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const nonOperatingIncome = hotelMonthData
               .filter(r => r.management_group_display_order === 6)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const nonOperatingExpenses = hotelMonthData
               .filter(r => r.management_group_display_order === 7)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const extraordinaryIncome = hotelMonthData
               .filter(r => r.management_group_display_order === 8)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const extraordinaryLosses = hotelMonthData
               .filter(r => r.management_group_display_order === 9)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const incomeTax = hotelMonthData
               .filter(r => r.management_group_display_order === 10)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
@@ -1123,51 +1385,51 @@ export default {
             };
           });
         });
-        
+
         return totalsByHotelMonth;
       }
-      
+
       if (filters.value.groupBy === 'department_month') {
         // For department_month view, calculate totals by department and month
         const totalsByDeptMonth = {};
-        
+
         groupedData.value.forEach(deptGroup => {
           const deptKey = deptGroup.department;
           totalsByDeptMonth[deptKey] = {};
-          
+
           uniqueMonths.value.forEach(month => {
-            const deptMonthData = filteredPlData.value.filter(r => 
+            const deptMonthData = filteredPlData.value.filter(r =>
               r.department === deptKey && r.month === month
             );
-            
+
             const revenue = deptMonthData
               .filter(r => r.management_group_display_order === 1)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const costOfSales = deptMonthData
               .filter(r => r.management_group_display_order === 2)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const operatingExpenses = deptMonthData
               .filter(r => [3, 4, 5].includes(r.management_group_display_order))
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const nonOperatingIncome = deptMonthData
               .filter(r => r.management_group_display_order === 6)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const nonOperatingExpenses = deptMonthData
               .filter(r => r.management_group_display_order === 7)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const extraordinaryIncome = deptMonthData
               .filter(r => r.management_group_display_order === 8)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const extraordinaryLosses = deptMonthData
               .filter(r => r.management_group_display_order === 9)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-            
+
             const incomeTax = deptMonthData
               .filter(r => r.management_group_display_order === 10)
               .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
@@ -1181,39 +1443,39 @@ export default {
             };
           });
         });
-        
+
         return totalsByDeptMonth;
       }
-      
+
       // For other views, calculate single totals
       const revenue = filteredPlData.value
         .filter(r => r.management_group_display_order === 1)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const costOfSales = filteredPlData.value
         .filter(r => r.management_group_display_order === 2)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const operatingExpenses = filteredPlData.value
         .filter(r => [3, 4, 5].includes(r.management_group_display_order))
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const nonOperatingIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 6)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const nonOperatingExpenses = filteredPlData.value
         .filter(r => r.management_group_display_order === 7)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const extraordinaryIncome = filteredPlData.value
         .filter(r => r.management_group_display_order === 8)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const extraordinaryLosses = filteredPlData.value
         .filter(r => r.management_group_display_order === 9)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
-      
+
       const incomeTax = filteredPlData.value
         .filter(r => r.management_group_display_order === 10)
         .reduce((sum, r) => sum + parseFloat(r.net_amount || 0), 0);
@@ -1273,7 +1535,7 @@ export default {
           filters.value.endMonth = availableMonths.value[0];
           filters.value.startMonth = availableMonths.value[Math.min(11, availableMonths.value.length - 1)];
         }
-        
+
         if (departmentsData && departmentsData.length > 0) {
           availableDepartments.value = departmentsData;
         }
@@ -1302,8 +1564,9 @@ export default {
 
         if (data && data.length > 0) {
           plData.value = data;
-          // Reset department selection when new data is loaded
+          // Reset filters when new data is loaded
           selectedDepartments.value = [];
+          selectedHotels.value = [];
         } else {
           plData.value = [];
           toast.add({ severity: 'info', summary: '情報', detail: '指定された条件でデータが見つかりませんでした', life: 3000 });
@@ -1323,7 +1586,7 @@ export default {
       }
 
       const rows = [];
-      
+
       // Add filter information header if departments are filtered
       if (selectedDepartments.value.length > 0 && selectedDepartments.value.length < departmentsInData.value.length) {
         rows.push(['部分データ - 選択された部門のみ']);
@@ -1331,7 +1594,7 @@ export default {
         rows.push([`${selectedDepartments.value.length} / ${departmentsInData.value.length} 部門`]);
         rows.push([]); // Empty row
       }
-      
+
       // For month view, export with months as columns
       if (filters.value.groupBy === 'month') {
         // Headers
@@ -1343,12 +1606,12 @@ export default {
           headers.push('合計');
         }
         rows.push(headers);
-        
+
         // Data rows
         groupedData.value.forEach(group => {
           // Group header
           rows.push([group.name]);
-          
+
           // Account rows
           group.accounts.forEach(account => {
             const row = [account.account_name];
@@ -1360,7 +1623,7 @@ export default {
             }
             rows.push(row);
           });
-          
+
           // Group subtotal
           const subtotalRow = [`${group.name} 小計`];
           uniqueMonths.value.forEach(month => {
@@ -1372,7 +1635,7 @@ export default {
           rows.push(subtotalRow);
           rows.push([]); // Empty row
         });
-        
+
         // Grand totals
         const profitRows = [
           { label: '売上総利益', key: 'grossProfit' },
@@ -1381,7 +1644,7 @@ export default {
           { label: '税引前当期純利益', key: 'profitBeforeTax' },
           { label: '当期純利益', key: 'netProfit' }
         ];
-        
+
         profitRows.forEach(profit => {
           const row = [profit.label];
           uniqueMonths.value.forEach(month => {
@@ -1399,10 +1662,10 @@ export default {
           headers.push(hotel.hotel_name);
         });
         rows.push(headers);
-        
+
         groupedData.value.forEach(group => {
           rows.push([group.name]);
-          
+
           group.accounts.forEach(account => {
             const row = [account.account_name];
             uniqueHotels.value.forEach(hotel => {
@@ -1410,7 +1673,7 @@ export default {
             });
             rows.push(row);
           });
-          
+
           const subtotalRow = [`${group.name} 小計`];
           uniqueHotels.value.forEach(hotel => {
             subtotalRow.push(group.subtotalByHotel[hotel.hotel_id]?.amount || 0);
@@ -1425,10 +1688,10 @@ export default {
           headers.push(dept);
         });
         rows.push(headers);
-        
+
         groupedData.value.forEach(group => {
           rows.push([group.name]);
-          
+
           group.accounts.forEach(account => {
             const row = [account.account_name];
             uniqueDepartments.value.forEach(dept => {
@@ -1436,7 +1699,7 @@ export default {
             });
             rows.push(row);
           });
-          
+
           const subtotalRow = [`${group.name} 小計`];
           uniqueDepartments.value.forEach(dept => {
             subtotalRow.push(group.subtotalByDepartment[dept] || 0);
@@ -1451,15 +1714,15 @@ export default {
           headers.push(formatMonth(month));
         });
         rows.push(headers);
-        
+
         groupedData.value.forEach(hotelGroup => {
           // Hotel header
           rows.push([hotelGroup.hotel_name]);
           rows.push([]);
-          
+
           hotelGroup.managementGroups.forEach(group => {
             rows.push([group.name]);
-            
+
             group.accounts.forEach(account => {
               const row = [account.account_name];
               uniqueMonths.value.forEach(month => {
@@ -1467,7 +1730,7 @@ export default {
               });
               rows.push(row);
             });
-            
+
             const subtotalRow = [`${group.name} 小計`];
             uniqueMonths.value.forEach(month => {
               subtotalRow.push(group.subtotalByMonth[month] || 0);
@@ -1475,7 +1738,7 @@ export default {
             rows.push(subtotalRow);
             rows.push([]);
           });
-          
+
           // Profit totals for this hotel
           const profitRows = [
             { label: '売上総利益', key: 'grossProfit' },
@@ -1484,7 +1747,7 @@ export default {
             { label: '税引前当期純利益', key: 'profitBeforeTax' },
             { label: '当期純利益', key: 'netProfit' }
           ];
-          
+
           profitRows.forEach(profit => {
             const row = [profit.label];
             uniqueMonths.value.forEach(month => {
@@ -1502,18 +1765,18 @@ export default {
           headers.push(formatMonth(month));
         });
         rows.push(headers);
-        
+
         groupedData.value.forEach(deptGroup => {
           // Department header
-          const deptHeader = deptGroup.hotel_name 
+          const deptHeader = deptGroup.hotel_name
             ? `${deptGroup.department} (${deptGroup.hotel_name})`
             : deptGroup.department;
           rows.push([deptHeader]);
           rows.push([]);
-          
+
           deptGroup.managementGroups.forEach(group => {
             rows.push([group.name]);
-            
+
             group.accounts.forEach(account => {
               const row = [account.account_name];
               uniqueMonths.value.forEach(month => {
@@ -1521,7 +1784,7 @@ export default {
               });
               rows.push(row);
             });
-            
+
             const subtotalRow = [`${group.name} 小計`];
             uniqueMonths.value.forEach(month => {
               subtotalRow.push(group.subtotalByMonth[month] || 0);
@@ -1529,7 +1792,7 @@ export default {
             rows.push(subtotalRow);
             rows.push([]);
           });
-          
+
           // Profit totals for this department
           const profitRows = [
             { label: '売上総利益', key: 'grossProfit' },
@@ -1538,7 +1801,7 @@ export default {
             { label: '税引前当期純利益', key: 'profitBeforeTax' },
             { label: '当期純利益', key: 'netProfit' }
           ];
-          
+
           profitRows.forEach(profit => {
             const row = [profit.label];
             uniqueMonths.value.forEach(month => {
@@ -1567,7 +1830,7 @@ export default {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.href = url;
-      
+
       // Add filter indicator to filename if filtered
       let filename = `PL_${filters.value.startMonth}_${filters.value.endMonth}`;
       if (selectedDepartments.value.length > 0 && selectedDepartments.value.length < departmentsInData.value.length) {
@@ -1593,30 +1856,30 @@ export default {
       try {
         // Fetch detailed data with tax information from the backend
         const { fetchProfitLossDetailed } = useAccountingStore();
-        
+
         const detailedFilters = {
           startMonth: filters.value.startMonth,
           endMonth: filters.value.endMonth,
-          departmentNames: selectedDepartments.value.length > 0 && selectedDepartments.value.length < departmentsInData.value.length 
-            ? selectedDepartments.value.map(d => d.department) 
+          departmentNames: selectedDepartments.value.length > 0 && selectedDepartments.value.length < departmentsInData.value.length
+            ? selectedDepartments.value.map(d => d.department)
             : null
         };
-        
+
         console.log('[CSV Export] Detailed filters:', detailedFilters);
         console.log('[CSV Export] Selected departments:', selectedDepartments.value);
         console.log('[CSV Export] Departments in data:', departmentsInData.value);
         console.log('[CSV Export] Filtered PL data count:', filteredPlData.value.length);
-        
+
         const response = await fetchProfitLossDetailed(detailedFilters);
         console.log('[CSV Export] API response:', response);
-        
+
         // Verify response is truthy and has success status
         if (!response || !response.success) {
           console.error('[CSV Export] Invalid or failed response from fetchProfitLossDetailed:', response);
           toast.add({ severity: 'error', summary: 'エラー', detail: '詳細データの取得に失敗しました', life: 3000 });
           return;
         }
-        
+
         const detailedData = response.data || [];
         console.log('[CSV Export] Detailed data count:', detailedData.length);
 
@@ -1628,7 +1891,7 @@ export default {
         }
 
         const rows = [];
-        
+
         // CSV Headers - Japanese column names as requested
         const headers = [
           '月分',         // Month (YYYY-MM-01 format)
@@ -1657,9 +1920,9 @@ export default {
         detailedData.forEach(item => {
           // Format transaction date
           const transactionDate = item.transaction_date ? new Date(item.transaction_date) : null;
-          const monthDate = transactionDate ? 
+          const monthDate = transactionDate ?
             `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}-01` : '';
-          const formattedTransactionDate = transactionDate ? 
+          const formattedTransactionDate = transactionDate ?
             `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}-${String(transactionDate.getDate()).padStart(2, '0')}` : '';
 
           const row = [
@@ -1702,7 +1965,7 @@ export default {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.href = url;
-        
+
         // Create filename with date range
         let filename = `PL_detailed_${filters.value.startMonth}_${filters.value.endMonth}`;
         if (selectedDepartments.value.length > 0 && selectedDepartments.value.length < departmentsInData.value.length) {
@@ -1730,18 +1993,18 @@ export default {
     // Watch for start month changes - adjust end month if needed
     watch(() => filters.value.startMonth, (newStart, oldStart) => {
       if (!newStart || !filters.value.endMonth) return;
-      
+
       const startDate = new Date(newStart);
       const endDate = new Date(filters.value.endMonth);
-      
+
       // If start is after end, set end to start
       if (startDate > endDate) {
         filters.value.endMonth = newStart;
-        toast.add({ 
-          severity: 'info', 
-          summary: '期間調整', 
-          detail: '開始月が終了月より後のため、終了月を調整しました', 
-          life: 3000 
+        toast.add({
+          severity: 'info',
+          summary: '期間調整',
+          detail: '開始月が終了月より後のため、終了月を調整しました',
+          life: 3000
         });
       }
     });
@@ -1749,18 +2012,18 @@ export default {
     // Watch for end month changes - adjust start month if needed
     watch(() => filters.value.endMonth, (newEnd, oldEnd) => {
       if (!newEnd || !filters.value.startMonth) return;
-      
+
       const startDate = new Date(filters.value.startMonth);
       const endDate = new Date(newEnd);
-      
+
       // If end is before start, set start to end
       if (endDate < startDate) {
         filters.value.startMonth = newEnd;
-        toast.add({ 
-          severity: 'info', 
-          summary: '期間調整', 
-          detail: '終了月が開始月より前のため、開始月を調整しました', 
-          life: 3000 
+        toast.add({
+          severity: 'info',
+          summary: '期間調整',
+          detail: '終了月が開始月より前のため、開始月を調整しました',
+          life: 3000
         });
       }
     });
@@ -1771,11 +2034,14 @@ export default {
       availableMonths,
       availableDepartments,
       selectedDepartments,
+      selectedHotels,
       filters,
       groupByOptions,
       showTotalColumn,
       showDepartmentFilter,
+      showHotelFilter,
       departmentsInData,
+      hotelsInData,
       uniqueMonths,
       uniqueHotels,
       uniqueDepartments,
@@ -1785,6 +2051,7 @@ export default {
       showHotelColumn,
       showDepartmentColumn,
       columnCount,
+      filteredPlData,
       groupedData,
       totals,
       formatMonth,
@@ -1805,20 +2072,21 @@ export default {
 
 /* Dark Mode Component Fixes */
 .dark :deep(.p-select) {
-    background: #0f172a !important;
-    border-color: #334155 !important;
+  background: #0f172a !important;
+  border-color: #334155 !important;
 }
 
 .dark :deep(.p-select-label) {
-    color: #f8fafc !important;
+  color: #f8fafc !important;
 }
 
 .dark :deep(.p-select-label.p-placeholder) {
-    color: #64748b !important; /* slate-500 */
+  color: #64748b !important;
+  /* slate-500 */
 }
 
 .dark :deep(.p-select-dropdown) {
-    background: #1e293b !important;
-    color: #f8fafc !important;
+  background: #1e293b !important;
+  color: #f8fafc !important;
 }
 </style>
