@@ -189,7 +189,7 @@
         {{ dialogContent }}
       </pre>
       <template #footer>
-        {{ formatDateTime(selectedResponse.received_at) }}
+        {{ selectedResponse ? formatDateTime(selectedResponse.received_at) : '' }}
       </template>
     </Dialog>
   </div>
@@ -317,6 +317,12 @@
   const displayDialog = ref(false);
   const selectedResponse = ref(null);
   const dialogContent = ref('');
+  const showResponseDetails = (data) => {
+    selectedResponse.value = data;
+    getDialogContent(data.response);
+    displayDialog.value = true;
+  };
+
   const getDialogContent = (response) => {
       if (!response) {
         dialogContent.value = '';
