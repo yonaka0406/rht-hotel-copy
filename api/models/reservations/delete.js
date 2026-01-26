@@ -12,6 +12,13 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
     const setSessionQuery = `SET SESSION "my_app.user_id" = '${updated_by}';`;
     await client.query(setSessionQuery);
     
+    // Explicitly delete reservation details first
+    const deleteDetailsQuery = {
+      text: `DELETE FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2`,
+      values: [reservation_id, hotel_id]
+    };
+    await client.query(deleteDetailsQuery);
+
     // Perform the delete operation
     const deleteQuery = {
       text: `
