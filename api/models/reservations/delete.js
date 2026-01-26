@@ -9,13 +9,6 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
   try {
     await client.query('BEGIN');
 
-    // Temporarily disable logging triggers    
-    await client.query('ALTER TABLE reservation_details DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_payments DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_clients DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_addons DISABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_rates DISABLE TRIGGER USER;');
-
     const setSessionQuery = `SET SESSION "my_app.user_id" = '${updated_by}';`;
     await client.query(setSessionQuery);
     
@@ -35,29 +28,11 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
     };
     const result = await client.query(deleteQuery);
 
-    // Re-enable logging triggers    
-    await client.query('ALTER TABLE reservation_details ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_payments ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_clients ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER USER;');
-    await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER USER;');
-
     await client.query('COMMIT');
 
     return result.rows[0] || { success: false, count: 0 };
 
   } catch (err) {
-    // Ensure triggers are re-enabled even on rollback
-    try {      
-      await client.query('ALTER TABLE reservation_details ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_payments ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_clients ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER USER;');
-      await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER USER;');
-    } catch (reEnableErr) {
-      logger.error('Error re-enabling triggers after rollback:', reEnableErr);
-    }
-
     await client.query('ROLLBACK');
     logger.error(`[${requestId}] Transaction failed. Rolling back. Error:`, {
       error: err.message,
