@@ -765,8 +765,8 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
         }
     });
 
-    // Sort gaps by timestamp to ensure chronological order
-    gaps.sort((a, b) => new Date(a.pmsEvent.timestamp) - new Date(b.pmsEvent.timestamp));
+    // Sort gaps by timestamp to ensure chronological order (newest first for display)
+    gaps.sort((a, b) => new Date(b.pmsEvent.timestamp) - new Date(a.pmsEvent.timestamp));
 
     return {
         totalPMSEvents: pmsEventCount,
