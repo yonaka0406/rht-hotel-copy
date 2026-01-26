@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.4] - 2026-01-26
 
+- New Feature: Enhanced OTA reservation queue with search functionality and status filtering (All/Failed).
+- New Feature: Improved reservation queue details with formatted communication logs (line break support) and classification badges (New/Mod/Can).
 - Chore: Added to inventory calculations exclusion of staff rooms indicator in available stock counts in addition to not for sale indicator.
 - Bug Fix: Improved reservation deletion logic to ensure data logging.
 - New Feature: Added phantom delete detection visualization in OTA investigation interface with visual indicators.
