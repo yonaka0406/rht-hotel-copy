@@ -1492,7 +1492,10 @@ const isTempBlock = computed(() => {
 
 const removeTempBlock = async () => {
     try {
-        await removeCalendarSettings(reservationDetails.value.reservation[0].reservation_id);
+        await removeCalendarSettings(
+            reservationDetails.value.reservation[0].reservation_id,
+            reservationDetails.value.reservation[0].hotel_id
+        );
         toast.add({ 
             severity: 'success', 
             summary: '成功', 

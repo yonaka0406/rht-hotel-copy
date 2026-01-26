@@ -282,7 +282,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
   }
 };
 
-const deleteBlockedRooms = async (requestId, reservationId, userID) => {
+const deleteBlockedRooms = async (requestId, reservationId, hotelId, userID) => {
   // Validate reservationId is a valid UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(reservationId)) {
@@ -291,32 +291,47 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
   }
 
   const pool = getPool(requestId);
-  const query = format(`
-    -- Set the updated_by value in a session variable
-    SET SESSION "my_app.user_id" = %L;
-
-    DELETE FROM reservations
-    WHERE id = %L AND status = 'block'
-    RETURNING *;
-  `, userID, reservationId);
+  const client = await pool.connect();
 
   try {
-    const result = await pool.query(query);
+    await client.query('BEGIN');
+
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, userID);
+    await client.query(setSessionQuery);
+
+    // Explicitly delete reservation details first
+    const deleteDetailsQuery = format(`
+      DELETE FROM reservation_details
+      WHERE reservation_id = %L AND hotel_id = %L
+    `, reservationId, hotelId);
+    await client.query(deleteDetailsQuery);
+
+    // Delete the reservation
+    const deleteReservationQuery = format(`
+      DELETE FROM reservations
+      WHERE id = %L AND hotel_id = %L AND status = 'block'
+      RETURNING *;
+    `, reservationId, hotelId);
+
+    const result = await client.query(deleteReservationQuery);
 
     if (result.rowCount === 0) {
       logger.warn(`[${requestId}] No rows were deleted - reservation not found or not a block type`);
     }
 
+    await client.query('COMMIT');
     return true;
   } catch (err) {
+    await client.query('ROLLBACK');
     logger.error(`[${requestId}] Error deleting reservation:`, {
       error: err.message,
       code: err.code,
       detail: err.detail,
-      query: query,
-      parameters: { reservationId, userID }
+      parameters: { reservationId, hotelId, userID }
     });
     throw new Error('Database error: ' + err.message);
+  } finally {
+    client.release();
   }
 };
 
