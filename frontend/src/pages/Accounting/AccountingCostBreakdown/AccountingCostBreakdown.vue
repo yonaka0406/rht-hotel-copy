@@ -86,16 +86,36 @@
                                         経費科目</th>
                                     <th
                                         class="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
-                                        通期平均</th>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>通期平均</span>
+                                            <i class="pi pi-question-circle text-slate-300 hover:text-slate-500 cursor-help text-xs"
+                                                v-tooltip.top="'通期平均の計算方法（当年度）:\n• 特定施設選択時: その施設の当年度の月平均コスト\n• 全施設選択時: 全施設の当年度月間総コスト ÷ 月数 ÷ 施設数\n\n※ 当年度 = 1月1日から現在まで'"></i>
+                                        </div>
+                                    </th>
                                     <th
                                         class="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
-                                        直近12ヶ月</th>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>直近12ヶ月</span>
+                                            <i class="pi pi-question-circle text-slate-300 hover:text-slate-500 cursor-help text-xs"
+                                                v-tooltip.top="'直近12ヶ月平均の計算方法:\n• 特定施設選択時: その施設の直近12ヶ月の月平均コスト\n• 全施設選択時: 全施設の直近12ヶ月総コスト ÷ 月数 ÷ 施設数\n\n※ 基準月から遡って12ヶ月間のデータを使用'"></i>
+                                        </div>
+                                    </th>
                                     <th
                                         class="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">
-                                        全体平均</th>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>全体平均</span>
+                                            <i class="pi pi-question-circle text-slate-300 hover:text-slate-500 cursor-help text-xs"
+                                                v-tooltip.top="'全体平均の計算方法（ベンチマーク）:\n1. 各施設の当年度月平均コストを個別に計算\n2. 全施設の当年度月平均コストを平均化\n\n例: 施設A=10万円/月、施設B=20万円/月 → 全体平均=15万円/月\n※ 施設規模に関係なく公平な比較基準（当年度ベース）'"></i>
+                                        </div>
+                                    </th>
                                     <th
                                         class="py-4 px-6 text-xs font-black text-violet-500 uppercase tracking-widest text-right">
-                                        売上比率</th>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>売上比率</span>
+                                            <i class="pi pi-question-circle text-violet-300 hover:text-violet-500 cursor-help text-xs"
+                                                v-tooltip.top="'売上比率（収益インパクト）の計算方法:\n(この経費科目の総コスト ÷ 総売上) × 100\n\n選択した施設・期間でのこの経費が売上に占める割合\n※ 低いほど収益性への影響が小さい'"></i>
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -110,7 +130,7 @@
                                     </td>
                                     <td
                                         class="py-4 px-4 text-right font-bold text-slate-600 dark:text-slate-300 tabular-nums">
-                                        {{ formatCurrency(item.lifetimeAvg) }}
+                                        {{ formatCurrency(item.currentYearAvg) }}
                                     </td>
                                     <td
                                         class="py-4 px-4 text-right font-bold text-slate-600 dark:text-slate-300 tabular-nums">
@@ -123,7 +143,7 @@
                                     <td class="py-4 px-6 text-right">
                                         <span
                                             class="inline-flex items-center px-2 py-1 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-black text-sm tabular-nums">
-                                            {{ item.salesRatio.toFixed(1) }}%
+                                            {{ item.revenueImpact.toFixed(1) }}%
                                         </span>
                                     </td>
                                 </tr>
@@ -273,43 +293,221 @@ const analyticsSummary = computed(() => {
     const referenceDate = selectedMonth.value ? new Date(selectedMonth.value) : (latestMonth.value ? new Date(latestMonth.value) : new Date());
     const twelveMonthsAgo = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 11, 1);
 
-    return topAccounts.value.map(account => {
+    console.log('=== COST BREAKDOWN CALCULATIONS ===');
+    console.log('Reference Date (Latest Available):', referenceDate.toISOString().substring(0, 7));
+    console.log('12 Months Ago (from latest data):', twelveMonthsAgo.toISOString().substring(0, 7));
+    console.log('Selected Hotel ID:', selectedHotelId.value);
+    console.log('Raw Time Series Data:', rawData.value.timeSeries.length, 'records');
+
+    const summary = topAccounts.value.map(account => {
+        console.log(`\n--- ACCOUNT: ${account.name} (${account.code}) ---`);
+        
         const accountData = rawData.value.timeSeries.filter(d => d.account_code === account.code);
+        console.log('Account Data Records:', accountData.length);
+        console.log('Account Data Sample:', accountData.slice(0, 3));
 
         // 1. Calculate metrics for the SELECTED scope
+        let currentYearAvg, last12mAvg;
+        
+        // Get "current year" based on the latest available data, not actual current year
+        const latestDataYear = latestMonth.value ? new Date(latestMonth.value).getFullYear() : new Date().getFullYear();
+        const currentYearStart = new Date(latestDataYear, 0, 1); // January 1st of the data year
+        const currentYearEnd = latestMonth.value ? new Date(latestMonth.value) : new Date();
+        
+        console.log('Data Year (from latest available data):', latestDataYear);
+        console.log('Current Year Range:', currentYearStart.toISOString().substring(0, 7), 'to', currentYearEnd.toISOString().substring(0, 7));
+        
+        if (selectedHotelId.value === 0) {
+            console.log('CALCULATION MODE: All Hotels');
+            
+            // For "All Hotels": Calculate average cost per hotel per month
+            const monthlyData = aggregateByMonth(accountData);
+            const uniqueHotels = [...new Set(accountData.map(d => d.hotel_id))];
+            const hotelCount = uniqueHotels.length || 1;
+            
+            console.log('Monthly Aggregated Data:', monthlyData.length, 'months');
+            console.log('Unique Hotels:', uniqueHotels, `(${hotelCount} hotels)`);
+            console.log('Monthly Data Sample:', monthlyData.slice(0, 3));
+            
+            // Current Year Average (based on latest data year)
+            const currentYearData = monthlyData.filter(d => {
+                const monthDate = new Date(d.month);
+                return monthDate >= currentYearStart && monthDate <= currentYearEnd;
+            });
+            const totalCurrentYearCost = currentYearData.reduce((sum, d) => sum + Number(d.cost), 0);
+            currentYearAvg = currentYearData.length > 0 ? totalCurrentYearCost / currentYearData.length / hotelCount : 0;
+            
+            console.log('Current Year Calculation (Data Year):');
+            console.log('  Data Year:', latestDataYear);
+            console.log('  Current Year Data:', currentYearData.length, 'months');
+            console.log('  Date Range:', currentYearData.length > 0 ? `${currentYearData[0]?.month} to ${currentYearData[currentYearData.length - 1]?.month}` : 'No data');
+            console.log('  Total Cost:', totalCurrentYearCost.toLocaleString());
+            console.log('  Hotels:', hotelCount);
+            console.log('  Average per hotel per month:', currentYearAvg.toLocaleString());
+
+            // Last 12 months calculation (unchanged)
+            const last12mMonthlyData = monthlyData.filter(d => new Date(d.month) >= twelveMonthsAgo);
+            const totalLast12mCost = last12mMonthlyData.reduce((sum, d) => sum + Number(d.cost), 0);
+            last12mAvg = last12mMonthlyData.length > 0 ? totalLast12mCost / last12mMonthlyData.length / hotelCount : 0;
+            
+            console.log('Last 12M Calculation:');
+            console.log('  Filtered Months:', last12mMonthlyData.length);
+            console.log('  Total Cost:', totalLast12mCost.toLocaleString());
+            console.log('  Average per hotel per month:', last12mAvg.toLocaleString());
+            
+        } else {
+            console.log('CALCULATION MODE: Specific Hotel', selectedHotelId.value);
+            
+            // For specific hotel: Calculate average monthly cost for that hotel
+            const hotelData = accountData.filter(d => d.hotel_id === selectedHotelId.value);
+            console.log('Hotel Data Records:', hotelData.length);
+            console.log('Hotel Data Sample:', hotelData.slice(0, 3));
+            
+            // Current Year Average (based on latest data year)
+            const currentYearHotelData = hotelData.filter(d => {
+                const monthDate = new Date(d.month);
+                return monthDate >= currentYearStart && monthDate <= currentYearEnd;
+            });
+            const totalCurrentYearCost = currentYearHotelData.reduce((sum, d) => sum + Number(d.cost), 0);
+            currentYearAvg = currentYearHotelData.length > 0 ? totalCurrentYearCost / currentYearHotelData.length : 0;
+            
+            console.log('Current Year Calculation (Data Year):');
+            console.log('  Data Year:', latestDataYear);
+            console.log('  Current Year Data:', currentYearHotelData.length, 'months');
+            console.log('  Date Range:', currentYearHotelData.length > 0 ? `${currentYearHotelData[0]?.month} to ${currentYearHotelData[currentYearHotelData.length - 1]?.month}` : 'No data');
+            console.log('  Total Cost:', totalCurrentYearCost.toLocaleString());
+            console.log('  Average per month:', currentYearAvg.toLocaleString());
+
+            // Last 12 months calculation (unchanged)
+            const last12mHotelData = hotelData.filter(d => new Date(d.month) >= twelveMonthsAgo);
+            const totalLast12mCost = last12mHotelData.reduce((sum, d) => sum + Number(d.cost), 0);
+            last12mAvg = last12mHotelData.length > 0 ? totalLast12mCost / last12mHotelData.length : 0;
+            
+            console.log('Last 12M Calculation:');
+            console.log('  Filtered Months:', last12mHotelData.length);
+            console.log('  Total Cost:', totalLast12mCost.toLocaleString());
+            console.log('  Average per month:', last12mAvg.toLocaleString());
+        }
+
+        // 2. Global Average (Benchmark)
+        console.log('GLOBAL AVERAGE CALCULATION:');
+        let globalAvg;
+        
+        if (selectedHotelId.value === 0) {
+            // When "All Hotels" is selected, benchmark should equal the current year average
+            // because we're comparing "all hotels" against "all hotels"
+            globalAvg = currentYearAvg;
+            console.log('All Hotels Selected - Benchmark equals Current Year Average:', globalAvg.toLocaleString());
+        } else {
+            // When specific hotel is selected, benchmark is the average across all hotels (using data year)
+            const allHotelData = accountData;
+            const uniqueHotels = [...new Set(allHotelData.map(d => d.hotel_id))];
+            
+            console.log('Specific Hotel Selected - Calculating benchmark across all hotels:', uniqueHotels);
+            console.log('Using Data Year for Benchmark:', latestDataYear);
+            
+            // Calculate per-hotel data year averages, then average those
+            const hotelDataYearAverages = uniqueHotels.map(hotelId => {
+                const hotelMonthlyData = allHotelData.filter(d => d.hotel_id === hotelId);
+                const hotelDataYearData = hotelMonthlyData.filter(d => {
+                    const monthDate = new Date(d.month);
+                    return monthDate >= currentYearStart && monthDate <= currentYearEnd;
+                });
+                const hotelDataYearTotal = hotelDataYearData.reduce((sum, d) => sum + Number(d.cost), 0);
+                const hotelDataYearAvg = hotelDataYearData.length > 0 ? hotelDataYearTotal / hotelDataYearData.length : 0;
+                
+                console.log(`  Hotel ${hotelId}: ${hotelDataYearData.length} months (data year), total: ${hotelDataYearTotal.toLocaleString()}, avg: ${hotelDataYearAvg.toLocaleString()}`);
+                return hotelDataYearAvg;
+            });
+            
+            globalAvg = hotelDataYearAverages.length > 0
+                ? hotelDataYearAverages.reduce((sum, avg) => sum + avg, 0) / hotelDataYearAverages.length
+                : 0;
+                
+            console.log('Global Average Result (Data Year):', globalAvg.toLocaleString());
+        }
+
+        // 3. Revenue Impact - what percentage this expense represents of total revenue
+        console.log('REVENUE IMPACT CALCULATION:');
         const selectedScopeData = selectedHotelId.value === 0
-            ? aggregateByMonth(accountData) // Global (sum per month)
+            ? aggregateByMonth(accountData)
             : accountData.filter(d => d.hotel_id === selectedHotelId.value);
+            
+        const accountTotalCost = selectedScopeData.reduce((sum, d) => sum + Number(d.cost), 0);
+        console.log('Account Total Cost:', accountTotalCost.toLocaleString());
+        console.log('Account Cost Data Period:', selectedScopeData.length, 'months');
+        console.log('Account Cost Date Range:', 
+            selectedScopeData.length > 0 ? 
+            `${selectedScopeData[0]?.month} to ${selectedScopeData[selectedScopeData.length - 1]?.month}` : 
+            'No data');
+        
+        // Calculate total revenue for the SAME SCOPE AND TIME PERIOD as the cost
+        let totalRevenue = 0;
+        if (selectedHotelId.value === 0) {
+            // For all hotels: use the same monthly aggregation as cost data
+            const allRevenueData = rawData.value.timeSeries;
+            const monthlyRevenueTotals = aggregateByMonth(allRevenueData);
+            
+            // Filter to match the same months as the cost data
+            const costMonths = new Set(selectedScopeData.map(d => d.month));
+            const matchingRevenueData = monthlyRevenueTotals.filter(d => costMonths.has(d.month));
+            
+            totalRevenue = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
+            console.log('All Hotels - Matching Revenue Records:', matchingRevenueData.length);
+            console.log('All Hotels - Revenue Date Range:', 
+                matchingRevenueData.length > 0 ? 
+                `${matchingRevenueData[0]?.month} to ${matchingRevenueData[matchingRevenueData.length - 1]?.month}` : 
+                'No data');
+            console.log('All Hotels - Total Revenue (matching period):', totalRevenue.toLocaleString());
+        } else {
+            // For specific hotel: use the same time period as cost data
+            const hotelRevenueData = rawData.value.timeSeries.filter(d => d.hotel_id === selectedHotelId.value);
+            
+            // Filter to match the same months as the cost data
+            const costMonths = new Set(selectedScopeData.map(d => d.month));
+            const matchingRevenueData = hotelRevenueData.filter(d => costMonths.has(d.month));
+            
+            totalRevenue = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
+            console.log('Specific Hotel - Matching Revenue Records:', matchingRevenueData.length);
+            console.log('Specific Hotel - Revenue Date Range:', 
+                matchingRevenueData.length > 0 ? 
+                `${matchingRevenueData[0]?.month} to ${matchingRevenueData[matchingRevenueData.length - 1]?.month}` : 
+                'No data');
+            console.log('Specific Hotel - Total Revenue (matching period):', totalRevenue.toLocaleString());
+        }
+        
+        const revenueImpact = totalRevenue > 0 ? (accountTotalCost / totalRevenue) * 100 : 0;
+        console.log('Revenue Impact:', `${revenueImpact.toFixed(2)}%`);
 
-        const lifetimeAvg = selectedScopeData.length > 0
-            ? selectedScopeData.reduce((sum, d) => sum + Number(d.cost), 0) / selectedScopeData.length
-            : 0;
-
-        const last12mItems = selectedScopeData.filter(d => new Date(d.month) >= twelveMonthsAgo);
-        const last12mAvg = last12mItems.length > 0
-            ? last12mItems.reduce((sum, d) => sum + Number(d.cost), 0) / last12mItems.length
-            : 0;
-
-        // 2. Global Average (Benchmark - always across all hotels individually, then average of hotel averages?)
-        // Let's do simple global monthly average for benchmark.
-        const globalMonthlyData = aggregateByMonth(accountData);
-        const globalAvg = globalMonthlyData.length > 0
-            ? globalMonthlyData.reduce((sum, d) => sum + Number(d.cost), 0) / globalMonthlyData.length
-            : 0;
-
-        // 3. Sales Ratio
-        const totalCost = selectedScopeData.reduce((sum, d) => sum + Number(d.cost), 0);
-        const totalSales = selectedScopeData.reduce((sum, d) => sum + Number(d.sales), 0);
-        const salesRatio = totalSales > 0 ? (totalCost / totalSales) * 100 : 0;
-
-        return {
+        const result = {
             ...account,
-            lifetimeAvg,
+            currentYearAvg,
             last12mAvg,
             globalAvg,
-            salesRatio
+            revenueImpact
         };
+        
+        console.log('FINAL RESULT:', {
+            name: result.name,
+            code: result.code,
+            currentYearAvg: result.currentYearAvg.toLocaleString(),
+            last12mAvg: result.last12mAvg.toLocaleString(),
+            globalAvg: result.globalAvg.toLocaleString(),
+            revenueImpact: `${result.revenueImpact.toFixed(2)}%`
+        });
+        
+        return result;
     });
+
+    // Sort by 直近12ヶ月平均 (last12mAvg) in descending order (bigger to smaller)
+    const sortedSummary = summary.sort((a, b) => b.last12mAvg - a.last12mAvg);
+    console.log('\n=== FINAL SORTED SUMMARY ===');
+    sortedSummary.forEach((item, index) => {
+        console.log(`${index + 1}. ${item.name}: ${item.last12mAvg.toLocaleString()} (${item.revenueImpact.toFixed(1)}%)`);
+    });
+    console.log('=== END CALCULATIONS ===\n');
+    
+    return sortedSummary;
 });
 
 /**
