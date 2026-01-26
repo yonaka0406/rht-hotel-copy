@@ -114,7 +114,12 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
             // Helper function to write facility performance metrics
             const writeFacilityPerformance = (sheet, startRow, monthStr, filteredRevenue, filteredOccupancy, options = {}) => {
                 const { writeFormulas = false, writeHeaders = true } = options;
-                const monthDate = monthStr ? new Date(`${monthStr}-01`) : null;
+                let monthDate = null;
+                if (monthStr) {
+                    const [year, month] = monthStr.split('-').map(Number);
+                    // Create local date at midday to avoid timezone shifts
+                    monthDate = new Date(year, month - 1, 1, 12, 0, 0);
+                }
 
                 if (writeHeaders) {
                     const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異', '仮売上'];
@@ -267,9 +272,10 @@ const getDailyTemplatePdf = async (req, res) => {
     let generatedFilePath = null;
     let dbClient = null;
     try {
+        const { hotelIds = [] } = req.body;
         // Fetch fresh, full data using the backend service to ensure multi-month data for sheets like '合計データ2'
         dbClient = await getPool(requestId).connect();
-        const fullReportData = await getFrontendCompatibleReportData(requestId, targetDate, period, dbClient);
+        const fullReportData = await getFrontendCompatibleReportData(requestId, targetDate, period, dbClient, hotelIds);
 
         // Merge backend-calculated data with frontend metadata if any
         const combinedData = {

@@ -170,7 +170,8 @@ const handleDownload = async (format) => {
             prevYearRevenueData: prevYearRevenueData.value,
             prevYearOccupancyData: prevYearOccupancyData.value,
             selectionMessage: selectionMessage.value,
-            kpiData: kpiData.value
+            kpiData: kpiData.value,
+            hotelIds: props.selectedHotels
         });
     } catch (error) {
         console.error(`Error downloading ${format}:`, error);

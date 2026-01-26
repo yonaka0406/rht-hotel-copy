@@ -57,7 +57,7 @@ function hasAllZeroMetrics(hotelIdStr, data) {
  * @param {Date} targetDate 
  * @param {Object} dbClient - Database client
  */
-const getFrontendCompatibleReportData = async (requestId, targetDate, period = 'month', dbClient) => {
+const getFrontendCompatibleReportData = async (requestId, targetDate, period = 'month', dbClient, hotelIds = []) => {
     try {
         // Input validation for targetDate
         let validatedDate;
@@ -121,16 +121,22 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
         // Fetch Hotels (same as frontend)
         const allHotelsResult = await dbClient.query('SELECT id, name, total_rooms, open_date, sort_order FROM hotels ORDER BY sort_order');
-        const allHotels = allHotelsResult.rows;
-        const hotelIds = allHotels.map(h => h.id);
+        let allHotels = allHotelsResult.rows;
 
-        logger.warn(`[getFrontendCompatibleReportData] Fetched ${allHotels.length} hotels. Hotel IDs: ${hotelIds.join(', ')}`);
+        // Filter by hotelIds if provided and doesn't contain 0
+        if (Array.isArray(hotelIds) && hotelIds.length > 0 && !hotelIds.includes(0) && !hotelIds.includes('0')) {
+            allHotels = allHotels.filter(h => hotelIds.includes(Number(h.id)) || hotelIds.includes(String(h.id)));
+        }
+
+        const effectiveHotelIds = allHotels.map(h => h.id);
+
+        logger.warn(`[getFrontendCompatibleReportData] Fetched ${allHotels.length} hotels. Hotel IDs: ${effectiveHotelIds.join(', ')}`);
         logger.warn(`[getFrontendCompatibleReportData] Date range: ${startDateStr} to ${endDateStr}`);
 
         // Batch fetch data for all hotels (replicating frontend batch approach)
         const fetchAllHotelsData = async (fetchMethod, sDate, eDate) => {
             const results = {};
-            await Promise.all(hotelIds.map(async (hid) => {
+            await Promise.all(effectiveHotelIds.map(async (hid) => {
                 const data = await fetchMethod(requestId, hid, sDate, eDate, dbClient);
                 results[String(hid)] = data || [];
             }));
@@ -168,7 +174,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const prevYearAccountingTotalData = {};
 
         // Process current year data (replicating frontend logic)
-        for (const hotelId of hotelIds) {
+        for (const hotelId of effectiveHotelIds) {
             const hKey = String(hotelId);
 
             // Process PMS Data
@@ -292,7 +298,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 acc_revenue: null
             };
 
-            hotelIds.forEach(hotelId => {
+            effectiveHotelIds.forEach(hotelId => {
                 monthlyAggregates[m.mKey][String(hotelId)] = {
                     pms_revenue: null,
                     pms_accommodation_revenue: null,
@@ -498,7 +504,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             };
 
             // Initialize aggregates for each hotel (same as frontend)
-            hotelIds.forEach(hotelId => {
+            effectiveHotelIds.forEach(hotelId => {
                 const hotel = allHotels.find(h => h.id === hotelId);
                 let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
                 let effectiveDaysForHotelInMonth = getDaysInMonth(m.mDate.getFullYear(), m.mDate.getMonth() + 1);
@@ -678,7 +684,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 }
 
                 // Use helper functions to determine if hotel should be included
-                if (isHotelRelevant(hotelIdStr, hotelIds)) {
+                if (isHotelRelevant(hotelIdStr, effectiveHotelIds)) {
                     if (!hasAllZeroMetrics(hotelIdStr, data)) {
                         occupancyData.push({
                             month: monthKeyInRange,
@@ -732,7 +738,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 pms_revenue: 0
             };
 
-            hotelIds.forEach(hotelId => {
+            effectiveHotelIds.forEach(hotelId => {
                 prevYearMonthlyAggregates[mKey][String(hotelId)] = {
                     pms_revenue: null,
                     pms_accommodation_revenue: null,
@@ -885,7 +891,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             const firstDayOfM = normalizeDate(new Date(yearP, monthP, 1));
             const lastDayOfM = normalizeDate(new Date(yearP, monthP, daysInMonthP));
 
-            hotelIds.forEach(hotelId => {
+            effectiveHotelIds.forEach(hotelId => {
                 const hotel = allHotels.find(h => h.id === hotelId);
                 let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
                 let effectiveDaysForHotelInMonth = daysInMonthP;
@@ -1027,7 +1033,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             const futureData = {};
             for (const monthInfo of months) {
                 futureData[monthInfo.monthLabel] = {};
-                for (const hotelId of hotelIds) {
+                for (const hotelId of effectiveHotelIds) {
                     try {
                         const occupationData = await selectOccupationBreakdownByMonth(requestId, hotelId, monthInfo.startDate, monthInfo.endDate, dbClient);
                         const forecastData = await selectForecastData(requestId, hotelId, monthInfo.startDate, monthInfo.endDate, dbClient);
@@ -1072,7 +1078,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             }
 
             // Get previous day data for comparison
-            const prevDayData = outlookTargetDate ? await selectDailyReportDataByHotel(requestId, outlookTargetDate, hotelIds, dbClient) : [];
+            const prevDayData = outlookTargetDate ? await selectDailyReportDataByHotel(requestId, outlookTargetDate, effectiveHotelIds, dbClient) : [];
 
             const prevByMonth = {};
             if (Array.isArray(prevDayData)) {
