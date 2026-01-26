@@ -1,42 +1,36 @@
 <template>
   <div>
     <p class="text-sm text-gray-500 mb-2">※デフォルトでは最新100件を表示しますが、検索機能で過去の全エントリーから検索可能です。</p>
-    
+
     <!-- Filter Section (Accounting Style) -->
-    <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 mb-4 rounded-t-xl">
+    <div
+      class="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 mb-4 rounded-t-xl">
       <div class="flex flex-wrap gap-4 items-center">
         <span class="text-[10px] font-bold text-slate-400 uppercase w-12">ステータス:</span>
         <div class="flex gap-1">
-          <Button label="すべて" :severity="statusFilter === 'all' ? 'primary' : 'secondary'" size="small" text @click="statusFilter = 'all'" class="!py-1 !px-3 text-xs" />
-          <Button label="失敗" :severity="statusFilter === 'failed' ? 'danger' : 'secondary'" size="small" text @click="statusFilter = 'failed'" class="!py-1 !px-3 text-xs" />
+          <Button label="すべて" :severity="statusFilter === 'all' ? 'primary' : 'secondary'" size="small" text
+            @click="statusFilter = 'all'" class="!py-1 !px-3 text-xs" />
+          <Button label="失敗" :severity="statusFilter === 'failed' ? 'danger' : 'secondary'" size="small" text
+            @click="statusFilter = 'failed'" class="!py-1 !px-3 text-xs" />
         </div>
       </div>
       <div class="flex flex-wrap gap-4 items-center">
         <span class="text-[10px] font-bold text-slate-400 uppercase w-12">検索:</span>
         <div class="flex gap-2">
-          <InputText v-model="searchQuery" placeholder="予約IDまたは予約者名" class="!py-1 !px-3 text-xs w-64" @keyup.enter="handleSearch" />
+          <InputText v-model="searchQuery" placeholder="予約IDまたは予約者名" class="!py-1 !px-3 text-xs w-64"
+            @keyup.enter="handleSearch" />
           <Button icon="pi pi-search" size="small" @click="handleSearch" severity="secondary" class="!py-1 !px-3" />
-          <Button v-if="searchQuery" icon="pi pi-times" size="small" @click="clearSearch" severity="secondary" text class="!py-1 !px-3" />
+          <Button v-if="searchQuery" icon="pi pi-times" size="small" @click="clearSearch" severity="secondary" text
+            class="!py-1 !px-3" />
         </div>
       </div>
     </div>
 
-    <DataTable
-      :value="filteredOtaQueue"
-      :paginator="true"
-      :rows="15"
-      :rowsPerPageOptions="[15, 25, 50]"
-      v-model:filters="filters"
-      filterDisplay="row"
-      class="p-datatable-sm"
-    >
+    <DataTable :value="filteredOtaQueue" :paginator="true" :rows="15" :rowsPerPageOptions="[15, 25, 50]"
+      v-model:filters="filters" filterDisplay="row" class="p-datatable-sm">
       <Column header="詳細" class="w-16">
         <template #body="slotProps">
-          <Button
-            icon="pi pi-eye"
-            class="p-button-rounded p-button-text"
-            @click="showRowDetails(slotProps.data)"
-          />
+          <Button icon="pi pi-eye" class="p-button-rounded p-button-text" @click="showRowDetails(slotProps.data)" />
         </template>
       </Column>
       <Column field="created_at" header="作成日時" sortable>
@@ -46,35 +40,25 @@
       </Column>
       <Column field="status" header="ステータス" sortable>
         <template #body="slotProps">
-          <Badge :severity="statusSeverity(slotProps.data.status)" :value="getStatusInJapanese(slotProps.data.status)" />
+          <Badge :severity="statusSeverity(slotProps.data.status)"
+            :value="getStatusInJapanese(slotProps.data.status)" />
         </template>
       </Column>
       <Column field="ota_reservation_id" header="予約ID" sortable>
         <template #body="slotProps">
           <div class="flex flex-col gap-1">
             <span>{{ slotProps.data.ota_reservation_id }}</span>
-            <Tag 
-              :severity="classificationSeverity(slotProps.data.data_classification)" 
-              :value="getClassificationInJapanese(slotProps.data.data_classification)" 
-              class="w-fit text-[9px] !bg-transparent border px-1"
-            />
+            <Tag :severity="classificationSeverity(slotProps.data.data_classification)"
+              :value="getClassificationInJapanese(slotProps.data.data_classification)"
+              class="w-fit text-[9px] !bg-transparent border px-1" />
           </div>
         </template>
       </Column>
       <Column field="booker_name" header="予約者名" sortable></Column>
       <Column field="hotel_name" header="ホテル名" sortable :showFilterMenu="false">
         <template #filter="{ filterModel, filterCallback }">
-          <Select
-            v-model="filterModel.value"
-            :options="hotels"
-            optionLabel="name"
-            optionValue="name"
-            placeholder="ホテルで絞り込み"
-            class="p-column-filter"
-            :showClear="true"
-            @change="filterCallback()"
-            fluid
-          />
+          <Select v-model="filterModel.value" :options="hotels" optionLabel="name" optionValue="name"
+            placeholder="ホテルで絞り込み" class="p-column-filter" :showClear="true" @change="filterCallback()" fluid />
         </template>
       </Column>
     </DataTable>
@@ -89,21 +73,20 @@
             <div><strong>予約ID:</strong> {{ selectedRow.ota_reservation_id }}</div>
             <div>
               <strong>ステータス:</strong>
-              <Badge :severity="statusSeverity(selectedRow.status)" :value="getStatusInJapanese(selectedRow.status)" class="ml-2" />
+              <Badge :severity="statusSeverity(selectedRow.status)" :value="getStatusInJapanese(selectedRow.status)"
+                class="ml-2" />
             </div>
             <div>
               <strong>種別:</strong>
-              <Tag 
-                :severity="classificationSeverity(selectedRow.data_classification)" 
-                :value="getClassificationInJapanese(selectedRow.data_classification)" 
-                class="ml-2 !bg-transparent border px-2"
-              />
+              <Tag :severity="classificationSeverity(selectedRow.data_classification)"
+                :value="getClassificationInJapanese(selectedRow.data_classification)"
+                class="ml-2 !bg-transparent border px-2" />
             </div>
             <div><strong>作成日時:</strong> {{ formatDateTime(selectedRow.created_at) }}</div>
             <div class="col-span-3"><strong>予約者名:</strong> {{ selectedRow.booker_name }}</div>
           </div>
         </Fieldset>
-        
+
         <Fieldset v-if="formattedTelegramData" legend="通信欄 (Telegram Data)" class="mt-4">
           <pre class="telegram-display">{{ formattedTelegramData }}</pre>
         </Fieldset>
@@ -170,17 +153,17 @@ const hotels = computed(() => {
 
 const filteredOtaQueue = computed(() => {
   let queue = otaQueue.value;
-  
+
   // Property based filter
   if (props.hotelId) {
     queue = queue.filter(item => item.hotel_id === props.hotelId);
   }
-  
+
   // Status filter (button based)
   if (statusFilter.value !== 'all') {
     queue = queue.filter(item => item.status === statusFilter.value);
   }
-  
+
   return queue;
 });
 
@@ -189,8 +172,8 @@ const formattedTelegramData = computed(() => {
   if (!data) return null;
 
   // Try different paths for TelegramData based on common structures
-  const telegramData = 
-    data?.RisaplsInformation?.RisaplsCommonInformation?.Basic?.TelegramData || 
+  const telegramData =
+    data?.RisaplsInformation?.RisaplsCommonInformation?.Basic?.TelegramData ||
     data?.BasicInformation?.TelegramData;
 
   if (!telegramData) return null;
@@ -207,6 +190,7 @@ const showRowDetails = (row) => {
 const formatDateTime = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   return date.toLocaleString('ja-JP');
 };
 
@@ -278,11 +262,13 @@ watch(() => props.hotelId, () => {
   font-family: monospace;
   font-size: 0.8rem;
 }
+
 .dark .json-display {
   background-color: #1e293b;
   border-color: #334155;
   color: #f8fafc;
 }
+
 .telegram-display {
   text-align: left;
   white-space: pre-wrap;
@@ -296,6 +282,7 @@ watch(() => props.hotelId, () => {
   font-size: 0.9rem;
   line-height: 1.5;
 }
+
 .dark .telegram-display {
   background-color: #2d2400;
   border-color: #8a6d00;
