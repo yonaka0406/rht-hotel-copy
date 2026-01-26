@@ -68,6 +68,7 @@ const AccountingSettings = () => import('@/pages/Accounting/AccountingSettings/A
 const AccountingReconciliation = () => import('@/pages/Accounting/AccountingReconciliation/AccountingReconciliation.vue');
 const AccountingProfitLoss = () => import('@/pages/Accounting/AccountingProfitLoss/AccountingProfitLoss.vue');
 const AccountingReceivables = () => import('@/pages/Accounting/AccountingReceivables/AccountingReceivables.vue');
+const AccountingCostBreakdown = () => import('@/pages/Accounting/AccountingCostBreakdown/AccountingCostBreakdown.vue');
 
 
 const routes = [
@@ -185,6 +186,7 @@ const routes = [
       { path: 'reconciliation', name: 'AccountingReconciliation', component: AccountingReconciliation },
       { path: 'settings', name: 'AccountingSettings', component: AccountingSettings },
       { path: 'receivables', name: 'AccountingReceivables', component: AccountingReceivables },
+      { path: 'cost-breakdown', name: 'AccountingCostBreakdown', component: AccountingCostBreakdown },
     ],
     meta: { requiresAuth: true, requiresAccounting: true }
   },

@@ -162,6 +162,11 @@ export function useAccountingStore() {
         return await post('/accounting/profit-loss/detailed', params);
     };
 
+    const fetchCostBreakdown = async (params) => {
+        const query = new URLSearchParams(params).toString();
+        return await get(`/accounting/analytics/cost-breakdown?${query}`);
+    };
+
     const clearPreviewData = () => {
         ledgerPreviewData.value = [];
         ledgerValidationData.value = null;
@@ -194,6 +199,7 @@ export function useAccountingStore() {
         fetchProfitLoss,
         fetchProfitLossSummary,
         fetchProfitLossDetailed,
+        fetchCostBreakdown,
         clearPreviewData,
         fetchDashboardMetrics,
         fetchReconciliationOverview,

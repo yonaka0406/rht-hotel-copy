@@ -935,6 +935,91 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
     }
 };
 
+/**
+ * Cost Breakdown Model: Analytics for top expense accounts
+ */
+const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    try {
+        // Step 1: Find the top N representative accounts (Management Groups 2, 3, 4, 5)
+        const topAccountsQuery = `
+            SELECT 
+                ac.code,
+                ac.name,
+                SUM(ayd.debit_amount) as total_historical_cost
+            FROM acc_yayoi_data ayd
+            JOIN acc_account_codes ac ON ayd.debit_account_code = ac.code
+            WHERE ac.management_group_id IN (2, 3, 4, 5)
+            GROUP BY ac.code, ac.name
+            ORDER BY total_historical_cost DESC
+            LIMIT $1
+        `;
+        const topAccountsResult = await client.query(topAccountsQuery, [topN]);
+        const topAccounts = topAccountsResult.rows;
+
+        if (topAccounts.length === 0) return { summary: [], timeSeries: [] };
+
+        const topCodes = topAccounts.map(a => a.code);
+
+        // Step 2: Get monthly metrics (Cost and Sales) per hotel and global
+        // This query finds the "current" department name for each hotel to match yayoi data
+        const monthDataQuery = `
+            WITH hotel_depts AS (
+                SELECT hotel_id, name FROM acc_departments WHERE is_current = TRUE
+            ),
+            monthly_sales AS (
+                SELECT 
+                    COALESCE(hd.hotel_id, 0) as hotel_id,
+                    date_trunc('month', ayd.transaction_date)::date as month,
+                    SUM(ayd.credit_amount) as sales
+                FROM acc_yayoi_data ayd
+                JOIN acc_account_codes ac ON ayd.credit_account_code = ac.code
+                LEFT JOIN hotel_depts hd ON ayd.credit_department = hd.name
+                WHERE ac.management_group_id = 1
+                GROUP BY hd.hotel_id, date_trunc('month', ayd.transaction_date)
+            ),
+            monthly_costs AS (
+                SELECT 
+                    ayd.debit_account_code as account_code,
+                    COALESCE(hd.hotel_id, 0) as hotel_id,
+                    date_trunc('month', ayd.transaction_date)::date as month,
+                    SUM(ayd.debit_amount) as cost
+                FROM acc_yayoi_data ayd
+                JOIN acc_account_codes ac ON ayd.debit_account_code = ac.code
+                LEFT JOIN hotel_depts hd ON ayd.debit_department = hd.name
+                WHERE ayd.debit_account_code = ANY($1::varchar[])
+                GROUP BY ayd.debit_account_code, hd.hotel_id, date_trunc('month', ayd.transaction_date)
+            )
+            SELECT 
+                mc.account_code,
+                mc.hotel_id,
+                h.name as hotel_name,
+                mc.month,
+                mc.cost,
+                COALESCE(ms.sales, 0) as sales
+            FROM monthly_costs mc
+            LEFT JOIN monthly_sales ms ON mc.hotel_id = ms.hotel_id AND mc.month = ms.month
+            LEFT JOIN hotels h ON mc.hotel_id = h.id
+            ORDER BY mc.month ASC
+        `;
+        const monthDataResult = await client.query(monthDataQuery, [topCodes]);
+        const timeSeries = monthDataResult.rows;
+
+        return {
+            topAccounts,
+            timeSeries
+        };
+    } catch (err) {
+        logger.error('Error in getCostBreakdownData:', err);
+        throw err;
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     getAccountCodes,
     getMappings,
@@ -946,5 +1031,7 @@ module.exports = {
     getDashboardMetrics,
     getReconciliationOverview,
     getReconciliationHotelDetails,
-    getReconciliationClientDetails
+    getReconciliationClientDetails,
+    getCostBreakdownData
 };
+

@@ -4,6 +4,7 @@ const dashboard = require('./dashboard');
 const importCtrl = require('./import');
 const profitLoss = require('./profitLoss');
 const receivables = require('./receivables');
+const analytics = require('./analytics');
 
 module.exports = {
     ...settings,
@@ -11,5 +12,6 @@ module.exports = {
     ...dashboard,
     ...importCtrl,
     ...profitLoss,
-    ...receivables
+    ...receivables,
+    ...analytics
 };
