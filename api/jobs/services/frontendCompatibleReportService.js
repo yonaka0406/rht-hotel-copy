@@ -698,6 +698,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                             sold_rooms: data.sold_rooms,
                             non_accommodation_stays: data.non_accommodation_stays,
                             occ: parseFloat(occupancyRate.toFixed(2)),
+                            occ_with_provisory: total_rooms > 0 ? parseFloat((((data.confirmed_sold_rooms + data.provisory_sold_rooms) / total_rooms) * 100).toFixed(2)) : 0,
                             not_available_rooms: 0,
                             fc_total_rooms: data.fc_total_rooms,
                             fc_sold_rooms: data.fc_sold_rooms,

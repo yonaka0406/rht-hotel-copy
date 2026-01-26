@@ -171,7 +171,7 @@ const handleDownload = async (format) => {
             prevYearOccupancyData: prevYearOccupancyData.value,
             selectionMessage: selectionMessage.value,
             kpiData: kpiData.value,
-            hotelIds: props.selectedHotels
+            hotelIds: selectedHotels.value
         });
     } catch (error) {
         console.error(`Error downloading ${format}:`, error);

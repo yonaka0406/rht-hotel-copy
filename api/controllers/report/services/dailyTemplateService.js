@@ -123,7 +123,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
 
                 if (writeHeaders) {
                     const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異', '仮売上'];
-                    const occHeaders = ['施設名', '月度', '計画稼働率', '見込み稼働率', '稼働率差異'];
+                    const occHeaders = ['施設名', '月度', '計画稼働率', '見込み稼働率', '稼働率差異', '仮予約含む稼働率'];
 
                     const headerRow = sheet.row(startRow);
                     revHeaders.forEach((header, index) => {
@@ -147,6 +147,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
 
                         const forecastOcc = occItem.fc_occ || 0;
                         const actualOcc = occItem.occ || 0;
+                        const actualOccWithProvisory = occItem.occ_with_provisory || 0;
                         const occVariance = actualOcc - forecastOcc;
 
                         return {
@@ -157,6 +158,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                             revenueVariance,
                             forecastOcc,
                             actualOcc,
+                            actualOccWithProvisory,
                             occVariance,
                         };
                     });
@@ -199,6 +201,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     row.cell(10).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
                     row.cell(11).value(item.actualOcc / 100).style("numberFormat", "0.0%");
                     row.cell(12).value(item.occVariance / 100).style("numberFormat", "0.0%");
+                    row.cell(13).value(item.actualOccWithProvisory / 100).style("numberFormat", "0.0%");
                 });
 
                 return hotelMetrics.length;
@@ -307,6 +310,7 @@ const getDailyTemplatePdf = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(`[${requestId}] Error in getDailyTemplatePdf:`, error);
         if (!res.headersSent) res.status(500).json({ message: 'Failed to generate file', error: error.message });
         if (generatedFilePath) cleanupFiles([generatedFilePath]);
     } finally {
