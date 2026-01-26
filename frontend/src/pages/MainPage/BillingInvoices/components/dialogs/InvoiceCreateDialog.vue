@@ -50,17 +50,17 @@
                 <DataTable :value="invoiceData.items">
                     <Column field="total_net_price" header="税抜き">
                         <template #body="slotProps">
-                            <span>{{ slotProps.data.total_net_price.toLocaleString() }} 円</span>
+                            <span>{{ (slotProps.data.total_net_price ?? 0).toLocaleString() }} 円</span>
                         </template>
                     </Column>
                     <Column header="税率">
                         <template #body="slotProps">
-                            <span>{{ slotProps.data.tax_rate * 100 }} %</span>
+                            <span>{{ (slotProps.data.tax_rate ?? 0) * 100 }} %</span>
                         </template>
                     </Column>
                     <Column field="total_price" header="税込み">
                         <template #body="slotProps">
-                            <span>{{ slotProps.data.total_price.toLocaleString() }} 円</span>
+                            <span>{{ (slotProps.data.total_price ?? 0).toLocaleString() }} 円</span>
                         </template>
                     </Column>
                     <template #footer>
@@ -126,6 +126,7 @@ const isBalanceCorrect = computed(() => {
     return Math.abs(ratesTotal.value - (props.invoiceData.invoice_total_value || 0)) < 1;
 });
 
+/*
 watch(() => props.visible, (newVal) => {
     if (newVal) {
         console.log('InvoiceCreateDialog loading contents:', {
@@ -134,4 +135,5 @@ watch(() => props.visible, (newVal) => {
         });
     }
 });
+*/
 </script>
