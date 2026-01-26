@@ -1,6 +1,6 @@
 <template>
   <div>
-    <p class="text-sm text-gray-500 mb-2">※デフォルトでは最新100件を表示しますが、検索機能で過去の全エントリーから検索可能です。</p>
+    <p class="text-sm text-gray-500 mb-2">※デフォルトでは最新100件を表示しますが、検索機能で過去のエントリーから最大500件まで検索可能です。</p>
 
     <!-- Filter Section (Accounting Style) -->
     <div
@@ -18,11 +18,15 @@
         <span class="text-[10px] font-bold text-slate-400 uppercase w-12">検索:</span>
         <div class="flex gap-2">
           <InputText v-model="searchQuery" placeholder="予約IDまたは予約者名" class="!py-1 !px-3 text-xs w-64"
-            @keyup.enter="handleSearch" />
-          <Button icon="pi pi-search" size="small" @click="handleSearch" severity="secondary" class="!py-1 !px-3" />
+            @keyup.enter="handleSearch" :disabled="isLoading" />
+          <Button icon="pi pi-search" size="small" @click="handleSearch" severity="secondary" class="!py-1 !px-3"
+            :loading="isLoading" />
           <Button v-if="searchQuery" icon="pi pi-times" size="small" @click="clearSearch" severity="secondary" text
-            class="!py-1 !px-3" />
+            class="!py-1 !px-3" :disabled="isLoading" />
         </div>
+      </div>
+      <div v-if="errorMessage" class="text-red-500 text-xs mt-1">
+        {{ errorMessage }}
       </div>
     </div>
 
@@ -103,7 +107,7 @@
 </template>
 
 <script setup>
-import { onMounted, watch, computed, ref } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import { useXMLStore } from '@/composables/useXMLStore';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -133,22 +137,42 @@ const statusFilter = ref('all');
 const searchQuery = ref('');
 const displayDialog = ref(false);
 const selectedRow = ref(null);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
 const handleSearch = async () => {
-  await fetchOtaQueue(searchQuery.value);
+  isLoading.value = true;
+  errorMessage.value = '';
+  try {
+    await fetchOtaQueue(searchQuery.value);
+  } catch (err) {
+    console.error('Failed to search OTA queue:', err);
+    errorMessage.value = 'データの検索に失敗しました。';
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const clearSearch = async () => {
+  isLoading.value = true;
+  errorMessage.value = '';
   searchQuery.value = '';
-  await fetchOtaQueue();
+  try {
+    await fetchOtaQueue();
+  } catch (err) {
+    console.error('Failed to clear search and fetch OTA queue:', err);
+    errorMessage.value = 'データの取得に失敗しました。';
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const hotels = computed(() => {
-  const hotelSet = new Set();
+  const hotelMap = new Map();
   otaQueue.value.forEach(item => {
-    hotelSet.add(JSON.stringify({ id: item.hotel_id, name: item.hotel_name }));
+    hotelMap.set(item.hotel_id, { id: item.hotel_id, name: item.hotel_name });
   });
-  return Array.from(hotelSet).map(item => JSON.parse(item));
+  return Array.from(hotelMap.values());
 });
 
 const filteredOtaQueue = computed(() => {
@@ -242,10 +266,6 @@ const getClassificationInJapanese = (classification) => {
 
 onMounted(() => {
   fetchOtaQueue();
-});
-
-watch(() => props.hotelId, () => {
-  // No need to fetch again, filtering is done in computed property
 });
 </script>
 

@@ -227,7 +227,7 @@ const selectXMLTemplate = async (requestId, hotel_id, name) => {
         // Replace placeholders
         xml = xml.replace("{{systemId}}", process.env.XML_SYSTEM_ID)
             .replace("{{pmsUserId}}", login.rows[0].user_id)
-            .replace("{{pmsPassword}}", login.rows[0].password)
+            .replace("{{pmsPassword}}", login.rows[0].password);
 
         return xml;
     } catch (error) {
@@ -498,6 +498,10 @@ const updateOTAReservationQueue = async (requestId, id, status, conflictDetails 
     }
 };
 
+// Constants for query limits
+const OTA_QUEUE_DEFAULT_LIMIT = 100;
+const OTA_QUEUE_SEARCH_LIMIT = 500;
+
 const selectOTAReservationQueue = async (requestId, searchTerm = null) => {
     const pool = getPool(requestId);
     try {
@@ -511,6 +515,9 @@ const selectOTAReservationQueue = async (requestId, searchTerm = null) => {
             `;
             params.push(`%${searchTerm}%`);
         }
+
+        // Use larger limit for searches, smaller for default view
+        const limit = searchTerm ? OTA_QUEUE_SEARCH_LIMIT : OTA_QUEUE_DEFAULT_LIMIT;
 
         let query = `
             SELECT
@@ -529,7 +536,7 @@ const selectOTAReservationQueue = async (requestId, searchTerm = null) => {
                 hotels h ON oq.hotel_id = h.id
             ${whereClause}
             ORDER BY oq.created_at DESC 
-            ${searchTerm ? '' : 'LIMIT 100'}
+            LIMIT ${limit}
         `;
         const result = await pool.query(query, params);
         return result.rows;
@@ -587,7 +594,7 @@ const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
 };
 
 const selectOTAXmlQueue = async (requestId) => {
-    const pool = getPool(requestId); // Use getPool as it's a read operation
+    const pool = getPool(requestId);
     try {
         const query = `
       SELECT DISTINCT
@@ -635,14 +642,11 @@ const selectOTAXmlQueue = async (requestId) => {
     } catch (error) {
         logger.error(`[${requestId}] Error in selectOTAXmlQueue: ${error.message}`, { stack: error.stack });
         throw error;
-    } finally {
-        // getPool returns a client from the pool, not a direct connection, so no client.release() needed here.
-        // The pool manages connection release.
     }
 };
 
 const selectFailedOTAXmlQueue = async (requestId) => {
-    const pool = getPool(requestId); // Use getPool as it's a read operation
+    const pool = getPool(requestId);
     try {
         const query = `
       SELECT
@@ -666,9 +670,6 @@ const selectFailedOTAXmlQueue = async (requestId) => {
     } catch (error) {
         logger.error(`[${requestId}] Error in selectFailedOTAXmlQueue: ${error.message}`, { stack: error.stack });
         throw error;
-    } finally {
-        // getPool returns a client from the pool, not a direct connection, so no client.release() needed here.
-        // The pool manages connection release.
     }
 };
 
