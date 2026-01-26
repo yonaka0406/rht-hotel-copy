@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.4] - 2026-01-26
+
+- Chore: Added to inventory calculations exclusion of staff rooms indicator in available stock counts in addition to not for sale indicator.
+- Bug Fix: Improved reservation deletion logic to ensure data logging.
+- New Feature: Added phantom delete detection visualization in OTA investigation interface with visual indicators.
+- New Feature: Enhanced hotel ID validation for blocked room operations.
+- Chore: Added diagnostic utilities for OTA stock auditing and historical stock analysis.
+
+---
+
 ## [1.4.3] - 2026-01-23
 
 - New Feature: Added OTA Stock Investigation Tool for diagnosing stock discrepancies between PMS and OTA systems, with event timeline analysis and gap detection.
