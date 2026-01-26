@@ -945,6 +945,7 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
 
     try {
         // Step 1: Find the top N representative accounts (Management Groups 2, 3, 4, 5)
+        // Strictly join with acc_departments to only consider costs assigned to facilities
         const topAccountsQuery = `
             SELECT 
                 ac.code,
@@ -952,6 +953,7 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
                 SUM(ayd.debit_amount) as total_historical_cost
             FROM acc_yayoi_data ayd
             JOIN acc_account_codes ac ON ayd.debit_account_code = ac.name
+            JOIN acc_departments ad ON ayd.debit_department = ad.name AND ad.is_current = TRUE
             WHERE ac.management_group_id IN (2, 3, 4, 5)
             GROUP BY ac.code, ac.name
             ORDER BY total_historical_cost DESC
@@ -964,32 +966,32 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
 
         const topNames = topAccounts.map(a => a.name);
 
-        // Step 2: Get monthly metrics (Cost and Sales) per hotel and global
-        // This query finds the "current" department name for each hotel to match yayoi data
+        // Step 2: Get monthly metrics (Cost and Sales) per hotel
+        // Strictly use departmental mapping to exclude non-hotel data
         const monthDataQuery = `
             WITH hotel_depts AS (
                 SELECT hotel_id, name FROM acc_departments WHERE is_current = TRUE
             ),
             monthly_sales AS (
                 SELECT 
-                    COALESCE(hd.hotel_id, 0) as hotel_id,
+                    hd.hotel_id,
                     date_trunc('month', ayd.transaction_date)::date as month,
                     SUM(ayd.credit_amount) as sales
                 FROM acc_yayoi_data ayd
                 JOIN acc_account_codes ac ON ayd.credit_account_code = ac.name
-                LEFT JOIN hotel_depts hd ON ayd.credit_department = hd.name
+                JOIN hotel_depts hd ON ayd.credit_department = hd.name
                 WHERE ac.management_group_id = 1
                 GROUP BY hd.hotel_id, date_trunc('month', ayd.transaction_date)
             ),
             monthly_costs AS (
                 SELECT 
                     ac.code as account_code,
-                    COALESCE(hd.hotel_id, 0) as hotel_id,
+                    hd.hotel_id,
                     date_trunc('month', ayd.transaction_date)::date as month,
                     SUM(ayd.debit_amount) as cost
                 FROM acc_yayoi_data ayd
                 JOIN acc_account_codes ac ON ayd.debit_account_code = ac.name
-                LEFT JOIN hotel_depts hd ON ayd.debit_department = hd.name
+                JOIN hotel_depts hd ON ayd.debit_department = hd.name
                 WHERE ac.name = ANY($1::varchar[])
                 GROUP BY ac.code, hd.hotel_id, date_trunc('month', ayd.transaction_date)
             )
@@ -1002,7 +1004,7 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
                 COALESCE(ms.sales, 0) as sales
             FROM monthly_costs mc
             LEFT JOIN monthly_sales ms ON mc.hotel_id = ms.hotel_id AND mc.month = ms.month
-            LEFT JOIN hotels h ON mc.hotel_id = h.id
+            JOIN hotels h ON mc.hotel_id = h.id
             ORDER BY mc.month ASC
         `;
         const monthDataResult = await client.query(monthDataQuery, [topNames]);
