@@ -422,11 +422,12 @@ const getDepartments = async (requestId, dbClient = null) => {
             h.name as hotel_name, 
             ad.id, 
             ad.name, 
+            ad.is_current,
             ad.created_at, 
             ad.updated_at
         FROM hotels h
         LEFT JOIN acc_departments ad ON h.id = ad.hotel_id
-        ORDER BY h.id ASC
+        ORDER BY h.id ASC, ad.is_current DESC NULLS LAST
     `;
 
     try {

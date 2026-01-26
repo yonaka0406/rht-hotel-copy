@@ -200,21 +200,45 @@ const upsertDepartment = async (requestId, data, user_id, dbClient = null) => {
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
 
-    const { id, hotel_id, name } = data;
-
-    const query = `
-        INSERT INTO acc_departments (id, hotel_id, name, created_by, updated_by)
-        VALUES (COALESCE($1, nextval('acc_departments_id_seq')), $2, $3, $4, $4)
-        ON CONFLICT (hotel_id) DO UPDATE SET
-            name = EXCLUDED.name,
-            updated_by = EXCLUDED.updated_by,
-            updated_at = CURRENT_TIMESTAMP
-        RETURNING *;
-    `;
-    const values = [id, hotel_id, name, user_id];
+    const { id, hotel_id, name, is_current } = data;
 
     try {
-        const result = await client.query(query, values);
+        let result;
+
+        if (id) {
+            // Update existing record by ID
+            const query = `
+                UPDATE acc_departments 
+                SET 
+                    hotel_id = $1,
+                    name = $2,
+                    is_current = COALESCE($3, is_current),
+                    updated_by = $4,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $5
+                RETURNING *;
+            `;
+            const values = [hotel_id, name, is_current, user_id, id];
+            result = await client.query(query, values);
+
+            if (result.rows.length === 0) {
+                throw new Error(`Department with id ${id} not found`);
+            }
+        } else {
+            // Insert new record with conflict handling
+            const query = `
+                INSERT INTO acc_departments (hotel_id, name, is_current, created_by, updated_by)
+                VALUES ($1, $2, COALESCE($3, false), $4, $4)
+                ON CONFLICT (hotel_id, name) DO UPDATE SET
+                    is_current = EXCLUDED.is_current,
+                    updated_by = EXCLUDED.updated_by,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING *;
+            `;
+            const values = [hotel_id, name, is_current, user_id];
+            result = await client.query(query, values);
+        }
+
         return result.rows[0];
     } catch (err) {
         logger.error('Error upserting department:', err);

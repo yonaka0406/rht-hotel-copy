@@ -331,38 +331,42 @@ CREATE INDEX idx_acc_yayoi_batch ON acc_yayoi_data (batch_id);
 
 -- 6. Accounting Departments Master
 -- Maps hotels to their accounting department codes (部門) for Yayoi exports
--- Supports both current and historical department name mappings
+-- Each hotel has one current name (for exports) and optional historical names (for import matching)
 CREATE TABLE acc_departments (
     id SERIAL PRIMARY KEY,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     name VARCHAR(24) NOT NULL, -- Yayoi department name (部門) e.g., "WH室蘭"
-    is_current BOOLEAN DEFAULT true, -- true = current mapping, false = historical mapping
-    valid_from DATE, -- Optional: When this mapping became valid
-    valid_to DATE, -- Optional: When this mapping ended (NULL for current)
+    is_current BOOLEAN DEFAULT false, -- true = current name for exports, false = historical name for import matching
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by INT REFERENCES users(id),
-    UNIQUE (hotel_id, name), -- Allow same hotel to have multiple historical names
-    CHECK (NOT (is_current = true AND valid_to IS NOT NULL)) -- Current mappings cannot have end date
+    UNIQUE (hotel_id, name) -- Each hotel can have multiple names, but each name must be unique per hotel
 );
 
-COMMENT ON TABLE acc_departments IS 'Maps hotels to accounting department codes for Yayoi exports. Supports historical mappings.';
-COMMENT ON COLUMN acc_departments.name IS 'Accounting department name (部門) used in Yayoi CSV exports';
-COMMENT ON COLUMN acc_departments.is_current IS 'true = current mapping for exports, false = historical mapping for imports';
-COMMENT ON COLUMN acc_departments.valid_from IS 'Optional: Start date for this department name';
-COMMENT ON COLUMN acc_departments.valid_to IS 'Optional: End date for this department name (NULL for current)';
+COMMENT ON TABLE acc_departments IS 'Maps hotels to accounting department codes. Each hotel has one current name (for exports) and optional historical names (for import matching).';
+COMMENT ON COLUMN acc_departments.name IS 'Accounting department name (部門) used in Yayoi CSV exports or for matching imports';
+COMMENT ON COLUMN acc_departments.is_current IS 'true = current name used for exports, false = historical/previous name used for import matching';
 
 -- Create indexes for lookups
 CREATE INDEX idx_acc_departments_hotel ON acc_departments(hotel_id);
-CREATE INDEX idx_acc_departments_current ON acc_departments(hotel_id, is_current) WHERE is_current = true;
 CREATE INDEX idx_acc_departments_name ON acc_departments(name);
+
+-- Ensure only one current department per hotel
+CREATE UNIQUE INDEX idx_acc_departments_one_current 
+ON acc_departments(hotel_id) 
+WHERE is_current = true;
 
 -- Seed department codes for existing hotels
 -- Update these values according to your actual hotel-to-department mapping
 INSERT INTO acc_departments (hotel_id, name, is_current, created_by) VALUES
 (24, 'WH室蘭', true, 1)
 ON CONFLICT (hotel_id, name) DO NOTHING;
+
+-- Example: Add historical name for a hotel
+-- INSERT INTO acc_departments (hotel_id, name, is_current, created_by) VALUES
+-- (24, 'ワークマンハウスむかわ', false, 1)
+-- ON CONFLICT (hotel_id, name) DO NOTHING;
 
 -- 7. Monthly Account Summary View
 -- Consolidates debit and credit entries by month, account, department, and tax class.

@@ -4,7 +4,8 @@
             <!-- Hero Row -->
             <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <button @click="$router.push({ name: 'AccountingDashboard' })" class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
+                    <button @click="$router.push({ name: 'AccountingDashboard' })"
+                        class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer shadow-sm h-[46px]">
                         <i class="pi pi-arrow-left text-sm"></i>
                         <span>戻る</span>
                     </button>
@@ -20,16 +21,14 @@
             </div>
 
             <!-- Tabs and Content Container -->
-            <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
+            <div
+                class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
                 <!-- Tabs Container -->
-                <div class="flex overflow-x-auto bg-slate-100/50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-2 gap-2">
-                    <button 
-                        v-for="tab in tabs" 
-                        :key="tab.id"
-                        @click="activeTab = tab.id"
+                <div
+                    class="flex overflow-x-auto bg-slate-100/50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-2 gap-2">
+                    <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
                         class="px-8 py-3 font-black rounded-xl transition-all cursor-pointer whitespace-nowrap"
-                        :class="activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50 bg-transparent'"
-                    >
+                        :class="activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50 bg-transparent'">
                         {{ tab.label }}
                     </button>
                 </div>
@@ -46,27 +45,24 @@
                         <div v-if="activeTab === 'codes'">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                                 <h2 class="text-2xl font-black text-slate-900 dark:text-white">勘定科目一覧</h2>
-                                <button @click="openModal('code')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
+                                <button @click="openModal('code')"
+                                    class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
                                     <i class="pi pi-plus"></i> 新規追加
                                 </button>
                             </div>
 
                             <!-- Group Filter Buttons -->
-                            <div class="flex flex-wrap gap-2 mb-8 p-1 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl w-fit">
-                                <button 
-                                    @click="selectedGroupFilter = null"
+                            <div
+                                class="flex flex-wrap gap-2 mb-8 p-1 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl w-fit">
+                                <button @click="selectedGroupFilter = null"
                                     class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                                    :class="!selectedGroupFilter ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
-                                >
+                                    :class="!selectedGroupFilter ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'">
                                     すべて
                                 </button>
-                                <button 
-                                    v-for="group in settings.groups" 
-                                    :key="group.id"
+                                <button v-for="group in settings.groups" :key="group.id"
                                     @click="selectedGroupFilter = group.id"
                                     class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                                    :class="selectedGroupFilter === group.id ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
-                                >
+                                    :class="selectedGroupFilter === group.id ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'">
                                     {{ group.name }}
                                 </button>
                             </div>
@@ -75,32 +71,51 @@
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">コード</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">科目名</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">管理区分</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">状態</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                コード</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                科目名</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                管理区分</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                状態</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                操作</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="item in filteredCodes" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                        <tr v-for="item in filteredCodes" :key="item.id"
+                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                             <td class="py-4 px-4 font-black tabular-nums">{{ item.code }}</td>
                                             <td class="py-4 px-4 font-bold">{{ item.name }}</td>
-                                            <td class="py-4 px-4 text-sm text-slate-500">{{ getGroupName(item.management_group_id) }}</td>
+                                            <td class="py-4 px-4 text-sm text-slate-500">{{
+                                                getGroupName(item.management_group_id) }}</td>
                                             <td class="py-4 px-4">
-                                                <span :class="item.is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'" class="text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                                <span
+                                                    :class="item.is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'"
+                                                    class="text-[10px] font-black px-2 py-1 rounded-md uppercase">
                                                     {{ item.is_active ? '有効' : '無効' }}
                                                 </span>
                                             </td>
                                             <td class="py-4 px-4">
                                                 <div class="flex gap-2">
-                                                    <button @click="editItem('code', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('code', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                    <button @click="editItem('code', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('code', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-trash"></i></button>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr v-if="filteredCodes.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
+                                                データがありません。</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -116,7 +131,8 @@
                                         ※ これらの区分は損益計算書（P&L）のアカウント専用です。
                                     </p>
                                 </div>
-                                <button @click="openModal('group')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer">
+                                <button @click="openModal('group')"
+                                    class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer">
                                     <i class="pi pi-plus"></i> 新規追加
                                 </button>
                             </div>
@@ -124,55 +140,63 @@
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">順序</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">区分名</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">
+                                                順序</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                区分名</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                操作</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="item in settings.groups" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                        <tr v-for="item in settings.groups" :key="item.id"
+                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                             <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
                                             <td class="py-4 px-4 font-bold">{{ item.name }}</td>
                                             <td class="py-4 px-4">
                                                 <div class="flex gap-2">
-                                                    <button @click="editItem('group', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('group', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                    <button @click="editItem('group', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('group', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-trash"></i></button>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr v-if="settings.groups.length === 0">
-                                            <td colspan="3" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                            <td colspan="3" class="py-12 text-center text-slate-400 font-medium">
+                                                データがありません。</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <!-- Tax Classes Tab -->                        
+                        <!-- Tax Classes Tab -->
                         <div v-if="activeTab === 'tax'">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                                 <h2 class="text-2xl font-black text-slate-900 dark:text-white">税区分設定</h2>
-                                <button @click="openModal('tax')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
+                                <button @click="openModal('tax')"
+                                    class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
                                     <i class="pi pi-plus"></i> 新規追加
                                 </button>
                             </div>
 
                             <!-- Filter Buttons -->
-                            <div class="flex flex-wrap gap-2 mb-8 p-1 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl w-fit">
-                                <button 
-                                    @click="selectedTaxFilter = null"
+                            <div
+                                class="flex flex-wrap gap-2 mb-8 p-1 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl w-fit">
+                                <button @click="selectedTaxFilter = null"
                                     class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                                    :class="selectedTaxFilter === null ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
-                                >
+                                    :class="selectedTaxFilter === null ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'">
                                     すべて
                                 </button>
-                                <button 
-                                    v-for="rate in uniqueTaxRates" 
-                                    :key="rate"
-                                    @click="selectedTaxFilter = rate"
+                                <button v-for="rate in uniqueTaxRates" :key="rate" @click="selectedTaxFilter = rate"
                                     class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer"
-                                    :class="selectedTaxFilter !== null && Math.abs(selectedTaxFilter - rate) < 0.0001 ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'"
-                                >
+                                    :class="selectedTaxFilter !== null && Math.abs(selectedTaxFilter - rate) < 0.0001 ? 'bg-white dark:bg-slate-800 text-violet-600 shadow-sm border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 bg-transparent'">
                                     {{ (rate * 100).toFixed(0) }}%
                                 </button>
                             </div>
@@ -181,28 +205,45 @@
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">順序</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">税区分名 (システム)</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">弥生会計名</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-32">税率</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-24">
+                                                順序</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                税区分名 (システム)</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                弥生会計名</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest w-32">
+                                                税率</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                操作</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="item in filteredTaxClasses" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                        <tr v-for="item in filteredTaxClasses" :key="item.id"
+                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                             <td class="py-4 px-4 font-black tabular-nums">{{ item.display_order }}</td>
                                             <td class="py-4 px-4 font-bold">{{ item.name }}</td>
                                             <td class="py-4 px-4 text-sm">{{ item.yayoi_name }}</td>
-                                            <td class="py-4 px-4 font-black tabular-nums">{{ (item.tax_rate * 100).toFixed(0) }}%</td>
+                                            <td class="py-4 px-4 font-black tabular-nums">{{ (item.tax_rate *
+                                                100).toFixed(0) }}%</td>
                                             <td class="py-4 px-4">
                                                 <div class="flex gap-2">
-                                                    <button @click="editItem('tax', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('tax', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                    <button @click="editItem('tax', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('tax', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-trash"></i></button>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr v-if="filteredTaxClasses.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
+                                                データがありません。</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -211,52 +252,68 @@
 
                         <!-- Departments Tab -->
                         <div v-if="activeTab === 'dept'">
-                            <!-- ... existing department content ... -->
-                            <div class="mb-6">
-                                <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門設定</h2>
-                                <p class="text-sm text-slate-500">現在の部門マッピングと履歴データを管理します</p>
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                                <div>
+                                    <h2 class="text-2xl font-black text-slate-900 dark:text-white">部門設定</h2>
+                                    <p class="text-sm text-slate-500">各店舗の現在の部門名と履歴名を管理します</p>
+                                </div>
+                                <button @click="openModal('dept')"
+                                    class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none">
+                                    <i class="pi pi-plus"></i> 部門名を追加
+                                </button>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">店舗名</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">部門名 (弥生会計)</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">状態</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">有効期間</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                店舗名</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                部門名 (弥生会計)</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                状態</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                操作</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="item in settings.departments" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                        <tr v-for="item in settings.departments" :key="item.id || 'h' + item.hotel_id"
+                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                             <td class="py-4 px-4 font-bold">{{ item.hotel_name }}</td>
                                             <td class="py-4 px-4">
-                                                <span v-if="item.name" class="font-black text-slate-700 dark:text-slate-300">{{ item.name }}</span>
+                                                <span v-if="item.name"
+                                                    class="font-black text-slate-700 dark:text-slate-300">{{ item.name
+                                                    }}</span>
                                                 <span v-else class="text-slate-400 text-sm font-medium">未設定</span>
                                             </td>
                                             <td class="py-4 px-4">
-                                                <span v-if="item.is_current" class="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                                <span v-if="item.is_current"
+                                                    class="bg-green-100 text-green-700 text-[10px] font-black px-2 py-1 rounded-md uppercase">
                                                     現在
                                                 </span>
-                                                <span v-else class="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-1 rounded-md uppercase">
+                                                <span v-else
+                                                    class="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-1 rounded-md uppercase">
                                                     履歴
                                                 </span>
                                             </td>
-                                            <td class="py-4 px-4 text-sm text-slate-500">
-                                                <span v-if="item.valid_from || item.valid_to">
-                                                    {{ formatDate(item.valid_from) }} 〜 {{ formatDate(item.valid_to) || '現在' }}
-                                                </span>
-                                                <span v-else class="text-slate-400">-</span>
-                                            </td>
                                             <td class="py-4 px-4">
                                                 <div class="flex gap-2">
-                                                    <button @click="editItem('dept', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
-                                                    <button v-if="item.id" @click="confirmDelete('dept', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                    <button @click="editItem('dept', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-pencil"></i></button>
+                                                    <button v-if="item.id" @click="confirmDelete('dept', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-trash"></i></button>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr v-if="settings.departments.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                            <td colspan="4" class="py-12 text-center text-slate-400 font-medium">
+                                                データがありません。</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -272,18 +329,14 @@
                                 </div>
                                 <div class="flex items-center gap-4">
                                     <div class="flex flex-col gap-1">
-                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">対象ホテルを選択</label>
-                                        <Select 
-                                            v-model="selectedMappingHotelId" 
-                                            :options="hotelStore.safeHotels.value" 
-                                            optionLabel="name" 
-                                            optionValue="id" 
-                                            placeholder="ホテルを選択" 
-                                            class="w-64"
-                                            @change="fetchSettings"
-                                        />
+                                        <label
+                                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest">対象ホテルを選択</label>
+                                        <Select v-model="selectedMappingHotelId" :options="hotelStore.safeHotels.value"
+                                            optionLabel="name" optionValue="id" placeholder="ホテルを選択" class="w-64"
+                                            @change="fetchSettings" />
                                     </div>
-                                    <button @click="openModal('mapping')" class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none self-end">
+                                    <button @click="openModal('mapping')"
+                                        class="bg-violet-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-violet-700 transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-violet-200 dark:shadow-none self-end">
                                         <i class="pi pi-plus"></i> マッピング追加
                                     </button>
                                 </div>
@@ -293,44 +346,65 @@
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="border-b border-slate-100 dark:border-slate-700">
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">対象タイプ</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">対象アイテム</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">ホテル</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">勘定科目</th>
-                                            <th class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">操作</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                対象タイプ</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                対象アイテム</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                ホテル</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                勘定科目</th>
+                                            <th
+                                                class="py-4 px-4 font-black text-slate-400 text-xs uppercase tracking-widest">
+                                                操作</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="item in settings.mappings" :key="item.id" class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                        <tr v-for="item in settings.mappings" :key="item.id"
+                                            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                             <td class="py-4 px-4">
-                                                <span class="text-[10px] font-black px-2 py-1 rounded-md uppercase" :class="getTargetTypeBadgeClass(item.target_type)">
+                                                <span class="text-[10px] font-black px-2 py-1 rounded-md uppercase"
+                                                    :class="getTargetTypeBadgeClass(item.target_type)">
                                                     {{ getTargetTypeLabel(item.target_type) }}
                                                 </span>
                                             </td>
                                             <td class="py-4 px-4 font-bold">{{ getTargetName(item) }}</td>
                                             <td class="py-4 px-4 text-sm text-slate-500">
                                                 <span v-if="item.hotel_id" class="flex items-center gap-1">
-                                                    <i class="pi pi-building text-[10px]"></i> {{ getHotelName(item.hotel_id) }}
+                                                    <i class="pi pi-building text-[10px]"></i> {{
+                                                        getHotelName(item.hotel_id) }}
                                                 </span>
-                                                <span v-else class="text-violet-600 font-bold italic flex items-center gap-1">
+                                                <span v-else
+                                                    class="text-violet-600 font-bold italic flex items-center gap-1">
                                                     <i class="pi pi-globe text-[10px]"></i> 共通設定
                                                 </span>
                                             </td>
                                             <td class="py-4 px-4 font-black">
                                                 <div class="flex flex-col">
-                                                    <span class="text-slate-900 dark:text-white">{{ item.account_name }}</span>
-                                                    <span class="text-[10px] text-slate-400 tabular-nums">{{ item.account_code }}</span>
+                                                    <span class="text-slate-900 dark:text-white">{{ item.account_name
+                                                    }}</span>
+                                                    <span class="text-[10px] text-slate-400 tabular-nums">{{
+                                                        item.account_code }}</span>
                                                 </div>
                                             </td>
                                             <td class="py-4 px-4">
                                                 <div class="flex gap-2">
-                                                    <button @click="editItem('mapping', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-pencil"></i></button>
-                                                    <button @click="confirmDelete('mapping', item)" class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i class="pi pi-trash"></i></button>
+                                                    <button @click="editItem('mapping', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-violet-600 hover:bg-violet-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-pencil"></i></button>
+                                                    <button @click="confirmDelete('mapping', item)"
+                                                        class="p-2 bg-slate-50 dark:bg-slate-900/50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all cursor-pointer"><i
+                                                            class="pi pi-trash"></i></button>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr v-if="settings.mappings.length === 0">
-                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">データがありません。</td>
+                                            <td colspan="5" class="py-12 text-center text-slate-400 font-medium">
+                                                データがありません。</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -343,16 +417,8 @@
         </div>
 
         <!-- Master Data Modal -->
-        <SettingsDialog 
-            v-model:visible="modal.visible"
-            :type="modal.type"
-            :is-edit="modal.isEdit"
-            :initial-data="form"
-            :settings="settings"
-            :hotels="hotelStore.safeHotels.value"
-            :saving="saving"
-            @save="handleSave"
-        />
+        <SettingsDialog v-model:visible="modal.visible" :type="modal.type" :is-edit="modal.isEdit" :initial-data="form"
+            :settings="settings" :hotels="hotelStore.safeHotels.value" :saving="saving" @save="handleSave" />
 
         <ConfirmDialog group="accounting-settings" />
     </div>
@@ -434,9 +500,7 @@ const form = reactive({
     yayoi_name: '',
     tax_rate_percent: 10,
     hotel_id: null,
-    is_current: true,
-    valid_from: null,
-    valid_to: null
+    is_current: true
 });
 
 const fetchSettings = async () => {
@@ -453,11 +517,11 @@ const fetchSettings = async () => {
         }
     } catch (err) {
         console.error('Failed to fetch accounting settings', err);
-        toast.add({ 
-            severity: 'error', 
-            summary: 'システムエラー', 
-            detail: '設定データの取得に失敗しました。ページを更新してください。', 
-            life: 5000 
+        toast.add({
+            severity: 'error',
+            summary: 'システムエラー',
+            detail: '設定データの取得に失敗しました。ページを更新してください。',
+            life: 5000
         });
     } finally {
         loading.value = false;
@@ -474,17 +538,13 @@ const getHotelName = (id) => {
     return h ? h.name : '-';
 };
 
-const formatDate = (dateStr) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
-};
+
 
 const openModal = (type) => {
     modal.type = type;
     modal.isEdit = false;
     modal.visible = true;
-    
+
     // Reset form
     form.id = null;
     form.code = '';
@@ -495,9 +555,7 @@ const openModal = (type) => {
     form.yayoi_name = '';
     form.tax_rate_percent = 10;
     form.hotel_id = null;
-    form.is_current = true;
-    form.valid_from = null;
-    form.valid_to = null;
+    form.is_current = false;
     form.target_type = null;
     form.target_id = null;
     form.account_code_id = null;
@@ -507,13 +565,13 @@ const editItem = (type, item) => {
     modal.type = type;
     modal.isEdit = true;
     modal.visible = true;
-    
+
     form.id = item.id;
-    
+
     if (type !== 'mapping') {
         form.name = item.name;
     }
-    
+
     if (type === 'code') {
         form.code = item.code;
         form.management_group_id = item.management_group_id;
@@ -528,9 +586,7 @@ const editItem = (type, item) => {
     } else if (type === 'dept') {
         form.hotel_id = item.hotel_id;
         form.name = item.name || '';
-        form.is_current = item.is_current !== undefined ? item.is_current : true;
-        form.valid_from = item.valid_from ? new Date(item.valid_from) : null;
-        form.valid_to = item.valid_to ? new Date(item.valid_to) : null;
+        form.is_current = item.is_current !== undefined ? item.is_current : false;
     } else if (type === 'mapping') {
         form.hotel_id = item.hotel_id;
         form.target_type = item.target_type;
@@ -543,20 +599,12 @@ const handleSave = async (formData) => {
     try {
         saving.value = true;
         let payload = { ...formData };
-        
+
         if (modal.type === 'tax') {
             payload.tax_rate = payload.tax_rate_percent / 100;
         }
 
-        if (modal.type === 'dept') {
-            // Format dates for backend
-            if (payload.valid_from) {
-                payload.valid_from = payload.valid_from.toISOString().split('T')[0];
-            }
-            if (payload.valid_to) {
-                payload.valid_to = payload.valid_to.toISOString().split('T')[0];
-            }
-        }
+
 
         if (modal.type === 'mapping' && payload.target_type === 'cancellation') {
             payload.target_id = 0;
@@ -567,7 +615,7 @@ const handleSave = async (formData) => {
         else if (modal.type === 'tax') await store.upsertTaxClass(payload);
         else if (modal.type === 'dept') await store.upsertDepartment(payload);
         else if (modal.type === 'mapping') await store.upsertMapping(payload);
-        
+
         modal.visible = false;
         await fetchSettings();
         toast.add({ severity: 'success', summary: '成功', detail: '保存しました。', life: 3000 });
@@ -642,12 +690,12 @@ const getTargetTypeBadgeClass = (type) => {
 
 const getTargetName = (item) => {
     if (item.target_type === 'cancellation') return '全体';
-    
+
     if (item.target_type === 'plan_hotel') {
         const p = settings.mappingMasterData.plans.find(x => x.id === item.target_id);
         return p ? p.name : `プランID: ${item.target_id}`;
     }
-    
+
     if (item.target_type === 'plan_type_category') {
         const c = settings.mappingMasterData.categories.find(x => x.id === item.target_id);
         return c ? c.name : `区分ID: ${item.target_id}`;
@@ -657,17 +705,17 @@ const getTargetName = (item) => {
         const c = settings.mappingMasterData.packageCategories.find(x => x.id === item.target_id);
         return c ? c.name : `パッケージID: ${item.target_id}`;
     }
-    
+
     if (item.target_type === 'addon_global') {
         const a = settings.mappingMasterData.addonsGlobal.find(x => x.id === item.target_id);
         return a ? a.name : `アドオンID: ${item.target_id}`;
     }
-    
+
     if (item.target_type === 'addon_hotel') {
         const a = settings.mappingMasterData.addonsHotel.find(x => x.id === item.target_id);
         return a ? a.name : `アドオンID: ${item.target_id}`;
     }
-    
+
     return `ID: ${item.target_id}`;
 };
 
@@ -688,8 +736,16 @@ onMounted(async () => {
 .animate-fade-in {
     animation: fade-in 0.3s ease-out forwards;
 }
+
 @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>
