@@ -33,7 +33,7 @@ const sc_serviceLabels = ref([
     { id: "OutputCompleteService", label: "予約出力_完了反映" }
 ]);
 const sc_fieldLabels = ref([
-    { id: "adjustmentDate", label: "調整日付" },    
+    { id: "adjustmentDate", label: "調整日付" },
     { id: "adjustmentProcedureCode", label: "調整方法" },
     { id: "adjustmentResult", label: "調整結果" },
     { id: "agtCode", label: "販売先コード" },
@@ -51,7 +51,7 @@ const sc_fieldLabels = ref([
     { id: "lincolnUseFlag", label: "リンカーン上で扱うフラグ" },
     { id: "maxLOS", label: "最大宿泊日数" },
     { id: "maxPrice", label: "最高販売価格" },
-    { id: "maxPriceInputMissAlarmFlg", label: "最高販売価格入力ミスアラーム設定フラグ" },    
+    { id: "maxPriceInputMissAlarmFlg", label: "最高販売価格入力ミスアラーム設定フラグ" },
     { id: "minLOS", label: "最低宿泊日数" },
     { id: "minPrice", label: "最低販売価格" },
     { id: "minPriceInputMissAlarmFlg", label: "最低販売価格入力ミスアラーム設定フラグ" },
@@ -81,7 +81,7 @@ const sc_fieldLabels = ref([
     { id: "priceRange8", label: "料金帯8料金" },
     { id: "priceRange9", label: "料金帯9料金" },
     { id: "priceRange10", label: "料金帯10料金" },
-    { id: "priceRangeCount1", label: "料金帯1人数" },    
+    { id: "priceRangeCount1", label: "料金帯1人数" },
     { id: "priceRangeCount2", label: "料金帯2人数" },
     { id: "priceRangeCount3", label: "料金帯3人数" },
     { id: "priceRangeCount4", label: "料金帯4人数" },
@@ -91,7 +91,7 @@ const sc_fieldLabels = ref([
     { id: "priceRangeCount8", label: "料金帯8人数" },
     { id: "priceRangeCount9", label: "料金帯9人数" },
     { id: "priceRangeCount10", label: "料金帯10人数" },
-    { id: "priceRangeName1", label: "料金帯1名称" },    
+    { id: "priceRangeName1", label: "料金帯1名称" },
     { id: "priceRangeName2", label: "料金帯2名称" },
     { id: "priceRangeName3", label: "料金帯3名称" },
     { id: "priceRangeName4", label: "料金帯4名称" },
@@ -123,7 +123,7 @@ const tlRoomMaster = ref(null);
 const tlPlanMaster = ref(null);
 
 export function useXMLStore() {
-        
+
     const fetchServiceName = (name) => {
         const service = sc_serviceLabels.value.find(item => item.id === name);
         return service ? service.label : name;
@@ -133,15 +133,15 @@ export function useXMLStore() {
         return service ? service.label : name;
     };
     // XML
-    const fetchXMLTemplate = async(hotel_id, name) => {
+    const fetchXMLTemplate = async (hotel_id, name) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/xml/template/${hotel_id}/${name}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,                    
-                },                
+                    'Authorization': `Bearer ${authToken}`,
+                },
             });
 
             if (!response.ok) {
@@ -149,25 +149,25 @@ export function useXMLStore() {
                 console.error('API Error in fetchXMLTemplate:', response.status, response.statusText, errorText);
                 throw new Error(`Failed to retrieve XML template: ${errorText}`);
             }
-            
+
             const data = await response.text();
             template.value = data;
-            
+
         } catch (error) {
             template.value = null;
             console.error('Failed to retrieve data.', error);
             throw error;
         }
     };
-    const fetchXMLRecentResponses = async() => {
+    const fetchXMLRecentResponses = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/xml/responses/recent`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,                    
-                },                
+                    'Authorization': `Bearer ${authToken}`,
+                },
             });
 
             if (!response.ok) {
@@ -175,17 +175,17 @@ export function useXMLStore() {
                 console.error('API Error in fetchXMLRecentResponses:', response.status, response.statusText, errorData);
                 throw new Error(`Failed to retrieve recent XML responses: ${errorData.message || JSON.stringify(errorData)}`);
             }
-            
+
             const data = await response.json();
             responses.value = data;
-            
+
         } catch (error) {
             responses.value = [];
             console.error('Failed to retrieve data.', error);
             throw error;
         }
     };
-    const insertXMLResponse = async(hotel_id, name, xml) => {
+    const insertXMLResponse = async (hotel_id, name, xml) => {
         // console.log('insertXMLResponse', name, xml);
         try {
             const authToken = localStorage.getItem('authToken');
@@ -208,7 +208,7 @@ export function useXMLStore() {
             const responseData = await response.json(); // Parse the JSON response from postXMLResponse
             // console.log('XML response saved successfully', responseData);
             return responseData;
-            
+
         } catch (error) {
             console.error('Failed to send data.', error);
             throw error;
@@ -216,15 +216,15 @@ export function useXMLStore() {
     };
 
     // Site Controller
-    const fetchTLRoomMaster = async(hotel_id) => {
+    const fetchTLRoomMaster = async (hotel_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/sc/tl/${hotel_id}/master/room`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,                    
-                },                
+                    'Authorization': `Bearer ${authToken}`,
+                },
             });
 
             if (!response.ok) {
@@ -232,10 +232,10 @@ export function useXMLStore() {
                 console.error('API Error in fetchTLRoomMaster:', response.status, response.statusText, errorData);
                 throw new Error(`Failed to retrieve TL Room Master: ${errorData.message || JSON.stringify(errorData)}`);
             }
-            
+
             const data = await response.json();
             tlRoomMaster.value = data;
-            
+
         } catch (error) {
             tlRoomMaster.value = null;
             console.error('Failed to retrieve data.', error);
@@ -254,13 +254,13 @@ export function useXMLStore() {
                 },
                 body: JSON.stringify(roomData),
             });
-        
+
             if (!response.ok) {
                 const errorData = await response.json(); // Assuming error responses are JSON
                 console.error('API Error in insertTLRoomMaster:', response.status, response.statusText, errorData);
                 throw new Error(`Failed to create room master: ${errorData.message || JSON.stringify(errorData)}`);
             }
-        
+
             const data = await response.json();
             return data;
         } catch (error) {
@@ -268,15 +268,15 @@ export function useXMLStore() {
             throw error; // Re-throw the error for handling in the component
         }
     };
-    const fetchTLPlanMaster = async(hotel_id) => {
+    const fetchTLPlanMaster = async (hotel_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/sc/tl/${hotel_id}/master/plan`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,                    
-                },                
+                    'Authorization': `Bearer ${authToken}`,
+                },
             });
 
             if (!response.ok) {
@@ -284,10 +284,10 @@ export function useXMLStore() {
                 console.error('API Error in fetchTLPlanMaster:', response.status, response.statusText, errorData);
                 throw new Error(`Failed to retrieve TL Plan Master: ${errorData.message || JSON.stringify(errorData)}`);
             }
-            
+
             const data = await response.json();
             tlPlanMaster.value = data;
-            
+
         } catch (error) {
             tlPlanMaster.value = null;
             console.error('Failed to retrieve data.', error);
@@ -306,13 +306,13 @@ export function useXMLStore() {
                 },
                 body: JSON.stringify(planData),
             });
-        
+
             if (!response.ok) {
                 const errorData = await response.json(); // Assuming error responses are JSON
                 console.error('API Error in insertTLPlanMaster:', response.status, response.statusText, errorData);
                 throw new Error(`Failed to create plan master: ${errorData.message || JSON.stringify(errorData)}`);
             }
-        
+
             const data = await response.json();
             return data;
         } catch (error) {
@@ -323,11 +323,11 @@ export function useXMLStore() {
     const fetchInventoryForTL = async (hotel_id, check_in, check_out) => {
 
         try {
-            const authToken = localStorage.getItem('authToken');    
+            const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/report/res/inventory-all/${hotel_id}/${check_in}/${check_out}`, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`, 
+                    'Authorization': `Bearer ${authToken}`,
                 }
             });
             if (!response.ok) {
@@ -336,19 +336,19 @@ export function useXMLStore() {
                 throw new Error(`Failed to retrieve inventory for TL: ${errorData.message || JSON.stringify(errorData)}`);
             }
             const data = await response.json();
-            
+
             return data;
         } catch (error) {
             console.error('Failed to retrieve data.', error);
             throw error;
-        }        
+        }
     };
     const updateTLInventory = async (hotel_id, inventory) => {
-        
+
         const logId = Math.floor(Math.random() * 1e8);
-        
+
         try {
-            const authToken = localStorage.getItem('authToken');  
+            const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/sc/tl/inventory-manual/multiple/${hotel_id}/${logId}`, {
                 method: 'POST',
                 headers: {
@@ -363,19 +363,22 @@ export function useXMLStore() {
                 throw new Error(`Failed to send data: ${errorText}`);
             }
             const data = await response.json();
-            
+
             return data;
-            
+
         } catch (error) {
-          console.error(`Failed to update site controller for hotel ${hotel_id}:`, error);          
-          throw error;
+            console.error(`Failed to update site controller for hotel ${hotel_id}:`, error);
+            throw error;
         }
     };
 
-    const fetchOtaQueue = async () => {
+    const fetchOtaQueue = async (search = null) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = '/api/ota-queue';
+            let url = '/api/ota-queue';
+            if (search) {
+                url += `?search=${encodeURIComponent(search)}`;
+            }
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -491,7 +494,7 @@ export function useXMLStore() {
         }
     };
 
-    return {        
+    return {
         template,
         responses,
         otaQueue,
@@ -503,7 +506,7 @@ export function useXMLStore() {
         fetchFieldName,
         fetchXMLTemplate,
         fetchXMLRecentResponses,
-        insertXMLResponse,      
+        insertXMLResponse,
         fetchTLRoomMaster,
         insertTLRoomMaster,
         fetchTLPlanMaster,
