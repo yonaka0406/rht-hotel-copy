@@ -90,7 +90,7 @@
                                     <td class="py-4 px-6">
                                         <div class="flex flex-col">
                                             <span class="font-bold text-slate-700 dark:text-slate-200">{{ item.name
-                                                }}</span>
+                                            }}</span>
                                             <span class="text-[10px] text-slate-400 font-medium">{{ item.code }}</span>
                                         </div>
                                     </td>
@@ -145,7 +145,7 @@
                             <h3 class="font-bold text-slate-700 dark:text-slate-200">{{ account.name }}</h3>
                             <span
                                 class="text-[10px] py-0.5 px-2 bg-slate-100 dark:bg-slate-700 rounded text-slate-500">{{
-                                account.code }}</span>
+                                    account.code }}</span>
                         </div>
                         <div class="h-[300px]">
                             <v-chart class="h-full w-full" :option="getScatterOption(account)" autoresize />
@@ -224,13 +224,13 @@ const hotelOptions = computed(() => {
     return options;
 });
 
-const topAccounts = computed(() => rawData.value.topAccounts);
+const topAccounts = computed(() => rawData.value?.topAccounts || []);
 
 /**
  * Perform frontend aggregation of cost data based on selected hotel
  */
 const analyticsSummary = computed(() => {
-    if (!rawData.value.timeSeries.length) return [];
+    if (!topAccounts.value?.length || !rawData.value?.timeSeries?.length) return [];
 
     const now = new Date();
     const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 12, 1);
@@ -417,8 +417,10 @@ const loadData = async () => {
     try {
         loading.value = true;
         const response = await accountingStore.fetchCostBreakdown({ topN: topN.value });
-        if (response?.success) {
+        if (response?.success && response.data) {
             rawData.value = response.data;
+        } else {
+            rawData.value = { topAccounts: [], timeSeries: [] };
         }
     } catch (e) {
         console.error('Failed to load cost breakdown data', e);
