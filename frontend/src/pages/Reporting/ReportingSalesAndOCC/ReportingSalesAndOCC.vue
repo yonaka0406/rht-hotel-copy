@@ -426,13 +426,11 @@ const fetchData = async () => {
 
                         for (const [, data] of Object.entries(hotelDataMap)) {
                             if (Array.isArray(data.occupation)) {
-                                let hotelBookable = 0;
                                 let hotelNetAvailable = 0;
 
                                 data.occupation.forEach(row => {
                                     // Capture hotel capacity once per hotel (it's repeated on every row)
-                                    if (hotelBookable === 0 && row.total_bookable_room_nights) {
-                                        hotelBookable = Number(row.total_bookable_room_nights) || 0;
+                                    if (row.total_bookable_room_nights) {
                                         hotelNetAvailable = Number(row.net_available_room_nights) || 0;
                                     }
 

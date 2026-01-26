@@ -184,6 +184,7 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     }
 
                     if (writeFormulas) {
+                        // Divide by 10,000 to convert from yen to 10,000-yen units (万円)
                         row.cell(15).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
                         row.cell(16).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
                         row.cell(17).formula(`E${currentRow}/10000`).style("numberFormat", "#,##0");
@@ -201,7 +202,9 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     row.cell(10).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
                     row.cell(11).value(item.actualOcc / 100).style("numberFormat", "0.0%");
                     row.cell(12).value(item.occVariance / 100).style("numberFormat", "0.0%");
-                    row.cell(13).value(item.actualOccWithProvisory / 100).style("numberFormat", "0.0%");
+                    if (item.actualOccWithProvisory !== item.actualOcc) {
+                        row.cell(13).value(item.actualOccWithProvisory / 100).style("numberFormat", "0.0%");
+                    }
                 });
 
                 return hotelMetrics.length;
@@ -286,8 +289,10 @@ const getDailyTemplatePdf = async (req, res) => {
             }
         }
 
-        // Sanitize: ensure valid types and filter out nulls/undefined
-        hotelIds = hotelIds.filter(id => id !== null && id !== undefined);
+        // Sanitize: ensure valid types (numbers or numeric strings) and normalize to numbers
+        hotelIds = hotelIds
+            .filter(id => (typeof id === 'number' && Number.isFinite(id)) || (typeof id === 'string' && /^\d+$/.test(id)))
+            .map(id => Number(id));
 
         // Fetch fresh, full data using the backend service to ensure multi-month data for sheets like '合計データ2'
         dbClient = await getPool(requestId).connect();
