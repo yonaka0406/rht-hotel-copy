@@ -37,6 +37,8 @@ router.post('/accounting/export/download', authMiddleware_accounting, accounting
 // Profit & Loss
 router.post('/accounting/profit-loss', authMiddleware_accounting, accountingController.getProfitLoss);
 router.post('/accounting/profit-loss/detailed', authMiddleware_accounting, accountingController.getProfitLossDetailed);
+router.post('/accounting/profit-loss/summary', authMiddleware_accounting, accountingController.getProfitLossSummary);
+router.get('/accounting/profit-loss/months', authMiddleware_accounting, accountingController.getAvailableMonths);
 router.get('/accounting/profit-loss/departments', authMiddleware_accounting, accountingController.getAvailableDepartments);
 
 // Analytics
