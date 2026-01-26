@@ -7,7 +7,7 @@ WITH roomTotal AS (
         room_type_id,
         COUNT(*) as total_rooms
     FROM rooms
-    WHERE for_sale = true
+    WHERE for_sale = true AND is_staff_room = false
     GROUP BY hotel_id, room_type_id
 )
 SELECT
@@ -24,7 +24,7 @@ FROM
     JOIN room_types rt ON rt.hotel_id = r.hotel_id AND rt.id = r.room_type_id
 	LEFT JOIN (SELECT DISTINCT hotel_id, room_type_id, netrmtypegroupcode FROM sc_tl_rooms) sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
     JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
-WHERE rd.cancelled IS NULL AND r.for_sale = true
+WHERE rd.cancelled IS NULL AND r.for_sale = true AND r.is_staff_room = false
 GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
 
 CREATE OR REPLACE VIEW vw_booking_for_google AS

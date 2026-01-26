@@ -94,6 +94,7 @@ const getBlockedRooms = async (req, res) => {
 
 const editBlockedRooms = async (req, res) => {
   const { id: blockId } = req.params;
+  const { hotelId } = req.body;
   const user_id = req.user?.id;
 
   if (!blockId) {
@@ -105,8 +106,16 @@ const editBlockedRooms = async (req, res) => {
     });
   }
 
+  if (!hotelId) {
+    logger.error('No hotel ID provided in body');
+    return res.status(400).json({
+      success: false,
+      message: 'Hotel ID is required'
+    });
+  }
+
   try {
-    const unblock = await hotelModel.deleteBlockedRooms(req.requestId, blockId, user_id);
+    const unblock = await hotelModel.deleteBlockedRooms(req.requestId, blockId, hotelId, user_id);
 
     if (!unblock) {
       logger.warn('Blocked room not found for ID:', blockId);

@@ -76,16 +76,16 @@ node api/adhoc_scripts/ota_stock/test_enhanced_monitoring.js
 node api/adhoc_scripts/ota_stock/test_auto_remediation.js
 ```
 
-### 7. `test_email_error_handling.js`
-**Purpose**: Tests defensive email alert error handling
-- Validates error case handling without crashes
-- Tests null/undefined data object handling
-- Confirms all alert levels (INFO, WARNING, CRITICAL, ERROR)
-- Used for: Email system robustness validation
+### 7. `test_phantom_delete_detection.js`
+**Purpose**: Tests phantom delete detection in OTA investigation timeline
+- Validates CASCADE DELETE detection for reservation_details without explicit logs
+- Tests timeline calculation accuracy with phantom deletes
+- Confirms room count calculations match current state
+- Used for: Phantom delete handling validation
 
 **Usage**:
 ```bash
-node api/adhoc_scripts/ota_stock/test_email_error_handling.js
+node api/adhoc_scripts/ota_stock/test_phantom_delete_detection.js
 ```
 
 ## Validation Workflow
@@ -124,6 +124,9 @@ node api/adhoc_scripts/ota_stock/test_safe_overlap_config.js
 
 # 4. Email error handling validation
 node api/adhoc_scripts/ota_stock/test_email_error_handling.js
+
+# 5. Phantom delete detection validation
+node api/adhoc_scripts/ota_stock/test_phantom_delete_detection.js
 ```
 
 ## Script Dependencies

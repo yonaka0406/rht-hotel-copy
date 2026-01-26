@@ -16,15 +16,17 @@ async function getCurrentStateSnapshot(requestId, hotelId, date) {
         const roomsQuery = `
             SELECT COUNT(*) as total_rooms
             FROM rooms 
-            WHERE hotel_id = $1 AND for_sale = true
+            WHERE hotel_id = $1 AND for_sale = true AND is_staff_room = false
         `;
         const roomsResult = await client.query(roomsQuery, [hotelId]);
 
         // Get occupied rooms from reservation_details for the specific date (only non-cancelled)
         const occupiedRoomsQuery = `
-            SELECT COUNT(DISTINCT room_id) as occupied_rooms
-            FROM reservation_details 
-            WHERE hotel_id = $1 AND date = $2 AND cancelled IS NULL
+            SELECT COUNT(DISTINCT rd.room_id) as occupied_rooms
+            FROM reservation_details rd
+            JOIN rooms r ON rd.room_id = r.id AND rd.hotel_id = r.hotel_id
+            WHERE rd.hotel_id = $1 AND rd.date = $2 AND rd.cancelled IS NULL
+            AND r.for_sale = true AND r.is_staff_room = false
         `;
         const occupiedRoomsResult = await client.query(occupiedRoomsQuery, [hotelId, date]);
 
@@ -166,6 +168,10 @@ async function getReservationLifecycle(requestId, hotelId, date) {
                     'Unknown Client'
                 ) as guest_name,
                 prs.parent_was_deleted,
+                r_last.for_sale as last_for_sale,
+                r_last.is_staff_room as last_is_staff_room,
+                r_first.for_sale as first_for_sale,
+                r_first.is_staff_room as first_is_staff_room,
                 CASE 
                     -- First check if it was explicitly deleted
                     WHEN lli.last_action = 'DELETE' THEN 'deleted'
@@ -207,7 +213,7 @@ async function getPMSEvents(requestId, hotelId, date) {
     try {
         const events = [];
 
-        // Get reservation_details logs for INSERT, DELETE, and UPDATE operations on the target date
+        // 1. Get reservation_details logs for INSERT, DELETE, and UPDATE operations on the target date
         const reservationDetailsLogsQuery = `
             SELECT 
                 allLogs.*,
@@ -216,7 +222,9 @@ async function getPMSEvents(requestId, hotelId, date) {
                     c.name_kana, 
                     c.name
                 ) as guest_name,
-                r.room_number as room_number
+                r.room_number as room_number,
+                r.for_sale,
+                r.is_staff_room
             FROM (
                 SELECT 
                     CASE
@@ -249,7 +257,7 @@ async function getPMSEvents(requestId, hotelId, date) {
                     'reservation_detail' as event_type
                 FROM logs_reservation lr
                 WHERE 
-                    lr.table_name LIKE 'reservation_details%'
+                    lr.table_name = $3
                     AND (
                         -- Include all INSERT and DELETE operations
                         lr.action IN ('INSERT', 'DELETE')
@@ -277,21 +285,133 @@ async function getPMSEvents(requestId, hotelId, date) {
             ORDER BY allLogs.log_time DESC
         `;
 
-        const logsResult = await client.query(reservationDetailsLogsQuery, [hotelId, date]);
+        const detailsTableName = `reservation_details_${hotelId}`;
+        const reservationsTableName = `reservations_${hotelId}`;
+        const logsResult = await client.query(reservationDetailsLogsQuery, [hotelId, date, detailsTableName]);
 
-        // Transform the results to match our expected format
-        events.push(...logsResult.rows.map(row => ({
-            id: row.record_id,
-            event_type: row.event_type,
-            action: row.action,
-            timestamp: row.log_time,
-            date: row.date,
-            room_id: row.room_id,
-            room_number: row.room_number,
-            cancelled: row.cancelled_new,
-            cancelled_old: row.cancelled_old,
-            guest_name: row.guest_name || 'Unknown Client'
-        })));
+        // Transform results and track unique detail record IDs to avoid duplicates with cascades
+        const detailRecordIdsInLogs = new Set();
+        logsResult.rows.forEach(row => {
+            detailRecordIdsInLogs.add(row.record_id);
+            events.push({
+                id: row.record_id,
+                event_type: row.event_type,
+                action: row.action,
+                timestamp: row.log_time,
+                date: row.date,
+                room_id: row.room_id,
+                room_number: row.room_number,
+                for_sale: row.for_sale,
+                is_staff_room: row.is_staff_room,
+                cancelled: row.cancelled_new,
+                cancelled_old: row.cancelled_old,
+                guest_name: row.guest_name || 'Unknown Client'
+            });
+        });
+
+        // 2. Identify CASCADE DELETIONS: Get reservation table deletions and check for affected records
+        const reservationDeletionsQuery = `
+            SELECT 
+                record_id::uuid as reservation_id,
+                log_time,
+                changes->>'client_name' as client_name,
+                changes->>'id' as deleted_reservation_id
+            FROM logs_reservation
+            WHERE table_name = $1 AND action = 'DELETE'
+        `;
+        const resDeletionsResult = await client.query(reservationDeletionsQuery, [reservationsTableName]);
+
+        if (resDeletionsResult.rows.length > 0) {
+            const deletedResIds = resDeletionsResult.rows.map(r => r.reservation_id);
+            const resDeletionTimeMap = new Map(resDeletionsResult.rows.map(r => [r.reservation_id.toString(), r.log_time]));
+
+            // Find all reservation_details records that:
+            // 1. Belong to deleted reservations
+            // 2. Affect the target date
+            // 3. Don't have explicit DELETE logs (phantom deletes)
+            const phantomDeleteQuery = `
+                WITH deleted_reservation_details AS (
+                    -- Find all reservation_details records for deleted reservations that affect target date
+                    SELECT DISTINCT
+                        lr.record_id,
+                        (lr.changes->>'reservation_id')::uuid as reservation_id,
+                        lr.changes->>'room_id' as room_id,
+                        lr.changes->>'date' as log_date,
+                        lr.log_time as insert_time,
+                        lr.changes->>'cancelled' as cancelled
+                    FROM logs_reservation lr
+                    WHERE lr.table_name = $1
+                    AND lr.action = 'INSERT'
+                    AND (lr.changes->>'date')::date = $3
+                    AND (lr.changes->>'reservation_id')::uuid = ANY($2::uuid[])
+                ),
+                explicit_deletes AS (
+                    -- Find records that have explicit DELETE logs
+                    SELECT DISTINCT lr.record_id
+                    FROM logs_reservation lr
+                    WHERE lr.table_name = $1
+                    AND lr.action = 'DELETE'
+                    AND (lr.changes->>'date')::date = $3
+                )
+                SELECT 
+                    drd.record_id,
+                    drd.reservation_id,
+                    drd.room_id,
+                    drd.cancelled,
+                    drd.insert_time
+                FROM deleted_reservation_details drd
+                LEFT JOIN explicit_deletes ed ON drd.record_id = ed.record_id
+                WHERE ed.record_id IS NULL  -- Only records without explicit DELETE logs
+                AND (drd.cancelled IS NULL OR drd.cancelled = '' OR drd.cancelled = 'null')  -- Only active records
+            `;
+
+            const phantomDeletesResult = await client.query(phantomDeleteQuery, [detailsTableName, deletedResIds, date]);
+
+            // Create phantom DELETE events for records that were CASCADE deleted
+            phantomDeletesResult.rows.forEach(record => {
+                const parentDeletionTime = resDeletionTimeMap.get(record.reservation_id.toString());
+                const parentDeletion = resDeletionsResult.rows.find(r => r.reservation_id.toString() === record.reservation_id.toString());
+                const clientName = parentDeletion?.client_name || 'Unknown (Phantom Delete)';
+
+                events.push({
+                    id: record.record_id,
+                    reservation_id: record.reservation_id.toString(),
+                    event_type: 'reservation_detail',
+                    action: 'DELETE',
+                    is_cascade: true,
+                    is_phantom_delete: true,
+                    timestamp: parentDeletionTime,
+                    date: date,
+                    room_id: record.room_id ? parseInt(record.room_id) : null,
+                    guest_name: clientName,
+                    note: 'Phantom delete: CASCADE deletion from parent reservation without individual log'
+                });
+            });
+
+            // Enrich phantom delete events with room info
+            const phantomEvents = events.filter(e => e.is_phantom_delete);
+            if (phantomEvents.length > 0) {
+                const roomIds = [...new Set(phantomEvents.map(e => e.room_id).filter(id => id !== null))];
+                if (roomIds.length > 0) {
+                    const roomsDetailQuery = `SELECT id, room_number, for_sale, is_staff_room FROM rooms WHERE hotel_id = $1 AND id = ANY($2::int[])`;
+                    const roomsResult = await client.query(roomsDetailQuery, [hotelId, roomIds]);
+                    const roomLookup = new Map(roomsResult.rows.map(r => [r.id, r]));
+
+                    phantomEvents.forEach(e => {
+                        const room = roomLookup.get(e.room_id);
+                        if (room) {
+                            e.room_number = room.room_number;
+                            e.for_sale = room.for_sale;
+                            e.is_staff_room = room.is_staff_room;
+                        }
+                    });
+                }
+            }
+        }
+
+        // Sort events by timestamp to ensure proper chronological order
+        // This is important because phantom delete events are added after regular events
+        events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         return events;
 
@@ -419,22 +539,31 @@ function mergeTimeline(pmsEvents, otaEvents) {
         if (event.event_type === 'reservation_detail') {
             if (event.action === 'INSERT') {
                 // When a reservation_detail is inserted (room becomes occupied)
-                if (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null') {
+                // Only count if it's a saleable room and NOT a staff room
+                if ((event.cancelled === null || event.cancelled === '' || event.cancelled === 'null') &&
+                    event.for_sale === true && event.is_staff_room === false) {
                     event.room_count_change = -1; // Room becomes unavailable
                 } else {
-                    event.room_count_change = 0; // Cancelled reservation doesn't affect availability
+                    event.room_count_change = 0; // Cancelled, staff, or not for sale doesn't affect availability
                 }
 
                 // Track this record for future DELETE operations
                 recordMap.set(event.id, {
                     guest_name: event.guest_name,
                     room_number: event.room_number,
+                    for_sale: event.for_sale,
+                    is_staff_room: event.is_staff_room,
                     insert_timestamp: event.timestamp
                 });
 
             } else if (event.action === 'DELETE') {
                 // When a reservation_detail is deleted (room becomes available)
-                event.room_count_change = 1; // Room becomes available
+                // Only count if it's a saleable room and NOT a staff room
+                if (event.for_sale === true && event.is_staff_room === false) {
+                    event.room_count_change = 1; // Room becomes available
+                } else {
+                    event.room_count_change = 0;
+                }
 
                 // Check if we have the original INSERT for this record
                 const originalRecord = recordMap.get(event.id);
@@ -442,6 +571,10 @@ function mergeTimeline(pmsEvents, otaEvents) {
                     event.original_guest_name = originalRecord.guest_name;
                     event.original_insert_timestamp = originalRecord.insert_timestamp;
                     event.is_related_to_insert = true;
+
+                    // Use flags from original record if not present in delete event
+                    if (event.for_sale === undefined) event.for_sale = originalRecord.for_sale;
+                    if (event.is_staff_room === undefined) event.is_staff_room = originalRecord.is_staff_room;
                 } else {
                     event.is_related_to_insert = false;
                 }
@@ -451,14 +584,18 @@ function mergeTimeline(pmsEvents, otaEvents) {
                 const wasActive = (event.cancelled_old === null || event.cancelled_old === '' || event.cancelled_old === 'null');
                 const isActive = (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null');
 
-                if (wasActive && !isActive) {
-                    // Room was occupied, now cancelled (room becomes available)
-                    event.room_count_change = 1;
-                } else if (!wasActive && isActive) {
-                    // Room was cancelled, now active (room becomes occupied)
-                    event.room_count_change = -1;
+                if (event.for_sale === true && event.is_staff_room === false) {
+                    if (wasActive && !isActive) {
+                        // Room was occupied, now cancelled (room becomes available)
+                        event.room_count_change = 1;
+                    } else if (!wasActive && isActive) {
+                        // Room was cancelled, now active (room becomes occupied)
+                        event.room_count_change = -1;
+                    } else {
+                        // No change in availability status
+                        event.room_count_change = 0;
+                    }
                 } else {
-                    // No change in availability status
                     event.room_count_change = 0;
                 }
             }
@@ -533,7 +670,10 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
         // Count by final status from lifecycle analysis
         reservationLifecycle.forEach(record => {
             if (record.final_status === 'active') {
-                operationStats.totalActive++;
+                // Only count if it's a saleable room and NOT a staff room
+                if (record.last_for_sale === true && record.last_is_staff_room === false) {
+                    operationStats.totalActive++;
+                }
             } else if (record.final_status === 'cancelled') {
                 operationStats.totalCancelled++;
             } else if (record.final_status === 'deleted') {
@@ -574,26 +714,31 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
                 if (event.action === 'INSERT') {
                     operationStats.totalInserts++;
                     // Only count as room change if not cancelled at insertion
-                    if (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null') {
+                    if ((event.cancelled === null || event.cancelled === '' || event.cancelled === 'null') &&
+                        event.for_sale === true && event.is_staff_room === false) {
                         operationStats.netRoomChange -= 1;
                     }
                 } else if (event.action === 'DELETE') {
                     operationStats.totalDeletes++;
-                    operationStats.netRoomChange += 1;
+                    if (event.for_sale === true && event.is_staff_room === false) {
+                        operationStats.netRoomChange += 1;
+                    }
                 } else if (event.action === 'UPDATE') {
                     operationStats.totalUpdates++;
 
                     const wasActive = (event.cancelled_old === null || event.cancelled_old === '' || event.cancelled_old === 'null');
                     const isActive = (event.cancelled === null || event.cancelled === '' || event.cancelled === 'null');
 
-                    if (wasActive && !isActive) {
-                        // Room was occupied, now cancelled (room becomes available)
-                        operationStats.updatesActiveToCancelled++;
-                        operationStats.netRoomChange += 1;
-                    } else if (!wasActive && isActive) {
-                        // Room was cancelled, now active (room becomes occupied)
-                        operationStats.updatesCancelledToActive++;
-                        operationStats.netRoomChange -= 1;
+                    if (event.for_sale === true && event.is_staff_room === false) {
+                        if (wasActive && !isActive) {
+                            // Room was occupied, now cancelled (room becomes available)
+                            operationStats.updatesActiveToCancelled++;
+                            operationStats.netRoomChange += 1;
+                        } else if (!wasActive && isActive) {
+                            // Room was cancelled, now active (room becomes occupied)
+                            operationStats.updatesCancelledToActive++;
+                            operationStats.netRoomChange -= 1;
+                        }
                     }
                 }
             }
@@ -619,6 +764,9 @@ function generateSummary(pmsEvents, otaEvents, timeline, reservationLifecycle = 
             });
         }
     });
+
+    // Sort gaps by timestamp to ensure chronological order (newest first for display)
+    gaps.sort((a, b) => new Date(b.pmsEvent.timestamp) - new Date(a.pmsEvent.timestamp));
 
     return {
         totalPMSEvents: pmsEventCount,
