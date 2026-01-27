@@ -9,12 +9,14 @@ const updateParkingReservationCancelledStatus = async (requestId, reservationId 
     let values = [];
     let whereClause = '';
 
+    const liveDetailsOnly = status === 'recovered' ? ' AND cancelled IS NULL' : '';
+
     if (reservationId) {
       // If reservationId is provided, update all parking reservations associated with that main reservation
       values = [updatedBy, reservationId, hotelId];
       whereClause = `
         WHERE reservation_details_id IN (
-          SELECT id FROM reservation_details WHERE reservation_id = $2::UUID AND hotel_id = $3
+          SELECT id FROM reservation_details WHERE reservation_id = $2::UUID AND hotel_id = $3${liveDetailsOnly}
         ) AND hotel_id = $3
       `;
       logger.debug(`[updateParkingReservationCancelledStatus] Updating parking for all details of reservation_id: ${reservationId}`);
@@ -23,6 +25,7 @@ const updateParkingReservationCancelledStatus = async (requestId, reservationId 
       values = [updatedBy, reservationDetailsId, hotelId];
       whereClause = `
         WHERE reservation_details_id = $2::UUID AND hotel_id = $3
+        ${status === 'recovered' ? 'AND EXISTS (SELECT 1 FROM reservation_details WHERE id = $2::UUID AND hotel_id = $3 AND cancelled IS NULL)' : ''}
       `;
       logger.debug(`[updateParkingReservationCancelledStatus] Updating parking for reservation_details_id: ${reservationDetailsId}`);
     }
