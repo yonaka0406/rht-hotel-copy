@@ -48,12 +48,23 @@ const updateParkingReservationCancelledStatus = async (requestId, reservationId 
         ${whereClause};
       `;
     } else {
-      logger.warn(`[updateParkingReservationCancelledStatus] Invalid status '${status}' for parking update for reservation_details_id: ${reservationDetailsId}. No action taken.`);
+      logger.warn(`[updateParkingReservationCancelledStatus] Invalid status '${status}' for parking update. reservation_id: ${reservationId || 'N/A'}, reservation_details_id: ${reservationDetailsId || 'N/A'}. No action taken.`);
       return; // No action needed for other statuses
     }
 
-    if (query) {
-      await client.query(query, values);
+    try {
+      if (query) {
+        await client.query(query, values);
+      }
+    } catch (err) {
+      logger.error(`[updateParkingReservationCancelledStatus] Error updating reservation parking: ${err.message}`, {
+        requestId,
+        status,
+        reservationId: reservationId || 'N/A',
+        reservationDetailsId: reservationDetailsId || 'N/A',
+        error: err.stack
+      });
+      throw err;
     }
   } finally {
     if (!dbClient) {

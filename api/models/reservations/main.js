@@ -609,7 +609,12 @@ const updateReservationStatus = async (requestId, reservationData) => {
       'SELECT status FROM reservations WHERE id = $1::UUID AND hotel_id = $2',
       [id, hotel_id]
     );
-    const oldStatus = currentStatusResult.rows[0]?.status;
+
+    if (currentStatusResult.rows.length === 0) {
+      throw new Error(`Reservation not found for id: ${id}, hotel_id: ${hotel_id}`);
+    }
+
+    const oldStatus = currentStatusResult.rows[0].status;
 
     // 1. Update the status of the main reservation record
     const updateReservationQuery = `
