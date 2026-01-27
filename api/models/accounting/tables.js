@@ -18,6 +18,7 @@ const getForecastTable = async (requestId, hotelId, startMonth, endMonth, dbClie
 
     try {
         const result = await client.query(query, [hotelId, startMonth, endMonth]);
+        logger.debug(`Forecast query for hotel ${hotelId} from ${startMonth} to ${endMonth} returned ${result.rows.length} rows`);
         return result.rows;
     } catch (err) {
         logger.error('Error fetching du_forecast data:', err);

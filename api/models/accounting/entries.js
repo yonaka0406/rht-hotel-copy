@@ -9,11 +9,11 @@ const pgFormat = require('pg-format');
  * @param {number} userId 
  */
 const upsertForecastEntries = async (requestId, entries, userId, dbClient = null) => {
+    if (!entries || entries.length === 0) return [];
+
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
-
-    if (!entries || entries.length === 0) return [];
 
     try {
         // 1. Resolve account_code_ids and sub_account_ids from names
@@ -43,18 +43,23 @@ const upsertForecastEntries = async (requestId, entries, userId, dbClient = null
                 subAccountId,
                 e.sub_account_name || null,
                 e.amount || 0,
-                userId
+                userId, // created_by
+                userId  // updated_by
             ];
         });
 
         const query = pgFormat(
-            `INSERT INTO du_forecast_entries (hotel_id, month, account_code_id, account_name, sub_account_id, sub_account_name, amount, created_by)
+            `INSERT INTO du_forecast_entries (
+                hotel_id, month, account_code_id, account_name, 
+                sub_account_id, sub_account_name, amount, created_by, updated_by
+             )
              VALUES %L
              ON CONFLICT (hotel_id, month, account_name, sub_account_name) DO UPDATE SET
                 account_code_id = EXCLUDED.account_code_id,
                 sub_account_id = EXCLUDED.sub_account_id,
                 amount = EXCLUDED.amount,
-                created_by = EXCLUDED.created_by
+                updated_by = EXCLUDED.updated_by,
+                updated_at = CURRENT_TIMESTAMP
              RETURNING *`,
             values
         );
@@ -78,14 +83,17 @@ const getEntries = async (requestId, type, hotelId, startMonth, endMonth, dbClie
     const shouldRelease = !dbClient;
 
     // Actuals entries table removed; return empty if type is accounting
-    if (type !== 'forecast') return [];
+    if (type !== 'forecast') {
+        if (shouldRelease) client.release();
+        return [];
+    }
 
     const query = `
         SELECT e.*, a.code as account_code, a.management_group_id
         FROM du_forecast_entries e
         LEFT JOIN acc_account_codes a ON e.account_name = a.name
         WHERE e.hotel_id = $1 AND e.month BETWEEN $2 AND $3
-        ORDER BY e.month, e.account_name, e.sub_account_name, e.sub_account_code
+        ORDER BY e.month, e.account_name, e.sub_account_name
     `;
 
     try {

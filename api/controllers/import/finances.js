@@ -13,6 +13,8 @@ const getFinancesData = async (req, res) => {
         return res.status(400).json({ error: 'Missing required parameters: hotelId, startMonth, endMonth' });
     }
 
+    logger.info(`Fetching finance grid data for hotelId: ${hotelId}, range: ${startMonth} to ${endMonth}`);
+
     try {
         const planModel = require('../../models/plan');
         const [forecast, accountCodes, forecastTable, actualsTable, typeCategories, packageCategories] = await Promise.all([
@@ -23,6 +25,25 @@ const getFinancesData = async (req, res) => {
             planModel.selectAllPlanTypeCategories(requestId),
             planModel.selectAllPlanPackageCategories(requestId)
         ]);
+
+        logger.debug(`Found ${forecast.length} forecast entries, ${forecastTable.length} forecast table records`);
+
+        // Log per-month counts for forecastTable
+        const countsByMonth = forecastTable.reduce((acc, row) => {
+            let m;
+            if (row.forecast_month instanceof Date) {
+                const d = row.forecast_month;
+                m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            } else {
+                m = String(row.forecast_month).slice(0, 7);
+            }
+            acc[m] = (acc[m] || 0) + 1;
+            return acc;
+        }, {});
+
+        Object.entries(countsByMonth).sort().forEach(([month, count]) => {
+            logger.debug(`Month ${month}: ${count} rows found in du_forecast`);
+        });
 
         res.json({
             forecast,
@@ -89,7 +110,7 @@ const syncFromYayoi = async (req, res) => {
 
     try {
         const pool = require('../../config/database').getPool(requestId);
-        
+
         const query = `
             SELECT 
                 amas.account_name,
@@ -102,7 +123,7 @@ const syncFromYayoi = async (req, res) => {
         `;
 
         const result = await pool.query(query, [hotelId, month]);
-        
+
         res.json({
             success: true,
             month,
@@ -129,7 +150,7 @@ const syncFromPMS = async (req, res) => {
 
     try {
         const pool = require('../../config/database').getPool(requestId);
-        
+
         const query = `
             WITH mapped_data AS (
                 SELECT 
@@ -165,7 +186,7 @@ const syncFromPMS = async (req, res) => {
         `;
 
         const result = await pool.query(query, [hotelId, month]);
-        
+
         res.json({
             success: true,
             month,

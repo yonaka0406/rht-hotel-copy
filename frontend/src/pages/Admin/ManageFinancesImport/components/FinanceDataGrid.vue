@@ -2,23 +2,25 @@
     <div class="finance-data-grid">
         <div class="flex justify-between items-center mb-4">
             <div class="flex items-center gap-3">
-                <Select v-model="selectedHotel" :options="hotels" optionLabel="name" placeholder="ホテルを選択" class="w-64" />
+                <Select v-model="selectedHotel" :options="hotels" optionLabel="name" placeholder="ホテルを選択"
+                    class="w-64" />
                 <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" placeholder="開始月を選択" />
                 <Button label="読み込み" icon="pi pi-refresh" @click="loadData" :loading="loading" />
             </div>
             <div class="flex gap-2">
-                <SelectButton v-model="viewFilter" :options="viewOptions" optionLabel="label" optionValue="value" class="mr-2" />
-                <Button 
-                    :label="hideZeroRows ? '全項目を表示' : '0以外の項目を表示'"
-                    :icon="hideZeroRows ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                    class="p-button-outlined p-button-secondary"
-                    @click="hideZeroRows = !hideZeroRows"
-                    :disabled="!gridData.length"
-                />
-                <Button label="貼り付け" icon="pi pi-clipboard" class="p-button-outlined" @click="openPasteDialog" :disabled="!gridData.length || (viewFilter === 'account' && type !== 'forecast')" />
-                <Button label="PMS同期" icon="pi pi-bolt" class="p-button-help" @click="onSyncPMS" :disabled="!selectedHotel || !selectedMonth" v-if="type === 'accounting'" />
-                <Button label="Yayoi同期" icon="pi pi-sync" class="p-button-secondary" @click="onSyncYayoi" :disabled="!selectedHotel || !selectedMonth" v-if="type === 'accounting'" />
-                <Button label="保存" icon="pi pi-save" class="p-button-success" @click="saveData" :loading="saving" :disabled="!hasChanges" />
+                <SelectButton v-model="viewFilter" :options="viewOptions" optionLabel="label" optionValue="value"
+                    class="mr-2" />
+                <Button :label="hideZeroRows ? '全項目を表示' : '0以外の項目を表示'"
+                    :icon="hideZeroRows ? 'pi pi-eye' : 'pi pi-eye-slash'" class="p-button-outlined p-button-secondary"
+                    @click="hideZeroRows = !hideZeroRows" :disabled="!gridData.length" />
+                <Button label="貼り付け" icon="pi pi-clipboard" class="p-button-outlined" @click="openPasteDialog"
+                    :disabled="!gridData.length || (viewFilter === 'account' && type !== 'forecast')" />
+                <Button label="PMS同期" icon="pi pi-bolt" class="p-button-help" @click="onSyncPMS"
+                    :disabled="!selectedHotel || !selectedMonth" v-if="type === 'accounting'" />
+                <Button label="Yayoi同期" icon="pi pi-sync" class="p-button-secondary" @click="onSyncYayoi"
+                    :disabled="!selectedHotel || !selectedMonth" v-if="type === 'accounting'" />
+                <Button label="保存" icon="pi pi-save" class="p-button-success" @click="saveData" :loading="saving"
+                    :disabled="!hasChanges" />
             </div>
         </div>
 
@@ -49,7 +51,8 @@
                 以下の項目はシステム内の名称と一致しませんでした。手動でマッピング先を選択してください。
             </p>
             <div class="space-y-4 max-h-96 overflow-y-auto p-1">
-                <div v-for="(item, index) in unmappedRows" :key="index" class="flex items-center gap-4 p-3 border rounded bg-gray-50">
+                <div v-for="(item, index) in unmappedRows" :key="index"
+                    class="flex items-center gap-4 p-3 border rounded bg-gray-50">
                     <div class="flex-1">
                         <small class="block text-gray-500 mb-1">Excel内の名称</small>
                         <span class="font-bold">{{ item.excelName }}</span>
@@ -57,14 +60,8 @@
                     <i class="pi pi-arrow-right text-gray-400"></i>
                     <div class="flex-1">
                         <small class="block text-gray-500 mb-1">マッピング先を選択</small>
-                        <Select 
-                            v-model="item.selectedAccount" 
-                            :options="availableAccounts" 
-                            optionLabel="name" 
-                            placeholder="項目を選択..." 
-                            class="w-full"
-                            filter
-                        />
+                        <Select v-model="item.selectedAccount" :options="availableAccounts" optionLabel="name"
+                            placeholder="項目を選択..." class="w-full" filter />
                     </div>
                 </div>
             </div>
@@ -73,20 +70,14 @@
                     <i class="pi pi-exclamation-triangle mr-1"></i> {{ duplicateWarning }}
                 </div>
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="showMappingDialog = false" />
-                <Button label="マッピングを適用" icon="pi pi-check" class="p-button-primary" @click="applyManualMapping" :disabled="!canApplyMapping" />
+                <Button label="マッピングを適用" icon="pi pi-check" class="p-button-primary" @click="applyManualMapping"
+                    :disabled="!canApplyMapping" />
             </template>
         </Dialog>
 
-        <DataTable 
-            :value="filteredGridData" 
-            editMode="cell" 
-            @cell-edit-complete="onCellEditComplete"
-            class="p-datatable-sm border rounded-lg overflow-hidden shadow-sm"
-            scrollable 
-            scrollHeight="600px"
-            rowGroupMode="subheader" 
-            groupRowsBy="management_group_name"
-        >
+        <DataTable :value="filteredGridData" editMode="cell" @cell-edit-complete="onCellEditComplete"
+            class="p-datatable-sm border rounded-lg overflow-hidden shadow-sm" scrollable scrollHeight="600px"
+            rowGroupMode="subheader" groupRowsBy="management_group_name">
             <template #groupheader="slotProps">
                 <td :colspan="months.length + 1" class="bg-gray-100 py-2 px-3 font-bold">
                     <span class="text-primary">{{ slotProps.data.management_group_name }}</span>
@@ -94,7 +85,7 @@
             </template>
 
             <Column field="account_name" header="名称" style="min-width: 250px"></Column>
-            
+
             <Column v-for="col in months" :key="col.value" :field="col.value" :header="col.label" class="text-right">
                 <template #body="{ data, field }">
                     {{ formatNumber(data[field]) }}
@@ -113,6 +104,7 @@ import { DataTable, Column, Select, DatePicker, Button, InputNumber, Message, Di
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useImportStore } from '@/composables/useImportStore';
 import { useToast } from 'primevue/usetoast';
+import { formatDate } from '@/utils/dateUtils';
 
 const props = defineProps({
     type: {
@@ -185,8 +177,8 @@ const availableAccounts = computed(() => {
         return gridData.value
             .filter(r => r.is_operational)
             .map(r => ({
-                id: r.row_key, 
-                name: r.is_global ? r.account_name : `${r.account_name} (${r.management_group_name})` 
+                id: r.row_key,
+                name: r.is_global ? r.account_name : `${r.account_name} (${r.management_group_name})`
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -195,11 +187,11 @@ const availableAccounts = computed(() => {
 const canApplyMapping = computed(() => {
     const selected = unmappedRows.value.filter(r => r.selectedAccount);
     if (selected.length === 0) return false;
-    
+
     // Check for duplicates
     const accountNames = selected.map(r => r.selectedAccount.name);
     const hasDuplicates = new Set(accountNames).size !== accountNames.length;
-    
+
     return !hasDuplicates;
 });
 
@@ -207,7 +199,7 @@ const duplicateWarning = computed(() => {
     const selected = unmappedRows.value.filter(r => r.selectedAccount);
     const accountNames = selected.map(r => r.selectedAccount.name);
     const duplicates = accountNames.filter((name, index) => accountNames.indexOf(name) !== index);
-    
+
     if (duplicates.length > 0) {
         return `警告: 「${duplicates[0]}」が重複して選択されています。1つのシステム科目に複数の行を割り当てることはできません。`;
     }
@@ -226,10 +218,10 @@ const months = computed(() => {
     if (!selectedMonth.value) return [];
     const result = [];
     const date = new Date(selectedMonth.value);
-    
+
     for (let i = 0; i < 12; i++) {
         const d = new Date(date.getFullYear(), date.getMonth() + i, 1);
-        const value = d.toISOString().slice(0, 10);
+        const value = formatDate(d);
         result.push({
             value,
             label: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`,
@@ -240,21 +232,21 @@ const months = computed(() => {
 });
 
 const loadData = async () => {
-    if (!selectedHotel.value || !selectedMonth.value) return; 
-    
+    if (!selectedHotel.value || !selectedMonth.value) return;
+
     loading.value = true;
     try {
         const start = months.value[0].value;
         const end = months.value[11].value;
         const response = await importStore.getFinancesData(selectedHotel.value.id, start, end);
-        
+
         accountCodes.value = response.accountCodes;
         const entries = props.type === 'forecast' ? response.forecast : [];
         const tableRecords = props.type === 'forecast' ? response.forecastTable : response.actualsTable;
         const { typeCategories, packageCategories } = response;
-        
+
         const dataMap = {};
-        
+
         // 1. Global Operational Metrics
         const globalMetrics = [
             { name: '営業日数', key: 'operating_days', group: '運用指標 (全体)' },
@@ -324,7 +316,7 @@ const loadData = async () => {
                         account_name: ac.name,
                         account_code: ac.code,
                         management_group_name: ac.management_group_name || 'その他',
-                        group_sort_order: 100 + (parseInt(ac.group_display_order) || 0), 
+                        group_sort_order: 100 + (parseInt(ac.group_display_order) || 0),
                         is_operational: false,
                         ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
                     };
@@ -335,15 +327,15 @@ const loadData = async () => {
         // Map data
         entries.forEach(e => {
             if (dataMap[e.account_name]) {
-                const mKey = new Date(e.month).toISOString().slice(0, 10);
+                const mKey = formatDate(e.month);
                 dataMap[e.account_name][mKey] = parseFloat(e.amount);
             }
         });
 
         tableRecords.forEach(tr => {
             const mDate = tr.forecast_month || tr.accounting_month;
-            const mKey = new Date(mDate).toISOString().slice(0, 10);
-            
+            const mKey = formatDate(mDate);
+
             if (tr.plan_type_category_id === null && tr.plan_package_category_id === null) {
                 globalMetrics.forEach(m => {
                     const rowKey = `global_${m.key}`;
@@ -374,8 +366,8 @@ const loadData = async () => {
 };
 
 const saveData = async () => {
-    if (!selectedHotel.value) return; 
-    
+    if (!selectedHotel.value) return;
+
     saving.value = true;
     try {
         const entries = [];
@@ -387,7 +379,7 @@ const saveData = async () => {
                 if (row.is_operational) {
                     const combo = row.is_global ? 'global' : `${row.plan_type_category_id || 'null'}_${row.plan_package_category_id || 'null'}`;
                     const mapKey = `${m.value}_${combo}`;
-                    
+
                     if (!tableDataMap[mapKey]) {
                         tableDataMap[mapKey] = {
                             hotel_id: selectedHotel.value.id,
@@ -421,7 +413,7 @@ const saveData = async () => {
 const onSyncYayoi = async () => {
     if (!selectedHotel.value || !selectedMonth.value) return;
     try {
-        const monthStr = selectedMonth.value.toISOString().slice(0, 10);
+        const monthStr = formatDate(selectedMonth.value);
         const result = await importStore.syncYayoi(selectedHotel.value.id, monthStr);
         if (result.entries && result.entries.length > 0) {
             result.entries.forEach(e => {
@@ -441,7 +433,7 @@ const onSyncYayoi = async () => {
 const onSyncPMS = async () => {
     if (!selectedHotel.value || !selectedMonth.value) return;
     try {
-        const monthStr = selectedMonth.value.toISOString().slice(0, 10);
+        const monthStr = formatDate(selectedMonth.value);
         const result = await importStore.syncPMS(selectedHotel.value.id, monthStr);
         if (result.entries && result.entries.length > 0) {
             result.entries.forEach(e => {
@@ -496,7 +488,7 @@ const processPaste = () => {
 
     lines.forEach(line => {
         if (!line.trim()) return;
-        
+
         const cells = line.split('\t').map(c => c.trim());
         if (cells.length < 2) return;
 
@@ -512,13 +504,13 @@ const processPaste = () => {
         });
 
         const normalizedExcelName = excelName.toLowerCase().replace(/[　]/g, '');
-        
+
         const row = filteredGridData.value.find(r => {
             const gridName = (r.account_name || '').toLowerCase().replace(/[　]/g, '');
             const gridCode = (r.account_code || '').toLowerCase().replace(/[　]/g, '');
             return gridName === normalizedExcelName || gridCode === normalizedExcelName;
         });
-        
+
         if (row) {
             matchedCount++;
             values.forEach((val, idx) => {
