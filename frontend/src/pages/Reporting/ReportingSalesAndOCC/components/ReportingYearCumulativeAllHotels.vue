@@ -13,36 +13,9 @@
                     <span class="text-xl font-bold">主要KPI（全施設合計）</span>
                 </template>
                 <template #content>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                            }}</p>
-                            <span v-if="ADRDifference"
-                                :class="['text-xs font-bold', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference) }}
-                            </span>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(actualRevPAR) }}</p>
-                            <span v-if="revPARDifference"
-                                :class="['text-xs font-bold', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                {{ revPARDifference > 0 ? '+' : '' }}{{ formatCurrency(revPARDifference) }}
-                            </span>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastRevPAR) }}</p>
-                        </div>
-                    </div>
+                    <KpiSummaryCards :actualADR="actualADR" :forecastADR="forecastADR" :ADRDifference="ADRDifference"
+                        :actualRevPAR="actualRevPAR" :revPARDifference="revPARDifference"
+                        :forecastRevPAR="forecastRevPAR" :formatCurrency="formatCurrency" variant="cards" />
                 </template>
                 <template #footer>
                     <div class="flex justify-content-between">
@@ -135,36 +108,9 @@
                     <span class="text-xl font-bold">主要KPI（全施設合計）</span>
                 </template>
                 <template #content>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                            }}</p>
-                            <span v-if="ADRDifference"
-                                :class="['text-xs font-bold', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference) }}
-                            </span>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(actualRevPAR) }}</p>
-                            <span v-if="revPARDifference"
-                                :class="['text-xs font-bold', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                {{ revPARDifference > 0 ? '+' : '' }}{{ formatCurrency(revPARDifference) }}
-                            </span>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastRevPAR) }}</p>
-                        </div>
-                    </div>
+                    <KpiSummaryCards :actualADR="actualADR" :forecastADR="forecastADR" :ADRDifference="ADRDifference"
+                        :actualRevPAR="actualRevPAR" :revPARDifference="revPARDifference"
+                        :forecastRevPAR="forecastRevPAR" :formatCurrency="formatCurrency" variant="grid" />
                 </template>
                 <template #footer>
                     <div class="flex justify-content-between">
@@ -226,6 +172,7 @@ import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
 import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
 import MonthlyRevenuePlanVsActualChart from './charts/MonthlyRevenuePlanVsActualChart.vue';
 import AllHotelsOccupancyChart from './charts/AllHotelsOccupancyChart.vue';
+import KpiSummaryCards from './KpiSummaryCards.vue';
 import MonthlyOccupancyChart from './charts/MonthlyOccupancyChart.vue';
 import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 
@@ -346,12 +293,12 @@ const forecastRevPAR = computed(() => {
 });
 
 const ADRDifference = computed(() => {
-    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return 0;
+    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return null;
     return actualADR.value - forecastADR.value;
 });
 
 const revPARDifference = computed(() => {
-    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return 0;
+    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return null;
     return actualRevPAR.value - forecastRevPAR.value;
 });
 
