@@ -76,11 +76,53 @@ CREATE TABLE acc_account_codes (
     UNIQUE (name)
 );
 
+-- 4. Sub-Accounts Master Table
+-- Defines sub-accounts (補助科目) that can be used with specific account codes
+CREATE TABLE acc_sub_accounts (
+    id SERIAL PRIMARY KEY,
+    account_code_id INT NOT NULL REFERENCES acc_account_codes(id) ON DELETE CASCADE,
+    code VARCHAR(50), -- Optional: Sub-account code for structured identification
+    name VARCHAR(100) NOT NULL, -- Sub-account name (e.g., "ガス", "水道", "電気" for utilities)
+    description TEXT, -- Optional: Detailed description
+    is_active BOOLEAN DEFAULT true,
+    display_order INT, -- For ordering sub-accounts within an account
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by INT REFERENCES users(id),
+    
+    -- Ensure unique sub-account names per account code
+    UNIQUE (account_code_id, name),
+    -- If code is provided, ensure it's unique per account
+    UNIQUE (account_code_id, code)
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_acc_sub_accounts_account_code ON acc_sub_accounts(account_code_id);
+CREATE INDEX idx_acc_sub_accounts_name ON acc_sub_accounts(name);
+CREATE INDEX idx_acc_sub_accounts_active ON acc_sub_accounts(account_code_id, is_active) WHERE is_active = true;
+
+-- Add comments
+COMMENT ON TABLE acc_sub_accounts IS 'Sub-accounts (補助科目) for detailed account tracking';
+COMMENT ON COLUMN acc_sub_accounts.code IS 'Optional structured code for the sub-account';
+COMMENT ON COLUMN acc_sub_accounts.name IS 'Sub-account name as used in Yayoi exports/imports';
+COMMENT ON COLUMN acc_sub_accounts.display_order IS 'Display order within the parent account';
+
 -- Add foreign key constraints to finance entry tables (created in 009)
 -- Linking by account_name as per system requirement
 ALTER TABLE du_forecast_entries 
     ADD CONSTRAINT fk_du_forecast_entries_account_name 
     FOREIGN KEY (account_name) REFERENCES acc_account_codes(name) ON UPDATE CASCADE;
+
+-- Link to master tables
+ALTER TABLE du_forecast_entries
+    ADD CONSTRAINT fk_du_forecast_entries_account_code_id
+    FOREIGN KEY (account_code_id) REFERENCES acc_account_codes(id) ON UPDATE CASCADE;
+
+ALTER TABLE du_forecast_entries
+    ADD CONSTRAINT fk_du_forecast_entries_sub_account_id
+    FOREIGN KEY (sub_account_id) REFERENCES acc_sub_accounts(id) ON DELETE SET NULL;
+
 
 -- Seed Account Codes
 INSERT INTO acc_account_codes (code, name, category1, category2, category3, category4, management_group_code, management_group_id, created_by) VALUES
@@ -192,7 +234,11 @@ INSERT INTO acc_account_codes (code, name, category1, category2, category3, cate
 ('10110003', 'その他特別損失', '特別損失', '特別損失', '特別損失', NULL, 101100, 9, 1),
 ('11110001', '法人税等', '当期純損益', '当期純損益', '当期純損益', NULL, 111100, 10, 1);
 
--- 4. Accounting Mappings
+-- Seed common sub-accounts based on current usage
+-- Note: Run api/scripts/seed_sub_accounts_from_yayoi_data.sql after importing Yayoi data
+-- to automatically create all sub-accounts from actual transaction data
+
+-- 5. Accounting Mappings
 -- Maps system entities (Plans, Addons, Categories) to Account Codes.
 -- Resolution Logic (to be implemented in code/query):
 -- 1. Check for specific Item mapping for the Hotel (e.g. Plan A in Hotel 1).
@@ -226,7 +272,7 @@ CREATE TABLE acc_accounting_mappings (
 CREATE INDEX idx_acc_accounting_mappings_lookup ON acc_accounting_mappings (hotel_id, target_type, target_id);
 CREATE INDEX idx_acc_accounting_mappings_account_code ON acc_accounting_mappings (account_code_id);
 
--- 5. Yayoi Export Data
+-- 6. Yayoi Export Data
 -- Stores aggregated transaction data ready for export in Yayoi format (25 Columns).
 -- This table is a staging area that mirrors the standard Yayoi Import CSV format.
 CREATE TABLE acc_yayoi_data (
@@ -335,7 +381,7 @@ CREATE TABLE acc_yayoi_data (
 CREATE INDEX idx_acc_yayoi_date ON acc_yayoi_data (transaction_date);
 CREATE INDEX idx_acc_yayoi_batch ON acc_yayoi_data (batch_id);
 
--- 6. Accounting Departments Master
+-- 7. Accounting Departments Master
 -- Maps hotels to their accounting department codes (部門) for Yayoi exports
 -- Supports both current and historical department name mappings
 CREATE TABLE acc_departments (
@@ -369,42 +415,6 @@ CREATE INDEX idx_acc_departments_name ON acc_departments(name);
 INSERT INTO acc_departments (hotel_id, name, is_current, created_by) VALUES
 (24, 'WH室蘭', true, 1)
 ON CONFLICT (hotel_id, name) DO NOTHING;
-
--- 7. Sub-Accounts Master Table
--- Defines sub-accounts (補助科目) that can be used with specific account codes
-CREATE TABLE acc_sub_accounts (
-    id SERIAL PRIMARY KEY,
-    account_code_id INT NOT NULL REFERENCES acc_account_codes(id) ON DELETE CASCADE,
-    code VARCHAR(50), -- Optional: Sub-account code for structured identification
-    name VARCHAR(100) NOT NULL, -- Sub-account name (e.g., "ガス", "水道", "電気" for utilities)
-    description TEXT, -- Optional: Detailed description
-    is_active BOOLEAN DEFAULT true,
-    display_order INT, -- For ordering sub-accounts within an account
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_by INT REFERENCES users(id),
-    
-    -- Ensure unique sub-account names per account code
-    UNIQUE (account_code_id, name),
-    -- If code is provided, ensure it's unique per account
-    UNIQUE (account_code_id, code)
-);
-
--- Create indexes for performance
-CREATE INDEX idx_acc_sub_accounts_account_code ON acc_sub_accounts(account_code_id);
-CREATE INDEX idx_acc_sub_accounts_name ON acc_sub_accounts(name);
-CREATE INDEX idx_acc_sub_accounts_active ON acc_sub_accounts(account_code_id, is_active) WHERE is_active = true;
-
--- Add comments
-COMMENT ON TABLE acc_sub_accounts IS 'Sub-accounts (補助科目) for detailed account tracking';
-COMMENT ON COLUMN acc_sub_accounts.code IS 'Optional structured code for the sub-account';
-COMMENT ON COLUMN acc_sub_accounts.name IS 'Sub-account name as used in Yayoi exports/imports';
-COMMENT ON COLUMN acc_sub_accounts.display_order IS 'Display order within the parent account';
-
--- Seed common sub-accounts based on current usage
--- Note: Run api/scripts/seed_sub_accounts_from_yayoi_data.sql after importing Yayoi data
--- to automatically create all sub-accounts from actual transaction data
 
 -- Create a view to easily see account codes with their sub-accounts
 CREATE VIEW acc_accounts_with_sub_accounts AS

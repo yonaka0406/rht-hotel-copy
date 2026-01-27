@@ -16,18 +16,43 @@ const upsertForecastEntries = async (requestId, entries, userId, dbClient = null
     if (!entries || entries.length === 0) return [];
 
     try {
-        const values = entries.map(e => [
-            e.hotel_id,
-            e.month,
-            e.account_name,
-            e.amount || 0,
-            userId
+        // 1. Resolve account_code_ids and sub_account_ids from names
+        const accountNames = [...new Set(entries.map(e => e.account_name))];
+        const subAccountNames = [...new Set(entries.filter(e => e.sub_account_name).map(e => e.sub_account_name))];
+
+        const [accountResult, subAccountResult] = await Promise.all([
+            client.query(`SELECT id, name FROM acc_account_codes WHERE name = ANY($1)`, [accountNames]),
+            client.query(`SELECT id, name, account_code_id FROM acc_sub_accounts WHERE name = ANY($1)`, [subAccountNames])
         ]);
 
+        const accountMap = Object.fromEntries(accountResult.rows.map(r => [r.name, r.id]));
+        const subAccountMap = {}; // { "account_id:sub_name": id }
+        subAccountResult.rows.forEach(r => {
+            subAccountMap[`${r.account_code_id}:${r.name}`] = r.id;
+        });
+
+        const values = entries.map(e => {
+            const accountId = accountMap[e.account_name] || null;
+            const subAccountId = accountId && e.sub_account_name ? subAccountMap[`${accountId}:${e.sub_account_name}`] : null;
+
+            return [
+                e.hotel_id,
+                e.month,
+                accountId,
+                e.account_name,
+                subAccountId,
+                e.sub_account_name || null,
+                e.amount || 0,
+                userId
+            ];
+        });
+
         const query = pgFormat(
-            `INSERT INTO du_forecast_entries (hotel_id, month, account_name, amount, created_by)
+            `INSERT INTO du_forecast_entries (hotel_id, month, account_code_id, account_name, sub_account_id, sub_account_name, amount, created_by)
              VALUES %L
-             ON CONFLICT (hotel_id, month, account_name) DO UPDATE SET
+             ON CONFLICT (hotel_id, month, account_name, sub_account_name) DO UPDATE SET
+                account_code_id = EXCLUDED.account_code_id,
+                sub_account_id = EXCLUDED.sub_account_id,
                 amount = EXCLUDED.amount,
                 created_by = EXCLUDED.created_by
              RETURNING *`,
@@ -60,7 +85,7 @@ const getEntries = async (requestId, type, hotelId, startMonth, endMonth, dbClie
         FROM du_forecast_entries e
         LEFT JOIN acc_account_codes a ON e.account_name = a.name
         WHERE e.hotel_id = $1 AND e.month BETWEEN $2 AND $3
-        ORDER BY e.month, e.account_name
+        ORDER BY e.month, e.account_name, e.sub_account_name, e.sub_account_code
     `;
 
     try {

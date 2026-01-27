@@ -37,24 +37,35 @@ This document outlines the strategy to modernize the financial data import proce
 1. **Filter Context:** User selects the view (運用指標 or 勘定科目).
 2. **Action:** User clicks the **「貼り付け」** button.
 3. **Context-Aware Processing:** Matches data strictly against the visible rows.
-4. **Validation:** Remapping dialog for unmatched account names.
+4. **Validation:** Remapping dialog for unmatched account names or sub-accounts.
 
 ### 4.3. Automated Synchronization (Actuals)
 
-- **PMS Sync:** Aggregates reservation data into `du_accounting` (Operational).
-- **Yayoi Sync:** Aggregates ledger data from `acc_yayoi_data` directly into Actuals.
+- **PMS Sync:** Aggregates reservation data into Account-level Actuals using `acc_accounting_mappings`.
+- **Yayoi Sync:** Aggregates ledger data from `acc_yayoi_data` via `acc_monthly_account_summary` directly into Actuals.
 
 ## 5. Technical Architecture
 
 ### Database Schema
 
-- `du_forecast_entries`: Stores granular budget data.
+- `du_forecast_entries`: Stores granular budget data (Account + Sub-Account IDs).
+- `acc_sub_accounts`: New master table for sub-accounts (補助科目).
+- `acc_accounting_mappings`: Maps PMS entities (Plans, Addons) to Account Codes for automated sync.
 - Operational metrics remain in `du_forecast` and `du_accounting`.
 - `du_accounting_entries`: TABLE REMOVED (Redundant with Yayoi data).
+- `acc_monthly_account_summary`: View that calculates net amounts from Yayoi raw data.
 
 ### API Routes (`api/routes/importRoutes.js`)
 
-- `GET /api/import/finance/data`: Fetch grid data.
-- `POST /api/import/finance/upsert`: Save Forecast data.
-- `POST /api/import/finance/sync-yayoi`: Populate Actuals from Yayoi.
-- `POST /api/import/finance/sync-pms`: Populate Actuals from PMS.
+- `GET /api/import/finance/data`: Fetch grid data (Forecasts, Actuals, Table data).
+- `POST /api/import/finance/upsert`: Save Forecast data (Entries + Table).
+- `POST /api/import/finance/sync-yayoi`: Populate Actuals from Yayoi summary.
+- `POST /api/import/finance/sync-pms`: Populate Actuals from PMS using mappings.
+
+## 6. Implementation Status (Refined)
+
+- [x] **Sub-Account Support:** Added `sub_account_name` to `du_forecast_entries`.
+- [x] **ReadOnly Actuals:** Transitioned Actuals grid to display data solely from Yayoi/PMS sync.
+- [x] **Account Mapping System:** Implemented hierarchical resolution (Plan -> Category -> Global).
+- [x] **Yayoi Summary Logic:** Net amount calculation with tax adjustment and sub-account grouping.
+- [x] **Dynamic Sub-Account Creation:** implemented `get_or_create_sub_account` for flexible imports.
