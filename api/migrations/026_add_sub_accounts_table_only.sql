@@ -1,9 +1,9 @@
--- 026_add_sub_accounts_table.sql
--- Add sub-accounts (補助科目) table with foreign key to account codes
+-- 026_add_sub_accounts_table_only.sql
+-- Add sub-accounts table without dropping existing data
 
--- 1. Create Sub-Accounts Master Table
--- Defines sub-accounts that can be used with specific account codes
-CREATE TABLE acc_sub_accounts (
+-- Create Sub-Accounts Master Table
+-- Defines sub-accounts (補助科目) that can be used with specific account codes
+CREATE TABLE IF NOT EXISTS acc_sub_accounts (
     id SERIAL PRIMARY KEY,
     account_code_id INT NOT NULL REFERENCES acc_account_codes(id) ON DELETE CASCADE,
     code VARCHAR(50), -- Optional: Sub-account code for structured identification
@@ -23,9 +23,9 @@ CREATE TABLE acc_sub_accounts (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_acc_sub_accounts_account_code ON acc_sub_accounts(account_code_id);
-CREATE INDEX idx_acc_sub_accounts_name ON acc_sub_accounts(name);
-CREATE INDEX idx_acc_sub_accounts_active ON acc_sub_accounts(account_code_id, is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_acc_sub_accounts_account_code ON acc_sub_accounts(account_code_id);
+CREATE INDEX IF NOT EXISTS idx_acc_sub_accounts_name ON acc_sub_accounts(name);
+CREATE INDEX IF NOT EXISTS idx_acc_sub_accounts_active ON acc_sub_accounts(account_code_id, is_active) WHERE is_active = true;
 
 -- Add comments
 COMMENT ON TABLE acc_sub_accounts IS 'Sub-accounts (補助科目) for detailed account tracking';
@@ -33,38 +33,8 @@ COMMENT ON COLUMN acc_sub_accounts.code IS 'Optional structured code for the sub
 COMMENT ON COLUMN acc_sub_accounts.name IS 'Sub-account name as used in Yayoi exports/imports';
 COMMENT ON COLUMN acc_sub_accounts.display_order IS 'Display order within the parent account';
 
--- 2. Seed common sub-accounts based on current usage
-
--- First, let's get the account_code_id for utilities (水道光熱費)
--- Insert utilities sub-accounts
-INSERT INTO acc_sub_accounts (account_code_id, name, display_order, created_by)
-SELECT 
-    ac.id,
-    sub_account_name,
-    display_order,
-    1
-FROM acc_account_codes ac
-CROSS JOIN (
-    VALUES 
-        ('電気', 1),
-        ('ガス', 2), 
-        ('水道', 3),
-        ('灯油・重油', 4)
-) AS sub_accounts(sub_account_name, display_order)
-WHERE ac.name = '水道光熱費';
-
--- Insert utilities cost sub-accounts (水道光熱費原価)
-INSERT INTO acc_sub_accounts (account_code_id, name, display_order, created_by)
-SELECT 
-    ac.id,
-    'サブリース',
-    1,
-    1
-FROM acc_account_codes ac
-WHERE ac.name = '水道光熱費原価';
-
--- 3. Create a view to easily see account codes with their sub-accounts
-CREATE VIEW acc_accounts_with_sub_accounts AS
+-- Create a view to easily see account codes with their sub-accounts
+CREATE OR REPLACE VIEW acc_accounts_with_sub_accounts AS
 SELECT 
     ac.id as account_id,
     ac.code as account_code,
@@ -85,7 +55,52 @@ ORDER BY ac.code, asa.display_order, asa.name;
 
 COMMENT ON VIEW acc_accounts_with_sub_accounts IS 'Combined view of account codes and their sub-accounts';
 
--- 4. Update the monthly summary view to include sub-account information
+-- Add function to get or create sub-accounts dynamically
+-- This is useful for importing data where sub-accounts might not exist yet
+CREATE OR REPLACE FUNCTION get_or_create_sub_account(
+    p_account_name VARCHAR(100),
+    p_sub_account_name VARCHAR(100),
+    p_created_by INT DEFAULT 1
+) RETURNS INT AS $$
+DECLARE
+    v_account_id INT;
+    v_sub_account_id INT;
+    v_max_display_order INT;
+BEGIN
+    -- Get the account code ID
+    SELECT id INTO v_account_id 
+    FROM acc_account_codes 
+    WHERE name = p_account_name;
+    
+    IF v_account_id IS NULL THEN
+        RAISE EXCEPTION 'Account code not found: %', p_account_name;
+    END IF;
+    
+    -- Check if sub-account already exists
+    SELECT id INTO v_sub_account_id
+    FROM acc_sub_accounts
+    WHERE account_code_id = v_account_id AND name = p_sub_account_name;
+    
+    -- If not found, create it
+    IF v_sub_account_id IS NULL THEN
+        -- Get the next display order
+        SELECT COALESCE(MAX(display_order), 0) + 1 INTO v_max_display_order
+        FROM acc_sub_accounts
+        WHERE account_code_id = v_account_id;
+        
+        -- Insert new sub-account
+        INSERT INTO acc_sub_accounts (account_code_id, name, display_order, created_by)
+        VALUES (v_account_id, p_sub_account_name, v_max_display_order, p_created_by)
+        RETURNING id INTO v_sub_account_id;
+    END IF;
+    
+    RETURN v_sub_account_id;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION get_or_create_sub_account IS 'Get existing or create new sub-account for an account code';
+
+-- Update the monthly summary view to include sub-account information
 -- Drop and recreate the view with sub-account details
 DROP VIEW IF EXISTS acc_monthly_account_summary CASCADE;
 
@@ -143,9 +158,8 @@ SELECT
     ac.code as account_code,
     gd.account_name,
     gd.sub_account,
-    asa.id as sub_account_id,
     asa.code as sub_account_code,
-    asa.description as sub_account_description,
+    asa.name as sub_account_name,
     gd.department,
     gd.tax_class,
     mg.name as management_group_name,
@@ -160,48 +174,3 @@ LEFT JOIN acc_management_groups mg ON ac.management_group_id = mg.id
 ORDER BY gd.month, mg.display_order, ac.code, asa.display_order;
 
 COMMENT ON VIEW acc_monthly_account_summary IS 'Consolidated view of monthly account activity with sub-account details';
-
--- 5. Add function to get or create sub-accounts dynamically
--- This is useful for importing data where sub-accounts might not exist yet
-CREATE OR REPLACE FUNCTION get_or_create_sub_account(
-    p_account_name VARCHAR(100),
-    p_sub_account_name VARCHAR(100),
-    p_created_by INT DEFAULT 1
-) RETURNS INT AS $$
-DECLARE
-    v_account_id INT;
-    v_sub_account_id INT;
-    v_max_display_order INT;
-BEGIN
-    -- Get the account code ID
-    SELECT id INTO v_account_id 
-    FROM acc_account_codes 
-    WHERE name = p_account_name;
-    
-    IF v_account_id IS NULL THEN
-        RAISE EXCEPTION 'Account code not found: %', p_account_name;
-    END IF;
-    
-    -- Check if sub-account already exists
-    SELECT id INTO v_sub_account_id
-    FROM acc_sub_accounts
-    WHERE account_code_id = v_account_id AND name = p_sub_account_name;
-    
-    -- If not found, create it
-    IF v_sub_account_id IS NULL THEN
-        -- Get the next display order
-        SELECT COALESCE(MAX(display_order), 0) + 1 INTO v_max_display_order
-        FROM acc_sub_accounts
-        WHERE account_code_id = v_account_id;
-        
-        -- Insert new sub-account
-        INSERT INTO acc_sub_accounts (account_code_id, name, display_order, created_by)
-        VALUES (v_account_id, p_sub_account_name, v_max_display_order, p_created_by)
-        RETURNING id INTO v_sub_account_id;
-    END IF;
-    
-    RETURN v_sub_account_id;
-END;
-$$ LANGUAGE plpgsql;
-
-COMMENT ON FUNCTION get_or_create_sub_account IS 'Get existing or create new sub-account for an account code';
