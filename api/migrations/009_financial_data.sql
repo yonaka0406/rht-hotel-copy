@@ -59,10 +59,14 @@ CREATE TABLE IF NOT EXISTS du_forecast_entries (
     amount NUMERIC(15, 2) DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by INT REFERENCES users(id),
     CONSTRAINT uq_hotel_month_account_sub_account_forecast UNIQUE (hotel_id, month, account_name, sub_account_name)
 );
 
 COMMENT ON TABLE du_forecast_entries IS 'Account-level budget data (Forecast), identified by account_name';
+COMMENT ON COLUMN du_forecast_entries.updated_at IS 'Timestamp of the last update';
+COMMENT ON COLUMN du_forecast_entries.updated_by IS 'User ID of the last person to update the entry';
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_du_forecast_plan_type_category ON du_forecast(plan_type_category_id);
