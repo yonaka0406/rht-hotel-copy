@@ -198,6 +198,97 @@ export function useImportStore() {
         }
     };
 
+    const getFinancesData = async (hotelId, startMonth, endMonth) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/import/finance/data?hotelId=${hotelId}&startMonth=${startMonth}&endMonth=${endMonth}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch finance data');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching finance data:', error);
+            throw error;
+        }
+    };
+
+    const upsertFinancesData = async (type, entries) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/import/finance/upsert`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ type, entries }),
+            });
+            if (!response.ok) throw new Error('Failed to save finance data');
+            return await response.json();
+        } catch (error) {
+            console.error('Error saving finance data:', error);
+            throw error;
+        }
+    };
+
+    const syncYayoi = async (hotelId, month) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/import/finance/sync-yayoi`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ hotelId, month }),
+            });
+            if (!response.ok) throw new Error('Failed to sync Yayoi data');
+            return await response.json();
+        } catch (error) {
+            console.error('Error syncing Yayoi data:', error);
+            throw error;
+        }
+    };
+
+    const syncPMS = async (hotelId, month) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/import/finance/sync-pms`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ hotelId, month }),
+            });
+            if (!response.ok) throw new Error('Failed to sync PMS data');
+            return await response.json();
+        } catch (error) {
+            console.error('Error syncing PMS data:', error);
+            throw error;
+        }
+    };
+
+    const getAccountingSettings = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/accounting/settings`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+            if (!response.ok) throw new Error('Failed to fetch accounting settings');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching accounting settings:', error);
+            throw error;
+        }
+    };
+
     return{
         yadomasterAddClients,
         yadomasterAddReservations,
@@ -208,5 +299,10 @@ export function useImportStore() {
         forecastAddData,
         accountingAddData,
         getPrefilledTemplateData,
+        getFinancesData,
+        upsertFinancesData,
+        syncYayoi,
+        syncPMS,
+        getAccountingSettings,
     };
 }
