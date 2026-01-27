@@ -45,7 +45,7 @@ function generateInvoiceHTML(html, data, userName) {
   // Main Table
   modifiedHTML = modifiedHTML.replace(/{{ facility_name }}/g, data.facility_name || '');
   modifiedHTML = modifiedHTML.replace(/{{ payment_due_date }}/g, data.due_date || '');
-  modifiedHTML = modifiedHTML.replace(/{{ total_amount }}/g, data.invoice_total_value ? data.invoice_total_value.toLocaleString() : '0');
+  modifiedHTML = modifiedHTML.replace(/{{ total_amount }}/g, (data.invoice_total_value !== null && data.invoice_total_value !== undefined) ? data.invoice_total_value.toLocaleString() : '0');
   modifiedHTML = modifiedHTML.replace(/{{ bank_name }}/g, data.bank_name || '');
   modifiedHTML = modifiedHTML.replace(/{{ bank_branch_name }}/g, data.bank_branch_name || '');
   modifiedHTML = modifiedHTML.replace(/{{ bank_account_type }}/g, data.bank_account_type || '');
@@ -53,32 +53,80 @@ function generateInvoiceHTML(html, data, userName) {
   modifiedHTML = modifiedHTML.replace(/{{ bank_account_name }}/g, data.bank_account_name || '');
 
   // Details Table
-  let dtlitems = data.items.map(item => `
-  <tr>
-      <td class="cell-center">1</td>
-      <td>宿泊料</td>                    
-      <td class="cell-right">${data.invoice_total_stays} 泊</td>
-      <td class="cell-right">¥ ${data.invoice_total_value.toLocaleString()}</td>
-  </tr>
-`).join('');
+  let dtlitems = '';
+  let rowCount = 1;
+
+  if (data.items && Array.isArray(data.items)) {
+    data.items.forEach(item => {
+      const baseLabel = item.name || (item.category === 'accommodation' ? '宿泊料' : 'その他');
+      const taxRateVal = item.tax_rate !== null && item.tax_rate !== undefined ? parseFloat(item.tax_rate) : null;
+      const taxLabel = taxRateVal !== null ? ` (${(taxRateVal * 100).toLocaleString()}%)` : '';
+      const label = `${baseLabel}${taxLabel}`;
+
+      // Determine unit based on label content (Room charge vs Addon)
+      const isRoomCharge = baseLabel.includes('宿泊料');
+      const qtyValue = isRoomCharge ? (data.invoice_total_stays || item.total_quantity || 1) : (item.total_quantity || 1);
+      const unit = isRoomCharge ? '泊' : '個';
+      const quantity = `${qtyValue} ${unit}`;
+
+      dtlitems += `
+      <tr>
+          <td class="cell-center">${rowCount++}</td>
+          <td>${label}</td>                    
+          <td class="cell-right">${quantity}</td>
+          <td class="cell-right">¥ ${item.total_price.toLocaleString()}</td>
+      </tr>
+      `;
+    });
+  } else {
+    // Fallback if no items array
+    dtlitems = `
+    <tr>
+        <td class="cell-center">1</td>
+        <td>宿泊料</td>                    
+        <td class="cell-right">${data.invoice_total_stays} 泊</td>
+        <td class="cell-right">¥ ${data.invoice_total_value.toLocaleString()}</td>
+    </tr>
+    `;
+  }
+
   modifiedHTML = modifiedHTML.replace(/{{ detail_items }}/g, dtlitems);
   modifiedHTML = modifiedHTML.replace(/{{ details_total_value }}/g, data.invoice_total_value.toLocaleString());
 
   // Taxable items
   let taxValue = 0;
+  const taxSummary = {};
+
   if (data.items && Array.isArray(data.items)) {
     data.items.forEach(item => {
       const difference = item.total_price - item.total_net_price;
       taxValue += difference;
+
+      // Aggregate by tax rate for the breakdown section
+      let rateKey = parseFloat(item.tax_rate);
+      if (isNaN(rateKey)) {
+        rateKey = 0;
+      }
+      if (!taxSummary[rateKey]) {
+        taxSummary[rateKey] = { rate: rateKey, net: 0, tax: 0 };
+      }
+      taxSummary[rateKey].net += item.total_net_price;
+      taxSummary[rateKey].tax += difference;
     });
   }
   modifiedHTML = modifiedHTML.replace(/{{ total_tax_value }}/g, taxValue.toLocaleString());
-  let taxitems = data.items.map(item => `
+
+  // Generate breakdown HTML, sorted by rate descending, filtering out 0s
+  let taxitems = Object.values(taxSummary)
+    .filter(summary => summary.net !== 0 || summary.tax !== 0)
+    .sort((a, b) => b.rate - a.rate)
+    .map(summary => `
     <tr>        
-      <td class="title-cell">${(item.tax_rate * 100).toLocaleString()}％対象</td>
-      <td class="cell-right">¥ ${item.total_net_price.toLocaleString()}</td>
+      <td class="title-cell">${(summary.rate * 100).toLocaleString()}％対象</td>
+      <td class="cell-right">¥ ${summary.net.toLocaleString()}</td>
     </tr>
 `).join('');
+
   modifiedHTML = modifiedHTML.replace(/{{ taxable_details }}/g, taxitems);
 
   // Footer

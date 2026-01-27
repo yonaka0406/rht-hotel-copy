@@ -8,10 +8,13 @@ const { v4: uuidv4 } = require('uuid');
 
 const { getProdPool, getDevPool } = require('../config/database');
 
+const { startLog, completeLog } = require('../models/cron_logs');
+
 /**
  * Generates and sends the Daily Sales & Occ PDF report.
  */
 const runDailySalesOccPdfJob = async () => {
+    const logId = await startLog('Daily Sales & Occ PDF');
     const requestId = `JOB-SALES-OCC-${uuidv4()}`;
     const startTime = new Date();
 
@@ -125,8 +128,10 @@ const runDailySalesOccPdfJob = async () => {
 
         jobSuccess = true;
         logger.warn(`[${requestId}] ========== JOB COMPLETED SUCCESSFULLY ==========`);
+        await completeLog(logId, 'success', { message: 'Daily Sales & Occ PDF Job completed', emailTo });
 
     } catch (error) {
+        await completeLog(logId, 'failed', { error: error.message });
         logger.error(`[${requestId}] ========== JOB FAILED ==========`);
         logger.error(`[${requestId}] Job failed: ${error.message}`, { stack: error.stack });
 

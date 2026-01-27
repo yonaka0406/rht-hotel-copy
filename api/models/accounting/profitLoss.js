@@ -1,6 +1,94 @@
 const { getPool } = require('../../config/database');
 
 /**
+ * Get Profit & Loss statement data with detailed tax information for CSV export
+ * @param {String} requestId - Request ID for logging
+ * @param {Object} filters - { startMonth, endMonth, departmentNames }
+ * @param {Object} dbClient - Optional database client
+ * @returns {Promise<Array>} P&L data with tax details
+ */
+async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
+  const pool = getPool(requestId);
+  const client = dbClient || await pool.connect();
+  const shouldRelease = !dbClient;
+
+  try {
+    const { startMonth, endMonth, departmentNames } = filters;
+    
+    console.log('[P&L Model] Detailed Filters:', { startMonth, endMonth, departmentNames });
+    console.log('[P&L Model] Date formats - startMonth type:', typeof startMonth, 'value:', startMonth);
+    console.log('[P&L Model] Date formats - endMonth type:', typeof endMonth, 'value:', endMonth);
+  
+    // Always use the acc_profit_loss view to match the main P&L page
+    console.log('[P&L Model] Using acc_profit_loss view for consistency');
+    
+    let fallbackQuery = `
+      SELECT 
+        month as transaction_date,
+        EXTRACT(MONTH FROM month) as month_num,
+        TO_CHAR(month, 'YYYY-MM') as month,
+        account_code,
+        account_name,
+        '' as sub_account,
+        department,
+        '' as tax_class,
+        net_amount as amount_with_tax,
+        0 as tax_amount,
+        '' as counterpart_account_code,
+        '' as counterpart_sub_account,
+        '' as counterpart_department,
+        COALESCE(management_group_name, '') || ' - ' || COALESCE(account_name, '') as summary,
+        management_group_name,
+        management_group_display_order,
+        COALESCE(LPAD(management_group_display_order::text, 2, '0') || '_' || management_group_name, '') as management_group_formatted,
+        hotel_id,
+        hotel_name
+      FROM acc_profit_loss
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    let paramIndex = 1;
+    
+    if (startMonth) {
+      fallbackQuery += ` AND month >= $${paramIndex}`;
+      params.push(startMonth); // startMonth is already in YYYY-MM-DD format
+      paramIndex++;
+    }
+    
+    if (endMonth) {
+      fallbackQuery += ` AND month <= $${paramIndex}`;
+      params.push(endMonth); // endMonth is already in YYYY-MM-DD format
+      paramIndex++;
+    }
+    
+    if (departmentNames && departmentNames.length > 0) {
+      fallbackQuery += ` AND department = ANY($${paramIndex})`;
+      params.push(departmentNames);
+      paramIndex++;
+    }
+    
+    fallbackQuery += `
+      ORDER BY 
+        month,
+        department,
+        management_group_display_order,
+        account_code
+    `;
+    
+    console.log('[P&L Model] Query:', fallbackQuery);
+    console.log('[P&L Model] Params:', params);
+    
+    const result = await client.query(fallbackQuery, params);
+    console.log('[P&L Model] Result count:', result.rows.length);
+    
+    return result.rows;
+  } finally {
+    if (shouldRelease) client.release();
+  }
+}
+
+/**
  * Get Profit & Loss statement data
  * @param {String} requestId - Request ID for logging
  * @param {Object} filters - { startMonth, endMonth, departmentNames }
@@ -230,6 +318,7 @@ async function getAvailableDepartments(requestId, dbClient = null) {
 
 module.exports = {
   getProfitLoss,
+  getProfitLossDetailed,
   getProfitLossSummary,
   getAvailableMonths,
   getAvailableDepartments

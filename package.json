@@ -1,6 +1,6 @@
 {
     "name": "rht-hotel",
-    "version": "1.4.0",
+    "version": "1.4.4",
     "private": true,
     "scripts": {
         "build": "npm run build:frontend",

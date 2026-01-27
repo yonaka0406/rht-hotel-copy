@@ -492,7 +492,8 @@ const getXMLTemplate = async (req, res) => {
 
 const getRecentQueuedReservations = async (req, res) => {
     try {
-        const queue = await selectOTAReservationQueue(req.requestId);
+        const searchTerm = req.query.search;
+        const queue = await selectOTAReservationQueue(req.requestId, searchTerm);
         res.json(queue);
     } catch (error) {
         logger.error('Error getting ota queue:', error);

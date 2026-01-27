@@ -158,6 +158,10 @@ export function useAccountingStore() {
         return await post('/accounting/profit-loss/summary', params);
     };
 
+    const fetchProfitLossDetailed = async (params) => {
+        return await post('/accounting/profit-loss/detailed', params);
+    };
+
     const clearPreviewData = () => {
         ledgerPreviewData.value = [];
         ledgerValidationData.value = null;
@@ -189,6 +193,7 @@ export function useAccountingStore() {
         fetchProfitLossDepartments,
         fetchProfitLoss,
         fetchProfitLossSummary,
+        fetchProfitLossDetailed,
         clearPreviewData,
         fetchDashboardMetrics,
         fetchReconciliationOverview,

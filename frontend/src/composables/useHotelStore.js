@@ -329,7 +329,8 @@ export function useHotelStore() {
 
         return { success: true, message: data.message || 'Calendar updated successfully' };
     };
-    const removeCalendarSettings = async (reservationId) => {
+    const removeCalendarSettings = async (reservationId, hotelId = null) => {
+        const idToUse = hotelId || selectedHotelId.value;
         try {
             const authToken = localStorage.getItem('authToken');
             await fetch(`/api/hotel-calendar/unblock/${reservationId}`, {
@@ -338,6 +339,7 @@ export function useHotelStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({ hotelId: idToUse })
             });
             
         } catch (error) {

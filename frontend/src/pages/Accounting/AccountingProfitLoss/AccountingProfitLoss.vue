@@ -106,10 +106,16 @@
               </button>
             </div>
             
-            <button @click="exportToCSV" class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
-              <i class="pi pi-download"></i>
-              <span>CSV出力</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button @click="exportToCSV" class="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold hover:text-violet-600 hover:border-violet-200 transition-all cursor-pointer">
+                <i class="pi pi-download"></i>
+                <span>CSV出力</span>
+              </button>
+              <button @click="exportDetailedCSV" class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white border border-violet-600 rounded-xl font-bold hover:bg-violet-700 transition-all cursor-pointer">
+                <i class="pi pi-file-export"></i>
+                <span>詳細CSV出力</span>
+              </button>
+            </div>
           </div>
           
           <!-- Department Filter Panel -->
@@ -1578,6 +1584,145 @@ export default {
       toast.add({ severity: 'success', summary: '成功', detail: 'CSVファイルをダウンロードしました', life: 3000 });
     };
 
+    const exportDetailedCSV = async () => {
+      if (!filteredPlData.value.length) {
+        toast.add({ severity: 'warn', summary: '警告', detail: 'エクスポートするデータがありません', life: 3000 });
+        return;
+      }
+
+      try {
+        // Fetch detailed data with tax information from the backend
+        const { fetchProfitLossDetailed } = useAccountingStore();
+        
+        const detailedFilters = {
+          startMonth: filters.value.startMonth,
+          endMonth: filters.value.endMonth,
+          departmentNames: selectedDepartments.value.length > 0 && selectedDepartments.value.length < departmentsInData.value.length 
+            ? selectedDepartments.value.map(d => d.department) 
+            : null
+        };
+        
+        console.log('[CSV Export] Detailed filters:', detailedFilters);
+        console.log('[CSV Export] Selected departments:', selectedDepartments.value);
+        console.log('[CSV Export] Departments in data:', departmentsInData.value);
+        console.log('[CSV Export] Filtered PL data count:', filteredPlData.value.length);
+        
+        const response = await fetchProfitLossDetailed(detailedFilters);
+        console.log('[CSV Export] API response:', response);
+        
+        // Verify response is truthy and has success status
+        if (!response || !response.success) {
+          console.error('[CSV Export] Invalid or failed response from fetchProfitLossDetailed:', response);
+          toast.add({ severity: 'error', summary: 'エラー', detail: '詳細データの取得に失敗しました', life: 3000 });
+          return;
+        }
+        
+        const detailedData = response.data || [];
+        console.log('[CSV Export] Detailed data count:', detailedData.length);
+
+        if (!detailedData.length) {
+          console.log('[CSV Export] No detailed data found, checking regular PL data structure:');
+          console.log('[CSV Export] Sample PL data:', filteredPlData.value.slice(0, 3));
+          toast.add({ severity: 'warn', summary: '警告', detail: '詳細データが見つかりませんでした', life: 3000 });
+          return;
+        }
+
+        const rows = [];
+        
+        // CSV Headers - Japanese column names as requested
+        const headers = [
+          '月分',         // Month (YYYY-MM-01 format)
+          '日付',         // Transaction Date
+          '勘定科目',     // Account Subject
+          '補助科目',     // Sub Account
+          '部門',         // Department
+          '税区分',       // Tax Classification
+          '金額（税込）', // Amount including tax
+          '税額',         // Tax Amount
+          '相手勘定科目', // Counterpart Account
+          '相手補助科目', // Counterpart Sub Account
+          '相手部門',     // Counterpart Department
+          '摘要',         // Summary/Description
+          '区分1',        // Classification 1
+          '区分2',        // Classification 2
+          '区分3',        // Classification 3
+          '区分4',        // Classification 4
+          '順番コード',   // Order Code (account code)
+          '直接CF（相手）', // Direct CF (Counterpart) - empty
+          '経営グループ'  // Management Group
+        ];
+        rows.push(headers);
+
+        // Process each row of detailed P&L data
+        detailedData.forEach(item => {
+          // Format transaction date
+          const transactionDate = item.transaction_date ? new Date(item.transaction_date) : null;
+          const monthDate = transactionDate ? 
+            `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}-01` : '';
+          const formattedTransactionDate = transactionDate ? 
+            `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}-${String(transactionDate.getDate()).padStart(2, '0')}` : '';
+
+          const row = [
+            monthDate,                           // 月分 (YYYY-MM-01)
+            formattedTransactionDate,            // 日付 (YYYY-MM-DD)
+            item.account_name || '',             // 勘定科目
+            item.sub_account || '',              // 補助科目
+            item.department || '',               // 部門
+            item.tax_class || '',                // 税区分
+            item.amount_with_tax || 0,           // 金額（税込）
+            item.tax_amount || 0,                // 税額
+            item.counterpart_account_code || '', // 相手勘定科目
+            item.counterpart_sub_account || '',  // 相手補助科目
+            item.counterpart_department || '',   // 相手部門
+            item.summary || '',                  // 摘要
+            '',                                  // 区分1 (empty)
+            '',                                  // 区分2 (empty)
+            '',                                  // 区分3 (empty)
+            '',                                  // 区分4 (empty)
+            item.account_code || '',             // 順番コード (account code)
+            '',                                  // 直接CF（相手） (empty)
+            item.management_group_formatted || '' // 経営グループ (formatted as order_name)
+          ];
+          rows.push(row);
+        });
+
+        // Helper function to escape CSV cells
+        const escapeCSVCell = (cell) => {
+          if (cell === null || cell === undefined) return '""';
+          const str = String(cell);
+          // If cell contains comma, newline, or double quote, wrap in quotes and escape quotes
+          if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return `"${str}"`;
+        };
+
+        const csv = rows.map(row => row.map(escapeCSVCell).join(',')).join('\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        
+        // Create filename with date range
+        let filename = `PL_detailed_${filters.value.startMonth}_${filters.value.endMonth}`;
+        if (selectedDepartments.value.length > 0 && selectedDepartments.value.length < departmentsInData.value.length) {
+          filename += '_filtered';
+        }
+        link.download = `${filename}.csv`;
+        link.click();
+
+        // Revoke the blob URL to prevent memory leaks
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 100);
+
+        toast.add({ severity: 'success', summary: '成功', detail: '詳細CSVファイルをダウンロードしました', life: 3000 });
+      } catch (error) {
+        console.error('Error exporting detailed CSV:', error);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '詳細CSV出力中にエラーが発生しました', life: 3000 });
+      }
+    };
+
     onMounted(() => {
       loadInitialData();
     });
@@ -1645,7 +1790,8 @@ export default {
       formatMonth,
       formatCurrency,
       loadData,
-      exportToCSV
+      exportToCSV,
+      exportDetailedCSV
     };
   }
 };
