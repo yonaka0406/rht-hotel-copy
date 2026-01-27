@@ -16,9 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New Feature: Restructured billing interface with dedicated invoice management page.
 - New Feature: Added invoice creation dialog with editable invoice details and validation.
 - New Feature: New bulk billing drawer for processing multiple reservations simultaneously.
+- New Feature: Added support for multi-month report views, enabling users to analyze performance across extended time periods.
+- New Feature: Enhanced hotel filtering capabilities in report generation and download workflows.
+- New Feature: Added provisional sales column (仮売上) to daily report Excel output.
 - Improvement: Enhanced invoice generation with improved multi-tax-rate aggregation.
 - Improvement: Better reservation detail aggregation and organization in invoices.
 - Improvement: Improved data handling for complex billing scenarios with multiple accommodations and add-ons.
+- Bug Fix: Improved reservation data filtering and handling for more accurate report calculations.
+- Chore: Updated repository configuration files.
 
 ---
 
