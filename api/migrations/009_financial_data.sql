@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS du_forecast (
    non_accommodation_sold_rooms INTEGER, -- '宿泊外販売客室数'
    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,   
    created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_categories_forecast UNIQUE (hotel_id, forecast_month, plan_type_category_id, plan_package_category_id)
+   CONSTRAINT uq_hotel_month_categories_forecast UNIQUE NULLS NOT DISTINCT (hotel_id, forecast_month, plan_type_category_id, plan_package_category_id)
 );
 COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';
 COMMENT ON COLUMN du_forecast.hotel_id IS '施設テーブルを参照する外部キー (hotels.id)';
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS du_accounting (
    non_accommodation_sold_rooms INTEGER, -- '宿泊外販売客室数'
    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,   
    created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_categories_accounting UNIQUE (hotel_id, accounting_month, plan_type_category_id, plan_package_category_id)
+   CONSTRAINT uq_hotel_month_categories_accounting UNIQUE NULLS NOT DISTINCT (hotel_id, accounting_month, plan_type_category_id, plan_package_category_id)
 );
 COMMENT ON TABLE du_accounting IS '施設ごと月ごとの売上会計データ';
 COMMENT ON COLUMN du_accounting.plan_type_category_id IS 'プランタイプカテゴリーID (plan_type_categories.id)';

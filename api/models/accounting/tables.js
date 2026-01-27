@@ -57,11 +57,11 @@ const getAccountingTable = async (requestId, hotelId, startMonth, endMonth, dbCl
  * Upsert Forecast table data
  */
 const upsertForecastTable = async (requestId, data, userId, dbClient = null) => {
+    if (!data || data.length === 0) return [];
+
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
-
-    if (!data || data.length === 0) return [];
 
     try {
         const values = data.map(d => [
@@ -112,11 +112,11 @@ const upsertForecastTable = async (requestId, data, userId, dbClient = null) => 
  * Upsert Accounting table data
  */
 const upsertAccountingTable = async (requestId, data, userId, dbClient = null) => {
+    if (!data || data.length === 0) return [];
+
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
     const shouldRelease = !dbClient;
-
-    if (!data || data.length === 0) return [];
 
     try {
         const values = data.map(d => [
