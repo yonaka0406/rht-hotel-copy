@@ -214,9 +214,12 @@ const calculateMetrics = () => {
     filteredMetricsReservations.forEach(res => {
         totalAccommodationRevenue += parseFloat(res.accommodation_price || 0);
         totalOtherRevenue += parseFloat(res.other_price || 0);
-        if (parseFloat(res.accommodation_price || 0) > 0) {
-            totalRoomsSold += parseInt(res.room_count || 0);
-        }
+        
+        // Count rooms regardless of price (to include complimentary stays), 
+        // but exclude provisory bookings to align with "Confirmed" definition in breakdown table.
+        const totalRooms = parseInt(res.room_count || 0);
+        const provisoryRooms = parseInt(res.provisory_room_count || 0);
+        totalRoomsSold += Math.max(0, totalRooms - provisoryRooms);
     });
 
     // For ADR and RevPAR calculations, use accommodation revenue only
