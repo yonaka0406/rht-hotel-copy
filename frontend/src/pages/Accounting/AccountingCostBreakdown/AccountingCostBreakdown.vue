@@ -612,6 +612,21 @@ const analyticsSummary = computed(() => {
 
 // --- Helper Functions ---
 
+/**
+ * Aggregate costs and sales across multiple hotels for each month
+ */
+function aggregateByMonth(data) {
+    const monthsMap = {};
+    data.forEach(d => {
+        if (!monthsMap[d.month]) {
+            monthsMap[d.month] = { month: d.month, cost: 0, sales: 0 };
+        }
+        monthsMap[d.month].cost += Number(d.cost);
+        monthsMap[d.month].sales += Number(d.sales);
+    });
+    return Object.values(monthsMap).sort((a, b) => new Date(a.month) - new Date(b.month));
+}
+
 const formatCurrency = (value) =>
     new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(value);
 
