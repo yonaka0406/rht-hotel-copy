@@ -1,6 +1,36 @@
 {
   "entries": [
     {
+      "version": "1.4.5",
+      "date": "2026-01-27",
+      "changes": [
+        {
+          "type": "feature",
+          "description": "精算インターフェースを再構築し、専用の請求書管理ページを追加しました。"
+        },
+        {
+          "type": "feature",
+          "description": "編集可能な請求書詳細とバリデーション機能を備えた請求書作成ダイアログを追加しました。"
+        },
+        {
+          "type": "feature",
+          "description": "複数の予約を同時に処理するための新規一括精算ドロワーを追加しました。"
+        },
+        {
+          "type": "improvement",
+          "description": "複数の税率の集計機能を改善し、請求書発行機能を強化しました。"
+        },
+        {
+          "type": "improvement",
+          "description": "請求書における予約詳細の集計と整理を改善しました。"
+        },
+        {
+          "type": "improvement",
+          "description": "複数の宿泊やアドオンを含む複雑な精算シナリオのデータ処理を改善しました。"
+        }
+      ]
+    },
+    {
       "version": "1.4.4",
       "date": "2026-01-26",
       "changes": [

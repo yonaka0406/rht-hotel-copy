@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.5] - 2026-01-27
+
+- New Feature: Restructured billing interface with dedicated invoice management page.
+- New Feature: Added invoice creation dialog with editable invoice details and validation.
+- New Feature: New bulk billing drawer for processing multiple reservations simultaneously.
+- Improvement: Enhanced invoice generation with improved multi-tax-rate aggregation.
+- Improvement: Better reservation detail aggregation and organization in invoices.
+- Improvement: Improved data handling for complex billing scenarios with multiple accommodations and add-ons.
+
+---
+
 ## [1.4.4] - 2026-01-26
 
 - New Feature: Enhanced OTA reservation queue with search functionality and status filtering (All/Failed).
