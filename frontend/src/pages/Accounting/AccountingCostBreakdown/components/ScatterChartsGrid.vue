@@ -51,6 +51,10 @@ const getScatterOption = (account) => {
     const accountData = props.rawData.timeSeries.filter(d => d.account_code === account.code);
     const occupancyData = props.rawData.occupancyData || [];
     
+    console.log(`\n=== SCATTER CHART ANALYSIS: ${account.name} (${account.code}) ===`);
+    console.log('Account Cost Data Records:', accountData.length);
+    console.log('Occupancy Data Records:', occupancyData.length);
+    
     // Create series data for each hotel
     const hotelSeries = [];
     const hotelColors = [
@@ -64,29 +68,78 @@ const getScatterOption = (account) => {
         ? props.mappedHotels 
         : props.mappedHotels.filter(h => h.hotel_id === props.selectedHotelId);
 
+    console.log('Hotels to Analyze:', hotelsToAnalyze.map(h => `${h.hotel_name} (ID: ${h.hotel_id})`));
+    console.log('Selected Hotel ID:', props.selectedHotelId);
+
     hotelsToAnalyze.forEach((hotel, index) => {
         const hotelAccountData = accountData.filter(d => d.hotel_id === hotel.hotel_id);
         const hotelOccupancyData = occupancyData.filter(d => d.hotel_id === hotel.hotel_id);
         
+        console.log(`\n--- Hotel: ${hotel.hotel_name} (ID: ${hotel.hotel_id}) ---`);
+        console.log('  Cost Data Records:', hotelAccountData.length);
+        console.log('  Occupancy Data Records:', hotelOccupancyData.length);
+        
+        // Debug: Show the actual months in each dataset
+        console.log('  Cost Data Months:', hotelAccountData.map(d => d.month).sort());
+        console.log('  Occupancy Data Months:', hotelOccupancyData.map(d => d.month).sort());
+        
+        // Debug: Show sample records from each dataset
+        if (hotelAccountData.length > 0) {
+            console.log('  Sample Cost Record:', hotelAccountData[0]);
+        }
+        if (hotelOccupancyData.length > 0) {
+            console.log('  Sample Occupancy Record:', hotelOccupancyData[0]);
+        }
+        
         // Combine cost and occupancy data by month
         const combinedData = [];
+        let zeroOccupancyCount = 0;
+        let noMatchCount = 0;
+        
         hotelAccountData.forEach(costRecord => {
             const occupancyRecord = hotelOccupancyData.find(o => o.month === costRecord.month);
-            if (occupancyRecord && occupancyRecord.total_sold_rooms > 0) {
-                const costPerOccupiedRoom = costRecord.cost / occupancyRecord.total_sold_rooms;
-                const occupancyPercentage = parseFloat(occupancyRecord.occupancy_percentage);
+            
+            console.log(`  Checking month ${costRecord.month}:`);
+            console.log(`    Cost Record: ¥${Number(costRecord.cost).toLocaleString()}`);
+            console.log(`    Occupancy Record Found: ${occupancyRecord ? 'YES' : 'NO'}`);
+            
+            if (occupancyRecord) {
+                console.log(`    Occupancy Details: ${occupancyRecord.occupancy_percentage}%, Sold Rooms: ${occupancyRecord.total_sold_rooms}, Available Rooms: ${occupancyRecord.total_available_rooms}`);
                 
-                combinedData.push([
-                    occupancyPercentage, // X-axis: Occupancy Percentage
-                    costPerOccupiedRoom, // Y-axis: Cost per Occupied Room
-                    costRecord.month,    // For tooltip
-                    costRecord.cost,     // For tooltip
-                    occupancyRecord.total_sold_rooms // For tooltip
-                ]);
+                if (occupancyRecord.total_sold_rooms > 0) {
+                    const costPerOccupiedRoom = costRecord.cost / occupancyRecord.total_sold_rooms;
+                    const occupancyPercentage = parseFloat(occupancyRecord.occupancy_percentage);
+                    
+                    console.log(`    ✓ MATCH: Occupancy ${occupancyPercentage.toFixed(1)}%, Cost/Room ¥${costPerOccupiedRoom.toLocaleString()}, Total Cost ¥${Number(costRecord.cost).toLocaleString()}, Sold Rooms ${occupancyRecord.total_sold_rooms}`);
+                    
+                    combinedData.push([
+                        occupancyPercentage, // X-axis: Occupancy Percentage
+                        costPerOccupiedRoom, // Y-axis: Cost per Occupied Room
+                        costRecord.month,    // For tooltip
+                        costRecord.cost,     // For tooltip
+                        occupancyRecord.total_sold_rooms // For tooltip
+                    ]);
+                } else {
+                    zeroOccupancyCount++;
+                    console.log(`    ✗ SKIP: No sold rooms (${occupancyRecord.total_sold_rooms}) - Hotel may be closed/under construction`);
+                }
+            } else {
+                noMatchCount++;
+                console.log(`    ✗ SKIP: No matching occupancy record for month ${costRecord.month}`);
             }
         });
+        
+        // Summary for this hotel
+        console.log(`  SUMMARY: ${combinedData.length} data points, ${zeroOccupancyCount} zero-occupancy months, ${noMatchCount} unmatched months`);
 
+        console.log(`  Combined Data Points: ${combinedData.length}`);
+        
         if (combinedData.length > 0) {
+            const avgOccupancy = combinedData.reduce((sum, d) => sum + d[0], 0) / combinedData.length;
+            const avgCostPerRoom = combinedData.reduce((sum, d) => sum + d[1], 0) / combinedData.length;
+            console.log(`  Average Occupancy: ${avgOccupancy.toFixed(1)}%`);
+            console.log(`  Average Cost per Room: ¥${avgCostPerRoom.toLocaleString()}`);
+            
             hotelSeries.push({
                 name: hotel.hotel_name,
                 type: 'scatter',
@@ -97,8 +150,14 @@ const getScatterOption = (account) => {
                     opacity: 0.7
                 }
             });
+        } else {
+            console.log(`  No matching data points for ${hotel.hotel_name}`);
+            console.log(`  → This hotel may have been closed, under construction, or had data quality issues during the cost periods`);
         }
     });
+
+    console.log(`\nTotal Series Created: ${hotelSeries.length}`);
+    console.log('=== END SCATTER CHART ANALYSIS ===\n');
 
     return {
         grid: {
@@ -111,9 +170,18 @@ const getScatterOption = (account) => {
             trigger: 'item',
             formatter: (params) => {
                 const [occupancy, costPerRoom, month, totalCost, soldRooms] = params.data;
+                
+                // Format the date nicely (e.g., "2025-07-31T15:00:00.000Z" -> "2025年07月")
+                const formatDate = (dateString) => {
+                    const date = new Date(dateString);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    return `${year}年${month}月`;
+                };
+                
                 return `
                     <strong>${params.seriesName}</strong><br/>
-                    ${month}<br/>
+                    ${formatDate(month)}<br/>
                     稼働率: ${occupancy.toFixed(1)}%<br/>
                     客室単価コスト: ${formatCurrency(costPerRoom)}<br/>
                     総コスト: ${formatCurrency(totalCost)}<br/>
