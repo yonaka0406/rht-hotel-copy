@@ -45,7 +45,7 @@ function generateInvoiceHTML(html, data, userName) {
   // Main Table
   modifiedHTML = modifiedHTML.replace(/{{ facility_name }}/g, data.facility_name || '');
   modifiedHTML = modifiedHTML.replace(/{{ payment_due_date }}/g, data.due_date || '');
-  modifiedHTML = modifiedHTML.replace(/{{ total_amount }}/g, data.invoice_total_value ? data.invoice_total_value.toLocaleString() : '0');
+  modifiedHTML = modifiedHTML.replace(/{{ total_amount }}/g, (data.invoice_total_value !== null && data.invoice_total_value !== undefined) ? data.invoice_total_value.toLocaleString() : '0');
   modifiedHTML = modifiedHTML.replace(/{{ bank_name }}/g, data.bank_name || '');
   modifiedHTML = modifiedHTML.replace(/{{ bank_branch_name }}/g, data.bank_branch_name || '');
   modifiedHTML = modifiedHTML.replace(/{{ bank_account_type }}/g, data.bank_account_type || '');

@@ -270,16 +270,16 @@ const generateInvoiceExcel = async (req, res) => {
     worksheet.getCell('I25').value = totalTax;
 
     // 10% Subject (Net) and Tax
-    worksheet.getCell('I27').value = totalNet10 > 0 ? totalNet10 : '';
-    worksheet.getCell('I28').value = taxAmount10 > 0 ? taxAmount10 : '';
+    worksheet.getCell('I27').value = totalNet10 !== 0 ? totalNet10 : '';
+    worksheet.getCell('I28').value = taxAmount10 !== 0 ? taxAmount10 : '';
 
     // 8% Subject (Net) and Tax - Corrected based on template having a spacer at I29
-    worksheet.getCell('I30').value = totalNet8 > 0 ? totalNet8 : '';
-    worksheet.getCell('I31').value = taxAmount8 > 0 ? taxAmount8 : '';
+    worksheet.getCell('I30').value = totalNet8 !== 0 ? totalNet8 : '';
+    worksheet.getCell('I31').value = taxAmount8 !== 0 ? taxAmount8 : '';
 
     // 0% (Non-taxable) Subject and Tax
-    worksheet.getCell('I33').value = (totalNet0 > 0 || taxAmount0 > 0) ? totalNet0 : '';
-    worksheet.getCell('I34').value = (totalNet0 > 0 || taxAmount0 > 0) ? taxAmount0 : '';
+    worksheet.getCell('I33').value = (totalNet0 !== 0 || taxAmount0 !== 0) ? totalNet0 : '';
+    worksheet.getCell('I34').value = (totalNet0 !== 0 || taxAmount0 !== 0) ? taxAmount0 : '';
 
     worksheet.getCell('C33').value = invoiceData.comment;
     worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
@@ -343,7 +343,7 @@ const generateInvoiceExcel = async (req, res) => {
             planData[bucketId].price += detail.price + (detail.addons_price_accom || 0);
           }
           // Add 'Other' Addons to bucket 5
-          if (detail.addons_price_other > 0) {
+          if (detail.addons_price_other !== 0) {
             planData[5].price += detail.addons_price_other;
           }
         }
@@ -354,16 +354,16 @@ const generateInvoiceExcel = async (req, res) => {
       const utcCurrentDate = new Date(Date.UTC(year, month, day));
       row.getCell('B').value = utcCurrentDate;
 
-      row.getCell('C').value = planData[4].count > 0 ? planData[4].count : '';
-      row.getCell('D').value = planData[4].price > 0 ? planData[4].price : '';
-      row.getCell('E').value = planData[3].count > 0 ? planData[3].count : '';
-      row.getCell('F').value = planData[3].price > 0 ? planData[3].price : '';
-      row.getCell('G').value = planData[2].count > 0 ? planData[2].count : '';
-      row.getCell('H').value = planData[2].price > 0 ? planData[2].price : '';
-      row.getCell('I').value = planData[1].count > 0 ? planData[1].count : '';
-      row.getCell('J').value = planData[1].price > 0 ? planData[1].price : '';
-      row.getCell('K').value = planData[5].price > 0 ? planData[5].price : '';
-      row.getCell('L').value = cancelledCount > 0 ? cancelledCount : '';
+      row.getCell('C').value = planData[4].count !== 0 ? planData[4].count : '';
+      row.getCell('D').value = planData[4].price !== 0 ? planData[4].price : '';
+      row.getCell('E').value = planData[3].count !== 0 ? planData[3].count : '';
+      row.getCell('F').value = planData[3].price !== 0 ? planData[3].price : '';
+      row.getCell('G').value = planData[2].count !== 0 ? planData[2].count : '';
+      row.getCell('H').value = planData[2].price !== 0 ? planData[2].price : '';
+      row.getCell('I').value = planData[1].count !== 0 ? planData[1].count : '';
+      row.getCell('J').value = planData[1].price !== 0 ? planData[1].price : '';
+      row.getCell('K').value = planData[5].price !== 0 ? planData[5].price : '';
+      row.getCell('L').value = cancelledCount !== 0 ? cancelledCount : '';
     }
 
     res.setHeader('Access-Control-Expose-Headers', 'X-Invoice-Number');
