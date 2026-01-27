@@ -157,6 +157,8 @@
                     :analyticsSummary="analyticsSummary" 
                     :rawData="rawData"
                     :mappedHotels="mappedHotels"
+                    :selectedMonth="selectedMonth"
+                    :latestMonth="latestMonth"
                 />
             </div>
 
@@ -565,36 +567,30 @@ const analyticsSummary = computed(() => {
         console.log('  全体平均 (Global):', globalAvg.toLocaleString());
         console.log('  Are they all equal?', currentYearAvg === last12mAvg && last12mAvg === globalAvg);
 
-        // 3. Revenue Impact - total lifetime cost over total lifetime revenue (ALL DATA)
-        console.log('REVENUE IMPACT CALCULATION (LIFETIME):');
+        // 3. Revenue Impact - total lifetime cost over total accumulated revenue until selected date
+        console.log('REVENUE IMPACT CALCULATION (CONSISTENT DENOMINATOR):');
         
         // Use ALL data for this account across ALL hotels and ALL time periods
         const allAccountData = rawData.value.timeSeries.filter(d => d.account_code === account.code);
         const lifetimeTotalCost = allAccountData.reduce((sum, d) => sum + Number(d.cost), 0);
         
-        // For revenue denominator, use ALL revenue data (not just this account's records)
-        // Get all unique months and hotels that have this account data
-        const accountMonthHotelPairs = new Set(allAccountData.map(d => `${d.month}-${d.hotel_id}`));
-        
-        // Find all revenue records for those same month-hotel combinations
-        const matchingRevenueData = rawData.value.timeSeries.filter(d => 
-            accountMonthHotelPairs.has(`${d.month}-${d.hotel_id}`)
-        );
-        
-        // Sum up ALL revenue for those month-hotel combinations (across all accounts)
-        const lifetimeTotalRevenue = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
+        // For revenue denominator, use ALL revenue data up to the selected date (2025-11)
+        // This ensures all accounts use the same revenue base for comparison
+        const selectedDate = selectedMonth.value ? new Date(selectedMonth.value) : (latestMonth.value ? new Date(latestMonth.value) : new Date());
+        const allRevenueDataUpToDate = rawData.value.timeSeries.filter(d => new Date(d.month) <= selectedDate);
+        const totalAccumulatedRevenue = allRevenueDataUpToDate.reduce((sum, d) => sum + Number(d.sales), 0);
         
         console.log('Account Lifetime Total Cost:', lifetimeTotalCost.toLocaleString());
-        console.log('Account Lifetime Total Revenue (ALL accounts for same periods):', lifetimeTotalRevenue.toLocaleString());
+        console.log('Total Accumulated Revenue (up to', selectedDate.toISOString().substring(0, 7), '):', totalAccumulatedRevenue.toLocaleString());
         console.log('Account Cost Data Records:', allAccountData.length);
-        console.log('Matching Revenue Data Records:', matchingRevenueData.length);
+        console.log('Total Revenue Data Records (up to selected date):', allRevenueDataUpToDate.length);
         console.log('Account Lifetime Date Range:', 
             allAccountData.length > 0 ? 
             `${allAccountData[0]?.month} to ${allAccountData[allAccountData.length - 1]?.month}` : 
             'No data');
         
-        const revenueImpact = lifetimeTotalRevenue > 0 ? (lifetimeTotalCost / lifetimeTotalRevenue) * 100 : 0;
-        console.log('Lifetime Revenue Impact:', `${revenueImpact.toFixed(2)}%`);
+        const revenueImpact = totalAccumulatedRevenue > 0 ? (lifetimeTotalCost / totalAccumulatedRevenue) * 100 : 0;
+        console.log('Lifetime Revenue Impact (vs total accumulated revenue):', `${revenueImpact.toFixed(2)}%`);
 
         const result = {
             ...account,

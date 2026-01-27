@@ -26,15 +26,27 @@ const props = defineProps({
     mappedHotels: {
         type: Array,
         required: true
+    },
+    selectedMonth: {
+        type: String,
+        default: null
+    },
+    latestMonth: {
+        type: String,
+        default: null
     }
 });
 
 /**
- * Calculate revenue impact for each hotel individually using lifetime data
+ * Calculate revenue impact for each hotel individually using consistent denominator
  */
 const calculateHotelRevenueImpacts = computed(() => {
     if (!props.rawData?.timeSeries?.length || !props.analyticsSummary?.length) return [];
 
+    // Calculate total accumulated revenue up to selected date (same denominator for all)
+    const selectedDate = props.selectedMonth ? new Date(props.selectedMonth) : (props.latestMonth ? new Date(props.latestMonth) : new Date());
+    const allRevenueDataUpToDate = props.rawData.timeSeries.filter(d => new Date(d.month) <= selectedDate);
+    
     const hotelImpacts = [];
     
     // Get unique hotels from mapped hotels
@@ -47,6 +59,11 @@ const calculateHotelRevenueImpacts = computed(() => {
             impacts: []
         };
 
+        // Calculate total accumulated revenue for this hotel up to selected date
+        const hotelTotalRevenue = allRevenueDataUpToDate
+            .filter(d => d.hotel_id === hotel.hotel_id)
+            .reduce((sum, d) => sum + Number(d.sales), 0);
+
         props.analyticsSummary.forEach(account => {
             // Get ALL lifetime data for this hotel and account (no time filtering)
             const accountData = props.rawData.timeSeries.filter(d => 
@@ -57,14 +74,8 @@ const calculateHotelRevenueImpacts = computed(() => {
                 // Use total lifetime cost for this account at this hotel
                 const totalCost = accountData.reduce((sum, d) => sum + Number(d.cost), 0);
                 
-                // For revenue denominator, get ALL revenue for this hotel for the same months
-                const accountMonths = new Set(accountData.map(d => d.month));
-                const matchingRevenueData = props.rawData.timeSeries.filter(d => 
-                    d.hotel_id === hotel.hotel_id && accountMonths.has(d.month)
-                );
-                const totalSales = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
-                
-                const revenueImpact = totalSales > 0 ? (totalCost / totalSales) * 100 : 0;
+                // Use the same denominator (total accumulated revenue for this hotel)
+                const revenueImpact = hotelTotalRevenue > 0 ? (totalCost / hotelTotalRevenue) * 100 : 0;
                 hotelData.impacts.push(revenueImpact);
             } else {
                 hotelData.impacts.push(0);
@@ -129,9 +140,15 @@ const radarOption = computed(() => {
         tooltip: {
             trigger: 'item',
             formatter: (params) => {
-                const dataIndex = params.dataIndex;
-                const item = props.analyticsSummary[dataIndex];
-                return `${item.name}<br/>${params.seriesName}: ${params.value.toFixed(1)}%`;
+                let html = `<div class="font-bold mb-1">${params.name}</div>`;
+                if (Array.isArray(params.value)) {
+                    props.analyticsSummary.forEach((item, index) => {
+                        const val = params.value[index];
+                        const valStr = (typeof val === 'number') ? val.toFixed(1) : '0.0';
+                        html += `<div>${item.name}: ${valStr}%</div>`;
+                    });
+                }
+                return html;
             }
         },
         legend: {

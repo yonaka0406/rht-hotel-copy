@@ -35,7 +35,7 @@
                             <div class="flex items-center justify-end gap-1">
                                 <span>売上比率</span>
                                 <i class="pi pi-question-circle text-violet-300 hover:text-violet-500 cursor-help text-xs"
-                                    v-tooltip.top="'売上比率（収益インパクト）の計算方法:\n(この経費科目の総コスト ÷ 同期間の総売上) × 100\n\nこの経費が発生した期間の総売上に対する割合\n※ 低いほど収益性への影響が小さい'"></i>
+                                    v-tooltip.top="'売上比率（収益インパクト）の計算方法:\n(この経費科目の総コスト ÷ 基準月までの累計売上) × 100\n\n全ての経費科目が同じ売上ベースで比較される\n※ 低いほど収益性への影響が小さい'"></i>
                             </div>
                         </th>
                     </tr>
