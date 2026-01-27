@@ -54,11 +54,17 @@ const calculateHotelRevenueImpacts = computed(() => {
             );
             
             if (accountData.length > 0) {
-                // Use total lifetime cost and revenue for this hotel
+                // Use total lifetime cost for this account at this hotel
                 const totalCost = accountData.reduce((sum, d) => sum + Number(d.cost), 0);
-                const totalSales = accountData.reduce((sum, d) => sum + Number(d.sales), 0);
-                const revenueImpact = totalSales > 0 ? (totalCost / totalSales) * 100 : 0;
                 
+                // For revenue denominator, get ALL revenue for this hotel for the same months
+                const accountMonths = new Set(accountData.map(d => d.month));
+                const matchingRevenueData = props.rawData.timeSeries.filter(d => 
+                    d.hotel_id === hotel.hotel_id && accountMonths.has(d.month)
+                );
+                const totalSales = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
+                
+                const revenueImpact = totalSales > 0 ? (totalCost / totalSales) * 100 : 0;
                 hotelData.impacts.push(revenueImpact);
             } else {
                 hotelData.impacts.push(0);

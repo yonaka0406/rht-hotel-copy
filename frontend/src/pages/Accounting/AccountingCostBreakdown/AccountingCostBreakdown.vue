@@ -571,11 +571,23 @@ const analyticsSummary = computed(() => {
         // Use ALL data for this account across ALL hotels and ALL time periods
         const allAccountData = rawData.value.timeSeries.filter(d => d.account_code === account.code);
         const lifetimeTotalCost = allAccountData.reduce((sum, d) => sum + Number(d.cost), 0);
-        const lifetimeTotalRevenue = allAccountData.reduce((sum, d) => sum + Number(d.sales), 0);
+        
+        // For revenue denominator, use ALL revenue data (not just this account's records)
+        // Get all unique months and hotels that have this account data
+        const accountMonthHotelPairs = new Set(allAccountData.map(d => `${d.month}-${d.hotel_id}`));
+        
+        // Find all revenue records for those same month-hotel combinations
+        const matchingRevenueData = rawData.value.timeSeries.filter(d => 
+            accountMonthHotelPairs.has(`${d.month}-${d.hotel_id}`)
+        );
+        
+        // Sum up ALL revenue for those month-hotel combinations (across all accounts)
+        const lifetimeTotalRevenue = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
         
         console.log('Account Lifetime Total Cost:', lifetimeTotalCost.toLocaleString());
-        console.log('Account Lifetime Total Revenue:', lifetimeTotalRevenue.toLocaleString());
-        console.log('Account Lifetime Data Records:', allAccountData.length);
+        console.log('Account Lifetime Total Revenue (ALL accounts for same periods):', lifetimeTotalRevenue.toLocaleString());
+        console.log('Account Cost Data Records:', allAccountData.length);
+        console.log('Matching Revenue Data Records:', matchingRevenueData.length);
         console.log('Account Lifetime Date Range:', 
             allAccountData.length > 0 ? 
             `${allAccountData[0]?.month} to ${allAccountData[allAccountData.length - 1]?.month}` : 
