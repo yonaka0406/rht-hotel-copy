@@ -13,28 +13,9 @@
                     <span class="text-xl font-bold">主要KPI（{{ currentHotelName }}）</span>
                 </template>
                 <template #content>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                                }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(actualRevPAR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastRevPAR) }}</p>
-                        </div>
-                    </div>
+                    <KpiSummaryCards :actualADR="actualADR" :forecastADR="forecastADR" :ADRDifference="ADRDifference"
+                        :actualRevPAR="actualRevPAR" :revPARDifference="revPARDifference"
+                        :forecastRevPAR="forecastRevPAR" :formatCurrency="formatCurrency" variant="cards" />
                 </template>
                 <template #footer>
                     <div class="flex justify-content-between">
@@ -100,28 +81,9 @@
                     <span class="text-xl font-bold">主要KPI（{{ currentHotelName }}）</span>
                 </template>
                 <template #content>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
-                                }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(actualRevPAR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                formatCurrency(forecastRevPAR) }}</p>
-                        </div>
-                    </div>
+                    <KpiSummaryCards :actualADR="actualADR" :forecastADR="forecastADR" :ADRDifference="ADRDifference"
+                        :actualRevPAR="actualRevPAR" :revPARDifference="revPARDifference"
+                        :forecastRevPAR="forecastRevPAR" :formatCurrency="formatCurrency" variant="grid" />
                 </template>
                 <template #footer>
                     <div class="flex justify-content-between">
@@ -182,6 +144,7 @@ import MonthlyRevenuePlanVsActualChart from './charts/MonthlyRevenuePlanVsActual
 import RevenuePlanVsActualChart from './charts/RevenuePlanVsActualChart.vue';
 import MonthlyOccupancyChart from './charts/MonthlyOccupancyChart.vue';
 import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
+import KpiSummaryCards from './KpiSummaryCards.vue';
 
 // Utilities
 import {
@@ -357,6 +320,16 @@ const forecastRevPAR = computed(() => {
     const revenue = aggregatedCurrentHotelRevenue.value.total_forecast_revenue;
     const availableRooms = aggregatedCurrentHotelOccupancy.value.total_fc_available_rooms;
     return availableRooms ? Math.round(revenue / availableRooms) : NaN;
+});
+
+const ADRDifference = computed(() => {
+    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return null;
+    return actualADR.value - forecastADR.value;
+});
+
+const revPARDifference = computed(() => {
+    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return null;
+    return actualRevPAR.value - forecastRevPAR.value;
 });
 
 // ECharts are now handled by individual chart components

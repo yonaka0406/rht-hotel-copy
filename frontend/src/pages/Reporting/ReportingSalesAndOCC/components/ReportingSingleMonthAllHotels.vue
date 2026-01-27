@@ -31,42 +31,10 @@
                             </div>
 
                             <!-- Row 2: KPIs -->
-                            <div class="grid grid-cols-2 gap-4 kpi-section">
-                                <Card class="shadow-sm bg-gray-50 dark:bg-gray-800">
-                                    <template #content>
-                                        <div class="flex flex-col items-center text-center">
-                                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">ADR
-                                            </h6>
-                                            <span class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                                formatCurrency(actualADR) }}</span>
-                                            <span class="text-xs text-gray-400 dark:text-gray-500 mt-1">(計画: {{
-                                                formatCurrency(forecastADR) }})</span>
-                                            <span v-if="ADRDifference"
-                                                :class="['text-xs font-bold mt-1', ADRDifference > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400']">
-                                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference)
-                                                }}
-                                            </span>
-                                        </div>
-                                    </template>
-                                </Card>
-                                <Card class="shadow-sm bg-gray-50 dark:bg-gray-800">
-                                    <template #content>
-                                        <div class="flex flex-col items-center text-center">
-                                            <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">RevPAR
-                                            </h6>
-                                            <span class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
-                                                formatCurrency(actualRevPAR) }}</span>
-                                            <span class="text-xs text-gray-400 dark:text-gray-500 mt-1">(計画: {{
-                                                formatCurrency(forecastRevPAR) }})</span>
-                                            <span v-if="revPARDifference"
-                                                :class="['text-xs font-bold mt-1', revPARDifference > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400']">
-                                                {{ revPARDifference > 0 ? '+' : '' }}{{
-                                                    formatCurrency(revPARDifference) }}
-                                            </span>
-                                        </div>
-                                    </template>
-                                </Card>
-                            </div>
+                            <KpiSummaryCards :actualADR="actualADR" :forecastADR="forecastADR"
+                                :ADRDifference="ADRDifference" :actualRevPAR="actualRevPAR"
+                                :revPARDifference="revPARDifference" :forecastRevPAR="forecastRevPAR"
+                                :formatCurrency="formatCurrency" variant="cards" />
                         </div>
                     </div>
                     <Message severity="secondary" :closable="false" class="mt-2 p-2 text-sm">
@@ -115,24 +83,9 @@
                     <span class="text-xl font-bold">主要KPI（全施設合計）</span>
                 </template>
                 <template #content>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg shadow">
-                            <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
-                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
-                        </div>
-                    </div>
+                    <KpiSummaryCards :actualADR="actualADR" :forecastADR="forecastADR" :ADRDifference="ADRDifference"
+                        :actualRevPAR="actualRevPAR" :revPARDifference="revPARDifference"
+                        :forecastRevPAR="forecastRevPAR" :formatCurrency="formatCurrency" variant="grid" />
                 </template>
             </Card>
             <RevenuePlanVsActualTable :revenueData="props.revenueData" @export-csv="exportCSV" />
@@ -194,6 +147,7 @@ import AllHotelsOccupancyChart from './charts/AllHotelsOccupancyChart.vue';
 import OccupancyGaugeChart from './charts/OccupancyGaugeChart.vue';
 import HotelSalesComparisonChart from './charts/HotelSalesComparisonChart.vue';
 import RevenuePlanVsActualTable from './tables/RevenuePlanVsActualTable.vue';
+import KpiSummaryCards from './KpiSummaryCards.vue';
 
 // Primevue
 import { Card, Badge, SelectButton, Button, DataTable, Column, Panel, Message, Toast } from 'primevue';
@@ -375,12 +329,12 @@ const forecastRevPAR = computed(() => {
 });
 
 const ADRDifference = computed(() => {
-    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return 0;
+    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return null;
     return actualADR.value - forecastADR.value;
 });
 
 const revPARDifference = computed(() => {
-    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return 0;
+    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return null;
     return actualRevPAR.value - forecastRevPAR.value;
 });
 
