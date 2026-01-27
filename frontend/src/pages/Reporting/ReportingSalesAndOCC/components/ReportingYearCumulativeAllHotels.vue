@@ -18,6 +18,10 @@
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
                             }}</p>
+                            <span v-if="ADRDifference"
+                                :class="['text-xs font-bold', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference) }}
+                            </span>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -28,6 +32,10 @@
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                 formatCurrency(actualRevPAR) }}</p>
+                            <span v-if="revPARDifference"
+                                :class="['text-xs font-bold', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                {{ revPARDifference > 0 ? '+' : '' }}{{ formatCurrency(revPARDifference) }}
+                            </span>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
@@ -132,6 +140,10 @@
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">ADR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(actualADR)
                             }}</p>
+                            <span v-if="ADRDifference"
+                                :class="['text-xs font-bold', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference) }}
+                            </span>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 ADR</h6>
@@ -142,6 +154,10 @@
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{
                                 formatCurrency(actualRevPAR) }}</p>
+                            <span v-if="revPARDifference"
+                                :class="['text-xs font-bold', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                {{ revPARDifference > 0 ? '+' : '' }}{{ formatCurrency(revPARDifference) }}
+                            </span>
                         </div>
                         <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500 dark:text-gray-400">計画 RevPAR</h6>
@@ -327,6 +343,16 @@ const forecastRevPAR = computed(() => {
     const revenue = aggregatedAllHotelsRevenue.value.total_forecast_revenue;
     const availableRooms = aggregatedAllHotelsOccupancy.value.total_fc_available_rooms;
     return availableRooms ? Math.round(revenue / availableRooms) : NaN;
+});
+
+const ADRDifference = computed(() => {
+    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return 0;
+    return actualADR.value - forecastADR.value;
+});
+
+const revPARDifference = computed(() => {
+    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return 0;
+    return actualRevPAR.value - forecastRevPAR.value;
 });
 
 // --- Data Computeds for Charts ---

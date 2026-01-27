@@ -39,6 +39,11 @@
                                                 formatCurrency(actualADR) }}</span>
                                             <span class="text-xs text-gray-400 dark:text-gray-500 mt-1">(計画: {{
                                                 formatCurrency(forecastADR) }})</span>
+                                            <span v-if="ADRDifference"
+                                                :class="['text-xs font-bold mt-1', ADRDifference > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400']">
+                                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference)
+                                                }}
+                                            </span>
                                         </div>
                                     </template>
                                 </Card>
@@ -51,6 +56,11 @@
                                                 formatCurrency(actualRevPAR) }}</span>
                                             <span class="text-xs text-gray-400 dark:text-gray-500 mt-1">(計画: {{
                                                 formatCurrency(forecastRevPAR) }})</span>
+                                            <span v-if="revPARDifference"
+                                                :class="['text-xs font-bold mt-1', revPARDifference > 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400']">
+                                                {{ revPARDifference > 0 ? '+' : '' }}{{
+                                                    formatCurrency(revPARDifference) }}
+                                            </span>
                                         </div>
                                     </template>
                                 </Card>
@@ -77,6 +87,10 @@
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500">実績・予約 ADR</h6>
                             <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
+                            <span v-if="ADRDifference"
+                                :class="['text-xs font-bold', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                {{ ADRDifference > 0 ? '+' : '' }}{{ formatCurrency(ADRDifference) }}
+                            </span>
                         </div>
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
@@ -85,6 +99,10 @@
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500">実績・予約 RevPAR</h6>
                             <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
+                            <span v-if="revPARDifference"
+                                :class="['text-xs font-bold', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                {{ revPARDifference > 0 ? '+' : '' }}{{ formatCurrency(revPARDifference) }}
+                            </span>
                         </div>
                         <div class="p-4 bg-gray-50 rounded-lg shadow">
                             <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
@@ -346,6 +364,16 @@ const forecastRevPAR = computed(() => {
     const { total_forecast_revenue, total_fc_available_rooms } = currentHotelAggregateData.value;
     if (total_fc_available_rooms === 0 || total_fc_available_rooms === null || total_fc_available_rooms === undefined) return NaN;
     return Math.round(total_forecast_revenue / total_fc_available_rooms);
+});
+
+const ADRDifference = computed(() => {
+    if (isNaN(actualADR.value) || isNaN(forecastADR.value)) return 0;
+    return actualADR.value - forecastADR.value;
+});
+
+const revPARDifference = computed(() => {
+    if (isNaN(actualRevPAR.value) || isNaN(forecastRevPAR.value)) return 0;
+    return actualRevPAR.value - forecastRevPAR.value;
 });
 
 
