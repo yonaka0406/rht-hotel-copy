@@ -82,10 +82,6 @@ ALTER TABLE du_forecast_entries
     ADD CONSTRAINT fk_du_forecast_entries_account_name 
     FOREIGN KEY (account_name) REFERENCES acc_account_codes(name) ON UPDATE CASCADE;
 
-ALTER TABLE du_accounting_entries 
-    ADD CONSTRAINT fk_du_accounting_entries_account_name 
-    FOREIGN KEY (account_name) REFERENCES acc_account_codes(name) ON UPDATE CASCADE;
-
 -- Seed Account Codes
 INSERT INTO acc_account_codes (code, name, category1, category2, category3, category4, management_group_code, management_group_id, created_by) VALUES
 ('1110001', '現金', '資産', '流動資産', '現金･預金', NULL, 11100, NULL, 1),

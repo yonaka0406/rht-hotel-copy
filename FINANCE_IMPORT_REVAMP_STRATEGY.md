@@ -8,22 +8,25 @@ This document outlines the strategy to modernize the financial data import proce
 
 - Users download a CSV template, fill it in Excel, and re-upload.
 - No support for granular cost/expense budgeting at the individual account level.
-- Manual entry for Actuals was possible but inconsistent with the Accounting Module's ledger.
+- The system relies heavily on `acc_account_codes.name` to join with external Yayoi data.
 
 ## 3. Objectives ("To-Be")
 
-- **On-Screen Budgeting:** Interactive PrimeVue DataTable for **Forecast** data only.
-- **Actuals Integrity:** Actual financial data (`du_accounting_entries`) is populated exclusively via Yayoi imports or automated PMS synchronization to ensure accuracy.
+- **On-Screen Budgeting:** Interactive PrimeVue DataTable for **Forecast** data (Operational + Financial).
+- **Actuals Integrity:** Actual financial data is pulled directly from **Yayoi** (`acc_monthly_account_summary`) and displayed as operational metrics only.
+- **Data Deduplication:** Removed the redundant `du_accounting_entries` table; Yayoi ledger remains the single source of truth for actual financial entries.
 - **Smart Paste (Budgeting):** Copy/Paste multiple rows from Excel directly into the Forecast grid using **Account Names**.
-- **Centralized Routes:** All finance import endpoints are consolidated in `api/routes/importRoutes.js`.
 
 ## 4. Proposed Features
 
-### 4.1. Interactive Forecast Grid
-A specialized grid for Budgeting:
-1.  **Operational Metrics:** Hierarchical display where **Plan Types** (e.g., 素泊まり) act as group headers, with detailed rows for each **Package Category** and metric (販売客室数, 宿泊売上).
-2.  **Financial Entries:** Granular Revenue and Costs (Stored in `du_forecast_entries`).
-    - Row headers use the **Account Name** (`acc_account_codes.name`).
+### 4.1. Interactive Grids
+
+1. **Forecast Grid (予算):**
+    - **Operational Metrics:** Hierarchical display where **Plan Types** act as group headers, with sub-rows for packages and metrics.
+    - **Financial Entries:** Granular Cost/Revenue tracking in `du_forecast_entries` using Account Names.
+2. **Actuals Grid (実績):**
+    - **Operational Metrics ONLY:** Displays revenue and occupancy realized in the system.
+    - **Financial Data:** Managed via the Accounting Module (P&L, Ledger), not manually edited in this grid.
 
 ### 4.2. View-First Smart Paste (Excel Integration)
 
@@ -31,35 +34,27 @@ A specialized grid for Budgeting:
 
 **Workflow:**
 
-1. **Filter Context:** User clicks **「運用指標」を表示** or **「勘定科目」を表示** to filter the grid. This visually confirms which rows will be the target of the paste.
-2. **Action:** User clicks the **「貼り付け」** button to open the paste dialog.
-3. **Context-Aware Processing:**
-    - If the grid is filtered to **Operational Metrics**, the paste logic only attempts to match metrics (Revenue, Room Nights, etc.).
-    - If filtered to **Account Codes**, it only matches system accounts and provides the remapping dialog for unmatched rows.
-4. **Validation:** Provides immediate feedback and ensures no accidental overwrites of data in the non-visible context.
+1. **Filter Context:** User selects the view (運用指標 or 勘定科目).
+2. **Action:** User clicks the **「貼り付け」** button.
+3. **Context-Aware Processing:** Matches data strictly against the visible rows.
+4. **Validation:** Remapping dialog for unmatched account names.
 
-### 4.3. Automated Synchronization
+### 4.3. Automated Synchronization (Actuals)
 
-- **PMS Sync:** Aggregates reservation data into `du_accounting_entries` based on account mappings.
-- **Yayoi Sync:** Aggregates ledger data from `acc_yayoi_data` directly into the Actuals tables.
-- *Note:* These processes are triggered via the Import panels or the Accounting Module, not via manual grid editing.
+- **PMS Sync:** Aggregates reservation data into `du_accounting` (Operational).
+- **Yayoi Sync:** Aggregates ledger data from `acc_yayoi_data` directly into Actuals.
 
 ## 5. Technical Architecture
 
 ### Database Schema
 
-- `du_forecast_entries` and `du_accounting_entries` tables store granular data.
-- Linked by `account_name` to `acc_account_codes` for system-wide consistency.
+- `du_forecast_entries`: Stores granular budget data.
+- Operational metrics remain in `du_forecast` and `du_accounting`.
+- `du_accounting_entries`: TABLE REMOVED (Redundant with Yayoi data).
 
 ### API Routes (`api/routes/importRoutes.js`)
 
-- `GET /api/import/finance/data`: Fetch grid data (Forecast).
-- `POST /api/import/finance/upsert`: Save/Update Forecast entries.
+- `GET /api/import/finance/data`: Fetch grid data.
+- `POST /api/import/finance/upsert`: Save Forecast data.
 - `POST /api/import/finance/sync-yayoi`: Populate Actuals from Yayoi.
 - `POST /api/import/finance/sync-pms`: Populate Actuals from PMS.
-
-## 6. Implementation Plan
-
-1. **Database:** (Completed) Normalized entry tables created.
-2. **API:** (Completed) Endpoints for granular data and sync engines implemented.
-3. **UI:** (Modified) Implement the grid for **Forecasts only**, removing the manual Actuals grid to prevent data corruption.

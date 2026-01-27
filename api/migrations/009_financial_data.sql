@@ -61,20 +61,6 @@ CREATE TABLE du_forecast_entries (
 
 COMMENT ON TABLE du_forecast_entries IS 'Account-level budget data (Forecast), identified by account_name';
 
--- 2. Actual Entries (Accounting) - Granular
-CREATE TABLE du_accounting_entries (
-    id SERIAL PRIMARY KEY,
-    hotel_id INT NOT NULL REFERENCES hotels(id),
-    month DATE NOT NULL, -- First day of the month
-    account_name VARCHAR(100) NOT NULL, -- Logical link to acc_account_codes.name
-    amount NUMERIC(15, 2) DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    CONSTRAINT uq_hotel_month_account_name_accounting UNIQUE (hotel_id, month, account_name)
-);
-
-COMMENT ON TABLE du_accounting_entries IS 'Account-level actual data (Accounting), populated by manual entry or Yayoi sync';
-
 -- Create indexes for better query performance
 CREATE INDEX idx_du_forecast_plan_type_category ON du_forecast(plan_type_category_id);
 CREATE INDEX idx_du_forecast_plan_package_category ON du_forecast(plan_package_category_id);
@@ -82,4 +68,3 @@ CREATE INDEX idx_du_accounting_plan_type_category ON du_accounting(plan_type_cat
 CREATE INDEX idx_du_accounting_plan_package_category ON du_accounting(plan_package_category_id);
 
 CREATE INDEX idx_du_forecast_entries_hotel_month_name ON du_forecast_entries(hotel_id, month, account_name);
-CREATE INDEX idx_du_accounting_entries_hotel_month_name ON du_accounting_entries(hotel_id, month, account_name);

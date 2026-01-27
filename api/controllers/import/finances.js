@@ -15,9 +15,8 @@ const getFinancesData = async (req, res) => {
 
     try {
         const planModel = require('../../models/plan');
-        const [forecast, actuals, accountCodes, forecastTable, actualsTable, typeCategories, packageCategories] = await Promise.all([
+        const [forecast, accountCodes, forecastTable, actualsTable, typeCategories, packageCategories] = await Promise.all([
             accountingModel.getEntries(requestId, 'forecast', hotelId, startMonth, endMonth),
-            accountingModel.getEntries(requestId, 'accounting', hotelId, startMonth, endMonth),
             accountingModel.getAccountCodes(requestId),
             accountingModel.getForecastTable(requestId, hotelId, startMonth, endMonth),
             accountingModel.getAccountingTable(requestId, hotelId, startMonth, endMonth),
@@ -27,7 +26,7 @@ const getFinancesData = async (req, res) => {
 
         res.json({
             forecast,
-            actuals,
+            actuals: [], // actuals entries table removed
             accountCodes,
             forecastTable,
             actualsTable,
@@ -56,7 +55,8 @@ const upsertFinancesData = async (req, res) => {
             if (type === 'forecast') {
                 entryResult = await accountingModel.upsertForecastEntries(requestId, entries, userId);
             } else {
-                entryResult = await accountingModel.upsertAccountingEntries(requestId, entries, userId);
+                // actuals entries table removed
+                logger.warn('Attempted to upsert accounting entries which are now deprecated.');
             }
         }
 

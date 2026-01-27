@@ -104,11 +104,6 @@
                 </template>
             </Column>
         </DataTable>
-
-        <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-            <i class="pi pi-info-circle mr-2"></i>
-            Excelからデータをコピーして、対応する表示モードを選択してから「貼り付け」ボタンを使用してください。
-        </div>
     </div>
 </template>
 
@@ -144,10 +139,13 @@ const hideZeroRows = ref(false);
 
 // View Filter State
 const viewFilter = ref('operational'); // 'operational' or 'account'
-const viewOptions = [
-    { label: '運用指標を表示', value: 'operational' },
-    { label: '勘定科目を表示', value: 'account' }
-];
+const viewOptions = computed(() => {
+    const options = [{ label: '運用指標を表示', value: 'operational' }];
+    if (props.type === 'forecast') {
+        options.push({ label: '勘定科目を表示', value: 'account' });
+    }
+    return options;
+});
 
 const filteredGridData = computed(() => {
     let data = [];
@@ -183,7 +181,7 @@ const availableAccounts = computed(() => {
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
             .map(ac => ({ id: ac.name, name: ac.name }));
     } else {
-        // Return operational rows with context (Group Name) to distinguish duplicates like "Rooms Sold"
+        // Return operational rows with context (Group Name) to distinguish duplicates
         return gridData.value
             .filter(r => r.is_operational)
             .map(r => ({
@@ -193,6 +191,7 @@ const availableAccounts = computed(() => {
             .sort((a, b) => a.name.localeCompare(b.name));
     }
 });
+
 const canApplyMapping = computed(() => {
     const selected = unmappedRows.value.filter(r => r.selectedAccount);
     if (selected.length === 0) return false;
@@ -250,13 +249,13 @@ const loadData = async () => {
         const response = await importStore.getFinancesData(selectedHotel.value.id, start, end);
         
         accountCodes.value = response.accountCodes;
-        const entries = props.type === 'forecast' ? response.forecast : response.actuals;
+        const entries = props.type === 'forecast' ? response.forecast : [];
         const tableRecords = props.type === 'forecast' ? response.forecastTable : response.actualsTable;
         const { typeCategories, packageCategories } = response;
         
         const dataMap = {};
         
-        // 1. Global Operational Metrics (Hotel-wide / 未設定)
+        // 1. Global Operational Metrics
         const globalMetrics = [
             { name: '営業日数', key: 'operating_days', group: '運用指標 (全体)' },
             { name: '客室数', key: 'available_room_nights', group: '運用指標 (全体)' },
@@ -278,26 +277,19 @@ const loadData = async () => {
             };
         });
 
-        // 2. Categorized Operational Metrics (Detailed by Plan)
+        // 2. Categorized Operational Metrics
         const categorizedMetrics = [
             { name: '販売客室数', key: 'rooms_sold_nights' },
             { name: '宿泊売上', key: 'accommodation_revenue' },
         ];
 
         const combinations = new Set();
-        if (props.type === 'forecast') {
-            typeCategories.forEach(tc => {
-                packageCategories.forEach(pc => {
-                    combinations.add(`${tc.id}_${pc.id}`);
-                });
+        // Use all combinations for both forecast and accounting to keep grid structure consistent
+        typeCategories.forEach(tc => {
+            packageCategories.forEach(pc => {
+                combinations.add(`${tc.id}_${pc.id}`);
             });
-        } else {
-            tableRecords.forEach(tr => {
-                if (tr.plan_type_category_id !== null) {
-                    combinations.add(`${tr.plan_type_category_id}_${tr.plan_package_category_id || 'null'}`);
-                }
-            });
-        }
+        });
 
         combinations.forEach(combo => {
             const [typeId, pkgId] = combo.split('_');
@@ -311,7 +303,7 @@ const loadData = async () => {
                 dataMap[rowKey] = {
                     row_key: rowKey,
                     account_name: `[${pkgName}] ${m.name}`,
-                    management_group_name: typeName,
+                    management_group_name: typeName, // Plan Type is the Group Header
                     group_sort_order: 20,
                     is_operational: true,
                     is_global: false,
@@ -332,7 +324,7 @@ const loadData = async () => {
                         account_name: ac.name,
                         account_code: ac.code,
                         management_group_name: ac.management_group_name || 'その他',
-                        group_sort_order: 100 + (parseInt(ac.group_display_order) || 0), // Place after operational groups
+                        group_sort_order: 100 + (parseInt(ac.group_display_order) || 0), 
                         is_operational: false,
                         ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
                     };
@@ -369,7 +361,6 @@ const loadData = async () => {
         gridData.value = Object.values(dataMap).sort((a, b) => {
             if (a.group_sort_order !== b.group_sort_order) return a.group_sort_order - b.group_sort_order;
             if (a.management_group_name !== b.management_group_name) return a.management_group_name.localeCompare(b.management_group_name);
-            // Second order by account code if available (numeric sort for codes)
             if (a.account_code && b.account_code) return a.account_code.localeCompare(b.account_code, undefined, { numeric: true });
             return a.account_name.localeCompare(b.account_name);
         });
