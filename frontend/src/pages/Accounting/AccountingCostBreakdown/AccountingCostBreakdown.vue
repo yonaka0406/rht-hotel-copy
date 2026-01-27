@@ -565,57 +565,24 @@ const analyticsSummary = computed(() => {
         console.log('  全体平均 (Global):', globalAvg.toLocaleString());
         console.log('  Are they all equal?', currentYearAvg === last12mAvg && last12mAvg === globalAvg);
 
-        // 3. Revenue Impact - what percentage this expense represents of total revenue
-        console.log('REVENUE IMPACT CALCULATION:');
-        const selectedScopeData = selectedHotelId.value === 0
-            ? aggregateByMonth(accountData)
-            : accountData.filter(d => d.hotel_id === selectedHotelId.value);
-            
-        const accountTotalCost = selectedScopeData.reduce((sum, d) => sum + Number(d.cost), 0);
-        console.log('Account Total Cost:', accountTotalCost.toLocaleString());
-        console.log('Account Cost Data Period:', selectedScopeData.length, 'months');
-        console.log('Account Cost Date Range:', 
-            selectedScopeData.length > 0 ? 
-            `${selectedScopeData[0]?.month} to ${selectedScopeData[selectedScopeData.length - 1]?.month}` : 
+        // 3. Revenue Impact - total lifetime cost over total lifetime revenue (ALL DATA)
+        console.log('REVENUE IMPACT CALCULATION (LIFETIME):');
+        
+        // Use ALL data for this account across ALL hotels and ALL time periods
+        const allAccountData = rawData.value.timeSeries.filter(d => d.account_code === account.code);
+        const lifetimeTotalCost = allAccountData.reduce((sum, d) => sum + Number(d.cost), 0);
+        const lifetimeTotalRevenue = allAccountData.reduce((sum, d) => sum + Number(d.sales), 0);
+        
+        console.log('Account Lifetime Total Cost:', lifetimeTotalCost.toLocaleString());
+        console.log('Account Lifetime Total Revenue:', lifetimeTotalRevenue.toLocaleString());
+        console.log('Account Lifetime Data Records:', allAccountData.length);
+        console.log('Account Lifetime Date Range:', 
+            allAccountData.length > 0 ? 
+            `${allAccountData[0]?.month} to ${allAccountData[allAccountData.length - 1]?.month}` : 
             'No data');
         
-        // Calculate total revenue for the SAME SCOPE AND TIME PERIOD as the cost
-        let totalRevenue = 0;
-        if (selectedHotelId.value === 0) {
-            // For all hotels: use the same monthly aggregation as cost data
-            const allRevenueData = rawData.value.timeSeries;
-            const monthlyRevenueTotals = aggregateByMonth(allRevenueData);
-            
-            // Filter to match the same months as the cost data
-            const costMonths = new Set(selectedScopeData.map(d => d.month));
-            const matchingRevenueData = monthlyRevenueTotals.filter(d => costMonths.has(d.month));
-            
-            totalRevenue = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
-            console.log('All Hotels - Matching Revenue Records:', matchingRevenueData.length);
-            console.log('All Hotels - Revenue Date Range:', 
-                matchingRevenueData.length > 0 ? 
-                `${matchingRevenueData[0]?.month} to ${matchingRevenueData[matchingRevenueData.length - 1]?.month}` : 
-                'No data');
-            console.log('All Hotels - Total Revenue (matching period):', totalRevenue.toLocaleString());
-        } else {
-            // For specific hotel: use the same time period as cost data
-            const hotelRevenueData = rawData.value.timeSeries.filter(d => d.hotel_id === selectedHotelId.value);
-            
-            // Filter to match the same months as the cost data
-            const costMonths = new Set(selectedScopeData.map(d => d.month));
-            const matchingRevenueData = hotelRevenueData.filter(d => costMonths.has(d.month));
-            
-            totalRevenue = matchingRevenueData.reduce((sum, d) => sum + Number(d.sales), 0);
-            console.log('Specific Hotel - Matching Revenue Records:', matchingRevenueData.length);
-            console.log('Specific Hotel - Revenue Date Range:', 
-                matchingRevenueData.length > 0 ? 
-                `${matchingRevenueData[0]?.month} to ${matchingRevenueData[matchingRevenueData.length - 1]?.month}` : 
-                'No data');
-            console.log('Specific Hotel - Total Revenue (matching period):', totalRevenue.toLocaleString());
-        }
-        
-        const revenueImpact = totalRevenue > 0 ? (accountTotalCost / totalRevenue) * 100 : 0;
-        console.log('Revenue Impact:', `${revenueImpact.toFixed(2)}%`);
+        const revenueImpact = lifetimeTotalRevenue > 0 ? (lifetimeTotalCost / lifetimeTotalRevenue) * 100 : 0;
+        console.log('Lifetime Revenue Impact:', `${revenueImpact.toFixed(2)}%`);
 
         const result = {
             ...account,

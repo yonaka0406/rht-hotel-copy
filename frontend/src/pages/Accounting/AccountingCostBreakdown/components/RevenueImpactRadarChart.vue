@@ -30,7 +30,7 @@ const props = defineProps({
 });
 
 /**
- * Calculate revenue impact for each hotel individually
+ * Calculate revenue impact for each hotel individually using lifetime data
  */
 const calculateHotelRevenueImpacts = computed(() => {
     if (!props.rawData?.timeSeries?.length || !props.analyticsSummary?.length) return [];
@@ -48,12 +48,13 @@ const calculateHotelRevenueImpacts = computed(() => {
         };
 
         props.analyticsSummary.forEach(account => {
-            // Get data for this hotel and account
+            // Get ALL lifetime data for this hotel and account (no time filtering)
             const accountData = props.rawData.timeSeries.filter(d => 
                 d.account_code === account.code && d.hotel_id === hotel.hotel_id
             );
             
             if (accountData.length > 0) {
+                // Use total lifetime cost and revenue for this hotel
                 const totalCost = accountData.reduce((sum, d) => sum + Number(d.cost), 0);
                 const totalSales = accountData.reduce((sum, d) => sum + Number(d.sales), 0);
                 const revenueImpact = totalSales > 0 ? (totalCost / totalSales) * 100 : 0;
