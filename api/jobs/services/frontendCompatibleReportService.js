@@ -57,7 +57,7 @@ function hasAllZeroMetrics(hotelIdStr, data) {
  * @param {Date} targetDate 
  * @param {Object} dbClient - Database client
  */
-const getFrontendCompatibleReportData = async (requestId, targetDate, period = 'month', dbClient) => {
+const getFrontendCompatibleReportData = async (requestId, targetDate, period = 'month', dbClient, hotelIds = []) => {
     try {
         // Input validation for targetDate
         let validatedDate;
@@ -90,33 +90,53 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const month = validatedDate.getMonth();
 
         // Calculate date ranges (same as frontend)
-        const firstDayOfMonth = new Date(year, month, 1);
-        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const numMonths = period === 'year' ? 12 : 6;
+        const monthsInRange = [];
+        for (let i = 0; i < numMonths; i++) {
+            const mDate = new Date(year, (period === 'year' ? 0 : month) + i, 1);
+            const mKey = formatDateMonth(mDate);
+            const sDate = formatDate(mDate);
+            const eDate = formatDate(new Date(mDate.getFullYear(), mDate.getMonth() + 1, 0));
+            monthsInRange.push({ mKey, sDate, eDate, mDate });
+        }
 
-        // For monthly reports, use month range
-        const startDateStr = formatDate(firstDayOfMonth);
-        const endDateStr = formatDate(lastDayOfMonth);
+        const startDateStr = monthsInRange[0].sDate;
+        const endDateStr = monthsInRange[monthsInRange.length - 1].eDate;
 
         // Previous Year Dates
         const prevYearDate = new Date(validatedDate);
         prevYearDate.setFullYear(prevYearDate.getFullYear() - 1);
-        const prevYearFirstDay = new Date(prevYearDate.getFullYear(), month, 1);
-        const prevYearLastDay = new Date(prevYearDate.getFullYear(), month + 1, 0);
-        const prevStartDateStr = formatDate(prevYearFirstDay);
-        const prevEndDateStr = formatDate(prevYearLastDay);
+
+        const prevMonthsInRange = [];
+        for (let i = 0; i < numMonths; i++) {
+            const mDate = new Date(prevYearDate.getFullYear(), (period === 'year' ? 0 : month) + i, 1);
+            const mKey = formatDateMonth(mDate);
+            const sDate = formatDate(mDate);
+            const eDate = formatDate(new Date(mDate.getFullYear(), mDate.getMonth() + 1, 0));
+            prevMonthsInRange.push({ mKey, sDate, eDate, mDate });
+        }
+
+        const prevStartDateStr = prevMonthsInRange[0].sDate;
+        const prevEndDateStr = prevMonthsInRange[prevMonthsInRange.length - 1].eDate;
 
         // Fetch Hotels (same as frontend)
         const allHotelsResult = await dbClient.query('SELECT id, name, total_rooms, open_date, sort_order FROM hotels ORDER BY sort_order');
-        const allHotels = allHotelsResult.rows;
-        const hotelIds = allHotels.map(h => h.id);
+        let allHotels = allHotelsResult.rows;
 
-        logger.warn(`[getFrontendCompatibleReportData] Fetched ${allHotels.length} hotels. Hotel IDs: ${hotelIds.join(', ')}`);
+        // Filter by hotelIds if provided and doesn't contain 0
+        if (Array.isArray(hotelIds) && hotelIds.length > 0 && !hotelIds.includes(0) && !hotelIds.includes('0')) {
+            allHotels = allHotels.filter(h => hotelIds.includes(Number(h.id)) || hotelIds.includes(String(h.id)));
+        }
+
+        const effectiveHotelIds = allHotels.map(h => h.id);
+
+        logger.warn(`[getFrontendCompatibleReportData] Fetched ${allHotels.length} hotels. Hotel IDs: ${effectiveHotelIds.join(', ')}`);
         logger.warn(`[getFrontendCompatibleReportData] Date range: ${startDateStr} to ${endDateStr}`);
 
         // Batch fetch data for all hotels (replicating frontend batch approach)
         const fetchAllHotelsData = async (fetchMethod, sDate, eDate) => {
             const results = {};
-            await Promise.all(hotelIds.map(async (hid) => {
+            await Promise.all(effectiveHotelIds.map(async (hid) => {
                 const data = await fetchMethod(requestId, hid, sDate, eDate, dbClient);
                 results[String(hid)] = data || [];
             }));
@@ -154,7 +174,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const prevYearAccountingTotalData = {};
 
         // Process current year data (replicating frontend logic)
-        for (const hotelId of hotelIds) {
+        for (const hotelId of effectiveHotelIds) {
             const hKey = String(hotelId);
 
             // Process PMS Data
@@ -264,23 +284,11 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
         // Generate revenue data (replicating frontend computed property logic)
         const revenueData = [];
-        const monthKey = formatDateMonth(validatedDate);
-
         // Initialize monthly aggregates (same as frontend - use null for initial values)
         const monthlyAggregates = {};
-        monthlyAggregates[monthKey] = {};
-        monthlyAggregates[monthKey]['0'] = {
-            pms_revenue: null,
-            pms_accommodation_revenue: null,
-            pms_confirmed_accommodation_revenue: null,
-            pms_provisory_accommodation_revenue: null,
-            pms_other_revenue: null,
-            forecast_revenue: null,
-            acc_revenue: null
-        };
-
-        hotelIds.forEach(hotelId => {
-            monthlyAggregates[monthKey][String(hotelId)] = {
+        monthsInRange.forEach(m => {
+            monthlyAggregates[m.mKey] = {};
+            monthlyAggregates[m.mKey]['0'] = {
                 pms_revenue: null,
                 pms_accommodation_revenue: null,
                 pms_confirmed_accommodation_revenue: null,
@@ -289,6 +297,18 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 forecast_revenue: null,
                 acc_revenue: null
             };
+
+            effectiveHotelIds.forEach(hotelId => {
+                monthlyAggregates[m.mKey][String(hotelId)] = {
+                    pms_revenue: null,
+                    pms_accommodation_revenue: null,
+                    pms_confirmed_accommodation_revenue: null,
+                    pms_provisory_accommodation_revenue: null,
+                    pms_other_revenue: null,
+                    forecast_revenue: null,
+                    acc_revenue: null
+                };
+            });
         });
 
         // Aggregate PMS data (same logic as frontend)
@@ -468,38 +488,12 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
         // Generate occupancy data (replicating exact frontend logic)
         const occupancyData = [];
-        const daysInCurrentMonth = getDaysInMonth(year, month + 1);
-
         // Build monthly occupancy aggregates (same as frontend)
         const monthlyOccupancyAggregates = {};
-        monthlyOccupancyAggregates[monthKey] = {};
-        monthlyOccupancyAggregates[monthKey]['0'] = {
-            total_rooms: 0, sold_rooms: 0, non_accommodation_stays: 0,
-            roomDifferenceSum: 0, fc_total_rooms: 0, fc_sold_rooms: 0
-        };
-
-        // Initialize aggregates for each hotel (same as frontend)
-        hotelIds.forEach(hotelId => {
-            const hotel = allHotels.find(h => h.id === hotelId);
-            let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
-            let effectiveDaysForHotelInMonth = daysInCurrentMonth;
-
-            if (hotel && hotel.open_date) {
-                const openDate = normalizeDate(new Date(hotel.open_date));
-                const firstDayOfMonth = normalizeDate(new Date(year, month, 1));
-                const lastDayOfMonth = normalizeDate(new Date(year, month, daysInCurrentMonth));
-
-                if (openDate && !isNaN(openDate.getTime())) {
-                    if (openDate > lastDayOfMonth) effectiveDaysForHotelInMonth = 0;
-                    else if (openDate > firstDayOfMonth) effectiveDaysForHotelInMonth = lastDayOfMonth.getDate() - openDate.getDate() + 1;
-                }
-            }
-            effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
-            const monthlyAvailableRoomDays = physicalRooms * effectiveDaysForHotelInMonth;
-
-            monthlyOccupancyAggregates[monthKey]['0'].total_rooms += monthlyAvailableRoomDays;
-            monthlyOccupancyAggregates[monthKey][String(hotelId)] = {
-                total_rooms: monthlyAvailableRoomDays,
+        monthsInRange.forEach(m => {
+            monthlyOccupancyAggregates[m.mKey] = {};
+            monthlyOccupancyAggregates[m.mKey]['0'] = {
+                total_rooms: 0,
                 sold_rooms: 0,
                 confirmed_sold_rooms: 0,
                 provisory_sold_rooms: 0,
@@ -508,6 +502,38 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 fc_total_rooms: 0,
                 fc_sold_rooms: 0
             };
+
+            // Initialize aggregates for each hotel (same as frontend)
+            effectiveHotelIds.forEach(hotelId => {
+                const hotel = allHotels.find(h => h.id === hotelId);
+                let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
+                let effectiveDaysForHotelInMonth = getDaysInMonth(m.mDate.getFullYear(), m.mDate.getMonth() + 1);
+
+                if (hotel && hotel.open_date) {
+                    const openDate = normalizeDate(new Date(hotel.open_date));
+                    const firstDayOfM = normalizeDate(new Date(m.mDate.getFullYear(), m.mDate.getMonth(), 1));
+                    const lastDayOfM = normalizeDate(new Date(m.mDate.getFullYear(), m.mDate.getMonth() + 1, 0));
+
+                    if (openDate && !isNaN(openDate.getTime())) {
+                        if (openDate > lastDayOfM) effectiveDaysForHotelInMonth = 0;
+                        else if (openDate > firstDayOfM) effectiveDaysForHotelInMonth = lastDayOfM.getDate() - openDate.getDate() + 1;
+                    }
+                }
+                effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
+                const monthlyAvailableRoomDays = physicalRooms * effectiveDaysForHotelInMonth;
+
+                monthlyOccupancyAggregates[m.mKey]['0'].total_rooms += monthlyAvailableRoomDays;
+                monthlyOccupancyAggregates[m.mKey][String(hotelId)] = {
+                    total_rooms: monthlyAvailableRoomDays,
+                    sold_rooms: 0,
+                    confirmed_sold_rooms: 0,
+                    provisory_sold_rooms: 0,
+                    non_accommodation_stays: 0,
+                    roomDifferenceSum: 0,
+                    fc_total_rooms: 0,
+                    fc_sold_rooms: 0
+                };
+            });
         });
 
         // Process PMS data for sold rooms (same as frontend)
@@ -517,34 +543,34 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 pmsRecords.forEach(record => {
                     if (record && record.date && typeof record.room_count === 'number') {
                         const recordMonthKey = formatDateMonth(new Date(record.date));
-                        if (recordMonthKey === monthKey) {
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
-                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].sold_rooms += record.room_count;
-                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].confirmed_sold_rooms += (record.confirmed_room_count || 0);
-                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].provisory_sold_rooms += (record.provisory_room_count || 0);
+                        if (monthlyOccupancyAggregates[recordMonthKey]) {
+                            if (monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey]) {
+                                monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey].sold_rooms += record.room_count;
+                                monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey].confirmed_sold_rooms += (record.confirmed_room_count || 0);
+                                monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey].provisory_sold_rooms += (record.provisory_room_count || 0);
                             }
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
-                                monthlyOccupancyAggregates[monthKey]['0'].sold_rooms += record.room_count;
-                                monthlyOccupancyAggregates[monthKey]['0'].confirmed_sold_rooms += (record.confirmed_room_count || 0);
-                                monthlyOccupancyAggregates[monthKey]['0'].provisory_sold_rooms += (record.provisory_room_count || 0);
+                            if (monthlyOccupancyAggregates[recordMonthKey]['0']) {
+                                monthlyOccupancyAggregates[recordMonthKey]['0'].sold_rooms += record.room_count;
+                                monthlyOccupancyAggregates[recordMonthKey]['0'].confirmed_sold_rooms += (record.confirmed_room_count || 0);
+                                monthlyOccupancyAggregates[recordMonthKey]['0'].provisory_sold_rooms += (record.provisory_room_count || 0);
                             }
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey] && typeof record.non_accommodation_stays === 'number') {
-                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].non_accommodation_stays += record.non_accommodation_stays;
+                            if (monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey] && typeof record.non_accommodation_stays === 'number') {
+                                monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey].non_accommodation_stays += record.non_accommodation_stays;
                             }
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0'] && typeof record.non_accommodation_stays === 'number') {
-                                monthlyOccupancyAggregates[monthKey]['0'].non_accommodation_stays += record.non_accommodation_stays;
+                            if (monthlyOccupancyAggregates[recordMonthKey]['0'] && typeof record.non_accommodation_stays === 'number') {
+                                monthlyOccupancyAggregates[recordMonthKey]['0'].non_accommodation_stays += record.non_accommodation_stays;
                             }
                         }
                     }
                     if (record && record.date && typeof record.total_rooms === 'number' && typeof record.total_rooms_real === 'number') {
                         const recordMonthKey = formatDateMonth(new Date(record.date));
-                        if (recordMonthKey === monthKey) {
+                        if (monthlyOccupancyAggregates[recordMonthKey]) {
                             const difference = record.total_rooms_real - record.total_rooms;
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
-                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].roomDifferenceSum += difference;
+                            if (monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey]) {
+                                monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey].roomDifferenceSum += difference;
                             }
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
-                                monthlyOccupancyAggregates[monthKey]['0'].roomDifferenceSum += difference;
+                            if (monthlyOccupancyAggregates[recordMonthKey]['0']) {
+                                monthlyOccupancyAggregates[recordMonthKey]['0'].roomDifferenceSum += difference;
                             }
                         }
                     }
@@ -559,14 +585,14 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 forecastRecords.forEach(record => {
                     if (record && record.date && typeof record.room_count === 'number') {
                         const recordMonthKey = formatDateMonth(new Date(record.date));
-                        if (recordMonthKey === monthKey) {
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
-                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_sold_rooms += record.room_count;
-                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_total_rooms += record.total_rooms;
+                        if (monthlyOccupancyAggregates[recordMonthKey]) {
+                            if (monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey]) {
+                                monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey].fc_sold_rooms += record.room_count;
+                                monthlyOccupancyAggregates[recordMonthKey][stringHotelIdKey].fc_total_rooms += record.total_rooms;
                             }
-                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
-                                monthlyOccupancyAggregates[monthKey]['0'].fc_total_rooms += record.total_rooms;
-                                monthlyOccupancyAggregates[monthKey]['0'].fc_sold_rooms += record.room_count;
+                            if (monthlyOccupancyAggregates[recordMonthKey]['0']) {
+                                monthlyOccupancyAggregates[recordMonthKey]['0'].fc_total_rooms += record.total_rooms;
+                                monthlyOccupancyAggregates[recordMonthKey]['0'].fc_sold_rooms += record.room_count;
                             }
                         }
                     }
@@ -575,103 +601,110 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         }
 
         // Calculate detailed room availability (same as frontend)
-        const monthData = monthlyOccupancyAggregates[monthKey];
-        let totalRoomsSum = 0;
-        let totalGrossRoomsSum = 0;
+        for (const monthKeyInRange in monthlyOccupancyAggregates) {
+            const monthData = monthlyOccupancyAggregates[monthKeyInRange];
+            const [yStr, mStr] = monthKeyInRange.split('-');
+            const yearLoop = parseInt(yStr, 10);
+            const monthLoop = parseInt(mStr, 10) - 1;
+            const daysInMonthLoop = getDaysInMonth(yearLoop, monthLoop + 1);
 
-        // Calculate total_available_rooms_for_month_calc for each hotel
-        for (const hotelIdStr in monthData) {
-            if (hotelIdStr === '0') continue;
+            let totalRoomsSum = 0;
+            let totalGrossRoomsSum = 0;
 
-            const hotelData = monthData[hotelIdStr];
-            let total_available_rooms_for_month_calc = 0;
-            let total_gross_rooms_for_month_calc = 0;
-            const fallbackCapacityForHotel = pmsFallbackCapacities[hotelIdStr] || 0;
-            const dailyRealRoomsMap = new Map();
-            const dailyGrossRoomsMap = new Map();
-            const hotelPmsDataForMonth = (pmsTotalData[hotelIdStr] || []).filter(
-                pmsRecord => formatDateMonth(new Date(pmsRecord.date)) === monthKey
-            );
+            // Calculate total_available_rooms_for_month_calc for each hotel
+            for (const hotelIdStr in monthData) {
+                if (hotelIdStr === '0') continue;
 
-            hotelPmsDataForMonth.forEach(pmsRecord => {
-                if (pmsRecord.total_rooms_real !== null && pmsRecord.total_rooms_real !== undefined) {
-                    const realRooms = parseInt(pmsRecord.total_rooms_real, 10);
-                    if (!isNaN(realRooms)) {
-                        dailyRealRoomsMap.set(pmsRecord.date, realRooms);
+                const hotelData = monthData[hotelIdStr];
+                let total_available_rooms_for_month_calc = 0;
+                let total_gross_rooms_for_month_calc = 0;
+                const fallbackCapacityForHotel = pmsFallbackCapacities[hotelIdStr] || 0;
+                const dailyRealRoomsMap = new Map();
+                const dailyGrossRoomsMap = new Map();
+                const hotelPmsDataForMonth = (pmsTotalData[hotelIdStr] || []).filter(
+                    pmsRecord => formatDateMonth(new Date(pmsRecord.date)) === monthKeyInRange
+                );
+
+                hotelPmsDataForMonth.forEach(pmsRecord => {
+                    if (pmsRecord.total_rooms_real !== null && pmsRecord.total_rooms_real !== undefined) {
+                        const realRooms = parseInt(pmsRecord.total_rooms_real, 10);
+                        if (!isNaN(realRooms)) {
+                            dailyRealRoomsMap.set(pmsRecord.date, realRooms);
+                        }
                     }
-                }
-                if (pmsRecord.total_rooms !== null && pmsRecord.total_rooms !== undefined) {
-                    const grossRooms = parseInt(pmsRecord.total_rooms, 10);
-                    if (!isNaN(grossRooms)) {
-                        dailyGrossRoomsMap.set(pmsRecord.date, grossRooms);
+                    if (pmsRecord.total_rooms !== null && pmsRecord.total_rooms !== undefined) {
+                        const grossRooms = parseInt(pmsRecord.total_rooms, 10);
+                        if (!isNaN(grossRooms)) {
+                            dailyGrossRoomsMap.set(pmsRecord.date, grossRooms);
+                        }
                     }
-                }
-            });
-
-            for (let day = 1; day <= daysInCurrentMonth; day++) {
-                const dateForDay = new Date(year, month, day);
-                const currentDateStr = formatDate(dateForDay);
-
-                total_available_rooms_for_month_calc += dailyRealRoomsMap.has(currentDateStr) ? dailyRealRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
-                total_gross_rooms_for_month_calc += dailyGrossRoomsMap.has(currentDateStr) ? dailyGrossRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
-            }
-
-            hotelData.total_available_rooms_for_month_calc = total_available_rooms_for_month_calc;
-            hotelData.total_gross_rooms_for_month_calc = total_gross_rooms_for_month_calc;
-
-            totalRoomsSum += total_available_rooms_for_month_calc;
-            totalGrossRoomsSum += total_gross_rooms_for_month_calc;
-        }
-
-        // Assign the sum to the '0' hotel entry
-        if (monthData['0']) {
-            monthData['0'].total_available_rooms_for_month_calc = totalRoomsSum;
-            monthData['0'].total_gross_rooms_for_month_calc = totalGrossRoomsSum;
-        }
-
-        // Create occupancy data array (same logic as frontend)
-        for (const hotelIdStr in monthData) {
-            const data = monthData[hotelIdStr];
-            const total_rooms = data.fc_total_rooms > 0 ? data.fc_total_rooms : (data.total_available_rooms_for_month_calc || 0);
-            const total_gross_rooms = data.total_gross_rooms_for_month_calc || 0;
-            const occupancyRate = total_rooms > 0 ? (data.sold_rooms / total_rooms) * 100 : 0;
-
-            let outputHotelId = hotelIdStr === '0' ? 0 : parseInt(hotelIdStr, 10);
-            const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
-            const hotelOpenDate = searchAllHotels(outputHotelId)[0]?.open_date || null;
-
-            // Debug logging for total row
-            if (hotelIdStr === '0') {
-                logger.warn(`[getFrontendCompatibleReportData] Total occupancy calculation:`, {
-                    monthKey,
-                    sold_rooms: data.sold_rooms,
-                    fc_total_rooms: data.fc_total_rooms,
-                    total_available_rooms_for_month_calc: data.total_available_rooms_for_month_calc,
-                    total_rooms,
-                    occupancyRate: occupancyRate.toFixed(2)
                 });
+
+                for (let day = 1; day <= daysInMonthLoop; day++) {
+                    const dateForDay = new Date(yearLoop, monthLoop, day);
+                    const currentDateStr = formatDate(dateForDay);
+
+                    total_available_rooms_for_month_calc += dailyRealRoomsMap.has(currentDateStr) ? dailyRealRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
+                    total_gross_rooms_for_month_calc += dailyGrossRoomsMap.has(currentDateStr) ? dailyGrossRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
+                }
+
+                hotelData.total_available_rooms_for_month_calc = total_available_rooms_for_month_calc;
+                hotelData.total_gross_rooms_for_month_calc = total_gross_rooms_for_month_calc;
+
+                totalRoomsSum += total_available_rooms_for_month_calc;
+                totalGrossRoomsSum += total_gross_rooms_for_month_calc;
             }
 
-            // Use helper functions to determine if hotel should be included
-            if (isHotelRelevant(hotelIdStr, hotelIds)) {
-                if (!hasAllZeroMetrics(hotelIdStr, data)) {
-                    occupancyData.push({
-                        month: monthKey,
-                        hotel_id: outputHotelId,
-                        hotel_name: hotelName,
-                        sort_order: hotelSortOrderMap.get(outputHotelId) ?? 999,
-                        open_date: hotelOpenDate,
-                        total_rooms: total_rooms,
-                        net_total_rooms: data.fc_total_rooms > 0 ? data.fc_total_rooms : total_rooms, // Use fc_total_rooms for 計画販売可能総室数
-                        gross_total_rooms: total_gross_rooms,
+            // Assign the sum to the '0' hotel entry
+            if (monthData['0']) {
+                monthData['0'].total_available_rooms_for_month_calc = totalRoomsSum;
+                monthData['0'].total_gross_rooms_for_month_calc = totalGrossRoomsSum;
+            }
+
+            // Create occupancy data array for this month (same logic as frontend)
+            for (const hotelIdStr in monthData) {
+                const data = monthData[hotelIdStr];
+                const total_rooms = data.fc_total_rooms > 0 ? data.fc_total_rooms : (data.total_available_rooms_for_month_calc || 0);
+                const total_gross_rooms = data.total_gross_rooms_for_month_calc || 0;
+                const occupancyRate = total_rooms > 0 ? (data.sold_rooms / total_rooms) * 100 : 0;
+
+                let outputHotelId = hotelIdStr === '0' ? 0 : parseInt(hotelIdStr, 10);
+                const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
+                const hotelOpenDate = searchAllHotels(outputHotelId)[0]?.open_date || null;
+
+                // Debug logging for total row
+                if (hotelIdStr === '0') {
+                    logger.warn(`[getFrontendCompatibleReportData] Total occupancy calculation for ${monthKeyInRange}:`, {
                         sold_rooms: data.sold_rooms,
-                        non_accommodation_stays: data.non_accommodation_stays,
-                        occ: parseFloat(occupancyRate.toFixed(2)),
-                        not_available_rooms: 0,
                         fc_total_rooms: data.fc_total_rooms,
-                        fc_sold_rooms: data.fc_sold_rooms,
-                        fc_occ: data.fc_total_rooms > 0 ? parseFloat(((data.fc_sold_rooms / data.fc_total_rooms) * 100).toFixed(2)) : 0
+                        total_available_rooms_for_month_calc: data.total_available_rooms_for_month_calc,
+                        total_rooms,
+                        occupancyRate: occupancyRate.toFixed(2)
                     });
+                }
+
+                // Use helper functions to determine if hotel should be included
+                if (isHotelRelevant(hotelIdStr, effectiveHotelIds)) {
+                    if (!hasAllZeroMetrics(hotelIdStr, data)) {
+                        occupancyData.push({
+                            month: monthKeyInRange,
+                            hotel_id: outputHotelId,
+                            hotel_name: hotelName,
+                            sort_order: hotelSortOrderMap.get(outputHotelId) ?? 999,
+                            open_date: hotelOpenDate,
+                            total_rooms: total_rooms,
+                            net_total_rooms: data.fc_total_rooms > 0 ? data.fc_total_rooms : total_rooms, // Use fc_total_rooms for 計画販売可能総室数
+                            gross_total_rooms: total_gross_rooms,
+                            sold_rooms: data.sold_rooms,
+                            non_accommodation_stays: data.non_accommodation_stays,
+                            occ: parseFloat(occupancyRate.toFixed(2)),
+                            occ_with_provisory: total_rooms > 0 ? parseFloat((((data.confirmed_sold_rooms + data.provisory_sold_rooms) / total_rooms) * 100).toFixed(2)) : 0,
+                            not_available_rooms: 0,
+                            fc_total_rooms: data.fc_total_rooms,
+                            fc_sold_rooms: data.fc_sold_rooms,
+                            fc_occ: data.fc_total_rooms > 0 ? parseFloat(((data.fc_sold_rooms / data.fc_total_rooms) * 100).toFixed(2)) : 0
+                        });
+                    }
                 }
             }
         }
@@ -695,23 +728,25 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const prevYearMonthlyAggregates = {};
         const prevYearMonthlyTotalAggregates = {};
 
-        // Initialize aggregates for the previous year month
-        const prevYearMonthKey = formatDateMonth(prevYearDate);
-        prevYearMonthlyAggregates[prevYearMonthKey] = {};
-        prevYearMonthlyTotalAggregates[prevYearMonthKey] = {
-            period_revenue: 0,
-            accommodation_revenue: 0,
-            other_revenue: 0,
-            pms_revenue: 0
-        };
-
-        hotelIds.forEach(hotelId => {
-            prevYearMonthlyAggregates[prevYearMonthKey][String(hotelId)] = {
-                pms_revenue: null,
-                pms_accommodation_revenue: null,
-                pms_other_revenue: null,
-                acc_revenue: null
+        // Initialize aggregates for the previous year month range
+        prevMonthsInRange.forEach(m => {
+            const mKey = m.mKey;
+            prevYearMonthlyAggregates[mKey] = {};
+            prevYearMonthlyTotalAggregates[mKey] = {
+                period_revenue: 0,
+                accommodation_revenue: 0,
+                other_revenue: 0,
+                pms_revenue: 0
             };
+
+            effectiveHotelIds.forEach(hotelId => {
+                prevYearMonthlyAggregates[mKey][String(hotelId)] = {
+                    pms_revenue: null,
+                    pms_accommodation_revenue: null,
+                    pms_other_revenue: null,
+                    acc_revenue: null
+                };
+            });
         });
 
         // Aggregate previous year PMS data
@@ -845,49 +880,46 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
         const prevYearMonthlyOccupancyAggregates = {};
         const prevYearOccupancyTotals = {};
 
-        // Initialize aggregates for the previous year month
-        const prevYearOccMonthKey = formatDateMonth(prevYearDate);
-        prevYearMonthlyOccupancyAggregates[prevYearOccMonthKey] = {};
-        prevYearOccupancyTotals[prevYearOccMonthKey] = { total_rooms: 0, sold_rooms: 0 };
-
-        // Calculate days in the previous year month
-        const prevYear = prevYearDate.getFullYear();
-        const prevMonthIndex = prevYearDate.getMonth();
-        const daysInPrevYearMonth = getDaysInMonth(prevYear, prevMonthIndex + 1);
-        const firstDayOfPrevYearMonth = normalizeDate(new Date(prevYear, prevMonthIndex, 1));
-        const lastDayOfPrevYearMonth = normalizeDate(new Date(prevYear, prevMonthIndex, daysInPrevYearMonth));
-
         // Calculate total_rooms for each hotel (matching frontend logic)
-        hotelIds.forEach(hotelId => {
-            const hotel = allHotels.find(h => h.id === hotelId);
-            let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
-            let effectiveDaysForHotelInMonth = daysInPrevYearMonth;
+        prevMonthsInRange.forEach(m => {
+            const mKey = m.mKey;
+            prevYearMonthlyOccupancyAggregates[mKey] = {};
+            prevYearOccupancyTotals[mKey] = { total_rooms: 0, sold_rooms: 0 };
 
-            // Consider hotel open date (shift to previous year)
-            if (hotel && hotel.open_date) {
-                const openDate = normalizeDate(new Date(hotel.open_date));
-                if (openDate && !isNaN(openDate.getTime())) {
-                    const prevYearOpenDate = new Date(openDate);
-                    prevYearOpenDate.setFullYear(prevYearOpenDate.getFullYear() - 1);
+            const yearP = m.mDate.getFullYear();
+            const monthP = m.mDate.getMonth();
+            const daysInMonthP = getDaysInMonth(yearP, monthP + 1);
+            const firstDayOfM = normalizeDate(new Date(yearP, monthP, 1));
+            const lastDayOfM = normalizeDate(new Date(yearP, monthP, daysInMonthP));
 
-                    // If hotel opened after the month ended, 0 days
-                    if (prevYearOpenDate > lastDayOfPrevYearMonth) {
-                        effectiveDaysForHotelInMonth = 0;
-                    }
-                    // If hotel opened during the month, calculate days from open date to month end
-                    else if (prevYearOpenDate > firstDayOfPrevYearMonth) {
-                        effectiveDaysForHotelInMonth = lastDayOfPrevYearMonth.getDate() - prevYearOpenDate.getDate() + 1;
+            effectiveHotelIds.forEach(hotelId => {
+                const hotel = allHotels.find(h => h.id === hotelId);
+                let physicalRooms = (hotel && typeof hotel.total_rooms === 'number') ? hotel.total_rooms : 0;
+                let effectiveDaysForHotelInMonth = daysInMonthP;
+
+                // Consider hotel open date (shift to previous year)
+                if (hotel && hotel.open_date) {
+                    const openDate = normalizeDate(new Date(hotel.open_date));
+                    if (openDate && !isNaN(openDate.getTime())) {
+                        // If hotel opened after the month ended, 0 days
+                        if (openDate > lastDayOfM) {
+                            effectiveDaysForHotelInMonth = 0;
+                        }
+                        // If hotel opened during the month, calculate days from open date to month end
+                        else if (openDate > firstDayOfM) {
+                            effectiveDaysForHotelInMonth = lastDayOfM.getDate() - openDate.getDate() + 1;
+                        }
                     }
                 }
-            }
 
-            effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
-            const monthlyAvailableRoomDays = physicalRooms * effectiveDaysForHotelInMonth;
+                effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth);
+                const monthlyAvailableRoomDays = physicalRooms * effectiveDaysForHotelInMonth;
 
-            prevYearMonthlyOccupancyAggregates[prevYearOccMonthKey][String(hotelId)] = {
-                total_rooms: monthlyAvailableRoomDays,
-                sold_rooms: 0
-            };
+                prevYearMonthlyOccupancyAggregates[mKey][String(hotelId)] = {
+                    total_rooms: monthlyAvailableRoomDays,
+                    sold_rooms: 0
+                };
+            });
         });
 
         // Aggregate sold rooms from previous year PMS data
@@ -970,19 +1002,19 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
 
         try {
             const latestDateStrRaw = await selectLatestDailyReportDate(requestId, dbClient);
-            let targetDate = latestDateStrRaw;
+            let outlookTargetDate = latestDateStrRaw;
             const todayDateString = formatDate(new Date());
 
             logger.warn(`[${requestId}] Latest date: ${latestDateStrRaw}, Today: ${todayDateString}`);
 
             // If the latest report date is today, shift back one day to compare against the last full day
-            if (targetDate === todayDateString) {
-                const d = new Date(targetDate);
+            if (outlookTargetDate === todayDateString) {
+                const d = new Date(outlookTargetDate);
                 d.setDate(d.getDate() - 1);
-                targetDate = formatDate(d);
+                outlookTargetDate = formatDate(d);
             }
 
-            logger.warn(`[${requestId}] Target date for outlook: ${targetDate}`);
+            logger.warn(`[${requestId}] Target date for outlook: ${outlookTargetDate}`);
 
             // Calculate 6 months: start from current month and next 5 (same as backend getBatchFutureOutlook)
             const months = [];
@@ -1002,7 +1034,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             const futureData = {};
             for (const monthInfo of months) {
                 futureData[monthInfo.monthLabel] = {};
-                for (const hotelId of hotelIds) {
+                for (const hotelId of effectiveHotelIds) {
                     try {
                         const occupationData = await selectOccupationBreakdownByMonth(requestId, hotelId, monthInfo.startDate, monthInfo.endDate, dbClient);
                         const forecastData = await selectForecastData(requestId, hotelId, monthInfo.startDate, monthInfo.endDate, dbClient);
@@ -1047,7 +1079,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
             }
 
             // Get previous day data for comparison
-            const prevDayData = targetDate ? await selectDailyReportDataByHotel(requestId, targetDate, hotelIds, dbClient) : [];
+            const prevDayData = outlookTargetDate ? await selectDailyReportDataByHotel(requestId, outlookTargetDate, effectiveHotelIds, dbClient) : [];
 
             const prevByMonth = {};
             if (Array.isArray(prevDayData)) {
@@ -1166,7 +1198,7 @@ const getFrontendCompatibleReportData = async (requestId, targetDate, period = '
                 console.log(`[${requestId}] Month ${monthLabel} TOTALS BEFORE PUSH: sales=${totalActualSales}, sales_with_provisory=${totalActualSalesWithProvisory}, typeof=${typeof totalActualSalesWithProvisory}, confirmed_nights=${accommodationConfirmedNights}, provisory_nights=${accommodationProvisoryNights}`);
 
                 const outlookItem = {
-                    metric_date: targetDate,
+                    metric_date: outlookTargetDate,
                     month: monthLabel,
                     forecast_sales: totalForecastSales,
                     sales: totalActualSales,

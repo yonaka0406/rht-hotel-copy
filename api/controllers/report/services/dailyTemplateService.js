@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { convertExcelToPdf } = require('../../../services/libreOfficeService');
+const { getFrontendCompatibleReportData } = require('../../../jobs/services/frontendCompatibleReportService');
+const { getPool } = require('../../../config/database');
 
 const cleanupFiles = (filePaths) => {
     filePaths.forEach(filePath => {
@@ -29,8 +31,6 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
         targetDate,
         revenueData,
         occupancyData,
-        prevYearRevenueData,
-        prevYearOccupancyData,
         selectionMessage,
         kpiData
     } = data;
@@ -111,55 +111,42 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 });
             }
 
-            // Write All Facilities Revenue & Occupancy Overview starting from Row 10
-            if (Array.isArray(revenueData) && Array.isArray(occupancyData)) {
-                const startRow = 10;
-
-                // Headers
-                const revHeaders = ['施設名', '計画売上', '売上', '売上差異', '前年売上', '前年比差異(売上)'];
-                const occHeaders = ['施設名', '計画稼働率', '稼働率', '稼働率差異', '前年稼働率', '前年比差異(稼働率)'];
-
-                const headerRow = dataSheet.row(startRow);
-                revHeaders.forEach((header, index) => {
-                    headerRow.cell(index + 1).value(header).style({ bold: true });
-                });
-                occHeaders.forEach((header, index) => {
-                    // Start from Column H (8)
-                    headerRow.cell(index + 8).value(header).style({ bold: true });
-                });
+            // Helper function to write facility performance metrics
+            const writeFacilityPerformance = (sheet, startRow, monthStr, filteredRevenue, filteredOccupancy, options = {}) => {
+                const { writeFormulas = false, writeHeaders = true } = options;
+                let monthDate = null;
+                if (monthStr) {
+                    const [year, month] = monthStr.split('-').map(Number);
+                    // Create local date at midday to avoid timezone shifts
+                    monthDate = new Date(year, month - 1, 1, 12, 0, 0);
+                }
 
                 // Prepare combined data for sorting
-                const hotelMetrics = revenueData
+                const hotelMetrics = filteredRevenue
                     .filter(item => item.hotel_id !== 0)
                     .map(revItem => {
-                        const occItem = occupancyData.find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
-                        const prevRevItem = (prevYearRevenueData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
-                        const prevOccItem = (prevYearOccupancyData || []).find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
+                        const occItem = filteredOccupancy.find(o => String(o.hotel_id) === String(revItem.hotel_id)) || {};
 
-                        const forecastRevenue = revItem.forecast_revenue || 0;
-                        const actualRevenue = revItem.period_revenue || revItem.acc_revenue || revItem.pms_revenue || 0;
+                        const forecastRevenue = revItem.forecast_revenue ?? 0;
+                        const actualRevenue = revItem.accommodation_revenue ?? 0;
+                        const provisoryRevenue = revItem.provisory_accommodation_revenue ?? 0;
                         const revenueVariance = actualRevenue - forecastRevenue;
-                        const prevRevenue = prevRevItem.period_revenue || prevRevItem.acc_revenue || prevRevItem.pms_revenue || 0;
-                        const yoyRevenueVariance = actualRevenue - prevRevenue;
 
-                        const forecastOcc = occItem.fc_occ || 0;
-                        const actualOcc = occItem.occ || 0;
+                        const forecastOcc = occItem.fc_occ ?? 0;
+                        const actualOcc = occItem.occ ?? 0;
+                        const actualOccWithProvisory = occItem.occ_with_provisory ?? 0;
                         const occVariance = actualOcc - forecastOcc;
-                        const prevOcc = prevOccItem.occ || 0;
-                        const yoyOccVariance = actualOcc - prevOcc;
 
                         return {
                             hotel_name: revItem.hotel_name,
                             forecastRevenue,
                             actualRevenue,
+                            provisoryRevenue,
                             revenueVariance,
-                            prevRevenue,
-                            yoyRevenueVariance,
                             forecastOcc,
                             actualOcc,
+                            actualOccWithProvisory,
                             occVariance,
-                            prevOcc,
-                            yoyOccVariance
                         };
                     });
 
@@ -170,34 +157,78 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                 // Write data side-by-side
                 revenueSorted.forEach((item, index) => {
                     const currentRow = startRow + 1 + index;
-                    const row = dataSheet.row(currentRow);
+                    const row = sheet.row(currentRow);
 
-                    // Revenue section (Cols 1-6)
                     row.cell(1).value(item.hotel_name);
-                    row.cell(2).value(item.forecastRevenue).style("numberFormat", "#,##0");
-                    row.cell(3).value(item.actualRevenue).style("numberFormat", "#,##0");
-                    row.cell(4).value(item.revenueVariance).style("numberFormat", "#,##0");
-                    row.cell(5).value(item.prevRevenue).style("numberFormat", "#,##0");
-                    row.cell(6).value(item.yoyRevenueVariance).style("numberFormat", "#,##0");
+                    if (monthDate) {
+                        row.cell(2).value(monthDate).style("numberFormat", "yyyy/mm/dd");
+                    }
+                    row.cell(3).value(item.forecastRevenue).style("numberFormat", "#,##0");
+                    row.cell(4).value(item.actualRevenue).style("numberFormat", "#,##0");
+                    row.cell(5).value(item.revenueVariance).style("numberFormat", "#,##0");
+                    if (item.provisoryRevenue !== 0) {
+                        row.cell(6).value(item.provisoryRevenue).style("numberFormat", "#,##0");
+                    }
 
-                    // Formulas for columns O, P, Q (division by 10000)
-                    row.cell(15).formula(`B${currentRow}/10000`).style("numberFormat", "#,##0");
-                    row.cell(16).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
-                    row.cell(17).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
+                    if (writeFormulas) {
+                        // Divide by 10,000 to convert from yen to 10,000-yen units (万円)
+                        row.cell(15).formula(`C${currentRow}/10000`).style("numberFormat", "#,##0");
+                        row.cell(16).formula(`D${currentRow}/10000`).style("numberFormat", "#,##0");
+                        row.cell(17).formula(`E${currentRow}/10000`).style("numberFormat", "#,##0");
+                    }
                 });
 
                 occupancySorted.forEach((item, index) => {
                     const currentRow = startRow + 1 + index;
-                    const row = dataSheet.row(currentRow);
+                    const row = sheet.row(currentRow);
 
-                    // Occupancy section (Starts from Col 8 / H)
                     row.cell(8).value(item.hotel_name);
-                    row.cell(9).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(10).value(item.actualOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(11).value(item.occVariance / 100).style("numberFormat", "0.0%");
-                    row.cell(12).value(item.prevOcc / 100).style("numberFormat", "0.0%");
-                    row.cell(13).value(item.yoyOccVariance / 100).style("numberFormat", "0.0%");
+                    if (monthDate) {
+                        row.cell(9).value(monthDate).style("numberFormat", "yyyy/mm/dd");
+                    }
+                    row.cell(10).value(item.forecastOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(11).value(item.actualOcc / 100).style("numberFormat", "0.0%");
+                    row.cell(12).value(item.occVariance / 100).style("numberFormat", "0.0%");
+                    if (item.actualOccWithProvisory !== item.actualOcc) {
+                        row.cell(13).value(item.actualOccWithProvisory / 100).style("numberFormat", "0.0%");
+                    }
                 });
+
+                return hotelMetrics.length;
+            };
+
+            // Write All Facilities Revenue & Occupancy Overview starting from Row 10
+            if (Array.isArray(revenueData) && Array.isArray(occupancyData)) {
+                // Determine current month from outlookData
+                const currentMonthStr = outlookData?.[0]?.month;
+
+                // 1. Current Month Section on '合計データ'
+                const currentRevData = revenueData.filter(r => r.month === currentMonthStr);
+                const currentOccData = occupancyData.filter(o => o.month === currentMonthStr);
+
+                writeFacilityPerformance(dataSheet, 10, currentMonthStr, currentRevData, currentOccData, { writeFormulas: true, writeHeaders: true });
+
+                // 2. Next Month (M+1) on '合計データ2'
+                const nextMonth1Str = outlookData?.[1]?.month;
+                if (nextMonth1Str) {
+                    const dataSheet2 = workbook.sheet('合計データ2') || workbook.addSheet('合計データ2');
+                    const nextRev1Data = revenueData.filter(r => r.month === nextMonth1Str);
+                    const nextOcc1Data = occupancyData.filter(o => o.month === nextMonth1Str);
+                    if (dataSheet2 && (nextRev1Data.length > 0 || nextOcc1Data.length > 0)) {
+                        writeFacilityPerformance(dataSheet2, 2, nextMonth1Str, nextRev1Data, nextOcc1Data, { writeHeaders: true });
+                    }
+                }
+
+                // 3. Month After Next (M+2) on '合計データ3'
+                const nextMonth2Str = outlookData?.[2]?.month;
+                if (nextMonth2Str) {
+                    const dataSheet3 = workbook.sheet('合計データ3') || workbook.addSheet('合計データ3');
+                    const nextRev2Data = revenueData.filter(r => r.month === nextMonth2Str);
+                    const nextOcc2Data = occupancyData.filter(o => o.month === nextMonth2Str);
+                    if (dataSheet3 && (nextRev2Data.length > 0 || nextOcc2Data.length > 0)) {
+                        writeFacilityPerformance(dataSheet3, 2, nextMonth2Str, nextRev2Data, nextOcc2Data, { writeHeaders: true });
+                    }
+                }
             }
         }
 
@@ -228,13 +259,42 @@ const getDailyTemplatePdf = async (req, res) => {
     const {
         targetDate,
         format: outputFormat = 'pdf',
+        period = 'month'
     } = req.body;
 
     let generatedFilePath = null;
+    let dbClient = null;
     try {
-        generatedFilePath = await generateDailyReportPdf(req.body, requestId, outputFormat);
+        let { hotelIds = [] } = req.body;
 
-        const formattedDate = targetDate ? targetDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        // Validation and normalization of hotelIds
+        if (!Array.isArray(hotelIds)) {
+            if (hotelIds !== null && hotelIds !== undefined) {
+                hotelIds = [hotelIds];
+            } else {
+                hotelIds = [];
+            }
+        }
+
+        // Sanitize: ensure valid types (numbers or numeric strings) and normalize to numbers
+        hotelIds = hotelIds
+            .filter(id => (typeof id === 'number' && Number.isFinite(id)) || (typeof id === 'string' && /^\d+$/.test(id)))
+            .map(id => Number(id));
+
+        // Fetch fresh, full data using the backend service to ensure multi-month data for sheets like '合計データ2'
+        dbClient = await getPool(requestId).connect();
+        const fullReportData = await getFrontendCompatibleReportData(requestId, targetDate, period, dbClient, hotelIds);
+
+        // Merge backend-calculated data with frontend metadata if any
+        const combinedData = {
+            ...req.body,
+            ...fullReportData,
+            hotelIds // Override with sanitized array
+        };
+
+        generatedFilePath = await generateDailyReportPdf(combinedData, requestId, outputFormat);
+
+        const formattedDate = targetDate ? String(targetDate).replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const filename = `daily_report_${formattedDate}.${outputFormat}`;
 
         if (outputFormat === 'xlsx') {
@@ -256,8 +316,11 @@ const getDailyTemplatePdf = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(`[${requestId}] Error in getDailyTemplatePdf:`, error);
         if (!res.headersSent) res.status(500).json({ message: 'Failed to generate file', error: error.message });
         if (generatedFilePath) cleanupFiles([generatedFilePath]);
+    } finally {
+        if (dbClient) dbClient.release();
     }
 };
 
