@@ -2,7 +2,7 @@
     <div class="mb-8">
         <div class="mb-6 flex items-center gap-3">
             <div class="h-8 w-1 bg-violet-600 rounded-full"></div>
-            <h2 class="text-xl font-bold text-slate-800 dark:text-white">科目別相関分析 (売上 vs コスト)</h2>
+            <h2 class="text-xl font-bold text-slate-800 dark:text-white">科目別相関分析 (稼働率 vs 客室単価コスト)</h2>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -37,73 +37,136 @@ const props = defineProps({
     selectedHotelId: {
         type: Number,
         required: true
+    },
+    mappedHotels: {
+        type: Array,
+        required: true
     }
 });
 
 /**
- * Scatter Chart configuration for dispersion
+ * Scatter Chart configuration for occupancy vs cost per occupied room analysis
  */
 const getScatterOption = (account) => {
     const accountData = props.rawData.timeSeries.filter(d => d.account_code === account.code);
-    const selectedScopeData = props.selectedHotelId === 0
-        ? aggregateByMonth(accountData)
-        : accountData.filter(d => d.hotel_id === props.selectedHotelId);
+    const occupancyData = props.rawData.occupancyData || [];
+    
+    // Create series data for each hotel
+    const hotelSeries = [];
+    const hotelColors = [
+        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+        '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+        '#8b5cf6', '#a855f7', '#c084fc', '#d946ef', '#ec4899', '#f43f5e'
+    ];
 
-    const scatterData = selectedScopeData.map(d => [Number(d.sales), Number(d.cost)]);
+    // Get unique hotels to analyze
+    const hotelsToAnalyze = props.selectedHotelId === 0 
+        ? props.mappedHotels 
+        : props.mappedHotels.filter(h => h.hotel_id === props.selectedHotelId);
+
+    hotelsToAnalyze.forEach((hotel, index) => {
+        const hotelAccountData = accountData.filter(d => d.hotel_id === hotel.hotel_id);
+        const hotelOccupancyData = occupancyData.filter(d => d.hotel_id === hotel.hotel_id);
+        
+        // Combine cost and occupancy data by month
+        const combinedData = [];
+        hotelAccountData.forEach(costRecord => {
+            const occupancyRecord = hotelOccupancyData.find(o => o.month === costRecord.month);
+            if (occupancyRecord && occupancyRecord.total_sold_rooms > 0) {
+                const costPerOccupiedRoom = costRecord.cost / occupancyRecord.total_sold_rooms;
+                const occupancyPercentage = parseFloat(occupancyRecord.occupancy_percentage);
+                
+                combinedData.push([
+                    occupancyPercentage, // X-axis: Occupancy Percentage
+                    costPerOccupiedRoom, // Y-axis: Cost per Occupied Room
+                    costRecord.month,    // For tooltip
+                    costRecord.cost,     // For tooltip
+                    occupancyRecord.total_sold_rooms // For tooltip
+                ]);
+            }
+        });
+
+        if (combinedData.length > 0) {
+            hotelSeries.push({
+                name: hotel.hotel_name,
+                type: 'scatter',
+                data: combinedData,
+                symbolSize: 8,
+                itemStyle: {
+                    color: hotelColors[index % hotelColors.length],
+                    opacity: 0.7
+                }
+            });
+        }
+    });
 
     return {
         grid: {
-            top: 40,
-            left: 50,
-            right: 20,
-            bottom: 40
+            top: 60,
+            left: 80,
+            right: 40,
+            bottom: 60
         },
         tooltip: {
+            trigger: 'item',
             formatter: (params) => {
-                return `売上: ${formatCurrency(params.data[0])}<br/>コスト: ${formatCurrency(params.data[1])}`;
+                const [occupancy, costPerRoom, month, totalCost, soldRooms] = params.data;
+                return `
+                    <strong>${params.seriesName}</strong><br/>
+                    ${month}<br/>
+                    稼働率: ${occupancy.toFixed(1)}%<br/>
+                    客室単価コスト: ${formatCurrency(costPerRoom)}<br/>
+                    総コスト: ${formatCurrency(totalCost)}<br/>
+                    販売客室数: ${soldRooms}室
+                `;
             }
+        },
+        legend: {
+            data: hotelSeries.map(s => s.name),
+            top: 10,
+            textStyle: { fontSize: 10 }
         },
         xAxis: {
-            name: '売上',
+            name: '稼働率 (%)',
             nameLocation: 'middle',
-            nameGap: 25,
-            splitLine: { lineStyle: { type: 'dashed', color: 'rgba(148, 163, 184, 0.1)' } },
-            axisLabel: { formatter: (v) => v / 10000 + '万' }
+            nameGap: 35,
+            type: 'value',
+            min: 0,
+            max: 100,
+            splitLine: { 
+                lineStyle: { type: 'dashed', color: 'rgba(148, 163, 184, 0.1)' } 
+            },
+            axisLabel: { 
+                formatter: (v) => v + '%' 
+            }
         },
         yAxis: {
-            name: 'コスト',
-            splitLine: { lineStyle: { type: 'dashed', color: 'rgba(148, 163, 184, 0.1)' } },
-            axisLabel: { formatter: (v) => v / 1000 + 'k' }
-        },
-        series: [
-            {
-                symbolSize: 12,
-                data: scatterData,
-                type: 'scatter',
-                itemStyle: {
-                    color: '#6366f1',
-                    opacity: 0.6
-                }
+            name: '客室単価コスト (円)',
+            nameLocation: 'middle',
+            nameGap: 60,
+            type: 'value',
+            splitLine: { 
+                lineStyle: { type: 'dashed', color: 'rgba(148, 163, 184, 0.1)' } 
+            },
+            axisLabel: { 
+                formatter: (v) => formatCurrency(v, false) 
             }
-        ]
+        },
+        series: hotelSeries
     };
 };
 
-/**
- * Aggregate costs and sales across multiple hotels for each month
- */
-function aggregateByMonth(data) {
-    const monthsMap = {};
-    data.forEach(d => {
-        if (!monthsMap[d.month]) {
-            monthsMap[d.month] = { month: d.month, cost: 0, sales: 0 };
-        }
-        monthsMap[d.month].cost += Number(d.cost);
-        monthsMap[d.month].sales += Number(d.sales);
-    });
-    return Object.values(monthsMap).sort((a, b) => new Date(a.month) - new Date(b.month));
-}
-
-const formatCurrency = (value) =>
-    new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(value);
+const formatCurrency = (value, withSymbol = true) => {
+    if (withSymbol) {
+        return new Intl.NumberFormat('ja-JP', { 
+            style: 'currency', 
+            currency: 'JPY', 
+            maximumFractionDigits: 0 
+        }).format(value);
+    } else {
+        return new Intl.NumberFormat('ja-JP', { 
+            maximumFractionDigits: 0 
+        }).format(value);
+    }
+};
 </script>

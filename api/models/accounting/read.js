@@ -962,7 +962,7 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
         const topAccountsResult = await client.query(topAccountsQuery, [topN]);
         const topAccounts = topAccountsResult.rows;
 
-        if (topAccounts.length === 0) return { topAccounts: [], timeSeries: [] };
+        if (topAccounts.length === 0) return { topAccounts: [], timeSeries: [], occupancyData: [] };
 
         const topNames = topAccounts.map(a => a.name);
 
@@ -1010,9 +1010,44 @@ const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
         const monthDataResult = await client.query(monthDataQuery, [topNames]);
         const timeSeries = monthDataResult.rows;
 
+        // Step 3: Get occupancy data from du_accounting table
+        const occupancyDataQuery = `
+            WITH hotel_depts AS (
+                SELECT hotel_id, name FROM acc_departments WHERE is_current = TRUE
+            ),
+            monthly_occupancy AS (
+                SELECT 
+                    hd.hotel_id,
+                    date_trunc('month', dua.month)::date as month,
+                    SUM(dua.available_room_nights) as total_available_rooms,
+                    SUM(dua.rooms_sold_nights) as total_sold_rooms
+                FROM du_accounting dua
+                JOIN hotel_depts hd ON dua.hotel_id = hd.hotel_id
+                GROUP BY hd.hotel_id, date_trunc('month', dua.month)
+            )
+            SELECT 
+                mo.hotel_id,
+                h.name as hotel_name,
+                mo.month,
+                mo.total_available_rooms,
+                mo.total_sold_rooms,
+                CASE 
+                    WHEN mo.total_available_rooms > 0 
+                    THEN (mo.total_sold_rooms::decimal / mo.total_available_rooms::decimal) * 100 
+                    ELSE 0 
+                END as occupancy_percentage
+            FROM monthly_occupancy mo
+            JOIN hotels h ON mo.hotel_id = h.id
+            WHERE mo.total_available_rooms > 0
+            ORDER BY mo.month ASC, mo.hotel_id ASC
+        `;
+        const occupancyDataResult = await client.query(occupancyDataQuery);
+        const occupancyData = occupancyDataResult.rows;
+
         return {
             topAccounts,
-            timeSeries
+            timeSeries,
+            occupancyData
         };
     } catch (err) {
         logger.error('Error in getCostBreakdownData:', err);
