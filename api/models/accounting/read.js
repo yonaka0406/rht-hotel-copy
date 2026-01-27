@@ -7,8 +7,10 @@ const getAccountCodes = async (requestId, dbClient = null) => {
     const shouldRelease = !dbClient;
 
     const query = `
-        SELECT * FROM acc_account_codes 
-        ORDER BY code::BIGINT ASC
+        SELECT ac.*, mg.name as management_group_name, mg.display_order as group_display_order
+        FROM acc_account_codes ac
+        LEFT JOIN acc_management_groups mg ON ac.management_group_id = mg.id
+        ORDER BY mg.display_order ASC, ac.code::BIGINT ASC
     `;
 
     try {
