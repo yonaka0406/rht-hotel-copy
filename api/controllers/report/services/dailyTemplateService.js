@@ -121,19 +121,6 @@ const generateDailyReportPdf = async (data, requestId, format = null) => {
                     monthDate = new Date(year, month - 1, 1, 12, 0, 0);
                 }
 
-                if (writeHeaders) {
-                    const revHeaders = ['施設名', '月度', '計画売上', '見込み売上', '売上差異', '仮売上'];
-                    const occHeaders = ['施設名', '月度', '計画稼働率', '見込み稼働率', '稼働率差異', '仮予約含む稼働率'];
-
-                    const headerRow = sheet.row(startRow);
-                    revHeaders.forEach((header, index) => {
-                        headerRow.cell(index + 1).value(header).style({ bold: true });
-                    });
-                    occHeaders.forEach((header, index) => {
-                        headerRow.cell(index + 8).value(header).style({ bold: true });
-                    });
-                }
-
                 // Prepare combined data for sorting
                 const hotelMetrics = filteredRevenue
                     .filter(item => item.hotel_id !== 0)
