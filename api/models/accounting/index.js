@@ -5,9 +5,9 @@ const entries = require('./entries');
 const tables = require('./tables');
 
 module.exports = {
-    ...read,
-    ...write,
-    ...receivables,
-    ...entries,
-    ...tables
+    accountingRead: read,
+    accountingWrite: write,
+    receivables: receivables,
+    forecastEntries: entries,
+    operationalTables: tables
 };

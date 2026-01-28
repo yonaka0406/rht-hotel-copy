@@ -12,14 +12,14 @@ const getSettings = async (req, res, next) => {
         }
 
         const [codes, groups, taxClasses, departments] = await Promise.all([
-            accountingModel.getAccountCodes(requestId),
-            accountingModel.getManagementGroups(requestId),
-            accountingModel.getTaxClasses(requestId),
-            accountingModel.getDepartments(requestId)
+            accountingModel.accountingRead.getAccountCodes(requestId),
+            accountingModel.accountingRead.getManagementGroups(requestId),
+            accountingModel.accountingRead.getTaxClasses(requestId),
+            accountingModel.accountingRead.getDepartments(requestId)
         ]);
 
         const targetHotelId = (hotel_id && hotel_id !== 'undefined' && hotel_id !== 'null') ? parseInt(hotel_id) : null;
-        
+
         // Fetch additional master data for mappings if hotel_id is provided
         let mappingMasterData = {
             plans: [],
@@ -51,19 +51,19 @@ const getSettings = async (req, res, next) => {
             // Even if no hotel_id, we might want global categories and addons for global mappings
             const planModel = require('../../models/plan');
             const addonModel = require('../../models/addons');
-            
+
             const [categories, packageCategories, addonsGlobal] = await Promise.all([
                 planModel.selectAllPlanTypeCategories(requestId),
                 planModel.selectAllPlanPackageCategories(requestId),
                 addonModel.getAllGlobalAddons(requestId)
             ]);
-            
+
             mappingMasterData.categories = categories;
             mappingMasterData.packageCategories = packageCategories;
             mappingMasterData.addonsGlobal = addonsGlobal;
         }
 
-        const mappings = await accountingModel.getMappings(requestId, targetHotelId);
+        const mappings = await accountingModel.accountingRead.getMappings(requestId, targetHotelId);
 
         res.json({
             codes,
@@ -88,7 +88,7 @@ const upsertCode = async (req, res, next) => {
             throw error;
         }
 
-        const result = await accountingModel.upsertAccountCode(requestId, data, user.id);
+        const result = await accountingModel.accountingWrite.upsertAccountCode(requestId, data, user.id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -100,7 +100,7 @@ const deleteCode = async (req, res, next) => {
         const { requestId } = req;
         const { id } = req.params;
         validationUtils.validateNumericParam(id, 'id');
-        const result = await accountingModel.deleteAccountCode(requestId, id);
+        const result = await accountingModel.accountingWrite.deleteAccountCode(requestId, id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -116,7 +116,7 @@ const upsertManagementGroup = async (req, res, next) => {
             error.statusCode = 400;
             throw error;
         }
-        const result = await accountingModel.upsertManagementGroup(requestId, data, user.id);
+        const result = await accountingModel.accountingWrite.upsertManagementGroup(requestId, data, user.id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -128,7 +128,7 @@ const deleteManagementGroup = async (req, res, next) => {
         const { requestId } = req;
         const { id } = req.params;
         validationUtils.validateNumericParam(id, 'id');
-        const result = await accountingModel.deleteManagementGroup(requestId, id);
+        const result = await accountingModel.accountingWrite.deleteManagementGroup(requestId, id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -144,7 +144,7 @@ const upsertTaxClass = async (req, res, next) => {
             error.statusCode = 400;
             throw error;
         }
-        const result = await accountingModel.upsertTaxClass(requestId, data, user.id);
+        const result = await accountingModel.accountingWrite.upsertTaxClass(requestId, data, user.id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -156,7 +156,7 @@ const deleteTaxClass = async (req, res, next) => {
         const { requestId } = req;
         const { id } = req.params;
         validationUtils.validateNumericParam(id, 'id');
-        const result = await accountingModel.deleteTaxClass(requestId, id);
+        const result = await accountingModel.accountingWrite.deleteTaxClass(requestId, id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -172,7 +172,7 @@ const upsertDepartment = async (req, res, next) => {
             error.statusCode = 400;
             throw error;
         }
-        const result = await accountingModel.upsertDepartment(requestId, data, user.id);
+        const result = await accountingModel.accountingWrite.upsertDepartment(requestId, data, user.id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -184,7 +184,7 @@ const deleteDepartment = async (req, res, next) => {
         const { requestId } = req;
         const { id } = req.params;
         validationUtils.validateNumericParam(id, 'id');
-        const result = await accountingModel.deleteDepartment(requestId, id);
+        const result = await accountingModel.accountingWrite.deleteDepartment(requestId, id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -200,7 +200,7 @@ const upsertMapping = async (req, res, next) => {
             error.statusCode = 400;
             throw error;
         }
-        const result = await accountingModel.upsertMapping(requestId, data, user.id);
+        const result = await accountingModel.accountingWrite.upsertMapping(requestId, data, user.id);
         res.json(result);
     } catch (err) {
         next(err);
@@ -212,7 +212,7 @@ const deleteMapping = async (req, res, next) => {
         const { requestId } = req;
         const { id } = req.params;
         validationUtils.validateNumericParam(id, 'id');
-        const result = await accountingModel.deleteMapping(requestId, id);
+        const result = await accountingModel.accountingWrite.deleteMapping(requestId, id);
         res.json(result);
     } catch (err) {
         next(err);

@@ -1,4 +1,6 @@
 const accountingModel = require('../../models/accounting');
+const planModel = require('../../models/plan');
+const { getPool } = require('../../config/database');
 const logger = require('../../config/logger');
 
 /**
@@ -16,12 +18,11 @@ const getFinancesData = async (req, res) => {
     logger.info(`Fetching finance grid data for hotelId: ${hotelId}, range: ${startMonth} to ${endMonth}`);
 
     try {
-        const planModel = require('../../models/plan');
         const [forecast, accountCodes, forecastTable, actualsTable, typeCategories, packageCategories] = await Promise.all([
-            accountingModel.getEntries(requestId, 'forecast', hotelId, startMonth, endMonth),
-            accountingModel.getAccountCodes(requestId),
-            accountingModel.getForecastTable(requestId, hotelId, startMonth, endMonth),
-            accountingModel.getAccountingTable(requestId, hotelId, startMonth, endMonth),
+            accountingModel.forecastEntries.getEntries(requestId, 'forecast', hotelId, startMonth, endMonth),
+            accountingModel.accountingRead.getAccountCodes(requestId),
+            accountingModel.operationalTables.getForecastTable(requestId, hotelId, startMonth, endMonth),
+            accountingModel.operationalTables.getAccountingTable(requestId, hotelId, startMonth, endMonth),
             planModel.selectAllPlanTypeCategories(requestId),
             planModel.selectAllPlanPackageCategories(requestId)
         ]);
@@ -74,7 +75,7 @@ const upsertFinancesData = async (req, res) => {
 
         if (entries && Array.isArray(entries) && entries.length > 0) {
             if (type === 'forecast') {
-                entryResult = await accountingModel.upsertForecastEntries(requestId, entries, userId);
+                entryResult = await accountingModel.forecastEntries.upsertForecastEntries(requestId, entries, userId);
             } else {
                 // actuals entries table removed
                 logger.warn('Attempted to upsert accounting entries which are now deprecated.');
@@ -83,9 +84,9 @@ const upsertFinancesData = async (req, res) => {
 
         if (tableData && Array.isArray(tableData) && tableData.length > 0) {
             if (type === 'forecast') {
-                tableResult = await accountingModel.upsertForecastTable(requestId, tableData, userId);
+                tableResult = await accountingModel.operationalTables.upsertForecastTable(requestId, tableData, userId);
             } else {
-                tableResult = await accountingModel.upsertAccountingTable(requestId, tableData, userId);
+                tableResult = await accountingModel.operationalTables.upsertAccountingTable(requestId, tableData, userId);
             }
         }
 
@@ -109,7 +110,7 @@ const syncFromYayoi = async (req, res) => {
     }
 
     try {
-        const pool = require('../../config/database').getPool(requestId);
+        const pool = getPool(requestId);
 
         const query = `
             SELECT 
@@ -149,7 +150,7 @@ const syncFromPMS = async (req, res) => {
     }
 
     try {
-        const pool = require('../../config/database').getPool(requestId);
+        const pool = getPool(requestId);
 
         const query = `
             WITH mapped_data AS (

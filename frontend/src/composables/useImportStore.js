@@ -19,8 +19,8 @@ export function useImportStore() {
         }
     };
 
-    
-    const yadomasterAddClients = async (array) => {        
+
+    const yadomasterAddClients = async (array) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/import/yadomaster/clients`, {
@@ -31,18 +31,18 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
     };
-    const yadomasterAddReservations = async (array) => {        
+    const yadomasterAddReservations = async (array) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/import/yadomaster/reservations`, {
@@ -53,18 +53,18 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
     };
-    const yadomasterAddReservationDetails = async (array) => {        
+    const yadomasterAddReservationDetails = async (array) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/import/yadomaster/reservation-details`, {
@@ -75,18 +75,18 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
     };
-    const yadomasterAddReservationPayments = async (array) => {        
+    const yadomasterAddReservationPayments = async (array) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/import/yadomaster/reservation-payments`, {
@@ -97,18 +97,18 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
     };
-    const yadomasterAddReservationAddons = async (array) => {        
+    const yadomasterAddReservationAddons = async (array) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/import/yadomaster/reservation-addons`, {
@@ -119,18 +119,18 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
     };
-    const yadomasterAddReservationRates = async (array) => {        
+    const yadomasterAddReservationRates = async (array) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/import/yadomaster/reservation-rates`, {
@@ -141,13 +141,13 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
@@ -164,13 +164,13 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
@@ -186,13 +186,13 @@ export function useImportStore() {
                 },
                 body: JSON.stringify(array),
             });
-        
+
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            const data = await response.json();            
+            const data = await response.json();
             return data;
-            
+
         } catch (error) {
             console.error('Failed to import data', error);
         }
@@ -234,19 +234,23 @@ export function useImportStore() {
         }
     };
 
+    const syncFinanceData = async (endpoint, hotelId, month, errorLabel) => {
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ hotelId, month }),
+        });
+        if (!response.ok) throw new Error(`Failed to sync ${errorLabel} data`);
+        return await response.json();
+    };
+
     const syncYayoi = async (hotelId, month) => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/import/finance/sync-yayoi`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ hotelId, month }),
-            });
-            if (!response.ok) throw new Error('Failed to sync Yayoi data');
-            return await response.json();
+            return await syncFinanceData('/api/import/finance/sync-yayoi', hotelId, month, 'Yayoi');
         } catch (error) {
             console.error('Error syncing Yayoi data:', error);
             throw error;
@@ -255,17 +259,7 @@ export function useImportStore() {
 
     const syncPMS = async (hotelId, month) => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/import/finance/sync-pms`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ hotelId, month }),
-            });
-            if (!response.ok) throw new Error('Failed to sync PMS data');
-            return await response.json();
+            return await syncFinanceData('/api/import/finance/sync-pms', hotelId, month, 'PMS');
         } catch (error) {
             console.error('Error syncing PMS data:', error);
             throw error;
@@ -289,7 +283,7 @@ export function useImportStore() {
         }
     };
 
-    return{
+    return {
         yadomasterAddClients,
         yadomasterAddReservations,
         yadomasterAddReservationDetails,

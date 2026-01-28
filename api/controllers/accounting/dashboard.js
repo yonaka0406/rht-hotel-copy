@@ -52,7 +52,7 @@ const getDashboardMetrics = async (req, res, next) => {
         }
 
         // 3. Fetch Metrics
-        const metrics = await accountingModel.getDashboardMetrics(requestId, queryStart, queryEnd, targetHotelIds);
+        const metrics = await accountingModel.accountingRead.getDashboardMetrics(requestId, queryStart, queryEnd, targetHotelIds);
 
         logger.debug(`[Accounting] Dashboard metrics fetched successfully for ${queryStart} to ${queryEnd}`);
         res.json(metrics);
@@ -87,7 +87,7 @@ const getReconciliationOverview = async (req, res, next) => {
             targetHotelIds = allHotels.map(h => h.id);
         }
 
-        const data = await accountingModel.getReconciliationOverview(requestId, startDate, endDate, targetHotelIds);
+        const data = await accountingModel.accountingRead.getReconciliationOverview(requestId, startDate, endDate, targetHotelIds);
         res.json(data);
     } catch (err) {
         next(err);
@@ -102,7 +102,7 @@ const getReconciliationHotelDetails = async (req, res, next) => {
 
         validationUtils.validateNumericParam(hotelId, 'hotelId');
 
-        const data = await accountingModel.getReconciliationHotelDetails(requestId, parseInt(hotelId), startDate, endDate);
+        const data = await accountingModel.accountingRead.getReconciliationHotelDetails(requestId, parseInt(hotelId), startDate, endDate);
         res.json(data);
     } catch (err) {
         next(err);
@@ -118,7 +118,7 @@ const getReconciliationClientDetails = async (req, res, next) => {
         validationUtils.validateNumericParam(hotelId, 'hotelId');
         validationUtils.validateUuidParam(clientId, 'clientId');
 
-        const data = await accountingModel.getReconciliationClientDetails(requestId, parseInt(hotelId), clientId, startDate, endDate);
+        const data = await accountingModel.accountingRead.getReconciliationClientDetails(requestId, parseInt(hotelId), clientId, startDate, endDate);
         res.json(data);
     } catch (err) {
         next(err);
