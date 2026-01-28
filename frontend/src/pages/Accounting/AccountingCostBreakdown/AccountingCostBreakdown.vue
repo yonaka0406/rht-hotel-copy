@@ -174,9 +174,23 @@
             <!-- Empty State -->
             <div v-if="!loading && topAccounts.length === 0"
                 class="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                <i class="pi pi-inbox text-6xl text-slate-200 mb-4"></i>
-                <p class="text-slate-500 font-bold">データが見つかりません</p>
-                <p class="text-slate-400 text-sm mt-1">会計データをインポートしてください</p>
+                <i class="pi pi-inbox text-6xl text-slate-200 dark:text-slate-700 mb-4"></i>
+                <p class="text-slate-700 dark:text-slate-300 font-bold text-lg">コスト分析データが見つかりません</p>
+                <p class="text-slate-500 dark:text-slate-400 text-sm mt-2 text-center max-w-md">
+                    データを表示するには、以下の設定が必要です：
+                </p>
+                <div class="mt-4 text-left bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 max-w-md">
+                    <ol class="list-decimal list-inside space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                        <li>会計データ（Yayoi）をインポート</li>
+                        <li class="font-bold text-amber-600 dark:text-amber-400">部門を施設にマッピング（必須）</li>
+                        <li>勘定科目コードを登録</li>
+                    </ol>
+                </div>
+                <button @click="$router.push({ name: 'AccountingSettings' })"
+                    class="mt-6 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg">
+                    <i class="pi pi-cog"></i>
+                    <span>会計設定へ移動</span>
+                </button>
             </div>
 
             <!-- Skeleton Loading -->
