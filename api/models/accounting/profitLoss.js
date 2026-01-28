@@ -14,14 +14,7 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
 
   try {
     const { startMonth, endMonth, departmentNames } = filters;
-    
-    console.log('[P&L Model] Detailed Filters:', { startMonth, endMonth, departmentNames });
-    console.log('[P&L Model] Date formats - startMonth type:', typeof startMonth, 'value:', startMonth);
-    console.log('[P&L Model] Date formats - endMonth type:', typeof endMonth, 'value:', endMonth);
-  
-    // Always use the acc_profit_loss view to match the main P&L page
-    console.log('[P&L Model] Using acc_profit_loss view for consistency');
-    
+
     let fallbackQuery = `
       SELECT 
         month as transaction_date,
@@ -46,28 +39,28 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
       FROM acc_profit_loss
       WHERE 1=1
     `;
-    
+
     const params = [];
     let paramIndex = 1;
-    
+
     if (startMonth) {
       fallbackQuery += ` AND month >= $${paramIndex}`;
       params.push(startMonth); // startMonth is already in YYYY-MM-DD format
       paramIndex++;
     }
-    
+
     if (endMonth) {
       fallbackQuery += ` AND month <= $${paramIndex}`;
       params.push(endMonth); // endMonth is already in YYYY-MM-DD format
       paramIndex++;
     }
-    
+
     if (departmentNames && departmentNames.length > 0) {
       fallbackQuery += ` AND department = ANY($${paramIndex})`;
       params.push(departmentNames);
       paramIndex++;
     }
-    
+
     fallbackQuery += `
       ORDER BY 
         month,
@@ -75,13 +68,9 @@ async function getProfitLossDetailed(requestId, filters = {}, dbClient = null) {
         management_group_display_order,
         account_code
     `;
-    
-    console.log('[P&L Model] Query:', fallbackQuery);
-    console.log('[P&L Model] Params:', params);
-    
+
     const result = await client.query(fallbackQuery, params);
-    console.log('[P&L Model] Result count:', result.rows.length);
-    
+
     return result.rows;
   } finally {
     if (shouldRelease) client.release();
@@ -106,10 +95,8 @@ async function getProfitLoss(requestId, filters = {}, dbClient = null) {
 
   try {
     const { startMonth, endMonth, departmentNames } = filters;
-    
-    console.log('[P&L Model] Filters:', { startMonth, endMonth, departmentNames });
-  
-  let query = `
+
+    let query = `
     SELECT 
       month,
       department,
@@ -131,29 +118,29 @@ async function getProfitLoss(requestId, filters = {}, dbClient = null) {
     FROM acc_profit_loss
     WHERE 1=1
   `;
-  
-  const params = [];
-  let paramIndex = 1;
-  
-  if (startMonth) {
-    query += ` AND month >= $${paramIndex}`;
-    params.push(startMonth);
-    paramIndex++;
-  }
-  
-  if (endMonth) {
-    query += ` AND month <= $${paramIndex}`;
-    params.push(endMonth);
-    paramIndex++;
-  }
-  
-  if (departmentNames && departmentNames.length > 0) {
-    query += ` AND department = ANY($${paramIndex})`;
-    params.push(departmentNames);
-    paramIndex++;
-  }
-  
-  query += `
+
+    const params = [];
+    let paramIndex = 1;
+
+    if (startMonth) {
+      query += ` AND month >= $${paramIndex}`;
+      params.push(startMonth);
+      paramIndex++;
+    }
+
+    if (endMonth) {
+      query += ` AND month <= $${paramIndex}`;
+      params.push(endMonth);
+      paramIndex++;
+    }
+
+    if (departmentNames && departmentNames.length > 0) {
+      query += ` AND department = ANY($${paramIndex})`;
+      params.push(departmentNames);
+      paramIndex++;
+    }
+
+    query += `
     GROUP BY 
       month,
       department,
@@ -169,14 +156,9 @@ async function getProfitLoss(requestId, filters = {}, dbClient = null) {
       management_group_display_order,
       account_code
   `;
-  
-    console.log('[P&L Model] Query:', query);
-    console.log('[P&L Model] Params:', params);
-    
+
     const result = await client.query(query, params);
-    
-    console.log('[P&L Model] Result count:', result.rows.length);
-    
+
     return result.rows;
   } finally {
     if (shouldRelease) client.release();
@@ -197,23 +179,23 @@ async function getProfitLossSummary(requestId, filters = {}, dbClient = null) {
 
   try {
     const { startMonth, endMonth, departmentNames, groupBy = 'month' } = filters;
-  
-  // Determine grouping columns
-  const groupColumns = ['management_group_name', 'management_group_display_order'];
-  
-  if (groupBy === 'hotel') {
-    groupColumns.unshift('hotel_id', 'hotel_name');
-  } else if (groupBy === 'department') {
-    groupColumns.unshift('department');
-  } else if (groupBy === 'hotel_month') {
-    groupColumns.unshift('month', 'hotel_id', 'hotel_name');
-  } else if (groupBy === 'department_month') {
-    groupColumns.unshift('month', 'department');
-  } else {
-    groupColumns.unshift('month');
-  }
-  
-  let query = `
+
+    // Determine grouping columns
+    const groupColumns = ['management_group_name', 'management_group_display_order'];
+
+    if (groupBy === 'hotel') {
+      groupColumns.unshift('hotel_id', 'hotel_name');
+    } else if (groupBy === 'department') {
+      groupColumns.unshift('department');
+    } else if (groupBy === 'hotel_month') {
+      groupColumns.unshift('month', 'hotel_id', 'hotel_name');
+    } else if (groupBy === 'department_month') {
+      groupColumns.unshift('month', 'department');
+    } else {
+      groupColumns.unshift('month');
+    }
+
+    let query = `
     SELECT 
       ${groupColumns.join(', ')},
       SUM(net_amount) as net_amount,
@@ -228,33 +210,33 @@ async function getProfitLossSummary(requestId, filters = {}, dbClient = null) {
     FROM acc_profit_loss
     WHERE 1=1
   `;
-  
-  const params = [];
-  let paramIndex = 1;
-  
-  if (startMonth) {
-    query += ` AND month >= $${paramIndex}`;
-    params.push(startMonth);
-    paramIndex++;
-  }
-  
-  if (endMonth) {
-    query += ` AND month <= $${paramIndex}`;
-    params.push(endMonth);
-    paramIndex++;
-  }
-  
-  if (departmentNames && departmentNames.length > 0) {
-    query += ` AND department = ANY($${paramIndex})`;
-    params.push(departmentNames);
-    paramIndex++;
-  }
-  
-  query += `
+
+    const params = [];
+    let paramIndex = 1;
+
+    if (startMonth) {
+      query += ` AND month >= $${paramIndex}`;
+      params.push(startMonth);
+      paramIndex++;
+    }
+
+    if (endMonth) {
+      query += ` AND month <= $${paramIndex}`;
+      params.push(endMonth);
+      paramIndex++;
+    }
+
+    if (departmentNames && departmentNames.length > 0) {
+      query += ` AND department = ANY($${paramIndex})`;
+      params.push(departmentNames);
+      paramIndex++;
+    }
+
+    query += `
     GROUP BY ${groupColumns.join(', ')}
     ORDER BY ${groupColumns.join(', ')}
   `;
-  
+
     const result = await client.query(query, params);
     return result.rows;
   } finally {
@@ -279,7 +261,7 @@ async function getAvailableMonths(requestId, dbClient = null) {
       FROM acc_profit_loss
       ORDER BY month DESC
     `;
-    
+
     const result = await client.query(query);
     return result.rows.map(row => row.month);
   } finally {
@@ -309,7 +291,7 @@ async function getAvailableDepartments(requestId, dbClient = null) {
       WHERE ad.is_current = true
       ORDER BY h.name
     `;
-    
+
     const result = await client.query(query);
     return result.rows;
   } finally {
