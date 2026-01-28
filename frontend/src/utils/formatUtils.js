@@ -83,7 +83,7 @@ export const formatMonth = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
   const year = date.getFullYear();
-  const month = date.getMonth() + 1; // getMonth() is 0-indexed
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Pad with leading zero
   return `${year}年${month}月`;
 };
 

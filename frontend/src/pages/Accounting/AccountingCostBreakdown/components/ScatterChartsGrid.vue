@@ -24,6 +24,7 @@
 
 <script setup>
 import VChart from 'vue-echarts';
+import { formatMonth } from '@/utils/formatUtils';
 
 const props = defineProps({
     topAccounts: {
@@ -171,17 +172,9 @@ const getScatterOption = (account) => {
             formatter: (params) => {
                 const [occupancy, costPerRoom, month, totalCost, soldRooms] = params.data;
                 
-                // Format the date nicely (e.g., "2025-07-31T15:00:00.000Z" -> "2025年07月")
-                const formatDate = (dateString) => {
-                    const date = new Date(dateString);
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    return `${year}年${month}月`;
-                };
-                
                 return `
                     <strong>${params.seriesName}</strong><br/>
-                    ${formatDate(month)}<br/>
+                    ${formatMonth(month)}<br/>
                     稼働率: ${occupancy.toFixed(1)}%<br/>
                     客室単価コスト: ${formatCurrency(costPerRoom)}<br/>
                     総コスト: ${formatCurrency(totalCost)}<br/>
