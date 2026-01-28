@@ -1,94 +1,3 @@
-<script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAccountingStore } from '@/composables/useAccountingStore';
-import { useConfirm } from "primevue/useconfirm";
-import { useToast } from "primevue/usetoast";
-
-const router = useRouter();
-const accountingStore = useAccountingStore();
-const confirm = useConfirm();
-const toast = useToast();
-
-const currentStep = ref(1); // 1: Upload, 2: Review, 3: Success
-const selectedFile = ref(null);
-const isProcessing = ref(false);
-const importSummary = ref(null);
-
-const onFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
-            toast.add({ severity: 'error', summary: 'エラー', detail: 'CSVまたはTXTファイルを選択してください', life: 3000 });
-            return;
-        }
-        selectedFile.value = file;
-        handlePreview();
-    }
-};
-
-const handlePreview = async () => {
-    if (!selectedFile.value) return;
-    
-    isProcessing.value = true;
-    try {
-        const data = await accountingStore.previewYayoiImport(selectedFile.value);
-        importSummary.value = data;
-        currentStep.value = 2;
-    } catch (err) {
-        console.error(err);
-        toast.add({ severity: 'error', summary: 'エラー', detail: 'ファイルの解析に失敗しました', life: 3000 });
-    } finally {
-        isProcessing.value = false;
-    }
-};
-
-const confirmImport = () => {
-    confirm.require({
-        message: `${importSummary.value.minDate} から ${importSummary.value.maxDate} の期間の既存データを削除し、新しくデータをインポートします。よろしいですか？`,
-        header: 'インポートの確認',
-        icon: 'pi pi-exclamation-triangle',
-        acceptProps: {
-            label: 'はい、インポートします',
-            severity: 'danger'
-        },
-        rejectProps: {
-            label: 'キャンセル',
-            severity: 'secondary',
-            outlined: true
-        },
-        accept: () => {
-            handleImport();
-        }
-    });
-};
-
-const handleImport = async () => {
-    isProcessing.value = true;
-    try {
-        await accountingStore.executeYayoiImport(selectedFile.value);
-        currentStep.value = 3;
-        toast.add({ severity: 'success', summary: '完了', detail: 'インポートが正常に終了しました', life: 3000 });
-    } catch (err) {
-        console.error(err);
-        toast.add({ severity: 'error', summary: 'エラー', detail: 'インポートに失敗しました', life: 3000 });
-    } finally {
-        isProcessing.value = false;
-    }
-};
-
-const reset = () => {
-    selectedFile.value = null;
-    importSummary.value = null;
-    currentStep.value = 1;
-};
-
-const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ja-JP');
-};
-</script>
-
 <template>
     <div class="bg-slate-50 dark:bg-slate-900 min-h-screen p-6 font-sans">
         <div class="max-w-4xl mx-auto">
@@ -298,6 +207,98 @@ const formatDate = (dateStr) => {
         </div>
     </div>
 </template>
+
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAccountingStore } from '@/composables/useAccountingStore';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+
+const router = useRouter();
+const accountingStore = useAccountingStore();
+const confirm = useConfirm();
+const toast = useToast();
+
+const currentStep = ref(1); // 1: Upload, 2: Review, 3: Success
+const selectedFile = ref(null);
+const isProcessing = ref(false);
+const importSummary = ref(null);
+
+const onFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.csv') && !fileName.endsWith('.txt')) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: 'CSVまたはTXTファイルを選択してください', life: 3000 });
+            return;
+        }
+        selectedFile.value = file;
+        handlePreview();
+    }
+};
+
+const handlePreview = async () => {
+    if (!selectedFile.value) return;
+    
+    isProcessing.value = true;
+    try {
+        const data = await accountingStore.previewYayoiImport(selectedFile.value);
+        importSummary.value = data;
+        currentStep.value = 2;
+    } catch (err) {
+        console.error(err);
+        toast.add({ severity: 'error', summary: 'エラー', detail: 'ファイルの解析に失敗しました', life: 3000 });
+    } finally {
+        isProcessing.value = false;
+    }
+};
+
+const confirmImport = () => {
+    confirm.require({
+        message: `${importSummary.value.minDate} から ${importSummary.value.maxDate} の期間の既存データを削除し、新しくデータをインポートします。よろしいですか？`,
+        header: 'インポートの確認',
+        icon: 'pi pi-exclamation-triangle',
+        acceptProps: {
+            label: 'はい、インポートします',
+            severity: 'danger'
+        },
+        rejectProps: {
+            label: 'キャンセル',
+            severity: 'secondary',
+            outlined: true
+        },
+        accept: () => {
+            handleImport();
+        }
+    });
+};
+
+const handleImport = async () => {
+    isProcessing.value = true;
+    try {
+        await accountingStore.executeYayoiImport(selectedFile.value);
+        currentStep.value = 3;
+        toast.add({ severity: 'success', summary: '完了', detail: 'インポートが正常に終了しました', life: 3000 });
+    } catch (err) {
+        console.error(err);
+        toast.add({ severity: 'error', summary: 'エラー', detail: 'インポートに失敗しました', life: 3000 });
+    } finally {
+        isProcessing.value = false;
+    }
+};
+
+const reset = () => {
+    selectedFile.value = null;
+    importSummary.value = null;
+    currentStep.value = 1;
+};
+
+const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('ja-JP');
+};
+</script>
 
 <style scoped>
 .animate-fade-in {

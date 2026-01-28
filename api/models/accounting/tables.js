@@ -64,6 +64,66 @@ const upsertForecastTable = async (requestId, data, userId, dbClient = null) => 
     const shouldRelease = !dbClient;
 
     try {
+        if (shouldRelease) await client.query('BEGIN');
+
+        // 1. Consistency Check & Propagation
+        const groups = {};
+        data.forEach(d => {
+            const key = `${d.hotel_id}_${d.forecast_month}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(d);
+        });
+
+        for (const key in groups) {
+            const groupData = groups[key];
+            const first = groupData[0];
+            const hotelId = first.hotel_id;
+            const month = first.forecast_month;
+
+            // Strict null check to identify the Global Row
+            const globalRow = groupData.find(d => d.plan_type_category_id === null && d.plan_package_category_id === null);
+
+            let opDays, availRooms;
+
+            if (globalRow) {
+                // Case A: We are updating Global Metrics. Propagate to ALL DB rows for this month.
+                opDays = globalRow.operating_days;
+                availRooms = globalRow.available_room_nights;
+
+                // Use COALESCE or explicit values to handle 0 correctly
+                await client.query(
+                    `UPDATE du_forecast 
+                     SET operating_days = $1, available_room_nights = $2
+                     WHERE hotel_id = $3 AND forecast_month = $4`,
+                    [opDays ?? 0, availRooms ?? 0, hotelId, month]
+                );
+            } else {
+                // Case B: We are inserting/updating categorized rows but NO global row in this batch.
+                // We must fetch the existing Global Metrics from DB.
+                const res = await client.query(
+                    `SELECT operating_days, available_room_nights 
+                     FROM du_forecast 
+                     WHERE hotel_id = $1 AND forecast_month = $2 
+                     AND plan_type_category_id IS NULL AND plan_package_category_id IS NULL
+                     LIMIT 1`,
+                    [hotelId, month]
+                );
+                
+                if (res.rows.length > 0) {
+                    opDays = res.rows[0].operating_days;
+                    availRooms = res.rows[0].available_room_nights;
+                }
+            }
+
+            // Apply the determined global values to ALL rows in the current batch
+            if (opDays !== undefined || availRooms !== undefined) {
+                groupData.forEach(d => {
+                    if (opDays !== undefined) d.operating_days = opDays;
+                    if (availRooms !== undefined) d.available_room_nights = availRooms;
+                });
+            }
+        }
+
         const values = data.map(d => [
             d.hotel_id,
             d.forecast_month,
@@ -99,8 +159,11 @@ const upsertForecastTable = async (requestId, data, userId, dbClient = null) => 
         );
 
         const result = await client.query(query);
+        
+        if (shouldRelease) await client.query('COMMIT');
         return result.rows;
     } catch (err) {
+        if (shouldRelease) await client.query('ROLLBACK');
         logger.error('Error upserting du_forecast table:', err);
         throw err;
     } finally {
@@ -119,6 +182,61 @@ const upsertAccountingTable = async (requestId, data, userId, dbClient = null) =
     const shouldRelease = !dbClient;
 
     try {
+        if (shouldRelease) await client.query('BEGIN');
+
+        // 1. Consistency Check & Propagation
+        const groups = {};
+        data.forEach(d => {
+            const key = `${d.hotel_id}_${d.accounting_month}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(d);
+        });
+
+        for (const key in groups) {
+            const groupData = groups[key];
+            const first = groupData[0];
+            const hotelId = first.hotel_id;
+            const month = first.accounting_month;
+
+            // Strict null check to identify the Global Row
+            const globalRow = groupData.find(d => d.plan_type_category_id === null && d.plan_package_category_id === null);
+
+            let opDays, availRooms;
+
+            if (globalRow) {
+                opDays = globalRow.operating_days;
+                availRooms = globalRow.available_room_nights;
+
+                await client.query(
+                    `UPDATE du_accounting 
+                     SET operating_days = $1, available_room_nights = $2
+                     WHERE hotel_id = $3 AND accounting_month = $4`,
+                    [opDays ?? 0, availRooms ?? 0, hotelId, month]
+                );
+            } else {
+                const res = await client.query(
+                    `SELECT operating_days, available_room_nights 
+                     FROM du_accounting 
+                     WHERE hotel_id = $1 AND accounting_month = $2 
+                     AND plan_type_category_id IS NULL AND plan_package_category_id IS NULL
+                     LIMIT 1`,
+                    [hotelId, month]
+                );
+                
+                if (res.rows.length > 0) {
+                    opDays = res.rows[0].operating_days;
+                    availRooms = res.rows[0].available_room_nights;
+                }
+            }
+
+            if (opDays !== undefined || availRooms !== undefined) {
+                groupData.forEach(d => {
+                    if (opDays !== undefined) d.operating_days = opDays;
+                    if (availRooms !== undefined) d.available_room_nights = availRooms;
+                });
+            }
+        }
+
         const values = data.map(d => [
             d.hotel_id,
             d.accounting_month,
@@ -154,8 +272,11 @@ const upsertAccountingTable = async (requestId, data, userId, dbClient = null) =
         );
 
         const result = await client.query(query);
+        
+        if (shouldRelease) await client.query('COMMIT');
         return result.rows;
     } catch (err) {
+        if (shouldRelease) await client.query('ROLLBACK');
         logger.error('Error upserting du_accounting table:', err);
         throw err;
     } finally {

@@ -215,7 +215,7 @@ export function useImportStore() {
         }
     };
 
-    const upsertFinancesData = async (type, entries) => {
+    const upsertFinancesData = async (type, entries, tableData) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/import/finance/upsert`, {
@@ -224,7 +224,7 @@ export function useImportStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ type, entries }),
+                body: JSON.stringify({ type, entries, tableData }),
             });
             if (!response.ok) throw new Error('Failed to save finance data');
             return await response.json();

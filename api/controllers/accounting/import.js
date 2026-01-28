@@ -14,16 +14,16 @@ const parseYayoiFile = (buffer) => {
     const decoder = new TextDecoder('shift-jis');
     const text = decoder.decode(buffer);
     const lines = text.split(/\r?\n/);
-    
+
     const rows = [];
     for (let line of lines) {
         if (!line.trim()) continue;
-        
+
         // Simple CSV parser for quoted values
         const row = [];
         let current = '';
         let inQuotes = false;
-        
+
         for (let i = 0; i < line.length; i++) {
             const char = line[i];
             if (char === '"') {
@@ -36,7 +36,7 @@ const parseYayoiFile = (buffer) => {
             }
         }
         row.push(current.trim());
-        
+
         if (row.length >= 4) { // Basic validation: at least 4 columns (up to transaction date)
             rows.push(row);
         }
@@ -78,8 +78,8 @@ const previewImport = async (req, res) => {
         // Get master data for validation
         const accountingModel = require('../../models/accounting');
         const [codes, departmentsMaster] = await Promise.all([
-            accountingModel.getAccountCodes(requestId),
-            accountingModel.getDepartments(requestId)
+            accountingModel.accountingRead.getAccountCodes(requestId),
+            accountingModel.accountingRead.getDepartments(requestId)
         ]);
 
         const validAccountNames = new Set(codes.map(c => c.name));
@@ -97,7 +97,7 @@ const previewImport = async (req, res) => {
                 if (!minDate || dateStr < minDate) minDate = dateStr;
                 if (!maxDate || dateStr > maxDate) maxDate = dateStr;
             }
-            
+
             const debitAccount = row[4];
             const creditAccount = row[10];
             const debitDept = row[6];
@@ -185,7 +185,7 @@ const executeImport = async (req, res) => {
         const importBatchId = uuidv4();
         const insertData = rows.map(row => {
             const transactionDate = toIsoDate(row[3]);
-            
+
             return [
                 importBatchId,
                 row[0], // identification_flag

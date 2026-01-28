@@ -424,11 +424,12 @@ const getDepartments = async (requestId, dbClient = null) => {
             h.name as hotel_name, 
             ad.id, 
             ad.name, 
+            ad.is_current,
             ad.created_at, 
             ad.updated_at
         FROM hotels h
         LEFT JOIN acc_departments ad ON h.id = ad.hotel_id
-        ORDER BY h.id ASC
+        ORDER BY h.id ASC, ad.is_current DESC NULLS LAST
     `;
 
     try {
@@ -936,6 +937,128 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
     }
 };
 
+/**
+ * Cost Breakdown Model: Analytics for top expense accounts
+ */
+const getCostBreakdownData = async (requestId, topN = 5, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    try {
+        // Step 1: Find the top N representative accounts (Management Groups 2, 3, 4, 5)
+        // Strictly join with acc_departments to only consider costs assigned to facilities
+        const topAccountsQuery = `
+            SELECT 
+                ac.code,
+                ac.name,
+                SUM(ayd.debit_amount) as total_historical_cost
+            FROM acc_yayoi_data ayd
+            JOIN acc_account_codes ac ON ayd.debit_account_code = ac.name
+            JOIN acc_departments ad ON ayd.debit_department = ad.name AND ad.is_current = TRUE
+            WHERE ac.management_group_id IN (2, 3, 4, 5)
+            GROUP BY ac.code, ac.name
+            ORDER BY total_historical_cost DESC
+            LIMIT $1
+        `;
+        const topAccountsResult = await client.query(topAccountsQuery, [topN]);
+        const topAccounts = topAccountsResult.rows;
+
+        if (topAccounts.length === 0) return { topAccounts: [], timeSeries: [], occupancyData: [] };
+
+        const topNames = topAccounts.map(a => a.name);
+
+        // Step 2: Get monthly metrics (Cost and Sales) per hotel
+        // Strictly use departmental mapping to exclude non-hotel data
+        const monthDataQuery = `
+            WITH hotel_depts AS (
+                SELECT hotel_id, name FROM acc_departments WHERE is_current = TRUE
+            ),
+            monthly_sales AS (
+                SELECT 
+                    hd.hotel_id,
+                    date_trunc('month', ayd.transaction_date)::date as month,
+                    SUM(ayd.credit_amount) as sales
+                FROM acc_yayoi_data ayd
+                JOIN acc_account_codes ac ON ayd.credit_account_code = ac.name
+                JOIN hotel_depts hd ON ayd.credit_department = hd.name
+                WHERE ac.management_group_id = 1
+                GROUP BY hd.hotel_id, date_trunc('month', ayd.transaction_date)
+            ),
+            monthly_costs AS (
+                SELECT 
+                    ac.code as account_code,
+                    hd.hotel_id,
+                    date_trunc('month', ayd.transaction_date)::date as month,
+                    SUM(ayd.debit_amount) as cost
+                FROM acc_yayoi_data ayd
+                JOIN acc_account_codes ac ON ayd.debit_account_code = ac.name
+                JOIN hotel_depts hd ON ayd.debit_department = hd.name
+                WHERE ac.name = ANY($1::varchar[])
+                GROUP BY ac.code, hd.hotel_id, date_trunc('month', ayd.transaction_date)
+            )
+            SELECT 
+                mc.account_code,
+                mc.hotel_id,
+                h.name as hotel_name,
+                mc.month,
+                mc.cost,
+                COALESCE(ms.sales, 0) as sales
+            FROM monthly_costs mc
+            LEFT JOIN monthly_sales ms ON mc.hotel_id = ms.hotel_id AND mc.month = ms.month
+            JOIN hotels h ON mc.hotel_id = h.id
+            ORDER BY mc.month ASC
+        `;
+        const monthDataResult = await client.query(monthDataQuery, [topNames]);
+        const timeSeries = monthDataResult.rows;
+
+        // Step 3: Get occupancy data from du_accounting table
+        const occupancyDataQuery = `
+            WITH hotel_depts AS (
+                SELECT hotel_id, name FROM acc_departments WHERE is_current = TRUE
+            ),
+            monthly_occupancy AS (
+                SELECT 
+                    hd.hotel_id,
+                    date_trunc('month', dua.accounting_month)::date as month,
+                    SUM(dua.available_room_nights) as total_available_rooms,
+                    SUM(dua.rooms_sold_nights) as total_sold_rooms
+                FROM du_accounting dua
+                JOIN hotel_depts hd ON dua.hotel_id = hd.hotel_id
+                GROUP BY hd.hotel_id, date_trunc('month', dua.accounting_month)
+            )
+            SELECT 
+                mo.hotel_id,
+                h.name as hotel_name,
+                mo.month,
+                mo.total_available_rooms,
+                mo.total_sold_rooms,
+                CASE 
+                    WHEN mo.total_available_rooms > 0 
+                    THEN (mo.total_sold_rooms::decimal / mo.total_available_rooms::decimal) * 100 
+                    ELSE 0 
+                END as occupancy_percentage
+            FROM monthly_occupancy mo
+            JOIN hotels h ON mo.hotel_id = h.id
+            WHERE mo.total_available_rooms > 0
+            ORDER BY mo.month ASC, mo.hotel_id ASC
+        `;
+        const occupancyDataResult = await client.query(occupancyDataQuery);
+        const occupancyData = occupancyDataResult.rows;
+
+        return {
+            topAccounts,
+            timeSeries,
+            occupancyData
+        };
+    } catch (err) {
+        logger.error('Error in getCostBreakdownData:', err);
+        throw err;
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 const getSubAccounts = async (requestId, dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
@@ -976,5 +1099,7 @@ module.exports = {
     getReconciliationOverview,
     getReconciliationHotelDetails,
     getReconciliationClientDetails,
+    getCostBreakdownData,
     getSubAccounts
 };
+

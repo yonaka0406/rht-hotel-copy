@@ -1,19 +1,23 @@
 <template>
-    <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" :header="modalTitle" modal class="w-full max-w-lg">
+    <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" :header="modalTitle" modal
+        class="w-full max-w-lg">
         <div class="p-2 space-y-6">
             <!-- Account Code Form -->
             <div v-if="type === 'code'" class="space-y-4">
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">勘定コード <span class="text-rose-500">*</span></label>
+                    <label class="text-xs font-black text-slate-500 uppercase">勘定コード <span
+                            class="text-rose-500">*</span></label>
                     <InputText v-model="form.code" placeholder="例: 4110004" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">勘定科目名 <span class="text-rose-500">*</span></label>
+                    <label class="text-xs font-black text-slate-500 uppercase">勘定科目名 <span
+                            class="text-rose-500">*</span></label>
                     <InputText v-model="form.name" placeholder="例: 宿泊事業売上" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">管理区分</label>
-                    <Select v-model="form.management_group_id" :options="settings.groups" optionLabel="name" optionValue="id" placeholder="区分を選択" showClear fluid />
+                    <Select v-model="form.management_group_id" :options="settings.groups" optionLabel="name"
+                        optionValue="id" placeholder="区分を選択" showClear fluid />
                 </div>
                 <div class="flex items-center gap-2">
                     <Checkbox v-model="form.is_active" :binary="true" />
@@ -24,7 +28,8 @@
             <!-- Management Group Form -->
             <div v-if="type === 'group'" class="space-y-4">
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">区分名 <span class="text-rose-500">*</span></label>
+                    <label class="text-xs font-black text-slate-500 uppercase">区分名 <span
+                            class="text-rose-500">*</span></label>
                     <InputText v-model="form.name" placeholder="例: 売上高" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
@@ -36,11 +41,13 @@
             <!-- Tax Class Form -->
             <div v-if="type === 'tax'" class="space-y-4">
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">システム内表示名 <span class="text-rose-500">*</span></label>
+                    <label class="text-xs font-black text-slate-500 uppercase">システム内表示名 <span
+                            class="text-rose-500">*</span></label>
                     <InputText v-model="form.name" placeholder="例: 課税売上10%" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">弥生会計出力名 <span class="text-rose-500">*</span></label>
+                    <label class="text-xs font-black text-slate-500 uppercase">弥生会計出力名 <span
+                            class="text-rose-500">*</span></label>
                     <InputText v-model="form.yayoi_name" placeholder="例: 課税売上内10%" fluid />
                 </div>
                 <div class="flex flex-row gap-4">
@@ -62,13 +69,18 @@
             <!-- Department Form -->
             <div v-if="type === 'dept'" class="space-y-4">
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">対象店舗</label>
-                    <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-300">
-                            {{ getHotelName(form.hotel_id) }}
+                    <label class="text-xs font-black text-slate-500 uppercase">対象店舗 <span v-if="!form.id"
+                            class="text-rose-500">*</span></label>
+                    <div v-if="form.id"
+                        class="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-300">
+                        {{ getHotelName(form.hotel_id) }}
                     </div>
+                    <Select v-else v-model="form.hotel_id" :options="hotels" optionLabel="name" optionValue="id"
+                        placeholder="ホテルを選択" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">部門名 (弥生会計) <span class="text-rose-500">*</span></label>
+                    <label class="text-xs font-black text-slate-500 uppercase">部門名 (弥生会計) <span
+                            class="text-rose-500">*</span></label>
                     <InputText v-model="form.name" placeholder="例: WH室蘭" fluid />
                 </div>
                 <div class="flex flex-col gap-2">
@@ -79,71 +91,42 @@
                             現在のマッピング (エクスポートに使用)
                         </label>
                     </div>
-                    <p class="text-xs text-slate-500">チェックを外すと履歴データとして保存されます (インポート時の解決に使用)</p>
                 </div>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div class="flex flex-col gap-2">
-                                            <label class="text-xs font-black text-slate-500 uppercase">有効開始日</label>
-                                            <DatePicker v-model="form.valid_from" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" fluid :pt="{ input: { class: 'dark:bg-slate-900 dark:text-slate-50 dark:border-slate-700' } }" />
-                                            <p class="text-xs text-slate-500">任意: この部門名が有効になった日</p>
-                                        </div>
-                                        <div class="flex flex-col gap-2">
-                                            <label class="text-xs font-black text-slate-500 uppercase">有効終了日</label>
-                                            <DatePicker v-model="form.valid_to" dateFormat="yy/mm/dd" placeholder="YYYY/MM/DD" fluid :disabled="form.is_current" :pt="{ input: { class: 'dark:bg-slate-900 dark:text-slate-50 dark:border-slate-700' } }" />
-                                            <p class="text-xs text-slate-500">任意: この部門名が終了した日</p>
-                                        </div>
-                                    </div>            </div>
+            </div>
 
             <!-- Mapping Form -->
             <div v-if="type === 'mapping'" class="space-y-4">
                 <div class="flex flex-col gap-2">
                     <label class="text-xs font-black text-slate-500 uppercase">対象ホテル</label>
-                    <Select v-model="form.hotel_id" :options="hotels" optionLabel="name" optionValue="id" showClear placeholder="共通（すべてのホテル）" fluid />
+                    <Select v-model="form.hotel_id" :options="hotels" optionLabel="name" optionValue="id" showClear
+                        placeholder="共通（すべてのホテル）" fluid />
                 </div>
-                
+
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">対象タイプ <span class="text-rose-500">*</span></label>
-                    <Select 
-                        v-model="form.target_type" 
-                        :options="[
-                            { label: '個別プラン', value: 'plan_hotel' },
-                            { label: 'プラン区分', value: 'plan_type_category' },
-                            { label: '個別アドオン', value: 'addon_hotel' },
-                            { label: '共通アドオン', value: 'addon_global' },
-                            { label: 'キャンセル料', value: 'cancellation' }
-                        ]" 
-                        optionLabel="label" 
-                        optionValue="value" 
-                        placeholder="タイプを選択" 
-                        fluid
-                        @change="form.target_id = null"
-                    />
+                    <label class="text-xs font-black text-slate-500 uppercase">対象タイプ <span
+                            class="text-rose-500">*</span></label>
+                    <Select v-model="form.target_type" :options="[
+                        { label: '個別プラン', value: 'plan_hotel' },
+                        { label: 'プラン区分', value: 'plan_type_category' },
+                        { label: '個別アドオン', value: 'addon_hotel' },
+                        { label: '共通アドオン', value: 'addon_global' },
+                        { label: 'キャンセル料', value: 'cancellation' }
+                    ]" optionLabel="label" optionValue="value" placeholder="タイプを選択" fluid
+                        @change="form.target_id = null" />
                 </div>
 
                 <div v-if="form.target_type && form.target_type !== 'cancellation'" class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">対象アイテム <span class="text-rose-500">*</span></label>
-                    <Select 
-                        v-model="form.target_id" 
-                        :options="getTargetOptions(form.target_type)" 
-                        optionLabel="name" 
-                        optionValue="id" 
-                        placeholder="アイテムを選択" 
-                        fluid
-                        filter
-                    />
+                    <label class="text-xs font-black text-slate-500 uppercase">対象アイテム <span
+                            class="text-rose-500">*</span></label>
+                    <Select v-model="form.target_id" :options="getTargetOptions(form.target_type)" optionLabel="name"
+                        optionValue="id" placeholder="アイテムを選択" fluid filter />
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-500 uppercase">紐付ける勘定科目 <span class="text-rose-500">*</span></label>
-                    <Select 
-                        v-model="form.account_code_id" 
-                        :options="settings.codes" 
-                        optionLabel="name" 
-                        optionValue="id" 
-                        placeholder="科目を選択" 
-                        fluid
-                        filter
-                    >
+                    <label class="text-xs font-black text-slate-500 uppercase">紐付ける勘定科目 <span
+                            class="text-rose-500">*</span></label>
+                    <Select v-model="form.account_code_id" :options="settings.codes" optionLabel="name" optionValue="id"
+                        placeholder="科目を選択" fluid filter>
                         <template #option="slotProps">
                             <div class="flex justify-between items-center w-full">
                                 <span>{{ slotProps.option.name }}</span>
@@ -155,8 +138,10 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-                <Button label="キャンセル" @click="close" severity="secondary" text class="px-6 py-2 rounded-xl font-bold !bg-transparent" />
-                <Button label="保存する" @click="handleSave" :loading="saving" :disabled="!isFormValid" class="px-8 py-2 rounded-xl font-bold bg-violet-600 border-violet-600 hover:bg-violet-700 hover:border-violet-700" />
+                <Button label="キャンセル" @click="close" severity="secondary" text
+                    class="px-6 py-2 rounded-xl font-bold !bg-transparent" />
+                <Button label="保存する" @click="handleSave" :loading="saving" :disabled="!isFormValid"
+                    class="px-8 py-2 rounded-xl font-bold bg-violet-600 border-violet-600 hover:bg-violet-700 hover:border-violet-700" />
             </div>
         </div>
     </Dialog>
@@ -169,7 +154,6 @@ import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
-import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 
 const props = defineProps({
@@ -195,8 +179,6 @@ const form = reactive({
     tax_rate_percent: 10,
     hotel_id: null,
     is_current: true,
-    valid_from: null,
-    valid_to: null,
     target_type: null,
     target_id: null,
     account_code_id: null
@@ -220,8 +202,6 @@ watch(() => props.visible, (newVal) => {
                 tax_rate_percent: 10,
                 hotel_id: null,
                 is_current: true,
-                valid_from: null,
-                valid_to: null,
                 target_type: null,
                 target_id: null,
                 account_code_id: null
@@ -261,7 +241,7 @@ const isFormValid = computed(() => {
         case 'tax':
             return form.name && form.yayoi_name;
         case 'dept':
-            return form.name;
+            return form.hotel_id && form.name;
         case 'mapping':
             return form.target_type && (form.target_type === 'cancellation' || form.target_id) && form.account_code_id;
         default:
@@ -290,7 +270,8 @@ const close = () => {
 }
 
 .dark :deep(.p-select-label.p-placeholder) {
-    color: #64748b !important; /* slate-500 */
+    color: #64748b !important;
+    /* slate-500 */
 }
 
 .dark :deep(.p-datepicker-dropdown),
