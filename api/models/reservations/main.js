@@ -604,6 +604,18 @@ const updateReservationStatus = async (requestId, reservationData) => {
     // Start the transaction
     await client.query('BEGIN');
 
+    // Get the current reservation status before updating
+    const currentStatusResult = await client.query(
+      'SELECT status FROM reservations WHERE id = $1::UUID AND hotel_id = $2',
+      [id, hotel_id]
+    );
+
+    if (currentStatusResult.rows.length === 0) {
+      throw new Error(`Reservation not found for id: ${id}, hotel_id: ${hotel_id}`);
+    }
+
+    const oldStatus = currentStatusResult.rows[0].status;
+
     // 1. Update the status of the main reservation record
     const updateReservationQuery = `
       UPDATE reservations
@@ -638,20 +650,41 @@ const updateReservationStatus = async (requestId, reservationData) => {
       await updateParkingReservationCancelledStatus(requestId, id, null, hotel_id, 'cancelled', updated_by, client);
 
     } else if (resStatus === 'confirmed') {
-      // For confirmed reservations, ensure details are not cancelled and are billable
-      const updateDetailsQuery = `
-        UPDATE reservation_details
-        SET
-          cancelled = NULL,
-          billable = TRUE,
-          updated_by = $1
-        WHERE reservation_id = $2::UUID AND hotel_id = $3;
-      `;
-      const detailValues = [updated_by, id, hotel_id];
-      await client.query(updateDetailsQuery, detailValues);
+      // Logic for confirming a reservation:
+      // If it was previously cancelled, we recover EVERYTHING (all rooms).
+      // If it was NOT cancelled (e.g., from 'provisory'), we only set billable=TRUE for active rooms
+      // and keep the 'cancelled' status for rooms that were explicitly cancelled.
+      if (oldStatus === 'cancelled') {
+        const updateDetailsQuery = `
+          UPDATE reservation_details
+          SET
+            cancelled = NULL,
+            billable = TRUE,
+            updated_by = $1
+          WHERE reservation_id = $2::UUID AND hotel_id = $3;
+        `;
+        const detailValues = [updated_by, id, hotel_id];
+        await client.query(updateDetailsQuery, detailValues);
 
-      // Also "recover" any associated parking reservations by removing the cancelled flag
-      await updateParkingReservationCancelledStatus(requestId, id, null, hotel_id, 'recovered', updated_by, client);
+        // Also "recover" any associated parking reservations by removing the cancelled flag
+        await updateParkingReservationCancelledStatus(requestId, id, null, hotel_id, 'recovered', updated_by, client);
+      } else {
+        const updateDetailsQuery = `
+          UPDATE reservation_details
+          SET
+            billable = TRUE,
+            updated_by = $1
+          WHERE reservation_id = $2::UUID AND hotel_id = $3 AND cancelled IS NULL;
+        `;
+        const detailValues = [updated_by, id, hotel_id];
+        await client.query(updateDetailsQuery, detailValues);
+
+        // For transition to confirmed from non-cancelled, we might NOT want to recover all parking,
+        // but if we do, we should only recover parking for active details.
+        // However, usually parking is explicitly un-cancelled if needed.
+        // To be safe and consistent with details, let's recover parking only for active rooms.
+        await updateParkingReservationCancelledStatus(requestId, id, null, hotel_id, 'recovered', updated_by, client);
+      }
 
     } else if (resStatus === 'provisory') {
       // For provisory reservations, ensure details are not billable
