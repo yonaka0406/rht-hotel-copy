@@ -44,6 +44,13 @@ This document outlines the strategy to modernize the financial data import proce
 - **PMS Sync:** Aggregates reservation data into Account-level Actuals using `acc_accounting_mappings`.
 - **Yayoi Sync:** Aggregates ledger data from `acc_yayoi_data` via `acc_monthly_account_summary` directly into Actuals.
 
+### 4.4. Global Metrics Propagation (Consistency)
+
+To ensure data integrity within the `du_forecast` and `du_accounting` tables, global metrics (**営業日数** and **客室数**) are automatically synchronized across all rows for a given hotel and month.
+
+1.  **Global Update:** When the "Global Row" (no plan identifiers) is updated, the new `operating_days` and `available_room_nights` are propagated to all existing categorized rows in the database for that month.
+2.  **Inheritance on Insert:** When adding new categorized rows (e.g., via Smart Paste or manual entry), the system automatically fetches the current global metrics from the database and applies them to the new rows, preventing entries with zeroed operational constants.
+
 ## 5. Technical Architecture
 
 ### Database Schema
@@ -69,3 +76,4 @@ This document outlines the strategy to modernize the financial data import proce
 - [x] **Account Mapping System:** Implemented hierarchical resolution (Plan -> Category -> Global).
 - [x] **Yayoi Summary Logic:** Net amount calculation with tax adjustment and sub-account grouping.
 - [x] **Dynamic Sub-Account Creation:** implemented `get_or_create_sub_account` for flexible imports.
+- [x] **Global Metrics Propagation:** Automatic synchronization of `operating_days` and `available_room_nights` across all month/hotel rows.
