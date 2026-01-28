@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.7] - 2026-01-29
+
+- Fix: Unified reservation creation timestamp formatting in `ReservationPanel.vue` by using standard `formatDateTime` utility, resolving timezone discrepancies between environments.
+
+---
+
 ## [1.4.6] - 2026-01-28
 
 - New Feature: Added cost breakdown analytics dashboard with visualizations and configurable top expense filtering.

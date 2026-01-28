@@ -30,8 +30,7 @@
     <div class="flex flex-wrap items-center gap-x-2">
         <p class="font-bold whitespace-nowrap text-sm">作成日時：</p>
         <span class="whitespace-nowrap">
-            {{ formatDate(getJstDateTime(reservationInfo.created_at)) }} 
-            {{ formatTime(getJstDateTime(reservationInfo.created_at)) }}
+            {{ formatDateTime(reservationInfo.created_at) }}
         </span>
     </div>
 
@@ -484,39 +483,6 @@ const router = useRouter();
 import { validate as uuidValidate } from 'uuid';
 import { reservationTypeOptions, reservationPaymentTimingOptions, translateReservationStatus, translateReservationType } from '@/utils/reservationUtils';
 import { formatDate, formatTime, formatDateTime } from '@/utils/dateUtils';
-
-// Helper function to convert UTC date string to JST Date object
-const getJstDateTime = (utcDateString) => {
-  if (!utcDateString) return null;
-
-  try {
-    // Normalize space to 'T' for ISO 8601 compatibility
-    const isoString = utcDateString.replace(' ', 'T');
-    
-    // Robustly detect explicit timezone: 'Z', '+HH:MM', '-HH:MM', '+HHMM', '-HHMM'
-    const hasTimeZone = /[Zz]|[+-]\d{2}(?::?\d{2})?$/.test(isoString);
-    
-    // If no timezone is present, we assume it's UTC and append 'Z' to ensure reliable parsing
-    const finalIsoString = hasTimeZone ? isoString : isoString + 'Z';
-    const date = new Date(finalIsoString);
-
-    if (isNaN(date.getTime())) {
-      console.warn(`Invalid date string: ${utcDateString}`);
-      return null;
-    }
-
-    /**
-     * Convert to JST (UTC+9).
-     * We shift the internal UTC time by 9 hours so that local time methods 
-     * (e.g. getFullYear, getHours) return the values for the JST timezone 
-     * regardless of the environment's local timezone.
-     */
-    return new Date(date.getTime() + (9 * 60 * 60 * 1000));
-  } catch (error) {
-    console.error(`Error in getJstDateTime for value "${utcDateString}":`, error);
-    return null;
-  }
-};
 
 import ReservationCopyDialog from '@/pages/MainPage/Reservation/components/dialogs/ReservationCopyDialog.vue';
 
