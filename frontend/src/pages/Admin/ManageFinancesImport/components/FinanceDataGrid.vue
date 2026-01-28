@@ -1,24 +1,25 @@
 <template>
     <div class="finance-data-grid">
         <div class="flex flex-col gap-4 mb-6">
-            <!-- Row 1: Selection and View Mode -->
-            <div class="flex flex-wrap justify-between items-center gap-4">
-                <div class="flex flex-wrap items-center gap-3">
-                    <Select v-model="selectedHotel" :options="hotels" optionLabel="name" placeholder="ホテルを選択"
-                        class="w-64" />
-                    <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" placeholder="開始月を選択" />
-                    <Button label="読み込み" icon="pi pi-refresh" @click="loadData" :loading="loading" />
-                </div>
-                <SelectButton v-model="viewFilter" :options="viewOptions" optionLabel="label" optionValue="value" />
+            <!-- Row 1: Selection -->
+            <div class="flex flex-wrap items-center gap-3">
+                <Select v-model="selectedHotel" :options="hotels" optionLabel="name" placeholder="ホテルを選択"
+                    class="w-64" />
+                <DatePicker v-model="selectedMonth" view="month" dateFormat="yy/mm" placeholder="開始月を選択" />
+                <Button label="読み込み" icon="pi pi-refresh" @click="loadData" :loading="loading" />
             </div>
 
-            <!-- Row 2: State Filters and Import Actions -->
-            <div class="flex flex-wrap justify-end items-center gap-2 border-t pt-3">
-                <Button :label="hideZeroRows ? '全項目を表示' : '0以外の項目を表示'"
-                    :icon="hideZeroRows ? 'pi pi-eye' : 'pi pi-eye-slash'" class="p-button-outlined p-button-secondary"
-                    @click="hideZeroRows = !hideZeroRows" :disabled="!gridData.length" />
-                <Button label="貼り付け" icon="pi pi-clipboard" class="p-button-outlined" @click="openPasteDialog"
-                    :disabled="!gridData.length || (viewFilter === 'account' && type !== 'forecast')" />
+            <!-- Row 2: View Mode, Filters and Import Actions -->
+            <div class="flex flex-wrap justify-between items-center gap-2 border-t pt-3">
+                <div class="flex items-center gap-3">
+                    <SelectButton v-model="viewFilter" :options="viewOptions" optionLabel="label" optionValue="value" />
+                    <Button :label="hideZeroRows ? '全項目を表示' : '0以外の項目を表示'"
+                        :icon="hideZeroRows ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                        class="p-button-outlined p-button-secondary" @click="hideZeroRows = !hideZeroRows"
+                        :disabled="!gridData.length" />
+                    <Button label="貼り付け" icon="pi pi-clipboard" class="p-button-outlined" @click="openPasteDialog"
+                        :disabled="!gridData.length || (viewFilter === 'account' && type !== 'forecast')" />
+                </div>
 
                 <div class="flex gap-2 pl-2 border-l ml-2">
                     <Button label="PMS同期" icon="pi pi-bolt" class="p-button-help" @click="onSyncPMS"
