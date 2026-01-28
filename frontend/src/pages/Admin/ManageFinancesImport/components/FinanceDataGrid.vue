@@ -101,7 +101,7 @@
 
         <DataTable :value="filteredGridData" editMode="cell" @cell-edit-complete="onCellEditComplete"
             class="p-datatable-sm border rounded-lg overflow-hidden shadow-sm" scrollable scrollHeight="600px"
-            rowGroupMode="subheader" groupRowsBy="management_group_name">
+            rowGroupMode="subheader" groupRowsBy="management_group_name" dataKey="row_key">
             <template #groupheader="slotProps">
                 <td :colspan="months.length + 1" class="bg-gray-100 py-2 px-3 font-bold">
                     <span class="text-primary">{{ slotProps.data.management_group_name }}</span>
@@ -123,7 +123,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { DataTable, Column, Select, DatePicker, Button, InputNumber, Message, Dialog, Textarea, SelectButton, ToggleSwitch } from 'primevue';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useImportStore } from '@/composables/useImportStore';
@@ -190,6 +190,16 @@ const pasteContextLabel = computed(() => viewFilter.value === 'operational' ? '�
 // Mapping Dialog State
 const showMappingDialog = ref(false);
 const unmappedRows = ref([]); // { excelName, values: [], selectedAccount: null, useSubAccount: false, selectedSubAccount: null }
+
+// Debug Watcher for Subaccounts
+watch(() => unmappedRows.value, (newRows) => {
+    newRows.forEach((row) => {
+        if (row.selectedAccount) {
+            const subs = getSubAccountsForAccount(row.selectedAccount.name);
+            console.log(`[Mapping Debug] Excel: "${row.excelName}" -> Account: "${row.selectedAccount.name}" available subaccounts:`, subs);
+        }
+    });
+}, { deep: true });
 
 const getSubAccountsForAccount = (accountName) => {
     if (!accountName || !subAccounts.value) return [];
@@ -358,10 +368,12 @@ const loadData = async () => {
         if (props.type === 'forecast') {
             accountCodes.value.forEach(ac => {
                 if (ac.management_group_id) {
-                    const rowKey = ac.name;
-                    dataMap[rowKey] = {
-                        row_key: rowKey,
+                    // Create main account row
+                    const mainRowKey = ac.name;
+                    dataMap[mainRowKey] = {
+                        row_key: mainRowKey,
                         account_name: ac.name,
+                        base_account_name: ac.name,
                         account_code: ac.code,
                         management_group_name: ac.management_group_name || 'その他',
                         group_sort_order: 100 + (parseInt(ac.group_display_order) || 0),
@@ -369,21 +381,33 @@ const loadData = async () => {
                         sub_account_name: null,
                         ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
                     };
+
+                    // Create rows for each associated sub-account
+                    const accountSubs = subAccounts.value.filter(sa => sa.account_name === ac.name);
+                    accountSubs.forEach(sa => {
+                        const subRowKey = `${ac.name}:${sa.name}`;
+                        dataMap[subRowKey] = {
+                            row_key: subRowKey,
+                            account_name: `${ac.name} [${sa.name}]`,
+                            base_account_name: ac.name,
+                            account_code: ac.code,
+                            management_group_name: ac.management_group_name || 'その他',
+                            group_sort_order: 100 + (parseInt(ac.group_display_order) || 0),
+                            is_operational: false,
+                            sub_account_name: sa.name,
+                            ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
+                        };
+                    });
                 }
             });
-
-            // Handle historical sub-account entries by potentially creating extra rows
-            // In the grid, we currently group by account_name. 
-            // If we have multiple sub-accounts for the same account, we might need a way to show them.
-            // For now, mapping logic will overwrite the main account row, 
-            // but we'll store the sub_account_name in the row when mapped.
         }
 
         // Map data
         entries.forEach(e => {
-            if (dataMap[e.account_name]) {
+            const rowKey = e.sub_account_name ? `${e.account_name}:${e.sub_account_name}` : e.account_name;
+            if (dataMap[rowKey]) {
                 const mKey = formatDate(e.month);
-                dataMap[e.account_name][mKey] = parseFloat(e.amount);
+                dataMap[rowKey][mKey] = parseFloat(e.amount);
             }
         });
 
@@ -448,7 +472,7 @@ const saveData = async () => {
                     entries.push({
                         hotel_id: selectedHotel.value.id,
                         month: m.value,
-                        account_name: row.account_name,
+                        account_name: row.base_account_name || row.account_name,
                         sub_account_name: row.sub_account_name || null,
                         amount
                     });
@@ -510,20 +534,20 @@ const applyManualMapping = () => {
     let appliedCount = 0;
     unmappedRows.value.forEach(item => {
         if (item.selectedAccount) {
-            const targetRowKey = item.selectedAccount.id;
-            const row = gridData.value.find(r => r.row_key === targetRowKey);
-            if (row) {
-                // If subaccount is selected, update the row with subaccount info
-                if (item.useSubAccount && item.selectedSubAccount) {
-                    row.sub_account_name = item.selectedSubAccount.name;
-                    // Provide visual feedback in the account name (optional, but helpful)
-                    if (!row.account_name.includes('補助:')) {
-                        // row.account_name = `${row.account_name} (補助: ${item.selectedSubAccount.name})`;
-                    }
-                }
+            let targetRowKey = item.selectedAccount.id;
+            if (item.useSubAccount && item.selectedSubAccount) {
+                targetRowKey = `${item.selectedAccount.name}:${item.selectedSubAccount.name}`;
+            }
 
+            const row = gridData.value.find(r => r.row_key === targetRowKey);
+            console.log(`[Mapping Apply] Excel: "${item.excelName}" -> Target Key: "${targetRowKey}" (${row ? 'Found' : 'NOT FOUND!'})`);
+
+            if (row) {
                 item.values.forEach((val, idx) => {
-                    if (months.value[idx]) row[months.value[idx].value] = val;
+                    if (months.value[idx]) {
+                        // Sum the values in case multiple Excel rows are mapped to the same account
+                        row[months.value[idx].value] = (row[months.value[idx].value] || 0) + val;
+                    }
                 });
                 appliedCount++;
             }
@@ -531,6 +555,8 @@ const applyManualMapping = () => {
     });
     if (appliedCount > 0) {
         hasChanges.value = true;
+        // Re-trigger reactivity for computed properties
+        gridData.value = [...gridData.value];
         toast.add({ severity: 'success', summary: 'マッピング適用', detail: `${appliedCount}件の手動マッピングを適用しました。`, life: 5000 });
     }
     showMappingDialog.value = false;
@@ -573,6 +599,8 @@ const processPaste = () => {
         const row = filteredGridData.value.find(r => {
             const gridName = (r.account_name || '').toLowerCase().replace(/[　]/g, '');
             const gridCode = (r.account_code || '').toLowerCase().replace(/[　]/g, '');
+            // Check for direct match or subaccount match if naming convention allows
+            // Currently we stick to direct grid name match for simplicity in auto-matching
             return gridName === normalizedExcelName || gridCode === normalizedExcelName;
         });
 
@@ -580,7 +608,7 @@ const processPaste = () => {
             matchedCount++;
             values.forEach((val, idx) => {
                 if (months.value[idx]) {
-                    row[months.value[idx].value] = val;
+                    row[months.value[idx].value] = (row[months.value[idx].value] || 0) + val;
                     dataUpdated = true;
                 }
             });
