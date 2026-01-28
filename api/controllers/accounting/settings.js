@@ -11,11 +11,12 @@ const getSettings = async (req, res, next) => {
             validationUtils.validateNumericParam(hotel_id, 'hotel_id');
         }
 
-        const [codes, groups, taxClasses, departments] = await Promise.all([
+        const [codes, groups, taxClasses, departments, subAccounts] = await Promise.all([
             accountingModel.accountingRead.getAccountCodes(requestId),
             accountingModel.accountingRead.getManagementGroups(requestId),
             accountingModel.accountingRead.getTaxClasses(requestId),
-            accountingModel.accountingRead.getDepartments(requestId)
+            accountingModel.accountingRead.getDepartments(requestId),
+            accountingModel.accountingRead.getSubAccounts(requestId)
         ]);
 
         const targetHotelId = (hotel_id && hotel_id !== 'undefined' && hotel_id !== 'null') ? parseInt(hotel_id) : null;
@@ -70,6 +71,7 @@ const getSettings = async (req, res, next) => {
             groups,
             taxClasses,
             departments,
+            subAccounts,
             mappings,
             mappingMasterData
         });

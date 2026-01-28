@@ -51,17 +51,33 @@
                 以下の項目はシステム内の名称と一致しませんでした。手動でマッピング先を選択してください。
             </p>
             <div class="space-y-4 max-h-96 overflow-y-auto p-1">
-                <div v-for="(item, index) in unmappedRows" :key="index"
-                    class="flex items-center gap-4 p-3 border rounded bg-gray-50">
-                    <div class="flex-1">
-                        <small class="block text-gray-500 mb-1">Excel内の名称</small>
-                        <span class="font-bold">{{ item.excelName }}</span>
+                <div v-for="(item, index) in unmappedRows" :key="index" class="p-3 border rounded bg-gray-50">
+                    <div class="flex items-center justify-between mb-3 border-b pb-2">
+                        <div class="flex-1">
+                            <small class="block text-gray-500 mb-1">Excel内の名称</small>
+                            <span class="font-bold">{{ item.excelName }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-600">補助科目を使用</span>
+                            <ToggleSwitch v-model="item.useSubAccount" size="small" />
+                        </div>
                     </div>
-                    <i class="pi pi-arrow-right text-gray-400"></i>
-                    <div class="flex-1">
-                        <small class="block text-gray-500 mb-1">マッピング先を選択</small>
-                        <Select v-model="item.selectedAccount" :options="availableAccounts" optionLabel="name"
-                            placeholder="項目を選択..." class="w-full" filter />
+
+                    <div class="flex items-center gap-4">
+                        <i class="pi pi-arrow-right text-gray-400"></i>
+                        <div class="flex-1 grid grid-cols-2 gap-2">
+                            <div>
+                                <small class="block text-gray-500 mb-1">勘定科目</small>
+                                <Select v-model="item.selectedAccount" :options="availableAccounts" optionLabel="name"
+                                    placeholder="勘定科目を選択..." class="w-full" filter />
+                            </div>
+                            <div v-if="item.useSubAccount">
+                                <small class="block text-gray-500 mb-1">補助科目</small>
+                                <Select v-model="item.selectedSubAccount"
+                                    :options="getSubAccountsForAccount(item.selectedAccount?.id)" optionLabel="name"
+                                    placeholder="補助科目を選択..." class="w-full" filter :disabled="!item.selectedAccount" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -100,7 +116,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { DataTable, Column, Select, DatePicker, Button, InputNumber, Message, Dialog, Textarea, SelectButton } from 'primevue';
+import { DataTable, Column, Select, DatePicker, Button, InputNumber, Message, Dialog, Textarea, SelectButton, ToggleSwitch } from 'primevue';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useImportStore } from '@/composables/useImportStore';
 import { useToast } from 'primevue/usetoast';
@@ -125,6 +141,7 @@ const loading = ref(false);
 const saving = ref(false);
 const gridData = ref([]);
 const accountCodes = ref([]);
+const subAccounts = ref([]);
 const hasChanges = ref(false);
 const pasteInfo = ref(null);
 const hideZeroRows = ref(false);
@@ -164,7 +181,14 @@ const pasteContextLabel = computed(() => viewFilter.value === 'operational' ? '�
 
 // Mapping Dialog State
 const showMappingDialog = ref(false);
-const unmappedRows = ref([]); // { excelName, values: [], selectedAccount: null }
+const unmappedRows = ref([]); // { excelName, values: [], selectedAccount: null, useSubAccount: false, selectedSubAccount: null }
+
+const getSubAccountsForAccount = (accountName) => {
+    if (!accountName || !subAccounts.value) return [];
+    return subAccounts.value
+        .filter(sa => sa.account_name === accountName)
+        .map(sa => ({ id: sa.id, name: sa.name }));
+};
 const availableAccounts = computed(() => {
     if (viewFilter.value === 'account') {
         if (!accountCodes.value || accountCodes.value.length === 0) return [];
@@ -188,20 +212,35 @@ const canApplyMapping = computed(() => {
     const selected = unmappedRows.value.filter(r => r.selectedAccount);
     if (selected.length === 0) return false;
 
-    // Check for duplicates
-    const accountNames = selected.map(r => r.selectedAccount.name);
-    const hasDuplicates = new Set(accountNames).size !== accountNames.length;
+    // Check if each item that uses subaccount has one selected
+    const missingSubAccount = unmappedRows.value.some(r => r.useSubAccount && r.selectedAccount && !r.selectedSubAccount);
+    if (missingSubAccount) return false;
+
+    // Check for duplicates (Account + Subaccount combo)
+    const mappingKeys = unmappedRows.value
+        .filter(r => r.selectedAccount)
+        .map(r => {
+            const acc = r.selectedAccount.name;
+            const sub = r.useSubAccount && r.selectedSubAccount ? r.selectedSubAccount.name : '';
+            return `${acc}:${sub}`;
+        });
+    const hasDuplicates = new Set(mappingKeys).size !== mappingKeys.length;
 
     return !hasDuplicates;
 });
 
 const duplicateWarning = computed(() => {
     const selected = unmappedRows.value.filter(r => r.selectedAccount);
-    const accountNames = selected.map(r => r.selectedAccount.name);
-    const duplicates = accountNames.filter((name, index) => accountNames.indexOf(name) !== index);
+    const mappingKeys = selected.map(r => {
+        const acc = r.selectedAccount.name;
+        const sub = r.useSubAccount && r.selectedSubAccount ? r.selectedSubAccount.name : '';
+        return sub ? `${acc} (${sub})` : acc;
+    });
+
+    const duplicates = mappingKeys.filter((key, index) => mappingKeys.indexOf(key) !== index);
 
     if (duplicates.length > 0) {
-        return `警告: 「${duplicates[0]}」が重複して選択されています。1つのシステム科目に複数の行を割り当てることはできません。`;
+        return `警告: 「${duplicates[0]}」が重複して選択されています。1つのマッピング先に複数の行を割り当てることはできません。`;
     }
     return null;
 });
@@ -311,17 +350,25 @@ const loadData = async () => {
         if (props.type === 'forecast') {
             accountCodes.value.forEach(ac => {
                 if (ac.management_group_id) {
-                    dataMap[ac.name] = {
-                        row_key: ac.name,
+                    const rowKey = ac.name;
+                    dataMap[rowKey] = {
+                        row_key: rowKey,
                         account_name: ac.name,
                         account_code: ac.code,
                         management_group_name: ac.management_group_name || 'その他',
                         group_sort_order: 100 + (parseInt(ac.group_display_order) || 0),
                         is_operational: false,
+                        sub_account_name: null,
                         ...months.value.reduce((acc, mo) => ({ ...acc, [mo.value]: 0 }), {})
                     };
                 }
             });
+
+            // Handle historical sub-account entries by potentially creating extra rows
+            // In the grid, we currently group by account_name. 
+            // If we have multiple sub-accounts for the same account, we might need a way to show them.
+            // For now, mapping logic will overwrite the main account row, 
+            // but we'll store the sub_account_name in the row when mapped.
         }
 
         // Map data
@@ -394,6 +441,7 @@ const saveData = async () => {
                         hotel_id: selectedHotel.value.id,
                         month: m.value,
                         account_name: row.account_name,
+                        sub_account_name: row.sub_account_name || null,
                         amount
                     });
                 }
@@ -457,6 +505,15 @@ const applyManualMapping = () => {
             const targetRowKey = item.selectedAccount.id;
             const row = gridData.value.find(r => r.row_key === targetRowKey);
             if (row) {
+                // If subaccount is selected, update the row with subaccount info
+                if (item.useSubAccount && item.selectedSubAccount) {
+                    row.sub_account_name = item.selectedSubAccount.name;
+                    // Provide visual feedback in the account name (optional, but helpful)
+                    if (!row.account_name.includes('補助:')) {
+                        // row.account_name = `${row.account_name} (補助: ${item.selectedSubAccount.name})`;
+                    }
+                }
+
                 item.values.forEach((val, idx) => {
                     if (months.value[idx]) row[months.value[idx].value] = val;
                 });
@@ -521,7 +578,13 @@ const processPaste = () => {
             });
         } else {
             if (excelName.includes('計') || excelName.includes('合計')) return;
-            currentUnmapped.push({ excelName, values, selectedAccount: null });
+            currentUnmapped.push({
+                excelName,
+                values,
+                selectedAccount: null,
+                useSubAccount: false,
+                selectedSubAccount: null
+            });
         }
     });
 
@@ -545,7 +608,10 @@ onMounted(async () => {
     await hotelStore.fetchHotels();
     try {
         const settings = await importStore.getAccountingSettings();
-        if (settings && settings.codes) accountCodes.value = settings.codes;
+        if (settings) {
+            if (settings.codes) accountCodes.value = settings.codes;
+            if (settings.subAccounts) subAccounts.value = settings.subAccounts;
+        }
     } catch (e) {
         console.error('Failed to load initial account codes:', e);
     }
