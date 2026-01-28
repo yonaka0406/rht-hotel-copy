@@ -196,12 +196,12 @@ const getScatterOption = (account) => {
                 const [occupancy, costPerRoom, month, totalCost, soldRooms] = params.data;
                 
                 return `
-                    <strong>${params.seriesName}</strong><br/>
-                    ${formatMonth(month)}<br/>
-                    稼働率: ${occupancy.toFixed(1)}%
-                    客室単価コスト: ${formatCurrency(costPerRoom)}
-                    総コスト: ${formatCurrency(totalCost)}
-                    販売客室数: ${soldRooms}室
+                    <div class="font-bold mb-1">${params.seriesName}</div>
+                    <div class="text-xs mb-1">${formatMonth(month)}</div>
+                    <div>稼働率: ${occupancy.toFixed(1)}%</div>
+                    <div>客室単価コスト: ${formatCurrency(costPerRoom)}</div>
+                    <div>総コスト: ${formatCurrency(totalCost)}</div>
+                    <div>販売客室数: ${soldRooms}室</div>
                 `;
             }
         },
