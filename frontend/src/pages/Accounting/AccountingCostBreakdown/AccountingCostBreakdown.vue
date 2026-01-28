@@ -206,9 +206,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useAccountingStore } from '@/composables/useAccountingStore';
 import { useHotelStore } from '@/composables/useHotelStore';
+import { useToast } from 'primevue/usetoast';
 import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import { use } from 'echarts/core';
@@ -221,7 +222,6 @@ import {
     VisualMapComponent,
     GridComponent
 } from 'echarts/components';
-import VChart from 'vue-echarts';
 
 // Import components
 import RevenueImpactRadarChart from './components/RevenueImpactRadarChart.vue';
@@ -242,6 +242,7 @@ use([
 
 const accountingStore = useAccountingStore();
 const hotelStore = useHotelStore();
+const toast = useToast();
 
 const topN = ref(5);
 const selectedHotelId = ref(0); // 0 = All Hotels
@@ -613,7 +614,7 @@ const analyticsSummary = computed(() => {
     });
 
     // Sort by 直近12ヶ月平均 (last12mAvg) in descending order (bigger to smaller)
-    const sortedSummary = summary.sort((a, b) => b.last12mAvg - a.last12mAvg);
+    const sortedSummary = [...summary].sort((a, b) => b.last12mAvg - a.last12mAvg);
     /*
     console.log('\n=== FINAL SORTED SUMMARY ===');
     sortedSummary.forEach((item, index) => {
@@ -651,6 +652,7 @@ const loadData = async () => {
         const response = await accountingStore.fetchCostBreakdown({ topN: topN.value });
         if (response?.success && response.data) {
             rawData.value = response.data;
+            await nextTick();
 
             // Set default selected month if not set
             if (!selectedMonth.value && latestMonth.value) {
@@ -661,6 +663,12 @@ const loadData = async () => {
         }
     } catch (e) {
         console.error('Failed to load cost breakdown data', e);
+        toast.add({
+            severity: 'error',
+            summary: 'データ読み込み失敗',
+            detail: `経費データの取得に失敗しました: ${e.message || '予期せぬエラー'}`,
+            life: 5000
+        });
     } finally {
         loading.value = false;
     }
@@ -686,6 +694,12 @@ const fetchMappings = async () => {
         }
     } catch (e) {
         console.error('Failed to fetch departments', e);
+        toast.add({
+            severity: 'error',
+            summary: 'マッピング取得失敗',
+            detail: `施設マッピングの取得に失敗しました: ${e.message || '予期せぬエラー'}`,
+            life: 5000
+        });
     }
 };
 

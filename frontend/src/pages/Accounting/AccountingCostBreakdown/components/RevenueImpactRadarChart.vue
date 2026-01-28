@@ -65,8 +65,8 @@ const calculateHotelRevenueImpacts = computed(() => {
             .reduce((sum, d) => sum + Number(d.sales), 0);
 
         props.analyticsSummary.forEach(account => {
-            // Get ALL lifetime data for this hotel and account (no time filtering)
-            const accountData = props.rawData.timeSeries.filter(d => 
+            // Use time-filtered data to match revenue calculation time window
+            const accountData = allRevenueDataUpToDate.filter(d => 
                 d.account_code === account.code && d.hotel_id === hotel.hotel_id
             );
             
