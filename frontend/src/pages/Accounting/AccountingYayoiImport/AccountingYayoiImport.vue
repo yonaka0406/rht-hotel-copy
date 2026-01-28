@@ -228,7 +228,8 @@ const importSummary = ref(null);
 const onFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
-        if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.csv') && !fileName.endsWith('.txt')) {
             toast.add({ severity: 'error', summary: 'エラー', detail: 'CSVまたはTXTファイルを選択してください', life: 3000 });
             return;
         }
