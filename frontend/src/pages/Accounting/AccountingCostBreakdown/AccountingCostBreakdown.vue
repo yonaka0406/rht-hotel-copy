@@ -668,7 +668,7 @@ const loadData = async () => {
 
 const fetchMappings = async () => {
     try {
-        const response = await accountingStore.getAvailableDepartments();
+        const response = await accountingStore.fetchProfitLossDepartments();
         if (response?.success) {
             // Aggregate unique hotels from all historical department mappings
             const hotelMap = new Map();

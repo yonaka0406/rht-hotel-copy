@@ -150,10 +150,6 @@ export function useAccountingStore() {
         return await get('/accounting/profit-loss/departments');
     };
 
-    const getAvailableDepartments = async () => {
-        return await get('/accounting/profit-loss/departments');
-    };
-
     const fetchProfitLoss = async (params) => {
         return await post('/accounting/profit-loss', params);
     };
@@ -200,7 +196,6 @@ export function useAccountingStore() {
         executeYayoiImport,
         fetchProfitLossMonths,
         fetchProfitLossDepartments,
-        getAvailableDepartments,
         fetchProfitLoss,
         fetchProfitLossSummary,
         fetchProfitLossDetailed,
