@@ -1,8 +1,8 @@
 -- 026_add_sub_accounts_table_only.sql
--- Add sub-accounts table without dropping existing data
+-- Add sub-accounts table and related constraints/helpers only
+-- Extracted from 023_accounting_schema.sql standard
 
--- Create Sub-Accounts Master Table
--- Defines sub-accounts (補助科目) that can be used with specific account codes
+-- 1. Sub-Accounts Master Table
 CREATE TABLE IF NOT EXISTS acc_sub_accounts (
     id SERIAL PRIMARY KEY,
     account_code_id INT NOT NULL REFERENCES acc_account_codes(id) ON DELETE CASCADE,
@@ -33,7 +33,41 @@ COMMENT ON COLUMN acc_sub_accounts.code IS 'Optional structured code for the sub
 COMMENT ON COLUMN acc_sub_accounts.name IS 'Sub-account name as used in Yayoi exports/imports';
 COMMENT ON COLUMN acc_sub_accounts.display_order IS 'Display order within the parent account';
 
--- Create a view to easily see account codes with their sub-accounts
+-- 2. Link to du_forecast_entries (ensure columns and constraints)
+DO $$ 
+BEGIN 
+    -- Add columns if they don't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='du_forecast_entries' AND column_name='sub_account_id') THEN
+        ALTER TABLE du_forecast_entries ADD COLUMN sub_account_id INT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='du_forecast_entries' AND column_name='sub_account_name') THEN
+        ALTER TABLE du_forecast_entries ADD COLUMN sub_account_name VARCHAR(100);
+    END IF;
+
+    -- Add foreign key constraint if missing
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_du_forecast_entries_sub_account_id') THEN
+        ALTER TABLE du_forecast_entries
+        ADD CONSTRAINT fk_du_forecast_entries_sub_account_id
+        FOREIGN KEY (sub_account_id) REFERENCES acc_sub_accounts(id) ON DELETE SET NULL;
+    END IF;
+
+    -- Drop old unique constraint if it exists
+    ALTER TABLE du_forecast_entries DROP CONSTRAINT IF EXISTS uq_hotel_month_account_forecast;
+    
+    -- Add the combined unique constraint if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_hotel_month_account_sub_account_forecast') THEN
+        ALTER TABLE du_forecast_entries 
+        ADD CONSTRAINT uq_hotel_month_account_sub_account_forecast 
+        UNIQUE (hotel_id, month, account_name, sub_account_name);
+    END IF;
+END $$;
+
+-- Create index for better query performance
+CREATE INDEX IF NOT EXISTS idx_du_forecast_entries_hotel_month_name_sub 
+ON du_forecast_entries(hotel_id, month, account_name, sub_account_name);
+
+-- 3. Combined View of accounts and sub-accounts
 CREATE OR REPLACE VIEW acc_accounts_with_sub_accounts AS
 SELECT 
     ac.id as account_id,
@@ -55,8 +89,7 @@ ORDER BY ac.code, asa.display_order, asa.name;
 
 COMMENT ON VIEW acc_accounts_with_sub_accounts IS 'Combined view of account codes and their sub-accounts';
 
--- Add function to get or create sub-accounts dynamically
--- This is useful for importing data where sub-accounts might not exist yet
+-- 4. Dynamic sub-account creation function
 CREATE OR REPLACE FUNCTION get_or_create_sub_account(
     p_account_name VARCHAR(100),
     p_sub_account_name VARCHAR(100),
@@ -100,10 +133,8 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION get_or_create_sub_account IS 'Get existing or create new sub-account for an account code';
 
--- Update the monthly summary view to include sub-account information
--- Drop and recreate the view with sub-account details
+-- 5. Monthly Account Summary View (Includes sub-account details)
 DROP VIEW IF EXISTS acc_monthly_account_summary CASCADE;
-
 CREATE VIEW acc_monthly_account_summary AS
 WITH adjusted_data AS (
     -- Debit legs (negated)
