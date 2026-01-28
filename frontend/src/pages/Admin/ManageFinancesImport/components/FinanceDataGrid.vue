@@ -32,6 +32,18 @@
             </div>
         </div>
 
+        <!-- Loaded Data Title/Context -->
+        <div v-if="gridData.length > 0"
+            class="flex items-center gap-3 mb-4 bg-primary/5 p-3 rounded-lg border border-primary/20">
+            <i class="pi pi-info-circle text-primary text-xl"></i>
+            <div>
+                <span class="text-xs text-gray-500 block">表示中のデータ:</span>
+                <span class="font-bold text-lg text-primary">{{ loadedHotelName }}</span>
+                <span class="mx-2 text-gray-400">|</span>
+                <span class="text-gray-700">{{ loadedMonthRangeLabel }}</span>
+            </div>
+        </div>
+
         <!-- Paste Dialog -->
         <Dialog v-model:visible="showPasteDialog" :header="pasteDialogHeader" :style="{ width: '60vw' }" modal>
             <div class="mb-4 text-sm text-gray-600 space-y-2">
@@ -123,11 +135,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { DataTable, Column, Select, DatePicker, Button, InputNumber, Message, Dialog, Textarea, SelectButton, ToggleSwitch } from 'primevue';
-import { useHotelStore } from '@/composables/useHotelStore';
-import { useImportStore } from '@/composables/useImportStore';
+import { ref, computed, onMounted, watch } from 'vue';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Select from 'primevue/select';
+import DatePicker from 'primevue/datepicker';
+import Button from 'primevue/button';
+import InputNumber from 'primevue/inputnumber';
+import Message from 'primevue/message';
+import Dialog from 'primevue/dialog';
+import Textarea from 'primevue/textarea';
+import SelectButton from 'primevue/selectbutton';
+import ToggleSwitch from 'primevue/toggleswitch';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
+import { useImportStore } from '@/composables/useImportStore';
+import { useHotelStore } from '@/composables/useHotelStore';
 import { formatDate } from '@/utils/dateUtils';
 
 const props = defineProps({
@@ -137,12 +160,12 @@ const props = defineProps({
     }
 });
 
-const toast = useToast();
-const hotelStore = useHotelStore();
 const importStore = useImportStore();
+const hotelStore = useHotelStore();
+const toast = useToast();
+const confirm = useConfirm();
 
-const hotels = computed(() => hotelStore.hotels.value);
-
+const hotels = computed(() => hotelStore.hotels.value || []);
 const selectedHotel = ref(null);
 const selectedMonth = ref(new Date());
 const loading = ref(false);
@@ -153,6 +176,8 @@ const subAccounts = ref([]);
 const hasChanges = ref(false);
 const pasteInfo = ref(null);
 const hideZeroRows = ref(false);
+const loadedHotelName = ref('');
+const loadedMonthRangeLabel = ref('');
 
 // View Filter State
 const viewFilter = ref('operational'); // 'operational' or 'account'
@@ -164,43 +189,49 @@ const viewOptions = computed(() => {
     return options;
 });
 
+const hideZeroRowsOptions = ref([
+    { label: 'すべて', value: false },
+    { label: '0以外', value: true }
+]);
+
 const filteredGridData = computed(() => {
-    let data = [];
+    let data = gridData.value;
+
+    // Filter by view type
     if (viewFilter.value === 'operational') {
-        data = gridData.value.filter(r => r.is_operational);
+        data = data.filter(r => r.is_operational);
     } else {
-        data = gridData.value.filter(r => !r.is_operational);
+        data = data.filter(r => !r.is_operational);
     }
 
+    // Filter zero rows if enabled
     if (hideZeroRows.value) {
-        return data.filter(row => {
-            const total = months.value.reduce((sum, m) => sum + (parseFloat(row[m.value]) || 0), 0);
-            return total !== 0;
+        data = data.filter(row => {
+            return months.value.some(m => (row[m.value] || 0) !== 0);
         });
     }
+
     return data;
 });
 
 // Paste Dialog State
 const showPasteDialog = ref(false);
 const pasteRawText = ref('');
-const pasteDialogHeader = computed(() => viewFilter.value === 'operational' ? '運用指標の貼り付け' : '勘定科目の貼り付け');
-const pasteContextLabel = computed(() => viewFilter.value === 'operational' ? '運用指標 (売上・稼働など)' : '勘定科目 (費用・予算など)');
+const pasteInfoText = ref('');
+
+const pasteDialogHeader = computed(() => {
+    return viewFilter.value === 'operational' ? '運用指標データの貼り付け' : '勘定科目データの貼り付け';
+});
+
+const pasteContextLabel = computed(() => {
+    return viewFilter.value === 'operational' ? '運用指標' : '勘定科目';
+});
 
 // Mapping Dialog State
 const showMappingDialog = ref(false);
 const unmappedRows = ref([]); // { excelName, values: [], selectedAccount: null, useSubAccount: false, selectedSubAccount: null }
 
-// Debug Watcher for Subaccounts
-watch(() => unmappedRows.value, (newRows) => {
-    newRows.forEach((row) => {
-        if (row.selectedAccount) {
-            const subs = getSubAccountsForAccount(row.selectedAccount.name);
-            console.log(`[Mapping Debug] Excel: "${row.excelName}" -> Account: "${row.selectedAccount.name}" available subaccounts:`, subs);
-        }
-    });
-}, { deep: true });
-
+// Subaccount filtering
 const getSubAccountsForAccount = (accountName) => {
     if (!accountName || !subAccounts.value) return [];
     return subAccounts.value
@@ -435,6 +466,11 @@ const loadData = async () => {
             if (a.account_code && b.account_code) return a.account_code.localeCompare(b.account_code, undefined, { numeric: true });
             return a.account_name.localeCompare(b.account_name);
         });
+
+        // Update loaded context labels
+        loadedHotelName.value = selectedHotel.value.name;
+        loadedMonthRangeLabel.value = `${months.value[0].label} 〜 ${months.value[11].label}`;
+
         hasChanges.value = false;
     } catch (error) {
         console.error(error);
@@ -540,7 +576,6 @@ const applyManualMapping = () => {
             }
 
             const row = gridData.value.find(r => r.row_key === targetRowKey);
-            console.log(`[Mapping Apply] Excel: "${item.excelName}" -> Target Key: "${targetRowKey}" (${row ? 'Found' : 'NOT FOUND!'})`);
 
             if (row) {
                 item.values.forEach((val, idx) => {
