@@ -39,9 +39,9 @@
         <p class="font-bold mb-1 text-sm">備考：<span class="text-xs text-gray-400 font-normal">(タブキーで編集確定)</span></p>
         <Textarea 
             v-model="reservationInfo.comment"
-            :disabled="reservationInfo.client_id !== '22222222-2222-2222-2222-222222222222'"
+            :disabled="reservationInfo.client_id !== BLOCKED_RESERVATION_CLIENT_ID"
             @keydown="handleKeydown"
-            :style="{ 'background-color': reservationInfo.client_id === '22222222-2222-2222-2222-222222222222' ? 'white' : 'transparent' }"
+            :style="{ 'background-color': reservationInfo.client_id === BLOCKED_RESERVATION_CLIENT_ID ? 'white' : 'transparent' }"
             fluid 
         />
     </div>
@@ -476,6 +476,7 @@
 </template>
 
 <script setup>
+const BLOCKED_RESERVATION_CLIENT_ID = '22222222-2222-2222-2222-222222222222';
 // Vue
 import { ref, watch, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
@@ -1061,7 +1062,7 @@ const handleKeydown = (event) => {
     if (event.key === 'Tab') {
         // Check if status is blocked and client_id doesn't match the allowed client
         if (reservationInfo.value.status === 'block' &&
-            reservationInfo.value.client_id !== '22222222-2222-2222-2222-222222222222') {
+            reservationInfo.value.client_id !== BLOCKED_RESERVATION_CLIENT_ID) {
             event.preventDefault();
             toast.add({
                 severity: 'warn',
@@ -1596,10 +1597,6 @@ onMounted(async () => {
     // Initialize localCommentInput with the current comment from reservationInfo
     localCommentInput.value = reservationInfo.value.comment;
 });
-
-
-
-// Watcher
 
 // Watcher
 watch(addons, (newValue, oldValue) => {
