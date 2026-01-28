@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.6] - 2026-01-28
 
+- New Feature: Interactive finance data grid with Excel paste support for budget entry and actuals management.
+- New Feature: Sub-account categorization for granular financial tracking and reporting.
 - New Feature: Introduced a new reusable KPI summary component for displaying Average Daily Rate (ADR) and Revenue Per Available Room (RevPAR) metrics with actual values, forecasts, and variance indicators in multiple layout variants.
 - Refactor: Consolidated KPI display logic across multiple reporting pages to use the new unified component, improving consistency across the application.
 
