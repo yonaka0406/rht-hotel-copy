@@ -7,15 +7,15 @@ const profitLossModel = require('../../models/accounting/profitLoss');
 async function getProfitLossDetailed(req, res) {
   try {
     const { startMonth, endMonth, departmentNames } = req.body;
-    
+
     const filters = {
       startMonth: startMonth || null,
       endMonth: endMonth || null,
       departmentNames: departmentNames && Array.isArray(departmentNames) ? departmentNames : null
     };
-    
-    const data = await profitLossModel.getProfitLossDetailed(req.id, filters);
-    
+
+    const data = await profitLossModel.getProfitLossDetailed(req.requestId, filters);
+
     res.json({
       success: true,
       data
@@ -37,15 +37,15 @@ async function getProfitLossDetailed(req, res) {
 async function getProfitLoss(req, res) {
   try {
     const { startMonth, endMonth, departmentNames } = req.body;
-    
+
     const filters = {
       startMonth: startMonth || null,
       endMonth: endMonth || null,
       departmentNames: departmentNames && Array.isArray(departmentNames) ? departmentNames : null
     };
-    
-    const data = await profitLossModel.getProfitLoss(req.id, filters);
-    
+
+    const data = await profitLossModel.getProfitLoss(req.requestId, filters);
+
     res.json({
       success: true,
       data
@@ -67,16 +67,16 @@ async function getProfitLoss(req, res) {
 async function getProfitLossSummary(req, res) {
   try {
     const { startMonth, endMonth, departmentNames, groupBy } = req.body;
-    
+
     const filters = {
       startMonth: startMonth || null,
       endMonth: endMonth || null,
       departmentNames: departmentNames && Array.isArray(departmentNames) ? departmentNames : null,
       groupBy: groupBy || 'month'
     };
-    
-    const data = await profitLossModel.getProfitLossSummary(req.id, filters);
-    
+
+    const data = await profitLossModel.getProfitLossSummary(req.requestId, filters);
+
     res.json({
       success: true,
       data
@@ -97,8 +97,8 @@ async function getProfitLossSummary(req, res) {
  */
 async function getAvailableMonths(req, res) {
   try {
-    const months = await profitLossModel.getAvailableMonths(req.id);
-    
+    const months = await profitLossModel.getAvailableMonths(req.requestId);
+
     res.json({
       success: true,
       data: months
@@ -119,8 +119,8 @@ async function getAvailableMonths(req, res) {
  */
 async function getAvailableDepartments(req, res) {
   try {
-    const departments = await profitLossModel.getAvailableDepartments(req.id);
-    
+    const departments = await profitLossModel.getAvailableDepartments(req.requestId);
+
     res.json({
       success: true,
       data: departments

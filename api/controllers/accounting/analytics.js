@@ -9,7 +9,7 @@ const getCostBreakdown = async (req, res) => {
     try {
         const topN = validateNumericParam(req.query.topN, 5);
 
-        const data = await accountingModel.getCostBreakdownData(req.requestId, topN);
+        const data = await accountingModel.accountingRead.getCostBreakdownData(req.requestId, topN);
 
         res.json({
             success: true,
