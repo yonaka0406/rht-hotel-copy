@@ -600,6 +600,15 @@ const updateReservationStatus = async (requestId, reservationData) => {
     type = 'full-fee';
   }
 
+  // Check for conflicts if we are confirming the reservation
+  if (resStatus === 'confirmed') {
+    const { checkReservationOverlap } = require('./validation');
+    const conflict = await checkReservationOverlap(requestId, id, hotel_id);
+    if (conflict) {
+      throw new Error(`予約を復活できません。${conflict.date} の ${conflict.room_number}号室 は既に他の予約が入っています。`);
+    }
+  }
+
   try {
     // Start the transaction
     await client.query('BEGIN');

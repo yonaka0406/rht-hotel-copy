@@ -140,6 +140,14 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
 
   const { id, hotel_id, status, updated_by, billable } = reservationData;
 
+  if (status === 'recovered') {
+    const { checkReservationDetailOverlap } = require('./validation');
+    const conflict = await checkReservationDetailOverlap(requestId, id, hotel_id);
+    if (conflict) {
+      throw new Error(`予約詳細を復活できません。${conflict.date} の ${conflict.room_number}号室 は既に他の予約が入っています。`);
+    }
+  }
+
   try {
     // Start the transaction
     await client.query('BEGIN');

@@ -1008,15 +1008,23 @@ const updateReservationStatus = async (status, type = null) => {
                 outlined: true,
                 icon: 'pi pi-times'
             },
-            accept: () => {
-                setReservationStatus(status);
-                toast.add({
-                    severity: 'success',
-                    summary: '成功',
-                    detail: `復活されました。`,
-                    life: 3000
-                });
-
+            accept: async () => {
+                try {
+                    await setReservationStatus(status);
+                    toast.add({
+                        severity: 'success',
+                        summary: '成功',
+                        detail: `復活されました。`,
+                        life: 3000
+                    });
+                } catch (error) {
+                    toast.add({
+                        severity: 'error',
+                        summary: '失敗',
+                        detail: error.message || '予約の復活に失敗しました。',
+                        life: 5000
+                    });
+                }
             },
             reject: () => {
 

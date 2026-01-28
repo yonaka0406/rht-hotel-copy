@@ -595,13 +595,11 @@ const dayRecover = async () => {
     isSubmitting.value = true;
     try {
         await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'recovered');
-
         reservationCancelled.value = false;
-
         toast.add({ severity: 'success', summary: '成功', detail: '予約が復活されました。', life: 3000 });
     } catch (error) {
-        console.error('Error recovering:', error);
-        // Show error toast if needed
+        console.error('Error recovering reservation:', error);
+        toast.add({ severity: 'error', summary: '失敗', detail: error.message || '予約の復活に失敗しました。', life: 5000 });
     } finally {
         isSubmitting.value = false;
     }

@@ -1158,20 +1158,44 @@ const editReservationStatus = async (req, res) => {
   const { hotel_id, status } = req.body;
   const updated_by = req.user.id;
 
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
+    if (status !== 'cancelled') {
+      const existingReservation = await reservationsModel.selectReservationById(req.requestId, id, hotel_id, client);
+      if (existingReservation && existingReservation.status === 'cancelled') {
+        const conflicts = await reservationsModel.checkBookingConflict(req.requestId, { reservationId: id }, client);
+        if (conflicts.length > 0) {
+          await client.query('ROLLBACK');
+          const conflictInfo = conflicts.map(c => 
+            `${new Date(c.date).toLocaleDateString('ja-JP')}の${c.room_number}号室`
+          ).join(', ');
+          const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します: ${conflictInfo}`;
+          return res.status(409).json({ error: 'Booking conflict', message });
+        }
+      }
+    }
+
     // Call the function to update reservation status in the database
     const updatedReservation = await reservationsModel.updateReservationStatus(req.requestId, {
       id,
       hotel_id,
       status,
       updated_by,
-    });
+    }, client);
 
+    await client.query('COMMIT');
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
+    await client.query('ROLLBACK');
     logger.error('Error updating reservation status:', err);
     res.status(500).json({ error: 'Failed to update reservation status' });
+  } finally {
+    client.release();
   }
 };
 const editReservationDetailStatus = async (req, res) => {
@@ -1179,7 +1203,27 @@ const editReservationDetailStatus = async (req, res) => {
   const { hotel_id, status, billable } = req.body;
   const updated_by = req.user.id;
 
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
+    // Check for booking conflicts if un-cancelling
+    if (status !== 'cancelled') {
+      const existingDetails = await reservationsModel.selectReservationDetail(req.requestId, id, hotel_id, client);
+      if (existingDetails && existingDetails.length > 0 && existingDetails[0].cancelled) {
+        const conflicts = await reservationsModel.checkBookingConflict(req.requestId, { detailId: id }, client);
+        if (conflicts.length > 0) {
+          await client.query('ROLLBACK');
+          const conflictDate = new Date(conflicts[0].date).toLocaleDateString('ja-JP');
+          const conflictRoom = conflicts[0].room_number;
+          const message = `予約の復活に失敗しました。${conflictDate}の${conflictRoom}号室には、既に別の予約が存在します。`;
+          return res.status(409).json({ error: 'Booking conflict', message });
+        }
+      }
+    }
+
     // Call the function to update reservation status in the database
     const updatedReservation = await reservationsModel.updateReservationDetailStatus(req.requestId, {
       id,
@@ -1187,13 +1231,17 @@ const editReservationDetailStatus = async (req, res) => {
       status,
       updated_by,
       billable,
-    });
+    }, client);
 
+    await client.query('COMMIT');
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
+    await client.query('ROLLBACK');
     logger.error('Error updating reservation status:', err);
     res.status(500).json({ error: 'Failed to update reservation status' });
+  } finally {
+    client.release();
   }
 };
 

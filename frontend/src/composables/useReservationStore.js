@@ -151,15 +151,12 @@ export function useReservationStore() {
         reservationId.value = id;
     };
     const setReservationStatus = async (status) => {
-        // console.log('From Reservation Store => setReservationStatus:',status);
         try {
             setReservationIsUpdating(true);
 
             const authToken = localStorage.getItem('authToken');
-            // Get the hotel_id for the current reservation
             const hotel_id = await getReservationHotelId(reservationId.value);
 
-            // Assuming you have an API endpoint to update the reservation status
             const response = await fetch(`/api/reservation/update/status/${reservationId.value}`, {
                 method: 'PUT',
                 headers: {
@@ -170,19 +167,24 @@ export function useReservationStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update reservation status');
+                const errorData = await response.json().catch(() => ({}));
+                const message = errorData.message || `Error: ${response.status} ${response.statusText}`;
+                const error = new Error(message);
+                error.status = response.status;
+                error.data = errorData;
+                throw error;
             }
-
-            // Update the local reservationDetails state
+            
             reservationDetails.value.status = status;
-
-            setReservationIsUpdating(false);
+            return await response.json();
         } catch (error) {
             console.error('Error updating reservation status:', error);
+            throw error; // Re-throw to allow the caller to handle it
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
     const setReservationDetailStatus = async (detail_id, hotel_id, status, billable) => {
-        // console.log('From Reservation Store => setReservationDetailStatus:',status);
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -196,12 +198,20 @@ export function useReservationStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update reservation status');
+                const errorData = await response.json().catch(() => ({}));
+                const message = errorData.message || `Error: ${response.status} ${response.statusText}`;
+                const error = new Error(message);
+                error.status = response.status;
+                error.data = errorData;
+                throw error;
             }
 
-            setReservationIsUpdating(false);
+            return await response.json();
         } catch (error) {
-            console.error('Error updating reservation status:', error);
+            console.error('Error in setReservationDetailStatus:', error);
+            throw error; // Re-throw the error to be caught by the calling component
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
     const setReservationType = async (type) => {
