@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New Feature: Sub-account categorization for granular financial tracking and reporting.
 - New Feature: Introduced a new reusable KPI summary component for displaying Average Daily Rate (ADR) and Revenue Per Available Room (RevPAR) metrics with actual values, forecasts, and variance indicators in multiple layout variants.
 - Refactor: Consolidated KPI display logic across multiple reporting pages to use the new unified component, improving consistency across the application.
+- Bug Fix: Prevented unintended resurrection of partially cancelled rooms when confirming a reservation. Status transitions from non-cancelled states (e.g., provisory) now respect and preserve the existing 'cancelled' status of individual reservation details.
+- Improvement: Enhanced parking reservation synchronization logic to ensure parking spots are only recovered if the associated room detail is not cancelled.
+- Improvement: Strengthened robustness and debuggability in reservation and parking models by adding pre-update existence checks and detailed error logging with contextual identifiers (requestId, reservationId, detailId, status).
 
 ---
 
