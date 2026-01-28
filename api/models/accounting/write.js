@@ -242,6 +242,9 @@ const upsertDepartment = async (requestId, data, user_id, dbClient = null) => {
         return result.rows[0];
     } catch (err) {
         logger.error('Error upserting department:', err);
+        if (err.message.includes('not found')) {
+            throw err;
+        }
         throw new Error('Database error');
     } finally {
         if (shouldRelease) client.release();

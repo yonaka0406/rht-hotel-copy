@@ -92,13 +92,19 @@ const calculateHotelRevenueImpacts = computed(() => {
  * Radar Chart configuration
  */
 const radarOption = computed(() => {
+    // Safely calculate the max value across all series for consistent scaling
+    const allImpactValues = [
+        ...props.analyticsSummary.map(i => i.revenueImpact),
+        ...calculateHotelRevenueImpacts.value.flatMap(h => h.impacts)
+    ].filter(v => Number.isFinite(v) && v > 0);
+
+    const maxIndicatorValue = allImpactValues.length > 0 
+        ? Math.max(...allImpactValues) * 1.2 
+        : 5;
+
     const indicators = props.analyticsSummary.map(item => ({
         name: item.name,
-        // Max value should be slightly higher than the max revenue impact percentage across all series
-        max: Math.max(
-            Math.max(...props.analyticsSummary.map(i => i.revenueImpact)),
-            ...calculateHotelRevenueImpacts.value.flatMap(h => h.impacts)
-        ) * 1.2 || 5
+        max: maxIndicatorValue
     }));
 
     // Generate colors for hotels

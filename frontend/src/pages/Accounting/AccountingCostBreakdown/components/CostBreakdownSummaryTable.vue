@@ -60,7 +60,7 @@
                         </td>
                         <td class="py-4 px-6 text-right">
                             <span class="inline-flex items-center px-2 py-1 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-black text-sm tabular-nums">
-                                {{ item.revenueImpact.toFixed(1) }}%
+                                {{ (Number.isFinite(item.revenueImpact) ? item.revenueImpact : 0).toFixed(1) }}%
                             </span>
                         </td>
                     </tr>

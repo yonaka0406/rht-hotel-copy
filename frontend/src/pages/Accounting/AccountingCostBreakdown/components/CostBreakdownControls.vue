@@ -8,7 +8,7 @@
                         表示する上位経費数
                     </label>
                     <InputNumber 
-                        v-model="topN" 
+                        :modelValue="topN" 
                         :min="1" 
                         :max="20" 
                         showButtons 
@@ -29,7 +29,7 @@
                         </span>
                     </label>
                     <Select 
-                        v-model="selectedMonth" 
+                        :modelValue="selectedMonth" 
                         :options="monthOptions" 
                         optionLabel="label"
                         optionValue="value" 
@@ -45,7 +45,7 @@
                         対象施設 (マッピング済み)
                     </label>
                     <Select 
-                        v-model="selectedHotelId" 
+                        :modelValue="selectedHotelId" 
                         :options="hotelOptions" 
                         optionLabel="label"
                         optionValue="value" 
