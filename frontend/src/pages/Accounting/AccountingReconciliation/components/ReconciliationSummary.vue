@@ -1,9 +1,9 @@
 <script setup>
+const RECONCILIATION_HIGHLIGHT_THRESHOLD = 10;
 
 defineProps({
     totals: {
         type: Object,
-        required: true,
         default: () => ({ sales: 0, payments: 0, advance: 0, settlement: 0, difference: 0 })
     }
 });
@@ -38,7 +38,7 @@ const formatCurrency = (val) => {
                     <div class="flex items-center justify-end gap-3 text-[11px] mt-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                         <span class="text-slate-400">精算差異 (売上 - 精算等):</span>
                         <span :class="[
-                            Math.abs(totals.difference) > 10 ? 'text-rose-500 font-bold' : 'text-slate-500'
+                            Math.abs(totals.difference) > RECONCILIATION_HIGHLIGHT_THRESHOLD ? 'text-rose-500 font-bold' : 'text-slate-500'
                         ]">{{ formatCurrency(totals.difference) }}</span>
                     </div>
                 </div>
