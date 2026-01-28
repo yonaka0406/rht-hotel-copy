@@ -22,10 +22,12 @@
                 </div>
 
                 <div class="flex gap-2 pl-2 border-l ml-2">
+                    <!--
                     <Button label="PMS同期" icon="pi pi-bolt" class="p-button-help" @click="onSyncPMS"
                         :disabled="!selectedHotel || !selectedMonth" v-if="type === 'accounting'" />
                     <Button label="Yayoi同期" icon="pi pi-sync" class="p-button-secondary" @click="onSyncYayoi"
                         :disabled="!selectedHotel || !selectedMonth" v-if="type === 'accounting'" />
+                    -->
                     <Button label="保存" icon="pi pi-save" class="p-button-success" @click="saveData" :loading="saving"
                         :disabled="!hasChanges" />
                 </div>
@@ -526,6 +528,7 @@ const saveData = async () => {
     }
 };
 
+/*
 const onSyncYayoi = async () => {
     if (!selectedHotel.value || !selectedMonth.value) return;
     try {
@@ -545,7 +548,9 @@ const onSyncYayoi = async () => {
         toast.add({ severity: 'error', summary: 'エラー', detail: 'Yayoi同期に失敗しました。', life: 5000 });
     }
 };
+*/
 
+/*
 const onSyncPMS = async () => {
     if (!selectedHotel.value || !selectedMonth.value) return;
     try {
@@ -565,6 +570,7 @@ const onSyncPMS = async () => {
         toast.add({ severity: 'error', summary: 'エラー', detail: 'PMS同期に失敗しました。', life: 5000 });
     }
 };
+*/
 
 const applyManualMapping = () => {
     let appliedCount = 0;
