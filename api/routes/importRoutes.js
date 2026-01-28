@@ -15,4 +15,10 @@ router.post('/import/finance/accounting', authMiddleware_manageDB, importControl
 
 router.get('/import/prefilled-template', authMiddleware_manageDB, importControllers.getPrefilledTemplate);
 
+// Finance Grid & Smart Paste (Modernized)
+router.get('/import/finance/data', authMiddleware_manageDB, importControllers.getFinancesData);
+router.post('/import/finance/upsert', authMiddleware_manageDB, importControllers.upsertFinancesData);
+router.post('/import/finance/sync-yayoi', authMiddleware_manageDB, importControllers.syncFromYayoi);
+router.post('/import/finance/sync-pms', authMiddleware_manageDB, importControllers.syncFromPMS);
+
 module.exports = router;

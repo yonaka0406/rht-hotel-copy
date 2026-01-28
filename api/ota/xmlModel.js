@@ -70,45 +70,45 @@ const processXMLResponse = async (requestId, id) => {
             // Parse the main SOAP response
             const result = await parseXML(response);
             const body = result?.['S:Envelope']?.['S:Body'];
-            
+
             if (!body || !body['ns2:executeResponse']) {
                 throw new Error('Invalid response format: Missing S:Envelope.S:Body.ns2:executeResponse');
             }
 
             // Extract `infoTravelXML` data
             const returnData = body['ns2:executeResponse']?.['return'];
-        
+
             // Check if bookingInfoList exists and is an array with at least one item
             if (!returnData?.bookingInfoList || !Array.isArray(returnData.bookingInfoList) || returnData.bookingInfoList.length === 0) {
                 console.log('No valid bookingInfoList array found in returnData. Return data keys:', Object.keys(returnData || {}));
                 throw new Error('No booking information found in the response');
             }
-        
+
             // Get the first booking info item (assuming it's the one we want)
             const firstBookingInfo = returnData.bookingInfoList[0];
-        
+
             if (!firstBookingInfo?.infoTravelXML) {
                 console.log('No infoTravelXML found in the first booking info item. Booking info keys:', Object.keys(firstBookingInfo || {}));
                 throw new Error('No booking information found in the response');
             }
-        
+
             // The infoTravelXML might be a string or an object with _text property
             let infoTravelXML = firstBookingInfo.infoTravelXML;
-            
+
             // If it's an object with _text property (from CDATA), use that
             if (typeof infoTravelXML === 'object' && infoTravelXML._text) {
                 infoTravelXML = infoTravelXML._text;
             }
-            
+
             // If it's still not a string, try to stringify it
             if (typeof infoTravelXML !== 'string') {
                 infoTravelXML = JSON.stringify(infoTravelXML);
             }
-            
+
             // Parse the inner booking XML
             const bookingData = await parseXML(infoTravelXML);
             const allotmentBookingReport = bookingData?.AllotmentBookingReport;
-            
+
             if (!allotmentBookingReport) {
                 console.error('No AllotmentBookingReport found in the XML. Booking data keys:', Object.keys(bookingData || {}));
                 throw new Error('No AllotmentBookingReport found in the XML');
@@ -117,7 +117,7 @@ const processXMLResponse = async (requestId, id) => {
             // Extract the transaction type and basic info
             const transactionType = allotmentBookingReport.TransactionType || {};
             const dataClassification = transactionType.DataClassification;
-            
+
             if (!dataClassification) {
                 console.error('Could not determine report type. TransactionType:', transactionType);
                 throw new Error('Could not determine report type: Missing DataClassification');
@@ -143,7 +143,7 @@ const processXMLResponse = async (requestId, id) => {
             };
 
             // Handle different report types
-            switch(dataClassification) {
+            switch (dataClassification) {
                 case 'NewBookReport':
                     return {
                         success: true,
@@ -180,7 +180,7 @@ const processXMLResponse = async (requestId, id) => {
                         ...commonData
                     };
             }
-            
+
         } catch (parseError) {
             console.error('Error parsing XML:', parseError);
             throw new Error(`Failed to parse XML response: ${parseError.message}`);
@@ -198,7 +198,7 @@ const processXMLResponse = async (requestId, id) => {
 const selectXMLTemplate = async (requestId, hotel_id, name) => {
     try {
         const pool = getPool(requestId);
-        
+
         const result = await pool.query(
             "SELECT template FROM xml_templates WHERE name = $1",
             [name]
@@ -226,8 +226,8 @@ const selectXMLTemplate = async (requestId, hotel_id, name) => {
 
         // Replace placeholders
         xml = xml.replace("{{systemId}}", process.env.XML_SYSTEM_ID)
-                 .replace("{{pmsUserId}}", login.rows[0].user_id)
-                 .replace("{{pmsPassword}}", login.rows[0].password)
+            .replace("{{pmsUserId}}", login.rows[0].user_id)
+            .replace("{{pmsPassword}}", login.rows[0].password);
 
         return xml;
     } catch (error) {
@@ -251,40 +251,40 @@ const selectXMLRecentResponses = async (requestId) => {
             `
         );
 
-        const rows = result.rows;        
+        const rows = result.rows;
         const parser = new xml2js.Parser({ explicitArray: false });
         const parsedRows = await Promise.all(rows.map(async (row) => {
             let status = '不明';
             try {
                 const parsedResponse = await parser.parseStringPromise(row.response);
                 // Extract status
-                status = parsedResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['commonResponse']['isSuccess'] === 'true' ? '成功' : 'エラー';                
-                
-                return { 
+                status = parsedResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['commonResponse']['isSuccess'] === 'true' ? '成功' : 'エラー';
+
+                return {
                     hotel_id: row.hotel_id,
                     hotel_formal_name: row.hotel_formal_name,
                     hotel_name: row.hotel_name,
-                    received_at: row.received_at, 
-                    name: row.name, 
-                    status: status, 
-                    response: parsedResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return'] 
+                    received_at: row.received_at,
+                    name: row.name,
+                    status: status,
+                    response: parsedResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']
                 };
             } catch (parseError) {
                 console.error('Error parsing XML:', parseError);
-                return { 
+                return {
                     hotel_id: row.hotel_id,
                     hotel_formal_name: row.hotel_formal_name,
                     hotel_name: row.hotel_name,
-                    received_at: row.received_at, 
-                    name: row.name, 
-                    status: status, 
-                    response: null, 
-                    parseError: parseError.message 
-                };                
+                    received_at: row.received_at,
+                    name: row.name,
+                    status: status,
+                    response: null,
+                    parseError: parseError.message
+                };
             }
         }));
 
-        return parsedRows;        
+        return parsedRows;
 
     } catch (error) {
         console.error('Database query error:', error);
@@ -398,12 +398,12 @@ const insertTLPlanMaster = async (requestId, data) => {
                     item.plans_hotel_id,
                     item.plan_key,
                     item.plangroupcode,
-                    item.plangroupname,                    
+                    item.plangroupname,
                 ]
             );
             results.push(result.rows[0]);
         };
-        
+
         await client.query('COMMIT');
         return results;
     } catch (error) {
@@ -436,7 +436,7 @@ const insertOTAReservationQueue = async (requestId, {
     conflictDetails = null
 }) => {
     const pool = getPool(requestId);
-    
+
     try {
         const result = await pool.query(
             `INSERT INTO ota_reservation_queue 
@@ -457,7 +457,7 @@ const insertOTAReservationQueue = async (requestId, {
                 conflictDetails
             ]
         );
-        
+
         return result.rows[0];
     } catch (error) {
         console.error('Error in insertOTAReservationQueue:', error);
@@ -475,7 +475,7 @@ const insertOTAReservationQueue = async (requestId, {
  */
 const updateOTAReservationQueue = async (requestId, id, status, conflictDetails = null) => {
     const pool = getPool(requestId);
-    
+
     try {
         const result = await pool.query(
             `UPDATE ota_reservation_queue 
@@ -486,11 +486,11 @@ const updateOTAReservationQueue = async (requestId, id, status, conflictDetails 
              RETURNING *`,
             [status, conflictDetails, id]
         );
-        
+
         if (result.rows.length === 0) {
             throw new Error(`No reservation found with ID: ${id}`);
         }
-        
+
         return result.rows[0];
     } catch (error) {
         console.error('Error in updateOTAReservationQueue:', error);
@@ -498,9 +498,27 @@ const updateOTAReservationQueue = async (requestId, id, status, conflictDetails 
     }
 };
 
-const selectOTAReservationQueue = async (requestId) => {
+// Constants for query limits
+const OTA_QUEUE_DEFAULT_LIMIT = 100;
+const OTA_QUEUE_SEARCH_LIMIT = 500;
+
+const selectOTAReservationQueue = async (requestId, searchTerm = null) => {
     const pool = getPool(requestId);
     try {
+        let whereClause = '';
+        let params = [];
+
+        if (searchTerm) {
+            whereClause = `
+                WHERE oq.ota_reservation_id ILIKE $1 
+                OR oq.reservation_data->'BasicInformation'->>'GuestOrGroupNameSingleByte' ILIKE $1
+            `;
+            params.push(`%${searchTerm}%`);
+        }
+
+        // Use larger limit for searches, smaller for default view
+        const limit = searchTerm ? OTA_QUEUE_SEARCH_LIMIT : OTA_QUEUE_DEFAULT_LIMIT;
+
         let query = `
             SELECT
                 oq.id,
@@ -509,14 +527,18 @@ const selectOTAReservationQueue = async (requestId) => {
                 oq.ota_reservation_id,
                 oq.status,
                 oq.created_at,
+                oq.reservation_data,
+                oq.reservation_data->'TransactionType'->>'DataClassification' as data_classification,
                 oq.reservation_data->'BasicInformation'->>'GuestOrGroupNameSingleByte' as booker_name
             FROM
                 ota_reservation_queue oq
             JOIN
                 hotels h ON oq.hotel_id = h.id
-            ORDER BY oq.created_at DESC LIMIT 100
+            ${whereClause}
+            ORDER BY oq.created_at DESC 
+            LIMIT ${limit}
         `;
-        const result = await pool.query(query);
+        const result = await pool.query(query, params);
         return result.rows;
     } catch (error) {
         console.error('Error in selectOTAReservationQueue:', error);
@@ -537,7 +559,8 @@ const insertOTAXmlQueue = async (requestId, { hotel_id, service_name, xml_body, 
         return result.rows[0];
     } catch (error) {
         console.error('Error in insertOTAXmlQueue:', error);
-        throw error;    }
+        throw error;
+    }
 };
 
 const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
@@ -545,7 +568,7 @@ const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
     try {
         let setClauses = [`status = $1`, `last_error = $2`];
         let values = [status, error, id];
-        
+
         if (status === 'failed') {
             setClauses.push(`retries = retries + 1`);
             setClauses.push(`processed_at = CURRENT_TIMESTAMP`);
@@ -570,10 +593,10 @@ const updateOTAXmlQueue = async (requestId, id, status, error = null) => {
     }
 };
 
-const selectOTAXmlQueue = async (requestId) => {  
-  const pool = getPool(requestId); // Use getPool as it's a read operation
-  try {
-    const query = `
+const selectOTAXmlQueue = async (requestId) => {
+    const pool = getPool(requestId);
+    try {
+        const query = `
       SELECT DISTINCT
         id,
         status,
@@ -613,22 +636,19 @@ const selectOTAXmlQueue = async (requestId) => {
       ) AS combined_queue
       ORDER BY created_at DESC;
     `;
-    
-    const result = await pool.query(query);    
-    return result.rows;
-  } catch (error) {
-    logger.error(`[${requestId}] Error in selectOTAXmlQueue: ${error.message}`, { stack: error.stack });
-    throw error;
-  } finally {    
-    // getPool returns a client from the pool, not a direct connection, so no client.release() needed here.
-    // The pool manages connection release.
-  }
+
+        const result = await pool.query(query);
+        return result.rows;
+    } catch (error) {
+        logger.error(`[${requestId}] Error in selectOTAXmlQueue: ${error.message}`, { stack: error.stack });
+        throw error;
+    }
 };
 
-const selectFailedOTAXmlQueue = async (requestId) => {    
-  const pool = getPool(requestId); // Use getPool as it's a read operation
-  try {
-    const query = `
+const selectFailedOTAXmlQueue = async (requestId) => {
+    const pool = getPool(requestId);
+    try {
+        const query = `
       SELECT
         oq.id,
         oq.status,
@@ -643,17 +663,14 @@ const selectFailedOTAXmlQueue = async (requestId) => {
       WHERE oq.status = 'failed'
       ORDER BY oq.created_at DESC;
     `;
-        
-    const result = await pool.query(query);    
-    logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Found ${result.rows.length} failed OTA XML queue items.`);
-    return result.rows;
-  } catch (error) {
-    logger.error(`[${requestId}] Error in selectFailedOTAXmlQueue: ${error.message}`, { stack: error.stack });
-    throw error;
-  } finally {    
-    // getPool returns a client from the pool, not a direct connection, so no client.release() needed here.
-    // The pool manages connection release.
-  }
+
+        const result = await pool.query(query);
+        logger.debug(`[${requestId}] selectFailedOTAXmlQueue: Found ${result.rows.length} failed OTA XML queue items.`);
+        return result.rows;
+    } catch (error) {
+        logger.error(`[${requestId}] Error in selectFailedOTAXmlQueue: ${error.message}`, { stack: error.stack });
+        throw error;
+    }
 };
 
 module.exports = {

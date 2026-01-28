@@ -3,6 +3,7 @@
 ## Issue Reported
 
 When viewing the reconciliation page for 士別:
+
 - **Header displayed**: ¥4,207,100 (sales)
 - **Table sum**: ¥4,127,900 (sales)
 - **Discrepancy**: ¥79,200 missing from table
@@ -21,6 +22,7 @@ This caused reservation_details without associated reservation_rates to be exclu
 ### 1. `getReconciliationHotelDetails` (line ~703)
 
 **Changed**:
+
 ```sql
 -- Before (WRONG):
 JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
@@ -34,6 +36,7 @@ Also added the missing `COALESCE(rr.tax_rate, 0.10) as tax_rate` field and updat
 ### 2. `getReconciliationClientDetails` (line ~820)
 
 **Changed**:
+
 ```sql
 -- Before (WRONG):
 JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
@@ -56,6 +59,7 @@ This function **correctly** uses `INNER JOIN` because it's a validation function
 ✅ **Consistent calculation logic across all three reconciliation queries**
 
 The fix ensures that:
+
 1. Overview totals (header) are correct
 2. Hotel details (table) match the overview
 3. Client details (drill-down) match the hotel details
@@ -63,6 +67,7 @@ The fix ensures that:
 ## Testing
 
 1. **Restart your API server** to load the updated code:
+
    ```bash
    cd api
    npm restart
@@ -77,12 +82,14 @@ The fix ensures that:
    - Verify that the table sum now matches the header value
 
 3. **Run validation script** (optional):
+
    ```bash
    cd api
    node adhoc_scripts/validate_reconciliation_numbers.js
    ```
 
 4. **Run debug script** to see the fix in action:
+
    ```bash
    cd api
    node adhoc_scripts/debug_shibetsu_sales_discrepancy.js

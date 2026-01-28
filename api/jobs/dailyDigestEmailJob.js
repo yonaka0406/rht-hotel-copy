@@ -16,7 +16,10 @@ if (process.env.NODE_ENV === 'production') {
   envFrontend = process.env.VITE_FRONTEND_URL;
 }
 
+const { startLog, completeLog } = require('../models/cron_logs');
+
 const sendDailyDigestEmails = async (requestId) => {
+  const logId = await startLog('Daily Digest Email');
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
@@ -88,7 +91,7 @@ const sendDailyDigestEmails = async (requestId) => {
       });
 
       if (groupedLogs.added.length === 0 && groupedLogs.edited.length === 0 && groupedLogs.deleted.length === 0) {
-        
+
         let htmlContent = `<div style=\"font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;\">\r\n      <h2 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">日次予約ログダイジェスト - ${hotel.name}</h2>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">${formattedDate} の予約ログの概要です。</p>\r\n      <p style=\"font-size: 16px; line-height: 1.6;\">本日は予約の変更はありませんでした。</p>\r\n      </div>`;
 
         await sendGenericEmail(
@@ -154,23 +157,23 @@ const sendDailyDigestEmails = async (requestId) => {
 
           // Determine the values based on priority: DELETE > UPDATE > INSERT
           const currentStatus = (log.DELETE.changed && log.DELETE.status) ||
-                                (log.UPDATE.changed && log.UPDATE.status) ||
-                                (log.INSERT.changed && log.INSERT.status) || null;
+            (log.UPDATE.changed && log.UPDATE.status) ||
+            (log.INSERT.changed && log.INSERT.status) || null;
           const currentCheckIn = (log.DELETE.changed && log.DELETE.check_in) ||
-                                 (log.UPDATE.changed && log.UPDATE.check_in) ||
-                                 (log.INSERT.changed && log.INSERT.check_in) || null;
+            (log.UPDATE.changed && log.UPDATE.check_in) ||
+            (log.INSERT.changed && log.INSERT.check_in) || null;
           const currentCheckOut = (log.DELETE.changed && log.DELETE.check_out) ||
-                                  (log.UPDATE.changed && log.UPDATE.check_out) ||
-                                  (log.INSERT.changed && log.INSERT.check_out) || null;
+            (log.UPDATE.changed && log.UPDATE.check_out) ||
+            (log.INSERT.changed && log.INSERT.check_out) || null;
           const currentNumberOfPeople = (log.DELETE.changed && log.DELETE.number_of_people) ||
-                                        (log.UPDATE.changed && log.UPDATE.number_of_people) ||
-                                        (log.INSERT.changed && log.INSERT.number_of_people) || null;
+            (log.UPDATE.changed && log.UPDATE.number_of_people) ||
+            (log.INSERT.changed && log.INSERT.number_of_people) || null;
           const currentType = (log.DELETE.changed && log.DELETE.type) ||
-                              (log.UPDATE.changed && log.UPDATE.type) ||
-                              (log.INSERT.changed && log.INSERT.type) || null;
+            (log.UPDATE.changed && log.UPDATE.type) ||
+            (log.INSERT.changed && log.INSERT.type) || null;
           const currentComment = (log.DELETE.changed && log.DELETE.comment) ||
-                                (log.UPDATE.changed && log.UPDATE.comment) ||
-                                (log.INSERT.changed && log.INSERT.comment) || null;
+            (log.UPDATE.changed && log.UPDATE.comment) ||
+            (log.INSERT.changed && log.INSERT.comment) || null;
 
           groupHtml += `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <h4 style="color: #34495e; margin-top: 0; margin-bottom: 10px;">予約ID: ${logType === 'deleted' ? log.record_id : '<a href="' + reservationUrl + '" style="color: #3498db; text-decoration: none;">' + log.record_id + ' &#x2192;</a>'}</h4>
@@ -182,21 +185,21 @@ const sendDailyDigestEmails = async (requestId) => {
               <tr>
                 <td style="padding: 5px 0; font-weight: bold; width: 25%;">ステータス:</td>
                 <td style="padding: 5px 0; width: 25%;">${(() => {
-                  const statusText = translateReservationStatus(currentStatus);
-                  let style = '';
-                  if (currentStatus === 'cancelled') {
-                    style = 'color: red; padding: 2px 5px; border-radius: 3px;'; // Red color only, with padding and rounded edges
-                  } else if (currentStatus === 'block') {
-                    style = 'color: red; background-color: #ffe6e6; padding: 2px 5px; border-radius: 3px;'; // Red color, light red background
-                  } else if (currentStatus === 'hold') {
-                    style = 'color: #b8860b; background-color: #fffacd; padding: 2px 5px; border-radius: 3px;'; // Dark yellow color, yellow background
-                  } else if (currentStatus === 'provisory') {
-                    style = 'color: #00008b; background-color: #e6f7ff; padding: 2px 5px; border-radius: 3px;'; // Dark blue color, light blue background
-                  } else if (currentStatus === 'confirmed') {
-                    style = 'color: #006400; background-color: #90ee90; padding: 2px 5px; border-radius: 3px;'; // Dark green color, light green background
-                  }
-                  return `<span style="${style}">${statusText}</span>`;
-                })()}</td>
+              const statusText = translateReservationStatus(currentStatus);
+              let style = '';
+              if (currentStatus === 'cancelled') {
+                style = 'color: red; padding: 2px 5px; border-radius: 3px;'; // Red color only, with padding and rounded edges
+              } else if (currentStatus === 'block') {
+                style = 'color: red; background-color: #ffe6e6; padding: 2px 5px; border-radius: 3px;'; // Red color, light red background
+              } else if (currentStatus === 'hold') {
+                style = 'color: #b8860b; background-color: #fffacd; padding: 2px 5px; border-radius: 3px;'; // Dark yellow color, yellow background
+              } else if (currentStatus === 'provisory') {
+                style = 'color: #00008b; background-color: #e6f7ff; padding: 2px 5px; border-radius: 3px;'; // Dark blue color, light blue background
+              } else if (currentStatus === 'confirmed') {
+                style = 'color: #006400; background-color: #90ee90; padding: 2px 5px; border-radius: 3px;'; // Dark green color, light green background
+              }
+              return `<span style="${style}">${statusText}</span>`;
+            })()}</td>
                 <td style="padding: 5px 0; font-weight: bold; width: 25%;">タイプ:</td>
                 <td style="padding: 5px 0; width: 25%;">${translateReservationType(currentType) || 'N/A'}</td>
               </tr>
@@ -235,8 +238,10 @@ const sendDailyDigestEmails = async (requestId) => {
         htmlContent
       );
     }
+    await completeLog(logId, 'success', { message: 'Daily digest emails sent', hotelsWithEmail: hotels.length });
   } catch (error) {
     defaultLogger.error(`[${requestId}] Error in daily digest email job:`, error);
+    await completeLog(logId, 'failed', { error: error.message });
   }
 };
 

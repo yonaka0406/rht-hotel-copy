@@ -64,14 +64,22 @@
 
             <Tabs v-model:value="activeTab" class="pt-2">
                 <TabList>
-                    <Tab :value="0">予算データインポート</Tab>
-                    <Tab :value="1">実績データインポート</Tab>
+                    <Tab :value="0">予算管理 (グリッド)</Tab>
+                    <Tab :value="1">実績管理 (グリッド)</Tab>
+                    <Tab :value="2">予算データCSV</Tab>
+                    <Tab :value="3">実績データCSV</Tab>
                 </TabList>
                 <TabPanels>
                     <TabPanel :value="0">
-                        <ForecastImportPanel />
+                        <FinanceDataGrid type="forecast" />
                     </TabPanel>
                     <TabPanel :value="1">
+                        <FinanceDataGrid type="accounting" />
+                    </TabPanel>
+                    <TabPanel :value="2">
+                        <ForecastImportPanel />
+                    </TabPanel>
+                    <TabPanel :value="3">
                         <AccountingImportPanel />
                     </TabPanel>
                 </TabPanels>
@@ -85,6 +93,7 @@ import { ref, onMounted } from 'vue';
 import { Tabs, TabList, Tab, TabPanels, TabPanel, Panel, Toast, ProgressSpinner, Button } from 'primevue';
 import ForecastImportPanel from './components/ForecastImportPanel.vue';
 import AccountingImportPanel from './components/AccountingImportPanel.vue';
+import FinanceDataGrid from './components/FinanceDataGrid.vue';
 import { useImportLogic } from './composables/useImportLogic';
 
 const activeTab = ref(0);

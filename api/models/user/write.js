@@ -4,14 +4,30 @@ const bcrypt = require('bcryptjs');
 // Update a user's password hash
 const updatePasswordHash = async (requestId, email, passwordHash, updated_by, dbClient = null) => {
     const client = dbClient || getPool(requestId);
-    const query = 'UPDATE users SET password_hash = $1, updated_by = $2 WHERE email = $3 RETURNING *';
+    // Explicitly set auth_provider to 'local' and clear all Google-related fields when resetting password.
+    // This allows Google-linked accounts to be fully converted to local accounts,
+    // satisfying database constraints and ensuring no stale tokens remain.
+    const query = `
+        UPDATE users 
+        SET 
+            password_hash = $1, 
+            updated_by = $2, 
+            auth_provider = 'local', 
+            provider_user_id = NULL,
+            google_calendar_id = NULL,
+            google_access_token = NULL,
+            google_refresh_token = NULL,
+            google_token_expiry_date = NULL,
+            last_successful_google_sync = NULL
+        WHERE email = $3 
+        RETURNING *`;
     const values = [passwordHash, updated_by, email];
 
     try {
         const result = await client.query(query, values);
         return result.rows[0]; // Return the updated user
     } catch (err) {
-        console.error('Error updating password:', err);
+        console.error('Error updating password and clearing Google account link:', err);
         throw new Error('Database error');
     }
 };

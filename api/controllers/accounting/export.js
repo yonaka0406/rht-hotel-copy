@@ -50,8 +50,8 @@ const getLedgerPreview = async (req, res) => {
 
         // Fetch ledger data and validation results in parallel
         const [data, validation] = await Promise.all([
-            accountingModel.getLedgerPreview(requestId, filters),
-            accountingModel.validateLedgerDataIntegrity(requestId, filters)
+            accountingModel.accountingRead.getLedgerPreview(requestId, filters),
+            accountingModel.accountingRead.validateLedgerDataIntegrity(requestId, filters)
         ]);
 
         res.json({
@@ -89,7 +89,7 @@ const exportLedger = async (req, res) => {
         const lastDay = new Date(year, month, 0).getDate();
         const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-        const data = await accountingModel.getLedgerPreview(requestId, {
+        const data = await accountingModel.accountingRead.getLedgerPreview(requestId, {
             startDate,
             endDate,
             hotelIds: hotelIdsArray

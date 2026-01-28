@@ -1,17 +1,17 @@
-const settings = require('./settings');
-const exportCtrl = require('./export');
-const dashboard = require('./dashboard');
-const importCtrl = require('./import');
+const exportController = require('./export');
 const profitLoss = require('./profitLoss');
+const dashboard = require('./dashboard');
+const settings = require('./settings');
+const importController = require('./import');
 const receivables = require('./receivables');
 const analytics = require('./analytics');
 
 module.exports = {
-    ...settings,
-    ...exportCtrl,
-    ...dashboard,
-    ...importCtrl,
+    ...exportController,
     ...profitLoss,
     ...receivables,
-    ...analytics
+    ...analytics,
+    ...dashboard,
+    ...settings,
+    ...importController
 };

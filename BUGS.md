@@ -5,6 +5,22 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### January 16, 2026
+
+#### OTA reservations without reservation_rates values
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Source**: Bug Report
+- **Description**:
+  - OTA reservations without reservation_rates values appeared, we need to verify the cause.
+
+#### Remove comment from 宿泊者名簿 PDF
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Source**: User Request
+- **Description**:
+  - Remove from 宿泊者名簿 the comment(備考) from the PDF creation.
+
 ### December 1, 2025
 
 #### Monthly Report Tax Value Issue
@@ -720,6 +736,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: November 27, 2025*
-*Total Bugs: 5* (last one #87)
-*Total Feature Requests: 30* (last one #C)
+*Last Updated: January 16, 2026*
+*Total Bugs: 6* (last one #87)
+*Total Feature Requests: 31* (last one #C)

@@ -11,6 +11,7 @@ import {
   formatYenInTenThousands,
   formatYenInTenThousandsNoDecimal,
   formatPercentage,
+  formatNumber,
 } from '@/utils/formatUtils';
 import { colorScheme } from '@/utils/reportingUtils';
 
@@ -607,7 +608,11 @@ class ChartConfigurationService {
         formatter: params => {
           let tooltip = `${params[0].name}<br/>`;
           params.forEach(param => {
-            tooltip += `${param.marker} ${param.seriesName}: ${formatPercentage(param.value / 100)}${param.seriesName.includes('差異') ? 'p.p.' : '%'}<br/>`;
+            const isVariance = param.seriesName.includes('差異');
+            const formattedValue = isVariance
+              ? `${formatNumber(param.value, 'decimal')} p.p.`
+              : formatPercentage(param.value / 100);
+            tooltip += `${param.marker} ${param.seriesName}: ${formattedValue}<br/>`;
           });
           return tooltip;
         },

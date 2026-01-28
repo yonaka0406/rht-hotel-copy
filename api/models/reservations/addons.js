@@ -86,7 +86,10 @@ const addReservationAddon = async (requestId, addon, client = null) => {
 };
 
 const selectReservationAddonByDetail = async (requestId, reservationDetailId, client = null) => {
-  const pool = client || getPool(requestId);
+  const pool = getPool(requestId);
+  const dbClient = client || await pool.connect();
+  const shouldReleaseClient = !client;
+
   const query = `
     SELECT * FROM reservation_addons
     WHERE reservation_detail_id = $1;
@@ -94,11 +97,15 @@ const selectReservationAddonByDetail = async (requestId, reservationDetailId, cl
   const values = [reservationDetailId];
 
   try {
-    const result = await pool.query(query, values);
+    const result = await dbClient.query(query, values);
     return result.rows;
   } catch (err) {
     logger.error('Error selecting reservation addon by detail:', err);
     throw new Error('Database error');
+  } finally {
+    if (shouldReleaseClient) {
+      dbClient.release();
+    }
   }
 };
 

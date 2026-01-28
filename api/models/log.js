@@ -54,7 +54,7 @@ const selectReservationHistory = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(query, values);   
+        const result = await pool.query(query, values);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
@@ -119,14 +119,21 @@ const selectReservationInventoryChange = async (requestId, id) => {
                 lr.table_name,
                 lr.changes->'old'->>'room_id' AS old_room_id,
                 lr.changes->'new'->>'room_id' AS new_room_id,
-                lr.changes->'new'->>'date' AS log_date,
+                COALESCE(
+                    lr.changes->'new'->>'date',
+                    lr.changes->>'date' 
+                ) AS log_date,
                 COALESCE((lr.changes->'new'->>'hotel_id')::int, (lr.changes->>'hotel_id')::int) AS hotel_id
             FROM logs_reservation lr
             WHERE 
                 lr.id = $1
                 AND lr.table_name LIKE 'reservation_details_%'
-                AND lr.action = 'UPDATE'
-                AND lr.changes->'old'->>'room_id' IS DISTINCT FROM lr.changes->'new'->>'room_id'
+                AND (lr.action = 'UPDATE' OR lr.action = 'INSERT' OR lr.action = 'DELETE')
+                AND (
+                    lr.action = 'INSERT' OR
+                    lr.action = 'DELETE' OR
+                    lr.changes->'old'->>'room_id' IS DISTINCT FROM lr.changes->'new'->>'room_id'
+                )
         )
         SELECT
             ld.id,
@@ -142,16 +149,56 @@ const selectReservationInventoryChange = async (requestId, id) => {
         LEFT JOIN rooms new_room ON 
             new_room.id = ld.new_room_id::int AND 
             new_room.hotel_id = ld.hotel_id
-        WHERE old_room.room_type_id IS DISTINCT FROM new_room.room_type_id
+        WHERE 
+            ld.action = 'INSERT' OR
+            ld.action = 'DELETE' OR
+            old_room.room_type_id IS DISTINCT FROM new_room.room_type_id
     `;
     const values = [id];
     try {
+        // First check if this was a parent reservation DELETE that would CASCADE to reservation_details
+        const parentDeleteQuery = `
+            WITH parent_delete AS (
+                SELECT 
+                    lr.changes->>'id' as deleted_reservation_id,
+                    (lr.changes->>'hotel_id')::int as hotel_id,
+                    lr.table_name,
+                    lr.log_time
+                FROM logs_reservation lr
+                WHERE lr.id = $1 
+                AND lr.table_name LIKE 'reservations_%'
+                AND lr.action = 'DELETE'
+            )
+            SELECT 
+                rd_logs.record_id as id,
+                'DELETE' as action,
+                rd_logs.table_name,
+                COALESCE(rd_logs.changes->>'date', rd_logs.changes->'old'->>'date') as check_in,
+                COALESCE(rd_logs.changes->>'date', rd_logs.changes->'old'->>'date') as check_out,
+                (COALESCE(rd_logs.changes->>'hotel_id', rd_logs.changes->'old'->>'hotel_id'))::int as hotel_id
+            FROM parent_delete pd
+            JOIN logs_reservation rd_logs ON 
+                rd_logs.table_name = 'reservation_details_' || pd.hotel_id
+                AND rd_logs.action = 'DELETE'
+                AND (rd_logs.changes->>'reservation_id')::uuid = pd.deleted_reservation_id::uuid
+                AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
+        `;
+
+        const parentResult = await pool.query(parentDeleteQuery, values);
+        if (parentResult.rows.length > 0) {
+            // Return affected dates from CASCADE DELETE (individual reservation_details)
+            return parentResult.rows;
+        }
+
+        // If no CASCADE DELETE logs found, check the main reservation query
         const result = await pool.query(reservationQuery, values);
-        if (result.rows.length === 0) {
-            const detailsResult = await pool.query(detailsQuery, values);
-            return detailsResult.rows;
-        }        
-        return result.rows;
+        if (result.rows.length > 0) {
+            return result.rows;
+        }
+
+        // Fallback to existing reservation_details logic
+        const detailsResult = await pool.query(detailsQuery, values);
+        return detailsResult.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
@@ -210,18 +257,21 @@ const selectReservationGoogleInventoryChange = async (requestId, id) => {
                 lr.table_name,
                 lr.changes->'old'->>'room_id' AS old_room_id,
                 lr.changes->'new'->>'room_id' AS new_room_id,
-                lr.changes->'old'->>'plans_global_id' AS old_plans_global_id,
-                lr.changes->'new'->>'plans_global_id' AS new_plans_global_id,
                 lr.changes->'old'->>'plans_hotel_id' AS old_plans_hotel_id,
                 lr.changes->'new'->>'plans_hotel_id' AS new_plans_hotel_id,
-                lr.changes->'new'->>'date' AS log_date,
+                COALESCE(
+                    lr.changes->'new'->>'date',
+                    lr.changes->>'date' 
+                ) AS log_date,
                 COALESCE((lr.changes->'new'->>'hotel_id')::int, (lr.changes->>'hotel_id')::int) AS hotel_id
             FROM logs_reservation lr
             WHERE 
                 lr.id = $1
                 AND lr.table_name LIKE 'reservation_details_%'
-                AND lr.action = 'UPDATE'
+                AND (lr.action = 'UPDATE' OR lr.action = 'INSERT' OR lr.action = 'DELETE')
                 AND (
+                    lr.action = 'INSERT' OR
+                    lr.action = 'DELETE' OR
                     lr.changes->'old'->>'room_id' IS DISTINCT FROM lr.changes->'new'->>'room_id' OR
                     lr.changes->'old'->>'plans_global_id' IS DISTINCT FROM lr.changes->'new'->>'plans_global_id' OR
                     lr.changes->'old'->>'plans_hotel_id' IS DISTINCT FROM lr.changes->'new'->>'plans_hotel_id'
@@ -238,12 +288,49 @@ const selectReservationGoogleInventoryChange = async (requestId, id) => {
     `;
     const values = [id];
     try {
+        // First check if this was a parent reservation DELETE that would CASCADE to reservation_details
+        const parentDeleteQuery = `
+            WITH parent_delete AS (
+                SELECT 
+                    lr.changes->>'id' as deleted_reservation_id,
+                    (lr.changes->>'hotel_id')::int as hotel_id,
+                    lr.table_name,
+                    lr.log_time
+                FROM logs_reservation lr
+                WHERE lr.id = $1 
+                AND lr.table_name LIKE 'reservations_%'
+                AND lr.action = 'DELETE'
+            )
+            SELECT 
+                rd_logs.record_id as id,
+                'DELETE' as action,
+                rd_logs.table_name,
+                rd_logs.changes->>'date' as check_in,
+                rd_logs.changes->>'date' as check_out,
+                (rd_logs.changes->>'hotel_id')::int as hotel_id
+            FROM parent_delete pd
+            JOIN logs_reservation rd_logs ON 
+                rd_logs.table_name = 'reservation_details_' || pd.hotel_id
+                AND rd_logs.action = 'DELETE'
+                AND (rd_logs.changes->>'reservation_id')::uuid = pd.deleted_reservation_id::uuid
+                AND rd_logs.log_time BETWEEN pd.log_time - INTERVAL '10 minutes' AND pd.log_time + INTERVAL '10 minutes'
+        `;
+
+        const parentResult = await pool.query(parentDeleteQuery, values);
+        if (parentResult.rows.length > 0) {
+            // Return affected dates from CASCADE DELETE (individual reservation_details)
+            return parentResult.rows;
+        }
+
+        // If no CASCADE DELETE logs found, check the main reservation query
         const result = await pool.query(reservationQuery, values);
-        if (result.rows.length === 0) {
-            const detailsResult = await pool.query(detailsQuery, values);
-            return detailsResult.rows;
-        }        
-        return result.rows;
+        if (result.rows.length > 0) {
+            return result.rows;
+        }
+
+        // Fallback to existing reservation_details logic
+        const detailsResult = await pool.query(detailsQuery, values);
+        return detailsResult.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
         throw new Error('Database error');
@@ -303,7 +390,7 @@ const selectClientHistory = async (requestId, id) => {
     `;
     const values = [id];
     try {
-        const result = await pool.query(query, values);   
+        const result = await pool.query(query, values);
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
@@ -313,7 +400,7 @@ const selectClientHistory = async (requestId, id) => {
 
 module.exports = {
     selectReservationHistory,
-    selectReservationInventoryChange, 
+    selectReservationInventoryChange,
     selectReservationGoogleInventoryChange,
     selectClientHistory,
 };

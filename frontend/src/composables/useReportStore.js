@@ -1023,7 +1023,8 @@ export function useReportStore() {
             prevYearRevenueData = [],
             prevYearOccupancyData = [],
             selectionMessage = '',
-            kpiData = null
+            kpiData = null,
+            hotelIds = []
         } = options;
 
         try {
@@ -1041,7 +1042,8 @@ export function useReportStore() {
                 prevYearRevenueData,
                 prevYearOccupancyData,
                 selectionMessage,
-                kpiData
+                kpiData,
+                hotelIds
             }, {
                 responseType: 'blob'
             });
@@ -1052,12 +1054,12 @@ export function useReportStore() {
             const url = window.URL.createObjectURL(blob);
             const a = document.body.appendChild(document.createElement('a'));
             a.href = url;
-            
+
             // Format date for filename: always use today's date
             const today = new Date();
             const formattedDate = today.toISOString().slice(0, 10).replace(/-/g, '');
             a.download = `daily_report_${formattedDate}.${format}`;
-            
+
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);

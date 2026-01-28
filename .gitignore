@@ -19,3 +19,5 @@ pgadmin/.pgpass
 api/config/refresh_token.json
 /.vscode
 /.kiro
+/api/tmp
+/.agent

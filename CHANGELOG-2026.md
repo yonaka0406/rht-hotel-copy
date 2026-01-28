@@ -7,7 +7,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Unreleased
+## [1.4.6] - 2026-01-28
+
+- New Feature: Interactive finance data grid with Excel paste support for budget entry and actuals management.
+- New Feature: Sub-account categorization for granular financial tracking and reporting.
+- New Feature: Introduced a new reusable KPI summary component for displaying Average Daily Rate (ADR) and Revenue Per Available Room (RevPAR) metrics with actual values, forecasts, and variance indicators in multiple layout variants.
+- Refactor: Consolidated KPI display logic across multiple reporting pages to use the new unified component, improving consistency across the application.
+
+---
+
+## [1.4.5] - 2026-01-27
+
+- New Feature: Restructured billing interface with dedicated invoice management page.
+- New Feature: Added invoice creation dialog with editable invoice details and validation.
+- New Feature: New bulk billing drawer for processing multiple reservations simultaneously.
+- New Feature: Added support for multi-month report views, enabling users to analyze performance across extended time periods.
+- New Feature: Enhanced hotel filtering capabilities in report generation and download workflows.
+- New Feature: Added provisional sales column (仮売上) to daily report Excel output.
+- Improvement: Enhanced invoice generation with improved multi-tax-rate aggregation.
+- Improvement: Better reservation detail aggregation and organization in invoices.
+- Improvement: Improved data handling for complex billing scenarios with multiple accommodations and add-ons.
+- Bug Fix: Improved reservation data filtering and handling for more accurate report calculations.
+- Chore: Updated repository configuration files.
+
+---
+
+## [1.4.4] - 2026-01-26
+
+- New Feature: Enhanced OTA reservation queue with search functionality and status filtering (All/Failed).
+- New Feature: Improved reservation queue details with formatted communication logs (line break support) and classification badges (New/Mod/Can).
+- Chore: Added to inventory calculations exclusion of staff rooms indicator in available stock counts in addition to not for sale indicator.
+- Bug Fix: Improved reservation deletion logic to ensure data logging.
+- New Feature: Added phantom delete detection visualization in OTA investigation interface with visual indicators.
+- New Feature: Enhanced hotel ID validation for blocked room operations.
+- Chore: Added diagnostic utilities for OTA stock auditing and historical stock analysis.
+
+---
+
+## [1.4.3] - 2026-01-23
+
+- New Feature: Added OTA Stock Investigation Tool for diagnosing stock discrepancies between PMS and OTA systems, with event timeline analysis and gap detection.
+- New Feature: Added OTA Trigger Monitoring System with automatic remediation, email alerts, and manual check capabilities.
+- New Feature: Added cron job logging infrastructure for tracking scheduled task execution and performance metrics.
+
+---
+
+## [1.4.2] - 2026-01-19
+
+- New Feature: Introduced detailed CSV export for profit & loss data.
+- New Feature: Added Receivables Management interface with sub-account balance tracking, monthly history, filtering, and client follow-up actions via CRM integration.
+- New Feature: New accounting mappings management feature with support for multiple mapping types including cancellation fees.
+- New Feature: Import preview now validates accounts and departments against master data.
+- Fix: Improved dark mode styling consistency across accounting pages.
+- Fix: Fixed CRM actions to include unassigned follow-ups.
+- Fix: Fixed missing reservation rate records for OTA reservations.
+
+---
+
+## [1.4.1] - 2026-01-16
+
+- New Feature: Added Profit & Loss Statement feature with flexible grouping (by month, hotel, or department), date range filtering, and CSV export.
+- New Feature: Added support for importing raw Yayoi accounting data (25-column format) with a dedicated import panel including preview and validation.
+- New Feature: Enhanced Accounting settings management for account codes, tax classes, and departments (including validity tracking).
+- New Feature: Implemented previous year occupancy calculation logic in backend to match frontend consistency.
+- New Feature: Aligned future outlook aggregation logic with Net Accommodation Sales for accurate performance tracking in Daily Report.
+- Improvement: Enhanced daily report template with updated layout and improved cell mapping.
+- Fix: Improved accuracy of reconciliation calculations across summary and detailed views.
+- Fix: Improved transaction and database connection handling for reservation holds to prevent orphaned holds and ensure proper cleanup.
+- Fix: Resolved temporary file resource leak in the daily report background generation job.
+- Fix: Improved numeric data safety in Excel reports by correctly handling zero values using nullish coalescing.
+
+---
+
+## [1.4.0] - 2026-01-15
+
+- New Feature: Added Accounting Module with Sales Data Export functionality.
+
+---
+
+## [1.3.12] - 2026-01-15
+
+- New Feature: Added display of creation date and creator name in temporary blocked dates.
+
+---
+
+## [1.3.11] - 2026-01-14
+
+- New Feature: Added provisory accommodation metrics (revenue and room count totals) to reporting.
+- New Feature: Provisory sales and night aggregations are now computed and displayed in future outlook reports.
+- New Feature: Enhanced reporting dashboards to track pending reservations alongside confirmed bookings.
+- Fix: Error when adding a new plan rate was fixed.
+- Fix: Add loading indicator to Dashboard page.
+- Fix: Fixed double percentage sign in occupancy charts tooltip and improved variance formatting.
+- Improvement: Aligned the numbers displayed in the report for accommodation only both in the chart and the future outlook.
+
+---
+
+## [1.3.10] - 2026-01-09
+
+- Fix: Resolved password reset errors by aligning frontend and backend validation rules, including mandatory special characters.
+- New Feature: Added a confirmation dialog in the forgot password flow for Google-linked accounts to transition to local password-based accounts.
+- Improvement: Integrated comprehensive Japanese translations for all backend validation and authentication-related error messages.
+- Improvement: Simplified the password reset UI by removing redundant feedback from the confirmation input and streamlining error display via popups and on-screen text.
+- Refactor: Enhanced database logic to ensure all social provider tokens and IDs are fully cleared when a user resets their local password.
 
 ---
 
@@ -22,7 +124,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New Feature: Reorganized dashboard with interactive charts (occupancy bar chart, gauge chart, plan stack chart) and enhanced reservation list table with status, guest details, and pricing information.
 - New Feature: Improved occupancy forecasting with fallback logic using forecast data when available.
-- Documentation: Added shell command execution guidance for Windows PowerShell.
 - Refactor: Dashboard component restructured into modular, reusable chart and table components for improved maintainability.
 - Refactor: Enhanced occupancy calculations across reporting pages to prioritize forecast data.
 - Improvement: Enhanced daily sales and occupancy reports with improved data aggregation across multiple sources, providing comprehensive revenue, occupancy, and KPI metrics.
