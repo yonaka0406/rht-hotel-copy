@@ -13,6 +13,5 @@ module.exports = {
     ...dashboard,
     ...settings,
     ...importController,
-    // Receivables functions
     ...receivablesController
 };
