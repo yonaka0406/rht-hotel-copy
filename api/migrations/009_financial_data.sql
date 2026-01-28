@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS du_forecast_entries (
     created_by INT REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by INT REFERENCES users(id),
-    CONSTRAINT uq_hotel_month_account_sub_account_forecast UNIQUE (hotel_id, month, account_name, sub_account_name)
+    CONSTRAINT uq_hotel_month_account_sub_account_forecast UNIQUE NULLS NOT DISTINCT (hotel_id, month, account_name, sub_account_name)
 );
 
 COMMENT ON TABLE du_forecast_entries IS 'Account-level budget data (Forecast), identified by account_name';

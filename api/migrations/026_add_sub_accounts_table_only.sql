@@ -52,15 +52,15 @@ BEGIN
         FOREIGN KEY (sub_account_id) REFERENCES acc_sub_accounts(id) ON DELETE SET NULL;
     END IF;
 
-    -- Drop old unique constraint if it exists
+    -- Drop old unique constraints if they exist
     ALTER TABLE du_forecast_entries DROP CONSTRAINT IF EXISTS uq_hotel_month_account_forecast;
+    ALTER TABLE du_forecast_entries DROP CONSTRAINT IF EXISTS uq_hotel_month_account_name_forecast;
+    ALTER TABLE du_forecast_entries DROP CONSTRAINT IF EXISTS uq_hotel_month_account_sub_account_forecast;
     
-    -- Add the combined unique constraint if it doesn't exist
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_hotel_month_account_sub_account_forecast') THEN
-        ALTER TABLE du_forecast_entries 
-        ADD CONSTRAINT uq_hotel_month_account_sub_account_forecast 
-        UNIQUE (hotel_id, month, account_name, sub_account_name);
-    END IF;
+    -- Add the combined unique constraint with NULLS NOT DISTINCT (Postgres 15+)
+    ALTER TABLE du_forecast_entries 
+    ADD CONSTRAINT uq_hotel_month_account_sub_account_forecast 
+    UNIQUE NULLS NOT DISTINCT (hotel_id, month, account_name, sub_account_name);
 END $$;
 
 -- Create index for better query performance
