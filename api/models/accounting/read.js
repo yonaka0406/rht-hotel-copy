@@ -7,8 +7,10 @@ const getAccountCodes = async (requestId, dbClient = null) => {
     const shouldRelease = !dbClient;
 
     const query = `
-        SELECT * FROM acc_account_codes 
-        ORDER BY code::BIGINT ASC
+        SELECT ac.*, mg.name as management_group_name, mg.display_order as group_display_order
+        FROM acc_account_codes ac
+        LEFT JOIN acc_management_groups mg ON ac.management_group_id = mg.id
+        ORDER BY mg.display_order ASC, ac.code::BIGINT ASC
     `;
 
     try {
@@ -934,6 +936,34 @@ const getReconciliationClientDetails = async (requestId, hotelId, clientId, star
     }
 };
 
+const getSubAccounts = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `
+        SELECT 
+            sub_account_id as id,
+            sub_account_name as name,
+            sub_account_code as code,
+            account_name,
+            account_code
+        FROM acc_accounts_with_sub_accounts
+        WHERE sub_account_id IS NOT NULL AND sub_account_is_active = true
+        ORDER BY account_code ASC, sub_account_display_order ASC, sub_account_name ASC
+    `;
+
+    try {
+        const result = await client.query(query);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error retrieving sub accounts:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 module.exports = {
     getAccountCodes,
     getMappings,
@@ -945,5 +975,6 @@ module.exports = {
     getDashboardMetrics,
     getReconciliationOverview,
     getReconciliationHotelDetails,
-    getReconciliationClientDetails
+    getReconciliationClientDetails,
+    getSubAccounts
 };
