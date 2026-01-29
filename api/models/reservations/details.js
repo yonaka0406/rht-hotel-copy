@@ -247,6 +247,12 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     // If any query fails, roll back the entire transaction
     await client.query('ROLLBACK');
     logger.error('Error in transaction, rolling back changes:', err);
+    
+    // Preserve the original conflict error message so it can be displayed to the user
+    if (err.message.startsWith('予約詳細を復活できません')) {
+      throw err;
+    }
+    
     throw new Error('Database transaction failed');
   } finally {
     // Always release the client back to the pool

@@ -1171,9 +1171,26 @@ const editReservationStatus = async (req, res) => {
         const conflicts = await checkBookingConflict(req.requestId, { reservationId: id }, client);
         if (conflicts.length > 0) {
           await client.query('ROLLBACK');
-          const conflictInfo = conflicts.map(c => 
-            `${new Date(c.date).toLocaleDateString('ja-JP')}の${c.room_number}号室`
-          ).join(', ');
+          
+          // 部屋番号でグループ化
+          const conflictsByRoom = conflicts.reduce((acc, c) => {
+            const roomNumber = c.room_number;
+            if (!acc[roomNumber]) {
+              acc[roomNumber] = [];
+            }
+            acc[roomNumber].push(new Date(c.date).toLocaleDateString('ja-JP'));
+            return acc;
+          }, {});
+          
+          // メッセージを構築
+          const conflictInfo = Object.entries(conflictsByRoom).map(([roomNumber, dates]) => {
+            if (dates.length === 1) {
+              return `${dates[0]}の${roomNumber}号室`;
+            } else {
+              return `${dates.join('、')}の${roomNumber}号室`;
+            }
+          }).join(', ');
+          
           const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します: ${conflictInfo}`;
           return res.status(409).json({ error: 'Booking conflict', message });
         }
@@ -1217,9 +1234,27 @@ const editReservationDetailStatus = async (req, res) => {
         const conflicts = await checkBookingConflict(req.requestId, { detailId: id }, client);
         if (conflicts.length > 0) {
           await client.query('ROLLBACK');
-          const conflictDate = new Date(conflicts[0].date).toLocaleDateString('ja-JP');
-          const conflictRoom = conflicts[0].room_number;
-          const message = `予約の復活に失敗しました。${conflictDate}の${conflictRoom}号室には、既に別の予約が存在します。`;
+          
+          // 部屋番号でグループ化
+          const conflictsByRoom = conflicts.reduce((acc, c) => {
+            const roomNumber = c.room_number;
+            if (!acc[roomNumber]) {
+              acc[roomNumber] = [];
+            }
+            acc[roomNumber].push(new Date(c.date).toLocaleDateString('ja-JP'));
+            return acc;
+          }, {});
+          
+          // メッセージを構築
+          const conflictInfo = Object.entries(conflictsByRoom).map(([roomNumber, dates]) => {
+            if (dates.length === 1) {
+              return `${dates[0]}の${roomNumber}号室`;
+            } else {
+              return `${dates.join('、')}の${roomNumber}号室`;
+            }
+          }).join(', ');
+          
+          const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します: ${conflictInfo}`;
           return res.status(409).json({ error: 'Booking conflict', message });
         }
       }
