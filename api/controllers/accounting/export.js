@@ -221,6 +221,36 @@ const getDetailedDiscrepancyAnalysis = async (req, res) => {
 };
 
 /**
+ * Get available months from Yayoi data for period selection
+ */
+const getAvailableYayoiMonths = async (req, res) => {
+    const requestId = req.requestId;
+
+    try {
+        const months = await accountingModel.accountingRead.getAvailableYayoiMonths(requestId);
+        
+        const response = {
+            months: months.map(m => ({
+                value: m.month_key,
+                label: m.month_label,
+                year: parseInt(m.year),
+                month: parseInt(m.month),
+                transactionCount: parseInt(m.transaction_count),
+                earliestDate: m.earliest_date,
+                latestDate: m.latest_date
+            })),
+            hasData: months.length > 0,
+            latestMonth: months.length > 0 ? months[0].month_key : null
+        };
+
+        res.json(response);
+    } catch (error) {
+        logger.error(`[${requestId}] Error in getAvailableYayoiMonths:`, error);
+        res.status(500).json({ message: 'Error fetching available Yayoi months' });
+    }
+};
+
+/**
  * Get available years from Yayoi data for chart navigation
  */
 const getAvailableYayoiYears = async (req, res) => {
@@ -347,5 +377,6 @@ module.exports = {
     comparePmsVsYayoi,
     getMonthlySalesComparison,
     getAvailableYayoiYears,
+    getAvailableYayoiMonths,
     getDetailedDiscrepancyAnalysis
 };

@@ -676,6 +676,58 @@ const getHotelsWithDepartments = async (requestId, dbClient = null) => {
     }
 };
 
+/**
+ * Get available months from Yayoi data for period selection
+ * @param {string} requestId 
+ * @param {object} dbClient Optional database client for transactions
+ */
+const getAvailableYayoiMonths = async (requestId, dbClient = null) => {
+    const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+    const shouldRelease = !dbClient;
+
+    const query = `
+        SELECT DISTINCT
+            to_char(yd.transaction_date, 'YYYY-MM') as month_key,
+            to_char(yd.transaction_date, 'YYYY年MM月') as month_label,
+            EXTRACT(YEAR FROM yd.transaction_date) as year,
+            EXTRACT(MONTH FROM yd.transaction_date) as month,
+            COUNT(*) as transaction_count,
+            MIN(yd.transaction_date) as earliest_date,
+            MAX(yd.transaction_date) as latest_date
+        FROM acc_yayoi_data yd
+        JOIN acc_departments d ON yd.credit_department = d.name
+        JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
+        WHERE ac.management_group_id = 1  -- Sales accounts only
+        AND yd.credit_amount > 0
+        -- Use the most current department mapping for each department name
+        AND d.id = (
+            SELECT d2.id 
+            FROM acc_departments d2 
+            WHERE d2.name = d.name 
+            ORDER BY d2.is_current DESC, d2.id DESC 
+            LIMIT 1
+        )
+        GROUP BY 
+            to_char(yd.transaction_date, 'YYYY-MM'),
+            to_char(yd.transaction_date, 'YYYY年MM月'),
+            EXTRACT(YEAR FROM yd.transaction_date),
+            EXTRACT(MONTH FROM yd.transaction_date)
+        ORDER BY year DESC, month DESC
+    `;
+
+    try {
+        const result = await client.query(query);
+        logger.debug(`[${requestId}] Available Yayoi months:`, result.rows);
+        return result.rows;
+    } catch (err) {
+        logger.error('Error getting available Yayoi months:', err);
+        throw new Error('Database error');
+    } finally {
+        if (shouldRelease) client.release();
+    }
+};
+
 const getAvailableYayoiYears = async (requestId, dbClient = null) => {
     const pool = getPool(requestId);
     const client = dbClient || await pool.connect();
@@ -1579,6 +1631,7 @@ module.exports = {
     comparePmsVsYayoiData,
     getMonthlySalesComparison,
     getAvailableYayoiYears,
+    getAvailableYayoiMonths,
     getDetailedDiscrepancyAnalysis,
     getManagementGroups,
     getTaxClasses,

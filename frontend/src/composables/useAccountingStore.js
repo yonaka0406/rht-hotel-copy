@@ -84,6 +84,10 @@ export function useAccountingStore() {
         return await get('/accounting/export/available-yayoi-years');
     };
 
+    const getAvailableYayoiMonths = async () => {
+        return await get('/accounting/export/available-yayoi-months');
+    };
+
     const getAccountingSettings = async (hotelId = null) => {
         const params = hotelId ? { hotel_id: hotelId } : {};
         return await get('/accounting/settings', params);
@@ -228,6 +232,7 @@ export function useAccountingStore() {
         comparePmsVsYayoi,
         getMonthlySalesComparison,
         getDetailedDiscrepancyAnalysis,
-        getAvailableYayoiYears
+        getAvailableYayoiYears,
+        getAvailableYayoiMonths
     };
 }

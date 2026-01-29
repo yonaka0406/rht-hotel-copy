@@ -19,7 +19,9 @@
                 <div class="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
                     <span class="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2 whitespace-nowrap">対象期間:</span>
                     <select v-model="selectedMonth" @change="fetchAnalysisData"
-                        class="flex-1 px-3 py-2 bg-transparent border-none text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent dark:text-slate-50">
+                        :disabled="availableMonths.length === 0"
+                        class="flex-1 px-3 py-2 bg-transparent border-none text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent dark:text-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option v-if="availableMonths.length === 0" value="">弥生データなし</option>
                         <option v-for="month in availableMonths" :key="month.value" :value="month.value">
                             {{ month.label }}
                         </option>
@@ -44,6 +46,20 @@
                 <button @click="fetchAnalysisData" 
                     class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                     再試行
+                </button>
+            </div>
+
+            <!-- No Yayoi Data State -->
+            <div v-else-if="availableMonths.length === 0" 
+                class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 text-center">
+                <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-3xl mb-4"></i>
+                <h3 class="text-lg font-bold text-amber-800 dark:text-amber-300 mb-2">弥生会計データがありません</h3>
+                <p class="text-sm text-amber-600 dark:text-amber-400 mb-4">
+                    分析を行うには、まず弥生会計データをインポートしてください。
+                </p>
+                <button @click="$router.push({ name: 'AccountingYayoiImport' })" 
+                    class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+                    弥生会計インポートへ
                 </button>
             </div>
 
@@ -361,6 +377,7 @@ const selectedMonth = ref('');
 const analysisData = ref(null);
 const isLoading = ref(false);
 const hasError = ref(false);
+const availableMonthsData = ref([]);
 
 // Filters
 const selectedIssueType = ref('');
@@ -371,17 +388,12 @@ const minDifference = ref(0);
 const selectedHotelId = ref(null);
 const selectedHotelName = ref('');
 
-// Generate available months (last 12 months)
+// Available months from Yayoi data
 const availableMonths = computed(() => {
-    const months = [];
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const label = `${date.getFullYear()}年${date.getMonth() + 1}月`;
-        months.push({ value, label });
-    }
-    return months;
+    return availableMonthsData.value.map(month => ({
+        value: month.value,
+        label: month.label
+    }));
 });
 
 // Hotel summary for overview table
@@ -482,6 +494,22 @@ const filteredAnalysis = computed(() => {
     });
 });
 
+const fetchAvailableMonths = async () => {
+    try {
+        const response = await accountingStore.getAvailableYayoiMonths();
+        availableMonthsData.value = response.months || [];
+        
+        // Set default to the latest available month if no selection
+        if (!selectedMonth.value && response.latestMonth) {
+            selectedMonth.value = response.latestMonth;
+        }
+    } catch (error) {
+        console.error('Failed to fetch available Yayoi months:', error);
+        // Fallback to empty array
+        availableMonthsData.value = [];
+    }
+};
+
 const fetchAnalysisData = async () => {
     if (!selectedMonth.value) return;
     
@@ -546,11 +574,13 @@ const showItemDetails = (item) => {
     console.log('Show details for:', item);
 };
 
-onMounted(() => {
-    // Set default to last month
-    if (availableMonths.value.length > 1) {
-        selectedMonth.value = availableMonths.value[1].value;
-        fetchAnalysisData();
+onMounted(async () => {
+    // Fetch available months first
+    await fetchAvailableMonths();
+    
+    // Then fetch analysis data if we have a selected month
+    if (selectedMonth.value) {
+        await fetchAnalysisData();
     }
 });
 </script>

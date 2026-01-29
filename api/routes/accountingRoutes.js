@@ -36,6 +36,7 @@ router.post('/accounting/export/download', authMiddleware_accounting, accounting
 router.post('/accounting/export/compare-pms-yayoi', authMiddleware_accounting, accountingController.comparePmsVsYayoi);
 router.get('/accounting/export/monthly-comparison', authMiddleware_accounting, accountingController.getMonthlySalesComparison);
 router.get('/accounting/export/available-yayoi-years', authMiddleware_accounting, accountingController.getAvailableYayoiYears);
+router.get('/accounting/export/available-yayoi-months', authMiddleware_accounting, accountingController.getAvailableYayoiMonths);
 router.post('/accounting/export/detailed-discrepancy-analysis', authMiddleware_accounting, accountingController.getDetailedDiscrepancyAnalysis);
 
 // Profit & Loss
