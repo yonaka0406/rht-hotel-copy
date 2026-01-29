@@ -315,14 +315,15 @@ export const processRawDataIntoAnalysis = (rawData) => {
             });
         });
         
-        // 2. Create subaccount comparisons with fuzzy matching
+        // 2. Create subaccount comparisons with proper matching priority
         console.log(`--- Processing Subaccount Comparisons for ${hotel_name} ---`);
         const matchedYayoiItems = new Set();
+        const pmsMatches = new Map(); // Store PMS item -> Yayoi match mapping
         
-        // First pass: Process exact matches to prevent fuzzy matches from stealing exact matches
-        console.log(`First pass: Processing exact matches for ${hotel_name}`);
+        // Step 1: Find all exact matches first and reserve them
+        console.log(`Step 1: Finding exact matches for ${hotel_name}`);
         pmsItems.forEach(pmsItem => {
-            const yayoiMatch = yayoiSubItems.find(y => {
+            const exactMatch = yayoiSubItems.find(y => {
                 const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
                 const yayoiRate = parseFloat(y.tax_rate) || 0.10;
                 return Math.abs(pmsRate - yayoiRate) < 0.001 && 
@@ -330,54 +331,52 @@ export const processRawDataIntoAnalysis = (rawData) => {
                        !matchedYayoiItems.has(y);
             });
             
-            if (yayoiMatch) {
-                matchedYayoiItems.add(yayoiMatch);
-                console.log(`Exact match found for ${pmsItem.plan_name} -> ${yayoiMatch.subaccount_name}`);
+            if (exactMatch) {
+                pmsMatches.set(pmsItem, { match: exactMatch, type: 'exact' });
+                matchedYayoiItems.add(exactMatch);
+                console.log(`Exact match reserved: ${pmsItem.plan_name} -> ${exactMatch.subaccount_name} (¥${exactMatch.yayoi_amount})`);
             }
         });
         
-        // Second pass: Process all items (exact matches will be reused, fuzzy matches for unmatched items)
-        console.log(`Second pass: Processing all matches for ${hotel_name}`);
+        // Step 2: Find fuzzy matches for unmatched PMS items
+        console.log(`Step 2: Finding fuzzy matches for ${hotel_name}`);
         pmsItems.forEach(pmsItem => {
-            // Try to find exact match first (might already be in matchedYayoiItems from first pass)
-            let yayoiMatch = yayoiSubItems.find(y => {
-                const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
-                const yayoiRate = parseFloat(y.tax_rate) || 0.10;
-                return Math.abs(pmsRate - yayoiRate) < 0.001 && 
-                       normalizeString(y.subaccount_name) === normalizeString(pmsItem.plan_name);
-            });
-            
-            let matchType = 'exact';
-            
-            // If no exact match, try fuzzy matching from available items
-            if (!yayoiMatch) {
+            if (!pmsMatches.has(pmsItem)) { // Only process unmatched items
                 const availableYayoiItems = yayoiSubItems.filter(y => {
                     const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
                     const yayoiRate = parseFloat(y.tax_rate) || 0.10;
                     return Math.abs(pmsRate - yayoiRate) < 0.001 && !matchedYayoiItems.has(y);
                 });
+                
                 const fuzzyMatch = findBestMatch(pmsItem, availableYayoiItems);
                 if (fuzzyMatch) {
-                    yayoiMatch = fuzzyMatch;
-                    matchType = 'fuzzy';
-                    matchedYayoiItems.add(yayoiMatch); // Mark as matched
+                    pmsMatches.set(pmsItem, { match: fuzzyMatch, type: 'fuzzy' });
+                    matchedYayoiItems.add(fuzzyMatch);
+                    console.log(`Fuzzy match found: ${pmsItem.plan_name} -> ${fuzzyMatch.subaccount_name} (¥${fuzzyMatch.yayoi_amount})`);
+                } else {
+                    console.log(`No match found for: ${pmsItem.plan_name}`);
                 }
             }
+        });
+        
+        // Step 3: Create analysis items from matches
+        console.log(`Step 3: Creating analysis items for ${hotel_name}`);
+        pmsItems.forEach(pmsItem => {
+            const matchInfo = pmsMatches.get(pmsItem);
+            const yayoiMatch = matchInfo?.match;
+            const matchType = matchInfo?.type || 'none';
             
             const yayoiAmount = yayoiMatch ? parseFloat(yayoiMatch.yayoi_amount) || 0 : 0;
             const pmsAmount = parseFloat(pmsItem.pms_amount) || 0;
             const difference = pmsAmount - yayoiAmount;
             
-            console.log(`Final match for ${hotel_name} - ${pmsItem.plan_name}:`, {
-                pms_item: pmsItem,
-                yayoi_match: yayoiMatch,
-                match_type: matchType,
+            console.log(`Creating analysis item for ${hotel_name} - ${pmsItem.plan_name}:`, {
                 pms_amount: pmsAmount,
                 yayoi_amount: yayoiAmount,
                 difference: difference,
-                is_already_matched: yayoiMatch ? matchedYayoiItems.has(yayoiMatch) : false,
-                total_matched_count: matchedYayoiItems.size
-            });
+                match_type: matchType,
+                yayoi_subaccount: yayoiMatch?.subaccount_name || 'No match',
+                total_matched_yayoi_items: matchedYayoiItems.size
             
             analysisItems.push({
                 hotel_id,
