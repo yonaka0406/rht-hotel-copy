@@ -466,7 +466,6 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
                 SELECT d.hotel_id, d.name, d.is_current
                 FROM acc_departments d
                 WHERE d.name = yd.credit_department
-                  AND d.hotel_id = ANY($3::int[])
                 ORDER BY d.is_current DESC, d.id DESC
                 LIMIT 1
             ) d ON true
@@ -478,7 +477,8 @@ const getDetailedDiscrepancyAnalysis = async (requestId, filters, dbClient = nul
             LEFT JOIN plans_global pg ON am.target_type = 'plan_global' AND am.target_id = pg.id
             LEFT JOIN plan_type_categories ptc ON am.target_type = 'plan_type_category' AND am.target_id = ptc.id
             WHERE yd.transaction_date BETWEEN $1 AND $2
-            AND d.hotel_id = ANY($3::int[])
+            AND d.hotel_id IS NOT NULL  -- Only include records with valid department mapping
+            AND d.hotel_id = ANY($3::int[])  -- Filter by hotel IDs
             AND ac.management_group_id = 1  -- Sales accounts only
             AND yd.credit_amount > 0
             GROUP BY d.hotel_id, h.name, 
@@ -677,13 +677,13 @@ const getMonthlySalesComparison = async (requestId, filters, dbClient = null) =>
                 SELECT d.hotel_id, d.name, d.is_current
                 FROM acc_departments d
                 WHERE d.name = yd.credit_department
-                  AND d.hotel_id = ANY($2::int[])
                 ORDER BY d.is_current DESC, d.id DESC
                 LIMIT 1
             ) d ON true
             JOIN acc_account_codes ac ON yd.credit_account_code = ac.name
             WHERE EXTRACT(YEAR FROM yd.transaction_date) = $1
             AND d.hotel_id IS NOT NULL  -- Only include records with valid department mapping
+            AND d.hotel_id = ANY($2::int[])  -- Filter by hotel IDs after the JOIN
             AND ac.management_group_id = 1  -- Sales accounts only
             AND yd.credit_amount > 0
             GROUP BY to_char(yd.transaction_date, 'YYYY-MM')
