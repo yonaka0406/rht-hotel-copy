@@ -398,15 +398,29 @@ const getManagementGroups = async (requestId, dbClient = null) => {
 /**
  * Transform ledger preview data into format needed for integrity analysis
  * @param {Array} ledgerData - Raw ledger preview results
+ * @param {Array} reservationCounts - Reservation count data by plan and tax rate
  * @returns {Array} - Transformed PMS data for integrity analysis
  */
-const transformLedgerDataToPmsFormat = (ledgerData) => {
+const transformLedgerDataToPmsFormat = (ledgerData, reservationCounts = []) => {
     const pmsDataMap = new Map();
+    
+    // Create a lookup map for reservation counts
+    const countLookup = new Map();
+    reservationCounts.forEach(row => {
+        const key = `${row.hotel_id}-${row.plan_name}-${row.tax_rate}`;
+        countLookup.set(key, {
+            reservation_count: parseInt(row.reservation_count) || 0,
+            missing_rates_count: parseInt(row.missing_rates_count) || 0
+        });
+    });
     
     ledgerData.forEach(row => {
         const key = `${row.hotel_id}-${row.display_category_name}-${row.tax_rate}`;
         
         if (!pmsDataMap.has(key)) {
+            // Look up reservation counts
+            const countData = countLookup.get(key) || { reservation_count: 0, missing_rates_count: 0 };
+            
             pmsDataMap.set(key, {
                 hotel_id: row.hotel_id,
                 hotel_name: row.hotel_name,
@@ -414,9 +428,9 @@ const transformLedgerDataToPmsFormat = (ledgerData) => {
                 plan_type_category_id: null, // Not needed for integrity analysis
                 category_name: null, // Not needed for integrity analysis
                 tax_rate: row.tax_rate,
-                reservation_count: 0, // Will be calculated separately if needed
+                reservation_count: countData.reservation_count,
                 pms_amount: 0,
-                missing_rates_count: 0 // Will be calculated separately if needed
+                missing_rates_count: countData.missing_rates_count
             });
         }
         
@@ -446,8 +460,119 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
         logger.debug(`[${requestId}] Getting PMS data via getLedgerPreview for integrity analysis`);
         const ledgerData = await getLedgerPreview(requestId, filters, client);
         
+        // Get reservation counts separately for the dialog functionality
+        const reservationCountQuery = `
+            WITH rr_base AS (
+                -- Same base logic as getLedgerPreview
+                SELECT 
+                    rd.id as rd_id,
+                    rd.hotel_id,
+                    rd.plans_hotel_id,
+                    rd.plans_global_id,
+                    ph.plan_type_category_id,
+                    ph.plan_package_category_id,
+                    ptc.name as category_name,
+                    COALESCE(ph.name, pg.name, '未設定') as plan_name,
+                    CASE 
+                        WHEN rd.plan_type = 'per_room' THEN rd.price 
+                        ELSE rd.price * rd.number_of_people 
+                    END as total_rd_price,
+                    rr.id as rr_id,
+                    COALESCE(rr.tax_rate, 0.10) as tax_rate,
+                    CASE 
+                        WHEN rr.id IS NOT NULL THEN
+                            CASE 
+                                WHEN rd.plan_type = 'per_room' THEN rr.price 
+                                ELSE rr.price * rd.number_of_people 
+                            END
+                        ELSE 0
+                    END as rr_price,
+                    ROW_NUMBER() OVER (PARTITION BY rd.id ORDER BY COALESCE(rr.tax_rate, 0.10) DESC, rr.id DESC NULLS LAST) as rn,
+                    (rd.cancelled IS NOT NULL) as is_cancelled,
+                    CASE WHEN NOT EXISTS(
+                        SELECT 1 FROM reservation_rates rr2 
+                        WHERE rr2.reservation_details_id = rd.id 
+                        AND rr2.hotel_id = rd.hotel_id
+                    ) THEN 1 ELSE 0 END as missing_rates_count
+                FROM reservation_details rd
+                JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+                LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+                LEFT JOIN plan_type_categories ptc ON ph.plan_type_category_id = ptc.id
+                LEFT JOIN reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+                WHERE rd.date BETWEEN $1 AND $2
+                AND rd.hotel_id = ANY($3::int[])
+                AND rd.billable = TRUE
+                AND r.status NOT IN ('hold', 'block')
+                AND r.type <> 'employee'
+            ),
+            plan_counts AS (
+                -- Count reservations by display name (same grouping as ledger)
+                SELECT 
+                    b.hotel_id,
+                    h.name as hotel_name,
+                    CASE 
+                        WHEN b.is_cancelled THEN 'キャンセル' 
+                        WHEN b.plan_name LIKE '%マンスリー%' THEN COALESCE(b.category_name || ' - ', '') || 'マンスリー'
+                        ELSE COALESCE(b.category_name, b.plan_name)
+                    END as plan_name,
+                    b.tax_rate,
+                    COUNT(DISTINCT b.rd_id) as reservation_count,
+                    SUM(b.missing_rates_count) as missing_rates_count
+                FROM rr_base b
+                JOIN hotels h ON b.hotel_id = h.id
+                WHERE b.rn = 1  -- Only count each reservation_detail once
+                GROUP BY b.hotel_id, h.name, 
+                         CASE 
+                             WHEN b.is_cancelled THEN 'キャンセル' 
+                             WHEN b.plan_name LIKE '%マンスリー%' THEN COALESCE(b.category_name || ' - ', '') || 'マンスリー'
+                             ELSE COALESCE(b.category_name, b.plan_name)
+                         END, 
+                         b.tax_rate
+            ),
+            addon_counts AS (
+                -- Count addon reservations
+                SELECT 
+                    ra.hotel_id,
+                    h.name as hotel_name,
+                    CASE WHEN rd.cancelled IS NOT NULL THEN 'キャンセル' ELSE ra.addon_name END as plan_name,
+                    ra.tax_rate,
+                    COUNT(DISTINCT rd.id) as reservation_count,
+                    0 as missing_rates_count
+                FROM reservation_addons ra
+                JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+                JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                JOIN hotels h ON ra.hotel_id = h.id
+                WHERE rd.date BETWEEN $1 AND $2
+                AND ra.hotel_id = ANY($3::int[])
+                AND rd.billable = TRUE
+                AND r.status NOT IN ('hold', 'block')
+                AND r.type <> 'employee'
+                GROUP BY ra.hotel_id, h.name, 
+                         CASE WHEN rd.cancelled IS NOT NULL THEN 'キャンセル' ELSE ra.addon_name END,
+                         ra.tax_rate
+            )
+            SELECT 
+                hotel_id,
+                hotel_name,
+                plan_name,
+                tax_rate,
+                SUM(reservation_count) as reservation_count,
+                SUM(missing_rates_count) as missing_rates_count
+            FROM (
+                SELECT * FROM plan_counts
+                UNION ALL
+                SELECT * FROM addon_counts
+            ) combined
+            GROUP BY hotel_id, hotel_name, plan_name, tax_rate
+            ORDER BY hotel_id, plan_name
+        `;
+        
+        const values = [startDate, endDate, hotelIds];
+        const reservationCountResult = await client.query(reservationCountQuery, values);
+        
         // Transform ledger data into the format needed for integrity analysis
-        const pmsData = transformLedgerDataToPmsFormat(ledgerData);
+        const pmsData = transformLedgerDataToPmsFormat(ledgerData, reservationCountResult.rows);
         
         logger.debug(`[${requestId}] Transformed ${ledgerData.length} ledger rows into ${pmsData.length} PMS data rows`);
 
@@ -511,8 +636,6 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
             ORDER BY d.hotel_id, ac.name, yd.credit_sub_account
         `;
 
-        const values = [startDate, endDate, hotelIds];
-
         const [yayoiMainResult, yayoiSubResult] = await Promise.all([
             client.query(yayoiMainQuery, values),
             client.query(yayoiSubQuery, values)
@@ -522,6 +645,7 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
             pmsRows: pmsData.length,
             yayoiMainRows: yayoiMainResult.rows.length,
             yayoiSubRows: yayoiSubResult.rows.length,
+            reservationCountRows: reservationCountResult.rows.length,
             period: `${startDate} to ${endDate}`,
             hotelIds
         });
