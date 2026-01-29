@@ -43,8 +43,10 @@ const checkReservationOverlap = async (requestId, reservationId, hotelId) => {
     }
 };
 
-const checkReservationDetailOverlap = async (requestId, detailId, hotelId) => {
+const checkReservationDetailOverlap = async (requestId, detailId, hotelId, dbClient = null) => {
     const pool = getPool(requestId);
+    const client = dbClient || await pool.connect();
+
     const query = `
     WITH target_reservation AS (
         SELECT 
@@ -73,15 +75,20 @@ const checkReservationDetailOverlap = async (requestId, detailId, hotelId) => {
     WHERE 
         rd.cancelled IS NULL
         AND rd.reservation_id != t.reservation_id
+    FOR UPDATE OF rd
     LIMIT 1;
   `;
 
     try {
-        const result = await pool.query(query, [detailId, hotelId]);
+        const result = await client.query(query, [detailId, hotelId]);
         return result.rows[0];
     } catch (error) {
         logger.error('Error in checkReservationDetailOverlap:', error);
         throw error;
+    } finally {
+        if (!dbClient) {
+            client.release();
+        }
     }
 };
 
