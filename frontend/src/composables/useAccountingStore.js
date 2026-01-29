@@ -64,6 +64,34 @@ export function useAccountingStore() {
         setTimeout(() => window.URL.revokeObjectURL(url), 100);
     };
 
+    const comparePmsVsYayoi = async (filters) => {
+        return await post('/accounting/export/compare-pms-yayoi', filters);
+    };
+
+    const getMonthlySalesComparison = async (year, hotelIds = null) => {
+        const params = new URLSearchParams({ year });
+        if (hotelIds && hotelIds.length > 0) {
+            params.append('hotelIds', hotelIds.join(','));
+        }
+        return await get(`/accounting/export/monthly-comparison?${params}`);
+    };
+
+    const getRawDataForIntegrityAnalysis = async (filters) => {
+        return await post('/accounting/export/raw-data-integrity-analysis', filters);
+    };
+
+    const getPlanReservationDetails = async (filters) => {
+        return await post('/accounting/export/plan-reservation-details', filters);
+    };
+
+    const getAvailableYayoiYears = async () => {
+        return await get('/accounting/export/available-yayoi-years');
+    };
+
+    const getAvailableYayoiMonths = async () => {
+        return await get('/accounting/export/available-yayoi-months');
+    };
+
     const getAccountingSettings = async (hotelId = null) => {
         const params = hotelId ? { hotel_id: hotelId } : {};
         return await get('/accounting/settings', params);
@@ -204,6 +232,12 @@ export function useAccountingStore() {
         fetchDashboardMetrics,
         fetchReconciliationOverview,
         fetchReconciliationHotelDetails,
-        fetchReconciliationClientDetails
+        fetchReconciliationClientDetails,
+        comparePmsVsYayoi,
+        getMonthlySalesComparison,
+        getRawDataForIntegrityAnalysis,
+        getPlanReservationDetails,
+        getAvailableYayoiYears,
+        getAvailableYayoiMonths
     };
 }

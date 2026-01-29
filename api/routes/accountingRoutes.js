@@ -33,6 +33,12 @@ router.get('/accounting/dashboard/reconciliation/hotel/:hotelId/client/:clientId
 router.get('/accounting/export/options', authMiddleware_accounting, accountingController.getExportOptions);
 router.post('/accounting/export/preview', authMiddleware_accounting, accountingController.getLedgerPreview);
 router.post('/accounting/export/download', authMiddleware_accounting, accountingController.exportLedger);
+router.post('/accounting/export/compare-pms-yayoi', authMiddleware_accounting, accountingController.comparePmsVsYayoi);
+router.get('/accounting/export/monthly-comparison', authMiddleware_accounting, accountingController.getMonthlySalesComparison);
+router.get('/accounting/export/available-yayoi-years', authMiddleware_accounting, accountingController.getAvailableYayoiYears);
+router.get('/accounting/export/available-yayoi-months', authMiddleware_accounting, accountingController.getAvailableYayoiMonths);
+router.post('/accounting/export/raw-data-integrity-analysis', authMiddleware_accounting, accountingController.getRawDataForIntegrityAnalysis);
+router.post('/accounting/export/plan-reservation-details', authMiddleware_accounting, accountingController.getPlanReservationDetails);
 
 // Profit & Loss
 router.post('/accounting/profit-loss', authMiddleware_accounting, accountingController.getProfitLoss);
