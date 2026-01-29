@@ -930,12 +930,7 @@ const updateReservationStatus = async (status, type = null) => {
                     toast.add({ severity: 'success', summary: '成功', detail: '予約ステータスが更新されました。', life: 3000 });
                 } catch (error) {
                     console.error('Error updating reservation status:', error);
-                    // キャンセル復活の場合はボタン右側に表示、それ以外はtoast
-                    if (reservationStatus.value === 'キャンセル' && status === 'confirmed') {
-                        cancelRecoveryError.value = error.message || '予約ステータスの更新に失敗しました。';
-                    } else {
-                        toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
-                    }
+                    toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '予約ステータスの更新に失敗しました。', life: 3000 });
                 }
 
             },
@@ -1049,12 +1044,7 @@ const updateReservationStatus = async (status, type = null) => {
                 await setReservationStatus(status);
             } catch (error) {
                 console.error('Error updating and fetching reservation:', error);
-                // キャンセル復活の場合はボタン右側に表示、それ以外はtoast
-                if (reservationStatus.value === 'キャンセル' && status === 'confirmed') {
-                    cancelRecoveryError.value = error.message || '予約ステータスの更新に失敗しました。';
-                } else {
-                    toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
-                }
+                toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '予約ステータスの更新に失敗しました。', life: 3000 });
             }
         } else {
             try {
@@ -1062,7 +1052,7 @@ const updateReservationStatus = async (status, type = null) => {
                 await setReservationStatus(type);
             } catch (error) {
                 console.error('Error updating and fetching reservation:', error);
-                toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
+                toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '予約ステータスの更新に失敗しました。', life: 3000 });
             }
         }
     }
