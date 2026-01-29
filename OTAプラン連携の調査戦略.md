@@ -39,7 +39,329 @@ const { plans_global_id: plan_gid, plans_hotel_id: plan_hid } = await selectPlan
 
 - **`selectPlanId` 関数の特定とレビュー:** この関数がどこで定義されているかを特定し、`planGroupCode` からプランIDを検索するロジックを詳細にレビューします。
 - **`addOTAReservation`/`editOTAReservation` のレビュー:** プランIDが取得できなかった（`NULL` の）場合の現在の動作を確認します。エラーとして処理されるのか、あるいは不完全なデータのまま進むのかを特定します。
-- **OTAプラン連携機能のレビュー:** `sc_tl_plans` テーブルを更新している箇所（OTAからのプラン情報を同期する機能）を特定します。なぜIDが `NULL` のままレコードが保存されるのか、マッチングロジックに問題がないかを確認します。
+- **OTAプラン連携機能のレビュー（フロントエンド `otaPlanMaster.vue`）:**
+    `frontend/src/pages/Admin/OTA/otaPlanMaster.vue` の `savePlanMaster` 関数について調査します。この関数では、プラン選択UIで `plan_key` に基づいて正しいプランが表示されているにもかかわらず、バックエンドに送信される `plans_global_id` および `plans_hotel_id` が正しくない、または `NULL` になっている可能性があります。これにより、`sc_tl_plans` テーブルの `plans_global_id` および `plans_hotel_id` が正しく更新されない原因となっている可能性が考えられます。
+
+### 送信されるペイロードの例: `http://localhost:5173/api/sc/tl/master/plan`
+
+```json
+[
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "11",
+        "plangroupname": "3食付き",
+        "plan_key": "h169"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "12",
+        "plangroupname": "朝食無料",
+        "plan_key": "h177"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "13",
+        "plangroupname": "3食付き（2名利用）",
+        "plan_key": null
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 3,
+        "plans_hotel_id": null,
+        "plangroupcode": "14",
+        "plangroupname": "●2食付き",
+        "plan_key": "3h2"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "15",
+        "plangroupname": "●3食付き",
+        "plan_key": "h169"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 1,
+        "plans_hotel_id": null,
+        "plangroupcode": "16",
+        "plangroupname": "●素泊まり",
+        "plan_key": "1h1"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 1,
+        "plans_hotel_id": null,
+        "plangroupcode": "17",
+        "plangroupname": "●素泊まり",
+        "plan_key": "1h1"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 3,
+        "plans_hotel_id": null,
+        "plangroupcode": "18",
+        "plangroupname": "●2食付き",
+        "plan_key": "3h2"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "19",
+        "plangroupname": "●3食付き",
+        "plan_key": "h169"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 1,
+        "plans_hotel_id": null,
+        "plangroupcode": "1",
+        "plangroupname": "素泊まり",
+        "plan_key": "1h1"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 3,
+        "plans_hotel_id": null,
+        "plangroupcode": "2",
+        "plangroupname": "2食付き",
+        "plan_key": "3h2"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 1,
+        "plans_hotel_id": null,
+        "plangroupcode": "3",
+        "plangroupname": "素泊まり",
+        "plan_key": "1h1"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 3,
+        "plans_hotel_id": null,
+        "plangroupcode": "4",
+        "plangroupname": "2食付き",
+        "plan_key": "3h2"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "5",
+        "plangroupname": "素泊り（2名利用）",
+        "plan_key": "h9"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "6",
+        "plangroupname": "2食付き（2名利用）",
+        "plan_key": "h10"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 1,
+        "plans_hotel_id": null,
+        "plangroupcode": "7",
+        "plangroupname": "キャンペーン",
+        "plan_key": "1h1"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": 1,
+        "plans_hotel_id": null,
+        "plangroupcode": "8",
+        "plangroupname": "キャンペーン",
+        "plan_key": "1h1"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "9",
+        "plangroupname": "朝食無料",
+        "plan_key": "h177"
+    },
+    {
+        "hotel_id": 10,
+        "plans_global_id": null,
+        "plans_hotel_id": null,
+        "plangroupcode": "10",
+        "plangroupname": "3食付き",
+        "plan_key": "h169"
+        }
+    ]
+    
+    ### レスポンスの例:
+    
+    ```json
+    [
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "11",
+            "plangroupname": "3食付き",
+            "plan_key": "h169"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "12",
+            "plangroupname": "朝食無料",
+            "plan_key": "h177"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "13",
+            "plangroupname": "3食付き（2名利用）",
+            "plan_key": null
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 3,
+            "plans_hotel_id": null,
+            "plangroupcode": "14",
+            "plangroupname": "●2食付き",
+            "plan_key": "3h2"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "15",
+            "plangroupname": "●3食付き",
+            "plan_key": "h169"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 1,
+            "plans_hotel_id": null,
+            "plangroupcode": "16",
+            "plangroupname": "●素泊まり",
+            "plan_key": "1h1"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 1,
+            "plans_hotel_id": null,
+            "plangroupcode": "17",
+            "plangroupname": "●素泊まり",
+            "plan_key": "1h1"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 3,
+            "plans_hotel_id": null,
+            "plangroupcode": "18",
+            "plangroupname": "●2食付き",
+            "plan_key": "3h2"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "19",
+            "plangroupname": "●3食付き",
+            "plan_key": "h169"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 1,
+            "plans_hotel_id": null,
+            "plangroupcode": "1",
+            "plangroupname": "素泊まり",
+            "plan_key": "1h1"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 3,
+            "plans_hotel_id": null,
+            "plangroupcode": "2",
+            "plangroupname": "2食付き",
+            "plan_key": "3h2"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 1,
+            "plans_hotel_id": null,
+            "plangroupcode": "3",
+            "plangroupname": "素泊まり",
+            "plan_key": "1h1"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 3,
+            "plans_hotel_id": null,
+            "plangroupcode": "4",
+            "plangroupname": "2食付き",
+            "plan_key": "3h2"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "5",
+            "plangroupname": "素泊り（2名利用）",
+            "plan_key": "h9"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "6",
+            "plangroupname": "2食付き（2名利用）",
+            "plan_key": "h10"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 1,
+            "plans_hotel_id": null,
+            "plangroupcode": "7",
+            "plangroupname": "キャンペーン",
+            "plan_key": "1h1"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": 1,
+            "plans_hotel_id": null,
+            "plangroupcode": "8",
+            "plangroupname": "キャンペーン",
+            "plan_key": "1h1"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "9",
+            "plangroupname": "朝食無料",
+            "plan_key": "h177"
+        },
+        {
+            "hotel_id": 10,
+            "plans_global_id": null,
+            "plans_hotel_id": null,
+            "plangroupcode": "10",
+            "plangroupname": "3食付き",
+            "plan_key": "h169"
+        }
+    ]
+    ```
+    
+    **注:** 上記のペイロードの例では、`"plan_key": "h169"` が送信されているにもかかわらず、`"plans_hotel_id": null` となっています。これは、正しくは `"plans_hotel_id": 169` となるべきです。この不一致が問題の核心であると考えられます。
+    
+    - **OTAプラン連携機能のレビュー（バックエンド）:** `sc_tl_plans` テーブルを更新している箇所（OTAからのプラン情報を同期する機能）を特定します。なぜIDが `NULL` のままレコードが保存されるのか、マッチングロジックに問題がないかを確認します。
 
 ### ステップ3: 仮説の検証
 
