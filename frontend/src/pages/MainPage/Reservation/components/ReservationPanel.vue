@@ -202,7 +202,7 @@
             <Message v-if="cancelRecoveryError" severity="error" :closable="true" @close="cancelRecoveryError = ''" class="mt-2">
                 <div class="flex items-center">
                     <i class="pi pi-exclamation-triangle mr-2"></i>
-                    <span>{{ cancelRecoveryError }}</span>
+                    <span style="white-space: pre-line;">{{ cancelRecoveryError }}</span>
                 </div>
             </Message>
         </div>

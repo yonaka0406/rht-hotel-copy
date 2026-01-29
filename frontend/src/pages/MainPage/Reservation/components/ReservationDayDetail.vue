@@ -272,7 +272,7 @@
                                 <Message v-if="dayRecoveryError" severity="error" :closable="true" @close="dayRecoveryError = ''" class="mt-2">
                                     <div class="flex items-center">
                                         <i class="pi pi-exclamation-triangle mr-2"></i>
-                                        <span>{{ dayRecoveryError }}</span>
+                                        <span style="white-space: pre-line;">{{ dayRecoveryError }}</span>
                                     </div>
                                 </Message>
                             </TabPanel>

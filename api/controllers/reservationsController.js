@@ -1187,14 +1187,14 @@ const editReservationStatus = async (req, res) => {
             return acc;
           }, {});
           
-          // メッセージを構築
+          // メッセージを構築（部屋ごとに改行）
           const conflictInfo = Object.entries(conflictsByRoom).map(([roomNumber, dates]) => {
             // 日付を昇順でソートしてフォーマット
             const sortedDates = dates.sort((a, b) => a - b).map(date => date.toLocaleDateString('ja-JP'));
             return `${roomNumber}号室の${sortedDates.join('、')}`;
-          }).join(', ');
+          }).join('\n');
           
-          const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します: ${conflictInfo}`;
+          const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します:\n${conflictInfo}`;
           return res.status(409).json({ error: 'Booking conflict', message });
         }
       }
@@ -1249,14 +1249,14 @@ const editReservationDetailStatus = async (req, res) => {
             return acc;
           }, {});
           
-          // メッセージを構築
+          // メッセージを構築（部屋ごとに改行）
           const conflictInfo = Object.entries(conflictsByRoom).map(([roomNumber, dates]) => {
             // 日付を昇順でソートしてフォーマット
             const sortedDates = dates.sort((a, b) => a - b).map(date => date.toLocaleDateString('ja-JP'));
             return `${roomNumber}号室の${sortedDates.join('、')}`;
-          }).join(', ');
+          }).join('\n');
           
-          const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します: ${conflictInfo}`;
+          const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します:\n${conflictInfo}`;
           return res.status(409).json({ error: 'Booking conflict', message });
         }
       }
