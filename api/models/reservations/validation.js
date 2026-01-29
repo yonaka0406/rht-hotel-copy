@@ -92,12 +92,16 @@ const checkReservationDetailOverlap = async (requestId, detailId, hotelId, dbCli
     }
 };
 
-const checkBookingConflict = async (requestId, { reservationId, detailId }, dbClient = null) => {
+const checkBookingConflict = async (requestId, { reservationId, detailId }, hotelId, dbClient = null) => {
   const pool = getPool(requestId);
   const executor = dbClient || pool;
 
   if (!reservationId && !detailId) {
     throw new Error('Either reservationId or detailId must be provided.');
+  }
+
+  if (!hotelId) {
+    throw new Error('hotelId must be provided.');
   }
 
   let subquery;
@@ -107,16 +111,16 @@ const checkBookingConflict = async (requestId, { reservationId, detailId }, dbCl
     subquery = `
       SELECT hotel_id, date, room_id, reservation_id
       FROM reservation_details
-      WHERE reservation_id = $1::uuid
+      WHERE reservation_id = $1::uuid AND hotel_id = $2
     `;
-    params = [reservationId];
+    params = [reservationId, hotelId];
   } else {
     subquery = `
       SELECT hotel_id, date, room_id, reservation_id
       FROM reservation_details
-      WHERE id = $1::uuid
+      WHERE id = $1::uuid AND hotel_id = $2
     `;
-    params = [detailId];
+    params = [detailId, hotelId];
   }
 
   const query = `
@@ -154,6 +158,7 @@ const checkBookingConflict = async (requestId, { reservationId, detailId }, dbCl
       stack: err.stack,
       reservationId,
       detailId,
+      hotelId,
     });
     throw new Error('Database error during conflict check.');
   }
