@@ -2123,16 +2123,83 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     //logger.debug('selectPlanId code:', code);
     const match = planMaster.find(item => item.plangroupcode == code);
     if (match) {
-      return {
+      // Check if we have valid IDs from the match
+      if (match.plans_global_id || match.plans_hotel_id) {
+        return {
+          plans_global_id: match.plans_global_id,
+          plans_hotel_id: match.plans_hotel_id,
+        };
+      }
+      
+      // Fallback: If IDs are NULL but plan_key exists, extract IDs from plan_key
+      if (match.plan_key) {
+        logger.info(`[selectPlanId] Fallback: Extracting IDs from plan_key "${match.plan_key}" for planGroupCode "${code}"`);
+        
+        const extractedIds = extractIdsFromPlanKey(match.plan_key);
+        
+        if (extractedIds.plans_global_id || extractedIds.plans_hotel_id) {
+          logger.info(`[selectPlanId] Successfully extracted IDs from plan_key:`, {
+            planGroupCode: code,
+            plan_key: match.plan_key,
+            extracted: extractedIds
+          });
+          
+          return {
+            plans_global_id: extractedIds.plans_global_id,
+            plans_hotel_id: extractedIds.plans_hotel_id,
+          };
+        } else {
+          logger.warn(`[selectPlanId] Failed to extract valid IDs from plan_key "${match.plan_key}" for planGroupCode "${code}"`);
+        }
+      }
+      
+      // If we still don't have IDs, log the issue
+      logger.warn(`[selectPlanId] No valid plan IDs found for planGroupCode "${code}":`, {
         plans_global_id: match.plans_global_id,
         plans_hotel_id: match.plans_hotel_id,
-      };
+        plan_key: match.plan_key
+      });
     } else {
-      return {
-        plans_global_id: null,
-        plans_hotel_id: null,
-      };
+      logger.warn(`[selectPlanId] No plan master entry found for planGroupCode "${code}"`);
     }
+    
+    return {
+      plans_global_id: null,
+      plans_hotel_id: null,
+    };
+  };
+
+  // Helper function to extract IDs from plan_key format
+  const extractIdsFromPlanKey = (planKey) => {
+    if (!planKey) return { plans_global_id: null, plans_hotel_id: null };
+    
+    // plan_key formats: "1h1" (global_id=1, hotel_id=1) or "h169" (hotel_id=169 only)
+    const parts = planKey.split('h');
+    
+    let plans_global_id = null;
+    let plans_hotel_id = null;
+    
+    if (parts.length === 2) {
+      // "1h1" format
+      const globalPart = parts[0];
+      const hotelPart = parts[1];
+      
+      if (globalPart && !isNaN(parseInt(globalPart))) {
+        plans_global_id = parseInt(globalPart);
+      }
+      
+      if (hotelPart && !isNaN(parseInt(hotelPart))) {
+        plans_hotel_id = parseInt(hotelPart);
+      }
+    } else if (parts.length === 1 && planKey.startsWith('h')) {
+      // "h169" format (hotel plan only)
+      const hotelPart = planKey.substring(1);
+      if (hotelPart && !isNaN(parseInt(hotelPart))) {
+        plans_hotel_id = parseInt(hotelPart);
+      }
+    }
+    
+    return { plans_global_id, plans_hotel_id };
   };
 
   const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate, internalClient);
@@ -3027,16 +3094,83 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
   const selectPlanId = async (code) => {
     const match = planMaster.find(item => item.plangroupcode == code);
     if (match) {
-      return {
+      // Check if we have valid IDs from the match
+      if (match.plans_global_id || match.plans_hotel_id) {
+        return {
+          plans_global_id: match.plans_global_id,
+          plans_hotel_id: match.plans_hotel_id,
+        };
+      }
+      
+      // Fallback: If IDs are NULL but plan_key exists, extract IDs from plan_key
+      if (match.plan_key) {
+        logger.info(`[selectPlanId] Fallback: Extracting IDs from plan_key "${match.plan_key}" for planGroupCode "${code}"`);
+        
+        const extractedIds = extractIdsFromPlanKey(match.plan_key);
+        
+        if (extractedIds.plans_global_id || extractedIds.plans_hotel_id) {
+          logger.info(`[selectPlanId] Successfully extracted IDs from plan_key:`, {
+            planGroupCode: code,
+            plan_key: match.plan_key,
+            extracted: extractedIds
+          });
+          
+          return {
+            plans_global_id: extractedIds.plans_global_id,
+            plans_hotel_id: extractedIds.plans_hotel_id,
+          };
+        } else {
+          logger.warn(`[selectPlanId] Failed to extract valid IDs from plan_key "${match.plan_key}" for planGroupCode "${code}"`);
+        }
+      }
+      
+      // If we still don't have IDs, log the issue
+      logger.warn(`[selectPlanId] No valid plan IDs found for planGroupCode "${code}":`, {
         plans_global_id: match.plans_global_id,
         plans_hotel_id: match.plans_hotel_id,
-      };
+        plan_key: match.plan_key
+      });
     } else {
-      return {
-        plans_global_id: null,
-        plans_hotel_id: null,
-      };
+      logger.warn(`[selectPlanId] No plan master entry found for planGroupCode "${code}"`);
     }
+    
+    return {
+      plans_global_id: null,
+      plans_hotel_id: null,
+    };
+  };
+
+  // Helper function to extract IDs from plan_key format
+  const extractIdsFromPlanKey = (planKey) => {
+    if (!planKey) return { plans_global_id: null, plans_hotel_id: null };
+    
+    // plan_key formats: "1h1" (global_id=1, hotel_id=1) or "h169" (hotel_id=169 only)
+    const parts = planKey.split('h');
+    
+    let plans_global_id = null;
+    let plans_hotel_id = null;
+    
+    if (parts.length === 2) {
+      // "1h1" format
+      const globalPart = parts[0];
+      const hotelPart = parts[1];
+      
+      if (globalPart && !isNaN(parseInt(globalPart))) {
+        plans_global_id = parseInt(globalPart);
+      }
+      
+      if (hotelPart && !isNaN(parseInt(hotelPart))) {
+        plans_hotel_id = parseInt(hotelPart);
+      }
+    } else if (parts.length === 1 && planKey.startsWith('h')) {
+      // "h169" format (hotel plan only)
+      const hotelPart = planKey.substring(1);
+      if (hotelPart && !isNaN(parseInt(hotelPart))) {
+        plans_hotel_id = parseInt(hotelPart);
+      }
+    }
+    
+    return { plans_global_id, plans_hotel_id };
   };
 
   try {
