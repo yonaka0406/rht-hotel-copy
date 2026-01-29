@@ -3,6 +3,26 @@ import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/composables/useUserStore';
 import { useAccountingStore } from '@/composables/useAccountingStore';
+import VChart from 'vue-echarts';
+import { use } from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { LineChart, BarChart } from 'echarts/charts';
+import {
+    TitleComponent,
+    TooltipComponent,
+    LegendComponent,
+    GridComponent
+} from 'echarts/components';
+
+use([
+    CanvasRenderer,
+    LineChart,
+    BarChart,
+    TitleComponent,
+    TooltipComponent,
+    LegendComponent,
+    GridComponent
+]);
 
 const router = useRouter();
 const { logged_user, fetchUser } = useUserStore();
@@ -14,6 +34,10 @@ const metrics = ref({
     lastImport: null
 });
 
+const comparisonData = ref(null);
+const monthlyChartData = ref(null);
+const availableYears = ref([]);
+const selectedYear = ref(new Date().getFullYear());
 const isLoading = ref(true);
 const hasError = ref(false);
 
@@ -84,6 +108,155 @@ const paymentsSalesDiff = computed(() => {
     return payments - sales;
 });
 
+// Chart configuration
+const chartOption = computed(() => {
+    if (!monthlyChartData.value || !monthlyChartData.value.monthlyData) {
+        return null;
+    }
+
+    const data = monthlyChartData.value.monthlyData;
+    console.log('📊 Raw chart data:', data);
+    
+    const months = data.map(d => d.month_label);
+    const pmsData = data.map(d => {
+        const amount = parseFloat(d.pms_amount) || 0;
+        const result = Math.round(amount / 1000);
+        console.log(`PMS: ${d.pms_amount} (${typeof d.pms_amount}) -> ${amount} -> ${result}`);
+        return result;
+    });
+    const yayoiData = data.map(d => {
+        const amount = parseFloat(d.yayoi_amount) || 0;
+        const result = Math.round(amount / 1000);
+        console.log(`Yayoi: ${d.yayoi_amount} (${typeof d.yayoi_amount}) -> ${amount} -> ${result}`);
+        return result;
+    });
+
+    console.log('📊 Processed chart data:', { months, pmsData, yayoiData });
+
+    return {
+        title: {
+            text: `${selectedYear.value}年 売上比較`,
+            textStyle: {
+                fontSize: 14,
+                fontWeight: 'bold'
+            },
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis',
+            formatter: (params) => {
+                let result = `${params[0].axisValue}<br/>`;
+                params.forEach(param => {
+                    console.log('Tooltip param:', param);
+                    const rawValue = param.value;
+                    console.log('Raw value:', rawValue, 'Type:', typeof rawValue);
+                    
+                    let value = 0;
+                    if (rawValue !== null && rawValue !== undefined) {
+                        const numValue = parseFloat(rawValue);
+                        if (!isNaN(numValue)) {
+                            value = numValue * 1000;
+                        }
+                    }
+                    
+                    console.log('Calculated value:', value);
+                    const formattedValue = new Intl.NumberFormat('ja-JP').format(value);
+                    console.log('Formatted value:', formattedValue);
+                    
+                    result += `${param.seriesName}: ¥${formattedValue}<br/>`;
+                });
+                return result;
+            }
+        },
+        legend: {
+            data: ['PMS売上', '弥生データ'],
+            bottom: 0,
+            textStyle: {
+                fontSize: 11
+            }
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            data: months,
+            axisLabel: {
+                fontSize: 10
+            }
+        },
+        yAxis: {
+            type: 'value',
+            name: '売上 (千円)',
+            nameTextStyle: {
+                fontSize: 10
+            },
+            axisLabel: {
+                fontSize: 10,
+                formatter: '{value}K'
+            }
+        },
+        series: [
+            {
+                name: 'PMS売上',
+                type: 'bar',
+                data: pmsData,
+                itemStyle: {
+                    color: '#8b5cf6'
+                }
+            },
+            {
+                name: '弥生データ',
+                type: 'line',
+                data: yayoiData,
+                itemStyle: {
+                    color: '#f59e0b'
+                },
+                lineStyle: {
+                    width: 2
+                },
+                symbol: 'circle',
+                symbolSize: 4
+            }
+        ]
+    };
+});
+
+// Year navigation
+const canGoPreviousYear = computed(() => {
+    if (availableYears.value.length === 0) return false;
+    const minYear = Math.min(...availableYears.value.map(y => y.year));
+    return selectedYear.value > minYear;
+});
+
+const canGoNextYear = computed(() => {
+    if (availableYears.value.length === 0) return false;
+    const maxYear = Math.max(...availableYears.value.map(y => y.year));
+    return selectedYear.value < maxYear;
+});
+
+const changeYear = async (direction) => {
+    const newYear = selectedYear.value + direction;
+    
+    // Check if the year has data
+    const hasYearData = availableYears.value.some(y => y.year === newYear);
+    if (!hasYearData) return;
+    
+    selectedYear.value = newYear;
+    
+    // Fetch new chart data for the selected year
+    try {
+        const monthlyData = await accountingStore.getMonthlySalesComparison(selectedYear.value, null);
+        monthlyChartData.value = monthlyData;
+    } catch (error) {
+        console.error('Failed to fetch chart data for year:', selectedYear.value, error);
+    }
+};
+
 onMounted(async () => {
     try {
         isLoading.value = true;
@@ -103,12 +276,47 @@ onMounted(async () => {
             return `${y}-${m}-${day}`;
         };
 
-        const data = await accountingStore.fetchDashboardMetrics({
-            startDate: formatDate(start),
-            endDate: formatDate(end)
+        const selectedMonth = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+
+        // Fetch available years first to determine the correct year for the chart
+        const yearsData = await accountingStore.getAvailableYayoiYears().catch(err => {
+            console.warn('Failed to fetch available Yayoi years:', err);
+            return { years: [], latestYear: new Date().getFullYear(), hasData: false };
         });
 
-        metrics.value = data;
+        availableYears.value = yearsData.years || [];
+        
+        // Set the selected year to the latest year with data, or current year if no data
+        if (yearsData.latestYear && yearsData.hasData) {
+            selectedYear.value = yearsData.latestYear;
+        } else {
+            selectedYear.value = new Date().getFullYear();
+        }
+
+        // Fetch dashboard metrics, comparison data, and monthly chart data in parallel
+        const [metricsData, comparisonResult, monthlyData] = await Promise.all([
+            accountingStore.fetchDashboardMetrics({
+                startDate: formatDate(start),
+                endDate: formatDate(end)
+            }),
+            // Only compare if we have hotels available
+            accountingStore.comparePmsVsYayoi({
+                selectedMonth,
+                hotelIds: null // Let backend determine hotels with department mappings
+            }).catch(err => {
+                console.warn('Failed to fetch comparison data:', err);
+                return null;
+            }),
+            // Fetch monthly chart data for the latest Yayoi year
+            accountingStore.getMonthlySalesComparison(selectedYear.value, null).catch(err => {
+                console.warn('Failed to fetch monthly chart data:', err);
+                return null;
+            })
+        ]);
+
+        metrics.value = metricsData;
+        comparisonData.value = comparisonResult;
+        monthlyChartData.value = monthlyData;
     } catch (e) {
         console.error('Failed to load dashboard metrics', e);
         hasError.value = true;
@@ -359,18 +567,43 @@ onMounted(async () => {
                             </div>
                         </div>
 
-                        <!-- Discrepancies (近日公開 Style) -->
-                        <div
-                            class="group bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed relative overflow-hidden">
-                            <div class="flex items-center justify-between mb-4 opacity-50">
-                                <div class="p-2 bg-rose-100 dark:bg-rose-900/20 rounded-lg">
-                                    <i class="pi pi-exclamation-triangle text-rose-500 text-lg"></i>
+                        <!-- Monthly Sales Comparison Chart -->
+                        <div v-if="monthlyChartData && chartOption"
+                            class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
+                                        <i class="pi pi-chart-line text-violet-600 dark:text-violet-400 text-lg"></i>
+                                    </div>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button @click="changeYear(-1)" 
+                                            :disabled="!canGoPreviousYear"
+                                            class="p-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <i class="pi pi-chevron-left text-violet-600 dark:text-violet-400 text-sm"></i>
+                                        </button>
+                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300 min-w-[4rem] text-center">
+                                            {{ selectedYear }}年
+                                        </span>
+                                        <button @click="changeYear(1)" 
+                                            :disabled="!canGoNextYear"
+                                            class="p-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <i class="pi pi-chevron-right text-violet-600 dark:text-violet-400 text-sm"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <span
-                                    class="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-500 text-xs font-bold rounded-full">近日公開</span>
                             </div>
-                            <h3 class="text-lg font-bold text-slate-400 mb-2">要確認事項</h3>
-                            <p class="text-sm text-slate-400 mb-4">不突合・要確認の取引を自動検出</p>
+                            <div class="h-64">
+                                <VChart :option="chartOption" class="w-full h-full" />
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                                <p class="text-xs text-slate-500 dark:text-slate-400 text-center mb-2">
+                                    PMS売上計算と弥生会計データの月次比較
+                                </p>
+                                <button @click="$router.push({ name: 'AccountingDataIntegrityAnalysis' })"
+                                    class="w-full sm:w-auto text-xs font-semibold text-slate-500 hover:text-violet-600 flex items-center justify-center sm:justify-start gap-1 transition-colors cursor-pointer bg-transparent border-none p-0">
+                                    差異分析・詳細を表示 <i class="pi pi-arrow-right text-[10px]"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
