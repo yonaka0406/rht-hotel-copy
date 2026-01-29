@@ -884,9 +884,10 @@ const editReservationDetail = async (req, res) => {
   }
 
   const pool = getPool(req.requestId);
-  const client = await pool.connect();
+  let client;
 
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     // Fetch the existing reservation detail from the database to compare with the new data
@@ -974,11 +975,15 @@ const editReservationDetail = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (client) {
+      await client.query('ROLLBACK');
+    }
     logger.error(`[${req.requestId}] Error updating reservation detail: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Failed to update reservation detail' });
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 };
 
@@ -1172,23 +1177,21 @@ const editReservationStatus = async (req, res) => {
         if (conflicts.length > 0) {
           await client.query('ROLLBACK');
           
-          // 部屋番号でグループ化
+          // 部屋番号でグループ化し、日付を昇順でソート
           const conflictsByRoom = conflicts.reduce((acc, c) => {
             const roomNumber = c.room_number;
             if (!acc[roomNumber]) {
               acc[roomNumber] = [];
             }
-            acc[roomNumber].push(new Date(c.date).toLocaleDateString('ja-JP'));
+            acc[roomNumber].push(new Date(c.date));
             return acc;
           }, {});
           
           // メッセージを構築
           const conflictInfo = Object.entries(conflictsByRoom).map(([roomNumber, dates]) => {
-            if (dates.length === 1) {
-              return `${dates[0]}の${roomNumber}号室`;
-            } else {
-              return `${dates.join('、')}の${roomNumber}号室`;
-            }
+            // 日付を昇順でソートしてフォーマット
+            const sortedDates = dates.sort((a, b) => a - b).map(date => date.toLocaleDateString('ja-JP'));
+            return `${roomNumber}号室の${sortedDates.join('、')}`;
           }).join(', ');
           
           const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します: ${conflictInfo}`;
@@ -1222,9 +1225,10 @@ const editReservationDetailStatus = async (req, res) => {
   const updated_by = req.user.id;
 
   const pool = getPool(req.requestId);
-  const client = await pool.connect();
+  let client;
 
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     // Check for booking conflicts if un-cancelling
@@ -1235,23 +1239,21 @@ const editReservationDetailStatus = async (req, res) => {
         if (conflicts.length > 0) {
           await client.query('ROLLBACK');
           
-          // 部屋番号でグループ化
+          // 部屋番号でグループ化し、日付を昇順でソート
           const conflictsByRoom = conflicts.reduce((acc, c) => {
             const roomNumber = c.room_number;
             if (!acc[roomNumber]) {
               acc[roomNumber] = [];
             }
-            acc[roomNumber].push(new Date(c.date).toLocaleDateString('ja-JP'));
+            acc[roomNumber].push(new Date(c.date));
             return acc;
           }, {});
           
           // メッセージを構築
           const conflictInfo = Object.entries(conflictsByRoom).map(([roomNumber, dates]) => {
-            if (dates.length === 1) {
-              return `${dates[0]}の${roomNumber}号室`;
-            } else {
-              return `${dates.join('、')}の${roomNumber}号室`;
-            }
+            // 日付を昇順でソートしてフォーマット
+            const sortedDates = dates.sort((a, b) => a - b).map(date => date.toLocaleDateString('ja-JP'));
+            return `${roomNumber}号室の${sortedDates.join('、')}`;
           }).join(', ');
           
           const message = `予約の復活に失敗しました。以下の日程・部屋には既に別の予約が存在します: ${conflictInfo}`;
@@ -1273,11 +1275,15 @@ const editReservationDetailStatus = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (client) {
+      await client.query('ROLLBACK');
+    }
     logger.error('Error updating reservation status:', err);
     res.status(500).json({ error: 'Failed to update reservation status' });
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 };
 
