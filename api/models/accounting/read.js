@@ -1189,6 +1189,7 @@ const getDepartments = async (requestId, dbClient = null) => {
 /**
  * Get detailed reservation data for a specific plan in the integrity analysis
  * Uses the same rate adjustment logic as getLedgerPreview for consistency
+ * Includes both reservation details and addon details
  * @param {string} requestId 
  * @param {object} filters { hotelId, planName, selectedMonth, taxRate }
  * @param {object} dbClient Optional database client for transactions
@@ -1206,7 +1207,7 @@ const getPlanReservationDetails = async (requestId, filters, dbClient = null) =>
     const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0]; // Last day of month
 
     try {
-        // Use the same rr_base logic as getLedgerPreview for consistency
+        // Use the same logic as getLedgerPreview for consistency
         const query = `
             WITH rr_base AS (
                 -- Get all rate lines and identify the one with the highest tax rate per detail
@@ -1286,32 +1287,63 @@ const getPlanReservationDetails = async (requestId, filters, dbClient = null) =>
                         WHEN b.is_cancelled THEN 'キャンセル' 
                         WHEN b.plan_name LIKE '%マンスリー%' THEN COALESCE(b.category_name || ' - ', '') || 'マンスリー'
                         ELSE COALESCE(b.category_name, b.plan_name)
-                    END as display_name
+                    END as display_name,
+                    'plan' as item_type
                 FROM rr_base b
                 JOIN rr_totals t ON b.rd_id = t.rd_id
                 WHERE b.rn = 1  -- Only take the primary rate to avoid duplicates
+            ),
+            addon_sales AS (
+                -- Get addon sales (same logic as getLedgerPreview)
+                SELECT 
+                    rd.reservation_id,
+                    rd.date,
+                    1 as number_of_people, -- Addons don't have people count
+                    ra.price as unit_price,
+                    (ra.price * ra.quantity) as total_amount,
+                    ra.tax_rate,
+                    false as missing_rates, -- Addons don't have missing rates
+                    (rd.cancelled IS NOT NULL) as is_cancelled,
+                    ra.addon_name as plan_name,
+                    NULL as category_name,
+                    CASE WHEN rd.cancelled IS NOT NULL THEN 'キャンセル' ELSE ra.addon_name END as display_name,
+                    'addon' as item_type
+                FROM reservation_addons ra
+                JOIN reservation_details rd ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+                JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+                WHERE rd.date BETWEEN $2 AND $3
+                AND ra.hotel_id = $1
+                AND rd.billable = TRUE
+                AND r.status NOT IN ('hold', 'block')
+                AND r.type <> 'employee'
+            ),
+            combined_sales AS (
+                SELECT * FROM plan_sales
+                UNION ALL
+                SELECT * FROM addon_sales
             )
             SELECT 
-                ps.reservation_id,
-                ps.date,
-                ps.number_of_people,
-                ps.unit_price,
-                ps.total_amount,
-                ps.tax_rate,
-                ps.missing_rates,
-                ps.is_cancelled,
-                ps.plan_name,
-                ps.category_name,
-                ps.display_name,
+                cs.reservation_id,
+                cs.date,
+                cs.number_of_people,
+                cs.unit_price,
+                cs.total_amount,
+                cs.tax_rate,
+                cs.missing_rates,
+                cs.is_cancelled,
+                cs.plan_name,
+                cs.category_name,
+                cs.display_name,
+                cs.item_type,
                 COALESCE(c.name_kanji, c.name_kana, c.name, '未設定') as client_name,
                 r.check_in,
                 r.check_out
-            FROM plan_sales ps
-            JOIN reservations r ON ps.reservation_id = r.id AND r.hotel_id = $1
+            FROM combined_sales cs
+            JOIN reservations r ON cs.reservation_id = r.id AND r.hotel_id = $1
             LEFT JOIN clients c ON r.reservation_client_id = c.id
-            WHERE ps.display_name = $4  -- Match against the display name (same as ledger export)
-            AND ABS(ps.tax_rate - $5) < 0.001  -- Match tax rate with small tolerance
-            ORDER BY ps.date DESC, ps.reservation_id DESC
+            WHERE cs.display_name = $4  -- Match against the display name (same as ledger export)
+            AND ABS(cs.tax_rate - $5) < 0.001  -- Match tax rate with small tolerance
+            ORDER BY cs.date DESC, cs.reservation_id DESC, cs.item_type DESC -- Plans first, then addons
         `;
 
         const values = [hotelId, startDate, endDate, planName, parseFloat(taxRate) || 0.10];

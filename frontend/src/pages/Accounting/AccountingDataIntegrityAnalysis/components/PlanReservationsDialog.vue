@@ -112,7 +112,13 @@
                             {{ reservation.client_name || '未設定' }}
                         </td>
                         <td class="px-4 py-3 text-sm text-slate-900 dark:text-white">
-                            {{ reservation.plan_name }}
+                            <div class="flex items-center gap-2">
+                                <span>{{ reservation.plan_name }}</span>
+                                <span v-if="reservation.item_type === 'addon'" 
+                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
+                                    <i class="pi pi-plus text-xs mr-1"></i>アドオン
+                                </span>
+                            </div>
                             <div v-if="reservation.category_name" class="text-xs text-slate-500 dark:text-slate-400">
                                 {{ reservation.category_name }}
                             </div>
