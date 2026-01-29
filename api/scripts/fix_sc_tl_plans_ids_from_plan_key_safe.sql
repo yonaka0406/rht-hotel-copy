@@ -125,6 +125,8 @@ SELECT
     '=== EXTRACTION PREVIEW ===' as section,
     '' as detail;
 
+-- Create temporary table for preview to avoid set-returning function issues
+CREATE TEMP TABLE temp_preview_extractions AS
 SELECT 
     hotel_id,
     plangroupcode,
@@ -138,7 +140,20 @@ SELECT
     (extract_and_validate_plan_ids(plan_key)).extraction_method as method
 FROM sc_tl_plans 
 WHERE plan_key IS NOT NULL 
-  AND (plans_global_id IS NULL AND plans_hotel_id IS NULL)
+  AND (plans_global_id IS NULL AND plans_hotel_id IS NULL);
+
+SELECT 
+    hotel_id,
+    plangroupcode,
+    plangroupname,
+    plan_key,
+    current_global_id,
+    current_hotel_id,
+    new_global_id,
+    new_hotel_id,
+    will_update,
+    method
+FROM temp_preview_extractions
 ORDER BY hotel_id, plangroupcode;
 
 -- STEP 5: Validation of extraction methods
@@ -147,29 +162,30 @@ SELECT
     '' as detail;
 
 SELECT 
-    (extract_and_validate_plan_ids(plan_key)).extraction_method as method,
+    method,
     COUNT(*) as count,
-    ARRAY_AGG(DISTINCT plan_key ORDER BY plan_key) as sample_plan_keys
-FROM sc_tl_plans 
-WHERE plan_key IS NOT NULL 
-  AND (plans_global_id IS NULL AND plans_hotel_id IS NULL)
-GROUP BY (extract_and_validate_plan_ids(plan_key)).extraction_method
+    ARRAY_AGG(DISTINCT plan_key) as sample_plan_keys
+FROM temp_preview_extractions
+GROUP BY method
 ORDER BY count DESC;
 
 -- STEP 6: Perform the update (only successful extractions)
+-- Use the existing temp_preview_extractions table
+SELECT 
+    'RECORDS THAT WILL BE UPDATED' as info,
+    COUNT(*) as count
+FROM temp_preview_extractions 
+WHERE will_update = TRUE;
+
+-- Perform the actual update using the temporary table
 UPDATE sc_tl_plans 
 SET 
-    plans_global_id = COALESCE(
-        plans_global_id, 
-        (extract_and_validate_plan_ids(plan_key)).plans_global_id
-    ),
-    plans_hotel_id = COALESCE(
-        plans_hotel_id, 
-        (extract_and_validate_plan_ids(plan_key)).plans_hotel_id
-    )
-WHERE plan_key IS NOT NULL 
-  AND (plans_global_id IS NULL AND plans_hotel_id IS NULL)
-  AND (extract_and_validate_plan_ids(plan_key)).extraction_success = TRUE;
+    plans_global_id = COALESCE(plans_global_id, temp.new_global_id),
+    plans_hotel_id = COALESCE(plans_hotel_id, temp.new_hotel_id)
+FROM temp_preview_extractions temp
+WHERE sc_tl_plans.hotel_id = temp.hotel_id
+  AND sc_tl_plans.plangroupcode = temp.plangroupcode
+  AND temp.will_update = TRUE;
 
 -- STEP 7: Report results
 SELECT 
@@ -197,7 +213,7 @@ SELECT
         ELSE 'Other Format'
     END as plan_type,
     COUNT(*) as count,
-    ARRAY_AGG(DISTINCT CONCAT(hotel_id, ':', plangroupcode) ORDER BY hotel_id, plangroupcode) as samples
+    ARRAY_AGG(DISTINCT CONCAT(hotel_id, ':', plangroupcode)) as samples
 FROM sc_tl_plans 
 WHERE plan_key IS NOT NULL 
   AND (plans_global_id IS NOT NULL OR plans_hotel_id IS NOT NULL)
@@ -215,6 +231,8 @@ SELECT
     '=== REMAINING ISSUES ===' as section,
     '' as detail;
 
+-- Create temporary table for remaining issues analysis
+CREATE TEMP TABLE temp_remaining_issues AS
 SELECT 
     hotel_id,
     plangroupcode,
@@ -229,7 +247,18 @@ SELECT
     END as issue_type,
     (extract_and_validate_plan_ids(plan_key)).extraction_method as attempted_method
 FROM sc_tl_plans 
-WHERE plans_global_id IS NULL AND plans_hotel_id IS NULL
+WHERE plans_global_id IS NULL AND plans_hotel_id IS NULL;
+
+SELECT 
+    hotel_id,
+    plangroupcode,
+    plangroupname,
+    plan_key,
+    plans_global_id,
+    plans_hotel_id,
+    issue_type,
+    attempted_method
+FROM temp_remaining_issues
 ORDER BY issue_type, hotel_id, plangroupcode;
 
 -- STEP 10: Final validation
@@ -258,8 +287,10 @@ WHERE plangroupcode IN ('11', '12', '15', '1', '2', '14')
   AND hotel_id = 10
 ORDER BY plangroupcode;
 
--- Clean up the function
+-- Clean up the function and temporary tables
 DROP FUNCTION extract_and_validate_plan_ids(TEXT);
+DROP TABLE IF EXISTS temp_preview_extractions;
+DROP TABLE IF EXISTS temp_remaining_issues;
 
 COMMIT;
 

@@ -59,8 +59,8 @@ SELECT
 FROM sc_tl_plans;
 
 -- Show records that will be updated
+CREATE TEMP TABLE temp_update_preview AS
 SELECT 
-    'RECORDS TO BE UPDATED' as info,
     hotel_id,
     plangroupcode,
     plangroupname,
@@ -71,16 +71,29 @@ SELECT
     (extract_ids_from_plan_key(plan_key)).plans_hotel_id as extracted_hotel_id
 FROM sc_tl_plans 
 WHERE plan_key IS NOT NULL 
-  AND (plans_global_id IS NULL AND plans_hotel_id IS NULL)
+  AND (plans_global_id IS NULL AND plans_hotel_id IS NULL);
+
+SELECT 
+    'RECORDS TO BE UPDATED' as info,
+    hotel_id,
+    plangroupcode,
+    plangroupname,
+    plan_key,
+    current_global_id,
+    current_hotel_id,
+    extracted_global_id,
+    extracted_hotel_id
+FROM temp_update_preview
 ORDER BY hotel_id, plangroupcode;
 
 -- Update records where both IDs are NULL but plan_key exists
 UPDATE sc_tl_plans 
 SET 
-    plans_global_id = COALESCE(plans_global_id, (extract_ids_from_plan_key(plan_key)).plans_global_id),
-    plans_hotel_id = COALESCE(plans_hotel_id, (extract_ids_from_plan_key(plan_key)).plans_hotel_id)
-WHERE plan_key IS NOT NULL 
-  AND (plans_global_id IS NULL AND plans_hotel_id IS NULL);
+    plans_global_id = COALESCE(plans_global_id, temp.extracted_global_id),
+    plans_hotel_id = COALESCE(plans_hotel_id, temp.extracted_hotel_id)
+FROM temp_update_preview temp
+WHERE sc_tl_plans.hotel_id = temp.hotel_id
+  AND sc_tl_plans.plangroupcode = temp.plangroupcode;
 
 -- Show results after update
 SELECT 
@@ -128,8 +141,9 @@ FROM sc_tl_plans
 WHERE plans_global_id IS NULL AND plans_hotel_id IS NULL
 ORDER BY hotel_id, plangroupcode;
 
--- Clean up the temporary function
+-- Clean up the temporary function and tables
 DROP FUNCTION extract_ids_from_plan_key(TEXT);
+DROP TABLE IF EXISTS temp_update_preview;
 
 -- Summary report
 SELECT 
