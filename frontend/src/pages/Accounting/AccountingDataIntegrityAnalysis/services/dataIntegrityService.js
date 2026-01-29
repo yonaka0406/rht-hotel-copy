@@ -316,10 +316,30 @@ export const processRawDataIntoAnalysis = (rawData) => {
         });
         
         // 2. Create subaccount comparisons with fuzzy matching
+        console.log(`--- Processing Subaccount Comparisons for ${hotel_name} ---`);
         const matchedYayoiItems = new Set();
         
+        // First pass: Process exact matches to prevent fuzzy matches from stealing exact matches
+        console.log(`First pass: Processing exact matches for ${hotel_name}`);
         pmsItems.forEach(pmsItem => {
-            // First try exact match with tax rate normalization
+            const yayoiMatch = yayoiSubItems.find(y => {
+                const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
+                const yayoiRate = parseFloat(y.tax_rate) || 0.10;
+                return Math.abs(pmsRate - yayoiRate) < 0.001 && 
+                       normalizeString(y.subaccount_name) === normalizeString(pmsItem.plan_name) &&
+                       !matchedYayoiItems.has(y);
+            });
+            
+            if (yayoiMatch) {
+                matchedYayoiItems.add(yayoiMatch);
+                console.log(`Exact match found for ${pmsItem.plan_name} -> ${yayoiMatch.subaccount_name}`);
+            }
+        });
+        
+        // Second pass: Process all items (exact matches will be reused, fuzzy matches for unmatched items)
+        console.log(`Second pass: Processing all matches for ${hotel_name}`);
+        pmsItems.forEach(pmsItem => {
+            // Try to find exact match first (might already be in matchedYayoiItems from first pass)
             let yayoiMatch = yayoiSubItems.find(y => {
                 const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
                 const yayoiRate = parseFloat(y.tax_rate) || 0.10;
@@ -329,7 +349,7 @@ export const processRawDataIntoAnalysis = (rawData) => {
             
             let matchType = 'exact';
             
-            // If no exact match, try fuzzy matching
+            // If no exact match, try fuzzy matching from available items
             if (!yayoiMatch) {
                 const availableYayoiItems = yayoiSubItems.filter(y => {
                     const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
@@ -340,25 +360,23 @@ export const processRawDataIntoAnalysis = (rawData) => {
                 if (fuzzyMatch) {
                     yayoiMatch = fuzzyMatch;
                     matchType = 'fuzzy';
+                    matchedYayoiItems.add(yayoiMatch); // Mark as matched
                 }
-            }
-            
-            if (yayoiMatch) {
-                matchedYayoiItems.add(yayoiMatch);
             }
             
             const yayoiAmount = yayoiMatch ? parseFloat(yayoiMatch.yayoi_amount) || 0 : 0;
             const pmsAmount = parseFloat(pmsItem.pms_amount) || 0;
             const difference = pmsAmount - yayoiAmount;
             
-            console.log(`Subaccount match for ${hotel_name} - ${pmsItem.plan_name}:`, {
+            console.log(`Final match for ${hotel_name} - ${pmsItem.plan_name}:`, {
                 pms_item: pmsItem,
                 yayoi_match: yayoiMatch,
                 match_type: matchType,
                 pms_amount: pmsAmount,
                 yayoi_amount: yayoiAmount,
                 difference: difference,
-                available_yayoi_items: yayoiSubItems.length
+                is_already_matched: yayoiMatch ? matchedYayoiItems.has(yayoiMatch) : false,
+                total_matched_count: matchedYayoiItems.size
             });
             
             analysisItems.push({
