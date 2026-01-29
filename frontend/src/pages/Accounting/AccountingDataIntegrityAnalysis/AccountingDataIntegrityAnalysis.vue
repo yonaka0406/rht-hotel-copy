@@ -239,10 +239,82 @@ const fetchAnalysisData = async () => {
         
         console.log('=== Raw Data Received ===');
         console.log('Full result:', result);
-        console.log('PMS data:', result?.rawData?.pmsData?.length || 0);
-        console.log('Yayoi main accounts:', result?.rawData?.yayoiMainAccounts?.length || 0);
-        console.log('Yayoi subaccounts:', result?.rawData?.yayoiSubAccounts?.length || 0);
-        console.log('Hotel totals:', result?.hotelTotals?.length || 0);
+        console.log('PMS data count:', result?.rawData?.pmsData?.length || 0);
+        console.log('Yayoi main accounts count:', result?.rawData?.yayoiMainAccounts?.length || 0);
+        console.log('Yayoi subaccounts count:', result?.rawData?.yayoiSubAccounts?.length || 0);
+        console.log('Hotel totals count:', result?.hotelTotals?.length || 0);
+        
+        // Log detailed PMS data
+        if (result?.rawData?.pmsData?.length > 0) {
+            console.log('=== PMS Data Details ===');
+            console.log('All PMS data:', result.rawData.pmsData);
+            console.log('PMS data by hotel:');
+            const pmsByHotel = result.rawData.pmsData.reduce((acc, item) => {
+                if (!acc[item.hotel_id]) {
+                    acc[item.hotel_id] = { hotel_name: item.hotel_name, items: [], total_amount: 0 };
+                }
+                acc[item.hotel_id].items.push(item);
+                acc[item.hotel_id].total_amount += parseFloat(item.pms_amount) || 0;
+                return acc;
+            }, {});
+            console.log(pmsByHotel);
+        } else {
+            console.warn('=== NO PMS DATA FOUND ===');
+        }
+        
+        // Log detailed Yayoi main account data
+        if (result?.rawData?.yayoiMainAccounts?.length > 0) {
+            console.log('=== Yayoi Main Accounts Details ===');
+            console.log('All Yayoi main accounts:', result.rawData.yayoiMainAccounts);
+            console.log('Yayoi main accounts by hotel:');
+            const yayoiMainByHotel = result.rawData.yayoiMainAccounts.reduce((acc, item) => {
+                if (!acc[item.hotel_id]) {
+                    acc[item.hotel_id] = { hotel_name: item.hotel_name, items: [], total_amount: 0 };
+                }
+                acc[item.hotel_id].items.push(item);
+                acc[item.hotel_id].total_amount += parseFloat(item.yayoi_amount) || 0;
+                return acc;
+            }, {});
+            console.log(yayoiMainByHotel);
+        } else {
+            console.warn('=== NO YAYOI MAIN ACCOUNT DATA FOUND ===');
+        }
+        
+        // Log detailed Yayoi subaccount data
+        if (result?.rawData?.yayoiSubAccounts?.length > 0) {
+            console.log('=== Yayoi Subaccounts Details ===');
+            console.log('All Yayoi subaccounts:', result.rawData.yayoiSubAccounts);
+            console.log('Yayoi subaccounts by hotel:');
+            const yayoiSubByHotel = result.rawData.yayoiSubAccounts.reduce((acc, item) => {
+                if (!acc[item.hotel_id]) {
+                    acc[item.hotel_id] = { hotel_name: item.hotel_name, items: [], total_amount: 0 };
+                }
+                acc[item.hotel_id].items.push(item);
+                acc[item.hotel_id].total_amount += parseFloat(item.yayoi_amount) || 0;
+                return acc;
+            }, {});
+            console.log(yayoiSubByHotel);
+        } else {
+            console.warn('=== NO YAYOI SUBACCOUNT DATA FOUND ===');
+        }
+        
+        // Log hotel totals for comparison
+        if (result?.hotelTotals?.length > 0) {
+            console.log('=== Hotel Totals from Backend ===');
+            console.log('All hotel totals:', result.hotelTotals);
+            result.hotelTotals.forEach(hotel => {
+                console.log(`Hotel ${hotel.hotel_name} (${hotel.hotel_id}):`, {
+                    total_pms_amount: hotel.total_pms_amount,
+                    total_yayoi_amount: hotel.total_yayoi_amount,
+                    total_difference: hotel.total_difference,
+                    total_reservations: hotel.total_reservations,
+                    total_transactions: hotel.total_transactions,
+                    missing_rates_count: hotel.missing_rates_count
+                });
+            });
+        } else {
+            console.warn('=== NO HOTEL TOTALS FOUND ===');
+        }
         
         // Process the raw data into analysis format using the service
         const processedAnalysis = processRawDataIntoAnalysis(result.rawData);

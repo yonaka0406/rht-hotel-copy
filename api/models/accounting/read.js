@@ -467,13 +467,13 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
             ORDER BY rp.hotel_id, COALESCE(ph.name, pg.name, '未設定')
         `;
 
-        // Get Yayoi main account data
+        // Get Yayoi main account data (sum of all subaccounts by account)
         const yayoiMainQuery = `
             SELECT 
                 d.hotel_id,
                 h.name as hotel_name,
                 ac.name as account_name,
-                tc.tax_rate,
+                COALESCE(tc.tax_rate, 0.10) as tax_rate,
                 COUNT(*) as transaction_count,
                 SUM(yd.credit_amount)::numeric as yayoi_amount
             FROM acc_yayoi_data yd
@@ -485,7 +485,6 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
             AND d.hotel_id = ANY($3::int[])
             AND ac.management_group_id = 1  -- Sales accounts only
             AND yd.credit_amount > 0
-            AND (yd.credit_sub_account IS NULL OR yd.credit_sub_account = '')  -- Main account only
             AND d.id = (
                 SELECT d2.id 
                 FROM acc_departments d2 
@@ -493,7 +492,7 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
                 ORDER BY d2.is_current DESC, d2.id DESC 
                 LIMIT 1
             )
-            GROUP BY d.hotel_id, h.name, ac.name, tc.tax_rate
+            GROUP BY d.hotel_id, h.name, ac.name, COALESCE(tc.tax_rate, 0.10)
             ORDER BY d.hotel_id, ac.name
         `;
 
@@ -504,7 +503,7 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
                 h.name as hotel_name,
                 ac.name as account_name,
                 yd.credit_sub_account as subaccount_name,
-                tc.tax_rate,
+                COALESCE(tc.tax_rate, 0.10) as tax_rate,
                 COUNT(*) as transaction_count,
                 SUM(yd.credit_amount)::numeric as yayoi_amount
             FROM acc_yayoi_data yd
@@ -524,7 +523,7 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
                 ORDER BY d2.is_current DESC, d2.id DESC 
                 LIMIT 1
             )
-            GROUP BY d.hotel_id, h.name, ac.name, yd.credit_sub_account, tc.tax_rate
+            GROUP BY d.hotel_id, h.name, ac.name, yd.credit_sub_account, COALESCE(tc.tax_rate, 0.10)
             ORDER BY d.hotel_id, ac.name, yd.credit_sub_account
         `;
 
@@ -535,6 +534,29 @@ const getRawDataForIntegrityAnalysis = async (requestId, filters, dbClient = nul
             client.query(yayoiMainQuery, values),
             client.query(yayoiSubQuery, values)
         ]);
+
+        logger.debug(`[${requestId}] Raw data results:`, {
+            pmsRows: pmsResult.rows.length,
+            yayoiMainRows: yayoiMainResult.rows.length,
+            yayoiSubRows: yayoiSubResult.rows.length,
+            period: `${startDate} to ${endDate}`,
+            hotelIds
+        });
+
+        // Log sample data for debugging
+        if (pmsResult.rows.length > 0) {
+            logger.debug(`[${requestId}] Sample PMS data:`, pmsResult.rows[0]);
+        }
+        if (yayoiMainResult.rows.length > 0) {
+            logger.debug(`[${requestId}] Sample Yayoi main data:`, yayoiMainResult.rows[0]);
+        } else {
+            logger.warn(`[${requestId}] No Yayoi main account data found for period ${startDate} to ${endDate}`);
+        }
+        if (yayoiSubResult.rows.length > 0) {
+            logger.debug(`[${requestId}] Sample Yayoi sub data:`, yayoiSubResult.rows[0]);
+        } else {
+            logger.warn(`[${requestId}] No Yayoi subaccount data found for period ${startDate} to ${endDate}`);
+        }
 
         return {
             pmsData: pmsResult.rows,

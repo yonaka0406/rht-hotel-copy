@@ -68,15 +68,111 @@ export const findBestMatch = (pmsItem, yayoiItems, threshold = 0.6) => {
  * Process raw data into analysis format with fuzzy matching
  */
 export const processRawDataIntoAnalysis = (rawData) => {
-    console.log('=== Processing Raw Data ===');
+    console.log('=== Processing Raw Data Into Analysis ===');
     console.log('Raw data input:', rawData);
     
     const { pmsData, yayoiMainAccounts, yayoiSubAccounts } = rawData;
     const analysisItems = [];
     
-    console.log('PMS Data:', pmsData?.length || 0, 'items');
-    console.log('Yayoi Main Accounts:', yayoiMainAccounts?.length || 0, 'items');
-    console.log('Yayoi Sub Accounts:', yayoiSubAccounts?.length || 0, 'items');
+    console.log('Input data counts:', {
+        pmsData: pmsData?.length || 0,
+        yayoiMainAccounts: yayoiMainAccounts?.length || 0,
+        yayoiSubAccounts: yayoiSubAccounts?.length || 0
+    });
+    
+    // Detailed logging of input data
+    if (pmsData?.length > 0) {
+        console.log('=== PMS Data Analysis ===');
+        console.log('First PMS item structure:', pmsData[0]);
+        console.log('All PMS items:', pmsData);
+        
+        // Analyze PMS data by hotel and tax rate
+        const pmsAnalysis = pmsData.reduce((acc, item) => {
+            const key = `${item.hotel_id}-${item.tax_rate}`;
+            if (!acc[key]) {
+                acc[key] = {
+                    hotel_id: item.hotel_id,
+                    hotel_name: item.hotel_name,
+                    tax_rate: item.tax_rate,
+                    plans: [],
+                    total_amount: 0,
+                    total_reservations: 0
+                };
+            }
+            acc[key].plans.push({
+                plan_name: item.plan_name,
+                category_name: item.category_name,
+                pms_amount: parseFloat(item.pms_amount) || 0,
+                reservation_count: parseInt(item.reservation_count) || 0,
+                missing_rates_count: parseInt(item.missing_rates_count) || 0
+            });
+            acc[key].total_amount += parseFloat(item.pms_amount) || 0;
+            acc[key].total_reservations += parseInt(item.reservation_count) || 0;
+            return acc;
+        }, {});
+        console.log('PMS data analysis by hotel-tax rate:', pmsAnalysis);
+    }
+    
+    if (yayoiMainAccounts?.length > 0) {
+        console.log('=== Yayoi Main Accounts Analysis ===');
+        console.log('First Yayoi main item structure:', yayoiMainAccounts[0]);
+        console.log('All Yayoi main accounts:', yayoiMainAccounts);
+        
+        // Analyze Yayoi main accounts by hotel and tax rate
+        const yayoiMainAnalysis = yayoiMainAccounts.reduce((acc, item) => {
+            const key = `${item.hotel_id}-${item.tax_rate}`;
+            if (!acc[key]) {
+                acc[key] = {
+                    hotel_id: item.hotel_id,
+                    hotel_name: item.hotel_name,
+                    tax_rate: item.tax_rate,
+                    accounts: [],
+                    total_amount: 0,
+                    total_transactions: 0
+                };
+            }
+            acc[key].accounts.push({
+                account_name: item.account_name,
+                yayoi_amount: parseFloat(item.yayoi_amount) || 0,
+                transaction_count: parseInt(item.transaction_count) || 0
+            });
+            acc[key].total_amount += parseFloat(item.yayoi_amount) || 0;
+            acc[key].total_transactions += parseInt(item.transaction_count) || 0;
+            return acc;
+        }, {});
+        console.log('Yayoi main accounts analysis by hotel-tax rate:', yayoiMainAnalysis);
+    }
+    
+    if (yayoiSubAccounts?.length > 0) {
+        console.log('=== Yayoi Subaccounts Analysis ===');
+        console.log('First Yayoi sub item structure:', yayoiSubAccounts[0]);
+        console.log('All Yayoi subaccounts:', yayoiSubAccounts);
+        
+        // Analyze Yayoi subaccounts by hotel and tax rate
+        const yayoiSubAnalysis = yayoiSubAccounts.reduce((acc, item) => {
+            const key = `${item.hotel_id}-${item.tax_rate}`;
+            if (!acc[key]) {
+                acc[key] = {
+                    hotel_id: item.hotel_id,
+                    hotel_name: item.hotel_name,
+                    tax_rate: item.tax_rate,
+                    subaccounts: [],
+                    total_amount: 0,
+                    total_transactions: 0
+                };
+            }
+            acc[key].subaccounts.push({
+                account_name: item.account_name,
+                subaccount_name: item.subaccount_name,
+                yayoi_amount: parseFloat(item.yayoi_amount) || 0,
+                transaction_count: parseInt(item.transaction_count) || 0
+            });
+            acc[key].total_amount += parseFloat(item.yayoi_amount) || 0;
+            acc[key].total_transactions += parseInt(item.transaction_count) || 0;
+            return acc;
+        }, {});
+        console.log('Yayoi subaccounts analysis by hotel-tax rate:', yayoiSubAnalysis);
+    }
     
     // Group data by hotel
     const hotelGroups = new Map();
@@ -123,7 +219,15 @@ export const processRawDataIntoAnalysis = (rawData) => {
         hotelGroups.get(item.hotel_id).yayoiSubItems.push(item);
     });
     
-    console.log('Hotel groups created:', hotelGroups.size);
+    console.log('=== Hotel Groups Created ===');
+    console.log('Hotel groups count:', hotelGroups.size);
+    hotelGroups.forEach((group, hotelId) => {
+        console.log(`Hotel ${group.hotel_name} (${hotelId}):`, {
+            pmsItems: group.pmsItems.length,
+            yayoiMainItems: group.yayoiMainItems.length,
+            yayoiSubItems: group.yayoiSubItems.length
+        });
+    });
     
     // Process each hotel
     hotelGroups.forEach((hotelGroup, hotelId) => {
@@ -166,7 +270,13 @@ export const processRawDataIntoAnalysis = (rawData) => {
         console.log(`PMS totals by tax rate for ${hotel_name}:`, pmsTotalByTaxRate);
         
         pmsTotalByTaxRate.forEach((pmsTotal, taxRate) => {
-            const yayoiMain = yayoiMainItems.find(y => y.tax_rate === taxRate);
+            // Handle both null and numeric tax rates for matching
+            const yayoiMain = yayoiMainItems.find(y => {
+                const pmsRate = parseFloat(taxRate) || 0.10;
+                const yayoiRate = parseFloat(y.tax_rate) || 0.10;
+                return Math.abs(pmsRate - yayoiRate) < 0.001; // Allow for small floating point differences
+            });
+            
             const yayoiAmount = yayoiMain ? parseFloat(yayoiMain.yayoi_amount) || 0 : 0;
             const difference = pmsTotal.pms_amount - yayoiAmount;
             
@@ -174,7 +284,13 @@ export const processRawDataIntoAnalysis = (rawData) => {
                 pmsAmount: pmsTotal.pms_amount,
                 yayoiAmount,
                 difference,
-                yayoiMain
+                yayoiMain,
+                available_yayoi_main_items: yayoiMainItems,
+                tax_rate_comparison: {
+                    pms_tax_rate: taxRate,
+                    normalized_pms_rate: parseFloat(taxRate) || 0.10,
+                    yayoi_rates: yayoiMainItems.map(y => ({ tax_rate: y.tax_rate, normalized: parseFloat(y.tax_rate) || 0.10 }))
+                }
             });
             
             analysisItems.push({
@@ -203,19 +319,23 @@ export const processRawDataIntoAnalysis = (rawData) => {
         const matchedYayoiItems = new Set();
         
         pmsItems.forEach(pmsItem => {
-            // First try exact match
-            let yayoiMatch = yayoiSubItems.find(y => 
-                y.tax_rate === pmsItem.tax_rate && 
-                normalizeString(y.subaccount_name) === normalizeString(pmsItem.plan_name)
-            );
+            // First try exact match with tax rate normalization
+            let yayoiMatch = yayoiSubItems.find(y => {
+                const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
+                const yayoiRate = parseFloat(y.tax_rate) || 0.10;
+                return Math.abs(pmsRate - yayoiRate) < 0.001 && 
+                       normalizeString(y.subaccount_name) === normalizeString(pmsItem.plan_name);
+            });
             
             let matchType = 'exact';
             
             // If no exact match, try fuzzy matching
             if (!yayoiMatch) {
-                const availableYayoiItems = yayoiSubItems.filter(y => 
-                    y.tax_rate === pmsItem.tax_rate && !matchedYayoiItems.has(y)
-                );
+                const availableYayoiItems = yayoiSubItems.filter(y => {
+                    const pmsRate = parseFloat(pmsItem.tax_rate) || 0.10;
+                    const yayoiRate = parseFloat(y.tax_rate) || 0.10;
+                    return Math.abs(pmsRate - yayoiRate) < 0.001 && !matchedYayoiItems.has(y);
+                });
                 const fuzzyMatch = findBestMatch(pmsItem, availableYayoiItems);
                 if (fuzzyMatch) {
                     yayoiMatch = fuzzyMatch;
@@ -230,6 +350,16 @@ export const processRawDataIntoAnalysis = (rawData) => {
             const yayoiAmount = yayoiMatch ? parseFloat(yayoiMatch.yayoi_amount) || 0 : 0;
             const pmsAmount = parseFloat(pmsItem.pms_amount) || 0;
             const difference = pmsAmount - yayoiAmount;
+            
+            console.log(`Subaccount match for ${hotel_name} - ${pmsItem.plan_name}:`, {
+                pms_item: pmsItem,
+                yayoi_match: yayoiMatch,
+                match_type: matchType,
+                pms_amount: pmsAmount,
+                yayoi_amount: yayoiAmount,
+                difference: difference,
+                available_yayoi_items: yayoiSubItems.length
+            });
             
             analysisItems.push({
                 hotel_id,
