@@ -578,16 +578,16 @@ onMounted(async () => {
                                     <div class="flex items-center justify-center gap-2">
                                         <button @click="changeYear(-1)" 
                                             :disabled="!canGoPreviousYear"
-                                            class="p-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                            <i class="pi pi-chevron-left text-violet-600 dark:text-violet-400 text-sm"></i>
+                                            class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <i class="pi pi-chevron-left text-slate-600 dark:text-slate-400 text-sm"></i>
                                         </button>
                                         <span class="text-sm font-medium text-slate-700 dark:text-slate-300 min-w-[4rem] text-center">
                                             {{ selectedYear }}年
                                         </span>
                                         <button @click="changeYear(1)" 
                                             :disabled="!canGoNextYear"
-                                            class="p-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                            <i class="pi pi-chevron-right text-violet-600 dark:text-violet-400 text-sm"></i>
+                                            class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                            <i class="pi pi-chevron-right text-slate-600 dark:text-slate-400 text-sm"></i>
                                         </button>
                                     </div>
                                 </div>
