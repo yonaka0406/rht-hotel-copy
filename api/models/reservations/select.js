@@ -211,7 +211,8 @@ const selectReservationDetail = async (requestId, id, hotel_id, dbClient = null)
       eff.min_date AS details_min_date,
       eff.max_date AS details_max_date,
       eff.max_daily_people AS details_number_of_people,
-      reservations.status,  
+      reservations.status,
+      reservation_details.cancelled,
       reservations.type,
       reservations.agent,
       reservations.ota_reservation_id,
@@ -975,6 +976,7 @@ const selectReservationsByClientId = async (requestId, hotelId, clientId) => {
   }
 };
 
+
 module.exports = {
   selectReservationById,
   selectReservation,
@@ -990,5 +992,5 @@ module.exports = {
   selectAvailableParkingSpots,
   selectAndLockAvailableParkingSpot,
   selectReservationParkingAddons,
-  selectReservationsByClientId
+  selectReservationsByClientId,
 }

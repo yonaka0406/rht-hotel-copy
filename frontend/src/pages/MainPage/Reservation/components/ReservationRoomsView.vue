@@ -1473,14 +1473,16 @@ const cancelRoomReservation = () => {
 const recoverRoomReservation = async () => {
     isSubmitting.value = true;
     try {
-    for (const detail of selectedGroup.value.details) {
-        await setReservationDetailStatus(detail.id, detail.hotel_id, 'recovered');
-    }
-    toast.add({ severity: 'success', summary: '成功', detail: '部屋の予約が復活されました。', life: 3000 });
-    closeRoomEditDialog();
+        const recoveryPromises = selectedGroup.value.details.map(detail =>
+            setReservationDetailStatus(detail.id, detail.hotel_id, 'recovered')
+        );
+        await Promise.all(recoveryPromises);
+
+        toast.add({ severity: 'success', summary: '成功', detail: '部屋の予約が復活されました。', life: 3000 });
+        closeRoomEditDialog();
     } catch (error) {
         console.error('Error recovering room reservation:', error);
-        toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の予約の復活に失敗しました。', life: 3000 });
+        toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '部屋の予約の復活に失敗しました。', life: 5000 });
     } finally {
         isSubmitting.value = false;
     }

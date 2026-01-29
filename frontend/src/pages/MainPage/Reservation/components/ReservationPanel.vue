@@ -196,6 +196,14 @@
                 :hotel_id="String(reservationInfo.hotel_id)" @updateReservationStatus="updateReservationStatus"
                 @revertCheckout="revertCheckout" @handleCancel="handleCancel"
                 @onReservationDeleted="goToNewReservation" />
+            
+            <!-- キャンセル復活エラーメッセージ -->
+            <Message v-if="cancelRecoveryError" severity="error" :closable="true" @close="cancelRecoveryError = ''" class="mt-2">
+                <div class="flex items-center">
+                    <i class="pi pi-exclamation-triangle mr-2"></i>
+                    <span style="white-space: pre-line;">{{ cancelRecoveryError }}</span>
+                </div>
+            </Message>
         </div>
     </div>
 
@@ -551,6 +559,7 @@ const reservationTypeSelected = ref(null);
 const paymentTimingSelected = ref(null);
 
 const isSubmitting = ref(false);
+const cancelRecoveryError = ref('');
 
 const updatePaymentTiming = async (event) => {
     try {
@@ -883,11 +892,12 @@ const updateReservationStatus = async (status, type = null) => {
             rejectClass: 'p-button-secondary p-button-outlined',
             accept: async () => {
                 try {
+                    cancelRecoveryError.value = ''; // エラーメッセージをクリア
                     await setReservationStatus(status);
                     toast.add({ severity: 'success', summary: '成功', detail: '予約ステータスが更新されました。', life: 3000 });
                 } catch (error) {
                     console.error('Error updating reservation status:', error);
-                    toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '予約ステータスの更新に失敗しました。', life: 3000 });
                 }
 
             },
@@ -975,15 +985,20 @@ const updateReservationStatus = async (status, type = null) => {
                 outlined: true,
                 icon: 'pi pi-times'
             },
-            accept: () => {
-                setReservationStatus(status);
-                toast.add({
-                    severity: 'success',
-                    summary: '成功',
-                    detail: `復活されました。`,
-                    life: 3000
-                });
-
+            accept: async () => {
+                try {
+                    cancelRecoveryError.value = ''; // エラーメッセージをクリア
+                    await setReservationStatus(status);
+                    toast.add({
+                        severity: 'success',
+                        summary: '成功',
+                        detail: `復活されました。`,
+                        life: 3000
+                    });
+                } catch (error) {
+                    // toastの代わりにボタン右側にエラーメッセージを表示
+                    cancelRecoveryError.value = error.message || '予約ステータスの更新に失敗しました。';
+                }
             },
             reject: () => {
 
@@ -992,15 +1007,19 @@ const updateReservationStatus = async (status, type = null) => {
     } else {
         if (!type) {
             try {
+                cancelRecoveryError.value = ''; // エラーメッセージをクリア
                 await setReservationStatus(status);
             } catch (error) {
                 console.error('Error updating and fetching reservation:', error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '予約ステータスの更新に失敗しました。', life: 3000 });
             }
         } else {
             try {
+                cancelRecoveryError.value = ''; // エラーメッセージをクリア
                 await setReservationStatus(type);
             } catch (error) {
                 console.error('Error updating and fetching reservation:', error);
+                toast.add({ severity: 'error', summary: 'エラー', detail: error.message || '予約ステータスの更新に失敗しました。', life: 3000 });
             }
         }
     }

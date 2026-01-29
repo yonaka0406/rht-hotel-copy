@@ -144,6 +144,15 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     // Start the transaction
     await client.query('BEGIN');
 
+    if (status === 'recovered') {
+      const { checkReservationDetailOverlap } = require('./validation');
+      // Pass the client to ensure the check is part of the same transaction
+      const conflict = await checkReservationDetailOverlap(requestId, id, hotel_id, client);
+      if (conflict) {
+        throw new Error(`予約詳細を復活できません。${conflict.date} の ${conflict.room_number}号室 は既に他の予約が入っています。`);
+      }
+    }
+
     // First, get the parent reservation_id from the detail being updated
     const reservationDetail = await selectReservationDetailsById(requestId, id, hotel_id, client);
     const reservationId = reservationDetail?.reservation_id;
@@ -238,6 +247,12 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     // If any query fails, roll back the entire transaction
     await client.query('ROLLBACK');
     logger.error('Error in transaction, rolling back changes:', err);
+    
+    // Preserve the original conflict error message so it can be displayed to the user
+    if (err.message.startsWith('予約詳細を復活できません')) {
+      throw err;
+    }
+    
     throw new Error('Database transaction failed');
   } finally {
     // Always release the client back to the pool

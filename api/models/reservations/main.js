@@ -600,6 +600,8 @@ const updateReservationStatus = async (requestId, reservationData) => {
     type = 'full-fee';
   }
 
+  // 重複チェックは後で、実際に部屋を復活させる場合のみ実行
+
   try {
     // Start the transaction
     await client.query('BEGIN');
@@ -655,6 +657,13 @@ const updateReservationStatus = async (requestId, reservationData) => {
       // If it was NOT cancelled (e.g., from 'provisory'), we only set billable=TRUE for active rooms
       // and keep the 'cancelled' status for rooms that were explicitly cancelled.
       if (oldStatus === 'cancelled') {
+        // キャンセルから確定に戻す場合のみ重複チェック
+        const { checkReservationOverlap } = require('./validation');
+        const conflict = await checkReservationOverlap(requestId, id, hotel_id);
+        if (conflict) {
+          throw new Error(`予約を復活できません。${conflict.date} の ${conflict.room_number}号室 は既に他の予約が入っています。`);
+        }
+        
         const updateDetailsQuery = `
           UPDATE reservation_details
           SET
@@ -669,6 +678,7 @@ const updateReservationStatus = async (requestId, reservationData) => {
         // Also "recover" any associated parking reservations by removing the cancelled flag
         await updateParkingReservationCancelledStatus(requestId, id, null, hotel_id, 'recovered', updated_by, client);
       } else {
+        // 部屋の状態は変更せず、請求フラグのみ更新（重複チェック不要）
         const updateDetailsQuery = `
           UPDATE reservation_details
           SET
@@ -708,6 +718,12 @@ const updateReservationStatus = async (requestId, reservationData) => {
     // If any query fails, roll back the entire transaction
     await client.query('ROLLBACK');
     logger.error('Error in transaction, rolling back changes:', err);
+
+    // Preserve the original conflict error message so it can be displayed to the user
+    if (err.message.startsWith('予約を復活できません')) {
+      throw err;
+    }
+    
     throw new Error('Database transaction failed');
   } finally {
     // Always release the client back to the pool in the end

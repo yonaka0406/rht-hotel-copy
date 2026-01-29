@@ -267,6 +267,14 @@
                                         :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-times'"
                                         class="p-button-danger" />
                                 </div>
+                                
+                                <!-- 復活エラーメッセージ -->
+                                <Message v-if="dayRecoveryError" severity="error" :closable="true" @close="dayRecoveryError = ''" class="mt-2">
+                                    <div class="flex items-center">
+                                        <i class="pi pi-exclamation-triangle mr-2"></i>
+                                        <span style="white-space: pre-line;">{{ dayRecoveryError }}</span>
+                                    </div>
+                                </Message>
                             </TabPanel>
                         </TabPanels>
                     </Tabs>
@@ -293,7 +301,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
-import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, FloatLabel, Select, InputText, InputNumber, Button, Badge, Divider, ConfirmDialog, Checkbox } from 'primevue';
+import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, FloatLabel, Select, InputText, InputNumber, Button, Badge, Divider, ConfirmDialog, Checkbox, Message } from 'primevue';
 
 // Stores    
 import { useReservationStore } from '@/composables/useReservationStore';
@@ -559,6 +567,7 @@ const selectedClients = ref(null);
 const reservationCancelled = ref(false);
 const isSubmitting = ref(false);
 const disableRounding = ref(false);
+const dayRecoveryError = ref('');
 const dayCancel = async () => {
     isSubmitting.value = true;
     try {
@@ -594,14 +603,14 @@ const dayCancel = async () => {
 const dayRecover = async () => {
     isSubmitting.value = true;
     try {
+        dayRecoveryError.value = ''; // エラーメッセージをクリア
         await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'recovered');
-
         reservationCancelled.value = false;
-
         toast.add({ severity: 'success', summary: '成功', detail: '予約が復活されました。', life: 3000 });
     } catch (error) {
-        console.error('Error recovering:', error);
-        // Show error toast if needed
+        console.error('Error recovering reservation:', error);
+        // toastの代わりにボタン右側にエラーメッセージを表示
+        dayRecoveryError.value = error.message || '予約の復活に失敗しました。';
     } finally {
         isSubmitting.value = false;
     }
