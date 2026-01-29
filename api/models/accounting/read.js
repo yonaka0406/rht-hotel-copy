@@ -1266,6 +1266,7 @@ const getPlanReservationDetails = async (requestId, filters, dbClient = null) =>
             ),
             plan_sales AS (
                 -- Combined adjusted plan sales (same logic as getLedgerPreview)
+                -- Only take the primary rate (rn = 1) and apply adjustment
                 SELECT 
                     b.reservation_id,
                     b.date,
@@ -1288,6 +1289,7 @@ const getPlanReservationDetails = async (requestId, filters, dbClient = null) =>
                     END as display_name
                 FROM rr_base b
                 JOIN rr_totals t ON b.rd_id = t.rd_id
+                WHERE b.rn = 1  -- Only take the primary rate to avoid duplicates
             )
             SELECT 
                 ps.reservation_id,
