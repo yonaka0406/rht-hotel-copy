@@ -9,10 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.7] - 2026-01-29
 
+- Bug Fix: Resolved plan linking issues where plan IDs were missing or incorrectly mapped.
 - Fix: Unified reservation creation timestamp formatting in `ReservationPanel.vue` by using standard `formatDateTime` utility, resolving timezone discrepancies between environments.
 - Bug Fix: Financial data import was improved with global financial metric detection and aggregation to handle both zero and null values correctly.
 - Improvement: Financial data import was updated paste and manual mapping behavior to replace values instead of accumulating them.
 - Bug Fix: Prevented the resurrection of cancelled reservations or individual room nights when the room for that period has already been booked by another guest.
+- New Feature: Enhanced OTA plan mapping interface with real-time status indicators (mapped, unmapped, errors).
+- New Feature: Added intelligent plan recommendations based on name similarity matching.
 - New Feature: Added a pre-emptive availability check in the reservation panel UI to warn users of conflicts before attempting to recover cancelled bookings.
 - New Feature: Added Data Integrity Analysis page for detailed accounting reconciliation review with hotel-level drill-down capabilities
 - New Feature: Added Monthly Sales Comparison chart on Accounting Dashboard with year navigation controls
