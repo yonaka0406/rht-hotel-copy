@@ -378,7 +378,20 @@ const insertTLPlanMaster = async (requestId, data) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
 
-    // console.log('insertTLRoomMaster', data)
+    // 受信したデータをログ出力
+    console.log('[insertTLPlanMaster] 受信したデータ:', JSON.stringify(data, null, 2));
+    
+    // 各アイテムの詳細をログ出力
+    data.forEach((item, index) => {
+        console.log(`[insertTLPlanMaster] アイテム ${index}:`, {
+            hotel_id: item.hotel_id,
+            plangroupcode: item.plangroupcode,
+            plangroupname: item.plangroupname,
+            plan_key: item.plan_key,
+            plans_global_id: item.plans_global_id,
+            plans_hotel_id: item.plans_hotel_id
+        });
+    });
 
     try {
         await client.query('BEGIN');
@@ -389,6 +402,12 @@ const insertTLPlanMaster = async (requestId, data) => {
         // Insert the new records
         const results = [];
         for (const item of data) {
+            console.log(`[insertTLPlanMaster] 挿入中: ${item.plangroupcode} "${item.plangroupname}"`, {
+                plans_global_id: item.plans_global_id,
+                plans_hotel_id: item.plans_hotel_id,
+                plan_key: item.plan_key
+            });
+            
             const result = await client.query(
                 `INSERT INTO sc_tl_plans(hotel_id, plans_global_id, plans_hotel_id, plan_key, planGroupCode, planGroupName) 
                 VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -401,10 +420,13 @@ const insertTLPlanMaster = async (requestId, data) => {
                     item.plangroupname,
                 ]
             );
+            
+            console.log(`[insertTLPlanMaster] 挿入結果:`, result.rows[0]);
             results.push(result.rows[0]);
         };
 
         await client.query('COMMIT');
+        console.log(`[insertTLPlanMaster] 全${results.length}件の挿入完了`);
         return results;
     } catch (error) {
         await client.query('ROLLBACK');
